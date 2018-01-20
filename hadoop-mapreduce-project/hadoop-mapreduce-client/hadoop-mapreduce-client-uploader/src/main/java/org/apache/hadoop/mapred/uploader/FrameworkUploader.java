@@ -56,6 +56,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
+
 /**
  * Upload a MapReduce framework tarball to HDFS.
  * Usage:
@@ -67,6 +69,7 @@ public class FrameworkUploader implements Runnable {
       Pattern.compile(Shell.getEnvironmentVariableRegex());
   private static final Logger LOG =
       LoggerFactory.getLogger(FrameworkUploader.class);
+  private Configuration conf = new Configuration();
 
   @VisibleForTesting
   String input = null;
@@ -97,6 +100,11 @@ public class FrameworkUploader implements Runnable {
 
   private OutputStream targetStream = null;
   private String alias = null;
+
+  @VisibleForTesting
+  void setConf(Configuration configuration) {
+    conf = configuration;
+  }
 
   private void printHelp(Options options) {
     HelpFormatter formatter = new HelpFormatter();
@@ -168,7 +176,7 @@ public class FrameworkUploader implements Runnable {
           target.substring(lastIndex + 1) :
           targetPath.getName();
       LOG.info("Target " + targetPath);
-      FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
+      FileSystem fileSystem = targetPath.getFileSystem(conf);
 
       targetStream = null;
       if (fileSystem instanceof DistributedFileSystem) {
@@ -205,7 +213,7 @@ public class FrameworkUploader implements Runnable {
 
   private long getSmallestReplicatedBlockCount()
       throws IOException {
-    FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
+    FileSystem fileSystem = targetPath.getFileSystem(conf);
     FileStatus status = fileSystem.getFileStatus(targetPath);
     long length = status.getLen();
     HashMap<Long, Integer> blockCount = new HashMap<>();
@@ -221,7 +229,8 @@ public class FrameworkUploader implements Runnable {
     for(BlockLocation location: locations) {
       final int replicas = location.getHosts().length;
       blockCount.compute(
-          location.getOffset(), (key, value) -> value + replicas);
+          location.getOffset(),
+          (key, value) -> value == null ? 0 : value + replicas);
     }
 
     // Print out the results
@@ -236,7 +245,7 @@ public class FrameworkUploader implements Runnable {
 
   private void endUpload()
       throws IOException, InterruptedException {
-    FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
+    FileSystem fileSystem = targetPath.getFileSystem(conf);
     if (fileSystem instanceof DistributedFileSystem) {
       fileSystem.setReplication(targetPath, finalReplication);
       LOG.info("Set replication to " +
@@ -428,7 +437,7 @@ public class FrameworkUploader implements Runnable {
     opts.addOption(OptionBuilder.create("h"));
     opts.addOption(OptionBuilder.create("help"));
     opts.addOption(OptionBuilder
-        .withDescription("Input class path")
+        .withDescription("Input class path. Defaults to the default classpath.")
         .hasArg().create("input"));
     opts.addOption(OptionBuilder
         .withDescription(
@@ -502,20 +511,33 @@ public class FrameworkUploader implements Runnable {
     }
     String fs = parser.getCommandLine()
         .getOptionValue("fs", null);
-    if (fs == null) {
-      LOG.error("Target file system not specified");
-      printHelp(opts);
-      return false;
-    }
     String path = parser.getCommandLine().getOptionValue("target",
-        "mr-framework.tar.gz#mr-framework");
-    if (path == null) {
+        "/usr/lib/mr-framework.tar.gz#mr-framework");
+    boolean isFullPath =
+        path.startsWith("hdfs://") ||
+        path.startsWith("file://");
+
+    if (fs == null) {
+      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      if (fs == null && !isFullPath) {
+        LOG.error("No filesystem specified in either fs or target.");
+        printHelp(opts);
+        return false;
+      } else {
+        LOG.info(String.format(
+            "Target file system not specified. Using default %s", fs));
+      }
+    }
+    if (path.isEmpty()) {
       LOG.error("Target directory not specified");
       printHelp(opts);
       return false;
     }
-    StringBuilder absolutePath = new StringBuilder(fs);
-    absolutePath = absolutePath.append(path.startsWith("/") ? "" : "/");
+    StringBuilder absolutePath = new StringBuilder();
+    if (!isFullPath) {
+      absolutePath.append(fs);
+      absolutePath.append(path.startsWith("/") ? "" : "/");
+    }
     absolutePath.append(path);
     target = absolutePath.toString();
 
