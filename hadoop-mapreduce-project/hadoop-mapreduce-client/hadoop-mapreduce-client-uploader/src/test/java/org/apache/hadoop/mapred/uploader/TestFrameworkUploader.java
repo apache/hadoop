@@ -23,6 +23,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -43,6 +44,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
+
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 
 /**
  * Unit test class for FrameworkUploader.
@@ -127,6 +130,75 @@ public class TestFrameworkUploader {
         uploader.finalReplication);
     Assert.assertEquals("Timeout mismatch", 10,
         uploader.timeout);
+  }
+
+  /**
+   * Test the default ways how to specify filesystems.
+   */
+  @Test
+  public void testNoFilesystem() throws IOException {
+    FrameworkUploader uploader = new FrameworkUploader();
+    boolean success = uploader.parseArguments(new String[]{});
+    Assert.assertTrue("Expected to parse arguments", success);
+    Assert.assertEquals(
+        "Expected",
+        "file:////usr/lib/mr-framework.tar.gz#mr-framework", uploader.target);
+  }
+
+  /**
+   * Test the default ways how to specify filesystems.
+   */
+  @Test
+  public void testDefaultFilesystem() throws IOException {
+    FrameworkUploader uploader = new FrameworkUploader();
+    Configuration conf = new Configuration();
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://namenode:555");
+    uploader.setConf(conf);
+    boolean success = uploader.parseArguments(new String[]{});
+    Assert.assertTrue("Expected to parse arguments", success);
+    Assert.assertEquals(
+        "Expected",
+        "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework",
+        uploader.target);
+  }
+
+  /**
+   * Test the explicit filesystem specification.
+   */
+  @Test
+  public void testExplicitFilesystem() throws IOException {
+    FrameworkUploader uploader = new FrameworkUploader();
+    Configuration conf = new Configuration();
+    uploader.setConf(conf);
+    boolean success = uploader.parseArguments(new String[]{
+        "-target",
+        "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework"
+    });
+    Assert.assertTrue("Expected to parse arguments", success);
+    Assert.assertEquals(
+        "Expected",
+        "hdfs://namenode:555/usr/lib/mr-framework.tar.gz#mr-framework",
+        uploader.target);
+  }
+
+  /**
+   * Test the conflicting filesystem specification.
+   */
+  @Test
+  public void testConflictingFilesystem() throws IOException {
+    FrameworkUploader uploader = new FrameworkUploader();
+    Configuration conf = new Configuration();
+    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://namenode:555");
+    uploader.setConf(conf);
+    boolean success = uploader.parseArguments(new String[]{
+        "-target",
+        "file:///usr/lib/mr-framework.tar.gz#mr-framework"
+    });
+    Assert.assertTrue("Expected to parse arguments", success);
+    Assert.assertEquals(
+        "Expected",
+        "file:///usr/lib/mr-framework.tar.gz#mr-framework",
+        uploader.target);
   }
 
   /**

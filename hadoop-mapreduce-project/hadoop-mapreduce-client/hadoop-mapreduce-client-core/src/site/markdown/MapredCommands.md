@@ -162,4 +162,23 @@ Usage: `mapred hsadmin [-refreshUserToGroupsMappings] | [-refreshSuperUserGroups
 | -getGroups [username] | Get the groups which given user belongs to |
 | -help [cmd] | Displays help for the given command or all commands if none is specified. |
 
+### `frameworkuploader`
+
+Collects framework jars and uploads them to HDFS as a tarball.
+
+Usage: `mapred frameworkuploader -target <target> [-fs <filesystem>] [-input <classpath>] [-blacklist <list>] [-whitelist <list>] [-initialReplication <num>] [-acceptableReplication <num>] [-finalReplication <num>] [-timeout <seconds>] [-nosymlink]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| -input *classpath* | This is the input classpath that is searched for jar files to be included in the tarball. |
+| -fs *filesystem* | The target file system. Defaults to the default filesystem set by fs.defaultFS. |
+| -target *target* | This is the target location of the framework tarball, optionally followed by a # with the localized alias. An example would be /usr/lib/framework.tar#framework. Make sure the target directory is readable by all users but it is not writable by others than administrators to protect cluster security.
+| -blacklist *list* | This is a comma separated regex array to filter the jar file names to exclude from the class path. It can be used for example to exclude test jars or Hadoop services that are not necessary to localize. |
+| -whitelist *list* | This is a comma separated regex array to include certain jar files. This can be used to provide additional security, so that no external source can include malicious code in the classpath when the tool runs. |
+| -nosymlink | This flag can be used to exclude symlinks that point to the same directory. This is not widely used. For example, `/a/foo.jar` and a symlink `/a/bar.jar` that points to `/a/foo.jar` would normally add `foo.jar` and `bar.jar` to the tarball as separate files despite them actually being the same file. This flag would make the tool exclude `/a/bar.jar` so only one copy of the file is added. |
+| -initialReplication *num* | This is the replication count that the framework tarball is created with. It is safe to leave this value at the default 3. This is the tested scenario. |
+| -finalReplication *num* | The uploader tool sets the replication once all blocks are collected and uploaded. If quick initial startup is required, then it is advised to set this to the commissioned node count divided by two but not more than 512. |
+| -acceptableReplication *num* | The tool will wait until the tarball has been replicated this number of times before exiting. This should be a replication count less than or equal to the value in `finalReplication`. This is typically a 90% of the value in `finalReplication` to accomodate failing nodes. |
+| -timeout *seconds* | A timeout in seconds to wait to reach `acceptableReplication` before the tool exits. The tool logs an error otherwise and returns.
+
 
