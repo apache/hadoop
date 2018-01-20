@@ -105,6 +105,7 @@ class StripedBlockReader {
     if (offsetInBlock >= block.getNumBytes()) {
       return null;
     }
+    Peer peer = null;
     try {
       InetSocketAddress dnAddr =
           stripedReader.getSocketAddress4Transfer(source);
@@ -120,7 +121,7 @@ class StripedBlockReader {
          *
          * TODO: add proper tracer
          */
-      Peer peer = newConnectedPeer(block, dnAddr, blockToken, source);
+      peer = newConnectedPeer(block, dnAddr, blockToken, source);
       if (peer.isLocal()) {
         this.isLocal = true;
       }
@@ -131,6 +132,7 @@ class StripedBlockReader {
     } catch (IOException e) {
       LOG.info("Exception while creating remote block reader, datanode {}",
           source, e);
+      IOUtils.closeStream(peer);
       return null;
     }
   }
