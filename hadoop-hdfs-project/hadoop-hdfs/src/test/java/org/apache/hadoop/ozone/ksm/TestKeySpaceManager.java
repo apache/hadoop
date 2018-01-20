@@ -56,6 +56,7 @@ import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.AfterClass;
@@ -83,7 +84,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
@@ -121,7 +121,6 @@ public class TestKeySpaceManager {
     ksmId = UUID.randomUUID().toString();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    conf.setInt(OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS, 2);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
@@ -1080,6 +1079,9 @@ public class TestKeySpaceManager {
 
   @Test
   public void testExpiredOpenKey() throws Exception {
+    BackgroundService openKeyCleanUpService = ((KeyManagerImpl)cluster
+        .getKeySpaceManager().getKeyManager()).getOpenKeyCleanupService();
+
     String userName = "user" + RandomStringUtils.randomNumeric(5);
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
@@ -1098,54 +1100,67 @@ public class TestKeySpaceManager {
 
     // open some keys.
 
-    Thread.sleep(1000);
-
     KeyArgs keyArgs1 = new KeyArgs("testKey1", bucketArgs);
     KeyArgs keyArgs2 = new KeyArgs("testKey2", bucketArgs);
     KeyArgs keyArgs3 = new KeyArgs("testKey3", bucketArgs);
     KeyArgs keyArgs4 = new KeyArgs("testKey4", bucketArgs);
     List<BlockGroup> openKeys;
-    try (OutputStream s1 = storageHandler.newKeyWriter(keyArgs1);
-         OutputStream s2 = storageHandler.newKeyWriter(keyArgs2)) {
-      storageHandler.newKeyWriter(keyArgs3);
-      storageHandler.newKeyWriter(keyArgs4);
-      // now all k1-k4 should be in open state
-      openKeys = cluster.getKeySpaceManager()
-          .getMetadataManager().getExpiredOpenKeys();
-      Assert.assertEquals(0, openKeys.size());
+    storageHandler.newKeyWriter(keyArgs1);
+    storageHandler.newKeyWriter(keyArgs2);
+    storageHandler.newKeyWriter(keyArgs3);
+    storageHandler.newKeyWriter(keyArgs4);
 
-      Thread.sleep(2000);
+    Set<String> expected = Stream.of(
+        "testKey1", "testKey2", "testKey3", "testKey4")
+        .collect(Collectors.toSet());
 
-      openKeys = cluster.getKeySpaceManager().getMetadataManager()
-          .getExpiredOpenKeys();
-      Assert.assertEquals(4, openKeys.size());
+    // Now all k1-k4 should be in open state, so ExpiredOpenKeys should not
+    // contain these values.
+    openKeys = cluster.getKeySpaceManager()
+        .getMetadataManager().getExpiredOpenKeys();
 
-      Set<String> expected = Stream.of(
-          "testKey1", "testKey2", "testKey3", "testKey4")
-          .collect(Collectors.toSet());
-      openKeys =
-          cluster.getKeySpaceManager().getMetadataManager().getExpiredOpenKeys();
-      for (BlockGroup bg : openKeys) {
-        String[] subs = bg.getGroupID().split("/");
-        String keyName = subs[subs.length - 1];
-        Assert.assertTrue(expected.remove(keyName));
-      }
-      Assert.assertEquals(0, expected.size());
+    for (BlockGroup bg : openKeys) {
+      String[] subs = bg.getGroupID().split("/");
+      String keyName = subs[subs.length - 1];
+      Assert.assertFalse(expected.contains(keyName));
     }
+
+    Thread.sleep(2000);
+    // Now all k1-k4 should be in ExpiredOpenKeys
+    openKeys = cluster.getKeySpaceManager()
+        .getMetadataManager().getExpiredOpenKeys();
+    for (BlockGroup bg : openKeys) {
+      String[] subs = bg.getGroupID().split("/");
+      String keyName = subs[subs.length - 1];
+      if (expected.contains(keyName)) {
+        expected.remove(keyName);
+      }
+    }
+    Assert.assertEquals(0, expected.size());
 
     KeyArgs keyArgs5 = new KeyArgs("testKey5", bucketArgs);
     storageHandler.newKeyWriter(keyArgs5);
 
-    // k1 and k2 are closed, so should be removed from meta data, k3 and k4
-    // should still be there.
+    openKeyCleanUpService.triggerBackgroundTaskForTesting();
     Thread.sleep(2000);
-
+    // now all k1-k4 should have been removed by the clean-up task, only k5
+    // should be present in ExpiredOpenKeys.
     openKeys =
         cluster.getKeySpaceManager().getMetadataManager().getExpiredOpenKeys();
-    Assert.assertEquals(1, openKeys.size());
-    String[] subs = openKeys.get(0).getGroupID().split("/");
-    String keyName = subs[subs.length - 1];
-    Assert.assertEquals("testKey5", keyName);
+    System.out.println(openKeys);
+    boolean key5found = false;
+    Set<String> removed = Stream.of(
+        "testKey1", "testKey2", "testKey3", "testKey4")
+        .collect(Collectors.toSet());
+    for (BlockGroup bg : openKeys) {
+      String[] subs = bg.getGroupID().split("/");
+      String keyName = subs[subs.length - 1];
+      Assert.assertFalse(removed.contains(keyName));
+      if (keyName.equals("testKey5")) {
+        key5found = true;
+      }
+    }
+    Assert.assertTrue(key5found);
   }
 
   /**

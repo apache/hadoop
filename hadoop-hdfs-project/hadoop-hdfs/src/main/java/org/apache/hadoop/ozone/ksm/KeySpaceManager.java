@@ -235,6 +235,11 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   }
 
   @VisibleForTesting
+  public KeyManager getKeyManager() {
+    return keyManager;
+  }
+
+  @VisibleForTesting
   public ScmInfo getScmInfo() throws IOException {
     return scmBlockClient.getScmInfo();
   }

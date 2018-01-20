@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -126,6 +127,11 @@ public class KeyManagerImpl implements KeyManager {
         scmBlockClient, this, openkeyCheckInterval, serviceTimeout);
     random = new Random();
     this.ksmId = ksmId;
+  }
+
+  @VisibleForTesting
+  public BackgroundService getOpenKeyCleanupService() {
+    return openKeyCleanupService;
   }
 
   @Override
