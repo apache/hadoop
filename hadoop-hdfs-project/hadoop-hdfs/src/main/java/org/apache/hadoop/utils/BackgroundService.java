@@ -55,6 +55,7 @@ public abstract class BackgroundService {
   private final long interval;
   private final long serviceTimeout;
   private final TimeUnit unit;
+  private final PeriodicalTask service;
 
   public BackgroundService(String serviceName, long interval,
       TimeUnit unit, int threadPoolSize, long serviceTimeout) {
@@ -70,6 +71,7 @@ public abstract class BackgroundService {
         .setNameFormat(serviceName + "#%d")
         .build();
     exec = Executors.newScheduledThreadPool(threadPoolSize, threadFactory);
+    service = new PeriodicalTask();
   }
 
   protected ExecutorService getExecutorService() {
@@ -81,10 +83,14 @@ public abstract class BackgroundService {
     return threadGroup.activeCount();
   }
 
+  @VisibleForTesting
+  public void triggerBackgroundTaskForTesting() {
+    service.run();
+  }
 
   // start service
   public void start() {
-    exec.scheduleWithFixedDelay(new PeriodicalTask(), 0, interval, unit);
+    exec.scheduleWithFixedDelay(service, 0, interval, unit);
   }
 
   public abstract BackgroundTaskQueue getTasks();
@@ -95,7 +101,7 @@ public abstract class BackgroundService {
    */
   public class PeriodicalTask implements Runnable {
     @Override
-    public void run() {
+    public synchronized void run() {
       LOG.debug("Running background service : {}", serviceName);
       BackgroundTaskQueue tasks = getTasks();
       if (tasks.isEmpty()) {
