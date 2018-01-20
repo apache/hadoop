@@ -347,6 +347,22 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.num.write.chunk.threads</name>
+    <value>60</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Maximum number of threads in the thread pool that Ratis
+      will use for writing chunks (60 by default).
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.segment.size</name>
+    <value>134217728</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>The size of the raft segment used by Apache Ratis on datanodes.
+      (128 MB by default)
+    </description>
+  </property>
+  <property>
     <name>ozone.container.report.interval</name>
     <value>60000ms</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
@@ -701,14 +717,6 @@
       maximum size (16MB), it will be reset to the maximum size. This maps to
       the network packet sizes and file write operations in the client to
       datanode protocol.
-    </description>
-  </property>
-  <property>
-    <name>ozone.scm.ratis.segment.size</name>
-    <value>134217728</value>
-    <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
-    <description>
-      The size of the raft segment used by Apache Ratis on datanodes.
     </description>
   </property>
   <property>
