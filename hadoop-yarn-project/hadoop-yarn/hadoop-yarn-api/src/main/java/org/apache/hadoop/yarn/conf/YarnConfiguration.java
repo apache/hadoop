@@ -1831,6 +1831,14 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
 
+  /** Allow host pid namespace for containers. Use with care. */
+  public static final String NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
+
+  /** Host pid namespace for containers is disabled by default. */
+  public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
+      false;
+
   /**
    * Whether or not users are allowed to request that Docker containers honor
    * the debug deletion delay. This is useful for troubleshooting Docker

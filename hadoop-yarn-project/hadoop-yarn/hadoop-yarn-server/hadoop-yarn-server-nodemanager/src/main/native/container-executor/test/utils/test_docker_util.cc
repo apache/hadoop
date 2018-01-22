@@ -454,6 +454,102 @@ namespace ContainerExecutor {
     ASSERT_EQ(0, strlen(buff));
   }
 
+  TEST_F(TestDockerUtil, test_set_pid_namespace) {
+    struct configuration container_cfg, cmd_cfg;
+    const int buff_len = 1024;
+    char buff[buff_len];
+    int ret = 0;
+    std::string container_executor_cfg_contents[] = {"[docker]\n  docker.host-pid-namespace.enabled=1",
+                                                     "[docker]\n  docker.host-pid-namespace.enabled=true",
+                                                     "[docker]\n  docker.host-pid-namespace.enabled=True",
+                                                     "[docker]\n  docker.host-pid-namespace.enabled=0",
+                                                     "[docker]\n  docker.host-pid-namespace.enabled=false",
+                                                     "[docker]\n"};
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+    std::vector<std::pair<std::string, int> >::const_iterator itr2;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  pid=host", "--pid='host' "));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run", ""));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n pid=other",
+        static_cast<int>(INVALID_PID_NAMESPACE)));
+
+    for (int i = 1; i < 3; ++i) {
+      write_container_executor_cfg(container_executor_cfg_contents[0]);
+      ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+
+      if (ret != 0) {
+        FAIL();
+      }
+      for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+        memset(buff, 0, buff_len);
+        write_command_file(itr->first);
+        ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+        if (ret != 0) {
+          FAIL();
+        }
+        ret = set_pid_namespace(&cmd_cfg, &container_cfg, buff, buff_len);
+        ASSERT_EQ(0, ret);
+        ASSERT_STREQ(itr->second.c_str(), buff);
+      }
+      for (itr2 = bad_file_cmd_vec.begin(); itr2 != bad_file_cmd_vec.end(); ++itr2) {
+        memset(buff, 0, buff_len);
+        write_command_file(itr2->first);
+        ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+        if (ret != 0) {
+          FAIL();
+        }
+        ret = set_pid_namespace(&cmd_cfg, &container_cfg, buff, buff_len);
+        ASSERT_EQ(itr2->second, ret);
+        ASSERT_EQ(0, strlen(buff));
+      }
+    }
+
+    // check default case and when it's turned off
+    for (int i = 3; i < 6; ++i) {
+      write_container_executor_cfg(container_executor_cfg_contents[i]);
+      ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+      if (ret != 0) {
+        FAIL();
+      }
+      file_cmd_vec.clear();
+      file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+          "[docker-command-execution]\n  docker-command=run", ""));
+      for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+        memset(buff, 0, buff_len);
+        write_command_file(itr->first);
+        ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+        if (ret != 0) {
+          FAIL();
+        }
+        ret = set_pid_namespace(&cmd_cfg, &container_cfg, buff, buff_len);
+        ASSERT_EQ(0, ret);
+        ASSERT_STREQ(itr->second.c_str(), buff);
+      }
+      bad_file_cmd_vec.clear();
+      bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n pid=other",
+        static_cast<int>(INVALID_PID_NAMESPACE)));
+      bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n pid=host",
+        static_cast<int>(PID_HOST_DISABLED)));
+      for (itr2 = bad_file_cmd_vec.begin(); itr2 != bad_file_cmd_vec.end(); ++itr2) {
+        memset(buff, 0, buff_len);
+        write_command_file(itr2->first);
+        ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+        if (ret != 0) {
+          FAIL();
+        }
+        ret = set_pid_namespace(&cmd_cfg, &container_cfg, buff, buff_len);
+        ASSERT_EQ(itr2->second, ret);
+        ASSERT_EQ(0, strlen(buff));
+      }
+    }
+  }
+
   TEST_F(TestDockerUtil, test_check_mount_permitted) {
     const char *permitted_mounts[] = {"/etc", "/usr/bin/cut", "/tmp/", NULL};
     std::vector<std::pair<std::string, int> > test_data;
@@ -530,7 +626,7 @@ namespace ContainerExecutor {
 
 
     // check default case and when it's turned off
-    for (int i = 3; i < 5; ++i) {
+    for (int i = 3; i < 6; ++i) {
       write_container_executor_cfg(container_executor_cfg_contents[i]);
       ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
       if (ret != 0) {

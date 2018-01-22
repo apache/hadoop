@@ -1678,6 +1678,14 @@
   </property>
 
   <property>
+    <description>This configuration setting determines whether the host's PID
+      namespace is allowed for docker containers on this cluster.
+      Use with care.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Property to enable docker user remapping</description>
     <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
     <value>false</value>
