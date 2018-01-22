@@ -572,7 +572,7 @@ or implicitly set to "simple":
 
 Needless to say, an application so configured cannot talk to a secure Hadoop cluster.
 
-#### `--verifyshortname &lt;principal>`: validate the short name of a principal
+#### `--verifyshortname <principal>`: validate the short name of a principal
 
 This verifies that the short name of a principal contains neither the `"@"`
 nor `"/"` characters.
