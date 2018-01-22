@@ -575,7 +575,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     return 0;
   }
   
-  protected static class UsageInfo {
+  public static class UsageInfo {
     public final String args;
     public final String help;
     
