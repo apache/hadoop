@@ -25,9 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
@@ -50,9 +48,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.FSImplementationUtils;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.fs.store.StoreImplementationUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -103,7 +99,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private MultiPartUpload multiPartUpload;
 
   /** Closed flag. */
-  private final FSImplementationUtils.CloseChecker closed;
+  private final StoreImplementationUtils.CloseChecker closed;
 
   /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock activeBlock;
@@ -161,13 +157,13 @@ class S3ABlockOutputStream extends OutputStream implements
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
-        "Block size is too small: %s", blockSize);
+        "Block size is too small: %d", blockSize);
     this.executorService = MoreExecutors.listeningDecorator(executorService);
     this.multiPartUpload = null;
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    this.closed = new FSImplementationUtils.CloseChecker(
+    this.closed = new StoreImplementationUtils.CloseChecker(
         fs.keyToQualifiedPath(key));
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
@@ -348,10 +344,17 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public void close() throws IOException {
-    if (!closed.enterClose()) {
-      // already closed
-      LOG.debug("Ignoring close() as stream is already closed");
-      return;
+    synchronized (this) {
+      // this is synchronized to order its execution w.r.t any methods
+      // which are marked as synchronized.
+      // because the whole close() method is called, calling it on a stream
+      // which has just been closed isn't going to block it for the duration
+      // of the entire upload.
+      if (!closed.enterClose()) {
+        // already closed
+        LOG.debug("Ignoring close() as stream is already closed");
+        return;
+      }
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();

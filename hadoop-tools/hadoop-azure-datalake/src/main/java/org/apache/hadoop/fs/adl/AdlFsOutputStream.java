@@ -22,7 +22,7 @@ import com.microsoft.azure.datalake.store.ADLFileOutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSImplementationUtils;
+import org.apache.hadoop.fs.store.StoreImplementationUtils;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
@@ -85,6 +85,6 @@ public final class AdlFsOutputStream extends OutputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    return FSImplementationUtils.supportsSyncable(capability);
+    return StoreImplementationUtils.supportsSyncable(capability);
   }
 }

@@ -20,7 +20,7 @@
 With the exception of `FileSystem.copyFromLocalFile()`, 
 all API operations which write data to a filesystem in Hadoop do so
 through the Java "OutputStreams" API. More specifically, they do
-sp through `OutputStream` subclasses obtained through calls to
+so through `OutputStream` subclasses obtained through calls to
 `FileSystem.create()`, `FileSystem.append()`,
 or `FSDataOutputStreamBuilder.build()`.
 
@@ -145,8 +145,9 @@ Stream' =  (path, false, [])
 The `close()` operation must be idempotent with the sole attempt to write the
 data made in the first invocation.
 
-1. If `close()` succeeds, subsequent calls are no-ops
-1. If `close()` fails, again, subsequent calls are no-ops
+1. If `close()` succeeds, subsequent calls are no-ops.
+1. If `close()` fails, again, subsequent calls are no-ops. They MAY rethrow
+the previous exception, but they MUST NOT retry the write.
 
 <!--  ============================================================= -->
 <!--  CLASS: FSDataOutputStream -->
