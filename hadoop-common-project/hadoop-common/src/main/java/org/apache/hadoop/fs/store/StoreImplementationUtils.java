@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.store;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,19 +24,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.*;
-import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HFLUSH;
-import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HSYNC;
+import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.*;
 
 /**
  * Utility classes to help implementing filesystems and streams.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class FSImplementationUtils {
+public final class StoreImplementationUtils {
 
-  private FSImplementationUtils() {
+  private StoreImplementationUtils() {
   }
 
   /**
@@ -63,7 +64,7 @@ public final class FSImplementationUtils {
    * It should be the first operation in the {@code close} method,
    * with the caller exiting immediately if the stream is already closed.
    * <pre>
-   * @Override public void close() throws IOException {
+   * public void close() throws IOException {
    *   if (!closed.enterClose()) {
    *     return;
    *   }
@@ -137,10 +138,6 @@ public final class FSImplementationUtils {
      */
     public boolean isClosed() {
       return closed.get();
-    }
-
-    public boolean isOpen() {
-      return !isClosed();
     }
 
   }

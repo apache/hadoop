@@ -579,7 +579,7 @@ and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `Inv
 
     FS' where :
        FS'.Files'[p] == []
-       and ancestors(p) is-subset-of FS'.Directories'
+       ancestors(p) is-subset-of FS'.Directories'
 
     result = FSDataOutputStream
 
@@ -606,6 +606,10 @@ and potentially confuse file/directory logic. In particular, using `create()` to
 an exclusive lock on a file (whoever creates the file without an error is considered
 the holder of the lock) is not a valid algorithm when working with object stores.
 
+* Object stores may create an empty file as a marker when a file is created.
+However, object stores whith overwrite=true semantics may not implement this atomically,
+so creating files with `overwrite==false` cannot be used as an implicit exclusion
+mechanism between processes.
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
 a directory, hence it is listed as an exception that MAY be raised when
