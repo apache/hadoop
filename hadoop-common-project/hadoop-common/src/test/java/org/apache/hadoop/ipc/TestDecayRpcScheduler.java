@@ -19,19 +19,22 @@
 package org.apache.hadoop.ipc;
 
 import static java.lang.Thread.sleep;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
 
 public class TestDecayRpcScheduler {
@@ -247,5 +250,28 @@ public class TestDecayRpcScheduler {
     while (scheduler.getTotalCallSnapshot() > 0) {
       sleep(10);
     }
+  }
+
+  @Test(timeout=60000)
+  public void testNPEatInitialization() throws InterruptedException {
+    // redirect the LOG to and check if there is NPE message while initializing
+    // the DecayRpcScheduler
+    PrintStream output = System.out;
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
+
+      // initializing DefaultMetricsSystem here would set "monitoring" flag in
+      // MetricsSystemImpl to true
+      DefaultMetricsSystem.initialize("NameNode");
+      Configuration conf = new Configuration();
+      scheduler = new DecayRpcScheduler(1, "ns", conf);
+      // check if there is npe in log
+      assertFalse(bytes.toString().contains("NullPointerException"));
+    } finally {
+      //set systout back
+      System.setOut(output);
+    }
+
   }
 }
