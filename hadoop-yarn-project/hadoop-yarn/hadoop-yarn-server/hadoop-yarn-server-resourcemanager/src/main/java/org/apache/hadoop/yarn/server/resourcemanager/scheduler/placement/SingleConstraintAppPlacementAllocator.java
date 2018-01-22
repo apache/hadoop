@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsUtil;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
@@ -72,6 +73,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
   private String targetNodePartition;
   private Set<String> targetAllocationTags;
   private AllocationTagsManager allocationTagsManager;
+  private PlacementConstraintManager placementConstraintManager;
 
   public SingleConstraintAppPlacementAllocator() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -437,10 +439,9 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
     // node type will be ignored.
     try {
-      return PlacementConstraintsUtil.canSatisfySingleConstraint(
-          appSchedulingInfo.getApplicationId(),
-          this.schedulingRequest.getPlacementConstraint(), node,
-          allocationTagsManager);
+      return PlacementConstraintsUtil.canSatisfyConstraints(
+          appSchedulingInfo.getApplicationId(), schedulingRequest, node,
+          placementConstraintManager, allocationTagsManager);
     } catch (InvalidAllocationTagsQueryException e) {
       LOG.warn("Failed to query node cardinality:", e);
       return false;
@@ -527,5 +528,6 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
       SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
     super.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
     this.allocationTagsManager = rmContext.getAllocationTagsManager();
+    this.placementConstraintManager = rmContext.getPlacementConstraintManager();
   }
 }

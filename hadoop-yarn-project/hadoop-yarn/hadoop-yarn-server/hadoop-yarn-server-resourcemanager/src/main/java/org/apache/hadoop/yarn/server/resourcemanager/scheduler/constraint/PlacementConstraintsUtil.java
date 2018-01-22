@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
@@ -54,7 +55,7 @@ public final class PlacementConstraintsUtil {
   }
 
   /**
-   * Returns true if **single** placement constraint with associated
+   * Returns true if <b>single</b> placement constraint with associated
    * allocationTags and scope is satisfied by a specific scheduler Node.
    *
    * @param targetApplicationId the application id, which could be override by
@@ -148,59 +149,70 @@ public final class PlacementConstraintsUtil {
     return true;
   }
 
-  /**
-   * Returns true if all placement constraints are **currently** satisfied by a
-   * specific scheduler Node..
-   *
-   * To do so the method retrieves and goes through all application constraint
-   * expressions and checks if the specific allocation is between the allowed
-   * min-max cardinality values under the constraint scope (Node/Rack/etc).
-   *
-   * @param applicationId applicationId,
-   * @param placementConstraint placement constraint.
-   * @param node the scheduler node
-   * @param tagsManager the allocation tags store
-   * @return true if all application constraints are satisfied by node
-   * @throws InvalidAllocationTagsQueryException
-   */
-  public static boolean canSatisfySingleConstraint(ApplicationId applicationId,
-      PlacementConstraint placementConstraint, SchedulerNode node,
-      AllocationTagsManager tagsManager)
+  private static boolean canSatisfyConstraints(ApplicationId appId,
+      PlacementConstraint constraint, SchedulerNode node,
+      AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
-    if (placementConstraint == null) {
+    if (constraint == null) {
       return true;
     }
-    // Transform to SimpleConstraint
-    SingleConstraintTransformer singleTransformer =
-        new SingleConstraintTransformer(placementConstraint);
-    placementConstraint = singleTransformer.transform();
-    AbstractConstraint sConstraintExpr = placementConstraint.getConstraintExpr();
-    SingleConstraint single = (SingleConstraint) sConstraintExpr;
 
-    return canSatisfySingleConstraint(applicationId, single, node, tagsManager);
+    // If this is a single constraint, transform to SingleConstraint
+    SingleConstraintTransformer singleTransformer =
+        new SingleConstraintTransformer(constraint);
+    constraint = singleTransformer.transform();
+    AbstractConstraint sConstraintExpr = constraint.getConstraintExpr();
+
+    // TODO handle other type of constraints, e.g CompositeConstraint
+    if (sConstraintExpr instanceof SingleConstraint) {
+      SingleConstraint single = (SingleConstraint) sConstraintExpr;
+      return canSatisfySingleConstraint(appId, single, node, atm);
+    } else {
+      throw new InvalidAllocationTagsQueryException(
+          "Unsupported type of constraint.");
+    }
   }
 
   /**
-   * Returns true if all placement constraints with associated allocationTags
-   * are **currently** satisfied by a specific scheduler Node.
-   * To do so the method retrieves and goes through all application constraint
-   * expressions and checks if the specific allocation is between the allowed
-   * min-max cardinality values under the constraint scope (Node/Rack/etc).
+   * Returns true if the placement constraint for a given scheduling request
+   * is <b>currently</b> satisfied by the specific scheduler node. This method
+   * first validates the constraint specified in the request; if not specified,
+   * then it validates application level constraint if exists; otherwise, it
+   * validates the global constraint if exists.
+   * <p/>
+   * This method only checks whether a scheduling request can be placed
+   * on a node with respect to the certain placement constraint. It gives no
+   * guarantee that asked allocations can be eventually allocated because
+   * it doesn't check resource, that needs to be further decided by a scheduler.
    *
-   * @param appId the application id
-   * @param allocationTags the allocation tags set
-   * @param node the scheduler node
-   * @param pcm the placement constraints store
-   * @param tagsManager the allocation tags store
-   * @return true if all application constraints are satisfied by node
+   * @param applicationId application id
+   * @param request scheduling request
+   * @param schedulerNode node
+   * @param pcm placement constraint manager
+   * @param atm allocation tags manager
+   * @return true if the given node satisfies the constraint of the request
    * @throws InvalidAllocationTagsQueryException
    */
-  public static boolean canSatisfySingleConstraint(ApplicationId appId,
-      Set<String> allocationTags, SchedulerNode node,
-      PlacementConstraintManager pcm, AllocationTagsManager tagsManager)
+  public static boolean canSatisfyConstraints(ApplicationId applicationId,
+      SchedulingRequest request, SchedulerNode schedulerNode,
+      PlacementConstraintManager pcm, AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
-    PlacementConstraint constraint = pcm.getConstraint(appId, allocationTags);
-    return canSatisfySingleConstraint(appId, constraint, node, tagsManager);
-  }
+    // TODO do proper merge on different level of constraints, see YARN-7778.
 
+    // Request level constraint
+    PlacementConstraint constraint = request.getPlacementConstraint();
+    if (constraint == null) {
+      // Application level constraint
+      constraint = pcm.getConstraint(applicationId,
+          request.getAllocationTags());
+      if (constraint == null) {
+        // Global level constraint
+        constraint = pcm.getGlobalConstraint(request.getAllocationTags());
+        if (constraint == null) {
+          return true;
+        }
+      }
+    }
+    return canSatisfyConstraints(applicationId, constraint, schedulerNode, atm);
+  }
 }
