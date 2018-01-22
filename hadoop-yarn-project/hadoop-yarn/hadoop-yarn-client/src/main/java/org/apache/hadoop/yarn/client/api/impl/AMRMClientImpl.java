@@ -695,7 +695,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           + " priority=" + priority.getPriority()
           + " resourceName=" + resourceName + " numContainers="
           + resourceRequestInfo.remoteRequest.getNumContainers() 
-          + " #asks=" + ask.size());
+          + " #asks=" + ask.size() + " capacity=" + capability);
     }
   }
 

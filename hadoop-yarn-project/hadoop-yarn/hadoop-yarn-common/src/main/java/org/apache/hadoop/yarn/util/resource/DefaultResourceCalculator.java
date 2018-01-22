@@ -68,7 +68,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         divideAndCeil(numerator.getMemory(), denominator), 
         numerator.getVirtualCores(), 
         numerator.getGPUs(), 
-        numerator.getGPUAttribute()
+        numerator.getGPUAttribute(),
+        numerator.getPorts()
         );
   }
 
@@ -83,7 +84,9 @@ public class DefaultResourceCalculator extends ResourceCalculator {
     return Resources.createResource(normalizedMemory,
                                     r.getVirtualCores(), 
                                     r.getGPUs(), 
-                                    r.getGPUAttribute());
+                                    r.getGPUAttribute(),
+                                    r.getPorts()
+                                    );
   }
 
   @Override
@@ -98,7 +101,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         roundUp(r.getMemory(), stepFactor.getMemory()),
         r.getVirtualCores(), 
         r.getGPUs(), 
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 
@@ -108,7 +112,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         roundDown(r.getMemory(), stepFactor.getMemory()),
         r.getVirtualCores(),
         r.getGPUs(), 
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 
@@ -119,7 +124,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         roundUp((int)(r.getMemory() * by + 0.5), stepFactor.getMemory()),
         r.getVirtualCores(),
         r.getGPUs(), 
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 
@@ -133,7 +139,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
             ),
         r.getVirtualCores(), 
         r.getGPUs(), 
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 
