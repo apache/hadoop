@@ -2621,9 +2621,9 @@ public class CapacityScheduler extends
         // Validate placement constraint is satisfied before
         // committing the request.
         try {
-          if (!PlacementConstraintsUtil.canSatisfySingleConstraint(
+          if (!PlacementConstraintsUtil.canSatisfyConstraints(
               appAttempt.getApplicationId(),
-              schedulingRequest.getAllocationTags(), schedulerNode,
+              schedulingRequest, schedulerNode,
               rmContext.getPlacementConstraintManager(),
               rmContext.getAllocationTagsManager())) {
             LOG.debug("Failed to allocate container for application "
