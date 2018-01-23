@@ -124,6 +124,14 @@
   </property>
 
   <property>
+    <name>security.interqjournal.service.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for InterQJournalProtocol, used by the JN to
+    communicate with other JN
+    </description>
+  </property>
+
+  <property>
     <name>security.mrhs.client.protocol.acl</name>
     <value>*</value>
     <description>ACL for HSClientProtocol, used by job clients to
