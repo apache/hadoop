@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -718,14 +719,20 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             libPath, "lib", false);
     Path dependencyLibTarGzip = fs.getDependencyTarGzip();
     if (fs.isFile(dependencyLibTarGzip)) {
-      LOG.debug("Loading lib tar from " + fs.getFileSystem().getScheme() + ":/"
-          + dependencyLibTarGzip);
+      LOG.info("Loading lib tar from " + dependencyLibTarGzip);
       fs.submitTarGzipAndUpdate(localResources);
     } else {
+      if (dependencyLibTarGzip != null) {
+        LOG.warn("Property {} has a value {}, but is not a valid file",
+            YarnServiceConf.DEPENDENCY_TARBALL_PATH, dependencyLibTarGzip);
+      }
       String[] libs = ServiceUtils.getLibDirs();
-      LOG.info("Uploading all dependency jars to HDFS. For faster submission of" +
-          " apps, pre-upload dependency jars to HDFS "
-          + "using command: yarn app -enableFastLaunch");
+      LOG.info("Uploading all dependency jars to HDFS. For faster submission of"
+          + " apps, set config property {} to the dependency tarball location."
+          + " Dependency tarball can be uploaded to any HDFS path directly"
+          + " or by using command: yarn app -{} [<Destination Folder>]",
+          YarnServiceConf.DEPENDENCY_TARBALL_PATH,
+          ApplicationCLI.ENABLE_FAST_LAUNCH);
       for (String libDirProp : libs) {
         ProviderUtils.addAllDependencyJars(localResources, fs, libPath, "lib",
             libDirProp);
@@ -988,16 +995,23 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return this.yarnClient;
   }
 
-  public int enableFastLaunch() throws IOException, YarnException {
-    return actionDependency(true);
+  public int enableFastLaunch(String destinationFolder)
+      throws IOException, YarnException {
+    return actionDependency(destinationFolder, true);
   }
 
-  public int actionDependency(boolean overwrite)
+  public int actionDependency(String destinationFolder, boolean overwrite)
       throws IOException, YarnException {
     String currentUser = RegistryUtils.currentUser();
     LOG.info("Running command as user {}", currentUser);
 
-    Path dependencyLibTarGzip = fs.getDependencyTarGzip();
+    if (destinationFolder == null) {
+      destinationFolder = String.format(YarnServiceConstants.DEPENDENCY_DIR,
+          VersionInfo.getVersion());
+    }
+    Path dependencyLibTarGzip = new Path(destinationFolder,
+        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
+            + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
 
     // Check if dependency has already been uploaded, in which case log
     // appropriately and exit success (unless overwrite has been requested)
@@ -1019,6 +1033,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Version Info: " + VersionInfo.getBuildVersion());
       fs.copyLocalFileToHdfs(tempLibTarGzipFile, dependencyLibTarGzip,
           new FsPermission(YarnServiceConstants.DEPENDENCY_DIR_PERMISSIONS));
+      LOG.info("To let apps use this tarball, in yarn-site set config property "
+          + "{} to {}", YarnServiceConf.DEPENDENCY_TARBALL_PATH,
+          dependencyLibTarGzip);
       return EXIT_SUCCESS;
     } else {
       return EXIT_FALSE;
