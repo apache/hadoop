@@ -57,7 +57,11 @@ public final class ScmConfigKeys {
   public static final String DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY =
       "dfs.container.ratis.segment.size";
   public static final int DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT =
-      128 * 1024 * 1024;
+      1 * 1024 * 1024 * 1024;
+  public static final String DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY =
+      "dfs.container.ratis.segment.preallocated.size";
+  public static final int
+      DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT = 128 * 1024 * 1024;
 
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final String OZONE_SCM_CHUNK_SIZE_KEY = "ozone.scm.chunk.size";

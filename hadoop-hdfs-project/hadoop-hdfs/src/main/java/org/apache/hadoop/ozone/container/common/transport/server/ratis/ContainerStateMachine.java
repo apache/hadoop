@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
@@ -45,29 +46,61 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ArrayBlockingQueue;
 
-/** A {@link org.apache.ratis.statemachine.StateMachine} for containers.  */
+/** A {@link org.apache.ratis.statemachine.StateMachine} for containers.
+ *
+ * The stateMachine is responsible for handling different types of container
+ * requests. The container requests can be divided into readonly and write
+ * requests.
+ *
+ * Read only requests are classified in
+ * {@link org.apache.hadoop.scm.XceiverClientRatis#isReadOnly}
+ * and these readonly requests are replied from the
+ * {@link #query(RaftClientRequest)}
+ *
+ * The write requests can be divided into requests with user data
+ * (WriteChunkRequest) and other request without user data.
+ *
+ * Inorder to optimize the write throughput, the writeChunk request is
+ * processed in 2 phases. The 2 phases are divided in
+ * {@link #startTransaction(RaftClientRequest)}, in the first phase the user
+ * data is written directly into the state machine via
+ * {@link #writeStateMachineData} and in the second phase the
+ * transaction is committed via {@link #applyTransaction(TransactionContext)}
+ *
+ * For the requests with no stateMachine data, the transaction is directly
+ * committed through
+ * {@link #applyTransaction(TransactionContext)}
+ *
+ * There are 2 ordering operation which are enforced right now in the code,
+ * 1) Write chunk operation are executed after the create container operation,
+ * the write chunk operation will fail otherwise as the container still hasn't
+ * been created. Hence the create container operation has been split in the
+ * {@link #startTransaction(RaftClientRequest)}, this will help in synchronizing
+ * the calls in {@link #writeStateMachineData}
+ *
+ * 2) Write chunk commit operation is executed after write chunk state machine
+ * operation. This will ensure that commit operation is sync'd with the state
+ * machine operation.
+ * */
 public class ContainerStateMachine extends BaseStateMachine {
   static final Logger LOG = LoggerFactory.getLogger(
       ContainerStateMachine.class);
   private final SimpleStateMachineStorage storage
       = new SimpleStateMachineStorage();
   private final ContainerDispatcher dispatcher;
-  private final ThreadPoolExecutor writeChunkExecutor;
+  private ThreadPoolExecutor writeChunkExecutor;
   private final ConcurrentHashMap<String, CompletableFuture<Message>>
-                                                                writeChunkMap;
+      writeChunkFutureMap;
+  private final ConcurrentHashMap<String, CompletableFuture<Message>>
+      createContainerFutureMap;
 
   ContainerStateMachine(ContainerDispatcher dispatcher,
-      int numWriteChunkThreads) {
+      ThreadPoolExecutor writeChunkExecutor) {
     this.dispatcher = dispatcher;
-    writeChunkMap = new ConcurrentHashMap<>();
-    writeChunkExecutor =
-        new ThreadPoolExecutor(numWriteChunkThreads, numWriteChunkThreads,
-            60, TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(1024),
-            new ThreadPoolExecutor.CallerRunsPolicy());
+    this.writeChunkExecutor = writeChunkExecutor;
+    this.writeChunkFutureMap = new ConcurrentHashMap<>();
+    this.createContainerFutureMap = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -81,13 +114,13 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     super.initialize(id, properties, raftStorage);
     storage.init(raftStorage);
-    writeChunkExecutor.prestartAllCoreThreads();
     //  TODO handle snapshots
 
     // TODO: Add a flag that tells you that initialize has been called.
     // Check with Ratis if this feature is done in Ratis.
   }
 
+  @Override
   public TransactionContext startTransaction(RaftClientRequest request)
       throws IOException {
     final ContainerCommandRequestProto proto =
@@ -110,8 +143,12 @@ public class ContainerStateMachine extends BaseStateMachine {
 
       // create the log entry proto
       final WriteChunkRequestProto commitWriteChunkProto =
-          WriteChunkRequestProto
-              .newBuilder(write)
+          WriteChunkRequestProto.newBuilder()
+              .setPipeline(write.getPipeline())
+              .setKeyName(write.getKeyName())
+              .setChunkData(write.getChunkData())
+              // skipping the data field as it is
+              // already set in statemachine data proto
               .setStage(ContainerProtos.Stage.COMMIT_DATA)
               .build();
       ContainerCommandRequestProto commitContainerCommandProto =
@@ -123,6 +160,11 @@ public class ContainerStateMachine extends BaseStateMachine {
       log = SMLogEntryProto.newBuilder()
           .setData(getShadedByteString(commitContainerCommandProto))
           .setStateMachineData(getShadedByteString(dataContainerCommandProto))
+          .build();
+    } else if (proto.getCmdType() == ContainerProtos.Type.CreateContainer) {
+      log = SMLogEntryProto.newBuilder()
+          .setData(request.getMessage().getContent())
+          .setStateMachineData(request.getMessage().getContent())
           .build();
     } else {
       log = SMLogEntryProto.newBuilder()
@@ -154,12 +196,30 @@ public class ContainerStateMachine extends BaseStateMachine {
     try {
       final ContainerCommandRequestProto requestProto =
           getRequestProto(entry.getSmLogEntry().getStateMachineData());
-      final WriteChunkRequestProto write = requestProto.getWriteChunk();
-      Message raftClientReply = runCommand(requestProto);
-      CompletableFuture<Message> future =
-          CompletableFuture.completedFuture(raftClientReply);
-      writeChunkMap.put(write.getChunkData().getChunkName(),future);
-      return future;
+      if (requestProto.getCmdType() == ContainerProtos.Type.CreateContainer) {
+        String containerName =
+            requestProto.getCreateContainer().getContainerData().getName();
+        createContainerFutureMap.
+            computeIfAbsent(containerName, k -> new CompletableFuture<>());
+        return CompletableFuture.completedFuture(() -> ByteString.EMPTY);
+      } else {
+        final WriteChunkRequestProto write = requestProto.getWriteChunk();
+        String containerName = write.getPipeline().getContainerName();
+        CompletableFuture<Message> future =
+            createContainerFutureMap.get(containerName);
+
+        CompletableFuture<Message> writeChunkFuture;
+        if (future != null) {
+          writeChunkFuture = future.thenApplyAsync(
+              v -> runCommand(requestProto), writeChunkExecutor);
+        } else {
+          writeChunkFuture = CompletableFuture.supplyAsync(
+              () -> runCommand(requestProto), writeChunkExecutor);
+        }
+        writeChunkFutureMap
+            .put(write.getChunkData().getChunkName(), writeChunkFuture);
+        return writeChunkFuture;
+      }
     } catch (IOException e) {
       return completeExceptionally(e);
     }
@@ -186,13 +246,21 @@ public class ContainerStateMachine extends BaseStateMachine {
 
       if (requestProto.getCmdType() == ContainerProtos.Type.WriteChunk) {
         WriteChunkRequestProto write = requestProto.getWriteChunk();
+        // the data field has already been removed in start Transaction
+        Preconditions.checkArgument(!write.hasData());
         CompletableFuture<Message> stateMachineFuture =
-            writeChunkMap.remove(write.getChunkData().getChunkName());
+            writeChunkFutureMap.remove(write.getChunkData().getChunkName());
         return stateMachineFuture
             .thenComposeAsync(v ->
                 CompletableFuture.completedFuture(runCommand(requestProto)));
       } else {
-        return CompletableFuture.completedFuture(runCommand(requestProto));
+        Message message = runCommand(requestProto);
+        if (requestProto.getCmdType() == ContainerProtos.Type.CreateContainer) {
+          String containerName =
+              requestProto.getCreateContainer().getContainerData().getName();
+          createContainerFutureMap.remove(containerName).complete(message);
+        }
+        return CompletableFuture.completedFuture(message);
       }
     } catch (IOException e) {
       return completeExceptionally(e);
@@ -207,6 +275,5 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   @Override
   public void close() throws IOException {
-    writeChunkExecutor.shutdown();
   }
 }
