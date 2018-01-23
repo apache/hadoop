@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Private
@@ -200,6 +201,11 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public Integer getDecommissioningTimeout() {
     return null;
+  }
+
+  @Override
+  public Map<String, Long> getAllocationTagsWithCount() {
+    return node.getAllocationTagsWithCount();
   }
 
   @Override

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -276,6 +277,11 @@ public class MockNodes {
 
     @Override
     public Integer getDecommissioningTimeout() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getAllocationTagsWithCount() {
       return null;
     }
 
