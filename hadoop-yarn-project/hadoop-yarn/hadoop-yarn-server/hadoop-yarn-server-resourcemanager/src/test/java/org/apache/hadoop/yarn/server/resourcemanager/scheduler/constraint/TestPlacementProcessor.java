@@ -151,6 +151,55 @@ public class TestPlacementProcessor {
   }
 
   @Test(timeout = 300000)
+  public void testMutualAntiAffinityPlacement() throws Exception {
+    HashMap<NodeId, MockNM> nodes = new HashMap<>();
+    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm1.getNodeId(), nm1);
+    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm2.getNodeId(), nm2);
+    MockNM nm3 = new MockNM("h3:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm3.getNodeId(), nm3);
+    MockNM nm4 = new MockNM("h4:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm4.getNodeId(), nm4);
+    MockNM nm5 = new MockNM("h5:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm5.getNodeId(), nm5);
+    nm1.registerNode();
+    nm2.registerNode();
+    nm3.registerNode();
+    nm4.registerNode();
+    nm5.registerNode();
+
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    // Containers with allocationTag 'foo' are restricted to 1 per NODE
+    Map<Set<String>, PlacementConstraint> pcMap = new HashMap<>();
+    pcMap.put(Collections.singleton("foo"),
+        PlacementConstraints.build(
+            PlacementConstraints.targetNotIn(NODE, allocationTag("foo"))));
+    pcMap.put(Collections.singleton("bar"),
+        PlacementConstraints.build(
+            PlacementConstraints.targetNotIn(NODE, allocationTag("foo"))));
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2, pcMap);
+    am1.addSchedulingRequest(
+        Arrays.asList(schedulingRequest(1, 1, 1, 512, "bar"),
+            schedulingRequest(1, 2, 1, 512, "foo"),
+            schedulingRequest(1, 3, 1, 512, "foo"),
+            schedulingRequest(1, 4, 1, 512, "foo"),
+            schedulingRequest(1, 5, 1, 512, "foo")));
+    AllocateResponse allocResponse = am1.schedule(); // send the request
+    List<Container> allocatedContainers = new ArrayList<>();
+    allocatedContainers.addAll(allocResponse.getAllocatedContainers());
+
+    // kick the scheduler
+    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 5);
+
+    Assert.assertEquals(5, allocatedContainers.size());
+    Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
+        .collect(Collectors.toSet());
+    // Ensure unique nodes (antiaffinity)
+    Assert.assertEquals(5, nodeIds.size());
+  }
+
+  @Test(timeout = 300000)
   public void testCardinalityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
     MockNM nm1 = new MockNM("h1:1234", 8192, rm.getResourceTrackerService());
