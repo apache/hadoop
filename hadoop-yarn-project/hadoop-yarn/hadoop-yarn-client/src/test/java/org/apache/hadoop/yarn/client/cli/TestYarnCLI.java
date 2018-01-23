@@ -2064,11 +2064,14 @@ public class TestYarnCLI {
     pw.println("                                          Supports -appTypes option to");
     pw.println("                                          specify which client");
     pw.println("                                          implementation to use.");
-    pw.println(" -enableFastLaunch                        Uploads AM dependencies to HDFS");
+    pw.println(" -enableFastLaunch <Destination Folder>   Uploads AM dependencies to HDFS");
     pw.println("                                          to make future launches faster.");
     pw.println("                                          Supports -appTypes option to");
     pw.println("                                          specify which client");
     pw.println("                                          implementation to use.");
+    pw.println("                                          Optionally a destination folder");
+    pw.println("                                          for the tarball can be");
+    pw.println("                                          specified.");
     pw.println(" -flex <Application Name or ID>           Changes number of running");
     pw.println("                                          containers for a component of an");
     pw.println("                                          application / long-running");
