@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -28,19 +27,17 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos
-  .JournalIdProto;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos
-  .GetEditLogManifestRequestProto;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos
-  .GetEditLogManifestResponseProto;
-import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolPB;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolPB;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +49,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +67,6 @@ public class JournalNodeSyncer {
   private final Journal journal;
   private final String jid;
   private  String nameServiceId;
-  private final JournalIdProto jidProto;
   private final JNStorage jnStorage;
   private final Configuration conf;
   private volatile Daemon syncJournalDaemon;
@@ -90,7 +87,6 @@ public class JournalNodeSyncer {
     this.journal = journal;
     this.jid = jid;
     this.nameServiceId = nameServiceId;
-    this.jidProto = convertJournalId(this.jid);
     this.jnStorage = journal.getStorage();
     this.conf = conf;
     journalSyncInterval = conf.getLong(
@@ -235,7 +231,7 @@ public class JournalNodeSyncer {
     LOG.info("Syncing Journal " + jn.getBoundIpcAddress().getAddress() + ":"
         + jn.getBoundIpcAddress().getPort() + " with "
         + otherJNProxies.get(index) + ", journal id: " + jid);
-    final QJournalProtocolPB jnProxy = otherJNProxies.get(index).jnProxy;
+    final InterQJournalProtocol jnProxy = otherJNProxies.get(index).jnProxy;
     if (jnProxy == null) {
       LOG.error("JournalNode Proxy not found.");
       return;
@@ -249,13 +245,11 @@ public class JournalNodeSyncer {
       return;
     }
 
-    GetEditLogManifestResponseProto editLogManifest;
+    GetEditLogManifestFromJournalResponseProto editLogManifest;
     try {
-      editLogManifest = jnProxy.getEditLogManifest(null,
-          GetEditLogManifestRequestProto.newBuilder().setJid(jidProto)
-              .setSinceTxId(0)
-              .setInProgressOk(false).build());
-    } catch (ServiceException e) {
+      editLogManifest = jnProxy.getEditLogManifestFromJournal(jid,
+          nameServiceId, 0, false);
+    } catch (IOException e) {
       LOG.error("Could not sync with Journal at " +
           otherJNProxies.get(journalNodeIndexForSync), e);
       return;
@@ -323,14 +317,8 @@ public class JournalNodeSyncer {
         Sets.newHashSet(jn.getBoundIpcAddress()));
   }
 
-  private JournalIdProto convertJournalId(String journalId) {
-    return QJournalProtocolProtos.JournalIdProto.newBuilder()
-      .setIdentifier(journalId)
-      .build();
-  }
-
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,
-      GetEditLogManifestResponseProto response,
+      GetEditLogManifestFromJournalResponseProto response,
       JournalNodeProxy remoteJNproxy) {
 
     List<RemoteEditLog> otherJournalEditLogs = PBHelper.convert(
@@ -497,13 +485,26 @@ public class JournalNodeSyncer {
 
   private class JournalNodeProxy {
     private final InetSocketAddress jnAddr;
-    private final QJournalProtocolPB jnProxy;
+    private final InterQJournalProtocol jnProxy;
     private URL httpServerUrl;
 
     JournalNodeProxy(InetSocketAddress jnAddr) throws IOException {
+      final Configuration confCopy = new Configuration(conf);
       this.jnAddr = jnAddr;
-      this.jnProxy = RPC.getProxy(QJournalProtocolPB.class,
-          RPC.getProtocolVersion(QJournalProtocolPB.class), jnAddr, conf);
+      this.jnProxy = SecurityUtil.doAsLoginUser(
+          new PrivilegedExceptionAction<InterQJournalProtocol>() {
+            @Override
+            public InterQJournalProtocol run() throws IOException {
+              RPC.setProtocolEngine(confCopy, InterQJournalProtocolPB.class,
+                  ProtobufRpcEngine.class);
+              InterQJournalProtocolPB interQJournalProtocolPB = RPC.getProxy(
+                  InterQJournalProtocolPB.class,
+                  RPC.getProtocolVersion(InterQJournalProtocolPB.class),
+                  jnAddr, confCopy);
+              return new InterQJournalProtocolTranslatorPB(
+                  interQJournalProtocolPB);
+            }
+          });
     }
 
     @Override
