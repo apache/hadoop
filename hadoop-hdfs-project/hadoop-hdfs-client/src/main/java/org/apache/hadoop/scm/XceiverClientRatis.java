@@ -19,6 +19,7 @@
 package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -68,7 +70,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private final AtomicReference<RaftClient> client = new AtomicReference<>();
   private final int maxOutstandingRequests;
 
-  /** Constructs a client. */
+  /**
+   * Constructs a client.
+   */
   private XceiverClientRatis(Pipeline pipeline, RpcType rpcType,
       int maxOutStandingChunks) {
     super();
@@ -78,7 +82,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   }
 
   /**
-   *  {@inheritDoc}
+   * {@inheritDoc}
    */
   public void createPipeline(String clusterId, List<DatanodeID> datanodes)
       throws IOException {
@@ -90,6 +94,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   /**
    * Returns Ratis as pipeline Type.
+   *
    * @return - Ratis
    */
   @Override
@@ -97,8 +102,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return OzoneProtos.ReplicationType.RATIS;
   }
 
-  private void reinitialize(
-      List<DatanodeID> datanodes, RaftGroup group)
+  private void reinitialize(List<DatanodeID> datanodes, RaftGroup group)
       throws IOException {
     if (datanodes.isEmpty()) {
       return;
@@ -124,8 +128,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   /**
    * Adds a new peers to the Ratis Ring.
+   *
    * @param datanode - new datanode
-   * @param group - Raft group
+   * @param group    - Raft group
    * @throws IOException - on Failure.
    */
   private void reinitialize(DatanodeID datanode, RaftGroup group)
@@ -140,8 +145,6 @@ public final class XceiverClientRatis extends XceiverClientSpi {
           + "(datanode=" + datanode + ")", ioe);
     }
   }
-
-
 
   @Override
   public Pipeline getPipeline() {
@@ -216,6 +219,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return reply;
   }
 
+  private CompletableFuture<RaftClientReply> sendRequestAsync(
+      ContainerCommandRequestProto request) throws IOException {
+    boolean isReadOnlyRequest = isReadOnly(request);
+    ByteString byteString =
+        ShadedProtoUtil.asShadedByteString(request.toByteArray());
+    LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
+    return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
+        getClient().sendAsync(() -> byteString);
+  }
+
   @Override
   public ContainerCommandResponseProto sendCommand(
       ContainerCommandRequestProto request) throws IOException {
@@ -236,6 +249,16 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
       ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-    throw new IOException("Not implemented");
+    return sendRequestAsync(request).whenComplete((reply, e) ->
+          LOG.debug("received reply {} for request: {} exception: {}", request,
+              reply, e))
+        .thenApply(reply -> {
+          try {
+            return ContainerCommandResponseProto.parseFrom(
+                ShadedProtoUtil.asByteString(reply.getMessage().getContent()));
+          } catch (InvalidProtocolBufferException e) {
+            throw new CompletionException(e);
+          }
+        });
   }
 }

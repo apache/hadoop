@@ -100,7 +100,7 @@
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.1.1-alpha-e914e7a-SNAPSHOT</ratis.version>
+    <ratis.version>0.1.1-alpha-0f7169d-SNAPSHOT</ratis.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>

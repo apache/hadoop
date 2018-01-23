@@ -38,6 +38,7 @@ import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.util.SizeInBytes;
+import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,18 +116,17 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     RaftServerConfigKeys.setStorageDir(properties, new File(storageDir));
     RaftConfigKeys.Rpc.setType(properties, rpc);
 
-    //TODO: change these configs to setter after RATIS-154
-    properties.setInt("raft.server.log.segment.cache.num.max", 2);
-    properties.setInt("raft.grpc.message.size.max",
-        scmChunkSize + raftSegmentPreallocatedSize);
-    properties.setInt("raft.server.rpc.timeout.min", 800);
-    properties.setInt("raft.server.rpc.timeout.max", 1000);
+    RaftServerConfigKeys.Log.setMaxCachedSegmentNum(properties, 2);
+    GrpcConfigKeys.setMessageSizeMax(properties,
+        SizeInBytes.valueOf(scmChunkSize + raftSegmentPreallocatedSize));
+    RaftServerConfigKeys.Rpc.setTimeoutMin(properties,
+        TimeDuration.valueOf(800, TimeUnit.MILLISECONDS));
+    RaftServerConfigKeys.Rpc.setTimeoutMax(properties,
+        TimeDuration.valueOf(1000, TimeUnit.MILLISECONDS));
     if (rpc == SupportedRpcType.GRPC) {
       GrpcConfigKeys.Server.setPort(properties, port);
-    } else {
-      if (rpc == SupportedRpcType.NETTY) {
-        NettyConfigKeys.Server.setPort(properties, port);
-      }
+    } else if (rpc == SupportedRpcType.NETTY) {
+      NettyConfigKeys.Server.setPort(properties, port);
     }
     return properties;
   }

@@ -157,6 +157,7 @@
                       <!-- Leave javax APIs that are stable -->
                       <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
                       <exclude>com.google.code.findbugs:jsr305</exclude>
+                      <exclude>io.dropwizard.metrics:metrics-core</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
