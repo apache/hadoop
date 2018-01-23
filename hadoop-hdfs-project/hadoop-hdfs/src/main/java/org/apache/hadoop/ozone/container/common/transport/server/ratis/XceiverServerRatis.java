@@ -28,7 +28,6 @@ import org.apache.hadoop.ozone.container.common.transport.server
     .XceiverServerSpi;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
@@ -48,6 +47,9 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Creates a ratis server endpoint that acts as the communication layer for
@@ -57,6 +59,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverServerRatis.class);
   private final int port;
   private final RaftServer server;
+  private ThreadPoolExecutor writeChunkExecutor;
 
   private XceiverServerRatis(DatanodeID id, int port, String storageDir,
       ContainerDispatcher dispatcher, Configuration conf) throws IOException {
@@ -68,6 +71,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     final int raftSegmentSize = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT);
+    final int raftSegmentPreallocatedSize = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT);
     final int maxChunkSize = OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE;
     final int numWriteChunkThreads = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
@@ -76,28 +82,34 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     Objects.requireNonNull(id, "id == null");
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(rpc, port,
-        storageDir, maxChunkSize, raftSegmentSize);
+        storageDir, maxChunkSize, raftSegmentSize, raftSegmentPreallocatedSize);
 
+    writeChunkExecutor =
+        new ThreadPoolExecutor(numWriteChunkThreads, numWriteChunkThreads,
+            100, TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(1024),
+            new ThreadPoolExecutor.CallerRunsPolicy());
+    ContainerStateMachine stateMachine =
+        new ContainerStateMachine(dispatcher, writeChunkExecutor);
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(id))
         .setGroup(RatisHelper.emptyRaftGroup())
         .setProperties(serverProperties)
-        .setStateMachine(new ContainerStateMachine(dispatcher,
-            numWriteChunkThreads))
+        .setStateMachine(stateMachine)
         .build();
   }
 
   private static RaftProperties newRaftProperties(
       RpcType rpc, int port, String storageDir, int scmChunkSize,
-      int raftSegmentSize) {
+      int raftSegmentSize, int raftSegmentPreallocatedSize) {
     final RaftProperties properties = new RaftProperties();
     RaftServerConfigKeys.Log.Appender.setBatchEnabled(properties, true);
     RaftServerConfigKeys.Log.Appender.setBufferCapacity(properties,
-        SizeInBytes.valueOf(raftSegmentSize));
+        SizeInBytes.valueOf(raftSegmentPreallocatedSize));
     RaftServerConfigKeys.Log.setWriteBufferSize(properties,
         SizeInBytes.valueOf(scmChunkSize));
     RaftServerConfigKeys.Log.setPreallocatedSize(properties,
-        SizeInBytes.valueOf(raftSegmentSize));
+        SizeInBytes.valueOf(raftSegmentPreallocatedSize));
     RaftServerConfigKeys.Log.setSegmentSizeMax(properties,
         SizeInBytes.valueOf(raftSegmentSize));
     RaftServerConfigKeys.setStorageDir(properties, new File(storageDir));
@@ -106,9 +118,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     //TODO: change these configs to setter after RATIS-154
     properties.setInt("raft.server.log.segment.cache.num.max", 2);
     properties.setInt("raft.grpc.message.size.max",
-        scmChunkSize + raftSegmentSize);
-    properties.setInt("raft.server.rpc.timeout.min", 500);
-    properties.setInt("raft.server.rpc.timeout.max", 600);
+        scmChunkSize + raftSegmentPreallocatedSize);
+    properties.setInt("raft.server.rpc.timeout.min", 800);
+    properties.setInt("raft.server.rpc.timeout.max", 1000);
     if (rpc == SupportedRpcType.GRPC) {
       GrpcConfigKeys.Server.setPort(properties, port);
     } else {
@@ -171,12 +183,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   public void start() throws IOException {
     LOG.info("Starting {} {} at port {}", getClass().getSimpleName(),
         server.getId(), getIPCPort());
+    writeChunkExecutor.prestartAllCoreThreads();
     server.start();
   }
 
   @Override
   public void stop() {
     try {
+      writeChunkExecutor.shutdown();
       server.close();
     } catch (IOException e) {
       throw new RuntimeException(e);
