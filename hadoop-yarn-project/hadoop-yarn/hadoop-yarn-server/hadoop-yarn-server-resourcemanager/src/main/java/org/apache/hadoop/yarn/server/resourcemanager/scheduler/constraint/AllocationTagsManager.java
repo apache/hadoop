@@ -548,4 +548,15 @@ public class AllocationTagsManager {
       readLock.unlock();
     }
   }
+
+  /**
+   * Returns a map whose key is the allocation tag and value is the
+   * count of allocations with this tag.
+   *
+   * @param nodeId
+   * @return allocation tag to count mapping
+   */
+  public Map<String, Long> getAllocationTagsWithCount(NodeId nodeId) {
+    return globalNodeMapping.getTypeToTagsWithCount().get(nodeId);
+  }
 }
