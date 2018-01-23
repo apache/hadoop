@@ -167,4 +167,12 @@ public interface Context {
    */
   void removeAllSPSPathIds();
 
+  /**
+   * Gets the file path for a given inode id.
+   *
+   * @param inodeId
+   *          - path inode id.
+   */
+  String getFilePath(Long inodeId);
+
 }

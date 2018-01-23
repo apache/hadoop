@@ -80,7 +80,7 @@ public interface SPSService {
    *
    * @param itemInfo
    */
-  void addFileIdToProcess(ItemInfo itemInfo);
+  void addFileIdToProcess(ItemInfo itemInfo, boolean scanCompleted);
 
   /**
    * Adds all the Item information(file id etc) to processing queue.
@@ -104,4 +104,12 @@ public interface SPSService {
    * @return the configuration.
    */
   Configuration getConf();
+
+  /**
+   * Marks the scanning of directory if finished.
+   *
+   * @param inodeId
+   *          - directory inode id.
+   */
+  void markScanCompletedForPath(Long inodeId);
 }

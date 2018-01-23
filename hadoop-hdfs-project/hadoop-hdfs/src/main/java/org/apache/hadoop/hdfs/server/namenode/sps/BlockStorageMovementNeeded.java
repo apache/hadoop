@@ -97,23 +97,53 @@ public class BlockStorageMovementNeeded {
   }
 
   /**
-   * Add the itemInfo to tracking list for which storage movement
-   * expected if necessary.
+   * Add the itemInfo list to tracking list for which storage movement expected
+   * if necessary.
+   *
    * @param startId
-   *            - start id
+   *          - start id
    * @param itemInfoList
-   *            - List of child in the directory
+   *          - List of child in the directory
+   * @param scanCompleted
+   *          -Indicates whether the start id directory has no more elements to
+   *          scan.
    */
   @VisibleForTesting
-  public synchronized void addAll(long startId,
-      List<ItemInfo> itemInfoList, boolean scanCompleted) {
+  public synchronized void addAll(long startId, List<ItemInfo> itemInfoList,
+      boolean scanCompleted) {
     storageMovementNeeded.addAll(itemInfoList);
+    updatePendingDirScanStats(startId, itemInfoList.size(), scanCompleted);
+  }
+
+  /**
+   * Add the itemInfo to tracking list for which storage movement expected if
+   * necessary.
+   *
+   * @param itemInfoList
+   *          - List of child in the directory
+   * @param scanCompleted
+   *          -Indicates whether the ItemInfo start id directory has no more
+   *          elements to scan.
+   */
+  @VisibleForTesting
+  public synchronized void add(ItemInfo itemInfo, boolean scanCompleted) {
+    storageMovementNeeded.add(itemInfo);
+    // This represents sps start id is file, so no need to update pending dir
+    // stats.
+    if (itemInfo.getStartId() == itemInfo.getFileId()) {
+      return;
+    }
+    updatePendingDirScanStats(itemInfo.getStartId(), 1, scanCompleted);
+  }
+
+  private void updatePendingDirScanStats(long startId, int numScannedFiles,
+      boolean scanCompleted) {
     DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
     if (pendingWork == null) {
       pendingWork = new DirPendingWorkInfo();
       pendingWorkForDirectory.put(startId, pendingWork);
     }
-    pendingWork.addPendingWorkCount(itemInfoList.size());
+    pendingWork.addPendingWorkCount(numScannedFiles);
     if (scanCompleted) {
       pendingWork.markScanCompleted();
     }
@@ -250,13 +280,15 @@ public class BlockStorageMovementNeeded {
 
     @Override
     public void run() {
-      LOG.info("Starting FileInodeIdCollector!.");
+      LOG.info("Starting SPSPathIdProcessor!.");
       long lastStatusCleanTime = 0;
+      Long startINodeId = null;
       while (ctxt.isRunning()) {
-        LOG.info("Running FileInodeIdCollector!.");
         try {
           if (!ctxt.isInSafeMode()) {
-            Long startINodeId = ctxt.getNextSPSPathId();
+            if (startINodeId == null) {
+              startINodeId = ctxt.getNextSPSPathId();
+            } // else same id will be retried
             if (startINodeId == null) {
               // Waiting for SPS path
               Thread.sleep(3000);
@@ -281,9 +313,18 @@ public class BlockStorageMovementNeeded {
               lastStatusCleanTime = Time.monotonicNow();
               cleanSpsStatus();
             }
+            startINodeId = null; // Current inode id successfully scanned.
           }
         } catch (Throwable t) {
-          LOG.warn("Exception while loading inodes to satisfy the policy", t);
+          String reClass = t.getClass().getName();
+          if (InterruptedException.class.getName().equals(reClass)) {
+            LOG.info("SPSPathIdProcessor thread is interrupted. Stopping..");
+            Thread.currentThread().interrupt();
+            break;
+          }
+          LOG.warn("Exception while scanning file inodes to satisfy the policy",
+              t);
+          // TODO: may be we should retry the current inode id?
         }
       }
     }
@@ -425,5 +466,12 @@ public class BlockStorageMovementNeeded {
   @VisibleForTesting
   public static long getStatusClearanceElapsedTimeMs() {
     return statusClearanceElapsedTimeMs;
+  }
+
+  public void markScanCompletedForDir(Long inodeId) {
+    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(inodeId);
+    if (pendingWork != null) {
+      pendingWork.markScanCompleted();
+    }
   }
 }

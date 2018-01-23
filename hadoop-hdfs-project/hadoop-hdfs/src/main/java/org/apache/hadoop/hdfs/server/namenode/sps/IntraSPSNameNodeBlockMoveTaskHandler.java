@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockM
  * This class handles the internal SPS block movements. This will assign block
  * movement tasks to target datanode descriptors.
  */
+@InterfaceAudience.Private
 public class IntraSPSNameNodeBlockMoveTaskHandler
     implements BlockMoveTaskHandler {
 

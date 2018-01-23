@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
  * A specific implementation for scanning the directory with Namenode internal
  * Inode structure and collects the file ids under the given directory ID.
  */
+@InterfaceAudience.Private
 public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
     implements FileIdCollector {
   private int maxQueueLimitToScan;
@@ -131,12 +133,12 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
       } else {
 
         readLock();
-        // NOTE: this lock will not be held until full directory scanning. It is
+        // NOTE: this lock will not be held for full directory scanning. It is
         // basically a sliced locking. Once it collects a batch size( at max the
         // size of maxQueueLimitToScan (default 1000)) file ids, then it will
         // unlock and submits the current batch to SPSService. Once
         // service.processingQueueSize() shows empty slots, then lock will be
-        // resumed and scan also will be resumed. This logic was re-used from
+        // re-acquired and scan will be resumed. This logic was re-used from
         // EDEK feature.
         try {
           traverseDir(startInode.asDirectory(), startINodeId,

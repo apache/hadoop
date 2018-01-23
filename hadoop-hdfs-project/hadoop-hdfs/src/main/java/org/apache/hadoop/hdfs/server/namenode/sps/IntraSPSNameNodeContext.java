@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SAT
 import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
  * are expecting to change its storages and assigning the block storage
  * movements to satisfy the storage policy.
  */
+@InterfaceAudience.Private
 public class IntraSPSNameNodeContext implements Context {
   private static final Logger LOG = LoggerFactory
       .getLogger(IntraSPSNameNodeContext.class);
@@ -194,5 +196,10 @@ public class IntraSPSNameNodeContext implements Context {
   @Override
   public void removeAllSPSPathIds() {
     blockManager.removeAllSPSPathIds();
+  }
+
+  @Override
+  public String getFilePath(Long inodeId) {
+    return namesystem.getFilePath(inodeId);
   }
 }

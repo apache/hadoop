@@ -71,6 +71,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,18 +94,41 @@ public class TestStoragePolicySatisfier {
   private static final String COLD = "COLD";
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStoragePolicySatisfier.class);
-  private final Configuration config = new HdfsConfiguration();
+  private Configuration config = null;
   private StorageType[][] allDiskTypes =
       new StorageType[][]{{StorageType.DISK, StorageType.DISK},
           {StorageType.DISK, StorageType.DISK},
           {StorageType.DISK, StorageType.DISK}};
   private MiniDFSCluster hdfsCluster = null;
-  final private int numOfDatanodes = 3;
-  final private int storagesPerDatanode = 2;
-  final private long capacity = 2 * 256 * 1024 * 1024;
-  final private String file = "/testMoveWhenStoragePolicyNotSatisfying";
   private DistributedFileSystem dfs = null;
-  private static final int DEFAULT_BLOCK_SIZE = 1024;
+  public static final int NUM_OF_DATANODES = 3;
+  public static final int STORAGES_PER_DATANODE = 2;
+  public static final long CAPACITY = 2 * 256 * 1024 * 1024;
+  public static final String FILE = "/testMoveWhenStoragePolicyNotSatisfying";
+  public static final int DEFAULT_BLOCK_SIZE = 1024;
+
+  /**
+   * Sets hdfs cluster.
+   */
+  public void setCluster(MiniDFSCluster cluster) {
+    this.hdfsCluster = cluster;
+  }
+
+  /**
+   * @return conf.
+   */
+  public Configuration getConf() {
+    return this.config;
+  }
+
+  /**
+   * Gets distributed file system.
+   *
+   * @throws IOException
+   */
+  public void getFS() throws IOException {
+    this.dfs = hdfsCluster.getFileSystem();
+  }
 
   @After
   public void shutdownCluster() {
@@ -113,14 +137,19 @@ public class TestStoragePolicySatisfier {
     }
   }
 
-  private void createCluster() throws IOException {
+  public void createCluster() throws IOException {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
-    hdfsCluster = startCluster(config, allDiskTypes, numOfDatanodes,
-        storagesPerDatanode, capacity);
-    dfs = hdfsCluster.getFileSystem();
-    writeContent(file);
+    hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
+        STORAGES_PER_DATANODE, CAPACITY);
+    getFS();
+    writeContent(FILE);
+  }
+
+  @Before
+  public void setUp() {
+    config = new HdfsConfiguration();
   }
 
   @Test(timeout = 300000)
@@ -137,19 +166,19 @@ public class TestStoragePolicySatisfier {
 
   private void doTestWhenStoragePolicySetToCOLD() throws Exception {
     // Change policy to COLD
-    dfs.setStoragePolicy(new Path(file), COLD);
+    dfs.setStoragePolicy(new Path(FILE), COLD);
 
     StorageType[][] newtypes =
         new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE},
             {StorageType.ARCHIVE, StorageType.ARCHIVE},
             {StorageType.ARCHIVE, StorageType.ARCHIVE}};
-    startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-        storagesPerDatanode, capacity, hdfsCluster);
+    startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+        STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
     hdfsCluster.triggerHeartbeats();
-    dfs.satisfyStoragePolicy(new Path(file));
+    dfs.satisfyStoragePolicy(new Path(FILE));
     // Wait till namenode notified about the block location details
-    DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 3, 35000,
+    DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 3, 35000,
         dfs);
   }
 
@@ -159,7 +188,7 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Change policy to ALL_SSD
-      dfs.setStoragePolicy(new Path(file), "ALL_SSD");
+      dfs.setStoragePolicy(new Path(FILE), "ALL_SSD");
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK},
@@ -168,14 +197,13 @@ public class TestStoragePolicySatisfier {
 
       // Making sure SDD based nodes added to cluster. Adding SSD based
       // datanodes.
-      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
-      dfs.satisfyStoragePolicy(new Path(file));
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.SSD, 3, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.SSD, 3, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -187,23 +215,22 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Change policy to ONE_SSD
-      dfs.setStoragePolicy(new Path(file), ONE_SSD);
+      dfs.setStoragePolicy(new Path(FILE), ONE_SSD);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
 
       // Making sure SDD based nodes added to cluster. Adding SSD based
       // datanodes.
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
-      dfs.satisfyStoragePolicy(new Path(file));
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.SSD, 1, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 2, 30000,
+          dfs);
     } finally {
       shutdownCluster();
     }
@@ -218,23 +245,22 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Change policy to ONE_SSD
-      dfs.setStoragePolicy(new Path(file), ONE_SSD);
+      dfs.setStoragePolicy(new Path(FILE), ONE_SSD);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
 
       // Making sure SDD based nodes added to cluster. Adding SSD based
       // datanodes.
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
-      dfs.satisfyStoragePolicy(new Path(file));
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
 
       // Wait till the block is moved to SSD areas
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.SSD, 1, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 2, 30000,
+          dfs);
 
       waitForBlocksMovementAttemptReport(1, 30000);
     } finally {
@@ -251,7 +277,7 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       List<String> files = new ArrayList<>();
-      files.add(file);
+      files.add(FILE);
 
       // Creates 4 more files. Send all of them for satisfying the storage
       // policy together.
@@ -271,8 +297,8 @@ public class TestStoragePolicySatisfier {
 
       // Making sure SDD based nodes added to cluster. Adding SSD based
       // datanodes.
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
       hdfsCluster.triggerHeartbeats();
 
       for (String fileName : files) {
@@ -300,21 +326,21 @@ public class TestStoragePolicySatisfier {
       HdfsAdmin hdfsAdmin =
           new HdfsAdmin(FileSystem.getDefaultUri(config), config);
       // Change policy to COLD
-      dfs.setStoragePolicy(new Path(file), COLD);
+      dfs.setStoragePolicy(new Path(FILE), COLD);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
               {StorageType.DISK, StorageType.ARCHIVE},
               {StorageType.DISK, StorageType.ARCHIVE}};
-      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
-      hdfsAdmin.satisfyStoragePolicy(new Path(file));
+      hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
 
       hdfsCluster.triggerHeartbeats();
       // Wait till namenode notified about the block location details
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.ARCHIVE, 3, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 3, 30000,
+          dfs);
     } finally {
       shutdownCluster();
     }
@@ -344,8 +370,8 @@ public class TestStoragePolicySatisfier {
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
       hdfsAdmin.satisfyStoragePolicy(new Path(subDir));
 
@@ -384,11 +410,11 @@ public class TestStoragePolicySatisfier {
           new HdfsAdmin(FileSystem.getDefaultUri(config), config);
 
       try {
-        hdfsAdmin.satisfyStoragePolicy(new Path(file));
+        hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
         Assert.fail(String.format(
             "Should failed to satisfy storage policy "
                 + "for %s since %s is set to false.",
-            file, DFS_STORAGE_POLICY_ENABLED_KEY));
+            FILE, DFS_STORAGE_POLICY_ENABLED_KEY));
       } catch (IOException e) {
         Assert.assertTrue(e.getMessage().contains(String.format(
             "Failed to satisfy storage policy since %s is set to false.",
@@ -409,17 +435,17 @@ public class TestStoragePolicySatisfier {
       }
 
       try {
-        hdfsAdmin.satisfyStoragePolicy(new Path(file));
-        hdfsAdmin.satisfyStoragePolicy(new Path(file));
-        Assert.fail(String.format(
-            "Should failed to satisfy storage policy "
-            + "for %s ,since it has been "
-            + "added to satisfy movement queue.", file));
+        hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
+        hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
+        Assert.fail(String.format("Should failed to satisfy storage policy "
+            + "for %s ,since it has been " + "added to satisfy movement queue.",
+            FILE));
       } catch (IOException e) {
         GenericTestUtils.assertExceptionContains(
             String.format("Cannot request to call satisfy storage policy "
                 + "on path %s, as this file/dir was already called for "
-                + "satisfying storage policy.", file), e);
+                + "satisfying storage policy.", FILE),
+            e);
       }
     } finally {
       shutdownCluster();
@@ -446,23 +472,23 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Change policy to COLD
-      dfs.setStoragePolicy(new Path(file), COLD);
+      dfs.setStoragePolicy(new Path(FILE), COLD);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.ARCHIVE, StorageType.ARCHIVE}};
 
       // Adding ARCHIVE based datanodes.
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.ARCHIVE, 1, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 1, 30000,
+          dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 2, 30000,
+          dfs);
 
       waitForBlocksMovementAttemptReport(1, 30000);
     } finally {
@@ -489,22 +515,22 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Change policy to COLD
-      dfs.setStoragePolicy(new Path(file), COLD);
+      dfs.setStoragePolicy(new Path(FILE), COLD);
 
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.DISK, StorageType.DISK}};
       // Adding DISK based datanodes
-      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 1, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
 
       // No block movement will be scheduled as there is no target node
       // available with the required storage type.
       waitForAttemptedItems(1, 30000);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 3, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 3, 30000,
+          dfs);
       // Since there is no target node the item will get timed out and then
       // re-attempted.
       waitForAttemptedItems(1, 30000);
@@ -628,8 +654,8 @@ public class TestStoragePolicySatisfier {
               {StorageType.ARCHIVE, StorageType.ARCHIVE},
               {StorageType.ARCHIVE, StorageType.ARCHIVE}};
       // Adding DISK based datanodes
-      startAdditionalDNs(config, 3, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
       dfs.satisfyStoragePolicy(new Path(file1));
       hdfsCluster.triggerHeartbeats();
@@ -682,21 +708,21 @@ public class TestStoragePolicySatisfier {
               {StorageType.DISK, StorageType.DISK},
               {StorageType.DISK, StorageType.ARCHIVE}};
       hdfsCluster = startCluster(config, allDiskTypes, numOfDns,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
-      writeContent(file, (short) 5);
+      writeContent(FILE, (short) 5);
 
       // Change policy to COLD
-      dfs.setStoragePolicy(new Path(file), COLD);
+      dfs.setStoragePolicy(new Path(FILE), COLD);
 
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier identified that block to move to
       // ARCHIVE area.
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.ARCHIVE, 2, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 3, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 2, 30000,
+          dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 3, 30000,
+          dfs);
 
       waitForBlocksMovementAttemptReport(1, 30000);
     } finally {
@@ -720,20 +746,19 @@ public class TestStoragePolicySatisfier {
     config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
     try {
-      hdfsCluster = startCluster(config, diskTypes, numOfDatanodes,
-          storagesPerDatanode, capacity);
+      hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
-      writeContent(file);
+      writeContent(FILE);
 
       // Change policy to ONE_SSD
-      dfs.setStoragePolicy(new Path(file), ONE_SSD);
+      dfs.setStoragePolicy(new Path(FILE), ONE_SSD);
 
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.SSD, 1, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.SSD, 1, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 2, 30000,
+          dfs);
 
     } finally {
       shutdownCluster();
@@ -760,19 +785,19 @@ public class TestStoragePolicySatisfier {
         true);
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
-      writeContent(file);
+      writeContent(FILE);
 
       // Change policy to WARM
-      dfs.setStoragePolicy(new Path(file), "WARM");
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.setStoragePolicy(new Path(FILE), "WARM");
+      dfs.satisfyStoragePolicy(new Path(FILE));
       hdfsCluster.triggerHeartbeats();
 
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.DISK, 1, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(
-          file, StorageType.ARCHIVE, 2, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 1, 30000,
+          dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 2, 30000,
+          dfs);
     } finally {
       shutdownCluster();
     }
@@ -794,31 +819,31 @@ public class TestStoragePolicySatisfier {
       config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
           true);
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
       // 1. Write two replica on disk
-      DFSTestUtil.createFile(dfs, new Path(file), DEFAULT_BLOCK_SIZE,
+      DFSTestUtil.createFile(dfs, new Path(FILE), DEFAULT_BLOCK_SIZE,
           (short) 2, 0);
       // 2. Change policy to COLD, so third replica will be written to ARCHIVE.
-      dfs.setStoragePolicy(new Path(file), "COLD");
+      dfs.setStoragePolicy(new Path(FILE), "COLD");
 
       // 3.Change replication factor to 3.
-      dfs.setReplication(new Path(file), (short) 3);
+      dfs.setReplication(new Path(FILE), (short) 3);
 
-      DFSTestUtil
-          .waitExpectedStorageType(file, StorageType.DISK, 2, 30000, dfs);
-      DFSTestUtil.waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000,
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 2, 30000,
+          dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 1, 30000,
           dfs);
 
       // 4. Change policy to HOT, so we can move the all block to DISK.
-      dfs.setStoragePolicy(new Path(file), "HOT");
+      dfs.setStoragePolicy(new Path(FILE), "HOT");
 
       // 4. Satisfy the policy.
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
 
       // 5. Block should move successfully .
-      DFSTestUtil
-          .waitExpectedStorageType(file, StorageType.DISK, 3, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 3, 30000,
+          dfs);
     } finally {
       shutdownCluster();
     }
@@ -840,13 +865,13 @@ public class TestStoragePolicySatisfier {
         true);
     long dnCapacity = 1024 * DEFAULT_BLOCK_SIZE + (2 * DEFAULT_BLOCK_SIZE - 1);
     try {
-      hdfsCluster = startCluster(config, diskTypes, numOfDatanodes,
-          storagesPerDatanode, dnCapacity);
+      hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, dnCapacity);
       dfs = hdfsCluster.getFileSystem();
-      writeContent(file);
+      writeContent(FILE);
 
       // Change policy to ONE_SSD
-      dfs.setStoragePolicy(new Path(file), ONE_SSD);
+      dfs.setStoragePolicy(new Path(FILE), ONE_SSD);
       Path filePath = new Path("/testChooseInSameDatanode");
       final FSDataOutputStream out =
           dfs.create(filePath, false, 100, (short) 1, 2 * DEFAULT_BLOCK_SIZE);
@@ -869,7 +894,7 @@ public class TestStoragePolicySatisfier {
       for (DataNode dataNode : dataNodes) {
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNode, true);
       }
-      dfs.satisfyStoragePolicy(new Path(file));
+      dfs.satisfyStoragePolicy(new Path(FILE));
 
       // Wait for items to be processed
       waitForAttemptedItems(1, 30000);
@@ -887,9 +912,9 @@ public class TestStoragePolicySatisfier {
       }
       hdfsCluster.triggerHeartbeats();
 
-      DFSTestUtil.waitExpectedStorageType(file, StorageType.DISK, 3, 30000,
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.DISK, 3, 30000,
           dfs);
-      DFSTestUtil.waitExpectedStorageType(file, StorageType.SSD, 0, 30000, dfs);
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.SSD, 0, 30000, dfs);
     } finally {
       shutdownCluster();
     }
@@ -928,7 +953,7 @@ public class TestStoragePolicySatisfier {
         true);
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -1029,8 +1054,7 @@ public class TestStoragePolicySatisfier {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK}};
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-          .storageTypes(newtypes).build();
+      cluster = startCluster(conf, newtypes, 3, 2, CAPACITY);
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       Path filePath = new Path("/zeroSizeFile");
@@ -1211,7 +1235,7 @@ public class TestStoragePolicySatisfier {
       config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
           true);
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
       createDirectoryTree(dfs);
 
@@ -1245,7 +1269,7 @@ public class TestStoragePolicySatisfier {
       config.setInt(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
           5);
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-          storagesPerDatanode, capacity);
+          STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
       createDirectoryTree(dfs);
       List<String> files = getDFSListOfTree();
@@ -1284,7 +1308,7 @@ public class TestStoragePolicySatisfier {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     config.setInt(DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY, 10);
     hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-        storagesPerDatanode, capacity);
+        STORAGES_PER_DATANODE, CAPACITY);
     dfs = hdfsCluster.getFileSystem();
     createDirectoryTree(dfs);
 
@@ -1312,8 +1336,7 @@ public class TestStoragePolicySatisfier {
       }
     };
 
-    FileIdCollector fileIDCollector =
-        new IntraSPSNameNodeFileIdCollector(fsDir, sps);
+    FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
     sps.init(ctxt, fileIDCollector, null);
     sps.getStorageMovementQueue().activate();
 
@@ -1323,29 +1346,18 @@ public class TestStoragePolicySatisfier {
 
     //Wait for thread to reach U.
     Thread.sleep(1000);
-
     dfs.delete(new Path("/root/D/L"), true);
 
-    // Remove 10 element and make queue free, So other traversing will start.
-    for (int i = 0; i < 10; i++) {
-      String path = expectedTraverseOrder.remove(0);
-      long trackId = sps.getStorageMovementQueue().get().getFileId();
-      INode inode = fsDir.getInode(trackId);
-      assertTrue("Failed to traverse tree, expected " + path + " but got "
-          + inode.getFullPathName(), path.equals(inode.getFullPathName()));
-    }
-    //Wait to finish tree traverse
-    Thread.sleep(5000);
 
-    // Check other element traversed in order and R,S should not be added in
-    // queue which we already removed from expected list
-    for (String path : expectedTraverseOrder) {
-      long trackId = sps.getStorageMovementQueue().get().getFileId();
-      INode inode = fsDir.getInode(trackId);
-      assertTrue("Failed to traverse tree, expected " + path + " but got "
-          + inode.getFullPathName(), path.equals(inode.getFullPathName()));
-    }
+    assertTraversal(expectedTraverseOrder, fsDir, sps);
     dfs.delete(new Path("/root"), true);
+  }
+
+  public FileIdCollector createFileIdCollector(StoragePolicySatisfier sps,
+      Context ctxt) {
+    FileIdCollector fileIDCollector = new IntraSPSNameNodeFileIdCollector(
+        hdfsCluster.getNamesystem().getFSDirectory(), sps);
+    return fileIDCollector;
   }
 
   /**
@@ -1362,7 +1374,7 @@ public class TestStoragePolicySatisfier {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     config.setInt(DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY, 10);
     hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
-        storagesPerDatanode, capacity);
+        STORAGES_PER_DATANODE, CAPACITY);
     dfs = hdfsCluster.getFileSystem();
     createDirectoryTree(dfs);
 
@@ -1378,7 +1390,6 @@ public class TestStoragePolicySatisfier {
 
     // Queue limit can control the traverse logic to wait for some free
     // entry in queue. After 10 files, traverse control will be on U.
-    // StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
     StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
     Context ctxt = new IntraSPSNameNodeContext(hdfsCluster.getNamesystem(),
         hdfsCluster.getNamesystem().getBlockManager(), sps) {
@@ -1392,9 +1403,7 @@ public class TestStoragePolicySatisfier {
         return true;
       }
     };
-
-    FileIdCollector fileIDCollector =
-        new IntraSPSNameNodeFileIdCollector(fsDir, sps);
+    FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
     sps.init(ctxt, fileIDCollector, null);
     sps.getStorageMovementQueue().activate();
 
@@ -1407,6 +1416,13 @@ public class TestStoragePolicySatisfier {
 
     dfs.delete(new Path("/root/D/L"), true);
 
+    assertTraversal(expectedTraverseOrder, fsDir, sps);
+    dfs.delete(new Path("/root"), true);
+  }
+
+  private void assertTraversal(List<String> expectedTraverseOrder,
+      FSDirectory fsDir, StoragePolicySatisfier sps)
+          throws InterruptedException {
     // Remove 10 element and make queue free, So other traversing will start.
     for (int i = 0; i < 10; i++) {
       String path = expectedTraverseOrder.remove(0);
@@ -1426,7 +1442,6 @@ public class TestStoragePolicySatisfier {
       assertTrue("Failed to traverse tree, expected " + path + " but got "
           + inode.getFullPathName(), path.equals(inode.getFullPathName()));
     }
-    dfs.delete(new Path("/root"), true);
   }
 
   /**
@@ -1473,8 +1488,8 @@ public class TestStoragePolicySatisfier {
       StorageType[][] newtypes =
           new StorageType[][]{{StorageType.DISK, StorageType.SSD},
               {StorageType.DISK, StorageType.SSD}};
-      startAdditionalDNs(config, 2, numOfDatanodes, newtypes,
-          storagesPerDatanode, capacity, hdfsCluster);
+      startAdditionalDNs(config, 2, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
 
       // increase replication factor to 4 for the first 10 files and thus
       // initiate replica tasks
@@ -1772,7 +1787,7 @@ public class TestStoragePolicySatisfier {
     }, 100, timeout);
   }
 
-  private void writeContent(final String fileName) throws IOException {
+  public void writeContent(final String fileName) throws IOException {
     writeContent(fileName, (short) 3);
   }
 
@@ -1805,7 +1820,7 @@ public class TestStoragePolicySatisfier {
     cluster.triggerHeartbeats();
   }
 
-  private MiniDFSCluster startCluster(final Configuration conf,
+  public MiniDFSCluster startCluster(final Configuration conf,
       StorageType[][] storageTypes, int numberOfDatanodes, int storagesPerDn,
       long nodeCapacity) throws IOException {
     long[][] capacities = new long[numberOfDatanodes][storagesPerDn];

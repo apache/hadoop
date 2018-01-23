@@ -563,7 +563,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
                 chosenTarget.storageType, blockMovingInfos);
           }
           expected.remove(chosenTarget.storageType);
-          // TODO: We can increment scheduled block count for this node?
         }
       }
       // To avoid choosing this excludeNodes as targets later
@@ -924,7 +923,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   @Override
-  public void addFileIdToProcess(ItemInfo trackInfo) {
+  public void addFileIdToProcess(ItemInfo trackInfo, boolean scanCompleted) {
     storageMovementNeeded.add(trackInfo);
   }
 
@@ -947,5 +946,10 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   @VisibleForTesting
   public BlockStorageMovementNeeded getStorageMovementQueue() {
     return storageMovementNeeded;
+  }
+
+  @Override
+  public void markScanCompletedForPath(Long inodeId) {
+    getStorageMovementQueue().markScanCompletedForDir(inodeId);
   }
 }
