@@ -1656,7 +1656,7 @@
   <property>
     <description>Property to enable docker user remapping</description>
     <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
