@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsUtil;
@@ -53,13 +52,14 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
   // Number of times to re-attempt placing a single scheduling request.
   private static final int RE_ATTEMPT_COUNT = 2;
 
-  private AllocationTagsManager tagsManager;
+  private LocalAllocationTagsManager tagsManager;
   private PlacementConstraintManager constraintManager;
   private NodeCandidateSelector nodeSelector;
 
   @Override
   public void init(RMContext rmContext) {
-    this.tagsManager = rmContext.getAllocationTagsManager();
+    this.tagsManager = new LocalAllocationTagsManager(
+        rmContext.getAllocationTagsManager());
     this.constraintManager = rmContext.getPlacementConstraintManager();
     this.nodeSelector =
         filter -> ((AbstractYarnScheduler) (rmContext).getScheduler())
@@ -143,7 +143,7 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
             numAllocs =
                 schedulingRequest.getResourceSizing().getNumAllocations();
             // Add temp-container tags for current placement cycle
-            this.tagsManager.addTempContainer(node.getNodeID(),
+            this.tagsManager.addTempTags(node.getNodeID(),
                 requests.getApplicationId(),
                 schedulingRequest.getAllocationTags());
             lastSatisfiedNode = node;
