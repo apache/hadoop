@@ -153,6 +153,9 @@ public abstract class WebApp extends ServletModule {
 
   void setGuiceFilter(GuiceFilter instance) {
     guiceFilter = instance;
+    LOG.info("Registered webapp guice modules");
+    HttpServer2.defineFilter(httpServer.getWebAppContext(), "guice",
+      instance, null, new String[] { "/*" });
   }
 
   @Override
