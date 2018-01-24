@@ -483,7 +483,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     nodeHealthStatus.setIsNodeHealthy(healthChecker.isHealthy());
     nodeHealthStatus.setLastHealthReportTime(healthChecker
       .getLastHealthReportTime());
-    if (LOG.isDebugEnabled()) {
+
+    if (!nodeHealthStatus.getIsNodeHealthy()){
+       LOG.warn("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
+              + ", " + nodeHealthStatus.getHealthReport());
+    }
+    else if (LOG.isDebugEnabled()) {
       LOG.debug("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
           + ", " + nodeHealthStatus.getHealthReport());
     }

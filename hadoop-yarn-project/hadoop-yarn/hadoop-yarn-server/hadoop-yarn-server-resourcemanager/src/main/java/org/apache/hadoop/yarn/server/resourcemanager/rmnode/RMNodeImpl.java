@@ -1229,7 +1229,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
-        LOG.info("Node " + rmNode.nodeId +
+        LOG.warn("Node " + rmNode.nodeId +
             " reported UNHEALTHY with details: " +
             remoteNodeHealthStatus.getHealthReport());
         // if a node in decommissioning receives an unhealthy report,
