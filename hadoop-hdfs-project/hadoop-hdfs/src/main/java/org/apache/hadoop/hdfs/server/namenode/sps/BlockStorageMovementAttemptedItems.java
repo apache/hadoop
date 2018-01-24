@@ -46,8 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
  * finished for a longer time period, then such items will retries automatically
  * after timeout. The default timeout would be 5 minutes.
  */
-public class BlockStorageMovementAttemptedItems
-    implements BlockMovementListener {
+public class BlockStorageMovementAttemptedItems{
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class);
 
@@ -59,6 +58,7 @@ public class BlockStorageMovementAttemptedItems
   private final List<Block> movementFinishedBlocks;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
+  private final BlockMovementListener blkMovementListener;
   //
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
@@ -74,7 +74,8 @@ public class BlockStorageMovementAttemptedItems
   private final SPSService service;
 
   public BlockStorageMovementAttemptedItems(SPSService service,
-      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles) {
+      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles,
+      BlockMovementListener blockMovementListener) {
     this.service = service;
     long recheckTimeout = this.service.getConf().getLong(
         DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
@@ -89,6 +90,7 @@ public class BlockStorageMovementAttemptedItems
     this.blockStorageMovementNeeded = unsatisfiedStorageMovementFiles;
     storageMovementAttemptedItems = new ArrayList<>();
     movementFinishedBlocks = new ArrayList<>();
+    this.blkMovementListener = blockMovementListener;
   }
 
   /**
@@ -117,6 +119,10 @@ public class BlockStorageMovementAttemptedItems
     }
     synchronized (movementFinishedBlocks) {
       movementFinishedBlocks.addAll(Arrays.asList(moveAttemptFinishedBlks));
+    }
+    // External listener if it is plugged-in
+    if (blkMovementListener != null) {
+      blkMovementListener.notifyMovementTriedBlocks(moveAttemptFinishedBlks);
     }
   }
 

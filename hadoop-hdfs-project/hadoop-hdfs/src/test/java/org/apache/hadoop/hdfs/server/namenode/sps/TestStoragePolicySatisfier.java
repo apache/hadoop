@@ -92,7 +92,7 @@ public class TestStoragePolicySatisfier {
 
   private static final String ONE_SSD = "ONE_SSD";
   private static final String COLD = "COLD";
-  private static final Logger LOG =
+  protected static final Logger LOG =
       LoggerFactory.getLogger(TestStoragePolicySatisfier.class);
   private Configuration config = null;
   private StorageType[][] allDiskTypes =
@@ -1337,7 +1337,7 @@ public class TestStoragePolicySatisfier {
     };
 
     FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
-    sps.init(ctxt, fileIDCollector, null);
+    sps.init(ctxt, fileIDCollector, null, null);
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");
@@ -1404,7 +1404,7 @@ public class TestStoragePolicySatisfier {
       }
     };
     FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
-    sps.init(ctxt, fileIDCollector, null);
+    sps.init(ctxt, fileIDCollector, null, null);
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");

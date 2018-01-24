@@ -44,8 +44,7 @@ public class IntraSPSNameNodeBlockMoveTaskHandler
   }
 
   @Override
-  public void submitMoveTask(BlockMovingInfo blkMovingInfo,
-      BlockMovementListener blockMoveCompletionListener) throws IOException {
+  public void submitMoveTask(BlockMovingInfo blkMovingInfo) throws IOException {
     namesystem.readLock();
     try {
       DatanodeDescriptor dn = blockManager.getDatanodeManager()

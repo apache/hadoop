@@ -269,6 +269,14 @@ public class NameNodeConnector implements Closeable {
     }
   }
 
+  /**
+   * Returns fallbackToSimpleAuth. This will be true or false during calls to
+   * indicate if a secure client falls back to simple auth.
+   */
+  public AtomicBoolean getFallbackToSimpleAuth() {
+    return fallbackToSimpleAuth;
+  }
+
   @Override
   public void close() {
     keyManager.close();

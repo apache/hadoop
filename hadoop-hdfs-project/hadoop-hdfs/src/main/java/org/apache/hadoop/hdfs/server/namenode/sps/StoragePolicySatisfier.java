@@ -132,13 +132,14 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   public void init(final Context context, final FileIdCollector fileIDCollector,
-      final BlockMoveTaskHandler blockMovementTaskHandler) {
+      final BlockMoveTaskHandler blockMovementTaskHandler,
+      final BlockMovementListener blockMovementListener) {
     this.ctxt = context;
     this.storageMovementNeeded =
         new BlockStorageMovementNeeded(context, fileIDCollector);
     this.storageMovementsMonitor =
         new BlockStorageMovementAttemptedItems(this,
-        storageMovementNeeded);
+        storageMovementNeeded, blockMovementListener);
     this.blockMoveTaskHandler = blockMovementTaskHandler;
     this.spsWorkMultiplier = DFSUtil.getSPSWorkMultiplier(getConf());
     this.blockMovementMaxRetry = getConf().getInt(
@@ -291,6 +292,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
                       + " back to retry queue as some of the blocks"
                       + " are low redundant.");
                 }
+                itemInfo.increRetryCount();
                 this.storageMovementNeeded.add(itemInfo);
                 break;
               case BLOCKS_FAILED_TO_MOVE:
@@ -410,15 +412,18 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
             liveDns, ecPolicy);
         if (blocksPaired) {
           status = BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED;
-        } else {
-          // none of the blocks found its eligible targets for satisfying the
-          // storage policy.
+        } else
+          if (status != BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED) {
+          // Check if the previous block was successfully paired. Here the
+          // status will set to NO_BLOCKS_TARGETS_PAIRED only when none of the
+          // blocks of a file found its eligible targets to satisfy the storage
+          // policy.
           status = BlocksMovingAnalysis.Status.NO_BLOCKS_TARGETS_PAIRED;
         }
-      } else {
-        if (hasLowRedundancyBlocks) {
-          status = BlocksMovingAnalysis.Status.FEW_LOW_REDUNDANCY_BLOCKS;
-        }
+      } else if (hasLowRedundancyBlocks
+          && status != BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED) {
+        // Check if the previous block was successfully paired.
+        status = BlocksMovingAnalysis.Status.FEW_LOW_REDUNDANCY_BLOCKS;
       }
     }
 
@@ -426,8 +431,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
       // Check for at least one block storage movement has been chosen
       try {
-        blockMoveTaskHandler.submitMoveTask(blkMovingInfo,
-            storageMovementsMonitor);
+        blockMoveTaskHandler.submitMoveTask(blkMovingInfo);
         LOG.debug("BlockMovingInfo: {}", blkMovingInfo);
         assignedBlockIds.add(blkMovingInfo.getBlock());
         blockCount++;
@@ -823,7 +827,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
    * @param moveAttemptFinishedBlks
    *          set of storage movement attempt finished blocks.
    */
-  public void handleStorageMovementAttemptFinishedBlks(
+  public void notifyStorageMovementAttemptFinishedBlks(
       BlocksStorageMoveAttemptFinished moveAttemptFinishedBlks) {
     if (moveAttemptFinishedBlks.getBlocks().length <= 0) {
       return;
@@ -833,7 +837,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   @VisibleForTesting
-  BlockMovementListener getAttemptedItemsMonitor() {
+  BlockStorageMovementAttemptedItems getAttemptedItemsMonitor() {
     return storageMovementsMonitor;
   }
 

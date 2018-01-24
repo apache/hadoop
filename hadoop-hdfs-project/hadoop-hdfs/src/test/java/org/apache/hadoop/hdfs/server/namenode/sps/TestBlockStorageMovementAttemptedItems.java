@@ -56,7 +56,7 @@ public class TestBlockStorageMovementAttemptedItems {
     unsatisfiedStorageMovementFiles =
         new BlockStorageMovementNeeded(ctxt, null);
     bsmAttemptedItems = new BlockStorageMovementAttemptedItems(sps,
-        unsatisfiedStorageMovementFiles);
+        unsatisfiedStorageMovementFiles, null);
   }
 
   @After

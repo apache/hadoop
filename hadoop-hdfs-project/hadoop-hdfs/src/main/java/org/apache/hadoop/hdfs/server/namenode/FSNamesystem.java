@@ -1299,7 +1299,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               blockManager.getSPSService()),
           new IntraSPSNameNodeFileIdCollector(getFSDirectory(),
               blockManager.getSPSService()),
-          new IntraSPSNameNodeBlockMoveTaskHandler(blockManager, this));
+          new IntraSPSNameNodeBlockMoveTaskHandler(blockManager, this), null);
       blockManager.startSPS();
     } finally {
       startingActiveService = false;
@@ -3996,7 +3996,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                     + "  movement attempt finished block info sent by DN");
           }
         } else {
-          sps.handleStorageMovementAttemptFinishedBlks(blksMovementsFinished);
+          sps.notifyStorageMovementAttemptFinishedBlks(blksMovementsFinished);
         }
       }
 

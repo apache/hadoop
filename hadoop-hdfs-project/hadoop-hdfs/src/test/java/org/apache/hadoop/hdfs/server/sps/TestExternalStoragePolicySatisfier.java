@@ -18,19 +18,32 @@
 package org.apache.hadoop.hdfs.server.sps;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.FileIdCollector;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeBlockMoveTaskHandler;
 import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier;
+import org.junit.Assert;
 import org.junit.Ignore;
+
+import com.google.common.collect.Maps;
 
 /**
  * Tests the external sps service plugins.
@@ -69,23 +82,24 @@ public class TestExternalStoragePolicySatisfier
     cluster.waitActive();
     if (conf.getBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         false)) {
-      SPSService spsService = cluster.getNameNode().getNamesystem()
-          .getBlockManager().getSPSService();
+      BlockManager blkMgr = cluster.getNameNode().getNamesystem()
+          .getBlockManager();
+      SPSService spsService = blkMgr.getSPSService();
       spsService.stopGracefully();
 
       IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
           cluster.getNameNode().getNamesystem(),
-          cluster.getNameNode().getNamesystem().getBlockManager(), cluster
-              .getNameNode().getNamesystem().getBlockManager().getSPSService());
-
+          blkMgr, blkMgr.getSPSService());
+      ExternalBlockMovementListener blkMoveListener =
+          new ExternalBlockMovementListener();
+      ExternalSPSBlockMoveTaskHandler externalHandler =
+          new ExternalSPSBlockMoveTaskHandler(conf, getNameNodeConnector(conf),
+              blkMgr.getSPSService());
+      externalHandler.init();
       spsService.init(context,
-          new ExternalSPSFileIDCollector(context,
-              cluster.getNameNode().getNamesystem().getBlockManager()
-                  .getSPSService(),
-              5),
-          new IntraSPSNameNodeBlockMoveTaskHandler(
-              cluster.getNameNode().getNamesystem().getBlockManager(),
-              cluster.getNameNode().getNamesystem()));
+          new ExternalSPSFileIDCollector(context, blkMgr.getSPSService(), 5),
+          externalHandler,
+          blkMoveListener);
       spsService.start(true);
     }
     return cluster;
@@ -95,6 +109,35 @@ public class TestExternalStoragePolicySatisfier
   public FileIdCollector createFileIdCollector(StoragePolicySatisfier sps,
       Context ctxt) {
     return new ExternalSPSFileIDCollector(ctxt, sps, 5);
+  }
+
+  private class ExternalBlockMovementListener implements BlockMovementListener {
+
+    private List<Block> actualBlockMovements = new ArrayList<>();
+
+    @Override
+    public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
+      for (Block block : moveAttemptFinishedBlks) {
+        actualBlockMovements.add(block);
+      }
+      LOG.info("Movement attempted blocks", actualBlockMovements);
+    }
+  }
+
+  private NameNodeConnector getNameNodeConnector(Configuration conf)
+      throws IOException {
+    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+    Assert.assertEquals(1, namenodes.size());
+    Map<URI, List<Path>> nnMap = Maps.newHashMap();
+    for (URI nn : namenodes) {
+      nnMap.put(nn, null);
+    }
+    final Path externalSPSPathId = new Path("/system/externalSPS.id");
+    final List<NameNodeConnector> nncs = NameNodeConnector
+        .newNameNodeConnectors(nnMap,
+            StoragePolicySatisfier.class.getSimpleName(), externalSPSPathId,
+            conf, NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+    return nncs.get(0);
   }
 
   /**

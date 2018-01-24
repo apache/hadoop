@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 
 /**
  * An interface for SPSService, which exposes life cycle and processing APIs.
@@ -41,9 +42,11 @@ public interface SPSService {
    *          id
    * @param handler
    *          - a helper service for moving the blocks
+   * @param blkMovementListener
+   *          - listener to know about block movement attempt completion
    */
   void init(Context ctxt, FileIdCollector fileIDCollector,
-      BlockMoveTaskHandler handler);
+      BlockMoveTaskHandler handler, BlockMovementListener blkMovementListener);
 
   /**
    * Starts the SPS service. Make sure to initialize the helper services before
@@ -112,4 +115,13 @@ public interface SPSService {
    *          - directory inode id.
    */
   void markScanCompletedForPath(Long inodeId);
+
+  /**
+   * Notify the details of storage movement attempt finished blocks.
+   *
+   * @param moveAttemptFinishedBlks
+   *          - array contains all the blocks that are attempted to move
+   */
+  void notifyStorageMovementAttemptFinishedBlks(
+      BlocksStorageMoveAttemptFinished moveAttemptFinishedBlks);
 }

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.common.sps;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,8 +28,6 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementAttemptFinished;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlocksMovementsStatusHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * This class is used to track the completion of block movement future tasks.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceStability.Evolving
 public class BlockStorageMovementTracker implements Runnable {
   private static final Logger LOG = LoggerFactory
       .getLogger(BlockStorageMovementTracker.class);
@@ -148,7 +146,7 @@ public class BlockStorageMovementTracker implements Runnable {
    * @param futureTask
    *          future task used for moving the respective block
    */
-  void addBlock(Block block,
+  public void addBlock(Block block,
       Future<BlockMovementAttemptFinished> futureTask) {
     synchronized (moverTaskFutures) {
       List<Future<BlockMovementAttemptFinished>> futures =
@@ -167,7 +165,7 @@ public class BlockStorageMovementTracker implements Runnable {
   /**
    * Clear the pending movement and movement result queues.
    */
-  void removeAll() {
+  public void removeAll() {
     synchronized (moverTaskFutures) {
       moverTaskFutures.clear();
     }

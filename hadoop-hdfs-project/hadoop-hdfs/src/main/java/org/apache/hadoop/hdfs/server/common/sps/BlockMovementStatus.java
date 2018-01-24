@@ -16,28 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode.sps;
-
-import java.io.IOException;
+package org.apache.hadoop.hdfs.server.common.sps;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 
 /**
- * Interface for implementing different ways of block moving approaches. One can
- * connect directly to DN and request block move, and other can talk NN to
- * schedule via heart-beats.
+ * Block movement status code.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface BlockMoveTaskHandler {
+public enum BlockMovementStatus {
+  /** Success. */
+  DN_BLK_STORAGE_MOVEMENT_SUCCESS(0),
+  /**
+   * Failure due to generation time stamp mismatches or network errors
+   * or no available space.
+   */
+  DN_BLK_STORAGE_MOVEMENT_FAILURE(-1);
+
+  // TODO: need to support different type of failures. Failure due to network
+  // errors, block pinned, no space available etc.
+
+  private final int code;
+
+  BlockMovementStatus(int code) {
+    this.code = code;
+  }
 
   /**
-   * This is an interface method to handle the move tasks. BlockMovingInfo must
-   * contain the required info to move the block, that source location,
-   * destination location and storage types.
+   * @return the status code.
    */
-  void submitMoveTask(BlockMovingInfo blkMovingInfo) throws IOException;
-
+  int getStatusCode() {
+    return code;
+  }
 }
