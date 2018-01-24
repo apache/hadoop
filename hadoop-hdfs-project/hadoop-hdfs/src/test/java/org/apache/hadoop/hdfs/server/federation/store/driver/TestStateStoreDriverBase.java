@@ -37,6 +37,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
+import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
@@ -44,6 +45,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +97,10 @@ public class TestStateStoreDriverBase {
     return randomString;
   }
 
+  private long generateRandomLong() {
+    return RANDOM.nextLong();
+  }
+
   @SuppressWarnings("rawtypes")
   private <T extends Enum> T generateRandomEnum(Class<T> enumClass) {
     int x = RANDOM.nextInt(enumClass.getEnumConstants().length);
@@ -117,6 +124,12 @@ public class TestStateStoreDriverBase {
       Map<String, String> destMap = Collections.singletonMap(
           generateRandomString(), "/" + generateRandomString());
       return (T) MountTable.newInstance(src, destMap);
+    } else if (recordClass == RouterState.class) {
+      RouterState routerState = RouterState.newInstance(generateRandomString(),
+          generateRandomLong(), generateRandomEnum(RouterServiceState.class));
+      StateStoreVersion version = generateFakeRecord(StateStoreVersion.class);
+      routerState.setStateStoreVersion(version);
+      return (T) routerState;
     }
 
     return null;
