@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.cblock.jscsiHelper;
 
+import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * This class is the handler of CBlockManager used by target server
@@ -40,5 +42,9 @@ public class CBlockManagerHandler {
   public MountVolumeResponse mountVolume(
       String userName, String volumeName) throws IOException {
     return handler.mountVolume(userName, volumeName);
+  }
+
+  public List<VolumeInfo> listVolumes() throws IOException {
+    return handler.listVolumes();
   }
 }

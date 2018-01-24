@@ -20,9 +20,21 @@ package org.apache.hadoop.cblock.jscsiHelper;
 import com.google.common.primitives.Longs;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.cblock.exception.CBlockException;
+import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.CBlockClientProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
-import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos.ContainerIDProto;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos.ListVolumesRequestProto;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos.ListVolumesResponseProto;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos.MountVolumeRequestProto;
+import org.apache.hadoop.cblock.protocol.proto
+    .CBlockClientServerProtocolProtos.MountVolumeResponseProto;
+import org.apache.hadoop.cblock.protocol.proto.CBlockServiceProtocolProtos
+    .VolumeInfoProto;
 import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolPB;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
@@ -69,14 +81,14 @@ public class CBlockClientProtocolClientSideTranslatorPB
   @Override
   public MountVolumeResponse mountVolume(
       String userName, String volumeName) throws IOException {
-    CBlockClientServerProtocolProtos.MountVolumeRequestProto.Builder
+    MountVolumeRequestProto.Builder
         request
-        = CBlockClientServerProtocolProtos.MountVolumeRequestProto
+        = MountVolumeRequestProto
         .newBuilder();
     request.setUserName(userName);
     request.setVolumeName(volumeName);
     try {
-      CBlockClientServerProtocolProtos.MountVolumeResponseProto resp
+      MountVolumeResponseProto resp
           = rpcProxy.mountVolume(null, request.build());
       if (!resp.getIsValid()) {
         throw new CBlockException(
@@ -87,7 +99,7 @@ public class CBlockClientProtocolClientSideTranslatorPB
       if (resp.getAllContainerIDsList().size() == 0) {
         throw new CBlockException("Mount volume request returned no container");
       }
-      for (CBlockClientServerProtocolProtos.ContainerIDProto containerID :
+      for (ContainerIDProto containerID :
           resp.getAllContainerIDsList()) {
         if (containerID.hasPipeline()) {
           // it should always have a pipeline only except for tests.
@@ -107,6 +119,27 @@ public class CBlockClientProtocolClientSideTranslatorPB
           resp.getBlockSize(),
           containerIDs,
           containerPipelines);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public List<VolumeInfo> listVolumes() throws IOException {
+    try {
+      List<VolumeInfo> result = new ArrayList<>();
+      ListVolumesResponseProto
+          listVolumesResponseProto = this.rpcProxy.listVolumes(null,
+          ListVolumesRequestProto.newBuilder()
+              .build());
+      for (VolumeInfoProto volumeInfoProto :
+          listVolumesResponseProto
+          .getVolumeEntryList()) {
+        result.add(new VolumeInfo(volumeInfoProto.getUserName(),
+            volumeInfoProto.getVolumeName(), volumeInfoProto.getVolumeSize(),
+            volumeInfoProto.getBlockSize()));
+      }
+      return result;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.cblock.proto;
 
+import org.apache.hadoop.cblock.meta.VolumeInfo;
+
 import java.io.IOException;
+import java.util.List;
 
 /**
  * The protocol that CBlock client side uses to talk to server side. CBlock
@@ -30,4 +33,6 @@ import java.io.IOException;
 public interface CBlockClientProtocol {
   MountVolumeResponse mountVolume(String userName, String volumeName)
       throws IOException;
+
+  List<VolumeInfo> listVolumes() throws IOException;
 }

@@ -19,15 +19,18 @@ package org.apache.hadoop.cblock.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.CBlockClientProtocol;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
+import org.apache.hadoop.cblock.protocol.proto.CBlockServiceProtocolProtos;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * The server side implementation of cblock client to server protocol.
@@ -83,4 +86,31 @@ public class CBlockClientServerProtocolServerSideTranslatorPB implements
     }
     return resp.build();
   }
+
+  @Override
+  public CBlockClientServerProtocolProtos.ListVolumesResponseProto listVolumes(
+      RpcController controller,
+      CBlockClientServerProtocolProtos.ListVolumesRequestProto request)
+      throws ServiceException {
+    try {
+      CBlockClientServerProtocolProtos.ListVolumesResponseProto.Builder resp =
+          CBlockClientServerProtocolProtos.ListVolumesResponseProto
+              .newBuilder();
+      List<VolumeInfo> volumeInfos = impl.listVolumes();
+      List<CBlockServiceProtocolProtos.VolumeInfoProto> convertedInfos =
+          volumeInfos.stream().map(
+              volumeInfo -> CBlockServiceProtocolProtos.VolumeInfoProto
+                  .newBuilder().setUserName(volumeInfo.getUserName())
+                  .setBlockSize(volumeInfo.getBlockSize())
+                  .setVolumeName(volumeInfo.getVolumeName())
+                  .setVolumeSize(volumeInfo.getVolumeSize())
+                  .setUsage(volumeInfo.getUsage()).build())
+              .collect(Collectors.toList());
+      resp.addAllVolumeEntry(convertedInfos);
+      return resp.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
 }

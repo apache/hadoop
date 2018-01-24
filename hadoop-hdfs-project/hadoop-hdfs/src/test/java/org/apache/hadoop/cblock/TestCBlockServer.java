@@ -22,12 +22,13 @@ import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.util.MockStorageClient;
 import org.apache.hadoop.conf.OzoneConfiguration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
@@ -45,8 +46,8 @@ public class TestCBlockServer {
   private static CBlockManager cBlockManager;
   private static OzoneConfiguration conf;
 
-  @BeforeClass
-  public static void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
     ScmClient storageClient = new MockStorageClient();
     conf = new OzoneConfiguration();
     conf.set(DFS_CBLOCK_SERVICERPC_ADDRESS_KEY, "127.0.0.1:0");
@@ -55,8 +56,8 @@ public class TestCBlockServer {
     cBlockManager.start();
   }
 
-  @AfterClass
-  public static void clean() {
+  @After
+  public void clean() {
     cBlockManager.stop();
     cBlockManager.join();
     cBlockManager.clean();
@@ -152,7 +153,7 @@ public class TestCBlockServer {
     }
     List<VolumeInfo> volumes = cBlockManager.listVolume(userName);
     assertEquals(volumeNum, volumes.size());
-    HashSet<String> volumeIds = new HashSet<>();
+    Set<String> volumeIds = new HashSet<>();
     for (int i = 0; i<volumeNum; i++) {
       VolumeInfo volumeInfo = volumes.get(i);
       assertEquals(userName, volumeInfo.getUserName());
@@ -164,5 +165,48 @@ public class TestCBlockServer {
     for (int i = 0; i<volumeNum; i++) {
       assertTrue(volumeIds.contains(volumeName + i));
     }
+  }
+
+  /**
+   * Test listing a number of volumes.
+   * @throws Exception
+   */
+  @Test
+  public void testListVolumes() throws Exception {
+    String volumeName ="volume" +  RandomStringUtils.randomNumeric(5);
+    long volumeSize = 1L*1024*1024;
+    int blockSize = 4096;
+    int volumeNum = 100;
+    int userCount = 10;
+
+    assertTrue("We need at least one volume for each user",
+        userCount < volumeNum);
+
+    for (int i = 0; i<volumeNum; i++) {
+      String userName =
+          "user-" + (i % userCount);
+      cBlockManager.createVolume(userName, volumeName + i,
+          volumeSize, blockSize);
+    }
+    List<VolumeInfo> allVolumes = cBlockManager.listVolumes();
+    //check if we have the volumes from all the users.
+
+    Set<String> volumeIds = new HashSet<>();
+    Set<String> usernames = new HashSet<>();
+    for (int i = 0; i < allVolumes.size(); i++) {
+      VolumeInfo volumeInfo = allVolumes.get(i);
+      assertFalse(volumeIds.contains(volumeName + i));
+      usernames.add(volumeInfo.getUserName());
+      volumeIds.add(volumeName + i);
+      assertEquals(volumeSize, volumeInfo.getVolumeSize());
+      assertEquals(blockSize, volumeInfo.getBlockSize());
+    }
+
+    assertEquals(volumeNum, volumeIds.size());
+    for (int i = 0; i<volumeNum; i++) {
+      assertTrue(volumeIds.contains(volumeName + i));
+    }
+
+    assertEquals(userCount, usernames.size());
   }
 }
