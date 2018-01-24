@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -45,8 +46,9 @@ public abstract class ApplicationAttemptStateData {
       Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long finishTime, Map<String, Long> resourceSecondsMap,
-      Map<String, Long> preemptedResourceSecondsMap) {
+      long finishTime, Map<String, Long> guaranteedResourceSecondsMap,
+      Map<String, Long> preemptedResourceSecondsMap,
+      Map<String, Long> opportunisticResourcesSecondsMap) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -59,19 +61,22 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
     attemptStateData.setAMContainerExitStatus(exitStatus);
     attemptStateData.setFinishTime(finishTime);
-    attemptStateData.setMemorySeconds(RMServerUtils
-        .getOrDefault(resourceSecondsMap,
+    attemptStateData.setGuaranteedMemorySeconds(RMServerUtils
+        .getOrDefault(guaranteedResourceSecondsMap,
             ResourceInformation.MEMORY_MB.getName(), 0L));
-    attemptStateData.setVcoreSeconds(RMServerUtils
-        .getOrDefault(resourceSecondsMap, ResourceInformation.VCORES.getName(),
-            0L));
+    attemptStateData.setGuaranteedVcoreSeconds(RMServerUtils
+        .getOrDefault(guaranteedResourceSecondsMap,
+            ResourceInformation.VCORES.getName(), 0L));
     attemptStateData.setPreemptedMemorySeconds(RMServerUtils
         .getOrDefault(preemptedResourceSecondsMap,
             ResourceInformation.MEMORY_MB.getName(), 0L));
     attemptStateData.setPreemptedVcoreSeconds(RMServerUtils
         .getOrDefault(preemptedResourceSecondsMap,
             ResourceInformation.VCORES.getName(), 0L));
-    attemptStateData.setResourceSecondsMap(resourceSecondsMap);
+    attemptStateData.setGuaranteedResourceSecondsMap(
+        guaranteedResourceSecondsMap);
+    attemptStateData.setOpportunisticResourceSecondsMap(
+        opportunisticResourcesSecondsMap);
     attemptStateData
         .setPreemptedResourceSecondsMap(preemptedResourceSecondsMap);
     return attemptStateData;
@@ -80,11 +85,13 @@ public abstract class ApplicationAttemptStateData {
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime,
-      Map<String, Long> resourceSeondsMap,
-      Map<String, Long> preemptedResourceSecondsMap) {
+      Map<String, Long> guaranteedResourceSecondsMap,
+      Map<String, Long> preemptedResourceSecondsMap,
+      Map<String, Long> opportunisticResourcesSecondsMap) {
     return newInstance(attemptId, masterContainer, attemptTokens, startTime,
         null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        resourceSeondsMap, preemptedResourceSecondsMap);
+        guaranteedResourceSecondsMap, preemptedResourceSecondsMap,
+        opportunisticResourcesSecondsMap);
   }
 
 
@@ -180,28 +187,76 @@ public abstract class ApplicationAttemptStateData {
   public abstract void setFinishTime(long finishTime);
 
   /**
-  * Get the <em>memory seconds</em> (in MB seconds) of the application.
-   * @return <em>memory seconds</em> (in MB seconds) of the application
+   * Get the <em>guaranteed memory seconds</em> (in MB seconds) of the
+   * application.
+   * @return <em>guaranteed memory seconds</em> (in MB seconds) of the
+   *          application
    */
   @Public
   @Unstable
+  @Deprecated
   public abstract long getMemorySeconds();
 
   @Public
   @Unstable
+  @Deprecated
   public abstract void setMemorySeconds(long memorySeconds);
 
   /**
-   * Get the <em>vcore seconds</em> of the application.
-   * @return <em>vcore seconds</em> of the application
+   * Get the <em>guaranteed vcore seconds</em> of the application.
+   * @return <em>guaranteed vcore seconds</em> of the application
    */
   @Public
   @Unstable
+  @Deprecated
   public abstract long getVcoreSeconds();
 
   @Public
   @Unstable
+  @Deprecated
   public abstract void setVcoreSeconds(long vcoreSeconds);
+
+  /**
+   * Get the <em>guaranteed memory seconds</em> (in MB seconds) of the
+   * application.
+   * @return <em>guaranteed memory seconds</em> (in MB seconds) of the
+   *         application
+   */
+  @Public
+  @Unstable
+  public abstract long getGuaranteedMemorySeconds();
+
+  @Private
+  public abstract void setGuaranteedMemorySeconds(long memorySeconds);
+
+  /**
+   * Get the <em>guaranteed vcore seconds</em> of the application.
+   * @return <em>guaranteed vcore seconds</em> of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getGuaranteedVcoreSeconds();
+
+  @Private
+  public abstract void setGuaranteedVcoreSeconds(long vcoreSeconds);
+
+  /**
+   * Get the <em>opportunistic memory seconds</em> (in MB seconds) of the
+   * application.
+   * @return <em>opportunistic memory seconds</em> (in MB seconds) of the
+   *         application
+   */
+  @Public
+  @Unstable
+  public abstract long getOpportunisticMemorySeconds();
+
+  /**
+   * Get the <em>opportunistic vcore seconds</em> of the application.
+   * @return <em>opportunistic vcore seconds</em> of the application
+   */
+  @Public
+  @Unstable
+  public abstract long getOpportunisticVcoreSeconds();
 
   /**
    * Get the <em>preempted memory seconds</em>
@@ -232,26 +287,52 @@ public abstract class ApplicationAttemptStateData {
   public abstract void setPreemptedVcoreSeconds(long vcoreSeconds);
 
   /**
-   * Get the aggregated number of resources preempted that the application has
+   * Get the aggregated number of guaranteed resources that the application has
    * allocated times the number of seconds the application has been running.
    *
-   * @return map containing the resource name and aggregated preempted
-   * resource-seconds
+   * @return map containing the resource name and aggregated guaranteed
+   *         resource-seconds
    */
   @Public
   @Unstable
+  @Deprecated
   public abstract Map<String, Long> getResourceSecondsMap();
 
   /**
-   * Set the aggregated number of resources that the application has
+   * Set the aggregated number of guaranteed resources that the application has
    * allocated times the number of seconds the application has been running.
    *
    * @param resourceSecondsMap map containing the resource name and aggregated
-   *                           resource-seconds
+   *                           guaranteed resource-seconds
    */
   @Public
   @Unstable
+  @Deprecated
   public abstract void setResourceSecondsMap(
+      Map<String, Long> resourceSecondsMap);
+
+
+  /**
+   * Get the aggregated number of guaranteed resources that the application has
+   * allocated times the number of seconds the application has been running.
+   *
+   * @return map containing the resource name and aggregated guaranteed
+   *         resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Long> getGuaranteedResourceSecondsMap();
+
+  /**
+   * Set the aggregated number of guaranteed resources that the application has
+   * allocated times the number of seconds the application has been running.
+   *
+   * @param resourceSecondsMap map containing the resource name and aggregated
+   *                           guaranteed resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract void setGuaranteedResourceSecondsMap(
       Map<String, Long> resourceSecondsMap);
 
   /**
@@ -276,4 +357,27 @@ public abstract class ApplicationAttemptStateData {
   @Unstable
   public abstract void setPreemptedResourceSecondsMap(
       Map<String, Long> preemptedResourceSecondsMap);
+
+  /**
+   * Get the aggregated number of opportunistic resources that the application
+   * has allocated times the number of seconds the application has been running.
+   *
+   * @return map containing the resource name and aggregated opportunistic
+   *         resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Long> getOpportunisticResourceSecondsMap();
+
+  /**
+   * Set the aggregated number of opportunistic resources that the application
+   * has allocated times the number of seconds the application has been running.
+   *
+   * @param resourceSecondsMap map containing the resource name and aggregated
+   *                           opportunistic resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract void setOpportunisticResourceSecondsMap(
+      Map<String, Long> resourceSecondsMap);
 }

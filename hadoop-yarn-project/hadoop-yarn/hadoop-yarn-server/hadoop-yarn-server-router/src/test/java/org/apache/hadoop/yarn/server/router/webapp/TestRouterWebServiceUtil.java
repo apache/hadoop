@@ -249,8 +249,10 @@ public class TestRouterWebServiceUtil {
     Assert.assertEquals(value * 3, app.getReservedMB());
     Assert.assertEquals(value * 3, app.getReservedVCores());
     Assert.assertEquals(value * 3, app.getRunningContainers());
-    Assert.assertEquals(value * 3, app.getMemorySeconds());
-    Assert.assertEquals(value * 3, app.getVcoreSeconds());
+    Assert.assertEquals(value * 3, app.getGuaranteedMemorySeconds());
+    Assert.assertEquals(value * 3, app.getGuaranteedVcoreSeconds());
+    Assert.assertEquals(value * 3, app.getOpportunisticMemorySeconds());
+    Assert.assertEquals(value * 3, app.getOpportunisticVcoreSeconds());
     Assert.assertEquals(3, app.getResourceRequests().size());
   }
 
@@ -258,11 +260,15 @@ public class TestRouterWebServiceUtil {
     am.getResourceRequests().add(new ResourceRequestInfo());
     am.setAllocatedMB(value);
     am.setAllocatedVCores(value);
+    am.setAllocatedOpportunisticVCores(value);
+    am.setAllocatedOpportunisticMB(value);
     am.setReservedMB(value);
     am.setReservedVCores(value);
     am.setRunningContainers(value);
-    am.setMemorySeconds(value);
-    am.setVcoreSeconds(value);
+    am.setGuaranteedMemorySeconds(value);
+    am.setGuaranteedVcoreSeconds(value);
+    am.setOpportunisticMemorySeconds(value);
+    am.setOpportunisticVcoreSeconds(value);
   }
 
   /**

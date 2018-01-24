@@ -169,8 +169,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       queue.getMetrics().releaseResources(
           rmContainer.getNodeLabelExpression(),
           getUser(), 1, containerResource);
-      this.attemptResourceUsage.decUsed(containerResource);
-      getQueue().decUsedGuaranteedResource(containerResource);
+      if (rmContainer.getExecutionType().equals(ExecutionType.GUARANTEED)) {
+        this.attemptResourceUsage.decUsed(containerResource);
+        getQueue().decUsedGuaranteedResource(containerResource);
+      } else {
+        this.attemptOpportunisticResourceUsage.decUsed(containerResource);
+      }
+
 
       // Clear resource utilization metrics cache.
       lastMemoryAggregateAllocationUpdateTime = -1;

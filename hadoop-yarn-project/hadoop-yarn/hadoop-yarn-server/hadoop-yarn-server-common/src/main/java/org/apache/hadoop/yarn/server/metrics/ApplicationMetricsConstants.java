@@ -70,11 +70,17 @@ public class ApplicationMetricsConstants {
   public static final String STATE_EVENT_INFO =
       "YARN_APPLICATION_STATE";
   
-  public static final String APP_CPU_METRICS =
+  public static final String APP_GUARANTEED_CPU_METRICS =
       "YARN_APPLICATION_CPU";
   
-  public static final String APP_MEM_METRICS =
+  public static final String APP_GUARANTEED_MEM_METRICS =
       "YARN_APPLICATION_MEMORY";
+
+  public static final String APP_OPPORTUNISTIC_CPU_METRICS =
+      "YARN_APPLICATION_OPPORTUNISTIC_CPU";
+
+  public static final String APP_OPPORTUNISTIC_MEM_METRICS =
+      "YARN_APPLICATION_OPPORTUNISTIC_MEMORY";
 
   public static final String APP_RESOURCE_PREEMPTED_CPU =
       "YARN_APPLICATION_RESOURCE_PREEMPTED_CPU";

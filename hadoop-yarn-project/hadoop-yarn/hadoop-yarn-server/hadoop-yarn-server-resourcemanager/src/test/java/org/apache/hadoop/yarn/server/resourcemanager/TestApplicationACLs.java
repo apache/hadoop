@@ -426,9 +426,11 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
     Assert.assertEquals("Enemy should not see app reserved containers",
         -1, usageReport.getNumReservedContainers());
     Assert.assertEquals("Enemy should not see app used resources",
-        -1, usageReport.getUsedResources().getMemorySize());
+        -1, usageReport.getGuaranteedResourcesUsed().getMemorySize());
     Assert.assertEquals("Enemy should not see app reserved resources",
         -1, usageReport.getReservedResources().getMemorySize());
+    Assert.assertEquals("Enemy should not see app used opportunistic resources",
+        -1, usageReport.getOpportunisticResourcesUsed().getMemorySize());
     Assert.assertEquals("Enemy should not see app needed resources",
         -1, usageReport.getNeededResources().getMemorySize());
   }

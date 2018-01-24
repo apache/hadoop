@@ -107,9 +107,12 @@ public class RMAppBlock extends AppBlock{
           attemptResourcePreempted)
         .__("Number of Non-AM Containers Preempted from Current Attempt:",
           attemptNumNonAMContainerPreempted)
-        .__("Aggregate Resource Allocation:", appMetrics == null ? "N/A" :
-            StringHelper
-                .getResourceSecondsString(appMetrics.getResourceSecondsMap()))
+        .__("Aggregate Guaranteed Resource Allocation:", appMetrics == null ?
+            "N/A" : StringHelper.getResourceSecondsString(
+                appMetrics.getGuaranteedResourceSecondsMap()))
+        .__("Aggregate Opportunistic Resource Allocation:", appMetrics == null ?
+            "N/A" : StringHelper.getResourceSecondsString(
+                appMetrics.getOpportunisticResourceSecondsMap()))
         .__("Aggregate Preempted Resource Allocation:",
             appMetrics == null ? "N/A" : StringHelper.getResourceSecondsString(
                 appMetrics.getPreemptedResourceSecondsMap()));

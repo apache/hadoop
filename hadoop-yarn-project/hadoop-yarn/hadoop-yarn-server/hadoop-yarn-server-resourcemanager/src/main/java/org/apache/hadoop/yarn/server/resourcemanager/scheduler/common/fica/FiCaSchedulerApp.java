@@ -1111,7 +1111,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             .getEffectiveCapacity(getAppAMNodePartitionName());
         if (!effCap.equals(Resources.none())) {
           queueUsagePerc = calc.divide(totalPartitionRes,
-              report.getUsedResources(), effCap) * 100;
+              report.getGuaranteedResourcesUsed(), effCap) * 100;
         }
         report.setQueueUsagePercentage(queueUsagePerc);
       }

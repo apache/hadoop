@@ -186,19 +186,27 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("startTime", app.getStartTime())
           .add("finishTime", app.getFinishTime())
           .add("finalStatus", app.getFinalApplicationStatus())
-          .add("memorySeconds", metrics.getMemorySeconds())
-          .add("vcoreSeconds", metrics.getVcoreSeconds())
+          .add("guaranteedMemorySeconds", metrics.getGuaranteedMemorySeconds())
+          .add("guaranteedVcoreSeconds", metrics.getGuaranteedVcoreSeconds())
+          .add("opportunisticMemorySeconds",
+              metrics.getOpportunisticMemorySeconds())
+          .add("opportunisticVcoreSeconds",
+              metrics.getOpportunisticVcoreSeconds())
           .add("preemptedMemorySeconds", metrics.getPreemptedMemorySeconds())
           .add("preemptedVcoreSeconds", metrics.getPreemptedVcoreSeconds())
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
           .add("preemptedResources", metrics.getResourcePreempted())
           .add("applicationType", app.getApplicationType())
-          .add("resourceSeconds", StringHelper
-              .getResourceSecondsString(metrics.getResourceSecondsMap()))
+          .add("guaranteedResourceSeconds", StringHelper
+              .getResourceSecondsString(
+                  metrics.getGuaranteedResourceSecondsMap()))
           .add("preemptedResourceSeconds", StringHelper
               .getResourceSecondsString(
-                  metrics.getPreemptedResourceSecondsMap()));
+                  metrics.getPreemptedResourceSecondsMap()))
+          .add("opportunisticResourceSeconds", StringHelper
+              .getResourceSecondsString(
+                  metrics.getOpportunisticResourceSecondsMap()));
       return summary;
     }
 

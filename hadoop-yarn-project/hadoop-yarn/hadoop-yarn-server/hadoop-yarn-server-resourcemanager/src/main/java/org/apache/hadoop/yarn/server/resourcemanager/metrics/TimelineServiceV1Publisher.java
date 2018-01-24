@@ -142,10 +142,16 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
           latestApplicationAttemptId);
     }
     RMAppMetrics appMetrics = app.getRMAppMetrics();
-    entity.addOtherInfo(ApplicationMetricsConstants.APP_CPU_METRICS,
-        appMetrics.getVcoreSeconds());
-    entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_METRICS,
-        appMetrics.getMemorySeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS,
+        appMetrics.getGuaranteedVcoreSeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_GUARANTEED_MEM_METRICS,
+        appMetrics.getGuaranteedMemorySeconds());
+    entity.addOtherInfo(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_CPU_METRICS,
+        appMetrics.getOpportunisticVcoreSeconds());
+    entity.addOtherInfo(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_MEM_METRICS,
+        appMetrics.getOpportunisticMemorySeconds());
     entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS,
             appMetrics.getPreemptedMemorySeconds());
     entity.addOtherInfo(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS,

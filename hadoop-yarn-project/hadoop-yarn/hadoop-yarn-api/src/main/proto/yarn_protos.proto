@@ -252,6 +252,8 @@ message ApplicationResourceUsageReportProto {
   optional int64 preempted_vcore_seconds = 11;
   repeated StringLongMapProto application_resource_usage_map = 12;
   repeated StringLongMapProto application_preempted_resource_usage_map = 13;
+  optional ResourceProto used_opportunistic_resources = 14;
+  repeated StringLongMapProto application_opportunistic_resource_usage_map = 15;
 }
 
 message ApplicationReportProto {

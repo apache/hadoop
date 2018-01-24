@@ -209,7 +209,7 @@ public abstract class MockAsm extends MockApps {
     @Override
     public RMAppMetrics getRMAppMetrics() {
       return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<>(),
-          new HashMap<>());
+          new HashMap<>(), new HashMap<>());
     }
 
     @Override
@@ -375,7 +375,7 @@ public abstract class MockAsm extends MockApps {
         ApplicationResourceUsageReport usageReport =
             ApplicationResourceUsageReport
                 .newInstance(0, 0, null, null, null, new HashMap<>(), 0, 0,
-                    new HashMap<>());
+                    new HashMap<>(), null, new HashMap<>());
         ApplicationReport report = ApplicationReport.newInstance(
             getApplicationId(), appAttemptId, getUser(), getQueue(), 
             getName(), null, 0, null, null, getDiagnostics().toString(), 

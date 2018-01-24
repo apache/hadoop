@@ -123,18 +123,27 @@ public class TestYarnCLI {
     for (int i = 0; i < 2; ++i) {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
-      Map<String, Long> resourceSecondsMap = new HashMap<>();
+      Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>();
+      Map<String, Long> opportunisticResourceSecondsMap = new HashMap<>();
       Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
-      resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
-      resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
+      guaranteedResourceSecondsMap.put(
+          ResourceInformation.MEMORY_MB.getName(), 123456L);
+      guaranteedResourceSecondsMap.put(
+          ResourceInformation.VCORES.getName(), 4567L);
+      opportunisticResourceSecondsMap.put(
+          ResourceInformation.MEMORY_MB.getName(), 123456L);
+      opportunisticResourceSecondsMap.put(
+          ResourceInformation.VCORES.getName(), 4567L);
       preemptedResoureSecondsMap
           .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
       preemptedResoureSecondsMap
           .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
           ApplicationResourceUsageReport
-              .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
-                  preemptedResoureSecondsMap);
+              .newInstance(2, 0, null, null, null,
+                  guaranteedResourceSecondsMap, 0, 0,
+                  preemptedResoureSecondsMap, null,
+                  opportunisticResourceSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -170,7 +179,9 @@ public class TestYarnCLI {
       pw.println("\tTracking-URL : N/A");
       pw.println("\tRPC Port : 124");
       pw.println("\tAM Host : host");
-      pw.println("\tAggregate Resource Allocation : " +
+      pw.println("\tAggregate Guaranteed Resource Allocation : " +
+          (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
+      pw.println("\tAggregate Opportunistic Resource Allocation : " +
           (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
       pw.println("\tAggregate Resource Preempted : " +
           (i == 0 ? "N/A" : "1111 MB-seconds, 2222 vcore-seconds"));

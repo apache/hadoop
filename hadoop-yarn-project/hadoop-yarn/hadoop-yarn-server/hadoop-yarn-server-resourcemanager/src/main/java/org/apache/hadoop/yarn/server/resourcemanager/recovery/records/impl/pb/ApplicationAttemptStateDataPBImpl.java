@@ -31,6 +31,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
@@ -56,8 +57,9 @@ public class ApplicationAttemptStateDataPBImpl extends
   private Container masterContainer = null;
   private ByteBuffer appAttemptTokens = null;
 
-  private Map<String, Long> resourceSecondsMap;
+  private Map<String, Long> guaranteedResourceSecondsMap;
   private Map<String, Long> preemptedResourceSecondsMap;
+  private Map<String, Long> opportunisticResourceSecondsMap;
 
   public ApplicationAttemptStateDataPBImpl() {
     builder = ApplicationAttemptStateDataProto.newBuilder();
@@ -243,27 +245,69 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  @Deprecated
   public long getMemorySeconds() {
-    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getMemorySeconds();
+    return getGuaranteedMemorySeconds();
   }
  
   @Override
+  @Deprecated
   public long getVcoreSeconds() {
+    return getGuaranteedVcoreSeconds();
+  }
+
+  @Override
+  @Deprecated
+  public void setMemorySeconds(long memorySeconds) {
+    setGuaranteedMemorySeconds(memorySeconds);
+  }
+ 
+  @Override
+  @Deprecated
+  public void setVcoreSeconds(long vcoreSeconds) {
+    setGuaranteedVcoreSeconds(vcoreSeconds);
+  }
+
+  @Override
+  public long getGuaranteedMemorySeconds() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMemorySeconds();
+  }
+
+  @Override
+  public void setGuaranteedMemorySeconds(long memorySeconds) {
+    maybeInitBuilder();
+    builder.setMemorySeconds(memorySeconds);
+  }
+
+  @Override
+  public long getGuaranteedVcoreSeconds() {
     ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
     return p.getVcoreSeconds();
   }
 
   @Override
-  public void setMemorySeconds(long memorySeconds) {
-    maybeInitBuilder();
-    builder.setMemorySeconds(memorySeconds);
-  }
- 
-  @Override
-  public void setVcoreSeconds(long vcoreSeconds) {
+  public void setGuaranteedVcoreSeconds(long vcoreSeconds) {
     maybeInitBuilder();
     builder.setVcoreSeconds(vcoreSeconds);
+  }
+
+  @Override
+  public long getOpportunisticMemorySeconds() {
+    Map<String, Long> tmp = getOpportunisticResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      return tmp.get(ResourceInformation.MEMORY_MB.getName());
+    }
+    return 0;
+  }
+
+  @Override
+  public long getOpportunisticVcoreSeconds() {
+    Map<String, Long> tmp = getOpportunisticResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.VCORES.getName())) {
+      return tmp.get(ResourceInformation.VCORES.getName());
+    }
+    return 0;
   }
 
   @Override
@@ -410,21 +454,35 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  @Deprecated
   public Map<String, Long> getResourceSecondsMap() {
-    if (this.resourceSecondsMap != null) {
-      return this.resourceSecondsMap;
-    }
-    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
-    this.resourceSecondsMap = ProtoUtils.convertStringLongMapProtoListToMap(
-        p.getApplicationResourceUsageMapList());
-    return this.resourceSecondsMap;
+    return getGuaranteedResourceSecondsMap();
   }
 
   @Override
+  @Deprecated
   public void setResourceSecondsMap(Map<String, Long> resourceSecondsMap) {
+    setGuaranteedResourceSecondsMap(resourceSecondsMap);
+  }
+
+  @Override
+  public Map<String, Long> getGuaranteedResourceSecondsMap() {
+    if (this.guaranteedResourceSecondsMap != null) {
+      return this.guaranteedResourceSecondsMap;
+    }
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    this.guaranteedResourceSecondsMap =
+        ProtoUtils.convertStringLongMapProtoListToMap(
+            p.getApplicationResourceUsageMapList());
+    return this.guaranteedResourceSecondsMap;
+  }
+
+  @Override
+  public void setGuaranteedResourceSecondsMap(
+      Map<String, Long> resourceSecondsMap) {
     maybeInitBuilder();
     builder.clearApplicationResourceUsageMap();
-    this.resourceSecondsMap = resourceSecondsMap;
+    this.guaranteedResourceSecondsMap = resourceSecondsMap;
     if (resourceSecondsMap != null) {
       builder.addAllApplicationResourceUsageMap(
           ProtoUtils.convertMapToStringLongMapProtoList(resourceSecondsMap));
@@ -452,6 +510,30 @@ public class ApplicationAttemptStateDataPBImpl extends
     if (preemptedResourceSecondsMap != null) {
       builder.addAllPreemptedResourceUsageMap(ProtoUtils
           .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
+    }
+  }
+
+  @Override
+  public Map<String, Long> getOpportunisticResourceSecondsMap() {
+    if (this.opportunisticResourceSecondsMap != null) {
+      return this.opportunisticResourceSecondsMap;
+    }
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    this.opportunisticResourceSecondsMap =
+        ProtoUtils.convertStringLongMapProtoListToMap(
+            p.getApplicationOpportunisticResourceUsageMapList());
+    return this.opportunisticResourceSecondsMap;
+  }
+
+  @Override
+  public void setOpportunisticResourceSecondsMap(
+      Map<String, Long> resourceSecondsMap) {
+    maybeInitBuilder();
+    builder.clearApplicationOpportunisticResourceUsageMap();
+    this.opportunisticResourceSecondsMap = resourceSecondsMap;
+    if (resourceSecondsMap != null) {
+      builder.addAllApplicationOpportunisticResourceUsageMap(
+          ProtoUtils.convertMapToStringLongMapProtoList(resourceSecondsMap));
     }
   }
 }

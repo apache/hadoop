@@ -1179,12 +1179,20 @@ public class TestAppManager{
     when(app.getState()).thenReturn(RMAppState.RUNNING);
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
-    Map<String, Long> resourceSecondsMap = new HashMap<>();
-    resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
-    resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
+    Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>();
+    guaranteedResourceSecondsMap.put(
+        ResourceInformation.MEMORY_MB.getName(), 16384L);
+    guaranteedResourceSecondsMap.put(
+        ResourceInformation.VCORES.getName(), 64L);
+    Map<String, Long> opportunisticResourceSecondsMap = new HashMap<>();
+    opportunisticResourceSecondsMap.put(
+        ResourceInformation.MEMORY_MB.getName(), 16384L);
+    opportunisticResourceSecondsMap.put(
+        ResourceInformation.VCORES.getName(), 64L);
     RMAppMetrics metrics =
         new RMAppMetrics(Resource.newInstance(1234, 56),
-            10, 1, resourceSecondsMap, new HashMap<>());
+            10, 1, guaranteedResourceSecondsMap,
+            new HashMap<>(), opportunisticResourceSecondsMap);
     when(app.getRMAppMetrics()).thenReturn(metrics);
 
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
@@ -1195,16 +1203,19 @@ public class TestAppManager{
     Assert.assertFalse(msg.contains("\r"));
 
     String escaped = "\\n\\n\\r\\r";
-    assertTrue(msg.contains("Multiline" + escaped +"AppName"));
-    assertTrue(msg.contains("Multiline" + escaped +"UserName"));
-    assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
-    assertTrue(msg.contains("submitTime=1000"));
-    assertTrue(msg.contains("memorySeconds=16384"));
-    assertTrue(msg.contains("vcoreSeconds=64"));
-    assertTrue(msg.contains("preemptedAMContainers=1"));
-    assertTrue(msg.contains("preemptedNonAMContainers=10"));
-    assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
-    assertTrue(msg.contains("applicationType=MAPREDUCE"));
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
+    Assert.assertTrue(msg.contains("submitTime=1000"));
+    Assert.assertTrue(msg.contains("guaranteedMemorySeconds=16384"));
+    Assert.assertTrue(msg.contains("guaranteedVcoreSeconds=64"));
+    Assert.assertTrue(msg.contains("opportunisticMemorySeconds=16384"));
+    Assert.assertTrue(msg.contains("opportunisticVcoreSeconds=64"));
+    Assert.assertTrue(msg.contains("preemptedAMContainers=1"));
+    Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
+    Assert.assertTrue(
+        msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
+    Assert.assertTrue(msg.contains("applicationType=MAPREDUCE"));
  }
 
   @Test

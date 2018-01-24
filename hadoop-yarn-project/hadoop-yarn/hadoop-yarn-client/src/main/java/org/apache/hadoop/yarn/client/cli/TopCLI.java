@@ -170,13 +170,11 @@ public class TopCLI extends YarnCLI {
           appReport.getApplicationResourceUsageReport()
             .getNumReservedContainers();
       displayStringsMap.put(Columns.RCONT, String.valueOf(reservedContainers));
-      usedVirtualCores =
-          appReport.getApplicationResourceUsageReport().getUsedResources()
-            .getVirtualCores();
+      usedVirtualCores = appReport.getApplicationResourceUsageReport()
+          .getGuaranteedResourcesUsed().getVirtualCores();
       displayStringsMap.put(Columns.VCORES, String.valueOf(usedVirtualCores));
-      usedMemory =
-          appReport.getApplicationResourceUsageReport().getUsedResources()
-            .getMemorySize() / 1024;
+      usedMemory = appReport.getApplicationResourceUsageReport()
+          .getGuaranteedResourcesUsed().getMemorySize() / 1024;
       displayStringsMap.put(Columns.MEM, String.valueOf(usedMemory) + "G");
       reservedVirtualCores =
           appReport.getApplicationResourceUsageReport().getReservedResources()
@@ -195,11 +193,11 @@ public class TopCLI extends YarnCLI {
       progress = appReport.getProgress() * 100;
       displayStringsMap.put(Columns.PROGRESS, String.format("%.2f", progress));
       // store in GBSeconds
-      memorySeconds =
-          appReport.getApplicationResourceUsageReport().getMemorySeconds() / 1024;
+      memorySeconds = appReport.getApplicationResourceUsageReport()
+          .getGuaranteedMemorySeconds() / 1024;
       displayStringsMap.put(Columns.MEMSECS, String.valueOf(memorySeconds));
-      vcoreSeconds =
-          appReport.getApplicationResourceUsageReport().getVcoreSeconds();
+      vcoreSeconds = appReport.getApplicationResourceUsageReport()
+          .getGuaranteedVcoreSeconds();
       displayStringsMap.put(Columns.VCORESECS, String.valueOf(vcoreSeconds));
     }
   }

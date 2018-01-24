@@ -223,23 +223,23 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     RMApp app1 = rm.submitApp(GB, "app", "user", null, "a");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm3);
     ApplicationResourceUsageReport appResourceUsageReport =
-        rm.getResourceScheduler().getAppResourceUsageReport(
+        rm.getResourceScheduler().getAppActiveResourceUsageReport(
             am1.getApplicationAttemptId());
-    Assert.assertEquals(1024, appResourceUsageReport.getUsedResources()
-        .getMemorySize());
-    Assert.assertEquals(1, appResourceUsageReport.getUsedResources()
-        .getVirtualCores());
+    Assert.assertEquals(1024, appResourceUsageReport
+        .getGuaranteedResourcesUsed().getMemorySize());
+    Assert.assertEquals(1, appResourceUsageReport
+        .getGuaranteedResourcesUsed().getVirtualCores());
     // request a container.
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     rm.waitForState(nm1, containerId, RMContainerState.ALLOCATED);
     appResourceUsageReport =
-        rm.getResourceScheduler().getAppResourceUsageReport(
+        rm.getResourceScheduler().getAppActiveResourceUsageReport(
             am1.getApplicationAttemptId());
-    Assert.assertEquals(2048, appResourceUsageReport.getUsedResources()
-        .getMemorySize());
-    Assert.assertEquals(2, appResourceUsageReport.getUsedResources()
-        .getVirtualCores());
+    Assert.assertEquals(2048, appResourceUsageReport
+        .getGuaranteedResourcesUsed().getMemorySize());
+    Assert.assertEquals(2, appResourceUsageReport
+        .getGuaranteedResourcesUsed().getVirtualCores());
     LeafQueue queue =
         (LeafQueue) ((CapacityScheduler) rm.getResourceScheduler())
             .getQueue("a");

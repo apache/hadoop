@@ -456,6 +456,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       this.startTime = startTime;
     }
+    LOG.info(applicationId.toString() + " started at " + this.startTime);
     this.applicationType = StringInterner.weakIntern(applicationType);
     this.applicationTags = applicationTags;
     this.amReqs = amReqs;
@@ -775,10 +776,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
 
         RMAppMetrics rmAppMetrics = getRMAppMetrics();
-        appUsageReport
-            .setResourceSecondsMap(rmAppMetrics.getResourceSecondsMap());
+        appUsageReport.setGuaranteedResourceSecondsMap(
+            rmAppMetrics.getGuaranteedResourceSecondsMap());
         appUsageReport.setPreemptedResourceSecondsMap(
             rmAppMetrics.getPreemptedResourceSecondsMap());
+        appUsageReport.setOpportunisticResourceSecondsMap(
+            rmAppMetrics.getOpportunisticResourceSecondsMap());
       }
 
       if (currentApplicationAttemptId == null) {
@@ -1705,8 +1708,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     Resource resourcePreempted = Resource.newInstance(0, 0);
     int numAMContainerPreempted = 0;
     int numNonAMContainerPreempted = 0;
-    Map<String, Long> resourceSecondsMap = new HashMap<>();
-    Map<String, Long> preemptedSecondsMap = new HashMap<>();
+    Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>(2);
+    Map<String, Long> preemptedSecondsMap = new HashMap<>(2);
+    Map<String, Long> opportunsiticResourceSecondsMap = new HashMap<>(2);
     this.readLock.lock();
     try {
       for (RMAppAttempt attempt : attempts.values()) {
@@ -1722,20 +1726,15 @@ public class RMAppImpl implements RMApp, Recoverable {
           // for both running and finished containers.
           AggregateAppResourceUsage resUsage =
               attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-          for (Map.Entry<String, Long> entry : resUsage
-              .getResourceUsageSecondsMap().entrySet()) {
-            long value = RMServerUtils
-                .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
-            value += entry.getValue();
-            resourceSecondsMap.put(entry.getKey(), value);
-          }
-          for (Map.Entry<String, Long> entry : attemptMetrics
-              .getPreemptedResourceSecondsMap().entrySet()) {
-            long value = RMServerUtils
-                .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
-            value += entry.getValue();
-            preemptedSecondsMap.put(entry.getKey(), value);
-          }
+          Resources.mergeResourceSecondsMap(
+              resUsage.getGuaranteedResourceUsageSecondsMap(),
+              guaranteedResourceSecondsMap);
+          Resources.mergeResourceSecondsMap(
+              resUsage.getOpportunisticResourceSecondsMap(),
+              opportunsiticResourceSecondsMap);
+          Resources.mergeResourceSecondsMap(
+              attemptMetrics.getPreemptedResourceSecondsMap(),
+              preemptedSecondsMap);
         }
       }
     } finally {
@@ -1743,7 +1742,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
-        numAMContainerPreempted, resourceSecondsMap, preemptedSecondsMap);
+        numAMContainerPreempted, guaranteedResourceSecondsMap,
+        preemptedSecondsMap, opportunsiticResourceSecondsMap);
   }
 
   @Private

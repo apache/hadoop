@@ -299,10 +299,12 @@ public class TestRMAppAttemptTransitions {
 
     ApplicationResourceUsageReport appResUsgRpt =
         mock(ApplicationResourceUsageReport.class);
-    when(appResUsgRpt.getMemorySeconds()).thenReturn(0L);
-    when(appResUsgRpt.getVcoreSeconds()).thenReturn(0L);
+    when(appResUsgRpt.getGuaranteedMemorySeconds()).thenReturn(0L);
+    when(appResUsgRpt.getGuaranteedVcoreSeconds()).thenReturn(0L);
+    when(appResUsgRpt.getOpportunisticMemorySeconds()).thenReturn(0L);
+    when(appResUsgRpt.getOpportunisticVcoreSeconds()).thenReturn(0L);
     when(resourceScheduler
-        .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any()))
+        .getAppActiveResourceUsageReport((ApplicationAttemptId)Matchers.any()))
      .thenReturn(appResUsgRpt);
     spyRMContext = spy(rmContext);
     Mockito.doReturn(resourceScheduler).when(spyRMContext).getScheduler();
@@ -762,10 +764,12 @@ public class TestRMAppAttemptTransitions {
     ApplicationAttemptId attemptId = applicationAttempt.getAppAttemptId();
     ApplicationResourceUsageReport appResUsgRpt =
             mock(ApplicationResourceUsageReport.class);
-    when(appResUsgRpt.getMemorySeconds()).thenReturn(123456L);
-    when(appResUsgRpt.getVcoreSeconds()).thenReturn(55544L);
-    when(scheduler.getAppResourceUsageReport(any(ApplicationAttemptId.class)))
-    .thenReturn(appResUsgRpt);
+    when(appResUsgRpt.getGuaranteedMemorySeconds()).thenReturn(123456L);
+    when(appResUsgRpt.getGuaranteedVcoreSeconds()).thenReturn(55544L);
+    when(appResUsgRpt.getOpportunisticMemorySeconds()).thenReturn(123456L);
+    when(appResUsgRpt.getOpportunisticVcoreSeconds()).thenReturn(55544L);
+    when(scheduler.getAppActiveResourceUsageReport(
+        any(ApplicationAttemptId.class))).thenReturn(appResUsgRpt);
 
     // start and finish the attempt
     Container amContainer = allocateApplicationAttempt();
@@ -777,12 +781,14 @@ public class TestRMAppAttemptTransitions {
     // expect usage stats to come from the scheduler report
     ApplicationResourceUsageReport report = 
         applicationAttempt.getApplicationResourceUsageReport();
-    Assert.assertEquals(123456L, report.getMemorySeconds());
-    Assert.assertEquals(55544L, report.getVcoreSeconds());
+    Assert.assertEquals(123456L, report.getGuaranteedMemorySeconds());
+    Assert.assertEquals(55544L, report.getGuaranteedVcoreSeconds());
+    Assert.assertEquals(123456L, report.getOpportunisticMemorySeconds());
+    Assert.assertEquals(55544L, report.getOpportunisticVcoreSeconds());
 
     // finish app attempt and remove it from scheduler 
-    when(appResUsgRpt.getMemorySeconds()).thenReturn(223456L);
-    when(appResUsgRpt.getVcoreSeconds()).thenReturn(75544L);
+    when(appResUsgRpt.getGuaranteedMemorySeconds()).thenReturn(223456L);
+    when(appResUsgRpt.getGuaranteedVcoreSeconds()).thenReturn(75544L);
     sendAttemptUpdateSavedEvent(applicationAttempt);
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
@@ -793,8 +799,8 @@ public class TestRMAppAttemptTransitions {
     when(scheduler.getSchedulerAppInfo(eq(attemptId))).thenReturn(null);
 
     report = applicationAttempt.getApplicationResourceUsageReport();
-    Assert.assertEquals(223456, report.getMemorySeconds());
-    Assert.assertEquals(75544, report.getVcoreSeconds());
+    Assert.assertEquals(223456, report.getGuaranteedMemorySeconds());
+    Assert.assertEquals(75544, report.getGuaranteedVcoreSeconds());
   }
 
   @Test

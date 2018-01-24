@@ -36,21 +36,27 @@ public abstract class ApplicationResourceUsageReport {
   @Private
   @Unstable
   public static ApplicationResourceUsageReport newInstance(
-      int numUsedContainers, int numReservedContainers, Resource usedResources,
+      int numUsedContainers, int numReservedContainers,
+      Resource guaranteedResourcesUsed,
       Resource reservedResources, Resource neededResources,
-      Map<String, Long> resourceSecondsMap, float queueUsagePerc,
-      float clusterUsagePerc, Map<String, Long> preemtedResourceSecondsMap) {
+      Map<String, Long> guaranteedResourceSecondsMap, float queueUsagePerc,
+      float clusterUsagePerc, Map<String, Long> preemtedResourceSecondsMap,
+      Resource opportunisticResourcesUsed,
+      Map<String, Long> opportunisticResourcesSecondsMap) {
+
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
     report.setNumReservedContainers(numReservedContainers);
-    report.setUsedResources(usedResources);
+    report.setGuaranteedResourcesUsed(guaranteedResourcesUsed);
     report.setReservedResources(reservedResources);
     report.setNeededResources(neededResources);
-    report.setResourceSecondsMap(resourceSecondsMap);
+    report.setGuaranteedResourceSecondsMap(guaranteedResourceSecondsMap);
     report.setQueueUsagePercentage(queueUsagePerc);
     report.setClusterUsagePercentage(clusterUsagePerc);
     report.setPreemptedResourceSecondsMap(preemtedResourceSecondsMap);
+    report.setOpportunisticResourcesUsed(opportunisticResourcesUsed);
+    report.setOpportunisticResourceSecondsMap(opportunisticResourcesSecondsMap);
     return report;
   }
 
@@ -87,16 +93,40 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setNumReservedContainers(int num_reserved_containers);
 
   /**
-   * Get the used <code>Resource</code>.  -1 for invalid/inaccessible reports.
-   * @return the used <code>Resource</code>
+   * Get the guaranteed <code>Resource</code> used.
+   * -1 for invalid/inaccessible reports.
+   * @return the guaranteed <code>Resource</code> used
    */
   @Public
   @Stable
+  @Deprecated
   public abstract Resource getUsedResources();
+
+  /**
+   * Get the guaranteed <code>Resource</code> used.
+   * -1 for invalid/inaccessible reports.
+   * @return the guaranteed <code>Resource</code> used
+   */
+  @Public
+  @Unstable
+  public abstract Resource getGuaranteedResourcesUsed();
 
   @Private
   @Unstable
-  public abstract void setUsedResources(Resource resources);
+  public abstract void setGuaranteedResourcesUsed(Resource resources);
+
+  /**
+   * Get the opportunistic <code>Resource</code> used.
+   * -1 for invalid/inaccessible reports.
+   * @return the opportunistic <code>Resource</code> used
+   */
+  @Public
+  @Unstable
+  public abstract Resource getOpportunisticResourcesUsed();
+
+  @Private
+  @Unstable
+  public abstract void setOpportunisticResourcesUsed(Resource resources);
 
   /**
    * Get the reserved <code>Resource</code>.  -1 for invalid/inaccessible reports.
@@ -123,40 +153,82 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setNeededResources(Resource needed_resources);
 
   /**
-   * Set the aggregated amount of memory (in megabytes) the application has
-   * allocated times the number of seconds the application has been running.
-   * @param memory_seconds the aggregated amount of memory seconds
+   * Set the aggregated amount of guaranteed memory (in megabytes) the
+   * application has allocated times the number of seconds the application
+   * has been running.
+   * @param memorySeconds the aggregated amount of guaranteed memory seconds
    */
   @Private
   @Unstable
-  public abstract void setMemorySeconds(long memory_seconds);
+  public abstract void setGuaranteedMemorySeconds(long memorySeconds);
 
   /**
-   * Get the aggregated amount of memory (in megabytes) the application has
-   * allocated times the number of seconds the application has been running.
-   * @return the aggregated amount of memory seconds
+   * Get the aggregated amount of guaranteed memory (in megabytes) the
+   * application has allocated times the number of seconds the application
+   * has been running.
+   * @return the aggregated amount of guaranteed memory seconds
    */
   @Public
   @Unstable
+  public abstract long getGuaranteedMemorySeconds();
+
+  /**
+   * Get the aggregated amount of guaranteed memory (in megabytes) the
+   * application has allocated times the number of seconds the application
+   * has been running.
+   * @return the aggregated amount of guaranteed memory seconds
+   */
+  @Public
+  @Unstable
+  @Deprecated
   public abstract long getMemorySeconds();
 
   /**
-   * Set the aggregated number of vcores that the application has allocated
-   * times the number of seconds the application has been running.
-   * @param vcore_seconds the aggregated number of vcore seconds
+   * Set the aggregated number of guaranteed vcores that the application has
+   * allocated times the number of seconds the application has been running.
+   * @param vcoreSeconds the aggregated number of guaranteed vcore seconds
    */
   @Private
   @Unstable
-  public abstract void setVcoreSeconds(long vcore_seconds);
+  public abstract void setGuaranteedVcoreSeconds(long vcoreSeconds);
 
   /**
-   * Get the aggregated number of vcores that the application has allocated
-   * times the number of seconds the application has been running.
-   * @return the aggregated number of vcore seconds
+   * Get the aggregated number of guaranteed vcores that the application has
+   * allocated times the number of seconds the application has been running.
+   * @return the aggregated number of guaranteed vcore seconds
    */
   @Public
   @Unstable
+  public abstract long getGuaranteedVcoreSeconds();
+
+  /**
+   * Get the aggregated number of guaranteed vcores that the application has
+   * allocated times the number of seconds the application has been running.
+   * @return the aggregated number of guaranteed vcore seconds
+   */
+  @Public
+  @Unstable
+  @Deprecated
   public abstract long getVcoreSeconds();
+
+  /**
+   * Get the aggregated amount of opportunistic memory (in megabytes) the
+   * application has allocated times the number of seconds the application
+   * has been running.
+   * @return the aggregated amount of opportunistic memory seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getOpportunisticMemorySeconds();
+
+  /**
+   * Get the aggregated number of opportunistic vcores that the application
+   * has allocated times the number of seconds the application has been running.
+   * @return the aggregated number of opportunistic vcore seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getOpportunisticVcoreSeconds();
 
   /**
    * Get the percentage of resources of the queue that the app is using.
@@ -231,23 +303,35 @@ public abstract class ApplicationResourceUsageReport {
   public abstract long getPreemptedVcoreSeconds();
 
   /**
-   * Get the aggregated number of resources that the application has
+   * Get the aggregated number of guaranteed resources that the application has
    * allocated times the number of seconds the application has been running.
-   * @return map containing the resource name and aggregated resource-seconds
+   * @return map containing the resource name and aggregated guaranteed
+   *         resource-seconds
    */
   @Public
   @Unstable
+  @Deprecated
   public abstract Map<String, Long> getResourceSecondsMap();
 
   /**
-   * Set the aggregated number of resources that the application has
+   * Get the aggregated number of guaranteed resources that the application has
+   * allocated times the number of seconds the application has been running.
+   * @return map containing the resource name and aggregated guaranteed
+   *         resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Long> getGuaranteedResourceSecondsMap();
+
+  /**
+   * Set the aggregated number of guaranteed resources that the application has
    * allocated times the number of seconds the application has been running.
    * @param resourceSecondsMap map containing the resource name and aggregated
-   *                           resource-seconds
+   *                           guaranteed resource-seconds
    */
   @Private
   @Unstable
-  public abstract void setResourceSecondsMap(
+  public abstract void setGuaranteedResourceSecondsMap(
       Map<String, Long> resourceSecondsMap);
 
 
@@ -272,4 +356,24 @@ public abstract class ApplicationResourceUsageReport {
   public abstract void setPreemptedResourceSecondsMap(
       Map<String, Long> preemptedResourceSecondsMap);
 
+  /**
+   * Get the aggregated number of opportunistic resources that the application
+   * has allocated times the number of seconds the application has been running.
+   * @return map containing the resource name and aggregated opportunistic
+   *         resource-seconds
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Long> getOpportunisticResourceSecondsMap();
+
+  /**
+   * Set the aggregated number of opportunistic resources that the application
+   * has allocated times the number of seconds the application has been running.
+   * @param opportunisticResourceSecondsMap map containing the resource name
+   *                               and aggregated opportunistic resource-seconds
+   */
+  @Private
+  @Unstable
+  public abstract void setOpportunisticResourceSecondsMap(
+      Map<String, Long> opportunisticResourceSecondsMap);
 }

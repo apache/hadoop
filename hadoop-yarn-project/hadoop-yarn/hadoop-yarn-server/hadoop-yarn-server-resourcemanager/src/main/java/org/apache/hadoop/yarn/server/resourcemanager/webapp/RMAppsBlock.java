@@ -70,6 +70,10 @@ public class RMAppsBlock extends AppsBlock {
           .th(".allocatedMemory", "Allocated Memory MB")
           .th(".reservedCpu", "Reserved CPU VCores")
           .th(".reservedMemory", "Reserved Memory MB")
+          .th(".allocatedOpportunisticCpu",
+              "Allocated Opportunistic CPU VCores")
+          .th(".allocatedOpportunisticMemory",
+              "Allocated Opportunistic Memory MB")
           .th(".queuePercentage", "% of Queue")
           .th(".clusterPercentage", "% of Cluster")
           .th(".progress", "Progress")
@@ -156,6 +160,12 @@ public class RMAppsBlock extends AppsBlock {
         .append("\",\"")
         .append(app.getReservedMemoryMB() == -1 ? "N/A" :
             String.valueOf(app.getReservedMemoryMB()))
+        .append("\",\"")
+        .append(app.getAllocatedOpportunisticCpuVcores() == -1 ? "N/A" : String
+            .valueOf(app.getAllocatedOpportunisticCpuVcores()))
+        .append("\",\"")
+        .append(app.getAllocatedOpportunisticMemoryMB() == -1 ? "N/A" :
+            String.valueOf(app.getAllocatedOpportunisticMemoryMB()))
         .append("\",\"")
         .append(queuePercent)
         .append("\",\"")

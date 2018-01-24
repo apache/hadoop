@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -259,7 +258,7 @@ public class TestRMWebApp {
               app.getDiagnostics().toString(), (String) null,
               app.getStartTime(), app.getLaunchTime(), app.getFinishTime(),
               app.getFinalApplicationStatus(),
-              (ApplicationResourceUsageReport) null, app.getTrackingUrl(),
+              null, app.getTrackingUrl(),
               app.getProgress(), app.getApplicationType(), (Token) null);
       appReports.add(appReport);
     }

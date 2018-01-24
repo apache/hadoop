@@ -97,6 +97,8 @@ public class AppInfo {
   private String masterNodeId;
   private long allocatedMB;
   private long allocatedVCores;
+  private long allocatedOpportunisticMB;
+  private long allocatedOpportunisticVCores;
   private long reservedMB;
   private long reservedVCores;
   private int runningContainers;
@@ -105,6 +107,9 @@ public class AppInfo {
   protected float queueUsagePercentage;
   protected float clusterUsagePercentage;
   protected Map<String, Long> resourceSecondsMap;
+  private long opportunisticMemorySeconds;
+  private long opportunisticVcoreSeconds;
+  private Map<String, Long> opportunisticResourceSecondsMap;
 
   // preemption info fields
   private long preemptedResourceMB;
@@ -205,10 +210,17 @@ public class AppInfo {
           ApplicationResourceUsageReport resourceReport =
               attempt.getApplicationResourceUsageReport();
           if (resourceReport != null) {
-            Resource usedResources = resourceReport.getUsedResources();
+            Resource guaranteedResourcesUsed =
+                resourceReport.getGuaranteedResourcesUsed();
+            Resource opportunisticResourceUsed =
+                resourceReport.getOpportunisticResourcesUsed();
             Resource reservedResources = resourceReport.getReservedResources();
-            allocatedMB = usedResources.getMemorySize();
-            allocatedVCores = usedResources.getVirtualCores();
+            allocatedMB = guaranteedResourcesUsed.getMemorySize();
+            allocatedVCores = guaranteedResourcesUsed.getVirtualCores();
+            allocatedOpportunisticMB =
+                opportunisticResourceUsed.getMemorySize();
+            allocatedOpportunisticVCores =
+                opportunisticResourceUsed.getVirtualCores();
             reservedMB = reservedResources.getMemorySize();
             reservedVCores = reservedResources.getVirtualCores();
             runningContainers = resourceReport.getNumUsedContainers();
@@ -251,9 +263,13 @@ public class AppInfo {
       numNonAMContainerPreempted = appMetrics.getNumNonAMContainersPreempted();
       preemptedResourceVCores =
           appMetrics.getResourcePreempted().getVirtualCores();
-      memorySeconds = appMetrics.getMemorySeconds();
-      vcoreSeconds = appMetrics.getVcoreSeconds();
-      resourceSecondsMap = appMetrics.getResourceSecondsMap();
+      memorySeconds = appMetrics.getGuaranteedMemorySeconds();
+      vcoreSeconds = appMetrics.getGuaranteedVcoreSeconds();
+      resourceSecondsMap = appMetrics.getGuaranteedResourceSecondsMap();
+      opportunisticMemorySeconds = appMetrics.getOpportunisticMemorySeconds();
+      opportunisticVcoreSeconds = appMetrics.getOpportunisticVcoreSeconds();
+      opportunisticResourceSecondsMap =
+          appMetrics.getOpportunisticResourceSecondsMap();
       preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
       preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
       preemptedResourceSecondsMap = appMetrics.getPreemptedResourceSecondsMap();
@@ -470,6 +486,13 @@ public class AppInfo {
     return this.allocatedVCores;
   }
 
+  public long getAllocatedOpportunisticMB() {
+    return this.allocatedOpportunisticMB;
+  }
+
+  public long getAllocatedOpportunisticVCores() {
+    return this.allocatedOpportunisticVCores;
+  }
   public long getReservedMB() {
     return this.reservedMB;
   }
@@ -494,16 +517,28 @@ public class AppInfo {
     return numAMContainerPreempted;
   }
 
-  public long getMemorySeconds() {
+  public long getGuaranteedMemorySeconds() {
     return memorySeconds;
   }
 
-  public long getVcoreSeconds() {
+  public long getGuaranteedVcoreSeconds() {
     return vcoreSeconds;
   }
 
-  public Map<String, Long> getResourceSecondsMap() {
+  public long getOpportunisticMemorySeconds() {
+    return opportunisticMemorySeconds;
+  }
+
+  public long getOpportunisticVcoreSeconds() {
+    return opportunisticVcoreSeconds;
+  }
+
+  public Map<String, Long> getGuaranteedResourceSecondsMap() {
     return resourceSecondsMap;
+  }
+
+  public Map<String, Long> getOpportunisticResourceSecondsMap() {
+    return opportunisticResourceSecondsMap;
   }
 
   public long getPreemptedMemorySeconds() {
@@ -598,6 +633,15 @@ public class AppInfo {
     this.allocatedVCores = allocatedVCores;
   }
 
+  public void setAllocatedOpportunisticMB(long allocatedOpportunisticMB) {
+    this.allocatedOpportunisticMB = allocatedOpportunisticMB;
+  }
+
+  public void setAllocatedOpportunisticVCores(
+      long allocatedOpportunisticVCores) {
+    this.allocatedOpportunisticVCores = allocatedOpportunisticVCores;
+  }
+
   public void setReservedMB(long reservedMB) {
     this.reservedMB = reservedMB;
   }
@@ -610,12 +654,20 @@ public class AppInfo {
     this.runningContainers = runningContainers;
   }
 
-  public void setMemorySeconds(long memorySeconds) {
-    this.memorySeconds = memorySeconds;
+  public void setGuaranteedMemorySeconds(long guaranteedMemorySeconds) {
+    this.memorySeconds = guaranteedMemorySeconds;
   }
 
-  public void setVcoreSeconds(long vcoreSeconds) {
-    this.vcoreSeconds = vcoreSeconds;
+  public void setGuaranteedVcoreSeconds(long guaranteedVcoreSeconds) {
+    this.vcoreSeconds = guaranteedVcoreSeconds;
+  }
+
+  public void setOpportunisticMemorySeconds(long oppMemorySeconds) {
+    this.opportunisticMemorySeconds = oppMemorySeconds;
+  }
+
+  public void setOpportunisticVcoreSeconds(long oppVcoreSeconds) {
+    this.opportunisticVcoreSeconds = oppVcoreSeconds;
   }
 
   public void setAppId(String appId) {

@@ -152,9 +152,13 @@ public class TestApplicationHistoryClientService {
     ApplicationReport appReport = response.getApplicationReport();
     Assert.assertNotNull(appReport);
     Assert.assertEquals(123, appReport.getApplicationResourceUsageReport()
-        .getMemorySeconds());
+        .getGuaranteedMemorySeconds());
     Assert.assertEquals(345, appReport.getApplicationResourceUsageReport()
-        .getVcoreSeconds());
+        .getGuaranteedVcoreSeconds());
+    Assert.assertEquals(123, appReport.getApplicationResourceUsageReport()
+        .getOpportunisticMemorySeconds());
+    Assert.assertEquals(345, appReport.getApplicationResourceUsageReport()
+        .getOpportunisticVcoreSeconds());
     Assert.assertEquals("application_0_0001", appReport.getApplicationId()
       .toString());
     Assert.assertEquals("test app type",

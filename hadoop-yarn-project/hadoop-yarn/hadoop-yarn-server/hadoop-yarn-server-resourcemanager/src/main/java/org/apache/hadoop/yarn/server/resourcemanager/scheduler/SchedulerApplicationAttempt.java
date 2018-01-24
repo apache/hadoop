@@ -61,12 +61,12 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerResourceUsageReport;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -108,7 +108,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   private static final long MEM_AGGREGATE_ALLOCATION_CACHE_MSECS = 3000;
   protected long lastMemoryAggregateAllocationUpdateTime = 0;
-  private Map<String, Long> lastResourceSecondsMap = new HashMap<>();
+  private Map<String, Long> lastGuaranteedResourceSecondsMap =
+      new HashMap<>();
+  private Map<String, Long> lastOpportunisticResourceSecondsMap =
+      new HashMap<>();
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
@@ -1083,34 +1086,47 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // recently.
     if ((currentTimeMillis - lastMemoryAggregateAllocationUpdateTime)
         > MEM_AGGREGATE_ALLOCATION_CACHE_MSECS) {
-      Map<String, Long> resourceSecondsMap = new HashMap<>();
+      Map<String, Long> aggregatedGuaranteedResourceSecondsMap =
+          new HashMap<>();
+      Map<String, Long> aggregatedOpportunisticResourceSecondsMap =
+          new HashMap<>();
       for (RMContainer rmContainer : this.liveContainers.values()) {
-        long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
-        Resource resource = rmContainer.getContainer().getResource();
-        for (ResourceInformation entry : resource.getResources()) {
-          long value = RMServerUtils
-              .getOrDefault(resourceSecondsMap, entry.getName(), 0L);
-          value += entry.getValue() * usedMillis
-              / DateUtils.MILLIS_PER_SECOND;
-          resourceSecondsMap.put(entry.getName(), value);
-        }
+        ContainerResourceUsageReport containerResourceUsageReport =
+            rmContainer.getResourceUsageReport();
+        Resources.mergeResourceSecondsMap(
+            containerResourceUsageReport.getGuaranteedResourceUsageSecondsMap(),
+            aggregatedGuaranteedResourceSecondsMap);
+        Resources.mergeResourceSecondsMap(
+            containerResourceUsageReport.getOpportunisticResourceSecondsMap(),
+            aggregatedOpportunisticResourceSecondsMap);
       }
-
+      lastGuaranteedResourceSecondsMap =
+          aggregatedGuaranteedResourceSecondsMap;
+      lastOpportunisticResourceSecondsMap =
+          aggregatedOpportunisticResourceSecondsMap;
       lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
-      lastResourceSecondsMap = resourceSecondsMap;
     }
-    return new AggregateAppResourceUsage(lastResourceSecondsMap);
+    return new AggregateAppResourceUsage(lastGuaranteedResourceSecondsMap,
+        lastOpportunisticResourceSecondsMap);
   }
 
+  /**
+   * Get the resources that are actively being used by the app attempt.
+   * @return active resource usage
+   */
   public ApplicationResourceUsageReport getResourceUsageReport() {
     try {
       writeLock.lock();
       AggregateAppResourceUsage runningResourceUsage =
           getRunningAggregateAppResourceUsage();
-      Resource usedResourceClone = Resources.clone(
+      Resource guaranteedResourceUsedClone = Resources.clone(
           attemptResourceUsage.getAllUsed());
+      Resource opportunisticResourceUsedClone = Resources.clone(
+          attemptOpportunisticResourceUsage.getAllUsed());
       Resource reservedResourceClone = Resources.clone(
           attemptResourceUsage.getReserved());
+      Resource neededResource = Resources.add(opportunisticResourceUsedClone,
+          Resources.add(guaranteedResourceUsedClone, reservedResourceClone));
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
@@ -1125,18 +1141,20 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
         if (queueCapacityPerc != 0) {
-          queueUsagePerc = calc.divide(cluster, usedResourceClone,
+          queueUsagePerc = calc.divide(cluster, guaranteedResourceUsedClone,
               Resources.multiply(cluster, queueCapacityPerc)) * 100;
         }
         clusterUsagePerc =
-            calc.divide(cluster, usedResourceClone, cluster) * 100;
+            calc.divide(cluster, guaranteedResourceUsedClone, cluster) * 100;
       }
       return ApplicationResourceUsageReport
           .newInstance(liveContainers.size(), reservedContainers.size(),
-              usedResourceClone, reservedResourceClone,
-              Resources.add(usedResourceClone, reservedResourceClone),
-              runningResourceUsage.getResourceUsageSecondsMap(), queueUsagePerc,
-              clusterUsagePerc, preemptedResourceSecondsMaps);
+              guaranteedResourceUsedClone, reservedResourceClone,
+              neededResource,
+              runningResourceUsage.getGuaranteedResourceUsageSecondsMap(),
+              queueUsagePerc, clusterUsagePerc, preemptedResourceSecondsMaps,
+              opportunisticResourceUsedClone,
+              runningResourceUsage.getOpportunisticResourceSecondsMap());
     } finally {
       writeLock.unlock();
     }

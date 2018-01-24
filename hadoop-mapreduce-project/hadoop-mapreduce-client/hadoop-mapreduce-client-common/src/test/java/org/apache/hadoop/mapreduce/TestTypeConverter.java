@@ -94,7 +94,7 @@ public class TestTypeConverter {
     appUsageRpt.setNumReservedContainers(1);
     appUsageRpt.setNumUsedContainers(3);
     appUsageRpt.setReservedResources(r);
-    appUsageRpt.setUsedResources(r);
+    appUsageRpt.setGuaranteedResourcesUsed(r);
     applicationReport.setApplicationResourceUsageReport(appUsageRpt);
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
     Assert.assertEquals(appStartTime, jobStatus.getStartTime());
@@ -133,7 +133,7 @@ public class TestTypeConverter {
     appUsageRpt.setNumReservedContainers(1);
     appUsageRpt.setNumUsedContainers(3);
     appUsageRpt.setReservedResources(r);
-    appUsageRpt.setUsedResources(r);
+    appUsageRpt.setGuaranteedResourcesUsed(r);
     when(mockReport.getApplicationResourceUsageReport()).thenReturn(appUsageRpt);
     JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
     Assert.assertNotNull("fromYarn returned null status", status);

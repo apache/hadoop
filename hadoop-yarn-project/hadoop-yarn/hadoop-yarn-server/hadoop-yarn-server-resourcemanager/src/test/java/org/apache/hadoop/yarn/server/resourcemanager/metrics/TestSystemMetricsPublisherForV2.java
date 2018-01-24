@@ -221,7 +221,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(
-        appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
+        appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 10, 0);
   }
 
   @Test(timeout = 10000)
@@ -365,14 +365,14 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getCurrentAppAttempt()).thenReturn(appAttempt);
     when(app.getFinalApplicationStatus())
         .thenReturn(FinalApplicationStatus.UNDEFINED);
-    Map<String, Long> resourceSecondsMap = new HashMap<>();
-    resourceSecondsMap
+    Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>();
+    guaranteedResourceSecondsMap
         .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
-    resourceSecondsMap
+    guaranteedResourceSecondsMap
         .put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceSecondsMap,
-            new HashMap<>()));
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0,
+            guaranteedResourceSecondsMap, new HashMap<>(), new HashMap<>()));
     when(app.getApplicationTags()).thenReturn(Collections.<String>emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);

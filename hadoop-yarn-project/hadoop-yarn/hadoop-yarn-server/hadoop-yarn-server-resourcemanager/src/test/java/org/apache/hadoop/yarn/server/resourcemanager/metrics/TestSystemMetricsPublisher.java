@@ -219,13 +219,25 @@ public class TestSystemMetricsPublisher {
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
         Assert.assertEquals(
-            app.getRMAppMetrics().getMemorySeconds(),
+            app.getRMAppMetrics().getGuaranteedMemorySeconds(),
             Long.parseLong(entity.getOtherInfo()
-                .get(ApplicationMetricsConstants.APP_MEM_METRICS).toString()));
+                .get(ApplicationMetricsConstants.APP_GUARANTEED_MEM_METRICS)
+                .toString()));
         Assert.assertEquals(
-            app.getRMAppMetrics().getVcoreSeconds(),
+            app.getRMAppMetrics().getGuaranteedVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
-                .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
+                .get(ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS)
+                .toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getOpportunisticMemorySeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_OPPORTUNISTIC_MEM_METRICS)
+                .toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getOpportunisticVcoreSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_OPPORTUNISTIC_CPU_METRICS)
+                .toString()));
         Assert.assertEquals(
             app.getRMAppMetrics().getPreemptedMemorySeconds(),
             Long.parseLong(entity.getOtherInfo()
@@ -517,7 +529,8 @@ public class TestSystemMetricsPublisher {
         .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
     preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics())
-        .thenReturn(new RMAppMetrics(null, 0, 0, resourceMap, preemptedMap));
+        .thenReturn(new RMAppMetrics(null, 0, 0,
+            resourceMap, preemptedMap, new HashMap<>()));
     Set<String> appTags = new HashSet<String>();
     appTags.add("test");
     appTags.add("tags");

@@ -27,30 +27,55 @@ import java.util.Map;
 
 @Private
 public class AggregateAppResourceUsage {
-  private Map<String, Long> resourceSecondsMap = new HashMap<>();
+  private Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>();
+  private Map<String, Long> opportunisticResourceSecondsMap = new HashMap<>();
 
-  public AggregateAppResourceUsage(Map<String, Long> resourceSecondsMap) {
-    this.resourceSecondsMap.putAll(resourceSecondsMap);
+  public AggregateAppResourceUsage(
+      Map<String, Long> guaranteedResourceSecondsMap,
+      Map<String, Long> opportunisticResourceSecondsMap) {
+    this.guaranteedResourceSecondsMap.putAll(
+        guaranteedResourceSecondsMap);
+    this.opportunisticResourceSecondsMap.putAll(
+        opportunisticResourceSecondsMap);
   }
 
   /**
-   * @return the memorySeconds
+   * @return the guaranteed memory seconds
    */
-  public long getMemorySeconds() {
-    return RMServerUtils.getOrDefault(resourceSecondsMap,
+  public long getGuaranteedMemorySeconds() {
+    return RMServerUtils.getOrDefault(guaranteedResourceSecondsMap,
         ResourceInformation.MEMORY_MB.getName(), 0L);
   }
 
   /**
-   * @return the vcoreSeconds
+   * @return the guaranteed vcore seconds
    */
-  public long getVcoreSeconds() {
-    return RMServerUtils
-        .getOrDefault(resourceSecondsMap, ResourceInformation.VCORES.getName(),
-            0L);
+  public long getGuaranteedVcoreSeconds() {
+    return RMServerUtils.getOrDefault(guaranteedResourceSecondsMap,
+        ResourceInformation.VCORES.getName(), 0L);
   }
 
-  public Map<String, Long> getResourceUsageSecondsMap() {
-    return resourceSecondsMap;
+  /**
+   * @return the opportunistic memory seconds
+   */
+  public long getOpportunisticMemorySeconds() {
+    return RMServerUtils.getOrDefault(opportunisticResourceSecondsMap,
+        ResourceInformation.MEMORY_MB.getName(), 0L);
+  }
+
+  /**
+   * @return the opportunistic vcore seconds
+   */
+  public long getOpportunisticVcoreSeconds() {
+    return RMServerUtils.getOrDefault(opportunisticResourceSecondsMap,
+        ResourceInformation.VCORES.getName(), 0L);
+  }
+
+  public Map<String, Long> getGuaranteedResourceUsageSecondsMap() {
+    return guaranteedResourceSecondsMap;
+  }
+
+  public Map<String, Long> getOpportunisticResourceSecondsMap() {
+    return opportunisticResourceSecondsMap;
   }
 }

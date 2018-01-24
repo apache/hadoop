@@ -54,8 +54,11 @@ public class RMAppAttemptMetrics {
   
   private ReadLock readLock;
   private WriteLock writeLock;
-  private Map<String, AtomicLong> resourceUsageMap = new ConcurrentHashMap<>();
-  private Map<String, AtomicLong> preemptedResourceMap = new ConcurrentHashMap<>();
+  private Map<String, AtomicLong> guaranteedResourceUsageMap
+      = new HashMap<>();
+  private Map<String, AtomicLong> preemptedResourceMap = new HashMap<>();
+  private Map<String, AtomicLong> opportunisticResourceUsageMap
+      = new HashMap<>();
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -130,8 +133,10 @@ public class RMAppAttemptMetrics {
   }
 
   public AggregateAppResourceUsage getAggregateAppResourceUsage() {
-    Map<String, Long> resourcesUsed =
-        convertAtomicLongMaptoLongMap(resourceUsageMap);
+    Map<String, Long> guaranteedResourcesUsed =
+        convertAtomicLongMaptoLongMap(guaranteedResourceUsageMap);
+    Map<String, Long> opportunisticResourcesUsed =
+        convertAtomicLongMaptoLongMap(opportunisticResourceUsageMap);
 
     // Only add in the running containers if this is the active attempt.
     RMApp rmApp = rmContext.getRMApps().get(attemptId.getApplicationId());
@@ -140,27 +145,25 @@ public class RMAppAttemptMetrics {
       if (currentAttempt != null
           && currentAttempt.getAppAttemptId().equals(attemptId)) {
         ApplicationResourceUsageReport appResUsageReport =
-            rmContext.getScheduler().getAppResourceUsageReport(attemptId);
+            rmContext.getScheduler().getAppActiveResourceUsageReport(attemptId);
         if (appResUsageReport != null) {
-          Map<String, Long> tmp = appResUsageReport.getResourceSecondsMap();
-          for (Map.Entry<String, Long> entry : tmp.entrySet()) {
-            Long value = resourcesUsed.get(entry.getKey());
-            if (value != null) {
-              value += entry.getValue();
-            } else {
-              value = entry.getValue();
-            }
-            resourcesUsed.put(entry.getKey(), value);
-          }
+          Resources.mergeResourceSecondsMap(
+              appResUsageReport.getGuaranteedResourceSecondsMap(),
+              guaranteedResourcesUsed);
+          Resources.mergeResourceSecondsMap(
+              appResUsageReport.getOpportunisticResourceSecondsMap(),
+              opportunisticResourcesUsed);
         }
       }
     }
-    return new AggregateAppResourceUsage(resourcesUsed);
+
+    return new AggregateAppResourceUsage(guaranteedResourcesUsed,
+        opportunisticResourcesUsed);
   }
 
   public void updateAggregateAppResourceUsage(Resource allocated,
       long deltaUsedMillis) {
-    updateUsageMap(allocated, deltaUsedMillis, resourceUsageMap);
+    updateUsageMap(allocated, deltaUsedMillis, guaranteedResourceUsageMap);
   }
 
   public void updateAggregatePreemptedAppResourceUsage(Resource allocated,
@@ -168,9 +171,14 @@ public class RMAppAttemptMetrics {
     updateUsageMap(allocated, deltaUsedMillis, preemptedResourceMap);
   }
 
-  public void updateAggregateAppResourceUsage(
+  public void updateAggregateAppGuaranteedResourceUsage(
       Map<String, Long> resourceSecondsMap) {
-    updateUsageMap(resourceSecondsMap, resourceUsageMap);
+    updateUsageMap(resourceSecondsMap, guaranteedResourceUsageMap);
+  }
+
+  public void updateAggregateAppOpportunisticResourceUsage(
+      Map<String, Long> resourceSecondsMap) {
+    updateUsageMap(resourceSecondsMap, opportunisticResourceUsageMap);
   }
 
   public void updateAggregatePreemptedAppResourceUsage(
@@ -200,10 +208,9 @@ public class RMAppAttemptMetrics {
       if (!targetMap.containsKey(entry.getKey())) {
         resourceUsed = new AtomicLong(0);
         targetMap.put(entry.getKey(), resourceUsed);
-
       }
       resourceUsed = targetMap.get(entry.getKey());
-      resourceUsed.set(entry.getValue());
+      resourceUsed.addAndGet(entry.getValue());
     }
   }
 

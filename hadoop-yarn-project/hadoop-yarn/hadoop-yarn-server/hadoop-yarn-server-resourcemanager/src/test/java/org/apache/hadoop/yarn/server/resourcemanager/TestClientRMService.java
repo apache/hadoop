@@ -385,8 +385,8 @@ public class TestClientRMService {
       ApplicationReport report = response.getApplicationReport();
       ApplicationResourceUsageReport usageReport = 
           report.getApplicationResourceUsageReport();
-      Assert.assertEquals(10, usageReport.getMemorySeconds());
-      Assert.assertEquals(3, usageReport.getVcoreSeconds());
+      Assert.assertEquals(10, usageReport.getGuaranteedMemorySeconds());
+      Assert.assertEquals(3, usageReport.getGuaranteedVcoreSeconds());
       Assert.assertEquals("<Not set>", report.getAmNodeLabelExpression());
       Assert.assertEquals("<Not set>", report.getAppNodeLabelExpression());
 
@@ -1421,26 +1421,28 @@ public class TestClientRMService {
     when(asContext.getMaxAppAttempts()).thenReturn(1);
     when(asContext.getNodeLabelExpression()).thenReturn(appNodeLabelExpression);
     when(asContext.getPriority()).thenReturn(Priority.newInstance(0));
-    RMAppImpl app =
-        spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
+    ResourceRequest resourceRequest = BuilderUtils.newResourceRequest(
+        RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+        Resource.newInstance(1024, 1), 1);
+    RMAppImpl rmApp =
+        new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
             System.currentTimeMillis(), "YARN", null,
-            Collections.singletonList(BuilderUtils.newResourceRequest(
-                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                Resource.newInstance(1024, 1), 1))){
-                  @Override
-                  public ApplicationReport createAndGetApplicationReport(
-                      String clientUserName, boolean allowAccess) {
-                    ApplicationReport report = super.createAndGetApplicationReport(
-                        clientUserName, allowAccess);
-                    ApplicationResourceUsageReport usageReport = 
-                        report.getApplicationResourceUsageReport();
-                    usageReport.setMemorySeconds(memorySeconds);
-                    usageReport.setVcoreSeconds(vcoreSeconds);
-                    report.setApplicationResourceUsageReport(usageReport);
-                    return report;
-                  }
-              });
+            Collections.singletonList(resourceRequest)) {
+          @Override
+          public ApplicationReport createAndGetApplicationReport(
+              String clientUserName, boolean allowAccess) {
+            ApplicationReport report = super.createAndGetApplicationReport(
+                clientUserName, allowAccess);
+            ApplicationResourceUsageReport usageReport =
+                report.getApplicationResourceUsageReport();
+            usageReport.setGuaranteedMemorySeconds(memorySeconds);
+            usageReport.setGuaranteedVcoreSeconds(vcoreSeconds);
+            report.setApplicationResourceUsageReport(usageReport);
+            return report;
+          }
+        };
+    RMAppImpl app = spy(rmApp);
     app.getAMResourceRequests().get(0)
         .setNodeLabelExpression(amNodeLabelExpression);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
@@ -1496,7 +1498,8 @@ public class TestClientRMService {
     when(yarnScheduler.getAppsInQueue(QUEUE_2)).thenReturn(
         Arrays.asList(getApplicationAttemptId(103)));
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
-    when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
+    when(yarnScheduler.getAppActiveResourceUsageReport(attemptId))
+        .thenReturn(null);
 
     ResourceCalculator rs = mock(ResourceCalculator.class);
     when(yarnScheduler.getResourceCalculator()).thenReturn(rs);

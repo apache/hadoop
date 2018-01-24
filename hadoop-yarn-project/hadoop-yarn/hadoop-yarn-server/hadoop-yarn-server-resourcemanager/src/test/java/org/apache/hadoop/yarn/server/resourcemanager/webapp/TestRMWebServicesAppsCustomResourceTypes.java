@@ -222,7 +222,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   private int getExpectedNumberOfElements(RMApp app) {
-    int expectedNumberOfElements = 40 + 2; // 2 -> resourceRequests
+    int expectedNumberOfElements = 45 + 2; // 2 -> resourceRequests
     if (app.getApplicationSubmissionContext()
         .getNodeLabelExpression() != null) {
       expectedNumberOfElements++;

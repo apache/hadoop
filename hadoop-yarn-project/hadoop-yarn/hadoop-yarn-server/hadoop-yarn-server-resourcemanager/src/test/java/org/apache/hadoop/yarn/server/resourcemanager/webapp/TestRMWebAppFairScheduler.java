@@ -138,7 +138,7 @@ public class TestRMWebAppFairScheduler {
         @Override
         public RMAppMetrics getRMAppMetrics() {
           return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0,
-              new HashMap<>(), new HashMap<>());
+              new HashMap<>(), new HashMap<>(), new HashMap<>());
         }
         @Override
         public YarnApplicationState createApplicationState() {

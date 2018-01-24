@@ -456,19 +456,24 @@ public class BuilderUtils {
   }
 
   public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
-      int numUsedContainers, int numReservedContainers, Resource usedResources,
+      int numUsedContainers, int numReservedContainers,
+      Resource guaranteedResourcesUsed,
       Resource reservedResources, Resource neededResources,
-      Map<String, Long> resourceSecondsMap,
-      Map<String, Long> preemptedResourceSecondsMap) {
+      Map<String, Long> guaranteedResourceSecondsMap,
+      Map<String, Long> preemptedResourceSecondsMap,
+      Resource opportunisticResourcesUsed,
+      Map<String, Long> opportunisticResourcesSecondsMap) {
     ApplicationResourceUsageReport report =
         recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
     report.setNumReservedContainers(numReservedContainers);
-    report.setUsedResources(usedResources);
+    report.setGuaranteedResourcesUsed(guaranteedResourcesUsed);
     report.setReservedResources(reservedResources);
     report.setNeededResources(neededResources);
-    report.setResourceSecondsMap(resourceSecondsMap);
+    report.setGuaranteedResourceSecondsMap(guaranteedResourceSecondsMap);
     report.setPreemptedResourceSecondsMap(preemptedResourceSecondsMap);
+    report.setOpportunisticResourcesUsed(opportunisticResourcesUsed);
+    report.setOpportunisticResourceSecondsMap(opportunisticResourcesSecondsMap);
     return report;
   }
 

@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
 
@@ -62,6 +63,8 @@ public class AppInfo {
   protected int priority;
   private long allocatedCpuVcores;
   private long allocatedMemoryMB;
+  private long allocatedOpportunisticCpuVcores;
+  private long allocatedOpportunisticMemoryMB;
   private long reservedCpuVcores;
   private long reservedMemoryMB;
   protected boolean unmanagedApplication;
@@ -100,15 +103,25 @@ public class AppInfo {
     if (app.getApplicationResourceUsageReport() != null) {
       runningContainers = app.getApplicationResourceUsageReport()
           .getNumUsedContainers();
-      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
-        allocatedCpuVcores = app.getApplicationResourceUsageReport()
-            .getUsedResources().getVirtualCores();
-        allocatedMemoryMB = app.getApplicationResourceUsageReport()
-            .getUsedResources().getMemorySize();
-        reservedCpuVcores = app.getApplicationResourceUsageReport()
-            .getReservedResources().getVirtualCores();
-        reservedMemoryMB = app.getApplicationResourceUsageReport()
-            .getReservedResources().getMemorySize();
+      Resource guaranteedResourceUsed =
+          app.getApplicationResourceUsageReport().getGuaranteedResourcesUsed();
+      if (guaranteedResourceUsed != null) {
+        allocatedCpuVcores = guaranteedResourceUsed.getVirtualCores();
+        allocatedMemoryMB = guaranteedResourceUsed.getMemorySize();
+      }
+      Resource opportunisticResourceUsed = app
+          .getApplicationResourceUsageReport().getOpportunisticResourcesUsed();
+      if (opportunisticResourceUsed != null) {
+        allocatedOpportunisticCpuVcores =
+            opportunisticResourceUsed.getVirtualCores();
+        allocatedOpportunisticMemoryMB =
+            opportunisticResourceUsed.getMemorySize();
+      }
+      Resource resourceReserved =
+          app.getApplicationResourceUsageReport().getReservedResources();
+      if (resourceReserved != null) {
+        reservedCpuVcores = resourceReserved.getVirtualCores();
+        reservedMemoryMB = resourceReserved.getMemorySize();
       }
     }
     progress = app.getProgress() * 100; // in percent
@@ -166,6 +179,14 @@ public class AppInfo {
 
   public long getAllocatedMemoryMB() {
     return allocatedMemoryMB;
+  }
+
+  public long getAllocatedOpportunisticCpuVcores() {
+    return allocatedOpportunisticCpuVcores;
+  }
+
+  public long getAllocatedOpportunisticMemoryMB() {
+    return allocatedOpportunisticMemoryMB;
   }
 
   public long getReservedCpuVcores() {

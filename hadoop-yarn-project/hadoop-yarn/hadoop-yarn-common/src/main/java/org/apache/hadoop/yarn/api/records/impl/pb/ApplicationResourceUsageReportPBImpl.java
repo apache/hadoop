@@ -40,12 +40,14 @@ extends ApplicationResourceUsageReport {
   ApplicationResourceUsageReportProto.Builder builder = null;
   boolean viaProto = false;
 
-  Resource usedResources;
-  Resource reservedResources;
-  Resource neededResources;
+  private Resource guaranteedResourceUsed;
+  private Resource reservedResources;
+  private Resource neededResources;
+  private Resource opportunisticResourceUsed;
 
-  private Map<String, Long> resourceSecondsMap;
+  private Map<String, Long> guaranteedResourceSecondsMap;
   private Map<String, Long> preemptedResourceSecondsMap;
+  private Map<String, Long> opportunisticResourceSecondsMap;
 
   public ApplicationResourceUsageReportPBImpl() {
     builder = ApplicationResourceUsageReportProto.newBuilder();
@@ -55,8 +57,9 @@ extends ApplicationResourceUsageReport {
       ApplicationResourceUsageReportProto proto) {
     this.proto = proto;
     viaProto = true;
-    getResourceSecondsMap();
+    getGuaranteedResourceSecondsMap();
     getPreemptedResourceSecondsMap();
+    getOpportunisticResourceSecondsMap();
   }
 
   public synchronized ApplicationResourceUsageReportProto getProto() {
@@ -87,8 +90,13 @@ extends ApplicationResourceUsageReport {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.usedResources != null) {
-      builder.setUsedResources(convertToProtoFormat(this.usedResources));
+    if (this.guaranteedResourceUsed != null) {
+      builder.setUsedResources(
+          convertToProtoFormat(this.guaranteedResourceUsed));
+    }
+    if (this.opportunisticResourceUsed != null) {
+      builder.setUsedOpportunisticResources(
+          convertToProtoFormat(this.opportunisticResourceUsed));
     }
     if (this.reservedResources != null) {
       builder.setReservedResources(
@@ -99,19 +107,28 @@ extends ApplicationResourceUsageReport {
     }
     builder.clearApplicationResourceUsageMap();
     builder.clearApplicationPreemptedResourceUsageMap();
+    builder.clearApplicationOpportunisticResourceUsageMap();
 
     if (preemptedResourceSecondsMap != null && !preemptedResourceSecondsMap
         .isEmpty()) {
       builder.addAllApplicationPreemptedResourceUsageMap(ProtoUtils
           .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
     }
-    if (resourceSecondsMap != null && !resourceSecondsMap.isEmpty()) {
+    if (guaranteedResourceSecondsMap != null &&
+        !guaranteedResourceSecondsMap.isEmpty()) {
       builder.addAllApplicationResourceUsageMap(
-          ProtoUtils.convertMapToStringLongMapProtoList(resourceSecondsMap));
+          ProtoUtils.convertMapToStringLongMapProtoList(
+              guaranteedResourceSecondsMap));
+    }
+    if (opportunisticResourceSecondsMap != null &&
+        !opportunisticResourceSecondsMap.isEmpty()) {
+      builder.addAllApplicationOpportunisticResourceUsageMap(
+          ProtoUtils.convertMapToStringLongMapProtoList(
+              opportunisticResourceSecondsMap));
     }
 
-    builder.setMemorySeconds(this.getMemorySeconds());
-    builder.setVcoreSeconds(this.getVcoreSeconds());
+    builder.setMemorySeconds(this.getGuaranteedMemorySeconds());
+    builder.setVcoreSeconds(this.getGuaranteedVcoreSeconds());
     builder.setPreemptedMemorySeconds(this.getPreemptedMemorySeconds());
     builder.setPreemptedVcoreSeconds(this.getPreemptedVcoreSeconds());
   }
@@ -157,24 +174,53 @@ extends ApplicationResourceUsageReport {
   }
 
   @Override
+  @Deprecated
   public synchronized Resource getUsedResources() {
+    return getGuaranteedResourcesUsed();
+  }
+
+  @Override
+  public synchronized Resource getGuaranteedResourcesUsed() {
     ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.usedResources != null) {
-      return this.usedResources;
+    if (this.guaranteedResourceUsed != null) {
+      return this.guaranteedResourceUsed;
     }
     if (!p.hasUsedResources()) {
       return null;
     }
-    this.usedResources = convertFromProtoFormat(p.getUsedResources());
-    return this.usedResources;
+    this.guaranteedResourceUsed = convertFromProtoFormat(p.getUsedResources());
+    return this.guaranteedResourceUsed;
   }
 
   @Override
-  public synchronized void setUsedResources(Resource resources) {
+  public synchronized void setGuaranteedResourcesUsed(Resource resources) {
     maybeInitBuilder();
     if (resources == null)
       builder.clearUsedResources();
-    this.usedResources = resources;
+    this.guaranteedResourceUsed = resources;
+  }
+
+  @Override
+  public synchronized Resource getOpportunisticResourcesUsed() {
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.opportunisticResourceUsed != null) {
+      return this.opportunisticResourceUsed;
+    }
+    if (!p.hasUsedOpportunisticResources()) {
+      return null;
+    }
+    this.opportunisticResourceUsed =
+        convertFromProtoFormat(p.getUsedOpportunisticResources());
+    return this.opportunisticResourceUsed;
+  }
+
+  @Override
+  public synchronized void setOpportunisticResourcesUsed(Resource resources) {
+    maybeInitBuilder();
+    if (resources == null) {
+      builder.clearUsedOpportunisticResources();
+    }
+    this.opportunisticResourceUsed = resources;
   }
 
   @Override
@@ -220,14 +266,14 @@ extends ApplicationResourceUsageReport {
   }
 
   @Override
-  public synchronized void setMemorySeconds(long memory_seconds) {
-    getResourceSecondsMap()
-        .put(ResourceInformation.MEMORY_MB.getName(), memory_seconds);
+  public synchronized void setGuaranteedMemorySeconds(long memorySeconds) {
+    getGuaranteedResourceSecondsMap()
+        .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
   }
 
   @Override
-  public synchronized long getMemorySeconds() {
-    Map<String, Long> tmp = getResourceSecondsMap();
+  public synchronized long getGuaranteedMemorySeconds() {
+    Map<String, Long> tmp = getGuaranteedResourceSecondsMap();
     if (tmp.containsKey(ResourceInformation.MEMORY_MB.getName())) {
       return tmp.get(ResourceInformation.MEMORY_MB.getName());
     }
@@ -235,20 +281,50 @@ extends ApplicationResourceUsageReport {
   }
 
   @Override
-  public synchronized void setVcoreSeconds(long vcore_seconds) {
-    getResourceSecondsMap()
-        .put(ResourceInformation.VCORES.getName(), vcore_seconds);
+  @Deprecated
+  public synchronized long getMemorySeconds() {
+    return getGuaranteedMemorySeconds();
   }
 
   @Override
-  public synchronized long getVcoreSeconds() {
-    Map<String, Long> tmp = getResourceSecondsMap();
+  public synchronized void setGuaranteedVcoreSeconds(long vcoreSeconds) {
+    getGuaranteedResourceSecondsMap()
+        .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
+  }
+
+  @Override
+  public synchronized long getGuaranteedVcoreSeconds() {
+    Map<String, Long> tmp = getGuaranteedResourceSecondsMap();
     if (tmp.containsKey(ResourceInformation.VCORES.getName())) {
       return tmp.get(ResourceInformation.VCORES.getName());
     }
     return 0;
   }
-  
+
+  @Override
+  @Deprecated
+  public synchronized long getVcoreSeconds() {
+    return getGuaranteedVcoreSeconds();
+  }
+
+  @Override
+  public synchronized long getOpportunisticMemorySeconds() {
+    Map<String, Long> tmp = getOpportunisticResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      return tmp.get(ResourceInformation.MEMORY_MB.getName());
+    }
+    return 0;
+  }
+
+  @Override
+  public synchronized long getOpportunisticVcoreSeconds() {
+    Map<String, Long> tmp = getOpportunisticResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.VCORES.getName())) {
+      return tmp.get(ResourceInformation.VCORES.getName());
+    }
+    return 0;
+  }
+
   @Override
   public synchronized void setPreemptedMemorySeconds(
       long preemptedMemorySeconds) {
@@ -314,41 +390,47 @@ extends ApplicationResourceUsageReport {
   }
 
   @Override
-  public synchronized void setResourceSecondsMap(
+  public synchronized void setGuaranteedResourceSecondsMap(
       Map<String, Long> resourceSecondsMap) {
-    this.resourceSecondsMap = resourceSecondsMap;
+    this.guaranteedResourceSecondsMap = resourceSecondsMap;
     if (resourceSecondsMap == null) {
       return;
     }
     if (!resourceSecondsMap
         .containsKey(ResourceInformation.MEMORY_MB.getName())) {
-      this.setMemorySeconds(0L);
+      this.setGuaranteedMemorySeconds(0L);
     }
     if (!resourceSecondsMap.containsKey(ResourceInformation.VCORES.getName())) {
-      this.setVcoreSeconds(0L);
+      this.setGuaranteedVcoreSeconds(0L);
     }
   }
 
   @Override
+  @Deprecated
   public synchronized Map<String, Long> getResourceSecondsMap() {
-    if (this.resourceSecondsMap != null) {
-      return this.resourceSecondsMap;
+    return getGuaranteedResourceSecondsMap();
+  }
+
+  @Override
+  public synchronized Map<String, Long> getGuaranteedResourceSecondsMap() {
+    if (this.guaranteedResourceSecondsMap != null) {
+      return this.guaranteedResourceSecondsMap;
     }
     ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
-    this.resourceSecondsMap = ProtoUtils
+    this.guaranteedResourceSecondsMap = ProtoUtils
         .convertStringLongMapProtoListToMap(
             p.getApplicationResourceUsageMapList());
-    if (!this.resourceSecondsMap
+    if (!this.guaranteedResourceSecondsMap
         .containsKey(ResourceInformation.MEMORY_MB.getName())) {
-      this.setMemorySeconds(p.getMemorySeconds());
+      this.setGuaranteedMemorySeconds(p.getMemorySeconds());
     }
-    if (!this.resourceSecondsMap
+    if (!this.guaranteedResourceSecondsMap
         .containsKey(ResourceInformation.VCORES.getName())) {
-      this.setVcoreSeconds(p.getVcoreSeconds());
+      this.setGuaranteedVcoreSeconds(p.getVcoreSeconds());
     }
-    this.setMemorySeconds(p.getMemorySeconds());
-    this.setVcoreSeconds(p.getVcoreSeconds());
-    return this.resourceSecondsMap;
+    this.setGuaranteedMemorySeconds(p.getMemorySeconds());
+    this.setGuaranteedVcoreSeconds(p.getVcoreSeconds());
+    return this.guaranteedResourceSecondsMap;
   }
 
   @Override
@@ -388,5 +470,46 @@ extends ApplicationResourceUsageReport {
     this.setPreemptedMemorySeconds(p.getPreemptedMemorySeconds());
     this.setPreemptedVcoreSeconds(p.getPreemptedVcoreSeconds());
     return this.preemptedResourceSecondsMap;
+  }
+
+  @Override
+  public synchronized Map<String, Long> getOpportunisticResourceSecondsMap() {
+    if (this.opportunisticResourceSecondsMap != null) {
+      return this.opportunisticResourceSecondsMap;
+    }
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.opportunisticResourceSecondsMap = ProtoUtils
+        .convertStringLongMapProtoListToMap(
+            p.getApplicationOpportunisticResourceUsageMapList());
+    if (!opportunisticResourceSecondsMap.containsKey(
+        ResourceInformation.MEMORY_MB.getName())) {
+      this.opportunisticResourceSecondsMap.put(
+          ResourceInformation.MEMORY_MB.getName(), 0L);
+    }
+    if (!opportunisticResourceSecondsMap.containsKey(
+        ResourceInformation.VCORES.getName())) {
+      this.opportunisticResourceSecondsMap.put(
+          ResourceInformation.VCORES.getName(), 0L);
+    }
+    return this.opportunisticResourceSecondsMap;
+  }
+
+  @Override
+  public synchronized void setOpportunisticResourceSecondsMap(
+      Map<String, Long> opportunisticResourceSecondsMap) {
+    this.opportunisticResourceSecondsMap = opportunisticResourceSecondsMap;
+    if (opportunisticResourceSecondsMap == null) {
+      return;
+    }
+    if (!opportunisticResourceSecondsMap
+        .containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      this.opportunisticResourceSecondsMap.put(
+          ResourceInformation.MEMORY_MB.getName(), 0L);
+    }
+    if (!opportunisticResourceSecondsMap
+        .containsKey(ResourceInformation.VCORES.getName())) {
+      this.opportunisticResourceSecondsMap.put(
+          ResourceInformation.VCORES.getName(), 0L);
+    }
   }
 }

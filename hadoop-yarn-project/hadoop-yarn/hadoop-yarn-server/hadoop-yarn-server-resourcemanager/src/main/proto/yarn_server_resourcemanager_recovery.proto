@@ -90,6 +90,7 @@ message ApplicationAttemptStateDataProto {
     optional int64 preempted_vcore_seconds = 14;
     repeated StringLongMapProto application_resource_usage_map = 15;
     repeated StringLongMapProto preempted_resource_usage_map = 16;
+    repeated StringLongMapProto application_opportunistic_resource_usage_map = 17;
 }
 
 message EpochProto {

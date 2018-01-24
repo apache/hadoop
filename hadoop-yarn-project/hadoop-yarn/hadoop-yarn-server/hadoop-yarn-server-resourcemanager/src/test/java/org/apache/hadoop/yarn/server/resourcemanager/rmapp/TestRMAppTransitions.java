@@ -54,7 +54,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -243,7 +242,7 @@ public class TestRMAppTransitions {
 
     ResourceScheduler resourceScheduler = mock(ResourceScheduler.class);
     doReturn(null).when(resourceScheduler)
-              .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any());
+        .getAppActiveResourceUsageReport(Matchers.any());
     doReturn(resourceScheduler).when(rmContext).getScheduler();
 
     doReturn(mock(RMTimelineCollectorManager.class)).when(rmContext)
@@ -1249,7 +1248,8 @@ public class TestRMAppTransitions {
     assertAppState(RMAppState.NEW, app);
     ApplicationReport report = app.createAndGetApplicationReport(null, true);
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
-    Assert.assertEquals(report.getApplicationResourceUsageReport(),RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT);
+    Assert.assertEquals(RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT,
+        report.getApplicationResourceUsageReport());
     report = app.createAndGetApplicationReport("clientuser", true);
     Assert.assertNotNull(report.getApplicationResourceUsageReport());
     Assert.assertTrue("bad proxy url for app",

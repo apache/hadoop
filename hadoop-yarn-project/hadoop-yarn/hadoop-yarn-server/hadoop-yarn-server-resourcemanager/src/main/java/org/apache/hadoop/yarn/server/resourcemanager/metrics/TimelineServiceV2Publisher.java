@@ -193,11 +193,17 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     Set<TimelineMetric> entityMetrics = new HashSet<TimelineMetric>();
 
     entityMetrics.add(getTimelineMetric(
-        ApplicationMetricsConstants.APP_CPU_METRICS, timestamp,
-        appMetrics.getVcoreSeconds()));
+        ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS, timestamp,
+        appMetrics.getGuaranteedVcoreSeconds()));
     entityMetrics.add(getTimelineMetric(
-        ApplicationMetricsConstants.APP_MEM_METRICS, timestamp,
-        appMetrics.getMemorySeconds()));
+        ApplicationMetricsConstants.APP_GUARANTEED_MEM_METRICS, timestamp,
+        appMetrics.getGuaranteedMemorySeconds()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_CPU_METRICS,
+        timestamp, appMetrics.getOpportunisticVcoreSeconds()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_MEM_METRICS,
+        timestamp, appMetrics.getOpportunisticMemorySeconds()));
     entityMetrics.add(getTimelineMetric(
             ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS, timestamp,
             appMetrics.getPreemptedMemorySeconds()));

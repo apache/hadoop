@@ -339,12 +339,22 @@ public final class RouterWebServiceUtil {
 
       am.setAllocatedMB(am.getAllocatedMB() + uam.getAllocatedMB());
       am.setAllocatedVCores(am.getAllocatedVCores() + uam.getAllocatedVCores());
+      am.setAllocatedOpportunisticMB(am.getAllocatedOpportunisticMB() +
+          uam.getAllocatedOpportunisticMB());
+      am.setAllocatedOpportunisticVCores(am.getAllocatedOpportunisticVCores() +
+          uam.getAllocatedOpportunisticVCores());
       am.setReservedMB(am.getReservedMB() + uam.getReservedMB());
       am.setReservedVCores(am.getReservedVCores() + uam.getReservedMB());
       am.setRunningContainers(
           am.getRunningContainers() + uam.getRunningContainers());
-      am.setMemorySeconds(am.getMemorySeconds() + uam.getMemorySeconds());
-      am.setVcoreSeconds(am.getVcoreSeconds() + uam.getVcoreSeconds());
+      am.setGuaranteedMemorySeconds(am.getGuaranteedMemorySeconds() +
+          uam.getGuaranteedMemorySeconds());
+      am.setGuaranteedVcoreSeconds(am.getGuaranteedVcoreSeconds() +
+          uam.getGuaranteedVcoreSeconds());
+      am.setOpportunisticVcoreSeconds(am.getOpportunisticVcoreSeconds() +
+          uam.getOpportunisticVcoreSeconds());
+      am.setOpportunisticMemorySeconds(am.getOpportunisticMemorySeconds() +
+          uam.getOpportunisticMemorySeconds());
     }
   }
 

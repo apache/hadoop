@@ -28,18 +28,21 @@ public class RMAppMetrics {
   final Resource resourcePreempted;
   final int numNonAMContainersPreempted;
   final int numAMContainersPreempted;
-  private final Map<String, Long> resourceSecondsMap;
+  private final Map<String, Long> guaranteedResourceSecondsMap;
   private final Map<String, Long> preemptedResourceSecondsMap;
+  private final Map<String, Long> opportunisticResourceSecondsMap;
 
   public RMAppMetrics(Resource resourcePreempted,
       int numNonAMContainersPreempted, int numAMContainersPreempted,
-      Map<String, Long> resourceSecondsMap,
-      Map<String, Long> preemptedResourceSecondsMap) {
+      Map<String, Long> guaranteedResourceSecondsMap,
+      Map<String, Long> preemptedResourceSecondsMap,
+      Map<String, Long> opportunisticResourceSecondsMap) {
     this.resourcePreempted = resourcePreempted;
     this.numNonAMContainersPreempted = numNonAMContainersPreempted;
     this.numAMContainersPreempted = numAMContainersPreempted;
-    this.resourceSecondsMap = resourceSecondsMap;
+    this.guaranteedResourceSecondsMap = guaranteedResourceSecondsMap;
     this.preemptedResourceSecondsMap = preemptedResourceSecondsMap;
+    this.opportunisticResourceSecondsMap = opportunisticResourceSecondsMap;
   }
 
   public Resource getResourcePreempted() {
@@ -54,17 +57,25 @@ public class RMAppMetrics {
     return numAMContainersPreempted;
   }
 
-  public long getMemorySeconds() {
-    return RMServerUtils.getOrDefault(resourceSecondsMap,
+  public long getGuaranteedMemorySeconds() {
+    return RMServerUtils.getOrDefault(guaranteedResourceSecondsMap,
         ResourceInformation.MEMORY_MB.getName(), 0L);
   }
 
-  public long getVcoreSeconds() {
-    return RMServerUtils
-        .getOrDefault(resourceSecondsMap, ResourceInformation.VCORES.getName(),
-            0L);
+  public long getGuaranteedVcoreSeconds() {
+    return RMServerUtils.getOrDefault(guaranteedResourceSecondsMap,
+        ResourceInformation.VCORES.getName(), 0L);
   }
 
+  public long getOpportunisticMemorySeconds() {
+    return RMServerUtils.getOrDefault(opportunisticResourceSecondsMap,
+        ResourceInformation.MEMORY_MB.getName(), 0L);
+  }
+
+  public long getOpportunisticVcoreSeconds() {
+    return RMServerUtils.getOrDefault(opportunisticResourceSecondsMap,
+        ResourceInformation.VCORES.getName(), 0L);
+  }
   public long getPreemptedMemorySeconds() {
     return RMServerUtils.getOrDefault(preemptedResourceSecondsMap,
         ResourceInformation.MEMORY_MB.getName(), 0L);
@@ -75,12 +86,15 @@ public class RMAppMetrics {
         ResourceInformation.VCORES.getName(), 0L);
   }
 
-  public Map<String, Long> getResourceSecondsMap() {
-    return resourceSecondsMap;
+  public Map<String, Long> getGuaranteedResourceSecondsMap() {
+    return guaranteedResourceSecondsMap;
   }
 
   public Map<String, Long> getPreemptedResourceSecondsMap() {
     return preemptedResourceSecondsMap;
   }
 
+  public Map<String, Long> getOpportunisticResourceSecondsMap() {
+    return opportunisticResourceSecondsMap;
+  }
 }

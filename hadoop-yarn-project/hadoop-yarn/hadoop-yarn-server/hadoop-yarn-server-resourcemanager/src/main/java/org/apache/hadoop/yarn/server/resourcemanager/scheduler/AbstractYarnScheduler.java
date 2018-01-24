@@ -417,7 +417,7 @@ public abstract class AbstractYarnScheduler
   }
 
   @Override
-  public ApplicationResourceUsageReport getAppResourceUsageReport(
+  public ApplicationResourceUsageReport getAppActiveResourceUsageReport(
       ApplicationAttemptId appAttemptId) {
     SchedulerApplicationAttempt attempt = getApplicationAttempt(appAttemptId);
     if (attempt == null) {

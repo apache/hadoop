@@ -137,7 +137,7 @@ public class TestResourceMgrDelegate {
         Records.newRecord(Resource.class));
     Mockito.when(appResources.getReservedResources()).thenReturn(
         Records.newRecord(Resource.class));
-    Mockito.when(appResources.getUsedResources()).thenReturn(
+    Mockito.when(appResources.getGuaranteedResourcesUsed()).thenReturn(
         Records.newRecord(Resource.class));
     Mockito.when(appReport.getApplicationResourceUsageReport()).thenReturn(
         appResources);

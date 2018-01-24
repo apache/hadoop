@@ -2838,7 +2838,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Thread.sleep(1000);
     AllocateResponse allocResponse = am1.schedule();
     ApplicationResourceUsageReport report =
-        rm.getResourceScheduler().getAppResourceUsageReport(
+        rm.getResourceScheduler().getAppActiveResourceUsageReport(
           attempt1.getAppAttemptId());
     Assert.assertEquals(0, allocResponse.getAllocatedContainers().size());
     Assert.assertEquals(0, report.getNumReservedContainers());
@@ -2851,7 +2851,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
       allocResponse = am1.schedule();
     }
     report =
-        rm.getResourceScheduler().getAppResourceUsageReport(
+        rm.getResourceScheduler().getAppActiveResourceUsageReport(
           attempt1.getAppAttemptId());
     Assert.assertEquals(1, allocResponse.getAllocatedContainers().size());
     Assert.assertEquals(0, report.getNumReservedContainers());

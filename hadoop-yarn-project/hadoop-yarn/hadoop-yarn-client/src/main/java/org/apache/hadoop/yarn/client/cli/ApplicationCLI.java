@@ -1144,14 +1144,19 @@ public class ApplicationCLI extends YarnCLI {
 
   private void printResourceUsage(PrintWriter appReportStr,
       ApplicationResourceUsageReport usageReport) {
-    appReportStr.print("\tAggregate Resource Allocation : ");
+    appReportStr.print("\tAggregate Guaranteed Resource Allocation : ");
     if (usageReport != null) {
-      appReportStr.println(
-          getResourceSecondsString(usageReport.getResourceSecondsMap()));
+      appReportStr.println(getResourceSecondsString(
+          usageReport.getGuaranteedResourceSecondsMap()));
+      appReportStr.print("\tAggregate Opportunistic Resource Allocation : ");
+      appReportStr.println(getResourceSecondsString(
+          usageReport.getOpportunisticResourceSecondsMap()));
       appReportStr.print("\tAggregate Resource Preempted : ");
       appReportStr.println(getResourceSecondsString(
           usageReport.getPreemptedResourceSecondsMap()));
     } else {
+      appReportStr.println("N/A");
+      appReportStr.print("\tAggregate Opportunistic Resource Allocation : ");
       appReportStr.println("N/A");
       appReportStr.print("\tAggregate Resource Preempted : ");
       appReportStr.println("N/A");

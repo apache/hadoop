@@ -527,8 +527,8 @@ public class TypeConverter {
       jobStatus.setNumUsedSlots(resourceUsageReport.getNumUsedContainers());
       jobStatus.setReservedMem(
           (int)resourceUsageReport.getReservedResources().getMemorySize());
-      jobStatus.setUsedMem(
-          (int) resourceUsageReport.getUsedResources().getMemorySize());
+      jobStatus.setUsedMem((int) resourceUsageReport
+          .getGuaranteedResourcesUsed().getMemorySize());
     }
     return jobStatus;
   }

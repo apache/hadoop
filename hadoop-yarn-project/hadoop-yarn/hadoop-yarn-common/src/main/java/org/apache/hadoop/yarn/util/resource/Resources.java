@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 
+import java.util.Map;
+
 /**
  * Resources is a computation class which provides a set of apis to do
  * mathematical operations on Resource object.
@@ -552,5 +554,23 @@ public class Resources {
   public static Resource normalizeDown(ResourceCalculator calculator,
       Resource resource, Resource factor) {
     return calculator.normalizeDown(resource, factor);
+  }
+
+  /**
+   * Merge resource usage entries from a map to another map.
+   * @param mergeFrom the map to merge from
+   * @param mergeTo the map to merge to
+   */
+  public static void mergeResourceSecondsMap(Map<String, Long> mergeFrom,
+      Map<String, Long> mergeTo) {
+    for (Map.Entry<String, Long> entry : mergeFrom.entrySet()) {
+      Long value = mergeTo.get(entry.getKey());
+      if (value != null) {
+        value += entry.getValue();
+      } else {
+        value = entry.getValue();
+      }
+      mergeTo.put(entry.getKey(), value);
+    }
   }
 }

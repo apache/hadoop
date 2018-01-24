@@ -250,9 +250,13 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       ApplicationResourceUsageReport applicationResourceUsageReport =
           app.getApplicationResourceUsageReport();
       Assert.assertEquals(123,
-          applicationResourceUsageReport.getMemorySeconds());
-      Assert
-          .assertEquals(345, applicationResourceUsageReport.getVcoreSeconds());
+          applicationResourceUsageReport.getGuaranteedMemorySeconds());
+      Assert.assertEquals(345,
+          applicationResourceUsageReport.getGuaranteedVcoreSeconds());
+      Assert.assertEquals(123,
+          applicationResourceUsageReport.getOpportunisticMemorySeconds());
+      Assert.assertEquals(345,
+          applicationResourceUsageReport.getOpportunisticVcoreSeconds());
       long expectedPreemptMemSecs = 456;
       long expectedPreemptVcoreSecs = 789;
       if (i == 3) {
@@ -534,8 +538,12 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         Priority.newInstance(0));
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         Integer.MAX_VALUE + 1L);
-    entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS, 123);
-    entityInfo.put(ApplicationMetricsConstants.APP_CPU_METRICS, 345);
+    entityInfo.put(ApplicationMetricsConstants.APP_GUARANTEED_MEM_METRICS, 123);
+    entityInfo.put(ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS, 345);
+    entityInfo.put(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_MEM_METRICS, 123);
+    entityInfo.put(
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_CPU_METRICS, 345);
     if (!missingPreemptMetrics) {
       entityInfo.put(ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS, 456);
       entityInfo.put(ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS, 789);

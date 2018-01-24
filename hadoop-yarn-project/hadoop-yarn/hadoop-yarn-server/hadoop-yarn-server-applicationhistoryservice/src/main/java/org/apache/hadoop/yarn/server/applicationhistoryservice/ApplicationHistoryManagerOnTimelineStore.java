@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -330,29 +329,19 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                 .toString();
       }
 
-      if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
-        long vcoreSeconds = parseLong(entityInfo,
-            ApplicationMetricsConstants.APP_CPU_METRICS);
-        long memorySeconds = parseLong(entityInfo,
-            ApplicationMetricsConstants.APP_MEM_METRICS);
-        long preemptedMemorySeconds = parseLong(entityInfo,
-            ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS);
-        long preemptedVcoreSeconds = parseLong(entityInfo,
-            ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
-        Map<String, Long> resourceSecondsMap = new HashMap<>();
-        Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
-        resourceSecondsMap
-            .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
-        resourceSecondsMap
-            .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
-        preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
-            preemptedMemorySeconds);
-        preemptedResoureSecondsMap
-            .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
-
+      if (entityInfo.containsKey(
+          ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS)) {
+        Map<String, Long> guaranteedResourceSecondsMap =
+            extractGuaranteedResourceSecondsMap(entityInfo);
+        Map<String, Long> preemptedResoureSecondsMap =
+            extractPreemptedResourceSecondsMap(entityInfo);
+        Map<String, Long> opportunisticResourceSecondsMap =
+            extractOpportunisticResourceSecondsMap(entityInfo);
         appResources = ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, resourceSecondsMap, 0, 0,
-                preemptedResoureSecondsMap);
+            .newInstance(0, 0, null, null, null,
+                guaranteedResourceSecondsMap, 0, 0,
+                preemptedResoureSecondsMap, null,
+                opportunisticResourceSecondsMap);
       }
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
@@ -456,6 +445,54 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         amNodeLabelExpression), appViewACLs);
   }
 
+  private static Map<String, Long> extractGuaranteedResourceSecondsMap(
+      Map<String, Object> entityInfo) {
+    Map<String, Long> guaranteedResourceSecondsMap = new HashMap<>();
+
+    long guaranteedVcoreSeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_GUARANTEED_CPU_METRICS);
+    long guaranteedMemorySeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_GUARANTEED_MEM_METRICS);
+    guaranteedResourceSecondsMap.put(
+        ResourceInformation.MEMORY_MB.getName(), guaranteedMemorySeconds);
+    guaranteedResourceSecondsMap.put(ResourceInformation.VCORES.getName(),
+        guaranteedVcoreSeconds);
+
+    return guaranteedResourceSecondsMap;
+  }
+
+  private static Map<String, Long> extractOpportunisticResourceSecondsMap(
+      Map<String, Object> entityInfo) {
+    Map<String, Long> opportunisticResourceSecondsMap = new HashMap<>();
+
+    long opportunisticVcoreSeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_CPU_METRICS);
+    long opportunisticMemorySeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_OPPORTUNISTIC_MEM_METRICS);
+    opportunisticResourceSecondsMap.put(
+        ResourceInformation.MEMORY_MB.getName(),
+        opportunisticMemorySeconds);
+    opportunisticResourceSecondsMap.put(
+        ResourceInformation.VCORES.getName(), opportunisticVcoreSeconds);
+
+    return opportunisticResourceSecondsMap;
+  }
+
+  private static Map<String, Long> extractPreemptedResourceSecondsMap(
+      Map<String, Object> entityInfo) {
+    Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+
+    long preemptedMemorySeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS);
+    long preemptedVcoreSeconds = parseLong(entityInfo,
+        ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
+    preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+        preemptedMemorySeconds);
+    preemptedResoureSecondsMap
+        .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
+
+    return preemptedResoureSecondsMap;
+  }
   private static long parseLong(Map<String, Object> entityInfo,
       String infoKey) {
     long result = 0;
