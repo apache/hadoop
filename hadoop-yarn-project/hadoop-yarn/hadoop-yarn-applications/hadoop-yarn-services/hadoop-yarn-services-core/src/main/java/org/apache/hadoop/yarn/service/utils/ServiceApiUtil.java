@@ -61,6 +61,9 @@ public class ServiceApiUtil {
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
 
+  private static final PatternValidator userNamePattern
+      = new PatternValidator("[a-z][a-z0-9-.]*");
+
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
     jsonSerDeser = jsd;
@@ -72,11 +75,15 @@ public class ServiceApiUtil {
       IOException {
     boolean dnsEnabled = conf.getBoolean(RegistryConstants.KEY_DNS_ENABLED,
         RegistryConstants.DEFAULT_DNS_ENABLED);
-    if (dnsEnabled && RegistryUtils.currentUser().length() > RegistryConstants
-        .MAX_FQDN_LABEL_LENGTH) {
-      throw new IllegalArgumentException(RestApiErrorMessages
-          .ERROR_USER_NAME_INVALID);
+    if (dnsEnabled) {
+      if (RegistryUtils.currentUser().length()
+          > RegistryConstants.MAX_FQDN_LABEL_LENGTH) {
+        throw new IllegalArgumentException(
+            RestApiErrorMessages.ERROR_USER_NAME_INVALID);
+      }
+      userNamePattern.validate(RegistryUtils.currentUser());
     }
+
     if (StringUtils.isEmpty(service.getName())) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);

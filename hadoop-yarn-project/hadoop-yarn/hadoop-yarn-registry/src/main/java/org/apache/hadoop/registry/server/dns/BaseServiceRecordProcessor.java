@@ -36,8 +36,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Provides common service record processing logic.
@@ -51,7 +49,6 @@ public abstract class BaseServiceRecordProcessor
   private String path;
   private String domain;
 
-  private static final Pattern USER_NAME = Pattern.compile("/users/(\\w*)/?");
   private static final String YARN_SERVICE_API_PREFIX =
       "classpath:org.apache.hadoop.yarn.service.";
   private static final String HTTP_API_TYPE = "http://";
@@ -73,21 +70,6 @@ public abstract class BaseServiceRecordProcessor
     this.domain = domain;
     this.zoneSelctor = zoneSelector;
     initTypeToInfoMapping(record);
-  }
-
-  /**
-   * Return the username found in the ZK path.
-   *
-   * @param recPath the ZK recPath.
-   * @return the user name.
-   */
-  protected String getUsername(String recPath) {
-    String user = "anonymous";
-    Matcher matcher = USER_NAME.matcher(recPath);
-    if (matcher.find()) {
-      user = matcher.group(1);
-    }
-    return user;
   }
 
   /**
@@ -300,7 +282,7 @@ public abstract class BaseServiceRecordProcessor
       String service = RegistryPathUtils.lastPathEntry(
           RegistryPathUtils.parentOf(RegistryPathUtils.parentOf(getPath())));
       String description = getRecord().description.toLowerCase();
-      String user = getUsername(getPath());
+      String user = RegistryPathUtils.getUsername(getPath());
       return Name.fromString(MessageFormat.format("{0}.{1}.{2}.{3}",
           description,
           service,
@@ -352,7 +334,7 @@ public abstract class BaseServiceRecordProcessor
      * @throws TextParseException
      */
     protected Name getServiceName() throws TextParseException {
-      String user = getUsername(getPath());
+      String user = RegistryPathUtils.getUsername(getPath());
       String service =
           String.format("%s.%s.%s",
               RegistryPathUtils.lastPathEntry(getPath()),
