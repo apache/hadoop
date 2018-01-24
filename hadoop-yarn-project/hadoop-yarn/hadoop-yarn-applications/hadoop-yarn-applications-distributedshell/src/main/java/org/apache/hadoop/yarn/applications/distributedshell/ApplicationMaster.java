@@ -1419,7 +1419,7 @@ public class ApplicationMaster {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineV2Client.putEntities(entity);
+          timelineV2Client.putEntitiesAsync(entity);
           return null;
         }
       });
@@ -1453,7 +1453,7 @@ public class ApplicationMaster {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineV2Client.putEntities(entity);
+          timelineV2Client.putEntitiesAsync(entity);
           return null;
         }
       });
