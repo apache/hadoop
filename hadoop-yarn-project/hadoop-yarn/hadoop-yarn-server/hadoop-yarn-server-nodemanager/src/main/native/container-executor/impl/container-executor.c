@@ -1008,13 +1008,20 @@ static int open_file_as_nm(const char* filename) {
 static int copy_file(int input, const char* in_filename,
 		     const char* out_filename, mode_t perm) {
   const int buffer_size = 128*1024;
-  char buffer[buffer_size];
+  char* buffer = malloc(buffer_size);
+  if (buffer == NULL) {
+    fprintf(LOGFILE, "Failed to allocate buffer while copying file: %s -> %s",
+      in_filename, out_filename);
+    fflush(LOGFILE);
+    return -1;
+  }
 
   int out_fd = open(out_filename, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, perm);
   if (out_fd == -1) {
     fprintf(LOGFILE, "Can't open %s for output - %s\n", out_filename,
             strerror(errno));
     fflush(LOGFILE);
+    free(buffer);
     return -1;
   }
 
@@ -1024,15 +1031,18 @@ static int copy_file(int input, const char* in_filename,
     while (pos < len) {
       ssize_t write_result = write(out_fd, buffer + pos, len - pos);
       if (write_result <= 0) {
-	fprintf(LOGFILE, "Error writing to %s - %s\n", out_filename,
-		strerror(errno));
-	close(out_fd);
-	return -1;
+        fprintf(LOGFILE, "Error writing to %s - %s\n", out_filename,
+          strerror(errno));
+        close(out_fd);
+        free(buffer);
+        return -1;
       }
       pos += write_result;
     }
     len = read(input, buffer, buffer_size);
   }
+  free(buffer);
+
   if (len < 0) {
     fprintf(LOGFILE, "Failed to read file %s - %s\n", in_filename,
 	    strerror(errno));
