@@ -999,6 +999,12 @@
     <name>yarn.nodemanager.address</name>
     <value>${yarn.nodemanager.hostname}:0</value>
   </property>
+   
+  <property>
+    <description>use ip as node manager address, instead of hostname.</description>
+    <name>yarn.nodemanager.address.use-ip</name>
+    <value>false</value>
+  </property>
 
   <property>
     <description>
