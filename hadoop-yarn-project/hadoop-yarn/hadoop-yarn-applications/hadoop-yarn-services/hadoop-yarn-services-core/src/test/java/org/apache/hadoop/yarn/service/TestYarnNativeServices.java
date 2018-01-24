@@ -275,10 +275,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     }
   }
 
-  private void checkRegistryAndCompDirDeleted() {
-
-  }
-
   private void checkEachCompInstancesInOrder(Component component) {
     long expectedNumInstances = component.getNumberOfContainers();
     Assert.assertEquals(expectedNumInstances, component.getContainers().size());
@@ -292,32 +288,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       Assert.assertEquals(component.getName() + "-" + i, s);
       i++;
     }
-  }
-
-  private void waitForOneCompToBeReady(ServiceClient client,
-      Service exampleApp, String readyComp)
-      throws TimeoutException, InterruptedException {
-    long numExpectedContainers =
-        exampleApp.getComponent(readyComp).getNumberOfContainers();
-    GenericTestUtils.waitFor(() -> {
-      try {
-        Service retrievedApp = client.getStatus(exampleApp.getName());
-        Component retrievedComp = retrievedApp.getComponent(readyComp);
-
-        if (retrievedComp.getContainers() != null
-            && retrievedComp.getContainers().size() == numExpectedContainers) {
-          LOG.info(readyComp + " found " + numExpectedContainers
-              + " containers running");
-          return true;
-        } else {
-          LOG.info(" Waiting for " + readyComp + "'s containers to be running");
-          return false;
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, 2000, 200000);
   }
 
   /**
