@@ -2426,7 +2426,7 @@
   </property>
 
   <property>
-    <description> Optional FS path to an hbase-site.xml configuration file to be
+    <description> Optional URL to an hbase-site.xml configuration file to be
     used to connect to the timeline-service hbase cluster. If empty or not
     specified, then the HBase configuration will be loaded from the classpath.
     When specified the values in the specified configuration file will override

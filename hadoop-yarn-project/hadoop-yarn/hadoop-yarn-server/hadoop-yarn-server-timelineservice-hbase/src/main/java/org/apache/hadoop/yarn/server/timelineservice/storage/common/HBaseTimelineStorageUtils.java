@@ -18,14 +18,13 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -270,43 +269,28 @@ public final class HBaseTimelineStorageUtils {
    * @return a configuration with the HBase configuration from the classpath,
    *         optionally overwritten by the timeline service configuration URL if
    *         specified.
-   * @throws IOException if a timeline service HBase configuration path
-   *           is specified but unable to read it.
+   * @throws MalformedURLException if a timeline service HBase configuration URL
+   *           is specified but is a malformed URL.
    */
   public static Configuration getTimelineServiceHBaseConf(Configuration conf)
-      throws IOException {
+      throws MalformedURLException {
     if (conf == null) {
       throw new NullPointerException();
     }
 
     Configuration hbaseConf;
-    String timelineServiceHBaseConfFilePath =
+    String timelineServiceHBaseConfFileURL =
         conf.get(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE);
-    if (timelineServiceHBaseConfFilePath != null
-        && timelineServiceHBaseConfFilePath.length() > 0) {
+    if (timelineServiceHBaseConfFileURL != null
+        && timelineServiceHBaseConfFileURL.length() > 0) {
       LOG.info("Using hbase configuration at " +
-          timelineServiceHBaseConfFilePath);
+          timelineServiceHBaseConfFileURL);
       // create a clone so that we don't mess with out input one
       hbaseConf = new Configuration(conf);
       Configuration plainHBaseConf = new Configuration(false);
-      FileSystem fs = null;
-      FSDataInputStream in = null;
-      try {
-        Path hbaseConfigPath = new Path(timelineServiceHBaseConfFilePath);
-        fs = FileSystem.newInstance(conf);
-        in = fs.open(hbaseConfigPath);
-        plainHBaseConf.addResource(in);
-        HBaseConfiguration.merge(hbaseConf, plainHBaseConf);
-      } catch (IOException e) {
-        throw e;
-      } finally {
-        if (in != null) {
-          in.close();
-        }
-        if (fs != null) {
-          fs.close();
-        }
-      }
+      URL hbaseSiteXML = new URL(timelineServiceHBaseConfFileURL);
+      plainHBaseConf.addResource(hbaseSiteXML);
+      HBaseConfiguration.merge(hbaseConf, plainHBaseConf);
     } else {
       // default to what is on the classpath
       hbaseConf = HBaseConfiguration.create(conf);
