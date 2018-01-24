@@ -202,7 +202,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "auto-update.containers";
   public static final boolean DEFAULT_RM_AUTO_UPDATE_CONTAINERS = false;
 
-    /** use ip as node manager address, instead of hostname.*/
+  /** use ip as node manager address, instead of hostname.*/
   public static final String NM_USE_IP =
           NM_PREFIX + "address.use-ip";
   public static final boolean DEFAULT_NM_USE_IP = false;
