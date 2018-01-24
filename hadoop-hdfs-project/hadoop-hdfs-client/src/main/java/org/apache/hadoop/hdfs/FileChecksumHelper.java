@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.fs.CompositeCrcFileChecksum;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
+import org.apache.hadoop.fs.Options.ChecksumCombineMode;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -41,6 +46,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,9 +73,11 @@ final class FileChecksumHelper {
     private final long length;
     private final DFSClient client;
     private final ClientProtocol namenode;
-    private final DataOutputBuffer md5out = new DataOutputBuffer();
+    private final ChecksumCombineMode combineMode;
+    private final BlockChecksumType blockChecksumType;
+    private final DataOutputBuffer blockChecksumBuf = new DataOutputBuffer();
 
-    private MD5MD5CRC32FileChecksum fileChecksum;
+    private FileChecksum fileChecksum;
     private LocatedBlocks blockLocations;
 
     private int timeout;
@@ -88,12 +96,24 @@ final class FileChecksumHelper {
     FileChecksumComputer(String src, long length,
                          LocatedBlocks blockLocations,
                          ClientProtocol namenode,
-                         DFSClient client) throws IOException {
+                         DFSClient client,
+                         ChecksumCombineMode combineMode) throws IOException {
       this.src = src;
       this.length = length;
       this.blockLocations = blockLocations;
       this.namenode = namenode;
       this.client = client;
+      this.combineMode = combineMode;
+      switch (combineMode) {
+        case MD5MD5CRC:
+          this.blockChecksumType = BlockChecksumType.MD5CRC;
+          break;
+        case COMPOSITE_CRC:
+          this.blockChecksumType = BlockChecksumType.COMPOSITE_CRC;
+          break;
+        default:
+          throw new IOException("Unknown ChecksumCombineMode: " + combineMode);
+      }
 
       this.remaining = length;
 
@@ -121,11 +141,19 @@ final class FileChecksumHelper {
       return namenode;
     }
 
-    DataOutputBuffer getMd5out() {
-      return md5out;
+    ChecksumCombineMode getCombineMode() {
+      return combineMode;
     }
 
-    MD5MD5CRC32FileChecksum getFileChecksum() {
+    BlockChecksumType getBlockChecksumType() {
+      return blockChecksumType;
+    }
+
+    DataOutputBuffer getBlockChecksumBuf() {
+      return blockChecksumBuf;
+    }
+
+    FileChecksum getFileChecksum() {
       return fileChecksum;
     }
 
@@ -226,28 +254,98 @@ final class FileChecksumHelper {
     }
 
     /**
-     * Compute and aggregate block checksums block by block.
+     * Compute block checksums block by block and append the raw bytes of the
+     * block checksums into getBlockChecksumBuf().
      * @throws IOException
      */
     abstract void checksumBlocks() throws IOException;
 
     /**
-     * Make final file checksum result given the computing process done.
+     * Make final file checksum result given the per-block or per-block-group
+     * checksums collected into getBlockChecksumBuf().
      */
-    MD5MD5CRC32FileChecksum makeFinalResult() {
-      //compute file MD5
-      final MD5Hash fileMD5 = MD5Hash.digest(md5out.getData());
-      switch (crcType) {
-      case CRC32:
-        return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
-            crcPerBlock, fileMD5);
-      case CRC32C:
-        return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
-            crcPerBlock, fileMD5);
-      default:
-        // we will get here when crcType is "NULL".
-        return null;
+    FileChecksum makeFinalResult() throws IOException {
+      switch (combineMode) {
+        case MD5MD5CRC:
+          return makeMd5CrcResult();
+        case COMPOSITE_CRC:
+          return makeCompositeCrcResult();
+        default:
+          return null;
       }
+    }
+
+    FileChecksum makeMd5CrcResult() {
+      //compute file MD5
+      final MD5Hash fileMD5 = MD5Hash.digest(blockChecksumBuf.getData());
+      switch (crcType) {
+        case CRC32:
+          return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
+              crcPerBlock, fileMD5);
+        case CRC32C:
+          return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
+              crcPerBlock, fileMD5);
+        default:
+          // we will get here when crcType is "NULL".
+          return null;
+      }
+    }
+
+    FileChecksum makeCompositeCrcResult() throws IOException {
+      int compositeCrc = 0;
+      int crcPolynomial = DataChecksum.getCrcPolynomialForType(getCrcType());
+      byte[] blockChecksumBytes = blockChecksumBuf.getData();
+
+      long sumBlockLengths = 0;
+      for (int i = 0; i < locatedBlocks.size() - 1; ++i) {
+        LocatedBlock block = locatedBlocks.get(i);
+        // For everything except the last LocatedBlock, we expect getBlockSize()
+        // to accurately reflect the number of file bytes digested in the block
+        // checksum.
+        sumBlockLengths += block.getBlockSize();
+        int blockCrc = CrcUtil.readInt(blockChecksumBytes, i * 4);
+
+        if (compositeCrc == 0) {
+          compositeCrc = blockCrc;
+        } else {
+          // TODO(dhuo): Also used the precomputed monomial here. It's less
+          // important here composing blocks vs chunks since the number of
+          // blocks is generally much smaller than number of chunks.
+          compositeCrc = CrcUtil.compose(
+              compositeCrc, blockCrc, block.getBlockSize(), crcPolynomial);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format(
+              "Added blockCrc 0x%08x for block index %d of size %d",
+              blockCrc, i, block.getBlockSize()));
+        }
+      }
+
+      // NB: In some cases the located blocks have their block size adjusted
+      // explicitly based on the requested length, but not all cases;
+      // these numbers may or may not reflect actual sizes on disk.
+      long reportedLastBlockSize =
+          blockLocations.getLastLocatedBlock().getBlockSize();
+      long consumedLastBlockLength = reportedLastBlockSize;
+      if (length - sumBlockLengths < reportedLastBlockSize) {
+        LOG.warn(
+            "Implied last block length {} is less than reportedLastBlockSize {}",
+            length - sumBlockLengths, reportedLastBlockSize);
+        consumedLastBlockLength = length - sumBlockLengths;
+      }
+      // NB: blockChecksumBytes.length may be much longer than actual bytes
+      // written into the DataOutput.
+      int lastBlockCrc = CrcUtil.readInt(
+          blockChecksumBytes, 4 * (locatedBlocks.size() - 1));
+      compositeCrc = CrcUtil.compose(
+          compositeCrc, lastBlockCrc, consumedLastBlockLength, crcPolynomial);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format(
+            "Added lastBlockCrc 0x%08x for block index %d of size %d",
+            lastBlockCrc, locatedBlocks.size() - 1, consumedLastBlockLength));
+      }
+
+      return new CompositeCrcFileChecksum(compositeCrc, getCrcType());
     }
 
     /**
@@ -278,8 +376,10 @@ final class FileChecksumHelper {
     ReplicatedFileChecksumComputer(String src, long length,
                                    LocatedBlocks blockLocations,
                                    ClientProtocol namenode,
-                                   DFSClient client) throws IOException {
-      super(src, length, blockLocations, namenode, client);
+                                   DFSClient client,
+                                   ChecksumCombineMode combineMode)
+        throws IOException {
+      super(src, length, blockLocations, namenode, client, combineMode);
     }
 
     @Override
@@ -368,9 +468,11 @@ final class FileChecksumHelper {
         LOG.debug("write to {}: {}, block={}", datanode,
             Op.BLOCK_CHECKSUM, block);
 
-        // get block MD5
-        createSender(pair).blockChecksum(block,
-            locatedBlock.getBlockToken());
+        // get block checksum
+        createSender(pair).blockChecksum(
+            block,
+            locatedBlock.getBlockToken(),
+            new BlockChecksumOptions(getBlockChecksumType()));
 
         final BlockOpResponseProto reply = BlockOpResponseProto.parseFrom(
             PBHelperClient.vintPrefixed(pair.in));
@@ -397,9 +499,42 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        //read md5
-        final MD5Hash md5 = new MD5Hash(checksumData.getMd5().toByteArray());
-        md5.write(getMd5out());
+        String blockChecksumDebugString = null;
+        switch (getBlockChecksumType()) {
+          case MD5CRC:
+            //read md5
+            final MD5Hash md5 =
+                new MD5Hash(checksumData.getBlockChecksum().toByteArray());
+            md5.write(getBlockChecksumBuf());
+            if (LOG.isDebugEnabled()) {
+              blockChecksumDebugString = md5.toString();
+            }
+            break;
+          case COMPOSITE_CRC:
+            BlockChecksumType returnedType = PBHelperClient.convert(
+                checksumData.getBlockChecksumOptions().getBlockChecksumType());
+            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+              throw new IOException(String.format(
+                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+                  returnedType));
+            }
+            // TODO(dhuo): Maybe create a CRC wrapper which encapsulates
+            // validating size of byte-array and using hex for toString().
+            byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
+            if (crcBytes.length != 4) {
+              throw new IOException(String.format(
+                  "Unexpected crcBytes.length for COMPOSITE_CRC: %d",
+                  crcBytes.length));
+            }
+            int blockCrc = CrcUtil.readInt(crcBytes, 0);
+            getBlockChecksumBuf().write(CrcUtil.intToBytes(blockCrc));
+            if (LOG.isDebugEnabled()) {
+              blockChecksumDebugString = String.format("0x%08x", blockCrc);
+            }
+            break;
+          default:
+            throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
+        }
 
         // read crc-type
         final DataChecksum.Type ct;
@@ -415,8 +550,13 @@ final class FileChecksumHelper {
           setCrcType(ct);
         } else if (getCrcType() != DataChecksum.Type.MIXED
             && getCrcType() != ct) {
-          // if crc types are mixed in a file
-          setCrcType(DataChecksum.Type.MIXED);
+          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
+            throw new IOException(
+                "DataChecksum.Type.MIXED is not supported for COMPOSITE_CRC");
+          } else {
+            // if crc types are mixed in a file
+            setCrcType(DataChecksum.Type.MIXED);
+          }
         }
 
         if (LOG.isDebugEnabled()) {
@@ -424,7 +564,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from " + datanode + ": md5=" + md5);
+          LOG.debug("got reply from " + datanode + ": blockChecksum="
+              + blockChecksumDebugString);
         }
       }
     }
@@ -442,9 +583,10 @@ final class FileChecksumHelper {
                                           LocatedBlocks blockLocations,
                                           ClientProtocol namenode,
                                           DFSClient client,
-                                          ErasureCodingPolicy ecPolicy)
+                                          ErasureCodingPolicy ecPolicy,
+                                          ChecksumCombineMode combineMode)
         throws IOException {
-      super(src, length, blockLocations, namenode, client);
+      super(src, length, blockLocations, namenode, client, combineMode);
 
       this.ecPolicy = ecPolicy;
     }
@@ -464,7 +606,8 @@ final class FileChecksumHelper {
         LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
 
         if (!checksumBlockGroup(blockGroup)) {
-          throw new IOException("Fail to get block MD5 for " + locatedBlock);
+          throw new IOException(
+              "Fail to get block checksum for " + locatedBlock);
         }
       }
     }
@@ -520,15 +663,20 @@ final class FileChecksumHelper {
                              DatanodeInfo datanode,
                              long requestedNumBytes) throws IOException {
 
+      // TODO(dhuo): Refactor most of this into a shared helper method with the
+      // replicated computer.
       try (IOStreamPair pair = getClient().connectToDN(datanode,
           getTimeout(), blockGroup.getBlockToken())) {
 
         LOG.debug("write to {}: {}, blockGroup={}",
             datanode, Op.BLOCK_GROUP_CHECKSUM, blockGroup);
 
-        // get block MD5
-        createSender(pair).blockGroupChecksum(stripedBlockInfo,
-            blockGroup.getBlockToken(), requestedNumBytes);
+        // get block group checksum
+        createSender(pair).blockGroupChecksum(
+            stripedBlockInfo,
+            blockGroup.getBlockToken(),
+            requestedNumBytes,
+            new BlockChecksumOptions(getBlockChecksumType()));
 
         BlockOpResponseProto reply = BlockOpResponseProto.parseFrom(
             PBHelperClient.vintPrefixed(pair.in));
@@ -556,10 +704,40 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        //read md5
-        final MD5Hash md5 = new MD5Hash(
-            checksumData.getMd5().toByteArray());
-        md5.write(getMd5out());
+        String blockChecksumDebugString = null;
+        switch (getBlockChecksumType()) {
+          case MD5CRC:
+            //read md5
+            final MD5Hash md5 = new MD5Hash(
+                checksumData.getBlockChecksum().toByteArray());
+            md5.write(getBlockChecksumBuf());
+            if (LOG.isDebugEnabled()) {
+              blockChecksumDebugString = md5.toString();
+            }
+            break;
+          case COMPOSITE_CRC:
+            BlockChecksumType returnedType = PBHelperClient.convert(
+                checksumData.getBlockChecksumOptions().getBlockChecksumType());
+            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+              throw new IOException(String.format(
+                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+                  returnedType));
+            }
+            byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
+            if (crcBytes.length != 4) {
+              throw new IOException(String.format(
+                  "Unexpected crcBytes.length for COMPOSITE_CRC: %d",
+                  crcBytes.length));
+            }
+            int blockCrc = CrcUtil.readInt(crcBytes, 0);
+            getBlockChecksumBuf().write(CrcUtil.intToBytes(blockCrc));
+            if (LOG.isDebugEnabled()) {
+              blockChecksumDebugString = String.format("0x%08x", blockCrc);
+            }
+            break;
+          default:
+            throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
+        }
 
         // read crc-type
         final DataChecksum.Type ct;
@@ -575,8 +753,13 @@ final class FileChecksumHelper {
           setCrcType(ct);
         } else if (getCrcType() != DataChecksum.Type.MIXED &&
             getCrcType() != ct) {
-          // if crc types are mixed in a file
-          setCrcType(DataChecksum.Type.MIXED);
+          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
+            throw new IOException(
+                "DataChecksum.Type.MIXED is not supported for COMPOSITE_CRC");
+          } else {
+            // if crc types are mixed in a file
+            setCrcType(DataChecksum.Type.MIXED);
+          }
         }
 
         if (LOG.isDebugEnabled()) {
@@ -584,7 +767,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from " + datanode + ": md5=" + md5);
+          LOG.debug("got reply from " + datanode + ": blockChecksum="
+              + blockChecksumDebugString);
         }
       }
     }

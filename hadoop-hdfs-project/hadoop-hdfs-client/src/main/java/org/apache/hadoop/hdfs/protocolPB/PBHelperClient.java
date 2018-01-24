@@ -61,6 +61,8 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -245,6 +247,51 @@ public class PBHelperClient {
 
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
     return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+  }
+
+  public static HdfsProtos.BlockChecksumTypeProto convert(
+      BlockChecksumType type) {
+    switch(type) {
+      case MD5CRC:
+        return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
+      case COMPOSITE_CRC:
+        return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
+      case STRIPED_CRC:
+        return HdfsProtos.BlockChecksumTypeProto.STRIPED_CRC;
+      default:
+        throw new IllegalStateException(
+            "BUG: BlockChecksumType not found, type=" + type);
+    }
+  }
+
+  public static BlockChecksumType convert(
+      HdfsProtos.BlockChecksumTypeProto blockChecksumTypeProto) {
+    switch(blockChecksumTypeProto) {
+      case MD5CRC:
+        return BlockChecksumType.MD5CRC;
+      case COMPOSITE_CRC:
+        return BlockChecksumType.COMPOSITE_CRC;
+      case STRIPED_CRC:
+        return BlockChecksumType.STRIPED_CRC;
+      default:
+        throw new IllegalStateException(
+            "BUG: BlockChecksumTypeProto not found, type=" + blockChecksumTypeProto);
+    }
+  }
+
+  public static HdfsProtos.BlockChecksumOptionsProto convert(
+      BlockChecksumOptions options) {
+    return HdfsProtos.BlockChecksumOptionsProto.newBuilder()
+        .setBlockChecksumType(convert(options.getBlockChecksumType()))
+        .setStripeLength(options.getStripeLength())
+        .build();
+  }
+
+  public static BlockChecksumOptions convert(
+      HdfsProtos.BlockChecksumOptionsProto options) {
+    return new BlockChecksumOptions(
+        convert(options.getBlockChecksumType()),
+        options.getStripeLength());
   }
 
   public static ExtendedBlockProto convert(final ExtendedBlock b) {

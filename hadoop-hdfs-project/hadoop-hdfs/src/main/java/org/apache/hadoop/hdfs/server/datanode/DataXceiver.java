@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -61,6 +63,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
@@ -980,7 +983,8 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void blockChecksum(ExtendedBlock block,
-                            Token<BlockTokenIdentifier> blockToken)
+      Token<BlockTokenIdentifier> blockToken,
+      BlockChecksumOptions blockChecksumOptions)
       throws IOException {
     updateCurrentThreadName("Getting checksum for block " + block);
     final DataOutputStream out = new DataOutputStream(
@@ -988,7 +992,7 @@ class DataXceiver extends Receiver implements Runnable {
     checkAccess(out, true, block, blockToken, Op.BLOCK_CHECKSUM,
         BlockTokenIdentifier.AccessMode.READ);
     BlockChecksumComputer maker =
-        new ReplicatedBlockChecksumComputer(datanode, block);
+        new ReplicatedBlockChecksumComputer(datanode, block, blockChecksumOptions);
 
     try {
       maker.compute();
@@ -999,8 +1003,10 @@ class DataXceiver extends Receiver implements Runnable {
           .setChecksumResponse(OpBlockChecksumResponseProto.newBuilder()
               .setBytesPerCrc(maker.getBytesPerCRC())
               .setCrcPerBlock(maker.getCrcPerBlock())
-              .setMd5(ByteString.copyFrom(maker.getOutBytes()))
-              .setCrcType(PBHelperClient.convert(maker.getCrcType())))
+              .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
+              .setCrcType(PBHelperClient.convert(maker.getCrcType()))
+              // TODO(dhuo): Maybe re-fetch blockChecksumOptions from maker instead
+              .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);
       out.flush();
@@ -1018,7 +1024,9 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void blockGroupChecksum(final StripedBlockInfo stripedBlockInfo,
-      final Token<BlockTokenIdentifier> blockToken, long requestedNumBytes)
+      final Token<BlockTokenIdentifier> blockToken,
+      long requestedNumBytes,
+      BlockChecksumOptions blockChecksumOptions)
       throws IOException {
     final ExtendedBlock block = stripedBlockInfo.getBlock();
     updateCurrentThreadName("Getting checksum for block group" +
@@ -1029,7 +1037,7 @@ class DataXceiver extends Receiver implements Runnable {
 
     AbstractBlockChecksumComputer maker =
         new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo,
-            requestedNumBytes);
+            requestedNumBytes, blockChecksumOptions);
 
     try {
       maker.compute();
@@ -1040,8 +1048,10 @@ class DataXceiver extends Receiver implements Runnable {
           .setChecksumResponse(OpBlockChecksumResponseProto.newBuilder()
               .setBytesPerCrc(maker.getBytesPerCRC())
               .setCrcPerBlock(maker.getCrcPerBlock())
-              .setMd5(ByteString.copyFrom(maker.getOutBytes()))
-              .setCrcType(PBHelperClient.convert(maker.getCrcType())))
+              .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
+              .setCrcType(PBHelperClient.convert(maker.getCrcType()))
+              // TODO(dhuo): Maybe re-fetch blockChecksumOptions from maker instead
+              .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);
       out.flush();

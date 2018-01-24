@@ -21,6 +21,8 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -40,6 +42,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +73,7 @@ final class BlockChecksumHelper {
    */
   static abstract class AbstractBlockChecksumComputer {
     private final DataNode datanode;
+    private final BlockChecksumOptions blockChecksumOptions;
 
     private byte[] outBytes;
     private int bytesPerCRC = -1;
@@ -77,8 +81,11 @@ final class BlockChecksumHelper {
     private long crcPerBlock = -1;
     private int checksumSize = -1;
 
-    AbstractBlockChecksumComputer(DataNode datanode) throws IOException {
+    AbstractBlockChecksumComputer(
+        DataNode datanode,
+        BlockChecksumOptions blockChecksumOptions) throws IOException {
       this.datanode = datanode;
+      this.blockChecksumOptions = blockChecksumOptions;
     }
 
     abstract void compute() throws IOException;
@@ -90,6 +97,10 @@ final class BlockChecksumHelper {
 
     DataNode getDatanode() {
       return datanode;
+    }
+
+    BlockChecksumOptions getBlockChecksumOptions() {
+      return blockChecksumOptions;
     }
 
     InputStream getBlockInputStream(ExtendedBlock block, long seekOffset)
@@ -155,8 +166,10 @@ final class BlockChecksumHelper {
     private DataChecksum checksum;
 
     BlockChecksumComputer(DataNode datanode,
-                          ExtendedBlock block) throws IOException {
-      super(datanode);
+                          ExtendedBlock block,
+                          BlockChecksumOptions blockChecksumOptions)
+        throws IOException {
+      super(datanode, blockChecksumOptions);
       this.block = block;
       this.requestLength = block.getNumBytes();
       Preconditions.checkArgument(requestLength >= 0);
@@ -268,8 +281,10 @@ final class BlockChecksumHelper {
   static class ReplicatedBlockChecksumComputer extends BlockChecksumComputer {
 
     ReplicatedBlockChecksumComputer(DataNode datanode,
-                                    ExtendedBlock block) throws IOException {
-      super(datanode, block);
+                                    ExtendedBlock block,
+                                    BlockChecksumOptions blockChecksumOptions)
+        throws IOException {
+      super(datanode, block, blockChecksumOptions);
     }
 
     @Override
@@ -277,20 +292,39 @@ final class BlockChecksumHelper {
       try {
         readHeader();
 
-        MD5Hash md5out;
-        if (isPartialBlk() && getCrcPerBlock() > 0) {
-          md5out = checksumPartialBlock();
-        } else {
-          md5out = checksumWholeBlock();
+        BlockChecksumType type =
+            getBlockChecksumOptions().getBlockChecksumType();
+        switch (type) {
+          case MD5CRC:
+            computeMd5Crc();
+            break;
+          case COMPOSITE_CRC:
+            computeCompositeCrc(0);
+            break;
+          case STRIPED_CRC:
+            computeCompositeCrc(getBlockChecksumOptions().getStripeLength());
+            break;
+          default:
+            throw new IOException(String.format(
+                "Unrecognized BlockChecksumType: %s", type));
         }
-        setOutBytes(md5out.getDigest());
-
-        LOG.debug("block={}, bytesPerCRC={}, crcPerBlock={}, md5out={}",
-            getBlock(), getBytesPerCRC(), getCrcPerBlock(), md5out);
       } finally {
         IOUtils.closeStream(getChecksumIn());
         IOUtils.closeStream(getMetadataIn());
       }
+    }
+
+    private void computeMd5Crc() throws IOException {
+      MD5Hash md5out;
+      if (isPartialBlk() && getCrcPerBlock() > 0) {
+        md5out = checksumPartialBlock();
+      } else {
+        md5out = checksumWholeBlock();
+      }
+      setOutBytes(md5out.getDigest());
+
+      LOG.debug("block={}, bytesPerCRC={}, crcPerBlock={}, md5out={}",
+          getBlock(), getBytesPerCRC(), getCrcPerBlock(), md5out);
     }
 
     private MD5Hash checksumWholeBlock() throws IOException {
@@ -320,6 +354,114 @@ final class BlockChecksumHelper {
 
       return new MD5Hash(digester.digest());
     }
+
+    private void computeCompositeCrc(long stripeLength) throws IOException {
+      long checksumDataLength =
+          Math.min(getVisibleLength(), getRequestLength());
+      if (stripeLength <= 0 || stripeLength > checksumDataLength) {
+        stripeLength = checksumDataLength;
+      }
+      
+      // TODO(dhuo): Check bounds; we can't support numStripes >
+      // Integer.MAX_VALUE with this approach because we buffer
+      // all striped CRCs in memory before composing them in correct logical
+      // order. Alternatively we'd either need to spill to disk or pass
+      // around a running composite.
+      int numStripes = (int) (checksumDataLength / stripeLength);
+      if (checksumDataLength % stripeLength != 0) {
+        ++numStripes;
+      }
+      long crcsPerStripe;
+      if (stripeLength == checksumDataLength) {
+        crcsPerStripe = Long.MAX_VALUE;
+      } else if (stripeLength % getBytesPerCRC() == 0) {
+        crcsPerStripe = stripeLength / getBytesPerCRC();
+      } else {
+        throw new IOException(String.format(
+            "stripeLength(=%d) must either be full data length (=%d) or "
+            + "divisible by bytesPerCrc(=%d)",
+            stripeLength, checksumDataLength, getBytesPerCRC()));
+      }
+      LOG.debug("computeCompositeCrc stripeLength={}, checksumDataLength={}, "
+          + "numStripes={}, crcsPerStripe={}, getBytesPerCRC()={}",
+          stripeLength, checksumDataLength, numStripes, crcsPerStripe,
+          getBytesPerCRC());
+
+      // TODO(dhuo): maybe use DataOutputBuffer for this instead, but remember
+      // to deal with the fact that its getData() returns a powers-of-two
+      // buffer larger than actual written data.
+      byte[] stripedCrcs = new byte[4 * numStripes];
+      int stripedCrcsCursor = 0;  // Index into stripedCrcs.
+
+      int compositeCrc = 0;
+      int crcPolynomial = DataChecksum.getCrcPolynomialForType(getCrcType());
+      DataInputStream checksumIn = getChecksumIn();
+
+      // Whether getting the checksum for the entire block (which itself may
+      // not be a full block size and may have a final chunk smaller than
+      // getBytesPerCRC()), we begin with a number of full chunks, all of size
+      // getBytesPerCRC().
+      long numFullChunks = checksumDataLength / getBytesPerCRC();
+      int fullChunkMonomial = CrcUtil.getMonomial(getBytesPerCRC(), crcPolynomial);
+      LOG.debug(String.format(
+          "Using monomial 0x%08x for length %d and CRC polynomial 0x%08x",
+          fullChunkMonomial, getBytesPerCRC(), crcPolynomial));
+      for (long chunkNum = 0; chunkNum < numFullChunks; ++chunkNum) {
+        int chunkCrc = checksumIn.readInt();
+
+        if (compositeCrc == 0) {
+          compositeCrc = chunkCrc;
+        } else {
+          compositeCrc = CrcUtil.composeWithMonomial(
+              compositeCrc, chunkCrc, fullChunkMonomial, crcPolynomial);
+        }
+
+        if ((chunkNum + 1) % crcsPerStripe == 0) {
+          // Commit a single striped crc and reset the current compositeCrc.
+          CrcUtil.writeInt(stripedCrcs, stripedCrcsCursor, compositeCrc);
+          stripedCrcsCursor += 4;
+          compositeCrc = 0;
+        }
+      }
+
+      // There may be a final partial chunk that is not full-sized. Unlike the
+      // MD5 case, we still consider this a "partial chunk" even if
+      // getRequestLength() == getVisibleLength(), since the CRC composition
+      // depends on the byte size of that final chunk, even if it already has a
+      // precomputed CRC stored in metadata. So there are two cases:
+      //   1. Reading only part of a block via getRequestLength(); we get the
+      //      crcPartialBlock() explicitly.
+      //   2. Reading full visible length; the partial chunk already has a CRC
+      //      stored in block metadata, so we just continue reading checksumIn.
+      long partialChunkSize = checksumDataLength % getBytesPerCRC();
+      if (partialChunkSize > 0) {
+        int partialChunkCrc;
+        if (isPartialBlk()) {
+          byte[] partialChunkCrcBytes = crcPartialBlock();
+          partialChunkCrc = CrcUtil.readInt(partialChunkCrcBytes, 0);
+        } else {
+          partialChunkCrc = checksumIn.readInt();
+        }
+        compositeCrc = CrcUtil.compose(
+            compositeCrc, partialChunkCrc, partialChunkSize, crcPolynomial);
+      }
+
+      // TODO(dhuo): Find a cleaner way of accounting the various cases:
+      // 1. Exactly line up with full block (no partial chunk, no uncommitted
+      //    compositeCrc).
+      // 2. No partial chunk, but partial stripe; compositeCrc still needs
+      //    to be committed.
+      // 3. Lined up on full chunks, but partial chunk == partial stripe
+      if (stripedCrcsCursor < stripedCrcs.length) {
+        CrcUtil.writeInt(stripedCrcs, stripedCrcsCursor, compositeCrc);
+      }
+
+      setOutBytes(stripedCrcs);
+      // TODO(dhuo): Support striped crcs in the debug statement.
+      LOG.debug("block={}, getBytesPerCRC={}, crcPerBlock={}, compositeCrc={}",
+          getBlock(), getBytesPerCRC(), getCrcPerBlock(),
+          String.format("0x%08x", compositeCrc));
+    }
   }
 
   /**
@@ -335,19 +477,26 @@ final class BlockChecksumHelper {
     private final byte[] blockIndices;
     private final long requestedNumBytes;
 
-    private final DataOutputBuffer md5writer = new DataOutputBuffer();
+    private final DataOutputBuffer blockChecksumBuf = new DataOutputBuffer();
+
+    // Raw blockChecksum data returned for each block by blockIndex; so
+    // blockChecksumBytes[0] is the blockChecksum data for the logical
+    // blockIndex 0 in the block group.
+    private final byte[][] blockChecksumBytes;
 
     BlockGroupNonStripedChecksumComputer(DataNode datanode,
                                          StripedBlockInfo stripedBlockInfo,
-                                         long requestedNumBytes)
+                                         long requestedNumBytes,
+                                         BlockChecksumOptions blockChecksumOptions)
         throws IOException {
-      super(datanode);
+      super(datanode, blockChecksumOptions);
       this.blockGroup = stripedBlockInfo.getBlock();
       this.ecPolicy = stripedBlockInfo.getErasureCodingPolicy();
       this.datanodes = stripedBlockInfo.getDatanodes();
       this.blockTokens = stripedBlockInfo.getBlockTokens();
       this.blockIndices = stripedBlockInfo.getBlockIndices();
       this.requestedNumBytes = requestedNumBytes;
+      this.blockChecksumBytes = new byte[this.ecPolicy.getNumDataUnits()][];
     }
 
     private static class LiveBlockInfo {
@@ -409,8 +558,55 @@ final class BlockChecksumHelper {
         }
       }
 
-      MD5Hash md5out = MD5Hash.digest(md5writer.getData());
-      setOutBytes(md5out.getDigest());
+      BlockChecksumType type = getBlockChecksumOptions().getBlockChecksumType();
+      switch (type) {
+        case MD5CRC:
+          // TODO(dhuo): Check whether digest(DataOutputBuffer.getData() is a
+          // latent bug due to the data buffer being longer than the valid data
+          // length.
+          MD5Hash md5out = MD5Hash.digest(blockChecksumBuf.getData());
+          setOutBytes(md5out.getDigest());
+          break;
+        case COMPOSITE_CRC:
+          // TODO(dhuo): Maybe also use the monomial precompute.
+          int compositeCrc = 0;
+          int crcPolynomial =
+              DataChecksum.getCrcPolynomialForType(getCrcType());
+          int[] blockChecksumCursors = new int[numDataUnits];
+          long numFullCells = checksumLen / ecPolicy.getCellSize();
+          for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
+            int blockIndex = (int) (cellIndex % numDataUnits);
+            int checksumCursor = blockChecksumCursors[blockIndex];
+            int cellCrc = CrcUtil.readInt(
+                blockChecksumBytes[blockIndex], checksumCursor);
+            blockChecksumCursors[blockIndex] += 4;
+            if (compositeCrc == 0) {
+              compositeCrc = cellCrc;
+            } else {
+              compositeCrc = CrcUtil.compose(
+                  compositeCrc, cellCrc, ecPolicy.getCellSize(), crcPolynomial);
+            }
+          }
+          if (checksumLen % ecPolicy.getCellSize() != 0) {
+            // Final partial cell.
+            int blockIndex = (int) (numFullCells % numDataUnits);
+            int checksumCursor = blockChecksumCursors[blockIndex];
+            int cellCrc = CrcUtil.readInt(
+                blockChecksumBytes[blockIndex], checksumCursor);
+            blockChecksumCursors[blockIndex] += 4;
+            // At this point all blockChecksumCursor values should be equal to
+            // the lengths of correspending arrays in blockChecksumBytes.
+            compositeCrc = CrcUtil.compose(
+                compositeCrc, cellCrc, checksumLen % ecPolicy.getCellSize(),
+                crcPolynomial);
+          }
+          // TODO(dhuo): Maybe add a debug statement here.
+          setOutBytes(CrcUtil.intToBytes(compositeCrc));
+          break;
+        default:
+          throw new IOException(String.format(
+              "Unrecognized BlockChecksumType: %s", type));
+      }
     }
 
     private ExtendedBlock getInternalBlock(int numDataUnits, int idx) {
@@ -437,8 +633,25 @@ final class BlockChecksumHelper {
         LOG.debug("write to {}: {}, block={}",
             getDatanode(), Op.BLOCK_CHECKSUM, block);
 
-        // get block MD5
-        createSender(pair).blockChecksum(block, blockToken);
+        // get block checksum
+        // A BlockGroupCheckum of type COMPOSITE_CRC uses underlying
+        // BlockChecksums of type STRIPED_CRC.
+        BlockChecksumOptions childOptions;
+        BlockChecksumType groupChecksumType =
+            getBlockChecksumOptions().getBlockChecksumType();
+        switch (groupChecksumType) {
+          case MD5CRC:
+            childOptions = getBlockChecksumOptions();
+            break;
+          case COMPOSITE_CRC:
+            childOptions = new BlockChecksumOptions(
+                BlockChecksumType.STRIPED_CRC, ecPolicy.getCellSize());
+            break;
+          default:
+            throw new IOException(
+                "Unknown BlockChecksumType: " + groupChecksumType);
+        }
+        createSender(pair).blockChecksum(block, blockToken, childOptions);
 
         final DataTransferProtos.BlockOpResponseProto reply =
             DataTransferProtos.BlockOpResponseProto.parseFrom(
@@ -463,10 +676,34 @@ final class BlockChecksumHelper {
 
         setOrVerifyChecksumProperties(blockIdx, checksumData.getBytesPerCrc(),
             checksumData.getCrcPerBlock(), ct);
-        //read md5
-        final MD5Hash md5 = new MD5Hash(checksumData.getMd5().toByteArray());
-        md5.write(md5writer);
-        LOG.debug("got reply from datanode:{}, md5={}", targetDatanode, md5);
+
+        switch (groupChecksumType) {
+          case MD5CRC:
+            //read md5
+            final MD5Hash md5 =
+                new MD5Hash(checksumData.getBlockChecksum().toByteArray());
+            md5.write(blockChecksumBuf);
+            LOG.debug("got reply from datanode:{}, md5={}",
+                targetDatanode, md5);
+            break;
+          case COMPOSITE_CRC:
+            BlockChecksumType returnedType = PBHelperClient.convert(
+                checksumData.getBlockChecksumOptions().getBlockChecksumType());
+            if (returnedType != BlockChecksumType.STRIPED_CRC) {
+              throw new IOException(String.format(
+                  "Unexpected blockChecksumType '%s', expecting STRIPED_CRC",
+                  returnedType));
+            }
+            blockChecksumBytes[blockIdx] =
+                checksumData.getBlockChecksum().toByteArray();
+            // TODO(dhuo): Add debug log for returned data.
+            LOG.debug("got reply from datanode:{} for blockIdx:{}, length:{}",
+                targetDatanode, blockIdx, blockChecksumBytes[blockIdx].length);
+            break;
+          default:
+            throw new IOException(
+                "Unknown BlockChecksumType: " + groupChecksumType);
+        }
       }
     }
 
@@ -489,10 +726,11 @@ final class BlockChecksumHelper {
       StripedReconstructionInfo stripedReconInfo =
           new StripedReconstructionInfo(
               blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
+      // TODO(dhuo): Plumb through to StripedBlockChecksumReconstructor
       final StripedBlockChecksumReconstructor checksumRecon =
           new StripedBlockChecksumReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
-              md5writer, blockLength);
+              blockChecksumBuf, blockLength);
       checksumRecon.reconstruct();
 
       DataChecksum checksum = checksumRecon.getChecksum();
@@ -524,6 +762,7 @@ final class BlockChecksumHelper {
         setCrcType(ct);
       } else if (getCrcType() != DataChecksum.Type.MIXED &&
           getCrcType() != ct) {
+        // TODO(dhuo): Throw if getBlockChecksumType() == COMPOSITE_CTC
         // if crc types are mixed in a file
         setCrcType(DataChecksum.Type.MIXED);
       }
