@@ -334,14 +334,15 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
         targetAllocationTags = new HashSet<>(
             targetExpression.getTargetValues());
 
-        if (targetExpression.getTargetKey() == null || !targetExpression
+        if (targetExpression.getTargetKey() != null && !targetExpression
             .getTargetKey().equals(APPLICATION_LABEL_INTRA_APPLICATION)) {
           throwExceptionWithMetaInfo(
               "As of now, the only accepted target key for targetKey of "
                   + "allocation_tag target expression is: ["
                   + APPLICATION_LABEL_INTRA_APPLICATION
                   + "]. Please make changes to placement constraints "
-                  + "accordingly.");
+                  + "accordingly. If this is null, it will be set to "
+                  + APPLICATION_LABEL_INTRA_APPLICATION + " by default.");
         }
       }
     }
