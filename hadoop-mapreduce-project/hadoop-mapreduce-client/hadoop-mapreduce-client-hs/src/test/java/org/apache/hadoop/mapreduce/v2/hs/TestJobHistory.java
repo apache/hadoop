@@ -446,6 +446,32 @@ public class TestJobHistory {
   }
 
   @Test
+  public void testCachedStorageWaitsForFileMove() throws IOException {
+    HistoryFileManager historyManager = mock(HistoryFileManager.class);
+    jobHistory = spy(new JobHistory());
+    doReturn(historyManager).when(jobHistory).createHistoryFileManager();
+
+    Configuration conf = new Configuration();
+    jobHistory.init(conf);
+    jobHistory.start();
+
+    CachedHistoryStorage storage = spy((CachedHistoryStorage) jobHistory
+        .getHistoryStorage());
+
+    Job job  = mock(Job.class);
+    JobId jobId  = mock(JobId.class);
+    when(job.getID()).thenReturn(jobId);
+    when(job.getTotalMaps()).thenReturn(10);
+    when(job.getTotalReduces()).thenReturn(2);
+    HistoryFileInfo fileInfo = mock(HistoryFileInfo.class);
+    when(historyManager.getFileInfo(eq(jobId))).thenReturn(fileInfo);
+    when(fileInfo.loadJob()).thenReturn(job);
+
+    storage.getFullJob(jobId);
+    verify(fileInfo).waitUntilMoved();
+  }
+
+  @Test
   public void testRefreshLoadedJobCacheUnSupportedOperation() {
     jobHistory = spy(new JobHistory());
     HistoryStorage storage = new HistoryStorage() {
