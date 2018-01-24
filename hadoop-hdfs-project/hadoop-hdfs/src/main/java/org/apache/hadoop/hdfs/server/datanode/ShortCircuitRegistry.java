@@ -114,7 +114,7 @@ public class ShortCircuitRegistry {
 
   public synchronized void removeShm(ShortCircuitShm shm) {
     if (LOG.isTraceEnabled()) {
-      LOG.debug("removing shm " + shm);
+      LOG.trace("removing shm " + shm);
     }
     // Stop tracking the shmId.
     RegisteredShm removedShm = segments.remove(shm.getShmId());

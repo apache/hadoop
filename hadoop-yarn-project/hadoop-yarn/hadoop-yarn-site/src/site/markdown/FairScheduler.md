@@ -74,8 +74,11 @@ Customizing the Fair Scheduler typically involves altering two files. First, sch
 | `yarn.scheduler.fair.locality.threshold.rack` | For applications that request containers on particular racks, the number of scheduling opportunities since the last container assignment to wait before accepting a placement on another rack. Expressed as a float between 0 and 1, which, as a fraction of the cluster size, is the number of scheduling opportunities to pass up. The default value of -1.0 means don't pass up any scheduling opportunities. |
 | `yarn.scheduler.fair.allow-undeclared-pools` | If this is true, new queues can be created at application submission time, whether because they are specified as the application's queue by the submitter or because they are placed there by the user-as-default-queue property. If this is false, any time an app would be placed in a queue that is not specified in the allocations file, it is placed in the "default" queue instead. Defaults to true. If a queue placement policy is given in the allocations file, this property is ignored. |
 | `yarn.scheduler.fair.update-interval-ms` | The interval at which to lock the scheduler and recalculate fair shares, recalculate demand, and check whether anything is due for preemption. Defaults to 500 ms. |
-| `yarn.scheduler.increment-allocation-mb` | The fairscheduler grants memory in increments of this value. If you submit a task with resource request that is not a multiple of increment-allocation-mb, the request will be rounded up to the nearest increment. Defaults to 1024 MB. |
-| `yarn.scheduler.increment-allocation-vcores` | The fairscheduler grants vcores in increments of this value. If you submit a task with resource request that is not a multiple of increment-allocation-vcores, the request will be rounded up to the nearest increment. Defaults to 1. |
+| `yarn.resource-types.memory-mb.increment-allocation` | The fairscheduler grants memory in increments of this value. If you submit a task with resource request that is not a multiple of `memory-mb.increment-allocation`, the request will be rounded up to the nearest increment. Defaults to 1024 MB. |
+| `yarn.resource-types.vcores.increment-allocation` | The fairscheduler grants vcores in increments of this value. If you submit a task with resource request that is not a multiple of `vcores.increment-allocation`, the request will be rounded up to the nearest increment. Defaults to 1. |
+| `yarn.resource-types.<resource>.increment-allocation` | The fairscheduler grants `<resource>` in increments of this value. If you submit a task with resource request that is not a multiple of `<resource>.increment-allocation`, the request will be rounded up to the nearest increment. If this property is not specified for a resource, the increment round-up will not be applied. If no unit is specified, the default unit for the resource is assumed. |
+| `yarn.scheduler.increment-allocation-mb` | The allocation increment for memory. No longer preferred. Use `yarn.resource-types.memory-mb.increment-allocation` instead. Defaults to 1024 MB. |
+| `yarn.scheduler.increment-allocation-vcores` | The allocation increment for CPU vcores. No longer preferred. Use `yarn.resource-types.vcores.increment-allocation` instead. Defaults to 1. |
 
 ###Allocation file format
 
@@ -261,6 +264,6 @@ When an application is moved to a queue, its existing allocations become counted
 
 ###Dumping Fair Scheduler state
 
-Fair Scheduler is able to dump its state periodically. It is disabled by default. The administrator can enable it by setting org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler logging level to DEBUG.
+Fair Scheduler is able to dump its state periodically. It is disabled by default. The administrator can enable it by setting `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler.statedump` logging level to DEBUG.
 
-Fair Scheduler logs go to the Resource Manager log file by default. Fair Scheduler state dumps can potentially generate large amount of log data. Uncomment the "Fair scheduler state dump" section in log4j.properties to dump the state into a separate file.
+Fair Scheduler logs go to the Resource Manager log file by default. Fair Scheduler state dumps can potentially generate a large amount of log data. Uncomment the "Fair scheduler state dump" section in log4j.properties to dump the state into a separate file.

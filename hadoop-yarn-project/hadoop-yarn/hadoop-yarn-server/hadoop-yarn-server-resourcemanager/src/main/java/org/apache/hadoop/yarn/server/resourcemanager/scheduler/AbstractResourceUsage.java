@@ -64,7 +64,7 @@ public class AbstractResourceUsage {
     // be written by ordering policies
     USED(0), PENDING(1), AMUSED(2), RESERVED(3), CACHED_USED(4), CACHED_PENDING(
         5), AMLIMIT(6), MIN_RESOURCE(7), MAX_RESOURCE(8), EFF_MIN_RESOURCE(
-            9), EFF_MAX_RESOURCE(10);
+            9), EFF_MAX_RESOURCE(10), USERAMLIMIT(11);
 
     private int idx;
 

@@ -21,9 +21,11 @@ package org.apache.hadoop.io;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,22 +33,28 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FileUtils;;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test cases for IOUtils.java
  */
 public class TestIOUtils {
   private static final String TEST_FILE_NAME = "test_file";
+  private static final Logger LOG = LoggerFactory.getLogger(TestIOUtils.class);
   
   @Test
   public void testCopyBytesShouldCloseStreamsWhenCloseIsTrue() throws Exception {
@@ -288,5 +296,56 @@ public class TestIOUtils {
     } finally {
       FileUtils.deleteDirectory(dir);
     }
+  }
+
+  @Test
+  public void testCloseStreams() throws IOException {
+    File tmpFile = null;
+    FileOutputStream fos;
+    BufferedOutputStream bos;
+    FileOutputStream nullStream = null;
+
+    try {
+      tmpFile = new File(GenericTestUtils.getTestDir(), "testCloseStreams.txt");
+      fos = new FileOutputStream(tmpFile) {
+        @Override
+        public void close() throws IOException {
+          throw new IOException();
+        }
+      };
+      bos = new BufferedOutputStream(
+          new FileOutputStream(tmpFile)) {
+        @Override
+        public void close() {
+          throw new NullPointerException();
+        }
+      };
+
+      IOUtils.closeStreams(fos, bos, nullStream);
+      IOUtils.closeStreams();
+    } finally {
+      FileUtils.deleteQuietly(tmpFile);
+    }
+
+  }
+
+  @Test
+  public void testWrapException() throws Exception {
+    // Test for IOException with valid (String) constructor
+    LambdaTestUtils.intercept(EOFException.class,
+        "Failed with java.io.EOFException while processing file/directory "
+            + ":[/tmp/abc.txt] in method:[testWrapException]", () -> {
+          throw IOUtils.wrapException("/tmp/abc.txt", "testWrapException",
+              new EOFException("EOFException "));
+        });
+
+    // Test for IOException with  no (String) constructor
+    PathIOException returnedEx = LambdaTestUtils
+        .intercept(PathIOException.class, "Input/output error:",
+            () -> {
+              throw IOUtils.wrapException("/tmp/abc.txt", "testWrapEx",
+                  new CharacterCodingException());
+            });
+    assertEquals("/tmp/abc.txt", returnedEx.getPath().toString());
   }
 }

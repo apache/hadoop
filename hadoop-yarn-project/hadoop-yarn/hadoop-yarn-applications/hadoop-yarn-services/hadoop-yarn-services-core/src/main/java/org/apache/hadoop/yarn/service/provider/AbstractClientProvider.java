@@ -101,8 +101,8 @@ public abstract class AbstractClientProvider {
         Path p = new Path(file.getSrcFile());
         if (!fs.exists(p)) {
           throw new IllegalArgumentException(
-              "Src_file does not exist for config file: " + file
-                  .getSrcFile());
+              "Specified src_file does not exist on " + fs.getScheme() + ": "
+                  + file.getSrcFile());
         }
       }
 

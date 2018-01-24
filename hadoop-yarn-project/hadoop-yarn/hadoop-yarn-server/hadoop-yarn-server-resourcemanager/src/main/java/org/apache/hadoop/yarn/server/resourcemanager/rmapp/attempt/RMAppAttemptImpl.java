@@ -418,7 +418,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.ATTEMPT_NEW_SAVED,
               RMAppAttemptEventType.KILL,
-              RMAppAttemptEventType.FAIL))
+              RMAppAttemptEventType.FAIL,
+              RMAppAttemptEventType.ATTEMPT_ADDED))
 
       // Transitions from FAILED State
       // For work-preserving AM restart, failed attempt are still capturing
@@ -909,7 +910,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       } catch (InvalidStateTransitionException e) {
         LOG.error("App attempt: " + appAttemptID
             + " can't handle this event at current state", e);
-        /* TODO fail the application on the failed transition */
+        onInvalidTranstion(event.getType(), oldState);
       }
 
       // Log at INFO if we're not recovering or not in a terminal state.
@@ -2240,4 +2241,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     return Collections.EMPTY_SET;
   }
 
+  protected void onInvalidTranstion(RMAppAttemptEventType rmAppAttemptEventType,
+          RMAppAttemptState state){
+      /* TODO fail the application on the failed transition */
+  }
 }

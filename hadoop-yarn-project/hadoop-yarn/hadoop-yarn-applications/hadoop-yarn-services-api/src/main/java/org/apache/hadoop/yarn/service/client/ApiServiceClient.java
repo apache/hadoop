@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -42,7 +43,9 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.eclipse.jetty.util.UrlEncoded;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +82,7 @@ public class ApiServiceClient extends AppAdminClient {
     String path = "/app/v1/services/version";
     String rmAddress = conf
         .get("yarn.resourcemanager.webapp.address");
-    if(conf.getBoolean("hadoop.ssl.enabled", false)) {
+    if (YarnConfiguration.useHttps(conf)) {
       scheme = "https://";
       rmAddress = conf
           .get("yarn.resourcemanager.webapp.https.address");
@@ -120,6 +123,10 @@ public class ApiServiceClient extends AppAdminClient {
       api.append("/");
       api.append(appName);
     }
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      api.append("?user.name=" + UrlEncoded
+          .encodeString(System.getProperty("user.name")));
+    }
     return api.toString();
   }
 
@@ -159,19 +166,27 @@ public class ApiServiceClient extends AppAdminClient {
 
   private int processResponse(ClientResponse response) {
     response.bufferEntity();
-    if (response.getStatus() >= 299) {
-      String error = "";
-      try {
-        ServiceStatus ss = response.getEntity(ServiceStatus.class);
-        error = ss.getDiagnostics();
-      } catch (Throwable t) {
-        error = response.getEntity(String.class);
-      }
-      LOG.error(error);
+    String output;
+    if (response.getStatus() == 401) {
+      LOG.error("Authentication required");
       return EXIT_EXCEPTION_THROWN;
     }
-    LOG.info(response.toString());
-    return EXIT_SUCCESS;
+    try {
+      ServiceStatus ss = response.getEntity(ServiceStatus.class);
+      output = ss.getDiagnostics();
+    } catch (Throwable t) {
+      output = response.getEntity(String.class);
+    }
+    if (output==null) {
+      output = response.getEntity(String.class);
+    }
+    if (response.getStatus() <= 299) {
+      LOG.info(output);
+      return EXIT_SUCCESS;
+    } else {
+      LOG.error(output);
+      return EXIT_EXCEPTION_THROWN;
+    }
   }
 
   /**
@@ -358,7 +373,7 @@ public class ApiServiceClient extends AppAdminClient {
    * Change number of containers associated with a service.
    *
    * @param appName - YARN Service Name
-   * @param cmponentCounts - list of components and desired container count
+   * @param componentCounts - list of components and desired container count
    */
   @Override
   public int actionFlex(String appName, Map<String, String> componentCounts)
@@ -387,11 +402,11 @@ public class ApiServiceClient extends AppAdminClient {
   }
 
   @Override
-  public int enableFastLaunch() throws IOException, YarnException {
+  public int enableFastLaunch(String destinationFolder) throws IOException, YarnException {
     ServiceClient sc = new ServiceClient();
     sc.init(getConfig());
     sc.start();
-    int result = sc.enableFastLaunch();
+    int result = sc.enableFastLaunch(destinationFolder);
     sc.close();
     return result;
   }
@@ -399,20 +414,25 @@ public class ApiServiceClient extends AppAdminClient {
   /**
    * Retrieve Service Status through REST API.
    *
-   * @param applicationId - YARN application ID
+   * @param appIdOrName - YARN application ID or application name
    * @return Status output
    */
   @Override
-  public String getStatusString(String applicationId) throws IOException,
+  public String getStatusString(String appIdOrName) throws IOException,
       YarnException {
     String output = "";
+    String appName;
     try {
-      ApplicationReport appReport = yarnClient
-          .getApplicationReport(ApplicationId.fromString(applicationId));
-
-      String appName = appReport.getName();
-      ClientResponse response = getApiClient(appName)
-          .get(ClientResponse.class);
+      ApplicationId appId = ApplicationId.fromString(appIdOrName);
+      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
+      appName = appReport.getName();
+    } catch (IllegalArgumentException e) {
+      // not app Id format, may be app name
+      appName = appIdOrName;
+      ServiceApiUtil.validateNameFormat(appName, getConfig());
+    }
+    try {
+      ClientResponse response = getApiClient(appName).get(ClientResponse.class);
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
         sb.append(appName);

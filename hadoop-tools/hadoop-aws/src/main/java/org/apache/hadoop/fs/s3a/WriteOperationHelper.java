@@ -82,6 +82,7 @@ public class WriteOperationHelper {
   /**
    * Constructor.
    * @param owner owner FS creating the helper
+   * @param conf Configuration object
    *
    */
   protected WriteOperationHelper(S3AFileSystem owner, Configuration conf) {

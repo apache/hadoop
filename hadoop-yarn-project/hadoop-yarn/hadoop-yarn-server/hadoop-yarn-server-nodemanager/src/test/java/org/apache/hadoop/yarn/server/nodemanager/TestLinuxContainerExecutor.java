@@ -26,7 +26,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -647,6 +651,28 @@ public class TestLinuxContainerExecutor {
         .build());
     assertTrue("postExec not called after reacquisition",
         TestResourceHandler.postExecContainers.contains(cid));
+  }
+
+  @Test
+  public void testRemoveDockerContainer() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(12345, 67890);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 54321);
+    String cid = ContainerId.newContainerId(attemptId, 9876).toString();
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    lce.removeDockerContainer(cid);
+    verify(lce, times(1)).removeDockerContainer(cid);
+  }
+
+  @Test
+  public void testReapContainer() throws Exception {
+    Container container = mock(Container.class);
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
+    builder.setContainer(container).setUser("foo");
+    ContainerReapContext ctx = builder.build();
+    lce.reapContainer(ctx);
+    verify(lce, times(1)).reapContainer(ctx);
   }
 
   private static class TestResourceHandler implements LCEResourcesHandler {

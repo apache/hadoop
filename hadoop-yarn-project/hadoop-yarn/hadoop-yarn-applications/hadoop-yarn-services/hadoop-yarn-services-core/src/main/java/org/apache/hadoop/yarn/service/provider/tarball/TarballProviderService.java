@@ -38,9 +38,9 @@ public class TarballProviderService extends AbstractProviderService {
     Path artifact = new Path(instance.getCompSpec().getArtifact().getId());
     if (!fileSystem.isFile(artifact)) {
       throw new IOException(
-          "Package doesn't exist as a resource: " + artifact.toString());
+          "Package doesn't exist as a resource: " + artifact);
     }
-    log.info("Adding resource {}", artifact.toString());
+    log.info("Adding resource {}", artifact);
     LocalResourceType type = LocalResourceType.ARCHIVE;
     LocalResource packageResource = fileSystem.createAmResource(artifact, type);
     launcher.addLocalResource(APP_LIB_DIR, packageResource);

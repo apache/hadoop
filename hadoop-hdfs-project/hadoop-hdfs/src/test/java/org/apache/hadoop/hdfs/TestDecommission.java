@@ -710,13 +710,49 @@ public class TestDecommission extends AdminStatesBaseTest {
         @Override
         public Boolean get() {
           try {
+            boolean result1 = false;
+            boolean result2 = false;
             toolOut.reset();
             assertEquals(0, ToolRunner.run(dfsAdmin,
                 new String[]{"-listOpenFiles", "-blockingDecommission"}));
             toolOut.flush();
-            return verifyOpenFilesListing(
+            result1 = verifyOpenFilesListing(
                 "dfsadmin -listOpenFiles -blockingDecommission",
                 closedFileSet, openFilesMap, toolOut, maxOpenFiles);
+
+            // test -blockingDecommission with option -path
+            if (openFilesMap.size() > 0) {
+              String firstOpenFile = null;
+              // Construct a new open-file and close-file map.
+              // Pick the first open file into new open-file map, remaining
+              //  open files move into close-files map.
+              HashMap<Path, FSDataOutputStream> newOpenFilesMap =
+                  new HashMap<>();
+              HashSet<Path> newClosedFileSet = new HashSet<>();
+              for (Map.Entry<Path, FSDataOutputStream> entry : openFilesMap
+                  .entrySet()) {
+                if (firstOpenFile == null) {
+                  newOpenFilesMap.put(entry.getKey(), entry.getValue());
+                  firstOpenFile = entry.getKey().toString();
+                } else {
+                  newClosedFileSet.add(entry.getKey());
+                }
+              }
+
+              toolOut.reset();
+              assertEquals(0,
+                  ToolRunner.run(dfsAdmin, new String[] {"-listOpenFiles",
+                      "-blockingDecommission", "-path", firstOpenFile}));
+              toolOut.flush();
+              result2 = verifyOpenFilesListing(
+                  "dfsadmin -listOpenFiles -blockingDecommission -path"
+                      + firstOpenFile,
+                  newClosedFileSet, newOpenFilesMap, toolOut, 1);
+            } else {
+              result2 = true;
+            }
+
+            return result1 && result2;
           } catch (Exception e) {
             LOG.warn("Unexpected exception: " + e);
           }

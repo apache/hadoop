@@ -22,6 +22,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -110,6 +113,17 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     property.
  *   </li>
  *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE}
+ *     controls which PID namespace will be used by the Docker container. By
+ *     default, each Docker container has its own PID namespace. To share the
+ *     namespace of the host, the
+ *     {@code yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed}
+ *     property must be set to {@code true}. If the host PID namespace is
+ *     allowed and this environment variable is set to {@code host}, the
+ *     Docker container will share the host's PID namespace. No other value is
+ *     allowed.
+ *   </li>
+ *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME} sets the
  *     hostname to be used by the Docker container. If not specified, a
  *     hostname will be derived from the container ID.
@@ -145,6 +159,17 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     container-executor based on the values set in container-executor.cfg for
  *     {@code docker.allowed.ro-mounts} and {@code docker.allowed.rw-mounts}.
  *   </li>
+ *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL} allows a user
+ *     to request delayed deletion of the Docker containers on a per
+ *     container basis. If true, Docker containers will not be removed until
+ *     the duration defined by {@code yarn.nodemanager.delete.debug-delay-sec}
+ *     has elapsed. Administrators can disable this feature through the
+ *     yarn-site property
+ *     {@code yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed}.
+ *     This feature is disabled by default. When this feature is disabled or set
+ *     to false, the container will be removed as soon as it exits.
+ *   </li>
  * </ul>
  */
 @InterfaceAudience.Private
@@ -178,6 +203,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_NETWORK =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK";
   @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_PID_NAMESPACE =
+      "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE";
+  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_HOSTNAME =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME";
   @InterfaceAudience.Private
@@ -192,6 +220,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_DELAYED_REMOVAL =
+      "YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL";
 
   private Configuration conf;
   private Context nmContext;
@@ -206,6 +237,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private int userRemappingUidThreshold;
   private int userRemappingGidThreshold;
   private Set<String> capabilities;
+  private boolean delayedRemovalAllowed;
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -306,6 +338,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       YarnConfiguration.DEFAULT_NM_DOCKER_USER_REMAPPING_GID_THRESHOLD);
 
     capabilities = getDockerCapabilitiesFromConf();
+
+    delayedRemovalAllowed = conf.getBoolean(
+        YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL,
+        YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL);
   }
 
   private Set<String> getDockerCapabilitiesFromConf() throws
@@ -456,6 +492,47 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         + "' specified. Allowed networks: are " + allowedNetworks
         .toString();
     throw new ContainerExecutionException(msg);
+  }
+
+  /**
+   * Return whether the YARN container is allowed to run using the host's PID
+   * namespace for the Docker container. For this to be allowed, the submitting
+   * user must request the feature and the feature must be enabled on the
+   * cluster.
+   *
+   * @param container the target YARN container
+   * @return whether host pid namespace is requested and allowed
+   * @throws ContainerExecutionException if host pid namespace is requested
+   * but is not allowed
+   */
+  private boolean allowHostPidNamespace(Container container)
+      throws ContainerExecutionException {
+    Map<String, String> environment = container.getLaunchContext()
+        .getEnvironment();
+    String pidNamespace = environment.get(ENV_DOCKER_CONTAINER_PID_NAMESPACE);
+
+    if (pidNamespace == null) {
+      return false;
+    }
+
+    if (!pidNamespace.equalsIgnoreCase("host")) {
+      LOG.warn("NOT requesting PID namespace. Value of " +
+          ENV_DOCKER_CONTAINER_PID_NAMESPACE + "is invalid: " + pidNamespace);
+      return false;
+    }
+
+    boolean hostPidNamespaceEnabled = conf.getBoolean(
+        YarnConfiguration.NM_DOCKER_ALLOW_HOST_PID_NAMESPACE,
+        YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE);
+
+    if (!hostPidNamespaceEnabled) {
+      String message = "Host pid namespace being requested but this is not "
+          + "enabled on this cluster";
+      LOG.warn(message);
+      throw new ContainerExecutionException(message);
+    }
+
+    return true;
   }
 
   public static void validateHostname(String hostname) throws
@@ -776,6 +853,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
     }
 
+    if (allowHostPidNamespace(container)) {
+      runCommand.setPidNamespace("host");
+    }
+
     if (allowPrivilegedContainerExecution(container)) {
       runCommand.setPrivileged();
     }
@@ -833,49 +914,66 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
   }
 
+  /**
+   * Signal the docker container.
+   *
+   * Signals are used to check the liveliness of the container as well as to
+   * stop/kill the container. The following outlines the docker container
+   * signal handling.
+   *
+   * <ol>
+   *     <li>If the null signal is sent, run kill -0 on the pid. This is used
+   *     to check if the container is still alive, which is necessary for
+   *     reacquiring containers on NM restart.</li>
+   *     <li>If SIGTERM, SIGKILL is sent, attempt to stop and remove the docker
+   *     container.</li>
+   *     <li>If the docker container exists and is running, execute docker
+   *     stop.</li>
+   *     <li>If any other signal is sent, signal the container using docker
+   *     kill.</li>
+   * </ol>
+   *
+   * @param ctx the {@link ContainerRuntimeContext}.
+   * @throws ContainerExecutionException if the signaling fails.
+   */
   @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
     ContainerExecutor.Signal signal = ctx.getExecutionAttribute(SIGNAL);
-
-    PrivilegedOperation privOp = null;
-    // Handle liveliness checks, send null signal to pid
-    if(ContainerExecutor.Signal.NULL.equals(signal)) {
-      privOp = new PrivilegedOperation(
-          PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
-      privOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
-          ctx.getExecutionAttribute(USER),
-          Integer.toString(PrivilegedOperation.RunAsUserCommand
-              .SIGNAL_CONTAINER.getValue()),
-          ctx.getExecutionAttribute(PID),
-          Integer.toString(ctx.getExecutionAttribute(SIGNAL).getValue()));
-
-    // All other signals handled as docker stop
-    } else {
-      String containerId = ctx.getContainer().getContainerId().toString();
-      DockerStopCommand stopCommand = new DockerStopCommand(containerId);
-      String commandFile = dockerClient.writeCommandToTempFile(stopCommand,
-          containerId);
-      privOp = new PrivilegedOperation(
-          PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
-      privOp.appendArgs(commandFile);
-    }
-
-    //Some failures here are acceptable. Let the calling executor decide.
-    privOp.disableFailureLogging();
-
+    String containerId = ctx.getContainer().getContainerId().toString();
+    Map<String, String> env =
+        ctx.getContainer().getLaunchContext().getEnvironment();
     try {
-      privilegedOperationExecutor.executePrivilegedOperation(null,
-          privOp, null, null, false, false);
-    } catch (PrivilegedOperationException e) {
-      throw new ContainerExecutionException("Signal container failed", e
-          .getExitCode(), e.getOutput(), e.getErrorOutput());
+      if (ContainerExecutor.Signal.NULL.equals(signal)) {
+        executeLivelinessCheck(ctx);
+      } else {
+        if (ContainerExecutor.Signal.KILL.equals(signal)
+            || ContainerExecutor.Signal.TERM.equals(signal)) {
+          handleContainerStop(containerId, env);
+        } else {
+          handleContainerKill(containerId, env, signal);
+        }
+      }
+    } catch (ContainerExecutionException e) {
+      LOG.warn("Signal docker container failed. Exception: ", e);
+      throw new ContainerExecutionException("Signal docker container failed",
+          e.getExitCode(), e.getOutput(), e.getErrorOutput());
     }
   }
 
+  /**
+   * Reap the docker container.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}.
+   * @throws ContainerExecutionException if the removal fails.
+   */
   @Override
   public void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
+    // Clean up the Docker container
+    handleContainerRemove(ctx.getContainer().getContainerId().toString(),
+        ctx.getContainer().getLaunchContext().getEnvironment());
+
     // Cleanup volumes when needed.
     if (nmContext != null
         && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
@@ -991,6 +1089,85 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (!dockerImagePattern.matcher(imageName).matches()) {
       throw new ContainerExecutionException("Image name '" + imageName
           + "' doesn't match docker image name pattern");
+    }
+  }
+
+  private void executeLivelinessCheck(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    PrivilegedOperation signalOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
+    signalOp.appendArgs(ctx.getExecutionAttribute(RUN_AS_USER),
+        ctx.getExecutionAttribute(USER), Integer.toString(
+            PrivilegedOperation.RunAsUserCommand.SIGNAL_CONTAINER.getValue()),
+        ctx.getExecutionAttribute(PID),
+        Integer.toString(ctx.getExecutionAttribute(SIGNAL).getValue()));
+    signalOp.disableFailureLogging();
+    try {
+      privilegedOperationExecutor.executePrivilegedOperation(null, signalOp,
+          null, ctx.getContainer().getLaunchContext().getEnvironment(), false,
+          false);
+    } catch (PrivilegedOperationException e) {
+      String msg = "Liveliness check failed for PID: "
+          + ctx.getExecutionAttribute(PID)
+          + ". Container may have already completed.";
+      throw new ContainerExecutionException(msg, e.getExitCode(), e.getOutput(),
+          e.getErrorOutput());
+    }
+  }
+
+  private void handleContainerStop(String containerId, Map<String, String> env)
+      throws ContainerExecutionException {
+    DockerCommandExecutor.DockerContainerStatus containerStatus =
+        DockerCommandExecutor.getContainerStatus(containerId, conf,
+            privilegedOperationExecutor);
+    if (DockerCommandExecutor.isStoppable(containerStatus)) {
+      DockerStopCommand dockerStopCommand = new DockerStopCommand(containerId);
+      DockerCommandExecutor.executeDockerCommand(dockerStopCommand, containerId,
+          env, conf, privilegedOperationExecutor, false);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Container status is " + containerStatus.getName()
+                + ", skipping stop - " + containerId);
+      }
+    }
+  }
+
+  private void handleContainerKill(String containerId, Map<String, String> env,
+      ContainerExecutor.Signal signal) throws ContainerExecutionException {
+    DockerCommandExecutor.DockerContainerStatus containerStatus =
+        DockerCommandExecutor.getContainerStatus(containerId, conf,
+            privilegedOperationExecutor);
+    if (DockerCommandExecutor.isKillable(containerStatus)) {
+      DockerKillCommand dockerKillCommand =
+          new DockerKillCommand(containerId).setSignal(signal.name());
+      DockerCommandExecutor.executeDockerCommand(dockerKillCommand, containerId,
+          env, conf, privilegedOperationExecutor, false);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Container status is " + containerStatus.getName()
+                + ", skipping kill - " + containerId);
+      }
+    }
+  }
+
+  private void handleContainerRemove(String containerId,
+      Map<String, String> env) throws ContainerExecutionException {
+    String delayedRemoval = env.get(ENV_DOCKER_CONTAINER_DELAYED_REMOVAL);
+    if (delayedRemovalAllowed && delayedRemoval != null
+        && delayedRemoval.equalsIgnoreCase("true")) {
+      LOG.info("Delayed removal requested and allowed, skipping removal - "
+          + containerId);
+    } else {
+      DockerCommandExecutor.DockerContainerStatus containerStatus =
+          DockerCommandExecutor.getContainerStatus(containerId, conf,
+              privilegedOperationExecutor);
+      if (DockerCommandExecutor.isRemovable(containerStatus)) {
+        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+        DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
+            env, conf, privilegedOperationExecutor, false);
+      }
     }
   }
 }

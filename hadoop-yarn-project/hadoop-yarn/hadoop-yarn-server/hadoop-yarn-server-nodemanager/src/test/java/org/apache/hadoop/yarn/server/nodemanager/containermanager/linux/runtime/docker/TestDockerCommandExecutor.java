@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.MockPrivilegedOperationCaptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -42,6 +43,8 @@ import java.util.List;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor.DockerContainerStatus;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -93,9 +96,8 @@ public class TestDockerCommandExecutor {
   public void testExecuteDockerCommand() throws Exception {
     DockerStopCommand dockerStopCommand =
         new DockerStopCommand(MOCK_CONTAINER_ID);
-    DockerCommandExecutor
-        .executeDockerCommand(dockerStopCommand, cId.toString(), env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
+        cId.toString(), env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     assertEquals(1, ops.size());
@@ -106,9 +108,8 @@ public class TestDockerCommandExecutor {
   @Test
   public void testExecuteDockerRm() throws Exception {
     DockerRmCommand dockerCommand = new DockerRmCommand(MOCK_CONTAINER_ID);
-    DockerCommandExecutor
-        .executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID, env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -124,9 +125,8 @@ public class TestDockerCommandExecutor {
   @Test
   public void testExecuteDockerStop() throws Exception {
     DockerStopCommand dockerCommand = new DockerStopCommand(MOCK_CONTAINER_ID);
-    DockerCommandExecutor
-        .executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID, env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -143,9 +143,8 @@ public class TestDockerCommandExecutor {
   public void testExecuteDockerInspectStatus() throws Exception {
     DockerInspectCommand dockerCommand =
         new DockerInspectCommand(MOCK_CONTAINER_ID).getContainerStatus();
-    DockerCommandExecutor
-        .executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID, env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -164,9 +163,8 @@ public class TestDockerCommandExecutor {
   public void testExecuteDockerPull() throws Exception {
     DockerPullCommand dockerCommand =
         new DockerPullCommand(MOCK_IMAGE_NAME);
-    DockerCommandExecutor
-        .executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID, env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -183,9 +181,8 @@ public class TestDockerCommandExecutor {
   public void testExecuteDockerLoad() throws Exception {
     DockerLoadCommand dockerCommand =
         new DockerLoadCommand(MOCK_LOCAL_IMAGE_NAME);
-    DockerCommandExecutor
-        .executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID, env,
-            configuration, mockExecutor, false);
+    DockerCommandExecutor.executeDockerCommand(dockerCommand, MOCK_CONTAINER_ID,
+        env, configuration, mockExecutor, false);
     List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
         .capturePrivilegedOperations(mockExecutor, 1, true);
     List<String> dockerCommands = getValidatedDockerCommands(ops);
@@ -206,9 +203,138 @@ public class TestDockerCommandExecutor {
       when(mockExecutor.executePrivilegedOperation(eq(null),
           any(PrivilegedOperation.class), eq(null), any(), eq(true), eq(false)))
           .thenReturn(status.getName());
-      assertEquals(status, DockerCommandExecutor
-          .getContainerStatus(MOCK_CONTAINER_ID, configuration, mockExecutor));
+      assertEquals(status, DockerCommandExecutor.getContainerStatus(
+          MOCK_CONTAINER_ID, configuration, mockExecutor));
     }
+  }
+
+  @Test
+  public void testExecuteDockerKillSIGQUIT() throws Exception {
+    DockerKillCommand dockerKillCommand =
+        new DockerKillCommand(MOCK_CONTAINER_ID)
+            .setSignal(ContainerExecutor.Signal.QUIT.name());
+    DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
+        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+    List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
+        .capturePrivilegedOperations(mockExecutor, 1, true);
+    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    assertEquals(1, ops.size());
+    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
+        ops.get(0).getOperationType().name());
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
+    assertEquals("  signal=" + ContainerExecutor.Signal.QUIT.name(),
+        dockerCommands.get(3));
+  }
+
+  @Test
+  public void testExecuteDockerKillSIGKILL() throws Exception {
+    DockerKillCommand dockerKillCommand =
+        new DockerKillCommand(MOCK_CONTAINER_ID)
+            .setSignal(ContainerExecutor.Signal.KILL.name());
+    DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
+        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+    List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
+        .capturePrivilegedOperations(mockExecutor, 1, true);
+    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    assertEquals(1, ops.size());
+    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
+        ops.get(0).getOperationType().name());
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
+    assertEquals("  signal=" + ContainerExecutor.Signal.KILL.name(),
+        dockerCommands.get(3));
+  }
+
+  @Test
+  public void testExecuteDockerKillSIGTERM() throws Exception {
+    DockerKillCommand dockerKillCommand =
+        new DockerKillCommand(MOCK_CONTAINER_ID)
+            .setSignal(ContainerExecutor.Signal.TERM.name());
+    DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
+        MOCK_CONTAINER_ID, env, configuration, mockExecutor, false);
+    List<PrivilegedOperation> ops = MockPrivilegedOperationCaptor
+        .capturePrivilegedOperations(mockExecutor, 1, true);
+    List<String> dockerCommands = getValidatedDockerCommands(ops);
+    assertEquals(1, ops.size());
+    assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
+        ops.get(0).getOperationType().name());
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=kill", dockerCommands.get(1));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
+    assertEquals("  signal=" + ContainerExecutor.Signal.TERM.name(),
+        dockerCommands.get(3));
+  }
+
+  @Test
+  public void testIsStoppable() {
+    assertTrue(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.RUNNING));
+    assertTrue(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.RESTARTING));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.EXITED));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.CREATED));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.DEAD));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.NONEXISTENT));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.REMOVING));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.STOPPED));
+    assertFalse(DockerCommandExecutor.isStoppable(
+        DockerContainerStatus.UNKNOWN));
+  }
+
+  @Test
+  public void testIsKIllable() {
+    assertTrue(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.RUNNING));
+    assertTrue(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.RESTARTING));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.EXITED));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.CREATED));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.DEAD));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.NONEXISTENT));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.REMOVING));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.STOPPED));
+    assertFalse(DockerCommandExecutor.isKillable(
+        DockerContainerStatus.UNKNOWN));
+  }
+
+  @Test
+  public void testIsRemovable() {
+    assertTrue(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.STOPPED));
+    assertTrue(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.RESTARTING));
+    assertTrue(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.EXITED));
+    assertTrue(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.CREATED));
+    assertTrue(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.DEAD));
+    assertFalse(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.NONEXISTENT));
+    assertFalse(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.REMOVING));
+    assertFalse(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.UNKNOWN));
+    assertFalse(DockerCommandExecutor.isRemovable(
+        DockerContainerStatus.RUNNING));
   }
 
   private List<String> getValidatedDockerCommands(

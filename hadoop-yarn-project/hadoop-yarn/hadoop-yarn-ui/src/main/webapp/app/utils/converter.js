@@ -17,6 +17,7 @@
  */
 
 import Constants from 'yarn-ui/constants';
+import { convertTimestampWithTz } from "./date-utils";
 
 export default {
   containerIdToAttemptId: function(containerId) {
@@ -82,12 +83,10 @@ export default {
     return total * 1000;
   },
   timeStampToDate: function(timeStamp) {
-    var dateTimeString = moment(parseInt(timeStamp)).format("YYYY/MM/DD HH:mm:ss");
-    return dateTimeString;
+    return convertTimestampWithTz(timeStamp, "YYYY/MM/DD HH:mm:ss");
   },
   timeStampToDateOnly: function(timeStamp) {
-    var dateTimeString = moment(parseInt(timeStamp)).format("YYYY/MM/DD");
-    return dateTimeString;
+    return convertTimestampWithTz(timeStamp, "YYYY/MM/DD");
   },
   dateToTimeStamp: function(date) {
     if (date) {

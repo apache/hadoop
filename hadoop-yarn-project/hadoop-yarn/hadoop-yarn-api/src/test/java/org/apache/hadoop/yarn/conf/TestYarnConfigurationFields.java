@@ -162,6 +162,12 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.NM_MEMORY_RESOURCE_PREFIX);
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_CPU_RESOURCE_ENABLED);
+    configurationPrefixToSkipCompare.add(
+        YarnConfiguration.NM_NETWORK_TAG_MAPPING_MANAGER);
+    configurationPrefixToSkipCompare.add(
+        YarnConfiguration.NM_NETWORK_TAG_MAPPING_FILE_PATH);
+    configurationPrefixToSkipCompare.add(
+        YarnConfiguration.NM_NETWORK_TAG_PREFIX);
 
     // Ignore all Router Federation variables
 

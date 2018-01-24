@@ -37,8 +37,6 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -58,13 +56,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the JobResourceUploader class with the shared cache.
  */
 public class TestJobResourceUploaderWithSharedCache {
-  protected static final Log LOG = LogFactory
-      .getLog(TestJobResourceUploaderWithSharedCache.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(TestJobResourceUploaderWithSharedCache.class);
   private static MiniDFSCluster dfs;
   private static FileSystem localFs;
   private static FileSystem remoteFs;

@@ -29,10 +29,12 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -80,7 +83,10 @@ public class RouterAdmin extends Configured implements Tool {
         + "\t[-add <source> <nameservice> <destination> "
         + "[-readonly] -owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-rm <source>]\n"
-        + "\t[-ls <path>]\n";
+        + "\t[-ls <path>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+        + "<quota in bytes or quota size string>]\n"
+        + "\t[-clrQuota <path>\n";
     System.out.println(usage);
   }
 
@@ -104,6 +110,18 @@ public class RouterAdmin extends Configured implements Tool {
         return exitCode;
       }
     } else if ("-rm".equalsIgnoreCase(cmd)) {
+      if (argv.length < 2) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-setQuota".equalsIgnoreCase(cmd)) {
+      if (argv.length < 4) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-clrQuota".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
         System.err.println("Not enough parameters specificed for cmd " + cmd);
         printUsage();
@@ -143,6 +161,16 @@ public class RouterAdmin extends Configured implements Tool {
           listMounts(argv[i]);
         } else {
           listMounts("/");
+        }
+      } else if ("-setQuota".equals(cmd)) {
+        if (setQuota(argv, i)) {
+          System.out.println(
+              "Successfully set quota for mount point " + argv[i]);
+        }
+      } else if ("-clrQuota".equals(cmd)) {
+        if (clrQuota(argv[i])) {
+          System.out.println(
+              "Successfully clear quota for mount point " + argv[i]);
         }
       } else {
         printUsage();
@@ -369,8 +397,8 @@ public class RouterAdmin extends Configured implements Tool {
   private static void printMounts(List<MountTable> entries) {
     System.out.println("Mount Table Entries:");
     System.out.println(String.format(
-        "%-25s %-25s %-25s %-25s %-25s",
-        "Source", "Destinations", "Owner", "Group", "Mode"));
+        "%-25s %-25s %-25s %-25s %-25s %-25s",
+        "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage"));
     for (MountTable entry : entries) {
       StringBuilder destBuilder = new StringBuilder();
       for (RemoteLocation location : entry.getDestinations()) {
@@ -383,9 +411,117 @@ public class RouterAdmin extends Configured implements Tool {
       System.out.print(String.format("%-25s %-25s", entry.getSourcePath(),
           destBuilder.toString()));
 
-      System.out.println(String.format(" %-25s %-25s %-25s",
+      System.out.print(String.format(" %-25s %-25s %-25s",
           entry.getOwnerName(), entry.getGroupName(), entry.getMode()));
+
+      System.out.println(String.format(" %-25s", entry.getQuota()));
     }
+  }
+
+  /**
+   * Set quota for a mount table entry.
+   *
+   * @param parameters Parameters of the quota.
+   * @param i Index in the parameters.
+   */
+  private boolean setQuota(String[] parameters, int i) throws IOException {
+    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
+
+    String mount = parameters[i++];
+    while (i < parameters.length) {
+      if (parameters[i].equals("-nsQuota")) {
+        i++;
+        try {
+          nsQuota = Long.parseLong(parameters[i]);
+        } catch (Exception e) {
+          System.err.println("Cannot parse nsQuota: " + parameters[i]);
+        }
+      } else if (parameters[i].equals("-ssQuota")) {
+        i++;
+        try {
+          ssQuota = StringUtils.TraditionalBinaryPrefix
+              .string2long(parameters[i]);
+        } catch (Exception e) {
+          System.err.println("Cannot parse ssQuota: " + parameters[i]);
+        }
+      }
+
+      i++;
+    }
+
+    if (nsQuota <= 0 || ssQuota <= 0) {
+      System.err.println("Input quota value should be a positive number.");
+      return false;
+    }
+
+    return updateQuota(mount, nsQuota, ssQuota);
+  }
+
+  /**
+   * Clear quota of the mount point.
+   *
+   * @param mount Mount table to clear
+   * @return If the quota was cleared.
+   * @throws IOException Error clearing the mount point.
+   */
+  private boolean clrQuota(String mount) throws IOException {
+    return updateQuota(mount, HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.QUOTA_DONT_SET);
+  }
+
+  /**
+   * Update quota of specified mount table.
+   *
+   * @param mount Specified mount table to update.
+   * @param nsQuota Namespace quota.
+   * @param ssQuota Storage space quota.
+   * @return If the quota was updated.
+   * @throws IOException Error updating quota.
+   */
+  private boolean updateQuota(String mount, long nsQuota, long ssQuota)
+      throws IOException {
+    // Get existing entry
+    MountTableManager mountTable = client.getMountTableManager();
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(mount);
+    GetMountTableEntriesResponse getResponse = mountTable
+        .getMountTableEntries(getRequest);
+    List<MountTable> results = getResponse.getEntries();
+    MountTable existingEntry = null;
+    for (MountTable result : results) {
+      if (mount.equals(result.getSourcePath())) {
+        existingEntry = result;
+        break;
+      }
+    }
+
+    if (existingEntry == null) {
+      return false;
+    } else {
+      long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
+      long ssCount = existingEntry.getQuota().getSpaceConsumed();
+      // If nsQuota or ssQuota was unset, reset corresponding usage
+      // value to zero.
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+        nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      }
+
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+        ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      }
+
+      RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
+          .fileAndDirectoryCount(nsCount).quota(nsQuota)
+          .spaceConsumed(ssCount).spaceQuota(ssQuota).build();
+      existingEntry.setQuota(updatedQuota);
+    }
+
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(existingEntry);
+    UpdateMountTableEntryResponse updateResponse = mountTable
+        .updateMountTableEntry(updateRequest);
+    return updateResponse.getStatus();
   }
 
   /**

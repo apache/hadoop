@@ -41,7 +41,7 @@ Running the MiniCluster
 
 From inside the root directory of the extracted tarball, you can start the CLI MiniCluster using the following command:
 
-    $ HADOOP_CLASSPATH=share/hadoop/yarn/test/hadoop-yarn-server-tests-${project.version}-tests.jar bin/hadoop jar ./share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-${project.version}-tests.jar minicluster -rmport RM_PORT -jhsport JHS_PORT
+    $ bin/mapred minicluster -rmport RM_PORT -jhsport JHS_PORT
 
 In the example command above, `RM_PORT` and `JHS_PORT` should be replaced by the user's choice of these port numbers. If not specified, random free ports will be used.
 

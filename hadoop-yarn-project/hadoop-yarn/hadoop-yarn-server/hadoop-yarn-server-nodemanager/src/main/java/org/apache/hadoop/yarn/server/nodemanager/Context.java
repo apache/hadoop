@@ -128,4 +128,11 @@ public interface Context {
   ResourcePluginManager getResourcePluginManager();
 
   NodeManagerMetrics getNodeManagerMetrics();
+
+  /**
+   * Get the {@code DeletionService} associated with the NM.
+   *
+   * @return the NM {@code DeletionService}.
+   */
+  DeletionService getDeletionService();
 }

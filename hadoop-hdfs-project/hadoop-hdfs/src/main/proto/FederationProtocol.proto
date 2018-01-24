@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
+import "hdfs.proto";
 
 /////////////////////////////////////////////////
 // Membership
@@ -134,6 +135,8 @@ message MountTableRecordProto {
   optional string ownerName = 10;
   optional string groupName = 11;
   optional int32 mode = 12;
+
+  optional QuotaUsageProto quota = 13;
 }
 
 message AddMountTableEntryRequestProto {
@@ -169,3 +172,47 @@ message GetMountTableEntriesResponseProto {
   optional uint64 timestamp = 2;
 }
 
+
+/////////////////////////////////////////////////
+// Routers
+/////////////////////////////////////////////////
+
+message StateStoreVersionRecordProto {
+  optional uint64 membershipVersion = 1;
+  optional uint64 mountTableVersion = 2;
+}
+
+message RouterRecordProto {
+  optional uint64 dateCreated = 1;
+  optional uint64 dateModified = 2;
+  optional string address = 3;
+  optional string status = 4;
+  optional StateStoreVersionRecordProto stateStoreVersion = 5;
+  optional string buildVersion = 6;
+  optional string compileInfo = 7;
+  optional uint64 dateStarted = 8;
+}
+
+message GetRouterRegistrationRequestProto {
+  optional string routerId = 1;
+}
+
+message GetRouterRegistrationResponseProto {
+  optional RouterRecordProto router = 1;
+}
+
+message GetRouterRegistrationsRequestProto {
+}
+
+message GetRouterRegistrationsResponseProto {
+  optional uint64 timestamp = 1;
+  repeated RouterRecordProto routers = 2;
+}
+
+message RouterHeartbeatRequestProto {
+  optional RouterRecordProto router = 1;
+}
+
+message RouterHeartbeatResponseProto {
+  optional bool status = 1;
+}

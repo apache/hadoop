@@ -19,7 +19,7 @@
 import AbstractAdapter from './abstract';
 
 export default AbstractAdapter.extend({
-  address: "timelineWebAddress",
+  address: "timelineV1WebAddress",
   // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
   restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
   serverName: "ATS",

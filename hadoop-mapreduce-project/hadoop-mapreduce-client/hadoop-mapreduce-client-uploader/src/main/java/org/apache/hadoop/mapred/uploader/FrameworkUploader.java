@@ -25,6 +25,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -40,6 +42,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.NotLinkException;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -48,6 +55,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
+
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 
 /**
  * Upload a MapReduce framework tarball to HDFS.
@@ -60,6 +69,7 @@ public class FrameworkUploader implements Runnable {
       Pattern.compile(Shell.getEnvironmentVariableRegex());
   private static final Logger LOG =
       LoggerFactory.getLogger(FrameworkUploader.class);
+  private Configuration conf = new Configuration();
 
   @VisibleForTesting
   String input = null;
@@ -70,7 +80,16 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   String target = null;
   @VisibleForTesting
-  short replication = 10;
+  Path targetPath = null;
+  @VisibleForTesting
+  short initialReplication = 3;
+  @VisibleForTesting
+  short finalReplication = 10;
+  @VisibleForTesting
+  short acceptableReplication = 9;
+  @VisibleForTesting
+  int timeout = 10;
+  private boolean ignoreSymlink = false;
 
   @VisibleForTesting
   Set<String> filteredInputFiles = new HashSet<>();
@@ -79,9 +98,13 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   List<Pattern> blacklistedFiles = new LinkedList<>();
 
-  @VisibleForTesting
-  OutputStream targetStream = null;
+  private OutputStream targetStream = null;
   private String alias = null;
+
+  @VisibleForTesting
+  void setConf(Configuration configuration) {
+    conf = configuration;
+  }
 
   private void printHelp(Options options) {
     HelpFormatter formatter = new HelpFormatter();
@@ -98,9 +121,10 @@ public class FrameworkUploader implements Runnable {
       LOG.info(
           "Suggested mapreduce.application.classpath $PWD/" + alias + "/*");
       System.out.println("Suggested classpath $PWD/" + alias + "/*");
-    } catch (UploaderException|IOException e) {
+    } catch (UploaderException|IOException|InterruptedException e) {
       LOG.error("Error in execution " + e.getMessage());
       e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
@@ -144,7 +168,7 @@ public class FrameworkUploader implements Runnable {
     if (targetStream == null) {
       validateTargetPath();
       int lastIndex = target.indexOf('#');
-      Path targetPath =
+      targetPath =
           new Path(
               target.substring(
                   0, lastIndex == -1 ? target.length() : lastIndex));
@@ -152,12 +176,12 @@ public class FrameworkUploader implements Runnable {
           target.substring(lastIndex + 1) :
           targetPath.getName();
       LOG.info("Target " + targetPath);
-      FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
+      FileSystem fileSystem = targetPath.getFileSystem(conf);
 
       targetStream = null;
       if (fileSystem instanceof DistributedFileSystem) {
         LOG.info("Set replication to " +
-            replication + " for path: " + targetPath);
+            initialReplication + " for path: " + targetPath);
         LOG.info("Disabling Erasure Coding for path: " + targetPath);
         DistributedFileSystem dfs = (DistributedFileSystem)fileSystem;
         DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
@@ -165,13 +189,13 @@ public class FrameworkUploader implements Runnable {
             .overwrite(true)
             .ecPolicyName(
                 SystemErasureCodingPolicies.getReplicationPolicy().getName());
-        if (replication > 0) {
-          builder.replication(replication);
+        if (initialReplication > 0) {
+          builder.replication(initialReplication);
         }
         targetStream = builder.build();
       } else {
         LOG.warn("Cannot set replication to " +
-            replication + " for path: " + targetPath +
+            initialReplication + " for path: " + targetPath +
             " on a non-distributed fileystem " +
             fileSystem.getClass().getName());
       }
@@ -187,8 +211,71 @@ public class FrameworkUploader implements Runnable {
     }
   }
 
+  private long getSmallestReplicatedBlockCount()
+      throws IOException {
+    FileSystem fileSystem = targetPath.getFileSystem(conf);
+    FileStatus status = fileSystem.getFileStatus(targetPath);
+    long length = status.getLen();
+    HashMap<Long, Integer> blockCount = new HashMap<>();
+
+    // Start with 0s for each offset
+    for (long offset = 0; offset < length; offset +=status.getBlockSize()) {
+      blockCount.put(offset, 0);
+    }
+
+    // Count blocks
+    BlockLocation[] locations = fileSystem.getFileBlockLocations(
+        targetPath, 0, length);
+    for(BlockLocation location: locations) {
+      final int replicas = location.getHosts().length;
+      blockCount.compute(
+          location.getOffset(),
+          (key, value) -> value == null ? 0 : value + replicas);
+    }
+
+    // Print out the results
+    for (long offset = 0; offset < length; offset +=status.getBlockSize()) {
+      LOG.info(String.format(
+          "Replication counts offset:%d blocks:%d",
+          offset, blockCount.get(offset)));
+    }
+
+    return Collections.min(blockCount.values());
+  }
+
+  private void endUpload()
+      throws IOException, InterruptedException {
+    FileSystem fileSystem = targetPath.getFileSystem(conf);
+    if (fileSystem instanceof DistributedFileSystem) {
+      fileSystem.setReplication(targetPath, finalReplication);
+      LOG.info("Set replication to " +
+          finalReplication + " for path: " + targetPath);
+      long startTime = System.currentTimeMillis();
+      long endTime = startTime;
+      long currentReplication = 0;
+      while(endTime - startTime < timeout * 1000 &&
+           currentReplication < acceptableReplication) {
+        Thread.sleep(1000);
+        endTime = System.currentTimeMillis();
+        currentReplication = getSmallestReplicatedBlockCount();
+      }
+      if (endTime - startTime >= timeout * 1000) {
+        LOG.error(String.format(
+            "Timed out after %d seconds while waiting for acceptable" +
+                " replication of %d (current replication is %d)",
+            timeout, acceptableReplication, currentReplication));
+      }
+    } else {
+      LOG.info("Cannot set replication to " +
+          finalReplication + " for path: " + targetPath +
+          " on a non-distributed fileystem " +
+          fileSystem.getClass().getName());
+    }
+  }
+
   @VisibleForTesting
-  void buildPackage() throws IOException, UploaderException {
+  void buildPackage()
+      throws IOException, UploaderException, InterruptedException {
     beginUpload();
     LOG.info("Compressing tarball");
     try (TarArchiveOutputStream out = new TarArchiveOutputStream(
@@ -203,6 +290,7 @@ public class FrameworkUploader implements Runnable {
           out.closeArchiveEntry();
         }
       }
+      endUpload();
     } finally {
       if (targetStream != null) {
         targetStream.close();
@@ -284,6 +372,9 @@ public class FrameworkUploader implements Runnable {
         break;
       }
     }
+    if (ignoreSymlink && !excluded) {
+      excluded = checkSymlink(jar);
+    }
     if (found && !excluded) {
       LOG.info("Whitelisted " + jar.getAbsolutePath());
       if (!filteredInputFiles.add(jar.getAbsolutePath())) {
@@ -299,6 +390,40 @@ public class FrameworkUploader implements Runnable {
     }
   }
 
+  /**
+   * Check if the file is a symlink to the same directory.
+   * @param jar The file to check
+   * @return true, to ignore the directory
+   */
+  @VisibleForTesting
+  boolean checkSymlink(File jar) {
+    if (Files.isSymbolicLink(jar.toPath())) {
+      try {
+        java.nio.file.Path link = Files.readSymbolicLink(jar.toPath());
+        java.nio.file.Path jarPath = Paths.get(jar.getAbsolutePath());
+        String linkString = link.toString();
+        java.nio.file.Path jarParent = jarPath.getParent();
+        java.nio.file.Path linkPath =
+            jarParent == null ? null : jarParent.resolve(linkString);
+        java.nio.file.Path linkPathParent =
+            linkPath == null ? null : linkPath.getParent();
+        java.nio.file.Path normalizedLinkPath =
+            linkPathParent == null ? null : linkPathParent.normalize();
+        if (normalizedLinkPath != null && jarParent.equals(
+            normalizedLinkPath)) {
+          LOG.info(String.format("Ignoring same directory link %s to %s",
+              jarPath.toString(), link.toString()));
+          return true;
+        }
+      } catch (NotLinkException ex) {
+        LOG.debug("Not a link", jar);
+      } catch (IOException ex) {
+        LOG.warn("Cannot read symbolic link on", jar);
+      }
+    }
+    return false;
+  }
+
   private void validateTargetPath() throws UploaderException {
     if (!target.startsWith("hdfs:/") &&
         !target.startsWith("file:/")) {
@@ -312,7 +437,7 @@ public class FrameworkUploader implements Runnable {
     opts.addOption(OptionBuilder.create("h"));
     opts.addOption(OptionBuilder.create("help"));
     opts.addOption(OptionBuilder
-        .withDescription("Input class path")
+        .withDescription("Input class path. Defaults to the default classpath.")
         .hasArg().create("input"));
     opts.addOption(OptionBuilder
         .withDescription(
@@ -338,8 +463,24 @@ public class FrameworkUploader implements Runnable {
         .hasArg().create("target"));
     opts.addOption(OptionBuilder
         .withDescription(
-            "Desired replication count")
-        .hasArg().create("replication"));
+            "Desired initial replication count. Default 3.")
+        .hasArg().create("initialReplication"));
+    opts.addOption(OptionBuilder
+        .withDescription(
+            "Desired final replication count. Default 10.")
+        .hasArg().create("finalReplication"));
+    opts.addOption(OptionBuilder
+        .withDescription(
+            "Desired acceptable replication count. Default 9.")
+        .hasArg().create("acceptableReplication"));
+    opts.addOption(OptionBuilder
+        .withDescription(
+            "Desired timeout for the acceptable" +
+                " replication in seconds. Default 10")
+        .hasArg().create("timeout"));
+    opts.addOption(OptionBuilder
+        .withDescription("Ignore symlinks into the same directory")
+        .create("nosymlink"));
     GenericOptionsParser parser = new GenericOptionsParser(opts, args);
     if (parser.getCommandLine().hasOption("help") ||
         parser.getCommandLine().hasOption("h")) {
@@ -352,24 +493,51 @@ public class FrameworkUploader implements Runnable {
         "whitelist", DefaultJars.DEFAULT_MR_JARS);
     blacklist = parser.getCommandLine().getOptionValue(
         "blacklist", DefaultJars.DEFAULT_EXCLUDED_MR_JARS);
-    replication = Short.parseShort(parser.getCommandLine().getOptionValue(
-        "replication", "10"));
+    initialReplication =
+        Short.parseShort(parser.getCommandLine().getOptionValue(
+            "initialReplication", "3"));
+    finalReplication =
+        Short.parseShort(parser.getCommandLine().getOptionValue(
+            "finalReplication", "10"));
+    acceptableReplication =
+        Short.parseShort(
+            parser.getCommandLine().getOptionValue(
+                "acceptableReplication", "9"));
+    timeout =
+        Integer.parseInt(
+            parser.getCommandLine().getOptionValue("timeout", "10"));
+    if (parser.getCommandLine().hasOption("nosymlink")) {
+      ignoreSymlink = true;
+    }
     String fs = parser.getCommandLine()
         .getOptionValue("fs", null);
-    if (fs == null) {
-      LOG.error("Target file system not specified");
-      printHelp(opts);
-      return false;
-    }
     String path = parser.getCommandLine().getOptionValue("target",
-        "mr-framework.tar.gz#mr-framework");
-    if (path == null) {
+        "/usr/lib/mr-framework.tar.gz#mr-framework");
+    boolean isFullPath =
+        path.startsWith("hdfs://") ||
+        path.startsWith("file://");
+
+    if (fs == null) {
+      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      if (fs == null && !isFullPath) {
+        LOG.error("No filesystem specified in either fs or target.");
+        printHelp(opts);
+        return false;
+      } else {
+        LOG.info(String.format(
+            "Target file system not specified. Using default %s", fs));
+      }
+    }
+    if (path.isEmpty()) {
       LOG.error("Target directory not specified");
       printHelp(opts);
       return false;
     }
-    StringBuilder absolutePath = new StringBuilder(fs);
-    absolutePath = absolutePath.append(path.startsWith("/") ? "" : "/");
+    StringBuilder absolutePath = new StringBuilder();
+    if (!isFullPath) {
+      absolutePath.append(fs);
+      absolutePath.append(path.startsWith("/") ? "" : "/");
+    }
     absolutePath.append(path);
     target = absolutePath.toString();
 

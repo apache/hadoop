@@ -20,6 +20,7 @@ module.exports = { // YARN UI App configurations
     hosts: {
       localBaseAddress: "",
       timelineWebAddress: "localhost:8188",
+      timelineV1WebAddress: "localhost:8188",
       rmWebAddress: "localhost:8088",
       protocolScheme: "http:"
     },

@@ -41,6 +41,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 @Metrics(context="fairscheduler-op-durations")
 public class FSOpDurations implements MetricsSource {
 
+  @Deprecated
   @Metric("Duration for a continuous scheduling run")
   MutableRate continuousSchedulingRun;
 
@@ -90,6 +91,7 @@ public class FSOpDurations implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
+  @Deprecated
   public void addContinuousSchedulingRunDuration(long value) {
     continuousSchedulingRun.add(value);
   }

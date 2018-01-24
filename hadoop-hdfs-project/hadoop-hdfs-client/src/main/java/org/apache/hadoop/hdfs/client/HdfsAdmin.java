@@ -659,8 +659,8 @@ public class HdfsAdmin {
   }
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(
-      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
-    return dfs.listOpenFiles(openFilesTypes);
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    return dfs.listOpenFiles(openFilesTypes, path);
   }
 
 }

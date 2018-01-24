@@ -177,13 +177,7 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
 
-    float timelineServiceVersion =
-        conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
-    if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)
-        && ((Float.compare(timelineServiceVersion, 1.0f) == 0)
-            || (Float.compare(timelineServiceVersion, 1.5f) == 0))) {
+    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
       timelineV1ServiceEnabled = true;
       timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
       timelineService = TimelineUtils.buildTimelineTokenService(conf);

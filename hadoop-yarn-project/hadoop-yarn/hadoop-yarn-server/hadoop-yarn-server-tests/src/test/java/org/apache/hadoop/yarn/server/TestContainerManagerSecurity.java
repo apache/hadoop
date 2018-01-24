@@ -30,12 +30,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -52,7 +50,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -409,9 +406,10 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
   }
 
   private void waitForContainerToFinishOnNM(ContainerId containerId)
-      throws TimeoutException, InterruptedException {
+      throws InterruptedException {
     Context nmContext = yarnCluster.getNodeManager(0).getNMContext();
-    int interval = 4 * 60; // Max time for container token to expire.
+    // Max time for container token to expire.
+    final int timeout = 4 * 60 * 1000;
 
     // If the container is null, then it has already completed and been removed
     // from the Context by asynchronous calls.
@@ -420,14 +418,11 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       try {
         LOG.info("Waiting for " + containerId + " to get to state " +
             ContainerState.COMPLETE);
-        GenericTestUtils.waitFor(new Supplier<Boolean>() {
-          @Override
-          public Boolean get() {
-            return ContainerState.COMPLETE.equals(
-                waitContainer.cloneAndGetContainerStatus().getState());
-          }
-        }, 10, interval);
+        GenericTestUtils.waitFor(() -> ContainerState.COMPLETE.equals(
+            waitContainer.cloneAndGetContainerStatus().getState()),
+            500, timeout);
       } catch (TimeoutException te) {
+        LOG.error("TimeoutException", te);
         fail("Was waiting for " + containerId + " to get to state " +
             ContainerState.COMPLETE + " but was in state " +
             waitContainer.cloneAndGetContainerStatus().getState() +

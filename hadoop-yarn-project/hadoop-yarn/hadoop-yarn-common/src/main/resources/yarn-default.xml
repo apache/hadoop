@@ -1678,9 +1678,17 @@
   </property>
 
   <property>
+    <description>This configuration setting determines whether the host's PID
+      namespace is allowed for docker containers on this cluster.
+      Use with care.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Property to enable docker user remapping</description>
     <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
@@ -1694,6 +1702,14 @@
     <description>lower limit for acceptable gids of user remapped user</description>
     <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
     <value>1</value>
+  </property>
+
+  <property>
+    <description>Whether or not users are allowed to request that Docker
+      containers honor the debug deletion delay. This is useful for
+      troubleshooting Docker container related launch failures.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
+    <value>false</value>
   </property>
 
   <property>

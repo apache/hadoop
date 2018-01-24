@@ -57,6 +57,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
@@ -494,7 +495,8 @@ public final class S3AUtils {
   }
 
   /**
-   * Create the AWS credentials from the providers and the URI.
+   * Create the AWS credentials from the providers, the URI and
+   * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
    * @param binding Binding URI, may contain user:pass login details
    * @param conf filesystem configuration
    * @return a credentials provider list
@@ -505,14 +507,8 @@ public final class S3AUtils {
       URI binding, Configuration conf) throws IOException {
     AWSCredentialProviderList credentials = new AWSCredentialProviderList();
 
-    Class<?>[] awsClasses;
-    try {
-      awsClasses = conf.getClasses(AWS_CREDENTIALS_PROVIDER);
-    } catch (RuntimeException e) {
-      Throwable c = e.getCause() != null ? e.getCause() : e;
-      throw new IOException("From option " + AWS_CREDENTIALS_PROVIDER +
-          ' ' + c, c);
-    }
+    Class<?>[] awsClasses = loadAWSProviderClasses(conf,
+        AWS_CREDENTIALS_PROVIDER);
     if (awsClasses.length == 0) {
       S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
       credentials.add(new BasicAWSCredentialsProvider(
@@ -528,6 +524,25 @@ public final class S3AUtils {
     LOG.debug("For URI {}, using credentials {}",
         S3xLoginHelper.toString(binding), credentials);
     return credentials;
+  }
+
+  /**
+   * Load list of AWS credential provider/credential provider factory classes.
+   * @param conf configuration
+   * @param key key
+   * @param defaultValue list of default values
+   * @return the list of classes, possibly empty
+   * @throws IOException on a failure to load the list.
+   */
+  static Class<?>[] loadAWSProviderClasses(Configuration conf,
+      String key,
+      Class<?>... defaultValue) throws IOException {
+    try {
+      return conf.getClasses(key, defaultValue);
+    } catch (RuntimeException e) {
+      Throwable c = e.getCause() != null ? e.getCause() : e;
+      throw new IOException("From option " + key + ' ' + c, c);
+    }
   }
 
   /**
@@ -551,7 +566,7 @@ public final class S3AUtils {
    */
   static AWSCredentialsProvider createAWSCredentialProvider(
       Configuration conf, Class<?> credClass) throws IOException {
-    AWSCredentialsProvider credentials = null;
+    AWSCredentialsProvider credentials;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
       throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
@@ -590,9 +605,27 @@ public final class S3AUtils {
           + "accepting Configuration, or a public factory method named "
           + "getInstance that accepts no arguments, or a public default "
           + "constructor.", className, AWS_CREDENTIALS_PROVIDER));
+    } catch (InvocationTargetException e) {
+      Throwable targetException = e.getTargetException();
+      if (targetException == null) {
+        targetException =  e;
+      }
+      if (targetException instanceof IOException) {
+        throw (IOException) targetException;
+      } else if (targetException instanceof SdkBaseException) {
+        throw translateException("Instantiate " + className, "",
+            (SdkBaseException) targetException);
+      } else {
+        // supported constructor or factory method found, but the call failed
+        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+            + ": " + targetException,
+            targetException);
+      }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+          + ": " + e,
+          e);
     }
   }
 

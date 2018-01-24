@@ -59,7 +59,7 @@ public class ResourceUtils {
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
-  private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
+  public static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
   private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(
@@ -199,9 +199,23 @@ public class ResourceUtils {
     }
   }
 
-  @VisibleForTesting
-  static void initializeResourcesMap(Configuration conf) {
+  /**
+   * Get maximum allocation from config, *THIS WILL NOT UPDATE INTERNAL DATA*
+   * @param conf config
+   * @return maximum allocation
+   */
+  public static Resource fetchMaximumAllocationFromConfig(Configuration conf) {
+    Map<String, ResourceInformation> resourceInformationMap =
+        getResourceInformationMapFromConfig(conf);
+    Resource ret = Resource.newInstance(0, 0);
+    for (ResourceInformation entry : resourceInformationMap.values()) {
+      ret.setResourceValue(entry.getName(), entry.getMaximumAllocation());
+    }
+    return ret;
+  }
 
+  private static Map<String, ResourceInformation> getResourceInformationMapFromConfig(
+      Configuration conf) {
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
     String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
 
@@ -247,6 +261,13 @@ public class ResourceUtils {
 
     setAllocationForMandatoryResources(resourceInformationMap, conf);
 
+    return resourceInformationMap;
+  }
+
+  @VisibleForTesting
+  static void initializeResourcesMap(Configuration conf) {
+    Map<String, ResourceInformation> resourceInformationMap =
+        getResourceInformationMapFromConfig(conf);
     initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
 
@@ -544,19 +565,8 @@ public class ResourceUtils {
   public static Resource getResourceTypesMaximumAllocation() {
     Resource ret = Resource.newInstance(0, 0);
     for (ResourceInformation entry : resourceTypesArray) {
-      String name = entry.getName();
-      if (name.equals(ResourceInformation.MEMORY_MB.getName())) {
-        ret.setMemorySize(entry.getMaximumAllocation());
-      } else if (name.equals(ResourceInformation.VCORES.getName())) {
-        Long tmp = entry.getMaximumAllocation();
-        if (tmp > Integer.MAX_VALUE) {
-          tmp = (long) Integer.MAX_VALUE;
-        }
-        ret.setVirtualCores(tmp.intValue());
-        continue;
-      } else {
-        ret.setResourceValue(name, entry.getMaximumAllocation());
-      }
+      ret.setResourceValue(entry.getName(),
+          entry.getMaximumAllocation());
     }
     return ret;
   }

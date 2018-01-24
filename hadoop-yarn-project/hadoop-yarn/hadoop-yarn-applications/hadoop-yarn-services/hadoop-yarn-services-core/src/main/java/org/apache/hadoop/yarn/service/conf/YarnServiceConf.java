@@ -94,6 +94,12 @@ public class YarnServiceConf {
   public static final int DEFAULT_CONTAINER_RECOVERY_TIMEOUT_MS = 120000;
 
   /**
+   * The dependency tarball file location.
+   */
+  public static final String DEPENDENCY_TARBALL_PATH = YARN_SERVICE_PREFIX
+      + "framework.path";
+
+  /**
    * Get long value for the property. First get from the userConf, if not
    * present, get from systemConf.
    *

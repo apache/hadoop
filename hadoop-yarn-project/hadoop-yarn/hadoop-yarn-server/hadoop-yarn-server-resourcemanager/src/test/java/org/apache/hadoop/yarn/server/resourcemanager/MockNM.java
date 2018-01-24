@@ -55,7 +55,7 @@ public class MockNM {
 
   private int responseId;
   private NodeId nodeId;
-  private Resource capatibility;
+  private Resource capability;
   private ResourceTrackerService resourceTracker;
   private int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -86,15 +86,15 @@ public class MockNM {
         version);
   }
 
-  public MockNM(String nodeIdStr, Resource capatibility,
+  public MockNM(String nodeIdStr, Resource capability,
       ResourceTrackerService resourceTracker) {
-    this(nodeIdStr, capatibility, resourceTracker,
+    this(nodeIdStr, capability, resourceTracker,
         YarnVersionInfo.getVersion());
   }
 
-  public MockNM(String nodeIdStr, Resource capatibility,
+  public MockNM(String nodeIdStr, Resource capability,
       ResourceTrackerService resourceTracker, String version) {
-    this.capatibility = capatibility;
+    this.capability = capability;
     this.resourceTracker = resourceTracker;
     this.version = version;
     String[] splits = nodeIdStr.split(":");
@@ -166,7 +166,7 @@ public class MockNM {
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
-    req.setResource(capatibility);
+    req.setResource(capability);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
     req.setRunningApplications(runningApplications);
@@ -177,7 +177,7 @@ public class MockNM {
     this.currentNMTokenMasterKey = registrationResponse.getNMTokenMasterKey();
     Resource newResource = registrationResponse.getResource();
     if (newResource != null) {
-      capatibility = Resources.clone(newResource);
+      capability = Resources.clone(newResource);
     }
     containerStats.clear();
     if (containerReports != null) {
@@ -202,7 +202,7 @@ public class MockNM {
       long containerId, ContainerState containerState) throws Exception {
     ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
         BuilderUtils.newContainerId(attemptId, containerId), containerState,
-        "Success", 0, capatibility);
+        "Success", 0, capability);
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>(1);
     containerStatusList.add(containerStatus);
@@ -282,22 +282,22 @@ public class MockNM {
 
     Resource newResource = heartbeatResponse.getResource();
     if (newResource != null) {
-      capatibility = Resources.clone(newResource);
+      capability = Resources.clone(newResource);
     }
 
     return heartbeatResponse;
   }
 
   public long getMemory() {
-    return capatibility.getMemorySize();
+    return capability.getMemorySize();
   }
 
   public int getvCores() {
-    return capatibility.getVirtualCores();
+    return capability.getVirtualCores();
   }
 
-  public Resource getCapatibility() {
-    return capatibility;
+  public Resource getCapability() {
+    return capability;
   }
 
   public String getVersion() {

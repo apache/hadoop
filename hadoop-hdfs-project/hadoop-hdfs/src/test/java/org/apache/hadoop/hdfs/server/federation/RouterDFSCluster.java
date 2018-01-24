@@ -109,6 +109,8 @@ public class RouterDFSCluster {
   private List<RouterContext> routers;
   /** If the Namenodes are in high availability.*/
   private boolean highAvailability;
+  /** Number of datanodes per nameservice. */
+  private int numDatanodesPerNameservice = 2;
 
   /** Mini cluster. */
   private MiniDFSCluster cluster;
@@ -356,8 +358,8 @@ public class RouterDFSCluster {
         DEFAULT_HEARTBEAT_INTERVAL_MS, DEFAULT_CACHE_INTERVAL_MS);
   }
 
-  public RouterDFSCluster(boolean ha, int numNameservices, int numNamnodes) {
-    this(ha, numNameservices, numNamnodes,
+  public RouterDFSCluster(boolean ha, int numNameservices, int numNamenodes) {
+    this(ha, numNameservices, numNamenodes,
         DEFAULT_HEARTBEAT_INTERVAL_MS, DEFAULT_CACHE_INTERVAL_MS);
   }
 
@@ -531,6 +533,10 @@ public class RouterDFSCluster {
     }
   }
 
+  public void setNumDatanodesPerNameservice(int num) {
+    this.numDatanodesPerNameservice = num;
+  }
+
   public String getNameservicesKey() {
     StringBuilder sb = new StringBuilder();
     for (String nsId : this.nameservices) {
@@ -658,7 +664,7 @@ public class RouterDFSCluster {
         nnConf.addResource(overrideConf);
       }
       cluster = new MiniDFSCluster.Builder(nnConf)
-          .numDataNodes(nameservices.size()*2)
+          .numDataNodes(nameservices.size() * numDatanodesPerNameservice)
           .nnTopology(topology)
           .build();
       cluster.waitActive();

@@ -122,7 +122,7 @@ To configure Registry DNS to serve reverse lookup for `172.17.0.0/24`
     <value>172.17.0.0</value>
   </property>
 ```
-## Start the DNS Server
+## Start Registry DNS Server
 By default, the DNS server runs on non-privileged port `5353`. Start the server
 with:
 ```
@@ -134,3 +134,10 @@ environment variables `YARN_REGISTRYDNS_SECURE_USER` and
 `YARN_REGISTRYDNS_SECURE_EXTRA_OPTS` must be uncommented in the `yarn-env.sh`
 file. The DNS server should then be launched as `root` and jsvc will be used to
 reduce the privileges of the daemon after the port has been bound.
+
+## Make your cluster use Registry DNS
+You can edit the `/etc/resolv.conf` to make your system use the registry DNS such as below, where `192.168.154.3` is the ip address of your DNS host. It should appear before any nameservers that would return NXDOMAIN for lookups in the domain used by the cluster.
+```
+nameserver 192.168.154.3
+```
+Alternatively, if you have a corporate DNS in your organization, you can configure zone forwarding so that the Registry DNS resolves hostnames for the domain used by the cluster.

@@ -254,6 +254,11 @@ public abstract class MockAsm extends MockApps {
     public CollectorInfo getCollectorInfo() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public Map<String, String> getApplicationSchedulingEnvs() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   public static RMApp newApplication(int i) {

@@ -16,7 +16,7 @@
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
-##<a name="introduction"></a>  Introduction
+##<a name="introduction"></a> Introduction
 
 Common problems working with S3 are
 
@@ -34,6 +34,9 @@ running in the Hadoop cluster, the JARs must be on that classpath. That
 includes `distcp` and the `hadoop fs` command.
 
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+Troubleshooting IAM Assumed Roles is covered in its
+[specific documentation](assumed_roles.html#troubeshooting).
 
 ## <a name="classpath"></a> Classpath Setup
 
