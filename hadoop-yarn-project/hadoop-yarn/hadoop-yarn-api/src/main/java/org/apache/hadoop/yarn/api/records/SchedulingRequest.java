@@ -77,7 +77,7 @@ public abstract class SchedulingRequest {
 
     /**
      * Set the <code>allocationRequestId</code> of the request.
-     * 
+     *
      * @see SchedulingRequest#setAllocationRequestId(long)
      * @param allocationRequestId <code>allocationRequestId</code> of the
      *          request
@@ -107,7 +107,7 @@ public abstract class SchedulingRequest {
 
     /**
      * Set the <code>executionType</code> of the request.
-     * 
+     *
      * @see SchedulingRequest#setExecutionType(ExecutionTypeRequest)
      * @param executionType <code>executionType</code> of the request
      * @return {@link SchedulingRequest.SchedulingRequestBuilder}
@@ -119,7 +119,7 @@ public abstract class SchedulingRequest {
       schedulingRequest.setExecutionType(executionType);
       return this;
     }
-    
+
     /**
      * Set the <code>allocationTags</code> of the request.
      *
@@ -169,7 +169,7 @@ public abstract class SchedulingRequest {
 
     /**
      * Return generated {@link SchedulingRequest} object.
-     * 
+     *
      * @return {@link SchedulingRequest}
      */
     @Public

@@ -341,6 +341,9 @@ public class PlacementConstraint {
    * {@link TargetOperator} used.
    */
   public static class TargetConstraint extends AbstractConstraint {
+    /**
+     * TargetOperator enum helps to specify type.
+     */
     enum TargetOperator {
       IN, NOT_IN
     }

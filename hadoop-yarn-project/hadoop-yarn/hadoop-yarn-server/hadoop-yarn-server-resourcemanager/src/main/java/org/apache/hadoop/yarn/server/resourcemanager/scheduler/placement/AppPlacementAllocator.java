@@ -57,7 +57,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
   protected RMContext rmContext;
 
   /**
-   * Get iterator of preferred node depends on requirement and/or availability
+   * Get iterator of preferred node depends on requirement and/or availability.
    * @param candidateNodeSet input CandidateNodeSet
    * @return iterator of preferred node
    */
@@ -180,7 +180,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
   public abstract void showRequests();
 
   /**
-   * Initialize this allocator, this will be called by Factory automatically
+   * Initialize this allocator, this will be called by Factory automatically.
    *
    * @param appSchedulingInfo appSchedulingInfo
    * @param schedulerRequestKey schedulerRequestKey

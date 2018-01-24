@@ -66,7 +66,7 @@ public class AllocationTagsManager {
   private TypeToCountedTags<String> globalRackMapping = new TypeToCountedTags();
 
   /**
-   * Generic store mapping type <T> to counted tags.
+   * Generic store mapping type T to counted tags.
    * Currently used both for NodeId to Tag, Count and Rack to Tag, Count
    */
   @VisibleForTesting
@@ -467,7 +467,8 @@ public class AllocationTagsManager {
    *                      specified, all tags (of the node/app) will be
    *                      considered.
    * @param op            operator. Such as Long::max, Long::sum, etc. Required.
-   *                      This parameter only take effect when #values >= 2.
+   *                      This parameter only take effect when #values greater
+   *                      than 2.
    * @return cardinality of specified query on the node.
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
@@ -515,7 +516,8 @@ public class AllocationTagsManager {
    *                      specified, all tags (of the rack/app) will be
    *                      considered.
    * @param op            operator. Such as Long::max, Long::sum, etc. Required.
-   *                      This parameter only take effect when #values >= 2.
+   *                      This parameter only take effect when #values
+   *                      greater than 2.
    * @return cardinality of specified query on the rack.
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
