@@ -322,6 +322,9 @@ public class ApplicationCLI extends YarnCLI {
             System.err.println("Application with name '" + appIdOrName
                 + "' doesn't exist in RM or Timeline Server.");
             return -1;
+          } catch (Exception ie) {
+            System.err.println(ie.getMessage());
+            return -1;
           }
         }
       } else if (title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {

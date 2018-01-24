@@ -82,6 +82,7 @@ public class WebApps {
       public Class<? extends HttpServlet> clazz;
       public String name;
       public String spec;
+      public Map<String, String> params;
     }
     
     final String name;
@@ -147,7 +148,19 @@ public class WebApps {
       servlets.add(struct);
       return this;
     }
-    
+
+    public Builder<T> withServlet(String name, String pathSpec,
+        Class<? extends HttpServlet> servlet,
+        Map<String, String> params) {
+      ServletStruct struct = new ServletStruct();
+      struct.clazz = servlet;
+      struct.name = name;
+      struct.spec = pathSpec;
+      struct.params = params;
+      servlets.add(struct);
+      return this;
+    }
+
     public Builder<T> with(Configuration conf) {
       this.conf = conf;
       return this;
@@ -243,6 +256,11 @@ public class WebApps {
           pathList.add("/" + wsName + "/*");
         }
       }
+      for (ServletStruct s : servlets) {
+        if (!pathList.contains(s.spec)) {
+          pathList.add(s.spec);
+        }
+      }
       if (conf == null) {
         conf = new Configuration();
       }
@@ -315,7 +333,12 @@ public class WebApps {
         HttpServer2 server = builder.build();
 
         for(ServletStruct struct: servlets) {
-          server.addServlet(struct.name, struct.spec, struct.clazz);
+          if (struct.params != null) {
+            server.addInternalServlet(struct.name, struct.spec,
+                struct.clazz, struct.params);
+          } else {
+            server.addServlet(struct.name, struct.spec, struct.clazz);
+          }
         }
         for(Map.Entry<String, Object> entry : attributes.entrySet()) {
           server.setAttribute(entry.getKey(), entry.getValue());
@@ -394,21 +417,15 @@ public class WebApps {
     }
 
     public WebApp start(WebApp webapp) {
-      return start(webapp, null, null);
+      return start(webapp, null);
     }
 
-    public WebApp start(WebApp webapp, WebAppContext ui2Context,
-        Map<String, String> services) {
+    public WebApp start(WebApp webapp, WebAppContext ui2Context) {
       WebApp webApp = build(webapp);
       HttpServer2 httpServer = webApp.httpServer();
       if (ui2Context != null) {
         addFiltersForNewContext(ui2Context);
         httpServer.addHandlerAtFront(ui2Context);
-      }
-      if (services!=null) {
-        String packageName = services.get("PackageName");
-        String pathSpec = services.get("PathSpec");
-        httpServer.addJerseyResourcePackage(packageName, pathSpec);
       }
       try {
         httpServer.start();

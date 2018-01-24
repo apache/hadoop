@@ -987,7 +987,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     GetStatusResponseProto response =
         amProxy.getStatus(GetStatusRequestProto.newBuilder().build());
     appSpec = jsonSerDeser.fromJson(response.getStatus());
-
+    if (lifetime != null) {
+      appSpec.setLifetime(lifetime.getRemainingTime());
+    }
     return appSpec;
   }
 

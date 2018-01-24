@@ -99,7 +99,7 @@ public class RegistrySecurity extends AbstractService {
    * Access policy options
    */
   private enum AccessPolicy {
-    anon, sasl, digest
+    anon, sasl, digest, simple
   }
 
   /**
@@ -214,6 +214,9 @@ public class RegistrySecurity extends AbstractService {
     case REGISTRY_CLIENT_AUTH_ANONYMOUS:
       access = AccessPolicy.anon;
       break;
+    case REGISTRY_CLIENT_AUTH_SIMPLE:
+      access = AccessPolicy.simple;
+      break;
     default:
       throw new ServiceStateException(E_UNKNOWN_AUTHENTICATION_MECHANISM
                                       + "\"" + auth + "\"");
@@ -302,6 +305,7 @@ public class RegistrySecurity extends AbstractService {
           break;
 
         case anon:
+        case simple:
           // nothing is needed; account is read only.
           if (LOG.isDebugEnabled()) {
             LOG.debug("Auth is anonymous");
@@ -758,6 +762,9 @@ public class RegistrySecurity extends AbstractService {
           LOG.info(
               "Enabling ZK sasl client: jaasClientEntry = " + jaasClientEntry
                   + ", principal = " + principal + ", keytab = " + keytab);
+        default:
+          clearZKSaslClientProperties();
+          break;
       }
     }
   }
