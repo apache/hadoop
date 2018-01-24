@@ -104,6 +104,23 @@ public final class CBlockTargetServer extends TargetServer {
     return targets.containsKey(checkTargetName);
   }
 
+  @Override
+  public String[] getTargetNames() {
+    try {
+      if (cBlockManagerHandler != null) {
+        return cBlockManagerHandler.listVolumes().
+            stream().map(
+              volumeInfo -> volumeInfo.getUserName() + ":" + volumeInfo
+                .getVolumeName()).toArray(String[]::new);
+      } else {
+        return new String[0];
+      }
+    } catch (IOException e) {
+      LOGGER.error("Can't list existing volumes", e);
+      return new String[0];
+    }
+  }
+
   @VisibleForTesting
   public HashMap<String, Target> getTargets() {
     return targets;

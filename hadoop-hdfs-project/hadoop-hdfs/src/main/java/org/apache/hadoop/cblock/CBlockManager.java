@@ -247,6 +247,11 @@ public class CBlockManager implements CBlockServiceProtocol,
   }
 
   @Override
+  public List<VolumeInfo> listVolumes() throws IOException {
+    return listVolume(null);
+  }
+
+  @Override
   public synchronized void createVolume(String userName, String volumeName,
       long volumeSize, int blockSize) throws IOException {
     LOG.info("Create volume received: userName: {} volumeName: {} " +
