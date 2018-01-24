@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceSizingProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SchedulingRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SchedulingRequestProtoOrBuilder;
 
+/**
+ * Proto implementation for {@link SchedulingRequest} interface.
+ */
 @Private
 @Unstable
 public class SchedulingRequestPBImpl extends SchedulingRequest {

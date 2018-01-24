@@ -74,7 +74,7 @@ public final class PlacementConstraintsUtil {
       throws InvalidAllocationTagsQueryException {
     long minScopeCardinality = 0;
     long maxScopeCardinality = 0;
-    
+
     // Optimizations to only check cardinality if necessary.
     int desiredMinCardinality = sc.getMinCardinality();
     int desiredMaxCardinality = sc.getMaxCardinality();
@@ -179,7 +179,7 @@ public final class PlacementConstraintsUtil {
    * first validates the constraint specified in the request; if not specified,
    * then it validates application level constraint if exists; otherwise, it
    * validates the global constraint if exists.
-   * <p/>
+   *
    * This method only checks whether a scheduling request can be placed
    * on a node with respect to the certain placement constraint. It gives no
    * guarantee that asked allocations can be eventually allocated because

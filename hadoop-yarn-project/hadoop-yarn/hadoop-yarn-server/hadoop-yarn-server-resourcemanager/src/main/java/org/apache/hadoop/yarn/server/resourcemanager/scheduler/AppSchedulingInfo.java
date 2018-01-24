@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalityAppPlacementAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PendingAskUpdateResult;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SingleConstraintAppPlacementAllocator;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -739,7 +738,7 @@ public class AppSchedulingInfo {
 
   /**
    * Pre-check node to see if it satisfy the given schedulerKey and
-   * scheduler mode
+   * scheduler mode.
    *
    * @param schedulerKey schedulerKey
    * @param schedulerNode schedulerNode

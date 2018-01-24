@@ -26,6 +26,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceSizingProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceSizingProtoOrBuilder;
 
+/**
+ * Proto Implementation for {@link ResourceSizing} interface.
+ */
 @Private
 @Unstable
 public class ResourceSizingPBImpl extends ResourceSizing {
