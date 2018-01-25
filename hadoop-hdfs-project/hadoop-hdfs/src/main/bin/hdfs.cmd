@@ -59,6 +59,14 @@ if "%1" == "--loglevel" (
     )
   )
 
+  if "%hdfs-command%" == "dfsrouter" (
+    if defined HADOOP_ROUTER_OPTS (
+      @echo WARNING: it looks like you're using a deprecated config HADOOP_ROUTER_OPTS.
+      @echo Please switch to HADOOP_DFSROUTER_OPTS.
+      set HADOOP_DFSROUTER_OPTS=%HADOOP_ROUTER_OPTS%
+    )
+  )
+
   set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
@@ -181,7 +189,7 @@ goto :eof
 
 :dfsrouter
   set CLASS=org.apache.hadoop.hdfs.server.federation.router.DFSRouter
-  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_ROUTER_OPTS%
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_DFSROUTER_OPTS%
   goto :eof
 
 :dfsrouteradmin
