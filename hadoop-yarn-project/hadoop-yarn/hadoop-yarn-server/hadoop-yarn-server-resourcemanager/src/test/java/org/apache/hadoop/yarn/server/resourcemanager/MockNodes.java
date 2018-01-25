@@ -201,7 +201,8 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     @Override
@@ -239,12 +240,6 @@ public class MockNodes {
         return labels;
       }
       return CommonNodeLabelsManager.EMPTY_STRING_SET;
-    }
-
-    @Override
-    public void updateNodeHeartbeatResponseForUpdatedContainers(
-        NodeHeartbeatResponse response) {
-      
     }
 
     @Override
