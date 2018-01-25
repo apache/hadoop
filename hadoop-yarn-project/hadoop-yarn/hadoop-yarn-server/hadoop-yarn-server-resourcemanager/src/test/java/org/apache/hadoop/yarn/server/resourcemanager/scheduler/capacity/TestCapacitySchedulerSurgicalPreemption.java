@@ -152,6 +152,10 @@ public class TestCapacitySchedulerSurgicalPreemption
     waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode2.getNodeID()),
         am1.getApplicationAttemptId(), 16);
 
+    // Ensure preemption metrics were recored.
+    Assert.assertEquals("Number of preempted containers incorrectly recorded:",
+        4, cs.getQueue("root").getMetrics().getAggregatePreemptedContainers());
+
     rm1.close();
   }
 
