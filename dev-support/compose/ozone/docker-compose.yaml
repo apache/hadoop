@@ -42,6 +42,8 @@ services:
          - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
       ports:
          - 9874:9874
+      environment:
+         ENSURE_KSM_INITIALIZED: /data/metadata/ksm/current/VERSION
       env_file:
           - ./docker-config
       command: ["/opt/hadoop/bin/hdfs","ksm"]
@@ -53,4 +55,6 @@ services:
          - 9876:9876
       env_file:
           - ./docker-config
+      environment:
+          ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/hdfs","scm"]
