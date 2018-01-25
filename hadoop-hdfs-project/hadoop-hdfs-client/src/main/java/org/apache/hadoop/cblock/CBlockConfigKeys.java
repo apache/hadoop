@@ -187,6 +187,14 @@ public final class CBlockConfigKeys {
       "dfs.cblock.rpc.timeout";
   public static final String DFS_CBLOCK_RPC_TIMEOUT_DEFAULT = "300s";
 
+  public static final String DFS_CBLOCK_ISCSI_ADVERTISED_IP =
+      "dfs.cblock.iscsi.advertised.ip";
+
+  public static final String DFS_CBLOCK_ISCSI_ADVERTISED_PORT =
+      "dfs.cblock.iscsi.advertised.port";
+
+  public static final int DFS_CBLOCK_ISCSI_ADVERTISED_PORT_DEFAULT = 3260;
+
   private CBlockConfigKeys() {
 
   }

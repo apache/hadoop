@@ -277,6 +277,23 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.cblock.iscsi.advertised.ip</name>
+    <value>0.0.0.0</value>
+    <tag>CBLOCK</tag>
+    <description>
+      IP address returned during the iscsi discovery.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.port</name>
+    <value>3260</value>
+    <tag>CBLOCK</tag>
+    <description>
+      TCP port returned during the iscsi discovery.
+    </description>
+  </property>
   <!--Container Settings used by Datanode-->
   <property>
     <name>ozone.container.cache.size</name>

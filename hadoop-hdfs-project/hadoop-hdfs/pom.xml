@@ -211,7 +211,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.jscsi</groupId>
       <artifactId>target</artifactId>
-      <version>2.5.3</version>
+      <version>2.6.0</version>
       <optional>true</optional>
       <exclusions>
         <exclusion>
