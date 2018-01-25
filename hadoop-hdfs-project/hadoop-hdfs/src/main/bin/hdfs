@@ -134,6 +134,13 @@ if [ "$COMMAND" == "nfs3" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_PRIVILEGED_NFS
   fi
 fi
 
+# Determine if we're using deprecated config HADOOP_ROUTER_OPTS
+if [ "$COMMAND" == "dfsrouter" ] && [ "$HADOOP_ROUTER_OPTS" != "" ]; then
+  echo "WARNING: it looks like you're using a deprecated config HADOOP_ROUTER_OPTS. "\
+    "Please switch to HADOOP_DFSROUTER_OPTS."
+  HADOOP_DFSROUTER_OPTS=$HADOOP_ROUTER_OPTS
+fi
+
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
@@ -161,7 +168,7 @@ elif [ "$COMMAND" = "dfsadmin" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "dfsrouter" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_ROUTER_OPTS"
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DFSROUTER_OPTS"
 elif [ "$COMMAND" = "dfsrouteradmin" ] ; then
   CLASS='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
 elif [ "$COMMAND" = "haadmin" ] ; then
