@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.cblock.jscsiHelper;
 
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_ISCSI_ADVERTISED_IP;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_ISCSI_ADVERTISED_PORT;
+import static org.apache.hadoop.cblock.CBlockConfigKeys
+    .DFS_CBLOCK_ISCSI_ADVERTISED_PORT_DEFAULT;
 import org.apache.hadoop.cblock.protocolPB.CBlockClientServerProtocolPB;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -97,7 +103,18 @@ public final class SCSITargetDaemon {
                 NetUtils.getDefaultSocketFactory(ozoneConf), 5000)
         );
     CBlockManagerHandler cbmHandler = new CBlockManagerHandler(cbmClient);
-    Configuration jscsiConfig = new Configuration(jscsiServerAddress);
+
+    String advertisedAddress = ozoneConf.
+        getTrimmed(DFS_CBLOCK_ISCSI_ADVERTISED_IP, jscsiServerAddress);
+
+    int advertisedPort = ozoneConf.
+        getInt(DFS_CBLOCK_ISCSI_ADVERTISED_PORT,
+            DFS_CBLOCK_ISCSI_ADVERTISED_PORT_DEFAULT);
+
+    Configuration jscsiConfig =
+        new Configuration(jscsiServerAddress,
+            advertisedAddress,
+            advertisedPort);
     DefaultMetricsSystem.initialize("CBlockMetrics");
     CBlockTargetMetrics metrics = CBlockTargetMetrics.create();
     CBlockTargetServer targetServer = new CBlockTargetServer(
