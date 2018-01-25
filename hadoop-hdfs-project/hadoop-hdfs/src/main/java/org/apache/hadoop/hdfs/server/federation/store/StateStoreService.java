@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -38,8 +39,10 @@ import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MembershipStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
+import org.apache.hadoop.hdfs.server.federation.store.impl.RouterStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.service.CompositeService;
@@ -148,6 +151,7 @@ public class StateStoreService extends CompositeService {
     // Add supported record stores
     addRecordStore(MembershipStoreImpl.class);
     addRecordStore(MountTableStoreImpl.class);
+    addRecordStore(RouterStoreImpl.class);
 
     // Check the connection to the State Store periodically
     this.monitorService = new StateStoreConnectionMonitorService(this);
@@ -157,6 +161,11 @@ public class StateStoreService extends CompositeService {
     MembershipState.setExpirationMs(conf.getLong(
         DFSConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS,
         DFSConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT));
+
+    RouterState.setExpirationMs(conf.getTimeDuration(
+        DFSConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS,
+        DFSConfigKeys.FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
 
     // Cache update service
     this.cacheUpdater = new StateStoreCacheUpdateService(this);
