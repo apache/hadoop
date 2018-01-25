@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
@@ -34,6 +35,12 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_PROTOCOL_REST;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_PROTOCOL_RPC;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_HTTP_BIND_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
 
 /**
  * Factory class to create different types of OzoneClients.
@@ -49,112 +56,240 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
  */
 public final class OzoneClientFactory {
 
-  private enum ClientType {
-    RPC, REST
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(
+      OzoneClientFactory.class);
 
   /**
    * Private constructor, class is not meant to be initialized.
    */
   private OzoneClientFactory(){}
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      OzoneClientFactory.class);
-
-  private static Configuration configuration;
 
   /**
-   * Returns an OzoneClient which will use protocol defined through
-   * <code>ozone.client.protocol</code> to perform client operations.
+   * Constructs and return an OzoneClient with default configuration.
+   *
    * @return OzoneClient
+   *
    * @throws IOException
    */
   public static OzoneClient getClient() throws IOException {
-    return getClient(null);
+    LOG.info("Creating OzoneClient with default configuration.");
+    return getClient(new OzoneConfiguration());
   }
 
   /**
-   * Returns an OzoneClient which will use RPC protocol to perform
-   * client operations.
+   * Constructs and return an OzoneClient based on the configuration object.
+   * Protocol type is decided by <code>ozone.client.protocol</code>.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
    * @return OzoneClient
+   *
    * @throws IOException
    */
-  public static OzoneClient getRpcClient() throws IOException {
-    return getClient(ClientType.RPC);
-  }
-
-  /**
-   * Returns an OzoneClient which will use REST protocol to perform
-   * client operations.
-   * @return OzoneClient
-   * @throws IOException
-   */
-  public static OzoneClient getRestClient() throws IOException {
-    return getClient(ClientType.REST);
-  }
-
-  /**
-   * Returns OzoneClient with protocol type set base on ClientType.
-   * @param clientType
-   * @return OzoneClient
-   * @throws IOException
-   */
-  private static OzoneClient getClient(ClientType clientType)
+  public static OzoneClient getClient(Configuration config)
       throws IOException {
+    Preconditions.checkNotNull(config);
+    Class<? extends ClientProtocol> clazz = (Class<? extends ClientProtocol>)
+        config.getClass(OZONE_CLIENT_PROTOCOL, OZONE_CLIENT_PROTOCOL_RPC);
+    return getClient(getClientProtocol(clazz, config), config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(String ksmHost)
+      throws IOException {
+    return getRpcClient(ksmHost, OZONE_KSM_PORT_DEFAULT,
+        new OzoneConfiguration());
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @param ksmRpcPort
+   *        RPC port of KeySpaceManager.
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(String ksmHost, Integer ksmRpcPort)
+      throws IOException {
+    return getRpcClient(ksmHost, ksmRpcPort, new OzoneConfiguration());
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @param ksmRpcPort
+   *        RPC port of KeySpaceManager.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(String ksmHost, Integer ksmRpcPort,
+                                         Configuration config)
+      throws IOException {
+    Preconditions.checkNotNull(ksmHost);
+    Preconditions.checkNotNull(ksmRpcPort);
+    Preconditions.checkNotNull(config);
+    config.set(OZONE_KSM_ADDRESS_KEY, ksmHost + ":" + ksmRpcPort);
+    return getRpcClient(config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   *
+   * @param config
+   *        used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRpcClient(Configuration config)
+      throws IOException {
+    Preconditions.checkNotNull(config);
+    return getClient(getClientProtocol(OZONE_CLIENT_PROTOCOL_RPC, config),
+        config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use REST protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRestClient(String ksmHost)
+      throws IOException {
+    return getRestClient(ksmHost, OZONE_KSM_HTTP_BIND_PORT_DEFAULT);
+  }
+
+  /**
+   * Returns an OzoneClient which will use REST protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @param ksmHttpPort
+   *        HTTP port of KeySpaceManager.
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRestClient(String ksmHost, Integer ksmHttpPort)
+      throws IOException {
+    return getRestClient(ksmHost, ksmHttpPort, new OzoneConfiguration());
+  }
+
+  /**
+   * Returns an OzoneClient which will use REST protocol.
+   *
+   * @param ksmHost
+   *        hostname of KeySpaceManager to connect.
+   *
+   * @param ksmHttpPort
+   *        HTTP port of KeySpaceManager.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRestClient(String ksmHost, Integer ksmHttpPort,
+                                          Configuration config)
+      throws IOException {
+    Preconditions.checkNotNull(ksmHost);
+    Preconditions.checkNotNull(ksmHttpPort);
+    Preconditions.checkNotNull(config);
+    config.set(OZONE_KSM_HTTP_ADDRESS_KEY, ksmHost + ":" +  ksmHttpPort);
+    return getRestClient(config);
+  }
+
+  /**
+   * Returns an OzoneClient which will use REST protocol.
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   *
+   * @return OzoneClient
+   *
+   * @throws IOException
+   */
+  public static OzoneClient getRestClient(Configuration config)
+      throws IOException {
+    Preconditions.checkNotNull(config);
+    return getClient(getClientProtocol(OZONE_CLIENT_PROTOCOL_REST, config),
+        config);
+  }
+
+  /**
+   * Creates OzoneClient with the given ClientProtocol and Configuration.
+   *
+   * @param clientProtocol
+   *        Protocol to be used by the OzoneClient
+   *
+   * @param config
+   *        Configuration to be used for OzoneClient creation
+   */
+  private static OzoneClient getClient(ClientProtocol clientProtocol,
+                                       Configuration config) {
     OzoneClientInvocationHandler clientHandler =
-        new OzoneClientInvocationHandler(getProtocolClass(clientType));
+        new OzoneClientInvocationHandler(clientProtocol);
     ClientProtocol proxy = (ClientProtocol) Proxy.newProxyInstance(
         OzoneClientInvocationHandler.class.getClassLoader(),
         new Class<?>[]{ClientProtocol.class}, clientHandler);
-    return new OzoneClient(configuration, proxy);
+    return new OzoneClient(config, proxy);
   }
 
   /**
-   * Returns the configuration if it's already set, else creates a new
-   * {@link OzoneConfiguration} and returns it.
+   * Returns an instance of Protocol class.
    *
-   * @return Configuration
-   */
-  private static synchronized Configuration getConfiguration() {
-    if(configuration == null) {
-      setConfiguration(new OzoneConfiguration());
-    }
-    return configuration;
-  }
-
-  /**
-   * Based on the clientType, client protocol instance is created.
-   * If clientType is null, <code>ozone.client.protocol</code> property
-   * will be used to decide the protocol to be used.
-   * @param clientType type of client protocol to be created
-   * @return ClientProtocol implementation
+   * @param protocolClass
+   *        Class object of the ClientProtocol.
+   *
+   * @param config
+   *        Configuration used to initialize ClientProtocol.
+   *
+   * @return ClientProtocol
+   *
    * @throws IOException
    */
-  private static ClientProtocol getProtocolClass(ClientType clientType)
+  private static ClientProtocol getClientProtocol(
+      Class<? extends ClientProtocol> protocolClass, Configuration config)
       throws IOException {
-    Class<? extends ClientProtocol> protocolClass = null;
-    if(clientType != null) {
-      switch (clientType) {
-      case RPC:
-        protocolClass = OZONE_CLIENT_PROTOCOL_RPC;
-        break;
-      case REST:
-        protocolClass = OZONE_CLIENT_PROTOCOL_REST;
-        break;
-      default:
-        LOG.warn("Invalid ClientProtocol type, falling back to RPC.");
-        protocolClass = OZONE_CLIENT_PROTOCOL_RPC;
-        break;
-      }
-    } else {
-      protocolClass = (Class<ClientProtocol>)
-          getConfiguration().getClass(
-              OZONE_CLIENT_PROTOCOL, OZONE_CLIENT_PROTOCOL_RPC);
-    }
     try {
+      LOG.info("Using {} as client protocol.",
+          protocolClass.getCanonicalName());
       Constructor<? extends ClientProtocol> ctor =
           protocolClass.getConstructor(Configuration.class);
-      return ctor.newInstance(getConfiguration());
+      return ctor.newInstance(config);
     } catch (Exception e) {
       final String message = "Couldn't create protocol " + protocolClass;
       if (e.getCause() instanceof IOException) {
@@ -163,15 +298,6 @@ public final class OzoneClientFactory {
         throw new IOException(message, e);
       }
     }
-  }
-
-  /**
-   * Sets the configuration, which will be used while creating OzoneClient.
-   *
-   * @param conf
-   */
-  public static void setConfiguration(Configuration conf) {
-    configuration = conf;
   }
 
 }

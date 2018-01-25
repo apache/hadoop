@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.client.rest;
 
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -46,6 +45,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -77,15 +77,11 @@ public class TestOzoneRestClient {
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode datanode = cluster.getDataNodes().get(0);
-    conf.set(OzoneConfigKeys.OZONE_CLIENT_PROTOCOL,
-        "org.apache.hadoop.ozone.client.rest.RestClient");
-    conf.set(OzoneConfigKeys.OZONE_REST_SERVERS,
-        datanode.getDatanodeHostname());
-    conf.set(OzoneConfigKeys.OZONE_REST_CLIENT_PORT,
-        Integer.toString(datanode.getInfoPort()));
-    OzoneClientFactory.setConfiguration(conf);
-    ozClient = OzoneClientFactory.getClient();
+
+    InetSocketAddress ksmHttpAddress = cluster.getKeySpaceManager()
+        .getHttpServer().getHttpAddress();
+    ozClient = OzoneClientFactory.getRestClient(ksmHttpAddress.getHostName(),
+        ksmHttpAddress.getPort(), conf);
     store = ozClient.getObjectStore();
   }
 

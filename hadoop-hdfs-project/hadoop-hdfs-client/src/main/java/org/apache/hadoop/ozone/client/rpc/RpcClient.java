@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.ksm.protocolPB
@@ -54,6 +55,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.scm.ScmConfigKeys;
@@ -123,8 +126,7 @@ public class RpcClient implements ClientProtocol {
 
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
-    InetSocketAddress scmAddress =
-        OzoneClientUtils.getScmAddressForClients(conf);
+    InetSocketAddress scmAddress = getScmAddressForClient();
     RPC.setProtocolEngine(conf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
     this.storageContainerLocationClient =
@@ -148,6 +150,15 @@ public class RpcClient implements ClientProtocol {
     } else {
       chunkSize = configuredChunkSize;
     }
+  }
+
+  private InetSocketAddress getScmAddressForClient() throws IOException {
+    List<ServiceInfo> services = keySpaceManagerClient.getServiceList();
+    ServiceInfo scmInfo = services.stream().filter(
+        a -> a.getNodeType().equals(OzoneProtos.NodeType.SCM))
+        .collect(Collectors.toList()).get(0);
+    return NetUtils.createSocketAddr(scmInfo.getHostname()+ ":" +
+        scmInfo.getPort(ServicePort.Type.RPC));
   }
 
   @Override
