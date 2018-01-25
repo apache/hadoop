@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -36,7 +35,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -1611,23 +1609,6 @@ public class CapacityScheduler extends
     LeafQueue queue = (LeafQueue)application.getQueue();
     queue.completedContainer(clusterResource, application, node, 
         rmContainer, containerStatus, event, null, true);
-    if (ContainerExitStatus.PREEMPTED == containerStatus.getExitStatus()) {
-      updateQueuePreemptionMetrics(queue, rmContainer);
-    }
-  }
-
-  private void updateQueuePreemptionMetrics(
-      CSQueue queue, RMContainer rmc) {
-    QueueMetrics qMetrics = queue.getMetrics();
-    long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
-    Resource containerResource = rmc.getAllocatedResource();
-    qMetrics.preemptContainer();
-    long mbSeconds = (containerResource.getMemorySize() * usedMillis)
-        / DateUtils.MILLIS_PER_SECOND;
-    long vcSeconds = (containerResource.getVirtualCores() * usedMillis)
-        / DateUtils.MILLIS_PER_SECOND;
-    qMetrics.updatePreemptedMemoryMBSeconds(mbSeconds);
-    qMetrics.updatePreemptedVcoreSeconds(vcSeconds);
   }
   
   @Override

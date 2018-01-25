@@ -68,10 +68,6 @@ public class QueueMetrics implements MetricsSource {
     MutableCounterLong aggregateOffSwitchContainersAllocated;
   @Metric("Aggregate # of preempted containers") MutableCounterLong
       aggregateContainersPreempted;
-  @Metric("Aggregate # of preempted memory seconds") MutableCounterLong
-      aggregateMemoryMBSecondsPreempted;
-  @Metric("Aggregate # of preempted vcore seconds") MutableCounterLong
-      aggregateVcoreSecondsPreempted;
   @Metric("# of active users") MutableGaugeInt activeUsers;
   @Metric("# of active applications") MutableGaugeInt activeApplications;
   @Metric("App Attempt First Container Allocation Delay")
@@ -522,20 +518,6 @@ public class QueueMetrics implements MetricsSource {
       if (parent != null) {
         parent.releaseResources(partition, user, res);
       }
-    }
-  }
-
-  public void updatePreemptedMemoryMBSeconds(long mbSeconds) {
-    aggregateMemoryMBSecondsPreempted.incr(mbSeconds);
-    if (parent != null) {
-      parent.updatePreemptedMemoryMBSeconds(mbSeconds);
-    }
-  }
-
-  public void updatePreemptedVcoreSeconds(long vcoreSeconds) {
-    aggregateVcoreSecondsPreempted.incr(vcoreSeconds);
-    if (parent != null) {
-      parent.updatePreemptedVcoreSeconds(vcoreSeconds);
     }
   }
 
