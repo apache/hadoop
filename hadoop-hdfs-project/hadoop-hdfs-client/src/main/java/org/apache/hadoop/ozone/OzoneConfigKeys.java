@@ -124,10 +124,6 @@ public final class OzoneConfigKeys {
   public static final Class<? extends ClientProtocol>
       OZONE_CLIENT_PROTOCOL_REST = RestClient.class;
 
-  public static final String OZONE_REST_SERVERS = "ozone.rest.servers";
-  public static final String OZONE_REST_CLIENT_PORT = "ozone.rest.client.port";
-  public static final int OZONE_REST_CLIENT_PORT_DEFAULT = 9864;
-
   // This defines the overall connection limit for the connection pool used in
   // RestClient.
   public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_MAX =

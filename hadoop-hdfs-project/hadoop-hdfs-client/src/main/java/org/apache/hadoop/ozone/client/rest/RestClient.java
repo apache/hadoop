@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.ozone.client.rest;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -36,14 +39,16 @@ import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-
-import java.io.IOException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.http.HttpEntity;
@@ -64,19 +69,20 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -108,13 +114,7 @@ public class RestClient implements ClientProtocol {
     try {
       Preconditions.checkNotNull(conf);
       this.conf = conf;
-      int port = conf.getInt(OzoneConfigKeys.OZONE_REST_CLIENT_PORT,
-          OzoneConfigKeys.OZONE_REST_CLIENT_PORT_DEFAULT);
-      URIBuilder uriBuilder = new URIBuilder()
-          .setScheme("http")
-          .setHost(getOzoneRestHandlerHost())
-          .setPort(port);
-      this.ozoneRestUri = uriBuilder.build();
+
       long socketTimeout = conf.getTimeDuration(
           OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT,
           OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_DEFAULT,
@@ -129,7 +129,8 @@ public class RestClient implements ClientProtocol {
 
       int maxConnectionPerRoute = conf.getInt(
           OzoneConfigKeys.OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX,
-          OzoneConfigKeys.OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX_DEFAULT
+          OzoneConfigKeys
+              .OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX_DEFAULT
       );
 
       /*
@@ -152,26 +153,55 @@ public class RestClient implements ClientProtocol {
       this.ugi = UserGroupInformation.getCurrentUser();
       this.userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
           KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
+
+      // TODO: Add new configuration parameter to configure RestServerSelector.
+      RestServerSelector defaultSelector = new DefaultRestServerSelector();
+      InetSocketAddress restServer = getOzoneRestServerAddress(defaultSelector);
+      URIBuilder uriBuilder = new URIBuilder()
+          .setScheme("http")
+          .setHost(restServer.getHostName())
+          .setPort(restServer.getPort());
+      this.ozoneRestUri = uriBuilder.build();
+
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
   }
 
-  /**
-   * Returns the REST server host to connect to.
-   *
-   * @return hostname of REST server
-   */
-  private String getOzoneRestHandlerHost() {
-    List<String> servers = new ArrayList<>(conf.getTrimmedStringCollection(
-        OzoneConfigKeys.OZONE_REST_SERVERS));
-    if(servers.isEmpty()) {
-      throw new IllegalArgumentException(OzoneConfigKeys.OZONE_REST_SERVERS +
-          " must be defined. See" +
-          " https://wiki.apache.org/hadoop/Ozone#Configuration for" +
-          " details on configuring Ozone.");
+  private InetSocketAddress getOzoneRestServerAddress(
+      RestServerSelector selector) throws IOException {
+    String httpAddress = conf.get(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY);
+
+    if (httpAddress == null) {
+      throw new IllegalArgumentException(
+          KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY + " must be defined. See" +
+              " https://wiki.apache.org/hadoop/Ozone#Configuration for" +
+              " details on configuring Ozone.");
     }
-    return servers.get(new Random().nextInt(servers.size()));
+
+    HttpGet httpGet = new HttpGet("http://" + httpAddress + "/serviceList");
+    HttpEntity entity = executeHttpRequest(httpGet);
+    try {
+      String serviceListJson = EntityUtils.toString(entity);
+
+      ObjectMapper objectMapper = new ObjectMapper();
+      TypeReference<List<ServiceInfo>> serviceInfoReference =
+          new TypeReference<List<ServiceInfo>>() {
+          };
+      List<ServiceInfo> services = objectMapper.readValue(
+          serviceListJson, serviceInfoReference);
+
+      List<ServiceInfo> dataNodeInfos = services.stream().filter(
+          a -> a.getNodeType().equals(OzoneProtos.NodeType.DATANODE))
+          .collect(Collectors.toList());
+
+      ServiceInfo restServer = selector.getRestServer(dataNodeInfos);
+
+      return NetUtils.createSocketAddr(restServer.getHostname() + ":" +
+          restServer.getPort(ServicePort.Type.HTTP));
+    } finally {
+      EntityUtils.consume(entity);
+    }
   }
 
   @Override

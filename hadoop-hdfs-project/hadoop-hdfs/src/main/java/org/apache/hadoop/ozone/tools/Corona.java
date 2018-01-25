@@ -187,8 +187,7 @@ public final class Corona extends Configured implements Tool {
     numberOfVolumesCreated = new AtomicInteger();
     numberOfBucketsCreated = new AtomicInteger();
     numberOfKeysAdded = new AtomicLong();
-    OzoneClientFactory.setConfiguration(conf);
-    ozoneClient = OzoneClientFactory.getClient();
+    ozoneClient = OzoneClientFactory.getClient(conf);
     objectStore = ozoneClient.getObjectStore();
     for (CoronaOps ops : CoronaOps.values()) {
       histograms.add(ops.ordinal(), new Histogram(new UniformReservoir()));

@@ -93,10 +93,7 @@ public class TestOzoneRpcClient {
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 1);
     cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(10)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    conf.set("ozone.client.protocol",
-        "org.apache.hadoop.ozone.client.rpc.RpcClient");
-    OzoneClientFactory.setConfiguration(conf);
-    ozClient = OzoneClientFactory.getClient();
+    ozClient = OzoneClientFactory.getRpcClient(conf);
     store = ozClient.getObjectStore();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
