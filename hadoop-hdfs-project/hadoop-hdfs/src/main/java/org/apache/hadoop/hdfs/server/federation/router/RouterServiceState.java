@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
  * States of the Router.
  */
 public enum RouterServiceState {
-  NONE,
+  UNINITIALIZED,
   INITIALIZING,
   SAFEMODE,
   RUNNING,
