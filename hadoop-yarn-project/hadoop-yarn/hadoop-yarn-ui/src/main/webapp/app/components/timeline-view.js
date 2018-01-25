@@ -242,14 +242,6 @@ export default Ember.Component.extend({
       }.bind(this));
     }
 
-    if (this.get("tsModel")) {
-      this.get("tsModel").forEach(function(o) {
-        if(!this.modelArr.contains(o)) {
-          this.modelArr.push(o);
-        }
-      }.bind(this));
-    }
-
     if(this.modelArr.length === 0) {
       return;
     }
