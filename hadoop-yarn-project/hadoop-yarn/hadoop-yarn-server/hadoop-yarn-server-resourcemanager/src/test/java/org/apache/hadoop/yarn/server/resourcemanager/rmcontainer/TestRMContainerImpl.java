@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -171,7 +172,7 @@ public class TestRMContainerImpl {
     assertEquals(containerStatus, cfEvent.getContainerStatus());
     assertEquals(RMAppAttemptEventType.CONTAINER_FINISHED, cfEvent.getType());
     
-    // In RELEASED state. A FINIHSED event may come in.
+    // In RELEASED state. A FINISHED event may come in.
     rmContainer.handle(new RMContainerFinishedEvent(containerId, SchedulerUtils
         .createAbnormalContainerStatus(containerId, "FinishedContainer"),
         RMContainerEventType.FINISHED));
@@ -375,7 +376,7 @@ public class TestRMContainerImpl {
   }
 
   @Test
-  public void testContainerTransitionNotifyPlacementTagsManager()
+  public void testContainerTransitionNotifyAllocationTagsManager()
       throws Exception {
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(
@@ -493,6 +494,26 @@ public class TestRMContainerImpl {
         RMContainerEventType.FINISHED));
 
     Assert.assertEquals(0,
+        tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));
+
+    /* Fourth container: NEW -> RECOVERED */
+    rmContainer = new RMContainerImpl(container,
+        SchedulerRequestKey.extractFrom(container), appAttemptId, nodeId,
+        "user", rmContext);
+    rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
+
+    Assert.assertEquals(0,
+        tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));
+
+    NMContainerStatus containerStatus = NMContainerStatus
+        .newInstance(containerId, 0, ContainerState.NEW,
+            Resource.newInstance(1024, 1), "recover container", 0,
+            Priority.newInstance(0), 0);
+    containerStatus.setAllocationTags(ImmutableSet.of("mapper"));
+    rmContainer
+        .handle(new RMContainerRecoverEvent(containerId, containerStatus));
+
+    Assert.assertEquals(1,
         tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));
   }
 }
