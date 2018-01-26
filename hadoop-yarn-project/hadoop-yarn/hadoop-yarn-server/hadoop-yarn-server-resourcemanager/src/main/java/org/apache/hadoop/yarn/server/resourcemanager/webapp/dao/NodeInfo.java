@@ -58,6 +58,8 @@ public class NodeInfo {
   private int numQueuedContainers;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
   protected ResourceUtilizationInfo resourceUtilization;
+  protected ResourceInfo usedResource;
+  protected ResourceInfo availableResource;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -75,6 +77,8 @@ public class NodeInfo {
       this.usedVirtualCores = report.getUsedResource().getVirtualCores();
       this.availableVirtualCores =
           report.getAvailableResource().getVirtualCores();
+      this.usedResource = new ResourceInfo(report.getUsedResource());
+      this.availableResource = new ResourceInfo(report.getAvailableResource());
     }
     this.id = id.toString();
     this.rack = ni.getRackName();
@@ -181,6 +185,22 @@ public class NodeInfo {
 
   public ArrayList<String> getNodeLabels() {
     return this.nodeLabels;
+  }
+
+  public ResourceInfo getUsedResource() {
+    return usedResource;
+  }
+
+  public void setUsedResource(ResourceInfo used) {
+    this.usedResource = used;
+  }
+
+  public ResourceInfo getAvailableResource() {
+    return availableResource;
+  }
+
+  public void setAvailableResource(ResourceInfo avail) {
+    this.availableResource = avail;
   }
 
   public ResourceUtilizationInfo getResourceUtilization() {

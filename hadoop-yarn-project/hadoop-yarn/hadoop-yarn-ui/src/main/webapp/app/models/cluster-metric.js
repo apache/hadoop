@@ -169,8 +169,8 @@ export default DS.Model.extend({
       && this.get("totalUsedResourcesAcrossPartition")) {
       var usages = [];
 
-      var clusterResourceInformations = this.get("totalClusterResourcesAcrossPartition").resourcesInformations;
-      var usedResourceInformations = this.get("totalUsedResourcesAcrossPartition").resourcesInformations;
+      var clusterResourceInformations = this.get("totalClusterResourcesAcrossPartition").resourceInformations.resourceInformation;
+      var usedResourceInformations = this.get("totalUsedResourcesAcrossPartition").resourceInformations.resourceInformation;
 
       clusterResourceInformations.forEach(function(cluster) {
         var perResourceTypeUsage = {

@@ -61,6 +61,12 @@ public class ClusterMetricsInfo {
   private int activeNodes;
   private int shutdownNodes;
 
+  // Total used resource of the cluster, including all partitions
+  private ResourceInfo totalUsedResourcesAcrossPartition;
+
+  // Total registered resources of the cluster, including all partitions
+  private ResourceInfo totalClusterResourcesAcrossPartition;
+
   public ClusterMetricsInfo() {
   } // JAXB needs this
 
@@ -92,9 +98,20 @@ public class ClusterMetricsInfo {
     this.containersReserved = metrics.getReservedContainers();
 
     if (rs instanceof CapacityScheduler) {
+      CapacityScheduler cs = (CapacityScheduler) rs;
       this.totalMB = availableMB + allocatedMB + reservedMB;
       this.totalVirtualCores =
           availableVirtualCores + allocatedVirtualCores + containersReserved;
+      // TODO, add support of other schedulers to get total used resources
+      // across partition.
+      if (cs.getRootQueue() != null
+          && cs.getRootQueue().getQueueResourceUsage() != null
+          && cs.getRootQueue().getQueueResourceUsage().getAllUsed() != null) {
+        totalUsedResourcesAcrossPartition = new ResourceInfo(
+            cs.getRootQueue().getQueueResourceUsage().getAllUsed());
+        totalClusterResourcesAcrossPartition = new ResourceInfo(
+            cs.getClusterResource());
+      }
     } else {
       this.totalMB = availableMB + allocatedMB;
       this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
@@ -310,4 +327,11 @@ public class ClusterMetricsInfo {
     this.shutdownNodes = shutdownNodes;
   }
 
+  public ResourceInfo getTotalUsedResourcesAcrossPartition() {
+    return totalUsedResourcesAcrossPartition;
+  }
+
+  public ResourceInfo getTotalClusterResourcesAcrossPartition() {
+    return totalClusterResourcesAcrossPartition;
+  }
 }
