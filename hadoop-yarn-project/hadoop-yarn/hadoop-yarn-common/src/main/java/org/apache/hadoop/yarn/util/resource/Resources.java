@@ -164,7 +164,7 @@ public class Resources {
 
     @Override
     public int getPortsCount() {
-      return Integer.MAX_VALUE;;
+      return Integer.MAX_VALUE;
     }
 
     @Override
@@ -489,5 +489,6 @@ public class Resources {
       }
     }
     ValueRanges valueRanges = ValueRanges.newInstance(rangeList);
+    return valueRanges;
   }
 }
