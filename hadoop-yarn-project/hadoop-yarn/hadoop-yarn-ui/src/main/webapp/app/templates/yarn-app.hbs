@@ -65,7 +65,7 @@
         <div class="flex-right">
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>  &nbsp;|&nbsp;
+            <a href="{{model.app.masterNodeURL}}">Master Node</a> &nbsp;|&nbsp;
             {{#if isRunningService}}
               <div class="btn-group">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
