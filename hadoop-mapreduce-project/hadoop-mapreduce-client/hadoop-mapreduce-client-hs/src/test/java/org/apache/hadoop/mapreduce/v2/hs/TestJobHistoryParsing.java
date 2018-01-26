@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -712,7 +713,7 @@ public class TestJobHistoryParsing {
     protected void attemptLaunched(TaskAttemptId attemptID) {
       if (attemptID.getTaskId().getId() == 0 && attemptID.getId() == 0) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
@@ -732,7 +733,7 @@ public class TestJobHistoryParsing {
     protected void attemptLaunched(TaskAttemptId attemptID) {
       if (attemptID.getTaskId().getId() == 0) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
@@ -760,10 +761,10 @@ public class TestJobHistoryParsing {
             new TaskEvent(attemptID.getTaskId(), TaskEventType.T_KILL));
       } else if (taskType == TaskType.MAP && taskId == 1) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else if (taskType == TaskType.REDUCE && taskId == 0) {
         getContext().getEventHandler().handle(
-            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+            new TaskAttemptFailEvent(attemptID));
       } else if (taskType == TaskType.REDUCE && taskId == 1) {
         getContext().getEventHandler().handle(
             new TaskEvent(attemptID.getTaskId(), TaskEventType.T_KILL));

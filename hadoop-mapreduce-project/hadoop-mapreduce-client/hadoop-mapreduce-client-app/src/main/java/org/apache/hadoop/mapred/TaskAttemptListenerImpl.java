@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
@@ -281,7 +282,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public void fatalError(TaskAttemptID taskAttemptID, String msg)
+  public void fatalError(TaskAttemptID taskAttemptID, String msg, boolean fastFail)
       throws IOException {
     // This happens only in Child and in the Task.
     LOG.error("Task: " + taskAttemptID + " - exited : " + msg);
@@ -294,7 +295,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     preemptionPolicy.handleFailedContainer(attemptID);
 
     context.getEventHandler().handle(
-        new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+        new TaskAttemptFailEvent(attemptID, fastFail));
   }
 
   @Override
@@ -312,7 +313,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     preemptionPolicy.handleFailedContainer(attemptID);
 
     context.getEventHandler().handle(
-        new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+        new TaskAttemptFailEvent(attemptID));
   }
 
   @Override

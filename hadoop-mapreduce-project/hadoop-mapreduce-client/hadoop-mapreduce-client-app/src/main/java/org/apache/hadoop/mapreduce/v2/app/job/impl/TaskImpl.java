@@ -74,6 +74,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptKilledEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
@@ -1054,7 +1055,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
     @Override
     public TaskStateInternal transition(TaskImpl task, TaskEvent event) {
-      TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+      TaskTAttemptFailedEvent castEvent = (TaskTAttemptFailedEvent) event;
       TaskAttemptId taskAttemptId = castEvent.getTaskAttemptID();
       task.failedAttempts.add(taskAttemptId); 
       if (taskAttemptId.equals(task.commitAttempt)) {
@@ -1068,7 +1069,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       }
       
       task.finishedAttempts.add(taskAttemptId);
-      if (task.failedAttempts.size() < task.maxAttempts) {
+      if (!castEvent.isFastFail()
+          && task.failedAttempts.size() < task.maxAttempts) {
         task.handleTaskAttemptCompletion(
             taskAttemptId, 
             TaskAttemptCompletionEventStatus.FAILED);

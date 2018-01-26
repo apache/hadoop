@@ -81,7 +81,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
-import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.InitTransition;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
@@ -437,8 +437,7 @@ public class TestJobImpl {
       TaskImpl task = (TaskImpl) t;
       task.handle(new TaskEvent(task.getID(), TaskEventType.T_SCHEDULE));
       for(TaskAttempt ta: task.getAttempts().values()) {
-        task.handle(new TaskTAttemptEvent(ta.getID(),
-          TaskEventType.T_ATTEMPT_FAILED));
+        task.handle(new TaskTAttemptFailedEvent(ta.getID()));
       }
     }
 
