@@ -40,19 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -1457,7 +1445,20 @@ public class LeafQueue extends AbstractCSQueue {
       LOG.warn("Couldn't get container for allocation!");
       return Resources.none();
     }
-    
+
+    //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+    //container.setGPULocation(allocated);
+    if(capability.getGPUs() > 0) {
+      LOG.info("GPU/Ports allocation request: " + capability.toString() + " from availability: " + available.toString());
+      long allocated = Resources.allocateGPUs(capability, available);
+      capability.setGPUAttribute(allocated);
+    }
+
+    if(capability.getPortsCount() > 0) {
+      ValueRanges allocatedPorts = Resources.allocatePorts(capability, available);
+      capability.setPorts(allocatedPorts);
+    }
+
     boolean shouldAllocOrReserveNewContainer = shouldAllocOrReserveNewContainer(
         application, priority, capability);
 
@@ -1509,14 +1510,6 @@ public class LeafQueue extends AbstractCSQueue {
         return Resources.none();
       }
 
-      //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
-      //container.setGPULocation(allocated);
-      
-      LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-      long allocated = Resources.allocateGPUs(capability, available);
-      LOG.info("Allocated GPUs in bitvector format: " + allocated);
-      container.setGPULocation(allocated);
-      
       // Inform the node
       node.allocateContainer(allocatedContainer);
 

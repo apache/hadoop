@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class Resource implements Comparable<Resource> {
 
-
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
@@ -73,12 +72,19 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports) {
+    return newInstance(memory, vCores, GPUs, GPUAttribute, ports);
+  }
+
+  @Public
+  @Stable
+  public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports, int portsCount) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
     resource.setPorts(ports);
+    resource.setPortsCount(portsCount);
     return resource;
   }
 
@@ -199,6 +205,23 @@ public abstract class Resource implements Comparable<Resource> {
   @Stable
   public abstract void setPorts(ValueRanges ports);
 
+  /**
+   * Get <em>portsCount</em> of the resource.
+   * @return <em>portsCount</em> of the resource
+   */
+  @Public
+  @Stable
+  public abstract int getPortsCount();
+
+  /**
+   * Set <em>ports</em> of the resource.
+   * @param ports <em>ports</em> of the resource
+   */
+  @Public
+  @Stable
+  public abstract void setPortsCount(int portsCount);
+
+
   @Override
   public int hashCode() {
     final int prime = 263167;
@@ -252,6 +275,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ", ports: " + getPorts() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ", ports: " + getPorts() + ", portsCount :" + getPortsCount() + ">";
   }
 }

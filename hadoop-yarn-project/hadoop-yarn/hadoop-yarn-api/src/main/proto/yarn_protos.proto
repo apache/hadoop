@@ -71,6 +71,7 @@ message ResourceProto {
   optional int32 GPUs = 3;
   optional int64 GPUAttribute = 4;
   optional ValueRangesProto ports = 5;
+  optional int32 portsCount = 6;
 }
 
 message ResourceOptionProto {

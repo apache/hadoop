@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
+import sun.awt.SunHints;
 
 /**
  * {@code Container} represents an allocated resource in the cluster.
@@ -127,6 +128,10 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public abstract void setGPULocation(long GPULocation);
+
+  @Private
+  @Unstable
+  public abstract void setPorts(ValueRanges ports);
 
   /**
    * Get the <code>Priority</code> at which the <code>Container</code> was

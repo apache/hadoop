@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.PortsInfo;
+import org.apache.hadoop.yarn.api.records.ValueRange;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -185,12 +186,17 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     ValueRanges ports = null;
     ValueRanges usedPorts = null;
+    int portsCount = 0;
     if (enablePortsAsResource) {
       ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS, YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
       usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
+      ports = ports.minusSelf(usedPorts);
+      for (ValueRange rv : ports.getRangesList()) {
+        portsCount += (rv.getEnd() - rv.getBegin()) + 1;
+      }
     }
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports.minusSelf(usedPorts));
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports, portsCount);
 
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
