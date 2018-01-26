@@ -230,7 +230,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
-  private String cgroupsRootDirectory;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
   private boolean enableUserReMapping;
@@ -290,7 +289,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.info("cGroupsHandler is null - cgroups not in use.");
     } else {
       this.cGroupsHandler = cGroupsHandler;
-      this.cgroupsRootDirectory = cGroupsHandler.getCGroupMountPath();
     }
   }
 
@@ -795,11 +793,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .setNetworkType(network);
     setHostname(runCommand, containerIdStr, hostname);
     runCommand.setCapabilities(capabilities);
-
-    if(cgroupsRootDirectory != null) {
-      runCommand.addReadOnlyMountLocation(cgroupsRootDirectory,
-          cgroupsRootDirectory, false);
-    }
 
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
     allDirs.addAll(filecacheDirs);
