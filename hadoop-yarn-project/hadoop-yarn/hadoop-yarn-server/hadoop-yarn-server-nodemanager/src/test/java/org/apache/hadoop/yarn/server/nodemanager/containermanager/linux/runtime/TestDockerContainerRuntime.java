@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
@@ -330,24 +329,6 @@ public class TestDockerContainerRuntime {
     }
 
     return expectedCapabilitiesString.toString();
-  }
-
-  private String getExpectedCGroupsMountString() {
-    CGroupsHandler cgroupsHandler = ResourceHandlerModule.getCGroupsHandler();
-    if(cgroupsHandler == null) {
-      return "";
-    }
-
-    String cgroupMountPath = cgroupsHandler.getCGroupMountPath();
-    boolean cGroupsMountExists = new File(
-        cgroupMountPath).exists();
-
-    if(cGroupsMountExists) {
-      return "-v " + cgroupMountPath
-          + ":" + cgroupMountPath + ":ro ";
-    } else {
-      return "";
-    }
   }
 
   @Test
