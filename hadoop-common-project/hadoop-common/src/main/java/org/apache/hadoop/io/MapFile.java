@@ -811,15 +811,40 @@ public class MapFile {
                                     (LongWritable.class));
     }
     try {
-      long pos = 0L;
+      /** What's the position (in bytes) we wrote when we got the last index */
+      long lastIndexPos = -1;
+      /**
+       * What was size when we last wrote an index. Set to MIN_VALUE to ensure
+       * that we have an index at position zero - midKey will throw an exception
+       * if this is not the case
+       */
+      long lastIndexKeyCount = Long.MIN_VALUE;
+      long pos = dataReader.getPosition();
       LongWritable position = new LongWritable();
+      long nextBlock = pos;
+      boolean blockCompressed = dataReader.isBlockCompressed();
       while(dataReader.next(key, value)) {
-        cnt++;
-        if (cnt % indexInterval == 0) {
-          position.set(pos);
-          if (!dryrun) indexWriter.append(key, position);
+        if (blockCompressed) {
+          long curPos = dataReader.getPosition();
+          if (curPos > nextBlock) {
+            pos = nextBlock;                       // current block position
+            nextBlock = curPos;
+          }
         }
-        pos = dataReader.getPosition();
+        // Follow the same logic as in
+        // {@link MapFile.Writer#append(WritableComparable, Writable)}
+        if (cnt >= lastIndexKeyCount + indexInterval && pos > lastIndexPos) {
+          position.set(pos);
+          if (!dryrun) {
+            indexWriter.append(key, position);
+          }
+          lastIndexPos = pos;
+          lastIndexKeyCount = cnt;
+        }
+        if (!blockCompressed) {
+          pos = dataReader.getPosition();         // next record position
+        }
+        cnt++;
       }
     } catch(Throwable t) {
       // truncated data file. swallow it.
