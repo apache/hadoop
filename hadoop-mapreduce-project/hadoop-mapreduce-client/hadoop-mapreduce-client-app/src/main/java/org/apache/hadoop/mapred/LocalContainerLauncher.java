@@ -510,7 +510,7 @@ public class LocalContainerLauncher extends AbstractService implements
           String cause =
               (tCause == null) ? throwable.getMessage() : StringUtils
                   .stringifyException(tCause);
-          umbilical.fatalError(classicAttemptID, cause);
+          umbilical.fatalError(classicAttemptID, cause, false);
         }
         throw new RuntimeException();
       }

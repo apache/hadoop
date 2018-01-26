@@ -68,9 +68,10 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 18 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 19 Added fatalError for child to communicate fatal errors to TT
    * Version 20 Added methods to manage checkpoints
+   * Version 21 Added fastFail parameter to fatalError
    * */
 
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
   
   /**
    * Called when a child task process starts, to get its task.
@@ -140,8 +141,13 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   /** Report that the task encounted a local filesystem error.*/
   void fsError(TaskAttemptID taskId, String message) throws IOException;
 
-  /** Report that the task encounted a fatal error.*/
-  void fatalError(TaskAttemptID taskId, String message) throws IOException;
+  /**
+   * Report that the task encounted a fatal error.
+   * @param taskId task's id
+   * @param message fail message
+   * @param fastFail flag to enable fast fail for task
+   */
+  void fatalError(TaskAttemptID taskId, String message, boolean fastFail) throws IOException;
   
   /** Called by a reduce task to get the map output locations for finished maps.
    * Returns an update centered around the map-task-completion-events. 

@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -354,7 +355,7 @@ abstract public class Task implements Writable, Configurable {
    * Report a fatal error to the parent (task) tracker.
    */
   protected void reportFatalError(TaskAttemptID id, Throwable throwable, 
-                                  String logMsg) {
+                                  String logMsg, boolean fastFail) {
     LOG.error(logMsg);
     
     if (ShutdownHookManager.get().isShutdownInProgress()) {
@@ -366,7 +367,7 @@ abstract public class Task implements Writable, Configurable {
                    ? StringUtils.stringifyException(throwable)
                    : StringUtils.stringifyException(tCause);
     try {
-      umbilical.fatalError(id, cause);
+      umbilical.fatalError(id, cause, fastFail);
     } catch (IOException ioe) {
       LOG.error("Failed to contact the tasktracker", ioe);
       System.exit(-1);
@@ -652,6 +653,8 @@ abstract public class Task implements Writable, Configurable {
     private Thread pingThread = null;
     private boolean done = true;
     private Object lock = new Object();
+    private volatile String diskLimitCheckStatus = null;
+    private Thread diskLimitCheckThread = null;
 
     /**
      * flag that indicates whether progress update needs to be sent to parent.
@@ -749,6 +752,65 @@ abstract public class Task implements Writable, Configurable {
     }
 
     /**
+     * disk limit checker, runs in separate thread when activated.
+     */
+    public class DiskLimitCheck implements Runnable {
+      private LocalFileSystem localFS;
+      private long fsLimit;
+      private long checkInterval;
+      private String[] localDirs;
+      private boolean killOnLimitExceeded;
+
+      public DiskLimitCheck(JobConf conf) throws IOException {
+        this.localFS = FileSystem.getLocal(conf);
+        this.fsLimit = conf.getLong(MRJobConfig.JOB_SINGLE_DISK_LIMIT_BYTES,
+            MRJobConfig.DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES);
+        this.localDirs = conf.getLocalDirs();
+        this.checkInterval = conf.getLong(
+            MRJobConfig.JOB_SINGLE_DISK_LIMIT_CHECK_INTERVAL_MS,
+            MRJobConfig.DEFAULT_JOB_SINGLE_DISK_LIMIT_CHECK_INTERVAL_MS);
+        this.killOnLimitExceeded = conf.getBoolean(
+            MRJobConfig.JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED,
+            MRJobConfig.DEFAULT_JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED);
+      }
+
+      @Override
+      public void run() {
+        while (!taskDone.get()) {
+          try {
+            long localWritesSize = 0L;
+            String largestWorkDir = null;
+            for (String local : localDirs) {
+              long size = FileUtil.getDU(localFS.pathToFile(new Path(local)));
+              if (localWritesSize < size) {
+                localWritesSize = size;
+                largestWorkDir = local;
+              }
+            }
+            if (localWritesSize > fsLimit) {
+              String localStatus =
+                  "too much data in local scratch dir="
+                      + largestWorkDir
+                      + ". current size is "
+                      + localWritesSize
+                      + " the limit is " + fsLimit;
+              if (killOnLimitExceeded) {
+                LOG.error(localStatus);
+                diskLimitCheckStatus = localStatus;
+              } else {
+                LOG.warn(localStatus);
+              }
+              break;
+            }
+            Thread.sleep(checkInterval);
+          } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+          }
+        }
+      }
+    }
+
+    /**
      * check the counters to see whether the task has exceeded any configured
      * limits.
      * @throws TaskLimitException
@@ -772,6 +834,9 @@ abstract public class Task implements Writable, Configurable {
                   " current value is " + localWritesCounter.getCounter() +
                   " the limit is " + limit);
         }
+      }
+      if (diskLimitCheckStatus != null) {
+        throw new TaskLimitException(diskLimitCheckStatus);
       }
     }
 
@@ -851,7 +916,7 @@ abstract public class Task implements Writable, Configurable {
                   StringUtils.stringifyException(e);
           LOG.error(errMsg);
           try {
-            umbilical.fatalError(taskId, errMsg);
+            umbilical.fatalError(taskId, errMsg, true);
           } catch (IOException ioe) {
             LOG.error("Failed to update failure diagnosis", ioe);
           }
@@ -883,6 +948,22 @@ abstract public class Task implements Writable, Configurable {
         pingThread = new Thread(this, "communication thread");
         pingThread.setDaemon(true);
         pingThread.start();
+      }
+      startDiskLimitCheckerThreadIfNeeded();
+    }
+    public void startDiskLimitCheckerThreadIfNeeded() {
+      if (diskLimitCheckThread == null && conf.getLong(
+          MRJobConfig.JOB_SINGLE_DISK_LIMIT_BYTES,
+          MRJobConfig.DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES) >= 0) {
+        try {
+          diskLimitCheckThread = new Thread(new DiskLimitCheck(conf),
+              "disk limit check thread");
+          diskLimitCheckThread.setDaemon(true);
+          diskLimitCheckThread.start();
+        } catch (IOException e) {
+          LOG.error("Issues starting disk monitor thread: "
+              + e.getMessage(), e);
+        }
       }
     }
     public void stopCommunicationThread() throws InterruptedException {
