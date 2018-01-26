@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -122,6 +123,13 @@ public class TestStoragePolicySatisfier {
   }
 
   /**
+   * @return hdfs cluster.
+   */
+  public MiniDFSCluster getCluster() {
+    return hdfsCluster;
+  }
+
+  /**
    * Gets distributed file system.
    *
    * @throws IOException
@@ -139,8 +147,6 @@ public class TestStoragePolicySatisfier {
 
   public void createCluster() throws IOException {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
         STORAGES_PER_DATANODE, CAPACITY);
     getFS();
@@ -150,6 +156,8 @@ public class TestStoragePolicySatisfier {
   @Before
   public void setUp() {
     config = new HdfsConfiguration();
+    config.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.INTERNAL.toString());
   }
 
   @Test(timeout = 300000)
@@ -404,8 +412,7 @@ public class TestStoragePolicySatisfier {
       final String nonExistingFile = "/noneExistingFile";
       hdfsCluster.getConfiguration(0).
           setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
-      hdfsCluster.restartNameNodes();
-      hdfsCluster.waitActive();
+      restartNamenode();
       HdfsAdmin hdfsAdmin =
           new HdfsAdmin(FileSystem.getDefaultUri(config), config);
 
@@ -423,8 +430,8 @@ public class TestStoragePolicySatisfier {
 
       hdfsCluster.getConfiguration(0).
           setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
-      hdfsCluster.restartNameNodes();
-      hdfsCluster.waitActive();
+      restartNamenode();
+
       hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(config), config);
       try {
         hdfsAdmin.satisfyStoragePolicy(new Path(nonExistingFile));
@@ -552,7 +559,8 @@ public class TestStoragePolicySatisfier {
       createCluster();
       // Stop SPS
       hdfsCluster.getNameNode().reconfigureProperty(
-          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          StoragePolicySatisfierMode.NONE.toString());
       running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
       Assert.assertFalse("SPS should stopped as configured.", running);
@@ -563,7 +571,8 @@ public class TestStoragePolicySatisfier {
 
       // Restart SPS
       hdfsCluster.getNameNode().reconfigureProperty(
-          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "true");
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          StoragePolicySatisfierMode.INTERNAL.toString());
 
       running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
@@ -578,7 +587,8 @@ public class TestStoragePolicySatisfier {
 
       // Restart SPS again
       hdfsCluster.getNameNode().reconfigureProperty(
-          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "true");
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          StoragePolicySatisfierMode.INTERNAL.toString());
       running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
       Assert.assertTrue("SPS should be running as "
@@ -588,7 +598,7 @@ public class TestStoragePolicySatisfier {
       doTestWhenStoragePolicySetToCOLD();
     } catch (ReconfigurationException e) {
       throw new IOException("Exception when reconfigure "
-          + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, e);
+          + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY, e);
     } finally {
       if (out != null) {
         out.close();
@@ -610,7 +620,7 @@ public class TestStoragePolicySatisfier {
       // Simulate the case by creating MOVER_ID file
       DFSTestUtil.createFile(hdfsCluster.getFileSystem(),
           HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
-      hdfsCluster.restartNameNode(true);
+      restartNamenode();
       boolean running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
       Assert.assertTrue("SPS should be running as "
@@ -630,14 +640,7 @@ public class TestStoragePolicySatisfier {
   public void testMoveWithBlockPinning() throws Exception {
     try{
       config.setBoolean(DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(3)
-          .storageTypes(
-              new StorageType[][] {{StorageType.DISK, StorageType.DISK},
-                  {StorageType.DISK, StorageType.DISK},
-                  {StorageType.DISK, StorageType.DISK}})
-          .build();
+      hdfsCluster = startCluster(config, allDiskTypes, 3, 2, CAPACITY);
 
       hdfsCluster.waitActive();
       dfs = hdfsCluster.getFileSystem();
@@ -699,8 +702,6 @@ public class TestStoragePolicySatisfier {
     try {
       int numOfDns = 5;
       config.setLong("dfs.block.size", 1024);
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       allDiskTypes =
           new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
               {StorageType.DISK, StorageType.DISK},
@@ -743,8 +744,6 @@ public class TestStoragePolicySatisfier {
             {StorageType.DISK, StorageType.SSD},
             {StorageType.DISK, StorageType.RAM_DISK}};
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     try {
       hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,
           STORAGES_PER_DATANODE, CAPACITY);
@@ -781,8 +780,6 @@ public class TestStoragePolicySatisfier {
             {StorageType.DISK, StorageType.DISK}};
 
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           STORAGES_PER_DATANODE, CAPACITY);
@@ -816,8 +813,6 @@ public class TestStoragePolicySatisfier {
         {StorageType.DISK, StorageType.ARCHIVE}};
 
     try {
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
@@ -861,8 +856,6 @@ public class TestStoragePolicySatisfier {
             {StorageType.DISK, StorageType.SSD},
             {StorageType.DISK, StorageType.DISK}};
     config.setLong("dfs.block.size", 2 * DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     long dnCapacity = 1024 * DEFAULT_BLOCK_SIZE + (2 * DEFAULT_BLOCK_SIZE - 1);
     try {
       hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,
@@ -949,8 +942,6 @@ public class TestStoragePolicySatisfier {
         1L);
     config.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           STORAGES_PER_DATANODE, CAPACITY);
@@ -1003,29 +994,25 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testSPSWhenFileLengthIsZero() throws Exception {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
+      hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, CAPACITY);
+      hdfsCluster.waitActive();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       Path filePath = new Path("/zeroSizeFile");
       DFSTestUtil.createFile(fs, filePath, 0, (short) 1, 0);
-      FSEditLog editlog = cluster.getNameNode().getNamesystem().getEditLog();
+      FSEditLog editlog = hdfsCluster.getNameNode().getNamesystem()
+          .getEditLog();
       long lastWrittenTxId = editlog.getLastWrittenTxId();
       fs.satisfyStoragePolicy(filePath);
       Assert.assertEquals("Xattr should not be added for the file",
           lastWrittenTxId, editlog.getLastWrittenTxId());
-      INode inode = cluster.getNameNode().getNamesystem().getFSDirectory()
+      INode inode = hdfsCluster.getNameNode().getNamesystem().getFSDirectory()
           .getINode(filePath.toString());
       Assert.assertTrue("XAttrFeature should be null for file",
           inode.getXAttrFeature() == null);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1042,42 +1029,36 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testSPSWhenFileHasLowRedundancyBlocks() throws Exception {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      conf.set(DFSConfigKeys
+      config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
       StorageType[][] newtypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK}};
-      cluster = startCluster(conf, newtypes, 3, 2, CAPACITY);
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
+      hdfsCluster = startCluster(config, newtypes, 3, 2, CAPACITY);
+      hdfsCluster.waitActive();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       Path filePath = new Path("/zeroSizeFile");
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 3, 0);
       fs.setStoragePolicy(filePath, "COLD");
       List<DataNodeProperties> list = new ArrayList<>();
-      list.add(cluster.stopDataNode(0));
-      list.add(cluster.stopDataNode(0));
-      list.add(cluster.stopDataNode(0));
-      cluster.restartNameNodes();
-      cluster.restartDataNode(list.get(0), false);
-      cluster.restartDataNode(list.get(1), false);
-      cluster.waitActive();
+      list.add(hdfsCluster.stopDataNode(0));
+      list.add(hdfsCluster.stopDataNode(0));
+      list.add(hdfsCluster.stopDataNode(0));
+      restartNamenode();
+      hdfsCluster.restartDataNode(list.get(0), false);
+      hdfsCluster.restartDataNode(list.get(1), false);
+      hdfsCluster.waitActive();
       fs.satisfyStoragePolicy(filePath);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),
-          StorageType.ARCHIVE, 2, 30000, cluster.getFileSystem());
-      cluster.restartDataNode(list.get(2), false);
+          StorageType.ARCHIVE, 2, 30000, hdfsCluster.getFileSystem());
+      hdfsCluster.restartDataNode(list.get(2), false);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),
-          StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+          StorageType.ARCHIVE, 3, 30000, hdfsCluster.getFileSystem());
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1091,12 +1072,8 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testSPSWhenFileHasExcessRedundancyBlocks() throws Exception {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      conf.set(DFSConfigKeys
+      config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
       StorageType[][] newtypes = new StorageType[][] {
@@ -1105,10 +1082,9 @@ public class TestStoragePolicySatisfier {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK}};
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5)
-          .storageTypes(newtypes).build();
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
+      hdfsCluster = startCluster(config, newtypes, 5, 2, CAPACITY);
+      hdfsCluster.waitActive();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       Path filePath = new Path("/zeroSizeFile");
       DFSTestUtil.createFile(fs, filePath, 1024, (short) 5, 0);
       fs.setReplication(filePath, (short) 3);
@@ -1117,13 +1093,11 @@ public class TestStoragePolicySatisfier {
       fs.setStoragePolicy(filePath, "COLD");
       fs.satisfyStoragePolicy(filePath);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),
-          StorageType.ARCHIVE, 3, 30000, cluster.getFileSystem());
+          StorageType.ARCHIVE, 3, 30000, hdfsCluster.getFileSystem());
       assertFalse("Log output does not contain expected log message: ",
           logs.getOutput().contains("some of the blocks are low redundant"));
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1133,24 +1107,19 @@ public class TestStoragePolicySatisfier {
   @Test(timeout = 300000)
   public void testSPSForEmptyDirectory() throws IOException, TimeoutException,
       InterruptedException {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      cluster = new MiniDFSCluster.Builder(conf).build();
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
+      hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, CAPACITY);
+      hdfsCluster.waitActive();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       Path emptyDir = new Path("/emptyDir");
       fs.mkdirs(emptyDir);
       fs.satisfyStoragePolicy(emptyDir);
       // Make sure satisfy xattr has been removed.
       DFSTestUtil.waitForXattrRemoved("/emptyDir",
-          XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
+          XATTR_SATISFY_STORAGE_POLICY, hdfsCluster.getNamesystem(), 30000);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1159,14 +1128,11 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testSPSForNonExistDirectory() throws Exception {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      cluster = new MiniDFSCluster.Builder(conf).build();
-      cluster.waitActive();
-      DistributedFileSystem fs = cluster.getFileSystem();
+      hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, CAPACITY);
+      hdfsCluster.waitActive();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       Path emptyDir = new Path("/emptyDir");
       try {
         fs.satisfyStoragePolicy(emptyDir);
@@ -1175,9 +1141,7 @@ public class TestStoragePolicySatisfier {
         // nothing to do
       }
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1186,13 +1150,10 @@ public class TestStoragePolicySatisfier {
    */
   @Test(timeout = 300000)
   public void testSPSWithDirectoryTreeWithoutFile() throws Exception {
-    MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
-      cluster = new MiniDFSCluster.Builder(conf).build();
-      cluster.waitActive();
+      hdfsCluster = startCluster(config, allDiskTypes, NUM_OF_DATANODES,
+          STORAGES_PER_DATANODE, CAPACITY);
+      hdfsCluster.waitActive();
       // Create directories
       /*
        *                   root
@@ -1203,7 +1164,7 @@ public class TestStoragePolicySatisfier {
        *                    |
        *                    O
        */
-      DistributedFileSystem fs = cluster.getFileSystem();
+      DistributedFileSystem fs = hdfsCluster.getFileSystem();
       fs.mkdirs(new Path("/root/C/H/O"));
       fs.mkdirs(new Path("/root/A"));
       fs.mkdirs(new Path("/root/D"));
@@ -1212,11 +1173,9 @@ public class TestStoragePolicySatisfier {
       fs.satisfyStoragePolicy(new Path("/root"));
       // Make sure satisfy xattr has been removed.
       DFSTestUtil.waitForXattrRemoved("/root",
-          XATTR_SATISFY_STORAGE_POLICY, cluster.getNamesystem(), 30000);
+          XATTR_SATISFY_STORAGE_POLICY, hdfsCluster.getNamesystem(), 30000);
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1232,8 +1191,6 @@ public class TestStoragePolicySatisfier {
           {StorageType.ARCHIVE, StorageType.SSD},
           {StorageType.DISK, StorageType.DISK}};
       config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           STORAGES_PER_DATANODE, CAPACITY);
       dfs = hdfsCluster.getFileSystem();
@@ -1263,8 +1220,6 @@ public class TestStoragePolicySatisfier {
           {StorageType.ARCHIVE, StorageType.SSD},
           {StorageType.DISK, StorageType.DISK}};
       config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       // Set queue max capacity
       config.setInt(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
           5);
@@ -1461,8 +1416,6 @@ public class TestStoragePolicySatisfier {
     try {
       config.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 3);
       config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
@@ -1473,8 +1426,8 @@ public class TestStoragePolicySatisfier {
       StorageType[][] storagetypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK}};
-      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(2)
-          .storageTypes(storagetypes).build();
+
+      hdfsCluster = startCluster(config, storagetypes, 2, 2, CAPACITY);
       hdfsCluster.waitActive();
       dfs = hdfsCluster.getFileSystem();
 
@@ -1523,8 +1476,6 @@ public class TestStoragePolicySatisfier {
   @Test(timeout = 300000)
   public void testStoragePolicySatisfyPathStatus() throws Exception {
     try {
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
@@ -1535,8 +1486,7 @@ public class TestStoragePolicySatisfier {
       StorageType[][] storagetypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK}};
-      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(2)
-          .storageTypes(storagetypes).build();
+      hdfsCluster = startCluster(config, storagetypes, 2, 2, CAPACITY);
       hdfsCluster.waitActive();
       // BlockStorageMovementNeeded.setStatusClearanceElapsedTimeMs(200000);
       dfs = hdfsCluster.getFileSystem();
@@ -1592,8 +1542,6 @@ public class TestStoragePolicySatisfier {
   @Test(timeout = 300000)
   public void testMaxRetryForFailedBlock() throws Exception {
     try {
-      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-          true);
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "1000");
@@ -1603,8 +1551,7 @@ public class TestStoragePolicySatisfier {
       StorageType[][] storagetypes = new StorageType[][] {
           {StorageType.DISK, StorageType.DISK},
           {StorageType.DISK, StorageType.DISK}};
-      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(2)
-          .storageTypes(storagetypes).build();
+      hdfsCluster = startCluster(config, storagetypes, 2, 2, CAPACITY);
       hdfsCluster.waitActive();
       dfs = hdfsCluster.getFileSystem();
 
@@ -1834,5 +1781,10 @@ public class TestStoragePolicySatisfier {
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
     return cluster;
+  }
+
+  public void restartNamenode() throws IOException {
+    hdfsCluster.restartNameNodes();
+    hdfsCluster.waitActive();
   }
 }

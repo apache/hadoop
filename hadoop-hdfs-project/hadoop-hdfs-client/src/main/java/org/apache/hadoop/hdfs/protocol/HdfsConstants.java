@@ -129,6 +129,45 @@ public final class HdfsConstants {
   }
 
   /**
+   * Storage policy satisfier service modes.
+   */
+  public enum StoragePolicySatisfierMode {
+
+    /**
+     * This mode represents that SPS service is running inside Namenode and can
+     * accept any SPS call request.
+     */
+    INTERNAL,
+
+    /**
+     * This mode represents that SPS service is running outside Namenode as an
+     * external service and can accept any SPS call request.
+     */
+    EXTERNAL,
+
+    /**
+     * This mode represents that SPS service is disabled and cannot accept any
+     * SPS call request.
+     */
+    NONE;
+
+    private static final Map<String, StoragePolicySatisfierMode> MAP =
+        new HashMap<>();
+
+    static {
+      for (StoragePolicySatisfierMode a : values()) {
+        MAP.put(a.name(), a);
+      }
+    }
+
+    /** Convert the given String to a StoragePolicySatisfierMode. */
+    public static StoragePolicySatisfierMode fromString(String s) {
+      return MAP.get(StringUtils.toUpperCase(s));
+    }
+  }
+
+
+  /**
    * Storage policy satisfy path status.
    */
   public enum StoragePolicySatisfyPathStatus {

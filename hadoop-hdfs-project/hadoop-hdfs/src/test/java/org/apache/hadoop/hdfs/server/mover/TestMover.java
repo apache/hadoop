@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DBlock;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
@@ -114,8 +115,8 @@ public class TestMover {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   static Mover newMover(Configuration conf) throws IOException {
@@ -136,8 +137,8 @@ public class TestMover {
   @Test
   public void testScheduleSameBlock() throws IOException {
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(4).build();
     try {
@@ -461,8 +462,8 @@ public class TestMover {
   @Test
   public void testMoverCli() throws Exception {
     final Configuration clusterConf = new HdfsConfiguration();
-    clusterConf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(clusterConf).numDataNodes(0).build();
     try {
@@ -496,8 +497,8 @@ public class TestMover {
   @Test
   public void testMoverCliWithHAConf() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -521,15 +522,15 @@ public class TestMover {
   @Test
   public void testMoverCliWithFederation() throws Exception {
     final Configuration clusterConf = new HdfsConfiguration();
-    clusterConf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -574,15 +575,15 @@ public class TestMover {
   @Test
   public void testMoverCliWithFederationHA() throws Exception {
     final Configuration clusterConf = new HdfsConfiguration();
-    clusterConf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -646,8 +647,8 @@ public class TestMover {
   public void testMoveWhenStoragePolicyNotSatisfying() throws Exception {
     // HDFS-8147
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .storageTypes(
@@ -676,8 +677,8 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testMoveWhenStoragePolicySatisfierIsRunning() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, true);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.INTERNAL.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .storageTypes(
@@ -799,8 +800,8 @@ public class TestMover {
         1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
-    conf.setBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   @Test(timeout = 300000)

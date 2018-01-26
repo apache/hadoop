@@ -102,6 +102,9 @@ public class IntraSPSNameNodeContext implements Context {
     namesystem.readLock();
     try {
       BlockCollection bc = namesystem.getBlockCollection(inodeID);
+      if (bc == null) {
+        return false;
+      }
       return blockManager.hasLowRedundancyBlocks(bc);
     } finally {
       namesystem.readUnlock();

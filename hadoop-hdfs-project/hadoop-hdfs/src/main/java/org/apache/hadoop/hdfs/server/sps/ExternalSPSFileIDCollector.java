@@ -18,6 +18,7 @@ package org.apache.hadoop.hdfs.server.sps;
  */
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -48,8 +49,7 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
   private SPSService service;
   private int maxQueueLimitToScan;
 
-  public ExternalSPSFileIDCollector(Context cxt, SPSService service,
-      int batchSize) {
+  public ExternalSPSFileIDCollector(Context cxt, SPSService service) {
     this.cxt = cxt;
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
@@ -74,7 +74,8 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
    * Recursively scan the given path and add the file info to SPS service for
    * processing.
    */
-  private void processPath(long startID, String fullPath) {
+  private long processPath(long startID, String fullPath) {
+    long pendingWorkCount = 0; // to be satisfied file counter
     for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
       final DirectoryListing children;
       try {
@@ -82,14 +83,14 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
       } catch (IOException e) {
         LOG.warn("Failed to list directory " + fullPath
             + ". Ignore the directory and continue.", e);
-        return;
+        return pendingWorkCount;
       }
       if (children == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("The scanning start dir/sub dir " + fullPath
               + " does not have childrens.");
         }
-        return;
+        return pendingWorkCount;
       }
 
       for (HdfsFileStatus child : children.getPartialListing()) {
@@ -97,13 +98,14 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
           service.addFileIdToProcess(new ItemInfo(startID, child.getFileId()),
               false);
           checkProcessingQueuesFree();
+          pendingWorkCount++; // increment to be satisfied file count
         } else {
           String fullPathStr = child.getFullName(fullPath);
           if (child.isDirectory()) {
             if (!fullPathStr.endsWith(Path.SEPARATOR)) {
               fullPathStr = fullPathStr + Path.SEPARATOR;
             }
-            processPath(startID, fullPathStr);
+            pendingWorkCount += processPath(startID, fullPathStr);
           }
         }
       }
@@ -111,7 +113,7 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
       if (children.hasMore()) {
         lastReturnedName = children.getLastName();
       } else {
-        return;
+        return pendingWorkCount;
       }
     }
   }
@@ -149,8 +151,20 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
     if (dfs == null) {
       dfs = getFS(service.getConf());
     }
-    processPath(inodeId, cxt.getFilePath(inodeId));
-    service.markScanCompletedForPath(inodeId);
+    long pendingSatisfyItemsCount = processPath(inodeId,
+        cxt.getFilePath(inodeId));
+    // Check whether the given path contains any item to be tracked
+    // or the no to be satisfied paths. In case of empty list, add the given
+    // inodeId to the 'pendingWorkForDirectory' with empty list so that later
+    // SPSPathIdProcessor#run function will remove the SPS hint considering that
+    // this path is already satisfied the storage policy.
+    if (pendingSatisfyItemsCount <= 0) {
+      LOG.debug("There is no pending items to satisfy the given path "
+          + "inodeId:{}", inodeId);
+      service.addAllFileIdsToProcess(inodeId, new ArrayList<>(), true);
+    } else {
+      service.markScanCompletedForPath(inodeId);
+    }
   }
 
 }

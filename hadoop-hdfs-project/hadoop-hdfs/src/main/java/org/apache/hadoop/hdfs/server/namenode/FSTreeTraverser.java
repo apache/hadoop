@@ -289,7 +289,7 @@ public abstract class FSTreeTraverser {
   /**
    * Check whether current batch can be submitted for the processing.
    *
-   * @return true if batch size meets meet the condition, otherwise false.
+   * @return true if batch size meets the condition, otherwise false.
    */
   protected abstract boolean shouldSubmitCurrentBatch();
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,8 +47,8 @@ public class TestStoragePolicySatisfyAdminCommands {
   @Before
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.INTERNAL.toString());
     StorageType[][] newtypes = new StorageType[][] {
         {StorageType.ARCHIVE, StorageType.DISK}};
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL)
@@ -94,16 +95,17 @@ public class TestStoragePolicySatisfyAdminCommands {
     final String file = "/testIsSatisfierRunningCommand";
     DFSTestUtil.createFile(dfs, new Path(file), SIZE, REPL, 0);
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
-    DFSTestUtil.toolRun(admin, "-isSatisfierRunning", 0, "yes");
+    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning", 0, "yes");
 
     cluster.getNameNode().reconfigureProperty(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     cluster.waitActive();
 
-    DFSTestUtil.toolRun(admin, "-isSatisfierRunning", 0, "no");
+    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning", 0, "no");
 
     // Test with unnecessary args
-    DFSTestUtil.toolRun(admin, "-isSatisfierRunning status", 1,
+    DFSTestUtil.toolRun(admin, "-isInternalSatisfierRunning status", 1,
         "Can't understand arguments: ");
   }
 

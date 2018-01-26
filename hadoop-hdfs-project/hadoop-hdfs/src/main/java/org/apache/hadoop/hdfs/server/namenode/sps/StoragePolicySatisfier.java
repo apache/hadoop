@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -82,6 +83,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   private BlockStorageMovementNeeded storageMovementNeeded;
   private BlockStorageMovementAttemptedItems storageMovementsMonitor;
   private volatile boolean isRunning = false;
+  private volatile StoragePolicySatisfierMode spsMode =
+      StoragePolicySatisfierMode.NONE;
   private int spsWorkMultiplier;
   private long blockCount = 0L;
   private int blockMovementMaxRetry;
@@ -152,9 +155,17 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
    * movements monitor for retry the attempts if needed.
    */
   @Override
-  public synchronized void start(boolean reconfigStart) {
+  public synchronized void start(boolean reconfigStart,
+      StoragePolicySatisfierMode serviceMode) {
+    if (serviceMode == StoragePolicySatisfierMode.NONE) {
+      LOG.error("Can't start StoragePolicySatisfier for the given mode:{}",
+          serviceMode);
+      return;
+    }
     isRunning = true;
-    if (ctxt.isMoverRunning()) {
+    this.spsMode = serviceMode;
+    if (spsMode == StoragePolicySatisfierMode.INTERNAL
+        && ctxt.isMoverRunning()) {
       isRunning = false;
       LOG.error(
           "Stopping StoragePolicySatisfier thread " + "as Mover ID file "
@@ -928,7 +939,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
 
   @Override
   public void addFileIdToProcess(ItemInfo trackInfo, boolean scanCompleted) {
-    storageMovementNeeded.add(trackInfo);
+    storageMovementNeeded.add(trackInfo, scanCompleted);
   }
 
   @Override

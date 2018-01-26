@@ -209,6 +209,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -2265,8 +2266,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             DFS_STORAGE_POLICY_ENABLED_KEY));
       }
 
-      if (blockManager.getStoragePolicySatisfier() == null
-          || !blockManager.getStoragePolicySatisfier().isRunning()) {
+      if (!blockManager.isSPSEnabled()
+          || (blockManager.getSPSMode() == StoragePolicySatisfierMode.INTERNAL
+              && !blockManager.getStoragePolicySatisfier().isRunning())) {
         throw new UnsupportedActionException(
             "Cannot request to satisfy storage policy "
                 + "when storage policy satisfier feature has been disabled"

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
@@ -54,12 +55,19 @@ public class TestExternalStoragePolicySatisfier
       new StorageType[][]{{StorageType.DISK, StorageType.DISK},
           {StorageType.DISK, StorageType.DISK},
           {StorageType.DISK, StorageType.DISK}};
+  private NameNodeConnector nnc;
+
+  @Override
+  public void setUp() {
+    super.setUp();
+
+    getConf().set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+  }
 
   @Override
   public void createCluster() throws IOException {
     getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    getConf().setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
     setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
         STORAGES_PER_DATANODE, CAPACITY));
     getFS();
@@ -80,35 +88,75 @@ public class TestExternalStoragePolicySatisfier
         .numDataNodes(numberOfDatanodes).storagesPerDatanode(storagesPerDn)
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
-    if (conf.getBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        false)) {
-      BlockManager blkMgr = cluster.getNameNode().getNamesystem()
-          .getBlockManager();
-      SPSService spsService = blkMgr.getSPSService();
-      spsService.stopGracefully();
 
-      IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
-          cluster.getNameNode().getNamesystem(),
-          blkMgr, blkMgr.getSPSService());
-      ExternalBlockMovementListener blkMoveListener =
-          new ExternalBlockMovementListener();
-      ExternalSPSBlockMoveTaskHandler externalHandler =
-          new ExternalSPSBlockMoveTaskHandler(conf, getNameNodeConnector(conf),
-              blkMgr.getSPSService());
-      externalHandler.init();
-      spsService.init(context,
-          new ExternalSPSFileIDCollector(context, blkMgr.getSPSService(), 5),
-          externalHandler,
-          blkMoveListener);
-      spsService.start(true);
-    }
+    nnc = getNameNodeConnector(getConf());
+
+    BlockManager blkMgr = cluster.getNameNode().getNamesystem()
+        .getBlockManager();
+    SPSService spsService = blkMgr.getSPSService();
+    spsService.stopGracefully();
+
+    // TODO: Since External is not fully implemented, just used INTERNAL now.
+    // Need to set External context here.
+    IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
+        cluster.getNameNode().getNamesystem(), blkMgr, blkMgr.getSPSService()) {
+      public boolean isRunning() {
+        return true;
+      };
+    };
+    ExternalBlockMovementListener blkMoveListener =
+        new ExternalBlockMovementListener();
+    ExternalSPSBlockMoveTaskHandler externalHandler =
+        new ExternalSPSBlockMoveTaskHandler(conf, nnc,
+            blkMgr.getSPSService());
+    externalHandler.init();
+    spsService.init(context,
+        new ExternalSPSFileIDCollector(context, blkMgr.getSPSService()),
+        externalHandler,
+        blkMoveListener);
+    spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
     return cluster;
+  }
+
+  public void restartNamenode() throws IOException{
+    BlockManager blkMgr = getCluster().getNameNode().getNamesystem()
+        .getBlockManager();
+    SPSService spsService = blkMgr.getSPSService();
+    spsService.stopGracefully();
+
+    getCluster().restartNameNodes();
+    getCluster().waitActive();
+    blkMgr = getCluster().getNameNode().getNamesystem()
+        .getBlockManager();
+    spsService = blkMgr.getSPSService();
+    spsService.stopGracefully();
+
+    // TODO: Since External is not fully implemented, just used INTERNAL now.
+    // Need to set External context here.
+    IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
+        getCluster().getNameNode().getNamesystem(), blkMgr,
+        blkMgr.getSPSService()) {
+      public boolean isRunning() {
+        return true;
+      };
+    };
+    ExternalBlockMovementListener blkMoveListener =
+        new ExternalBlockMovementListener();
+    ExternalSPSBlockMoveTaskHandler externalHandler =
+        new ExternalSPSBlockMoveTaskHandler(getConf(), nnc,
+            blkMgr.getSPSService());
+    externalHandler.init();
+    spsService.init(context,
+        new ExternalSPSFileIDCollector(context, blkMgr.getSPSService()),
+        externalHandler,
+        blkMoveListener);
+    spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
   }
 
   @Override
   public FileIdCollector createFileIdCollector(StoragePolicySatisfier sps,
       Context ctxt) {
-    return new ExternalSPSFileIDCollector(ctxt, sps, 5);
+    return new ExternalSPSFileIDCollector(ctxt, sps);
   }
 
   private class ExternalBlockMovementListener implements BlockMovementListener {
@@ -147,5 +195,19 @@ public class TestExternalStoragePolicySatisfier
   @Ignore("ExternalFileIdCollector is not batch based right now."
       + " So, ignoring it.")
   public void testBatchProcessingForSPSDirectory() throws Exception {
+  }
+
+  /**
+   * Status won't be supported for external SPS, now. So, ignoring it.
+   */
+  @Ignore("Status is not supported for external SPS. So, ignoring it.")
+  public void testStoragePolicySatisfyPathStatus() throws Exception {
+  }
+
+  /**
+   * Status won't be supported for external SPS, now. So, ignoring it.
+   */
+  @Ignore("Status is not supported for external SPS. So, ignoring it.")
+  public void testMaxRetryForFailedBlock() throws Exception {
   }
 }

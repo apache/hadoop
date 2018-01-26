@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -160,7 +161,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAUL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FS_PROTECTED_DIRECTORIES;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
@@ -295,7 +296,7 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
           FS_PROTECTED_DIRECTORIES,
           HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-          DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY));
+          DFS_STORAGE_POLICY_SATISFIER_MODE_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2041,7 +2042,7 @@ public class NameNode extends ReconfigurableBase implements
       return reconfCallerContextEnabled(newVal);
     } else if (property.equals(ipcClientRPCBackoffEnable)) {
       return reconfigureIPCBackoffEnabled(newVal);
-    } else if (property.equals(DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY)) {
+    } else if (property.equals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY)) {
       return reconfigureSPSEnabled(newVal, property);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
@@ -2128,13 +2129,13 @@ public class NameNode extends ReconfigurableBase implements
 
   String reconfigureSPSEnabled(String newVal, String property)
       throws ReconfigurationException {
-    if (newVal == null || !(newVal.equalsIgnoreCase(Boolean.TRUE.toString())
-        || newVal.equalsIgnoreCase(Boolean.FALSE.toString()))) {
+    if (newVal == null
+        || StoragePolicySatisfierMode.fromString(newVal) == null) {
       throw new ReconfigurationException(property, newVal,
           getConf().get(property),
           new HadoopIllegalArgumentException(
-              "For enabling or disabling storage policy satisfier, "
-                  + "we must pass true/false only"));
+              "For enabling or disabling storage policy satisfier, we must "
+                  + "pass either none/internal/external string value only"));
     }
 
     if (!isActiveState()) {
@@ -2143,12 +2144,21 @@ public class NameNode extends ReconfigurableBase implements
           "Enabling or disabling storage policy satisfier service on "
               + state + " NameNode is not allowed"));
     }
-
-    boolean enableSPS = Boolean.parseBoolean(newVal);
-    if (enableSPS) {
-      namesystem.getBlockManager().enableSPS();
-    } else {
+    StoragePolicySatisfierMode mode = StoragePolicySatisfierMode
+        .fromString(newVal);
+    switch(mode){
+    case NONE:
       namesystem.getBlockManager().disableSPS();
+      break;
+    case INTERNAL:
+      namesystem.getBlockManager().enableInternalSPS();
+      break;
+    case EXTERNAL:
+      namesystem.getBlockManager().enableExternalSPS();
+      break;
+    default:
+      // nothing
+      break;
     }
     return newVal;
   }

@@ -257,7 +257,7 @@ public class BlockStorageMovementNeeded {
     // File's directly added to storageMovementNeeded, So try to remove
     // xAttr for file
     ItemInfo itemInfo;
-    while ((itemInfo = storageMovementNeeded.poll()) != null) {
+    while ((itemInfo = get()) != null) {
       try {
         // Remove xAttr for file
         if (!itemInfo.isDir()) {

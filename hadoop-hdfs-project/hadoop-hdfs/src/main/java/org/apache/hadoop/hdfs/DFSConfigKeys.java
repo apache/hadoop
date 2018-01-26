@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
@@ -614,10 +615,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int    DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT = 60*1000; // One minute
 
   // SPS related configurations
-  public static final String  DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY =
-      "dfs.storage.policy.satisfier.enabled";
-  public static final boolean DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT =
-      false;
+  public static final String  DFS_STORAGE_POLICY_SATISFIER_MODE_KEY =
+      "dfs.storage.policy.satisfier.mode";
+  public static final String DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT =
+      StoragePolicySatisfierMode.NONE.toString();
   public static final String  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY =
       "dfs.storage.policy.satisfier.queue.limit";
   public static final int  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT =

@@ -341,12 +341,15 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     }
   }
 
-  /** Command to check storage policy satisfier status. */
-  private static class IsSatisfierRunningCommand
+  /**
+   * Command to check storage policy satisfier status running internal(inside)
+   * Namenode.
+   */
+  private static class IsInternalSatisfierRunningCommand
       implements AdminHelper.Command {
     @Override
     public String getName() {
-      return "-isSatisfierRunning";
+      return "-isInternalSatisfierRunning";
     }
 
     @Override
@@ -356,8 +359,9 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      return getShortUsage() + "\n" +
-          "Check the status of Storage Policy Statisfier.\n\n";
+      return getShortUsage() + "\n"
+          + "Check the status of Storage Policy Statisfier"
+          + " running inside Namenode.\n\n";
     }
 
     @Override
@@ -435,6 +439,6 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       new GetStoragePolicyCommand(),
       new UnsetStoragePolicyCommand(),
       new SatisfyStoragePolicyCommand(),
-      new IsSatisfierRunningCommand()
+      new IsInternalSatisfierRunningCommand()
   };
 }

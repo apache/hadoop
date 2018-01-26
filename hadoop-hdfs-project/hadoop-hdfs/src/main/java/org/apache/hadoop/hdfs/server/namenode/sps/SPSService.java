@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 
 /**
@@ -55,8 +56,9 @@ public interface SPSService {
    * @param reconfigStart
    *          - to indicate whether the SPS startup requested from
    *          reconfiguration service
+   * @param spsMode sps service mode
    */
-  void start(boolean reconfigStart);
+  void start(boolean reconfigStart, StoragePolicySatisfierMode spsMode);
 
   /**
    * Stops the SPS service gracefully. Timed wait to stop storage policy

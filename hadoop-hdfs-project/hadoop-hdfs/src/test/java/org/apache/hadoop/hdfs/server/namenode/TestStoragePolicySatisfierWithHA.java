@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -65,8 +66,8 @@ public class TestStoragePolicySatisfierWithHA {
 
   private void createCluster() throws IOException {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
-        true);
+    config.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.INTERNAL.toString());
     startCluster(config, allDiskTypes, numOfDatanodes, storagesPerDatanode,
         capacity);
     dfs = cluster.getFileSystem(nnIndex);
@@ -133,13 +134,14 @@ public class TestStoragePolicySatisfierWithHA {
 
       try {
         cluster.getNameNode(0).reconfigurePropertyImpl(
-            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+            StoragePolicySatisfierMode.EXTERNAL.toString());
         Assert.fail("It's not allowed to enable or disable"
             + " StoragePolicySatisfier on Standby NameNode");
       } catch (ReconfigurationException e) {
         GenericTestUtils.assertExceptionContains("Could not change property "
-            + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY
-            + " from 'true' to 'false'", e);
+            + DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY
+            + " from 'INTERNAL' to 'EXTERNAL'", e);
         GenericTestUtils.assertExceptionContains(
             "Enabling or disabling storage policy satisfier service on "
                 + "standby NameNode is not allowed", e.getCause());
