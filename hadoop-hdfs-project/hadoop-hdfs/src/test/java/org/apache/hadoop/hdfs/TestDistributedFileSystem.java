@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
@@ -437,6 +438,22 @@ public class TestDistributedFileSystem {
         in.close();
         fs.close();
       }
+
+      {
+        // Test PathIsNotEmptyDirectoryException while deleting non-empty dir
+        FileSystem fs = cluster.getFileSystem();
+        fs.mkdirs(new Path("/test/nonEmptyDir"));
+        fs.create(new Path("/tmp/nonEmptyDir/emptyFile")).close();
+        try {
+          fs.delete(new Path("/tmp/nonEmptyDir"), false);
+          Assert.fail("Expecting PathIsNotEmptyDirectoryException");
+        } catch (PathIsNotEmptyDirectoryException ex) {
+          // This is the proper exception to catch; move on.
+        }
+        Assert.assertTrue(fs.exists(new Path("/test/nonEmptyDir")));
+        fs.delete(new Path("/tmp/nonEmptyDir"), true);
+      }
+
     }
     finally {
       if (cluster != null) {cluster.shutdown();}
