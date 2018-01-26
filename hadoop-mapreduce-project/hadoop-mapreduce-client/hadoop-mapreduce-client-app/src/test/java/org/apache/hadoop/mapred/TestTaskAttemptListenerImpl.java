@@ -397,13 +397,15 @@ public class TestTaskAttemptListenerImpl {
     assertEquals(Phase.REDUCE, status.phase);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testStatusUpdateFromUnregisteredTask()
       throws IOException, InterruptedException{
     configureMocks();
     startListener(false);
 
-    listener.statusUpdate(attemptID, firstReduceStatus);
+    boolean taskFound = listener.statusUpdate(attemptID, firstReduceStatus);
+
+    assertFalse(taskFound);
   }
 
   private void configureMocks() {
