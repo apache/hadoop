@@ -18,6 +18,9 @@ Release 2.7.6 - UNRELEASED
     MAPREDUCE-7028. Concurrent task progress updates causing NPE in
     Application Master. (Gergo Repas via jlowe)
 
+    MAPREDUCE-7020. Task timeout in uber mode can crash AM. (Peter Bacsko
+    via jlowe)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

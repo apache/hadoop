@@ -343,8 +343,9 @@ public class TaskAttemptListenerImpl extends CompositeService
     AtomicReference<TaskAttemptStatus> lastStatusRef =
         attemptIdToStatus.get(yarnAttemptID);
     if (lastStatusRef == null) {
-      throw new IllegalStateException("Status update was called"
-          + " with illegal TaskAttemptId: " + yarnAttemptID);
+      LOG.error("Status update was called with illegal TaskAttemptId: "
+          + yarnAttemptID);
+      return false;
     }
 
     taskHeartbeatHandler.progressing(yarnAttemptID);
