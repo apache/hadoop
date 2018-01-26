@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -40,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -533,7 +531,7 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEvent event) {
       NMContainerStatus report =
           ((RMContainerRecoverEvent) event).getContainerReport();
-      // Set the allocation tags from the
+      // Set the allocation tags from the NMContainerStatus
       container.setAllocationTags(report.getAllocationTags());
       // Notify AllocationTagsManager
       container.rmContext.getAllocationTagsManager().addContainer(
@@ -689,7 +687,7 @@ public class RMContainerImpl implements RMContainer {
         // Something wrong happened, kill the container
         LOG.warn("Something wrong happened, container size reported by NM"
             + " is not expected, ContainerID=" + container.getContainerId()
-            + " rm-size-resource:" + rmContainerResource + " nm-size-reosurce:"
+            + " rm-size-resource:" + rmContainerResource + " nm-size-resource:"
             + nmContainerResource);
         container.eventHandler.handle(new RMNodeCleanContainerEvent(
             container.nodeId, container.getContainerId()));
@@ -702,7 +700,7 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Notify placementManager
+      // Notify AllocationTagsManager
       container.rmContext.getAllocationTagsManager().removeContainer(
           container.getNodeId(), container.getContainerId(),
           container.getAllocationTags());
