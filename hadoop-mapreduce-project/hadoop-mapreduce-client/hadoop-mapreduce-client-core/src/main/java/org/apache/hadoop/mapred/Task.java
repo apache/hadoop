@@ -790,6 +790,9 @@ abstract public class Task implements Writable, Configurable {
       long taskProgressInterval = MRJobConfUtil.
           getTaskProgressReportInterval(conf);
 
+      boolean uberized = conf.getBoolean("mapreduce.task.uberized",
+          false);
+
       while (!taskDone.get()) {
         synchronized (lock) {
           done = false;
@@ -828,9 +831,14 @@ abstract public class Task implements Writable, Configurable {
           // if Task Tracker is not aware of our task ID (probably because it died and 
           // came back up), kill ourselves
           if (!taskFound) {
-            LOG.warn("Parent died.  Exiting "+taskId);
-            resetDoneFlag();
-            System.exit(66);
+            if (uberized) {
+              taskDone.set(true);
+              break;
+            } else {
+              LOG.warn("Parent died.  Exiting "+taskId);
+              resetDoneFlag();
+              System.exit(66);
+            }
           }
 
           // Set a flag that says we should preempt this is read by
