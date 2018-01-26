@@ -694,6 +694,12 @@ public class AppSchedulingInfo {
       metrics.runAppAttempt(applicationId, user);
     }
 
+    updateMetrics(applicationId, type, node, containerAllocated, user, queue);
+  }
+
+  public static void updateMetrics(ApplicationId applicationId, NodeType type,
+      SchedulerNode node, Container containerAllocated, String user,
+      Queue queue) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationId=" + applicationId + " container="
           + containerAllocated.getId() + " host=" + containerAllocated
@@ -702,10 +708,10 @@ public class AppSchedulingInfo {
           + type);
     }
     if(node != null) {
-      metrics.allocateResources(node.getPartition(), user, 1,
+      queue.getMetrics().allocateResources(node.getPartition(), user, 1,
           containerAllocated.getResource(), true);
     }
-    metrics.incrNodeTypeAggregations(user, type);
+    queue.getMetrics().incrNodeTypeAggregations(user, type);
   }
 
   // Get AppPlacementAllocator by specified schedulerKey

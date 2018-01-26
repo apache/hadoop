@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -148,6 +149,10 @@ public class TestPlacementProcessor {
         .collect(Collectors.toSet());
     // Ensure unique nodes (antiaffinity)
     Assert.assertEquals(4, nodeIds.size());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 11264, 11, 5120, 5, 5);
   }
 
   @Test(timeout = 300000)
@@ -197,6 +202,10 @@ public class TestPlacementProcessor {
         .collect(Collectors.toSet());
     // Ensure unique nodes (antiaffinity)
     Assert.assertEquals(5, nodeIds.size());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 14336, 14, 6144, 6, 6);
   }
 
   @Test(timeout = 300000)
@@ -245,6 +254,10 @@ public class TestPlacementProcessor {
     for (NodeId n : nodeIdContainerIdMap.keySet()) {
       Assert.assertTrue(nodeIdContainerIdMap.get(n) < 5);
     }
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 23552, 23, 9216, 9, 9);
   }
 
   @Test(timeout = 300000)
@@ -288,6 +301,10 @@ public class TestPlacementProcessor {
         .collect(Collectors.toSet());
     // Ensure all containers end up on the same node (affinity)
     Assert.assertEquals(1, nodeIds.size());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 26624, 26, 6144, 6, 6);
   }
 
   @Test(timeout = 300000)
@@ -340,6 +357,10 @@ public class TestPlacementProcessor {
     for (NodeId n : nodeIdContainerIdMap.keySet()) {
       Assert.assertTrue(nodeIdContainerIdMap.get(n) < 4);
     }
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 9216, 9, 7168, 7, 7);
   }
 
   @Test(timeout = 300000)
@@ -407,6 +428,10 @@ public class TestPlacementProcessor {
     Assert.assertEquals(4, rej.getRequest().getAllocationRequestId());
     Assert.assertEquals(RejectionReason.COULD_NOT_SCHEDULE_ON_NODE,
         rej.getReason());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 12288, 12, 4096, 4, 4);
   }
 
   @Test(timeout = 300000)
@@ -490,6 +515,10 @@ public class TestPlacementProcessor {
         .map(x -> x.getNodeId()).collect(Collectors.toSet());
     // Ensure unique nodes
     Assert.assertEquals(4, nodeIds.size());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 15360, 19, 9216, 5, 5);
   }
 
   @Test(timeout = 300000)
@@ -557,6 +586,10 @@ public class TestPlacementProcessor {
     RejectedSchedulingRequest rej = rejectedReqs.get(0);
     Assert.assertEquals(RejectionReason.COULD_NOT_PLACE_ON_NODE,
         rej.getReason());
+
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    // Verify Metrics
+    verifyMetrics(metrics, 11264, 11, 5120, 5, 5);
   }
 
   private static void waitForContainerAllocation(Collection<MockNM> nodes,
@@ -593,5 +626,17 @@ public class TestPlacementProcessor {
         .resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(mem, cores)))
         .build();
+  }
+
+  private static void verifyMetrics(QueueMetrics metrics, long availableMB,
+      int availableVirtualCores, long allocatedMB,
+      int allocatedVirtualCores, int allocatedContainers) {
+    Assert.assertEquals(availableMB, metrics.getAvailableMB());
+    Assert.assertEquals(availableVirtualCores,
+        metrics.getAvailableVirtualCores());
+    Assert.assertEquals(allocatedMB, metrics.getAllocatedMB());
+    Assert.assertEquals(allocatedVirtualCores,
+        metrics.getAllocatedVirtualCores());
+    Assert.assertEquals(allocatedContainers, metrics.getAllocatedContainers());
   }
 }
