@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -1013,6 +1015,32 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
       String ips = output.substring(0, index).trim();
       String host = output.substring(index+1).trim();
+      if (ips.equals("")) {
+        String network;
+        try {
+          network = container.getLaunchContext().getEnvironment()
+              .get("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK");
+          if (network == null || network.isEmpty()) {
+            network = defaultNetwork;
+          }
+        } catch (NullPointerException e) {
+          network = defaultNetwork;
+        }
+        boolean useHostNetwork = network.equalsIgnoreCase("host");
+        if (useHostNetwork) {
+          // Report back node manager IP in the event where docker
+          // inspect reports no IP address.  This is for bridging a gap for
+          // docker environment to run with host network.
+          InetAddress address;
+          try {
+            address = InetAddress.getLocalHost();
+            ips = address.getHostAddress();
+          } catch (UnknownHostException e) {
+            LOG.error("Can not determine IP for container:"
+                + containerId);
+          }
+        }
+      }
       String[] ipAndHost = new String[2];
       ipAndHost[0] = ips;
       ipAndHost[1] = host;
