@@ -201,14 +201,6 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public void setGPULocation(long GPULocation) {
-    maybeInitBuilder();
-    if (resource == null)
-      builder.clearResource();
-    this.resource.setGPUAttribute(GPULocation);
-  }
-
-  @Override
   public Priority getPriority() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
     if (this.priority != null) {
