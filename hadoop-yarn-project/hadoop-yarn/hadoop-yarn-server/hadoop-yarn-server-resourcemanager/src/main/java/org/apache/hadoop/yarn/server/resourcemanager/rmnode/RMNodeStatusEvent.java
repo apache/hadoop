@@ -27,27 +27,22 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 
 public class RMNodeStatusEvent extends RMNodeEvent {
 
   private final NodeStatus nodeStatus;
-  private final NodeHeartbeatResponse latestResponse;
   private List<LogAggregationReport> logAggregationReportsForApps;
 
-  public RMNodeStatusEvent(NodeId nodeId, NodeStatus nodeStatus,
-      NodeHeartbeatResponse latestResponse) {
-    this(nodeId, nodeStatus, latestResponse, null);
+  public RMNodeStatusEvent(NodeId nodeId, NodeStatus nodeStatus) {
+    this(nodeId, nodeStatus, null);
   }
 
   public RMNodeStatusEvent(NodeId nodeId, NodeStatus nodeStatus,
-      NodeHeartbeatResponse latestResponse,
       List<LogAggregationReport> logAggregationReportsForApps) {
     super(nodeId, RMNodeEventType.STATUS_UPDATE);
     this.nodeStatus = nodeStatus;
-    this.latestResponse = latestResponse;
     this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 
@@ -59,10 +54,6 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     return this.nodeStatus.getContainersStatuses();
   }
 
-  public NodeHeartbeatResponse getLatestResponse() {
-    return this.latestResponse;
-  }
-  
   public List<ApplicationId> getKeepAliveAppIds() {
     return this.nodeStatus.getKeepAliveApplications();
   }

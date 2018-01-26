@@ -90,7 +90,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
           RecordFactoryProvider.getRecordFactory(null);
   // response queue
   protected final BlockingQueue<AllocateResponse> responseQueue;
-  protected int RESPONSE_ID = 1;
+  private int responseId = 0;
   // user name
   protected String user;  
   // queue name
@@ -213,7 +213,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       List<ContainerId> toRelease) {
     AllocateRequest allocateRequest =
             recordFactory.newRecordInstance(AllocateRequest.class);
-    allocateRequest.setResponseId(RESPONSE_ID ++);
+    allocateRequest.setResponseId(responseId++);
     allocateRequest.setAskList(ask);
     allocateRequest.setReleaseList(toRelease);
     return allocateRequest;

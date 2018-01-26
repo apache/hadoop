@@ -559,7 +559,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   };
 
   @Override
-  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
+  public void setAndUpdateNodeHeartbeatResponse(
+      NodeHeartbeatResponse response) {
     this.writeLock.lock();
 
     try {
@@ -573,6 +574,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       this.finishedApplications.clear();
       this.containersToSignal.clear();
       this.containersToBeRemovedFromNM.clear();
+
+      // NOTE: This is required for backward compatibility.
+      response.addAllContainersToDecrease(toBeDecreasedContainers.values());
+      toBeDecreasedContainers.clear();
+
+      // Synchronously update the last response in rmNode with updated
+      // responseId
+      this.latestNodeHeartBeatResponse = response;
     } finally {
       this.writeLock.unlock();
     }
@@ -582,25 +591,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   public Collection<Container> getToBeDecreasedContainers() {
     return toBeDecreasedContainers.values(); 
   }
-  
-  @Override
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
-      NodeHeartbeatResponse response) {
-    this.writeLock.lock();
-    
-    try {
-      response.addAllContainersToDecrease(toBeDecreasedContainers.values());
-      toBeDecreasedContainers.clear();
-    } finally {
-      this.writeLock.unlock();
-    }
-  }
 
   @Override
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
-
     this.readLock.lock();
-
     try {
       return this.latestNodeHeartBeatResponse;
     } finally {
@@ -848,21 +842,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             rmNode.context.getDispatcher().getEventHandler().handle(
                 new NodeAddedSchedulerEvent(rmNode));
           }
-        } else {
-          // Reconnected node differs, so replace old node and start new node
-          switch (rmNode.getState()) {
-            case RUNNING:
-              ClusterMetrics.getMetrics().decrNumActiveNodes();
-              break;
-            case UNHEALTHY:
-              ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
-              break;
-            default:
-              LOG.debug("Unexpected Rmnode state");
-            }
-            rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
-            rmNode.context.getDispatcher().getEventHandler().handle(
-                new RMNodeStartedEvent(newNode.getNodeID(), null, null));
         }
 
       } else {
@@ -1118,10 +1097,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
-
-      // Switch the last heartbeatresponse.
-      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
-
       NodeHealthStatus remoteNodeHealthStatus =
           statusEvent.getNodeHealthStatus();
       rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
@@ -1190,9 +1165,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     @Override
     public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent)event;
-
-      // Switch the last heartbeatresponse.
-      rmNode.latestNodeHeartBeatResponse = statusEvent.getLatestResponse();
       NodeHealthStatus remoteNodeHealthStatus =
           statusEvent.getNodeHealthStatus();
       rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());

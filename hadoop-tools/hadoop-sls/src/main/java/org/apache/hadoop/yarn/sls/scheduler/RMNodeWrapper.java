@@ -126,9 +126,9 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  public void updateNodeHeartbeatResponseForCleanup(
-          NodeHeartbeatResponse nodeHeartbeatResponse) {
-    node.updateNodeHeartbeatResponseForCleanup(nodeHeartbeatResponse);
+  public void setAndUpdateNodeHeartbeatResponse(
+      NodeHeartbeatResponse nodeHeartbeatResponse) {
+    node.setAndUpdateNodeHeartbeatResponse(nodeHeartbeatResponse);
   }
 
   @Override
@@ -164,12 +164,6 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public Set<String> getNodeLabels() {
     return RMNodeLabelsManager.EMPTY_STRING_SET;
-  }
-
-  @Override
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
-      NodeHeartbeatResponse response) {
-    // TODO Auto-generated method stub
   }
 
   @SuppressWarnings("unchecked")

@@ -143,8 +143,8 @@ public class NodeInfo {
       return runningApplications;
     }
 
-    public void updateNodeHeartbeatResponseForCleanup(
-            NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
@@ -175,13 +175,6 @@ public class NodeInfo {
     @Override
     public Set<String> getNodeLabels() {
       return RMNodeLabelsManager.EMPTY_STRING_SET;
-    }
-
-    @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
-        NodeHeartbeatResponse response) {
-      // TODO Auto-generated method stub
-      
     }
 
     @Override

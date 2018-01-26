@@ -134,10 +134,11 @@ public interface RMNode {
 
   /**
    * Update a {@link NodeHeartbeatResponse} with the list of containers and
-   * applications to clean up for this node.
+   * applications to clean up for this node, and the containers to be updated.
+   *
    * @param response the {@link NodeHeartbeatResponse} to update
    */
-  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
+  void setAndUpdateNodeHeartbeatResponse(NodeHeartbeatResponse response);
 
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
 
@@ -160,13 +161,7 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
-  
-  /**
-   * Update containers to be decreased
-   */
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
-      NodeHeartbeatResponse response);
-  
+
   public List<Container> pullNewlyIncreasedContainers();
 
   long getUntrackedTimeStamp();
