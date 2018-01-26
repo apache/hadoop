@@ -1382,7 +1382,7 @@ public class MRAppMaster extends CompositeService {
 
   private void cleanUpPreviousJobOutput() {
     // recovered application masters should not remove data from previous job
-    if (!recovered()) {
+    if (!isFirstAttempt() && !recovered()) {
       JobContext jobContext = getJobContextFromConf(getConfig());
       try {
         LOG.info("Starting to clean up previous job's temporary files");
