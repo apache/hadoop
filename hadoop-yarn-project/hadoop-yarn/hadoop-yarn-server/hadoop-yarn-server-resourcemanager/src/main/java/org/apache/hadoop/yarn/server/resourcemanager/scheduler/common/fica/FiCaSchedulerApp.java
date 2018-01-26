@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRese
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
@@ -548,6 +549,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               ((RMContainerImpl) rmContainer).setAllocationTags(
                   containerRequest.getSchedulingRequest().getAllocationTags());
             }
+          } else {
+            AppSchedulingInfo.updateMetrics(getApplicationId(),
+                allocation.getAllocationLocalityType(),
+                schedulerContainer.getSchedulerNode(),
+                schedulerContainer.getRmContainer().getContainer(), getUser(),
+                getQueue());
           }
 
           attemptResourceUsage.incUsed(schedulerContainer.getNodePartition(),
