@@ -215,15 +215,25 @@ public class ContainersMonitorImpl extends AbstractService implements
         YarnConfiguration.DEFAULT_NM_CONTAINER_MONITOR_ENABLED);
   }
 
+  /**
+   * Get the best process tree calculator.
+   * @param pId container process id
+   * @return process tree calculator
+   */
+  private ResourceCalculatorProcessTree
+      getResourceCalculatorProcessTree(String pId) {
+    return ResourceCalculatorProcessTree.
+        getResourceCalculatorProcessTree(
+            pId, processTreeClass, conf);
+  }
+
   private boolean isResourceCalculatorAvailable() {
     if (resourceCalculatorPlugin == null) {
       LOG.info("ResourceCalculatorPlugin is unavailable on this system. " + this
           .getClass().getName() + " is disabled.");
       return false;
     }
-    if (ResourceCalculatorProcessTree
-        .getResourceCalculatorProcessTree("0", processTreeClass, conf)
-        == null) {
+    if (getResourceCalculatorProcessTree("0") == null) {
       LOG.info("ResourceCalculatorProcessTree is unavailable on this system. "
           + this.getClass().getName() + " is disabled.");
       return false;
@@ -535,9 +545,7 @@ public class ContainersMonitorImpl extends AbstractService implements
             LOG.debug("Tracking ProcessTree " + pId + " for the first time");
           }
           ResourceCalculatorProcessTree pt =
-                  ResourceCalculatorProcessTree.
-                        getResourceCalculatorProcessTree(
-                            pId, processTreeClass, conf);
+              getResourceCalculatorProcessTree(pId);
           ptInfo.setPid(pId);
           ptInfo.setProcessTree(pt);
 
@@ -599,11 +607,14 @@ public class ContainersMonitorImpl extends AbstractService implements
       long pmemLimit = ptInfo.getPmemLimit();
       if (AUDITLOG.isDebugEnabled()) {
         AUDITLOG.debug(String.format(
-                "Memory usage of ProcessTree %s for container-id %s: ",
-                pId, containerId.toString()) +
-                formatUsageString(
-                      currentVmemUsage, vmemLimit,
-                      currentPmemUsage, pmemLimit));
+            "Resource usage of ProcessTree %s for container-id %s:" +
+                " %s CPU:%f CPU/core:%f",
+            pId, containerId.toString(),
+            formatUsageString(
+                currentVmemUsage, vmemLimit,
+                currentPmemUsage, pmemLimit),
+            cpuUsagePercentPerCore,
+            cpuUsageTotalCoresPercentage));
       }
 
       // Add resource utilization for this container
