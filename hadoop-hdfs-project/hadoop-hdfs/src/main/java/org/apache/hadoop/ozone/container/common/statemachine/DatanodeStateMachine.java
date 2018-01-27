@@ -356,17 +356,22 @@ public class DatanodeStateMachine implements Closeable {
     };
 
     // We will have only one thread for command processing in a datanode.
-    cmdProcessThread = new Thread(processCommandQueue);
-    cmdProcessThread.setDaemon(true);
-    cmdProcessThread.setName("Command processor thread");
-    cmdProcessThread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
+    cmdProcessThread = getCommandHandlerThread(processCommandQueue);
+    cmdProcessThread.start();
+  }
+
+  private Thread getCommandHandlerThread(Runnable processCommandQueue) {
+    Thread handlerThread = new Thread(processCommandQueue);
+    handlerThread.setDaemon(true);
+    handlerThread.setName("Command processor thread");
+    handlerThread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
       // Let us just restart this thread after logging a critical error.
       // if this thread is not running we cannot handle commands from SCM.
       LOG.error("Critical Error : Command processor thread encountered an " +
           "error. Thread: {}", t.toString(), e);
-      cmdProcessThread.start();
+      getCommandHandlerThread(processCommandQueue).start();
     });
-    cmdProcessThread.start();
+    return handlerThread;
   }
 
   /**
