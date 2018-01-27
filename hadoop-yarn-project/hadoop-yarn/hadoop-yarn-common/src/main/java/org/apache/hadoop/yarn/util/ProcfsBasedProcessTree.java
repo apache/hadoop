@@ -468,6 +468,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   @Override
   public float getCpuUsagePercent() {
     BigInteger processTotalJiffies = getTotalProcessJiffies();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Process " + pid + " jiffies:" + processTotalJiffies);
+    }
     cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
         clock.getTime());
     return cpuTimeTracker.getCpuTrackerUsagePercent();

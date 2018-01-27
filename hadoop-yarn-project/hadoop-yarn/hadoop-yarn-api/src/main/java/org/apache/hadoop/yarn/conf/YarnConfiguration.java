@@ -1357,22 +1357,20 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MEMORY_RESOURCE_PREFIX = NM_PREFIX
       + "resource.memory.";
 
-  @Private
   public static final String NM_MEMORY_RESOURCE_ENABLED =
       NM_MEMORY_RESOURCE_PREFIX + "enabled";
-  @Private
   public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENABLED = false;
 
-  @Private
+  public static final String NM_MEMORY_RESOURCE_ENFORCED =
+      NM_MEMORY_RESOURCE_PREFIX + "enforced";
+  public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENFORCED = true;
+
   public static final String NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS =
       NM_MEMORY_RESOURCE_PREFIX + "cgroups.swappiness";
-  @Private
   public static final int DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS = 0;
 
-  @Private
   public static final String NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
       NM_MEMORY_RESOURCE_PREFIX + "cgroups.soft-limit-percentage";
-  @Private
   public static final float
       DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
       90.0f;

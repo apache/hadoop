@@ -1309,6 +1309,37 @@
   </property>
 
   <property>
+    <description>Whether YARN CGroups memory tracking is enabled.</description>
+    <name>yarn.nodemanager.resource.memory.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Whether YARN CGroups strict memory enforcement is enabled.
+    </description>
+    <name>yarn.nodemanager.resource.memory.enforced</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>If memory limit is enforced, this the percentage of soft limit
+      compared to the memory assigned to the container. If there is memory
+      pressure container memory usage will be pushed back to its soft limit
+      by swapping out memory.
+    </description>
+    <name>yarn.nodemanager.resource.memory.cgroups.soft-limit-percentage</name>
+    <value>90.0</value>
+  </property>
+
+  <property>
+    <description>Container swappiness is the likelihood a page will be swapped
+      out compared to be kept in memory. Value is between 0-100.
+    </description>
+    <name>yarn.nodemanager.resource.memory.cgroups.swappiness</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>Whether physical memory limits will be enforced for
     containers.</description>
     <name>yarn.nodemanager.pmem-check-enabled</name>
@@ -1622,7 +1653,8 @@
     or be allowed to consume spare resources if they need them. For example, turning the
     flag on will restrict apps to use only their share of CPU, even if the node has spare
     CPU cycles. The default value is false i.e. use available resources. Please note that
-    turning this flag on may reduce job throughput on the cluster.</description>
+    turning this flag on may reduce job throughput on the cluster. This setting does
+    not apply to other subsystems like memory.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage</name>
     <value>false</value>
   </property>

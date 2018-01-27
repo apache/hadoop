@@ -52,6 +52,7 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
   private static final int OPPORTUNISTIC_SOFT_LIMIT = 0;
 
   private CGroupsHandler cGroupsHandler;
+  private boolean enforce = true;
   private int swappiness = 0;
   // multiplier to set the soft limit - value should be between 0 and 1
   private float softLimit = 0.0f;
@@ -79,6 +80,9 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
       throw new ResourceHandlerException(msg);
     }
     this.cGroupsHandler.initializeCGroupController(MEMORY);
+    enforce = conf.getBoolean(
+        YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED,
+        YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENFORCED);
     swappiness = conf
         .getInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS,
             YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS);
@@ -124,31 +128,33 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
         (long) (container.getResource().getMemorySize() * this.softLimit);
     long containerHardLimit = container.getResource().getMemorySize();
     cGroupsHandler.createCGroup(MEMORY, cgroupId);
-    try {
-      cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-          CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
-          String.valueOf(containerHardLimit) + "M");
-      ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
-      if (id != null && id.getExecutionType() ==
-          ExecutionType.OPPORTUNISTIC) {
+    if (enforce) {
+      try {
         cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-            CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
-            String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
-        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-            CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
-            String.valueOf(OPPORTUNISTIC_SWAPPINESS));
-      } else {
-        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-            CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
-            String.valueOf(containerSoftLimit) + "M");
-        cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-            CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
-            String.valueOf(swappiness));
+            CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
+            String.valueOf(containerHardLimit) + "M");
+        ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
+        if (id != null && id.getExecutionType() ==
+            ExecutionType.OPPORTUNISTIC) {
+          cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+              CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+              String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
+          cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+              CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+              String.valueOf(OPPORTUNISTIC_SWAPPINESS));
+        } else {
+          cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+              CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+              String.valueOf(containerSoftLimit) + "M");
+          cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+              CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+              String.valueOf(swappiness));
+        }
+      } catch (ResourceHandlerException re) {
+        cGroupsHandler.deleteCGroup(MEMORY, cgroupId);
+        LOG.warn("Could not update cgroup for container", re);
+        throw re;
       }
-    } catch (ResourceHandlerException re) {
-      cGroupsHandler.deleteCGroup(MEMORY, cgroupId);
-      LOG.warn("Could not update cgroup for container", re);
-      throw re;
     }
     List<PrivilegedOperation> ret = new ArrayList<>();
     ret.add(new PrivilegedOperation(
