@@ -110,7 +110,7 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
   /**
    * Initializes block movement tracker daemon and starts the thread.
    */
-  void init() {
+  public void init() {
     movementTrackerThread = new Daemon(this.blkMovementTracker);
     movementTrackerThread.setName("BlockStorageMovementTracker");
     movementTrackerThread.start();

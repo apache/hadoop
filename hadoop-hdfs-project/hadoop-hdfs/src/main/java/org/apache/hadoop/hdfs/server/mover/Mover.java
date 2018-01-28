@@ -672,7 +672,7 @@ public class Mover {
           }
           if (spsRunning) {
             System.err.println("Mover failed due to StoragePolicySatisfier"
-                + " is running. Exiting with status "
+                + " service running inside namenode. Exiting with status "
                 + ExitStatus.SKIPPED_DUE_TO_SPS + "... ");
             return ExitStatus.SKIPPED_DUE_TO_SPS.getExitCode();
           }

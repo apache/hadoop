@@ -22,7 +22,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -42,8 +41,6 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier;
 import org.junit.Assert;
 import org.junit.Ignore;
-
-import com.google.common.collect.Maps;
 
 /**
  * Tests the external sps service plugins.
@@ -95,7 +92,8 @@ public class TestExternalStoragePolicySatisfier
     SPSService spsService = blkMgr.getSPSService();
     spsService.stopGracefully();
 
-    ExternalSPSContext context = new ExternalSPSContext(spsService);
+    ExternalSPSContext context = new ExternalSPSContext(spsService,
+        getNameNodeConnector(conf));
 
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
@@ -124,7 +122,8 @@ public class TestExternalStoragePolicySatisfier
     spsService = blkMgr.getSPSService();
     spsService.stopGracefully();
 
-    ExternalSPSContext context = new ExternalSPSContext(spsService);
+    ExternalSPSContext context = new ExternalSPSContext(spsService,
+        getNameNodeConnector(getConf()));
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
@@ -161,16 +160,22 @@ public class TestExternalStoragePolicySatisfier
       throws IOException {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     Assert.assertEquals(1, namenodes.size());
-    Map<URI, List<Path>> nnMap = Maps.newHashMap();
-    for (URI nn : namenodes) {
-      nnMap.put(nn, null);
-    }
     final Path externalSPSPathId = new Path("/system/tmp.id");
-    final List<NameNodeConnector> nncs = NameNodeConnector
-        .newNameNodeConnectors(nnMap,
-            StoragePolicySatisfier.class.getSimpleName(), externalSPSPathId,
-            conf, NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
-    return nncs.get(0);
+    NameNodeConnector.checkOtherInstanceRunning(false);
+    while (true) {
+      try {
+        final List<NameNodeConnector> nncs = NameNodeConnector
+            .newNameNodeConnectors(namenodes,
+                StoragePolicySatisfier.class.getSimpleName(),
+                externalSPSPathId, conf,
+                NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+        return nncs.get(0);
+      } catch (IOException e) {
+        LOG.warn("Failed to connect with namenode", e);
+        // Ignore
+      }
+
+    }
   }
 
   /**

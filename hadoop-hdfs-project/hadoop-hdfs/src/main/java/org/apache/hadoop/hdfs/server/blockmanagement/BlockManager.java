@@ -94,6 +94,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeBlockMoveTaskHandler;
+import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
+import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeFileIdCollector;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSPathIds;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
@@ -5106,8 +5109,14 @@ public class BlockManager implements BlockStatsMXBean {
       return;
     }
     updateSPSMode(StoragePolicySatisfierMode.INTERNAL);
+    sps.init(new IntraSPSNameNodeContext(this.namesystem, this, sps),
+        new IntraSPSNameNodeFileIdCollector(this.namesystem.getFSDirectory(),
+            sps),
+        new IntraSPSNameNodeBlockMoveTaskHandler(this, this.namesystem), null);
     sps.start(true, spsMode);
   }
+
+
 
   /**
    * Enable storage policy satisfier by starting its service.

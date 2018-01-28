@@ -158,11 +158,15 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
    */
   public synchronized int remainingCapacity() {
     int size = service.processingQueueSize();
-    if (size >= maxQueueLimitToScan) {
-      return 0;
-    } else {
-      return (maxQueueLimitToScan - size);
+    int remainingSize = 0;
+    if (size < maxQueueLimitToScan) {
+      remainingSize = maxQueueLimitToScan - size;
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("SPS processing Q -> maximum capacity:{}, current size:{},"
+          + " remaining size:{}", maxQueueLimitToScan, size, remainingSize);
+    }
+    return remainingSize;
   }
 
   class SPSTraverseInfo extends TraverseInfo {

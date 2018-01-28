@@ -196,8 +196,4 @@ public class IntraSPSNameNodeContext implements Context {
     return namesystem.getFilePath(inodeId);
   }
 
-  @Override
-  public void close() throws IOException {
-    // Nothing to clean.
-  }
 }

@@ -175,9 +175,4 @@ public interface Context {
    */
   String getFilePath(Long inodeId);
 
-  /**
-   * Close the resources.
-   */
-  void close() throws IOException;
-
 }

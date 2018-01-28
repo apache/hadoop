@@ -19,19 +19,13 @@
 package org.apache.hadoop.hdfs.server.sps;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -57,13 +51,12 @@ public class ExternalSPSContext implements Context {
       LoggerFactory.getLogger(ExternalSPSContext.class);
   private SPSService service;
   private NameNodeConnector nnc = null;
-  private Object nnConnectionLock = new Object();
   private BlockStoragePolicySuite createDefaultSuite =
       BlockStoragePolicySuite.createDefaultSuite();
 
-  public ExternalSPSContext(SPSService service) {
+  public ExternalSPSContext(SPSService service, NameNodeConnector nnc) {
     this.service = service;
-    initializeNamenodeConnector();
+    this.nnc = nnc;
   }
 
   @Override
@@ -73,7 +66,6 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public boolean isInSafeMode() {
-    initializeNamenodeConnector();
     try {
       return nnc != null ? nnc.getDistributedFileSystem().isInSafeMode()
           : false;
@@ -85,7 +77,6 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public boolean isMoverRunning() {
-    initializeNamenodeConnector();
     try {
       FSDataOutputStream out = nnc.getDistributedFileSystem()
           .append(HdfsServerConstants.MOVER_ID_PATH);
@@ -101,7 +92,6 @@ public class ExternalSPSContext implements Context {
   @Override
   public long getFileID(String path) throws UnresolvedLinkException,
       AccessControlException, ParentNotDirectoryException {
-    initializeNamenodeConnector();
     HdfsFileStatus fs = null;
     try {
       fs = (HdfsFileStatus) nnc.getDistributedFileSystem().getFileStatus(
@@ -121,7 +111,6 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public boolean isFileExist(long inodeId) {
-    initializeNamenodeConnector();
     String filePath = null;
     try {
       filePath = getFilePath(inodeId);
@@ -145,14 +134,12 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public void removeSPSHint(long inodeId) throws IOException {
-    initializeNamenodeConnector();
     nnc.getDistributedFileSystem().removeXAttr(new Path(getFilePath(inodeId)),
         HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
   }
 
   @Override
   public int getNumLiveDataNodes() {
-    initializeNamenodeConnector();
     try {
       return nnc.getDistributedFileSystem()
           .getDataNodeStats(DatanodeReportType.LIVE).length;
@@ -164,7 +151,6 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public HdfsFileStatus getFileInfo(long inodeID) throws IOException {
-    initializeNamenodeConnector();
     return nnc.getDistributedFileSystem().getClient()
         .getLocatedFileInfo(getFilePath(inodeID), false);
   }
@@ -172,13 +158,11 @@ public class ExternalSPSContext implements Context {
   @Override
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
-    initializeNamenodeConnector();
     return nnc.getLiveDatanodeStorageReport();
   }
 
   @Override
   public boolean hasLowRedundancyBlocks(long inodeID) {
-    initializeNamenodeConnector();
     try {
       return nnc.getNNProtocolConnection().hasLowRedundancyBlocks(inodeID);
     } catch (IOException e) {
@@ -191,7 +175,6 @@ public class ExternalSPSContext implements Context {
   @Override
   public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
       long estimatedSize) {
-    initializeNamenodeConnector();
     try {
       return nnc.getNNProtocolConnection().checkDNSpaceForScheduling(dn, type,
           estimatedSize);
@@ -204,7 +187,6 @@ public class ExternalSPSContext implements Context {
 
   @Override
   public Long getNextSPSPathId() {
-    initializeNamenodeConnector();
     try {
       return nnc.getNNProtocolConnection().getNextSPSPathId();
     } catch (IOException e) {
@@ -233,39 +215,4 @@ public class ExternalSPSContext implements Context {
       return null;
     }
   }
-
-  @Override
-  public void close() throws IOException {
-    synchronized (nnConnectionLock) {
-      if (nnc != null) {
-        nnc.close();
-      }
-    }
-  }
-
-  private void initializeNamenodeConnector() {
-    synchronized (nnConnectionLock) {
-      if (nnc == null) {
-        try {
-          nnc = getNameNodeConnector(service.getConf());
-        } catch (IOException e) {
-          LOG.warn("Exception while creating Namenode Connector.."
-              + "Namenode might not have started.", e);
-        }
-      }
-    }
-  }
-
-  public static NameNodeConnector getNameNodeConnector(Configuration conf)
-      throws IOException {
-    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-    List<NameNodeConnector> nncs = Collections.emptyList();
-    NameNodeConnector.checkOtherInstanceRunning(false);
-    nncs = NameNodeConnector.newNameNodeConnectors(namenodes,
-        ExternalSPSContext.class.getSimpleName(),
-        HdfsServerConstants.MOVER_ID_PATH, conf,
-        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
-    return nncs.get(0);
-  }
-
 }

@@ -238,5 +238,13 @@ Check the running status of Storage Policy Satisfier service in namenode. If it 
 ### Enable(internal service inside NN or external service outside NN) or Disable SPS without restarting Namenode
 If administrator wants to switch modes of SPS feature while Namenode is running, first he/she needs to update the desired value(internal or external or none) for the configuration item `dfs.storage.policy.satisfier.mode` in configuration file (`hdfs-site.xml`) and then run the following Namenode reconfig command
 
-+       hdfs dfsadmin -reconfig namenode <host:ipc_port> start
+* Command:
 
+       hdfs dfsadmin -reconfig namenode <host:ipc_port> start
+
+### Start External SPS Service.
+If administrator wants to start external sps, first he/she needs to configure property `dfs.storage.policy.satisfier.mode` with `external` value in configuration file (`hdfs-site.xml`) and then run Namenode reconfig command. After this start external sps service using following command
+
+* Command:
+
+      hdfs --daemon start sps

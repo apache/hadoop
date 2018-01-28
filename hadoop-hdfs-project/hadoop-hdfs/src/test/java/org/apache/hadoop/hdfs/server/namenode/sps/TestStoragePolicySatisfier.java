@@ -603,7 +603,7 @@ public class TestStoragePolicySatisfier {
       if (out != null) {
         out.close();
       }
-      hdfsCluster.shutdown();
+      shutdownCluster();
     }
   }
 
@@ -626,9 +626,7 @@ public class TestStoragePolicySatisfier {
       Assert.assertTrue("SPS should be running as "
           + "no Mover really running", running);
     } finally {
-      if (hdfsCluster != null) {
-        hdfsCluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -672,9 +670,7 @@ public class TestStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(
           file1, StorageType.DISK, 2, 30000, dfs);
     } finally {
-      if (hdfsCluster != null) {
-        hdfsCluster.shutdown();
-      }
+      shutdownCluster();
     }
   }
 
@@ -1381,7 +1377,11 @@ public class TestStoragePolicySatisfier {
     // Remove 10 element and make queue free, So other traversing will start.
     for (int i = 0; i < 10; i++) {
       String path = expectedTraverseOrder.remove(0);
-      long trackId = sps.getStorageMovementQueue().get().getFileId();
+      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
+      if (itemInfo == null) {
+        continue;
+      }
+      long trackId = itemInfo.getFileId();
       INode inode = fsDir.getInode(trackId);
       assertTrue("Failed to traverse tree, expected " + path + " but got "
           + inode.getFullPathName(), path.equals(inode.getFullPathName()));
@@ -1392,7 +1392,11 @@ public class TestStoragePolicySatisfier {
     // Check other element traversed in order and E, M, U, R, S should not be
     // added in queue which we already removed from expected list
     for (String path : expectedTraverseOrder) {
-      long trackId = sps.getStorageMovementQueue().get().getFileId();
+      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
+      if (itemInfo == null) {
+        continue;
+      }
+      long trackId = itemInfo.getFileId();
       INode inode = fsDir.getInode(trackId);
       assertTrue("Failed to traverse tree, expected " + path + " but got "
           + inode.getFullPathName(), path.equals(inode.getFullPathName()));
