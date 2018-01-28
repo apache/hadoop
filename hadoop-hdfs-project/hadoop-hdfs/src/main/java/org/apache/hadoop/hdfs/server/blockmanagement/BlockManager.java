@@ -5021,6 +5021,25 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
+   * Check whether file id has low redundancy blocks.
+   *
+   * @param inodeID
+   *          - inode id
+   */
+  public boolean hasLowRedundancyBlocks(long inodeID) {
+    namesystem.readLock();
+    try {
+      BlockCollection bc = namesystem.getBlockCollection(inodeID);
+      if (bc == null) {
+        return false;
+      }
+      return hasLowRedundancyBlocks(bc);
+    } finally {
+      namesystem.readUnlock();
+    }
+  }
+
+  /**
    * Gets the storage policy satisfier instance.
    *
    * @return sps

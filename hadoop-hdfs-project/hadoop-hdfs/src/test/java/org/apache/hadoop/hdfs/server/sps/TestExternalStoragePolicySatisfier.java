@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.FileIdCollector;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier;
@@ -96,14 +95,8 @@ public class TestExternalStoragePolicySatisfier
     SPSService spsService = blkMgr.getSPSService();
     spsService.stopGracefully();
 
-    // TODO: Since External is not fully implemented, just used INTERNAL now.
-    // Need to set External context here.
-    IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
-        cluster.getNameNode().getNamesystem(), blkMgr, blkMgr.getSPSService()) {
-      public boolean isRunning() {
-        return true;
-      };
-    };
+    ExternalSPSContext context = new ExternalSPSContext(spsService);
+
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
@@ -131,15 +124,7 @@ public class TestExternalStoragePolicySatisfier
     spsService = blkMgr.getSPSService();
     spsService.stopGracefully();
 
-    // TODO: Since External is not fully implemented, just used INTERNAL now.
-    // Need to set External context here.
-    IntraSPSNameNodeContext context = new IntraSPSNameNodeContext(
-        getCluster().getNameNode().getNamesystem(), blkMgr,
-        blkMgr.getSPSService()) {
-      public boolean isRunning() {
-        return true;
-      };
-    };
+    ExternalSPSContext context = new ExternalSPSContext(spsService);
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
@@ -180,7 +165,7 @@ public class TestExternalStoragePolicySatisfier
     for (URI nn : namenodes) {
       nnMap.put(nn, null);
     }
-    final Path externalSPSPathId = new Path("/system/externalSPS.id");
+    final Path externalSPSPathId = new Path("/system/tmp.id");
     final List<NameNodeConnector> nncs = NameNodeConnector
         .newNameNodeConnectors(nnMap,
             StoragePolicySatisfier.class.getSimpleName(), externalSPSPathId,
@@ -202,6 +187,14 @@ public class TestExternalStoragePolicySatisfier
    */
   @Ignore("Status is not supported for external SPS. So, ignoring it.")
   public void testStoragePolicySatisfyPathStatus() throws Exception {
+  }
+
+  /**
+   * This test case is more specific to internal.
+   */
+  @Ignore("This test is specific to internal, so skipping here.")
+  public void testWhenMoverIsAlreadyRunningBeforeStoragePolicySatisfier()
+      throws Exception {
   }
 
   /**

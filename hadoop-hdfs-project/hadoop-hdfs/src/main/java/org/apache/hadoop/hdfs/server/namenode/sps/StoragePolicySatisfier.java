@@ -325,6 +325,9 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
               }
             }
           }
+        } else {
+          LOG.info("Namenode is in safemode. It will retry again.");
+          Thread.sleep(3000);
         }
         int numLiveDn = ctxt.getNumLiveDataNodes();
         if (storageMovementNeeded.size() == 0
@@ -706,8 +709,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   private StorageTypeNodePair chooseTargetTypeInSameNode(LocatedBlock blockInfo,
       DatanodeInfo source, List<StorageType> targetTypes) {
     for (StorageType t : targetTypes) {
-      boolean goodTargetDn = ctxt.verifyTargetDatanodeHasSpaceForScheduling(
-          source, t, blockInfo.getBlockSize());
+      boolean goodTargetDn =
+          ctxt.checkDNSpaceForScheduling(source, t, blockInfo.getBlockSize());
       if (goodTargetDn) {
         return new StorageTypeNodePair(t, source);
       }
@@ -720,8 +723,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
       StorageTypeNodeMap locsForExpectedStorageTypes,
       List<DatanodeInfo> excludeNodes) {
     for (StorageType t : targetTypes) {
-      List<DatanodeInfo> nodesWithStorages = locsForExpectedStorageTypes
-          .getNodesWithStorages(t);
+      List<DatanodeInfo> nodesWithStorages =
+          locsForExpectedStorageTypes.getNodesWithStorages(t);
       if (nodesWithStorages == null || nodesWithStorages.isEmpty()) {
         continue; // no target nodes with the required storage type.
       }
@@ -729,8 +732,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
       for (DatanodeInfo target : nodesWithStorages) {
         if (!excludeNodes.contains(target)
             && matcher.match(ctxt.getNetworkTopology(), source, target)) {
-          boolean goodTargetDn = ctxt.verifyTargetDatanodeHasSpaceForScheduling(
-              target, t, block.getBlockSize());
+          boolean goodTargetDn =
+              ctxt.checkDNSpaceForScheduling(target, t, block.getBlockSize());
           if (goodTargetDn) {
             return new StorageTypeNodePair(t, target);
           }

@@ -30,6 +30,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -2067,5 +2068,22 @@ public class DatanodeManager {
     }
     return reports;
   }
+
+  public boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
+      StorageType type, long estimatedSize) {
+    namesystem.readLock();
+    try {
+      DatanodeDescriptor datanode =
+          blockManager.getDatanodeManager().getDatanode(dn.getDatanodeUuid());
+      if (datanode == null) {
+        LOG.debug("Target datanode: " + dn + " doesn't exists");
+        return false;
+      }
+      return null != datanode.chooseStorage4Block(type, estimatedSize);
+    } finally {
+      namesystem.readUnlock();
+    }
+  }
+
 }
 

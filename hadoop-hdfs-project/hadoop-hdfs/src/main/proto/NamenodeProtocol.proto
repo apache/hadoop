@@ -206,6 +206,39 @@ message IsRollingUpgradeResponseProto {
   required bool isRollingUpgrade = 1;
 }
 
+message GetFilePathRequestProto {
+  required uint64 fileId = 1;
+}
+
+message GetFilePathResponseProto {
+  required string srcPath = 1;
+}
+
+message GetNextSPSPathIdRequestProto {
+}
+
+message GetNextSPSPathIdResponseProto {
+  optional uint64 fileId = 1;
+}
+
+message CheckDNSpaceRequestProto {
+  required DatanodeInfoProto dnInfo = 1;
+  required StorageTypeProto storageType = 2;
+  required uint64 estimatedSize = 3;
+}
+
+message CheckDNSpaceResponseProto {
+  required bool isGoodDatanodeWithSpace = 1;
+}
+
+message HasLowRedundancyBlocksRequestProto {
+  required uint64 inodeId = 1;
+}
+
+message HasLowRedundancyBlocksResponseProto {
+  required bool hasLowRedundancyBlocks = 1;
+}
+
 /**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
@@ -287,4 +320,28 @@ service NamenodeProtocolService {
    */
   rpc isRollingUpgrade(IsRollingUpgradeRequestProto)
       returns (IsRollingUpgradeResponseProto);
+
+  /**
+   * Return the corresponding file path for give file id
+   */
+  rpc getFilePath(GetFilePathRequestProto)
+      returns (GetFilePathResponseProto);
+
+  /**
+   * Return the sps path id from namenode
+   */
+  rpc getNextSPSPathId(GetNextSPSPathIdRequestProto)
+      returns (GetNextSPSPathIdResponseProto);
+
+  /**
+   * Return the sps path id from namenode
+   */
+  rpc checkDNSpaceForScheduling(CheckDNSpaceRequestProto)
+      returns (CheckDNSpaceResponseProto);
+
+  /**
+   * check whether given file id has low redundancy blocks.
+   */
+  rpc hasLowRedundancyBlocks(HasLowRedundancyBlocksRequestProto)
+      returns (HasLowRedundancyBlocksResponseProto);
 }

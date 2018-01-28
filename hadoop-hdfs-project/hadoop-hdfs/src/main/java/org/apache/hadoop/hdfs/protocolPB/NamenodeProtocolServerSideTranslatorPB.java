@@ -23,6 +23,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.CheckDNSpaceRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.CheckDNSpaceResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto;
@@ -33,10 +35,16 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksReq
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetFilePathRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetFilePathResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathIdRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathIdResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.HasLowRedundancyBlocksRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.HasLowRedundancyBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsUpgradeFinalizedRequestProto;
@@ -257,4 +265,63 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     return IsRollingUpgradeResponseProto.newBuilder()
         .setIsRollingUpgrade(isRollingUpgrade).build();
   }
+
+  @Override
+  public GetNextSPSPathIdResponseProto getNextSPSPathId(
+      RpcController controller, GetNextSPSPathIdRequestProto request)
+          throws ServiceException {
+    try {
+      Long nextSPSPathId = impl.getNextSPSPathId();
+      if (nextSPSPathId == null) {
+        return GetNextSPSPathIdResponseProto.newBuilder().build();
+      }
+      return GetNextSPSPathIdResponseProto.newBuilder().setFileId(nextSPSPathId)
+          .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetFilePathResponseProto getFilePath(RpcController controller,
+      GetFilePathRequestProto request) throws ServiceException {
+    try {
+      return GetFilePathResponseProto.newBuilder()
+          .setSrcPath(impl.getFilePath(request.getFileId())).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public CheckDNSpaceResponseProto checkDNSpaceForScheduling(
+      RpcController controller, CheckDNSpaceRequestProto request)
+          throws ServiceException {
+    try {
+      CheckDNSpaceResponseProto build = CheckDNSpaceResponseProto.newBuilder()
+          .setIsGoodDatanodeWithSpace(impl.checkDNSpaceForScheduling(
+              PBHelperClient.convert(request.getDnInfo()),
+              PBHelperClient.convertStorageType(request.getStorageType()),
+              request.getEstimatedSize()))
+          .build();
+      return build;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public HasLowRedundancyBlocksResponseProto hasLowRedundancyBlocks(
+      RpcController controller, HasLowRedundancyBlocksRequestProto request)
+          throws ServiceException {
+    try {
+      return HasLowRedundancyBlocksResponseProto.newBuilder()
+          .setHasLowRedundancyBlocks(
+              impl.hasLowRedundancyBlocks(request.getInodeId()))
+          .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
 }

@@ -319,12 +319,16 @@ public class BlockStorageMovementNeeded {
           String reClass = t.getClass().getName();
           if (InterruptedException.class.getName().equals(reClass)) {
             LOG.info("SPSPathIdProcessor thread is interrupted. Stopping..");
-            Thread.currentThread().interrupt();
             break;
           }
           LOG.warn("Exception while scanning file inodes to satisfy the policy",
               t);
-          // TODO: may be we should retry the current inode id?
+          try {
+            Thread.sleep(3000);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted while waiting in SPSPathIdProcessor", t);
+            break;
+          }
         }
       }
     }

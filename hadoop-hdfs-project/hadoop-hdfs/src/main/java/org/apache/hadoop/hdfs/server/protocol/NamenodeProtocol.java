@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -31,7 +32,8 @@ import org.apache.hadoop.security.KerberosInfo;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
- * It's used to get part of the name node state
+ * Also used by external storage policy satisfier. It's used to get part of the
+ * name node state
  *****************************************************************************/
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
@@ -202,5 +204,47 @@ public interface NamenodeProtocol {
    */
   @Idempotent
   boolean isRollingUpgrade() throws IOException;
+
+  /**
+   * Gets the file path for the given file id. This API used by External SPS.
+   *
+   * @param inodeId
+   *          - file inode id.
+   * @return path
+   */
+  @Idempotent
+  String getFilePath(Long inodeId) throws IOException;
+
+  /**
+   * @return Gets the next available sps path id, otherwise null. This API used
+   *         by External SPS.
+   */
+  @AtMostOnce
+  Long getNextSPSPathId() throws IOException;
+
+  /**
+   * Verifies whether the given Datanode has the enough estimated size with
+   * given storage type for scheduling the block. This API used by External SPS.
+   *
+   * @param dn
+   *          - datanode
+   * @param type
+   *          - storage type
+   * @param estimatedSize
+   *          - size
+   */
+  @Idempotent
+  boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
+      long estimatedSize) throws IOException;
+
+  /**
+   * Check if any low redundancy blocks for given file id. This API used by
+   * External SPS.
+   *
+   * @param inodeID
+   *          - inode id.
+   */
+  @Idempotent
+  boolean hasLowRedundancyBlocks(long inodeID) throws IOException;
 }
 

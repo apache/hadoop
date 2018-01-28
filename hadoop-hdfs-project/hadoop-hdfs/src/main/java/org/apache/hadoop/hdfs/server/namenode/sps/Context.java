@@ -149,8 +149,8 @@ public interface Context {
    * @return true if the given datanode has sufficient space to occupy blockSize
    *         data, false otherwise.
    */
-  boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
-      StorageType type, long blockSize);
+  boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
+      long blockSize);
 
   /**
    * @return next SPS path id to process.
@@ -174,5 +174,10 @@ public interface Context {
    *          - path inode id.
    */
   String getFilePath(Long inodeId);
+
+  /**
+   * Close the resources.
+   */
+  void close() throws IOException;
 
 }

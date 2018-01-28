@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -98,17 +97,8 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public boolean hasLowRedundancyBlocks(long inodeID) {
-    namesystem.readLock();
-    try {
-      BlockCollection bc = namesystem.getBlockCollection(inodeID);
-      if (bc == null) {
-        return false;
-      }
-      return blockManager.hasLowRedundancyBlocks(bc);
-    } finally {
-      namesystem.readUnlock();
-    }
+  public boolean hasLowRedundancyBlocks(long inodeId) {
+    return blockManager.hasLowRedundancyBlocks(inodeId);
   }
 
   @Override
@@ -170,8 +160,8 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
-      StorageType type, long blockSize) {
+  public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
+      long blockSize) {
     namesystem.readLock();
     try {
       DatanodeDescriptor datanode = blockManager.getDatanodeManager()
@@ -204,5 +194,10 @@ public class IntraSPSNameNodeContext implements Context {
   @Override
   public String getFilePath(Long inodeId) {
     return namesystem.getFilePath(inodeId);
+  }
+
+  @Override
+  public void close() throws IOException {
+    // Nothing to clean.
   }
 }

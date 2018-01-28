@@ -2537,10 +2537,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public boolean isStoragePolicySatisfierRunning() throws IOException {
     checkNNStartup();
+    String operationName = "isStoragePolicySatisfierRunning";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    return namesystem.getBlockManager().isStoragePolicySatisfierRunning();
+    boolean isSPSRunning =
+        namesystem.getBlockManager().isStoragePolicySatisfierRunning();
+    namesystem.logAuditEvent(true, operationName, null);
+    return isSPSRunning;
   }
 
   @Override
@@ -2552,5 +2557,51 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     return namesystem.getBlockManager().checkStoragePolicySatisfyPathStatus(
         path);
+  }
+
+  @Override
+  public String getFilePath(Long inodeId) throws IOException {
+    checkNNStartup();
+    String operationName = "getFilePath";
+    namesystem.checkSuperuserPrivilege(operationName);
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    return namesystem.getFilePath(inodeId);
+  }
+
+  @Override
+  public Long getNextSPSPathId() throws IOException {
+    checkNNStartup();
+    String operationName = "getNextSPSPathId";
+    namesystem.checkSuperuserPrivilege(operationName);
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    return namesystem.getBlockManager().getNextSPSPathId();
+  }
+
+  @Override
+  public boolean checkDNSpaceForScheduling(DatanodeInfo dn,
+      StorageType type, long estimatedSize) throws IOException {
+    checkNNStartup();
+    String operationName = "checkDNSpaceForScheduling";
+    namesystem.checkSuperuserPrivilege(operationName);
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    return namesystem.getBlockManager().getDatanodeManager()
+        .verifyTargetDatanodeHasSpaceForScheduling(dn, type, estimatedSize);
+  }
+
+  @Override
+  public boolean hasLowRedundancyBlocks(long inodeId) throws IOException {
+    checkNNStartup();
+    String operationName = "hasLowRedundancyBlocks";
+    namesystem.checkSuperuserPrivilege(operationName);
+    if (nn.isStandbyState()) {
+      throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    return namesystem.getBlockManager().hasLowRedundancyBlocks(inodeId);
   }
 }
