@@ -129,6 +129,11 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         new FlowActivityTable().getTableMutator(hbaseConf, conn);
     subApplicationTable =
         new SubApplicationTable().getTableMutator(hbaseConf, conn);
+
+    UserGroupInformation ugi = UserGroupInformation.isSecurityEnabled() ?
+        UserGroupInformation.getLoginUser() :
+        UserGroupInformation.getCurrentUser();
+    LOG.info("Initialized HBaseTimelineWriterImpl UGI to " + ugi);
   }
 
   /**

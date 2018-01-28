@@ -99,6 +99,7 @@ public class NMTimelinePublisher extends CompositeService {
     this.nmLoginUGI =  UserGroupInformation.isSecurityEnabled() ?
         UserGroupInformation.getLoginUser() :
         UserGroupInformation.getCurrentUser();
+    LOG.info("Initialized NMTimelinePublisher UGI to " + nmLoginUGI);
     super.serviceInit(conf);
   }
 
