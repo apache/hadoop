@@ -1006,6 +1006,20 @@
   </property>
 
   <property>
+    <description>enable port as resource</description>
+    <name>yarn.ports_as_resource.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>enable bitset store</description>
+    <name>yarn.ports_bitset_store.enable</name>
+    <value>false</value>
+  </property>
+
+
+
+  <property>
     <description>NM Webapp address.</description>
     <name>yarn.nodemanager.webapp.address</name>
     <value>${yarn.nodemanager.hostname}:8042</value>
