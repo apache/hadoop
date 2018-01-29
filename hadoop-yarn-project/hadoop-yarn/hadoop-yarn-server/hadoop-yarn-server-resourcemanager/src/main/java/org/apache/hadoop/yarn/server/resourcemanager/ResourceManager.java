@@ -948,11 +948,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     public void handle(RMAppAttemptEvent event) {
-      ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      ApplicationId appAttemptId = appAttemptID.getApplicationId();
-      RMApp rmApp = this.rmContext.getRMApps().get(appAttemptId);
+      ApplicationAttemptId appAttemptId = event.getApplicationAttemptId();
+      ApplicationId appId = appAttemptId.getApplicationId();
+      RMApp rmApp = this.rmContext.getRMApps().get(appId);
       if (rmApp != null) {
-        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptID);
+        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
         if (rmAppAttempt != null) {
           try {
             rmAppAttempt.handle(event);
