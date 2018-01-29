@@ -33,6 +33,7 @@
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <azure.data.lake.store.sdk.version>2.2.5</azure.data.lake.store.sdk.version>
   </properties>
   <build>
     <plugins>
@@ -109,7 +110,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-data-lake-store-sdk</artifactId>
-      <version>2.2.5</version>
+      <version>${azure.data.lake.store.sdk.version}</version>
     </dependency>
     <!--  ENDS HERE-->
     <dependency>
