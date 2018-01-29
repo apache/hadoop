@@ -80,9 +80,11 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ToolRunner;
@@ -149,6 +151,9 @@ public class TestEncryptionZones {
   private File testRootDir;
   protected final String TEST_KEY = "test_key";
   private static final String NS_METRICS = "FSNamesystem";
+  private static final String  AUTHORIZATION_EXCEPTION_MESSAGE =
+      "User [root] is not authorized to perform [READ] on key " +
+          "with ACL name [key2]!!";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -447,7 +452,6 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(zone2, myKeyName, NO_TRASH);
     assertNumZones(++numZones);
     assertZonePresent(myKeyName, zone2.toString());
-
     /* Test failure of create encryption zones as a non super user. */
     final UserGroupInformation user = UserGroupInformation.
         createUserForTesting("user", new String[] { "mygroup" });
@@ -1054,6 +1058,31 @@ public class TestEncryptionZones {
       assertFalse(
           "Expected isEncrypted to return false for non ez stat " + baseFile,
           s.isEncrypted());
+    }
+  }
+
+  private class AuthorizationExceptionInjector extends EncryptionFaultInjector {
+    @Override
+    public void ensureKeyIsInitialized() throws IOException {
+      throw new AuthorizationException(AUTHORIZATION_EXCEPTION_MESSAGE);
+    }
+  }
+
+  @Test
+  public void testExceptionInformationReturn() {
+    /* Test exception information can be returned when
+    creating transparent encryption zone.*/
+    final Path zone1 = new Path("/zone1");
+    EncryptionFaultInjector.instance = new AuthorizationExceptionInjector();
+    try {
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
+      fail("exception information can be returned when creating " +
+          "transparent encryption zone");
+    } catch (IOException e) {
+      assertTrue(e instanceof RemoteException);
+      assertTrue(((RemoteException) e).unwrapRemoteException()
+          instanceof AuthorizationException);
+      assertExceptionContains(AUTHORIZATION_EXCEPTION_MESSAGE, e);
     }
   }
 

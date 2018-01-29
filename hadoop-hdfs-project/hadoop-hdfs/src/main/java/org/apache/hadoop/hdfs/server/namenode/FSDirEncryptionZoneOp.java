@@ -121,6 +121,7 @@ final class FSDirEncryptionZoneOp {
       throw new IOException("Must specify a key name when creating an "
           + "encryption zone");
     }
+    EncryptionFaultInjector.getInstance().ensureKeyIsInitialized();
     KeyProvider.Metadata metadata = provider.getMetadata(keyName);
     if (metadata == null) {
       /*
