@@ -73,8 +73,10 @@ public abstract class Resource implements Comparable<Resource> {
   @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports) {
     int portsCount = 0;
-    for(ValueRange vr : ports.getRangesList()) {
-      portsCount += (vr.getEnd() - vr.getBegin() + 1);
+    if(ports != null && ports.getRangesList() != null) {
+      for (ValueRange vr : ports.getRangesList()) {
+        portsCount += (vr.getEnd() - vr.getBegin() + 1);
+      }
     }
     return newInstance(memory, vCores, GPUs, GPUAttribute, ports, portsCount);
   }
