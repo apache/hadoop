@@ -20,10 +20,14 @@ package org.apache.hadoop.hdfs;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +45,7 @@ import com.google.common.collect.Lists;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -49,6 +54,7 @@ import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.crypto.key.kms.server.EagerKeyGeneratorKeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
@@ -82,6 +88,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
@@ -1996,5 +2003,186 @@ public class TestEncryptionZones {
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(tokens[1], testToken);
     Assert.assertEquals(1, creds.numberOfTokens());
+  }
+
+  /**
+   * Creates a file with stable {@link DistributedFileSystem}.
+   * Tests the following 2 scenarios.
+   * 1. The decrypted data using {@link WebHdfsFileSystem} should be same as
+   * input data.
+   * 2. Gets the underlying raw encrypted stream and verifies that the
+   * encrypted data is different than input data.
+   * @throws Exception
+   */
+  @Test
+  public void testWebhdfsRead() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/encryptedFile.txt");
+    final Path rawPath =
+        new Path("/.reserved/raw/TestEncryptionZone/encryptedFile.txt");
+    final String content = "hello world";
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+    final FileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+
+    // Verify whether decrypted input stream data is same as content.
+    InputStream decryptedIputStream  = webhdfs.open(encryptedFilePath);
+    verifyStreamsSame(content, decryptedIputStream);
+
+    // Get the underlying stream from CryptoInputStream which should be
+    // raw encrypted bytes.
+    InputStream cryptoStream =
+        webhdfs.open(encryptedFilePath).getWrappedStream();
+    Assert.assertTrue("cryptoStream should be an instance of "
+        + "CryptoInputStream", (cryptoStream instanceof CryptoInputStream));
+    InputStream encryptedStream =
+        ((CryptoInputStream)cryptoStream).getWrappedStream();
+    // Verify that the data read from the raw input stream is different
+    // from the original content. Also check it is identical to the raw
+    // encrypted data from dfs.
+    verifyRaw(content, encryptedStream, fs.open(rawPath));
+  }
+
+  private void verifyStreamsSame(String content, InputStream is)
+      throws IOException {
+    byte[] streamBytes;
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(is, os, 1024, true);
+      streamBytes = os.toByteArray();
+    }
+    Assert.assertArrayEquals(content.getBytes(), streamBytes);
+  }
+
+  private void verifyRaw(String content, InputStream is, InputStream rawIs)
+      throws IOException {
+    byte[] streamBytes, rawBytes;
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(is, os, 1024, true);
+      streamBytes = os.toByteArray();
+    }
+    Assert.assertFalse(Arrays.equals(content.getBytes(), streamBytes));
+
+    // webhdfs raw bytes should match the raw bytes from dfs.
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(rawIs, os, 1024, true);
+      rawBytes = os.toByteArray();
+    }
+    Assert.assertArrayEquals(rawBytes, streamBytes);
+  }
+
+  /* Tests that if client is old and namenode is new then the
+   * data will be decrypted by datanode.
+   * @throws Exception
+   */
+  @Test
+  public void testWebhdfsReadOldBehavior() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath = new Path("/TestEncryptionZone/foo");
+    final String content = "hello world";
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+
+    InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+    URL url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client not supporting EZ.
+    HttpURLConnection namenodeConnection = returnConnection(url, "GET", false);
+    String location = namenodeConnection.getHeaderField("Location");
+    URL datanodeURL = new URL(location);
+    String path = datanodeURL.getPath();
+    Assert.assertEquals(
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
+    HttpURLConnection datanodeConnection = returnConnection(datanodeURL,
+        "GET", false);
+    InputStream in = datanodeConnection.getInputStream();
+    // Comparing with the original contents
+    // and making sure they are decrypted.
+    verifyStreamsSame(content, in);
+  }
+
+  /* Tests namenode returns path starting with /.reserved/raw if client
+   * supports EZ and not if otherwise
+   * @throws Exception
+   */
+  @Test
+  public void testWebhfsEZRedirectLocation()
+      throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/foo");
+    final String content = "hello world";
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+
+    InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+    URL url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client not supporting EZ.
+    HttpURLConnection namenodeConnection =
+        returnConnection(url, "GET", false);
+    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    URL datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
+    Assert.assertNotNull(datanodeUrl);
+    String path = datanodeUrl.getPath();
+    Assert.assertEquals(
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
+
+    url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client supporting EZ.
+    namenodeConnection = returnConnection(url, "GET", true);
+    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
+    Assert.assertNotNull(datanodeUrl);
+    path = datanodeUrl.getPath();
+    Assert.assertEquals(WebHdfsFileSystem.PATH_PREFIX
+        + "/.reserved/raw" + encryptedFilePath.toString(), path);
+  }
+
+  private static HttpURLConnection returnConnection(URL url,
+      String httpRequestType, boolean supportEZ) throws Exception {
+    HttpURLConnection conn = null;
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(httpRequestType);
+    conn.setDoOutput(true);
+    conn.setInstanceFollowRedirects(false);
+    if (supportEZ) {
+      conn.setRequestProperty(WebHdfsFileSystem.EZ_HEADER, "true");
+    }
+    return conn;
+  }
+
+  /*
+   * Test seek behavior of the webhdfs input stream which reads data from
+   * encryption zone.
+   */
+  @Test
+  public void testPread() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/foo");
+    // Create a file using DistributedFileSystem.
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    DFSTestUtil.createFile(webfs, encryptedFilePath, 1024, (short)1, 0xFEED);
+    byte[] data = DFSTestUtil.readFileBuffer(fs, encryptedFilePath);
+    FSDataInputStream in = webfs.open(encryptedFilePath);
+    for (int i = 0; i < 1024; i++) {
+      in.seek(i);
+      Assert.assertEquals((data[i] & 0XFF), in.read());
+    }
   }
 }
