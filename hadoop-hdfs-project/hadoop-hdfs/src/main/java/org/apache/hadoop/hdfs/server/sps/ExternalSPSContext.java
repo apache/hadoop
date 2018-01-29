@@ -175,6 +175,10 @@ public class ExternalSPSContext implements Context {
   @Override
   public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
       long estimatedSize) {
+    // TODO: Instead of calling namenode for checking the available space, it
+    // can be optimized by maintaining local cache of datanode storage report
+    // and do the computations. This local cache can be refreshed per file or
+    // periodic fashion.
     try {
       return nnc.getNNProtocolConnection().checkDNSpaceForScheduling(dn, type,
           estimatedSize);

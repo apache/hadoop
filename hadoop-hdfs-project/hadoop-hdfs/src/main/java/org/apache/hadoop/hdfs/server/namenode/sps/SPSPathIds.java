@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class SPSPathIds {
 
   // List of pending dir to satisfy the policy
-  // TODO: Make this bounded queue.
   private final Queue<Long> spsDirsToBeTraveresed = new LinkedList<Long>();
 
   /**
@@ -60,5 +59,12 @@ public class SPSPathIds {
    */
   public synchronized Long pollNext() {
     return spsDirsToBeTraveresed.poll();
+  }
+
+  /**
+   * @return the size of the queue.
+   */
+  public synchronized long size() {
+    return spsDirsToBeTraveresed.size();
   }
 }

@@ -614,7 +614,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_MOVER_MAX_NO_MOVE_INTERVAL_KEY = "dfs.mover.max-no-move-interval";
   public static final int    DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT = 60*1000; // One minute
 
-  // SPS related configurations
+  // StoragePolicySatisfier (SPS) related configurations
   public static final String  DFS_STORAGE_POLICY_SATISFIER_MODE_KEY =
       "dfs.storage.policy.satisfier.mode";
   public static final String DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT =
@@ -643,6 +643,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.storage.policy.satisfier.low.max-streams.preference";
   public static final boolean DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_DEFAULT =
       true;
+  public static final String DFS_SPS_MAX_OUTSTANDING_PATHS_KEY =
+      "dfs.storage.policy.satisfier.max.outstanding.paths";
+  public static final int DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT = 10000;
+
+  // SPS keytab configurations, by default it is disabled.
+  public static final String  DFS_SPS_ADDRESS_KEY =
+      "dfs.storage.policy.satisfier.address";
+  public static final String  DFS_SPS_ADDRESS_DEFAULT= "0.0.0.0:0";
+  public static final String  DFS_SPS_KEYTAB_FILE_KEY =
+      "dfs.storage.policy.satisfier.keytab.file";
+  public static final String  DFS_SPS_KERBEROS_PRINCIPAL_KEY =
+      "dfs.storage.policy.satisfier.kerberos.principal";
 
   public static final String  DFS_DATANODE_ADDRESS_KEY = "dfs.datanode.address";
   public static final int     DFS_DATANODE_DEFAULT_PORT = 9866;

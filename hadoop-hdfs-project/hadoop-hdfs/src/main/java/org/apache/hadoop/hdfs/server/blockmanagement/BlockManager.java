@@ -439,6 +439,7 @@ public class BlockManager implements BlockStatsMXBean {
   private final boolean storagePolicyEnabled;
   private StoragePolicySatisfierMode spsMode;
   private SPSPathIds spsPaths;
+  private final int spsOutstandingPathsLimit;
 
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
@@ -478,14 +479,16 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT)
         * 1000L);
-
+    // StoragePolicySatisfier(SPS) configs
     storagePolicyEnabled =
         conf.getBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
             DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT);
-    String spsModeVal =
-        conf.get(
-            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
+    String spsModeVal = conf.get(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
+    spsOutstandingPathsLimit = conf.getInt(
+        DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_KEY,
+        DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT);
     spsMode = StoragePolicySatisfierMode.fromString(spsModeVal);
     spsPaths = new SPSPathIds();
     sps = new StoragePolicySatisfier(conf);
@@ -5188,6 +5191,12 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
       String path) throws IOException {
+    if (spsMode != StoragePolicySatisfierMode.INTERNAL) {
+      LOG.debug("Satisfier is not running inside namenode, so status "
+          + "can't be returned.");
+      throw new IOException("Satisfier is not running inside namenode, "
+          + "so status can't be returned.");
+    }
     return sps.checkStoragePolicySatisfyPathStatus(path);
   }
 
@@ -5204,6 +5213,20 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public Long getNextSPSPathId() {
     return spsPaths.pollNext();
+  }
+
+  /**
+   * Verify that satisfier queue limit exceeds allowed outstanding limit.
+   */
+  public void verifyOutstandingSPSPathQLimit() throws IOException {
+    long size = spsPaths.size();
+    // Checking that the SPS call Q exceeds the allowed limit.
+    if (spsOutstandingPathsLimit - size <= 0) {
+      LOG.debug("Satisifer Q - outstanding limit:{}, current size:{}",
+          spsOutstandingPathsLimit, size);
+      throw new IOException("Outstanding satisfier queue limit: "
+          + spsOutstandingPathsLimit + " exceeded, try later!");
+    }
   }
 
   /**

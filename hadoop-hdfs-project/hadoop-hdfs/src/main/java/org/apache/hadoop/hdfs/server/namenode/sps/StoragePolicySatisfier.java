@@ -91,7 +91,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   private int blockMovementMaxRetry;
   private Context ctxt;
   private BlockMoveTaskHandler blockMoveTaskHandler;
-  private Configuration conf;
+  private final Configuration conf;
 
   public StoragePolicySatisfier(Configuration conf) {
     this.conf = conf;
@@ -441,8 +441,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
             liveDns, ecPolicy);
         if (blocksPaired) {
           status = BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED;
-        } else
-          if (status != BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED) {
+        } else if (status !=
+            BlocksMovingAnalysis.Status.BLOCKS_TARGETS_PAIRED) {
           // Check if the previous block was successfully paired. Here the
           // status will set to NO_BLOCKS_TARGETS_PAIRED only when none of the
           // blocks of a file found its eligible targets to satisfy the storage

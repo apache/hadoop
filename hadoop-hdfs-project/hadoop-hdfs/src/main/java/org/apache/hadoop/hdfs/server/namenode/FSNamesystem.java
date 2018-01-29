@@ -2253,28 +2253,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     final String operationName = "satisfyStoragePolicy";
     FileStatus auditStat;
+    validateStoragePolicySatisfy();
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot satisfy storage policy for " + src);
-      // make sure storage policy is enabled, otherwise
-      // there is no need to satisfy storage policy.
-      if (!dir.isStoragePolicyEnabled()) {
-        throw new IOException(String.format(
-            "Failed to satisfy storage policy since %s is set to false.",
-            DFS_STORAGE_POLICY_ENABLED_KEY));
-      }
-
-      if (!blockManager.isSPSEnabled()
-          || (blockManager.getSPSMode() == StoragePolicySatisfierMode.INTERNAL
-              && !blockManager.getStoragePolicySatisfier().isRunning())) {
-        throw new UnsupportedActionException(
-            "Cannot request to satisfy storage policy "
-                + "when storage policy satisfier feature has been disabled"
-                + " by admin. Seek for an admin help to enable it "
-                + "or use Mover tool.");
-      }
       auditStat = FSDirSatisfyStoragePolicyOp.satisfyStoragePolicy(
           dir, blockManager, src, logRetryCache);
     } catch (AccessControlException e) {
@@ -2285,6 +2269,29 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, src, null, auditStat);
+  }
+
+  private void validateStoragePolicySatisfy()
+      throws UnsupportedActionException, IOException {
+    // make sure storage policy is enabled, otherwise
+    // there is no need to satisfy storage policy.
+    if (!dir.isStoragePolicyEnabled()) {
+      throw new IOException(String.format(
+          "Failed to satisfy storage policy since %s is set to false.",
+          DFS_STORAGE_POLICY_ENABLED_KEY));
+    }
+    // checks sps status
+    if (!blockManager.isSPSEnabled()
+        || (blockManager.getSPSMode() == StoragePolicySatisfierMode.INTERNAL
+            && !blockManager.getStoragePolicySatisfier().isRunning())) {
+      throw new UnsupportedActionException(
+          "Cannot request to satisfy storage policy "
+              + "when storage policy satisfier feature has been disabled"
+              + " by admin. Seek for an admin help to enable it "
+              + "or use Mover tool.");
+    }
+    // checks SPS Q has many outstanding requests.
+    blockManager.verifyOutstandingSPSPathQLimit();
   }
 
   /**

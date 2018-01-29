@@ -110,6 +110,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -2577,6 +2578,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkSuperuserPrivilege(operationName);
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    // Check that internal SPS service is running
+    if (namesystem.getBlockManager()
+        .getSPSMode() == StoragePolicySatisfierMode.INTERNAL
+        && namesystem.getBlockManager().getSPSService().isRunning()) {
+      LOG.debug("SPS service is internally enabled and running inside "
+          + "namenode, so external SPS is not allowed to fetch the path Ids");
+      throw new IOException("SPS service is internally enabled and running"
+          + " inside namenode, so external SPS is not allowed to fetch"
+          + " the path Ids");
     }
     return namesystem.getBlockManager().getNextSPSPathId();
   }

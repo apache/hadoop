@@ -134,8 +134,9 @@ public class TestStoragePolicySatisfier {
    *
    * @throws IOException
    */
-  public void getFS() throws IOException {
+  public DistributedFileSystem getFS() throws IOException {
     this.dfs = hdfsCluster.getFileSystem();
+    return this.dfs;
   }
 
   @After
@@ -423,9 +424,9 @@ public class TestStoragePolicySatisfier {
                 + "for %s since %s is set to false.",
             FILE, DFS_STORAGE_POLICY_ENABLED_KEY));
       } catch (IOException e) {
-        Assert.assertTrue(e.getMessage().contains(String.format(
+        GenericTestUtils.assertExceptionContains(String.format(
             "Failed to satisfy storage policy since %s is set to false.",
-            DFS_STORAGE_POLICY_ENABLED_KEY)));
+            DFS_STORAGE_POLICY_ENABLED_KEY), e);
       }
 
       hdfsCluster.getConfiguration(0).
