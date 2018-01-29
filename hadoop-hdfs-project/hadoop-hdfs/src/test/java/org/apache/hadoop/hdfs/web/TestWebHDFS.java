@@ -1435,7 +1435,6 @@ public class TestWebHDFS {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(
           conf, WebHdfsConstants.WEBHDFS_SCHEME);
-      NamenodeWebHdfsMethods.resetServerDefaultsResponse();
       FSNamesystem fsnSpy =
           NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
       Mockito.when(fsnSpy.getServerDefaults()).
