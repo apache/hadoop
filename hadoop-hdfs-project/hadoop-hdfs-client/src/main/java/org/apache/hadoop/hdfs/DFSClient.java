@@ -38,7 +38,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -62,8 +61,6 @@ import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -911,45 +908,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Decrypts a EDEK by consulting the KeyProvider.
-   */
-  private KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
-      feInfo) throws IOException {
-    try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
-      KeyProvider provider = getKeyProvider();
-      if (provider == null) {
-        throw new IOException("No KeyProvider is configured, cannot access" +
-            " an encrypted file");
-      }
-      EncryptedKeyVersion ekv = EncryptedKeyVersion.createForDecryption(
-          feInfo.getKeyName(), feInfo.getEzKeyVersionName(), feInfo.getIV(),
-          feInfo.getEncryptedDataEncryptionKey());
-      try {
-        KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
-            .createKeyProviderCryptoExtension(provider);
-        return cryptoProvider.decryptEncryptedKey(ekv);
-      } catch (GeneralSecurityException e) {
-        throw new IOException(e);
-      }
-    }
-  }
-
-  /**
    * Wraps the stream in a CryptoInputStream if the underlying file is
    * encrypted.
    */
   public HdfsDataInputStream createWrappedInputStream(DFSInputStream dfsis)
       throws IOException {
-    final FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
+    FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
     if (feInfo != null) {
-      // File is encrypted, wrap the stream in a crypto stream.
-      // Currently only one version, so no special logic based on the version #
-      HdfsKMSUtil.getCryptoProtocolVersion(feInfo);
-      final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
-      final KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
-      final CryptoInputStream cryptoIn =
-          new CryptoInputStream(dfsis, codec, decrypted.getMaterial(),
-              feInfo.getIV());
+      CryptoInputStream cryptoIn;
+      try (TraceScope ignored = getTracer().newScope("decryptEDEK")) {
+        cryptoIn = HdfsKMSUtil.createWrappedInputStream(dfsis,
+            getKeyProvider(), feInfo, getConfiguration());
+      }
       return new HdfsDataInputStream(cryptoIn);
     } else {
       // No FileEncryptionInfo so no encryption.
@@ -978,7 +948,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // Currently only one version, so no special logic based on the version #
       HdfsKMSUtil.getCryptoProtocolVersion(feInfo);
       final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
-      KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
+      KeyVersion decrypted;
+      try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
+        decrypted = HdfsKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
+          getKeyProvider());
+      }
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
               decrypted.getMaterial(), feInfo.getIV(), startPos);
