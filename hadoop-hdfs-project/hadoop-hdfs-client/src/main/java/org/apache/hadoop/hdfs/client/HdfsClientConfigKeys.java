@@ -127,6 +127,9 @@ public interface HdfsClientConfigKeys {
   boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT = false;
   String  DFS_DOMAIN_SOCKET_PATH_KEY = "dfs.domain.socket.path";
   String  DFS_DOMAIN_SOCKET_PATH_DEFAULT = "";
+  String DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY =
+      "dfs.domain.socket.disable.interval.seconds";
+  long DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT = 600;
   String  DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS =
       "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
   int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
