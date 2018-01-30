@@ -22,6 +22,7 @@
     "momentjs": "~2.10.6",
     "select2": "4.0.0",
     "snippet-ss": "~1.11.0",
-    "alasql": "^0.4.3"
+    "alasql": "^0.4.3",
+    "abdmob/x2js": "1.2.0"
   }
 }
