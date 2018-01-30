@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.Or;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType;
@@ -149,6 +151,48 @@ public final class PlacementConstraintsUtil {
     return true;
   }
 
+  /**
+   * Returns true if all child constraints are satisfied.
+   * @param appId application id
+   * @param constraint Or constraint
+   * @param node node
+   * @param atm allocation tags manager
+   * @return true if all child constraints are satisfied, false otherwise
+   * @throws InvalidAllocationTagsQueryException
+   */
+  private static boolean canSatisfyAndConstraint(ApplicationId appId,
+      And constraint, SchedulerNode node, AllocationTagsManager atm)
+      throws InvalidAllocationTagsQueryException {
+    // Iterate over the constraints tree, if found any child constraint
+    // isn't satisfied, return false.
+    for (AbstractConstraint child : constraint.getChildren()) {
+      if(!canSatisfyConstraints(appId, child.build(), node, atm)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns true as long as any of child constraint is satisfied.
+   * @param appId application id
+   * @param constraint Or constraint
+   * @param node node
+   * @param atm allocation tags manager
+   * @return true if any child constraint is satisfied, false otherwise
+   * @throws InvalidAllocationTagsQueryException
+   */
+  private static boolean canSatisfyOrConstraint(ApplicationId appId,
+      Or constraint, SchedulerNode node, AllocationTagsManager atm)
+      throws InvalidAllocationTagsQueryException {
+    for (AbstractConstraint child : constraint.getChildren()) {
+      if (canSatisfyConstraints(appId, child.build(), node, atm)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static boolean canSatisfyConstraints(ApplicationId appId,
       PlacementConstraint constraint, SchedulerNode node,
       AllocationTagsManager atm)
@@ -167,9 +211,16 @@ public final class PlacementConstraintsUtil {
     if (sConstraintExpr instanceof SingleConstraint) {
       SingleConstraint single = (SingleConstraint) sConstraintExpr;
       return canSatisfySingleConstraint(appId, single, node, atm);
+    } else if (sConstraintExpr instanceof And) {
+      And and = (And) sConstraintExpr;
+      return canSatisfyAndConstraint(appId, and, node, atm);
+    } else if (sConstraintExpr instanceof Or) {
+      Or or = (Or) sConstraintExpr;
+      return canSatisfyOrConstraint(appId, or, node, atm);
     } else {
       throw new InvalidAllocationTagsQueryException(
-          "Unsupported type of constraint.");
+          "Unsupported type of constraint: "
+              + sConstraintExpr.getClass().getSimpleName());
     }
   }
 
