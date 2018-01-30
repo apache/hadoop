@@ -114,7 +114,7 @@ Returns information about a given bucket.
 ### List Buckets
 List buckets on a given volume.
 
-* `hdfs oz -listtBucket http://localhost:9864/hive`
+* `hdfs oz -listBucket http://localhost:9864/hive`
 
 Ozone Key Commands
 ------------------
