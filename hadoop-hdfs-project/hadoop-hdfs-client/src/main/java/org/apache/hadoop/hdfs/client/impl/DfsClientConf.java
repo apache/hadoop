@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.client.impl;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -69,6 +70,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT;
@@ -616,6 +619,7 @@ public class DfsClientConf {
     private final long shortCircuitMmapCacheExpiryMs;
     private final long shortCircuitMmapCacheRetryTimeout;
     private final long shortCircuitCacheStaleThresholdMs;
+    private final long domainSocketDisableIntervalSeconds;
 
     private final long keyProviderCacheExpiryMs;
 
@@ -682,6 +686,11 @@ public class DfsClientConf {
       shortCircuitSharedMemoryWatcherInterruptCheckMs = conf.getInt(
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
+      domainSocketDisableIntervalSeconds = conf.getLong(
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY,
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT);
+      Preconditions.checkArgument(domainSocketDisableIntervalSeconds >= 0,
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY + "can't be negative.");
 
       keyProviderCacheExpiryMs = conf.getLong(
           DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS,
@@ -795,6 +804,13 @@ public class DfsClientConf {
     }
 
     /**
+     * @return the domainSocketDisableIntervalSeconds
+     */
+    public long getDomainSocketDisableIntervalSeconds() {
+      return domainSocketDisableIntervalSeconds;
+    }
+
+    /**
      * @return the keyProviderCacheExpiryMs
      */
     public long getKeyProviderCacheExpiryMs() {
@@ -828,7 +844,9 @@ public class DfsClientConf {
           + ", shortCircuitSharedMemoryWatcherInterruptCheckMs = "
           + shortCircuitSharedMemoryWatcherInterruptCheckMs
           + ", keyProviderCacheExpiryMs = "
-          + keyProviderCacheExpiryMs;
+          + keyProviderCacheExpiryMs
+          + ", domainSocketDisableIntervalSeconds = "
+          + domainSocketDisableIntervalSeconds;
     }
   }
 }
