@@ -532,6 +532,12 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
 
+  /** Enable rich placement constraints. */
+  public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
+      RM_PREFIX + "placement-constraints.enabled";
+
+  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = false;
+
   /** Placement Algorithm. */
   public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_CLASS =
       RM_PREFIX + "placement-constraints.algorithm.class";
@@ -539,11 +545,6 @@ public class YarnConfiguration extends Configuration {
   /** Used for BasicPlacementAlgorithm - default SERIAL. **/
   public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_ITERATOR =
       RM_PREFIX + "placement-constraints.algorithm.iterator";
-
-  public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
-      RM_PREFIX + "placement-constraints.enabled";
-
-  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = false;
 
   public static final String RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS =
       RM_PREFIX + "placement-constraints.retry-attempts";

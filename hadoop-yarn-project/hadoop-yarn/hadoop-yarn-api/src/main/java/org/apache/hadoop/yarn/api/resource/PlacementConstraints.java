@@ -96,8 +96,9 @@ public final class PlacementConstraints {
    * Creates a constraint that restricts the number of allocations within a
    * given scope (e.g., node or rack).
    *
-   * For example, {@code cardinality(NODE, 3, 10)}, restricts the number of
-   * allocations per node to be no less than 3 and no more than 10.
+   * For example, {@code cardinality(NODE, 3, 10, "zk")} is satisfied on nodes
+   * where there are no less than 3 allocations with tag "zk" and no more than
+   * 10.
    *
    * @param scope the scope of the constraint
    * @param minCardinality determines the minimum number of allocations within
@@ -132,7 +133,7 @@ public final class PlacementConstraints {
 
   /**
    * Similar to {@link #cardinality(String, int, int, String...)}, but
-   * determines only the maximum cardinality (the minimum can be as low as 0).
+   * determines only the maximum cardinality (the minimum cardinality is 0).
    *
    * @param scope the scope of the constraint
    * @param maxCardinality determines the maximum number of allocations within
@@ -150,7 +151,7 @@ public final class PlacementConstraints {
    *
    * Consider a set of nodes N that belongs to the scope specified in the
    * constraint. If the target expressions are satisfied at least minCardinality
-   * times and at most max-cardinality times in the node set N, then the
+   * times and at most maxCardinality times in the node set N, then the
    * constraint is satisfied.
    *
    * For example, {@code targetCardinality(RACK, 2, 10, allocationTag("zk"))},
@@ -197,7 +198,7 @@ public final class PlacementConstraints {
 
     /**
      * Constructs a target expression on a node partition. It is satisfied if
-     * the specified node partition has one of the specified nodePartitions
+     * the specified node partition has one of the specified nodePartitions.
      *
      * @param nodePartitions the set of values that the attribute should take
      *          values from
@@ -211,7 +212,7 @@ public final class PlacementConstraints {
 
     /**
      * Constructs a target expression on an allocation tag. It is satisfied if
-     * the there are allocations with one of the given tags.
+     * there are allocations with one of the given tags.
      *
      * @param allocationTags the set of tags that the attribute should take
      *          values from
@@ -224,8 +225,8 @@ public final class PlacementConstraints {
 
     /**
      * Constructs a target expression on an allocation tag. It is satisfied if
-     * the there are allocations with one of the given tags. Comparing to
-     * {@link PlacementTargets#allocationTag(String...)}, this only check tags
+     * there are allocations with one of the given tags. Comparing to
+     * {@link PlacementTargets#allocationTag(String...)}, this only checks tags
      * within the application.
      *
      * @param allocationTags the set of tags that the attribute should take
