@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
@@ -29,8 +29,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
@@ -55,7 +54,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
-import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE;
+import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes
+    .FAILED_TO_CHANGE_CONTAINER_STATE;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This
@@ -82,19 +82,18 @@ public class ContainerMapping implements Mapping {
    *
    * @param nodeManager - NodeManager so that we can get the nodes that are
    * healthy to place new
-   *     containers.
+   * containers.
    * @param cacheSizeMB - Amount of memory reserved for the LSM tree to cache
    * its nodes. This is
-   *     passed to LevelDB and this memory is allocated in Native code space.
-   *     CacheSize is specified
-   *     in MB.
-   * @throws IOException
+   * passed to LevelDB and this memory is allocated in Native code space.
+   * CacheSize is specified
+   * in MB.
+   * @throws IOException on Failure.
    */
   @SuppressWarnings("unchecked")
   public ContainerMapping(
       final Configuration conf, final NodeManager nodeManager, final int
-      cacheSizeMB)
-      throws IOException {
+      cacheSizeMB) throws IOException {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
 
@@ -113,7 +112,7 @@ public class ContainerMapping implements Mapping {
 
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
     this.containerStateManager =
-        new ContainerStateManager(conf, this, this.cacheSize * OzoneConsts.MB);
+        new ContainerStateManager(conf, this);
     this.containerCloseThreshold = conf.getFloat(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
@@ -128,7 +127,9 @@ public class ContainerMapping implements Mapping {
     containerLeaseManager.start();
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public ContainerInfo getContainer(final String containerName) throws
       IOException {
@@ -142,16 +143,19 @@ public class ContainerMapping implements Mapping {
             "Specified key does not exist. key : " + containerName,
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
-      containerInfo =
-          ContainerInfo.fromProtobuf(OzoneProtos.SCMContainerInfo.PARSER
-              .parseFrom(containerBytes));
+
+      OzoneProtos.SCMContainerInfo temp = OzoneProtos.SCMContainerInfo.PARSER
+          .parseFrom(containerBytes);
+      containerInfo = ContainerInfo.fromProtobuf(temp);
       return containerInfo;
     } finally {
       lock.unlock();
     }
   }
 
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public List<ContainerInfo> listContainer(String startName,
       String prefixName, int count) throws IOException {
@@ -188,7 +192,7 @@ public class ContainerMapping implements Mapping {
    *
    * @param replicationFactor - replication factor of the container.
    * @param containerName - Name of the container.
-   * @param owner
+   * @param owner - The string name of the Service that owns this container.
    * @return - Pipeline that makes up this container.
    * @throws IOException - Exception
    */
@@ -201,7 +205,8 @@ public class ContainerMapping implements Mapping {
       throws IOException {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
-    ContainerInfo containerInfo = null;
+
+    ContainerInfo containerInfo;
     if (!nodeManager.isOutOfChillMode()) {
       throw new SCMException(
           "Unable to create container while in chill mode",
@@ -219,7 +224,8 @@ public class ContainerMapping implements Mapping {
       }
       containerInfo =
           containerStateManager.allocateContainer(
-              pipelineSelector, type, replicationFactor, containerName, owner);
+              pipelineSelector, type, replicationFactor, containerName,
+              owner);
       containerStore.put(
           containerName.getBytes(encoding), containerInfo.getProtobuf()
               .toByteArray());
@@ -234,8 +240,8 @@ public class ContainerMapping implements Mapping {
    *
    * @param containerName - Container name
    * @throws IOException if container doesn't exist or container store failed
-   * to delete the
-   *     specified key.
+   *                     to delete the
+   *                     specified key.
    */
   @Override
   public void deleteContainer(String containerName) throws IOException {
@@ -255,7 +261,9 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-  /** {@inheritDoc} Used by client to update container state on SCM. */
+  /**
+   * {@inheritDoc} Used by client to update container state on SCM.
+   */
   @Override
   public OzoneProtos.LifeCycleState updateContainerState(
       String containerName, OzoneProtos.LifeCycleEvent event) throws
@@ -327,8 +335,10 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-  /** + * Returns the container State Manager. + * + * @return
-   * ContainerStateManager + */
+  /**
+   * Returns the container State Manager.
+   * @return ContainerStateManager
+   */
   @Override
   public ContainerStateManager getStateManager() {
     return containerStateManager;
@@ -374,6 +384,7 @@ public class ContainerMapping implements Mapping {
           builder.setNumberOfKeys(containerInfo.getKeyCount());
           builder.setState(oldInfo.getState());
           builder.setStateEnterTime(oldInfo.getStateEnterTime());
+          builder.setContainerID(oldInfo.getContainerID());
           if (oldInfo.getOwner() != null) {
             builder.setOwner(oldInfo.getOwner());
           }
@@ -393,15 +404,16 @@ public class ContainerMapping implements Mapping {
                 OzoneProtos.LifeCycleEvent.FINALIZE);
             if (state != OzoneProtos.LifeCycleState.CLOSING) {
               LOG.error("Failed to close container {}, reason : Not able to " +
-                      "update container state, current container state: {}." +
-                      "in state {}", containerInfo.getContainerName(), state);
+                  "update container state, current container state: {}.",
+                  containerInfo.getContainerName(), state);
             }
           }
         } else {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
               " {}, for container: {}, reason: container doesn't exist in" +
-              "container database.");
+              "container database.", datanodeID,
+              containerInfo.getContainerName());
         }
       } finally {
         lock.unlock();
@@ -409,13 +421,10 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-
   /**
    * Closes this stream and releases any system resources associated with it.
    * If the stream is
    * already closed then invoking this method has no effect.
-   *
-   * <p>
    *
    * <p>As noted in {@link AutoCloseable#close()}, cases where the close may
    * fail require careful
@@ -445,7 +454,7 @@ public class ContainerMapping implements Mapping {
    * containerStateManager, when closing ContainerMapping, we need to update
    * this in the container store.
    *
-   * @throws IOException
+   * @throws IOException  on failure.
    */
   @VisibleForTesting
   public void flushContainerInfo() throws IOException {
@@ -476,7 +485,7 @@ public class ContainerMapping implements Mapping {
           containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
         } else {
           LOG.debug("Container state manager has container {} but not found " +
-              "in container store, a deleted container?",
+                  "in container store, a deleted container?",
               info.getContainerName());
         }
       } catch (IOException ioe) {

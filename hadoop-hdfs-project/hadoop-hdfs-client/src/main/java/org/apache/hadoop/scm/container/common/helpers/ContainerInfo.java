@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.scm.container.common.helpers;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.scm.container.ContainerStates.ContainerID;
 import org.apache.hadoop.util.Time;
 
 import java.util.Comparator;
 
-/** Class wraps ozone container info. */
+/**
+ * Class wraps ozone container info.
+ */
 public class ContainerInfo
     implements Comparator<ContainerInfo>, Comparable<ContainerInfo> {
   private OzoneProtos.LifeCycleState state;
@@ -40,8 +44,9 @@ public class ContainerInfo
   private long stateEnterTime;
   private String owner;
   private String containerName;
-
+  private long containerID;
   ContainerInfo(
+      long containerID,
       final String containerName,
       OzoneProtos.LifeCycleState state,
       Pipeline pipeline,
@@ -50,6 +55,7 @@ public class ContainerInfo
       long numberOfKeys,
       long stateEnterTime,
       String owner) {
+    this.containerID = containerID;
     this.containerName = containerName;
     this.pipeline = pipeline;
     this.allocatedBytes = allocatedBytes;
@@ -77,7 +83,12 @@ public class ContainerInfo
     builder.setStateEnterTime(info.getStateEnterTime());
     builder.setOwner(info.getOwner());
     builder.setContainerName(info.getContainerName());
+    builder.setContainerID(info.getContainerID());
     return builder.build();
+  }
+
+  public long getContainerID() {
+    return containerID;
   }
 
   public String getContainerName() {
@@ -86,6 +97,10 @@ public class ContainerInfo
 
   public OzoneProtos.LifeCycleState getState() {
     return state;
+  }
+
+  public void setState(OzoneProtos.LifeCycleState state) {
+    this.state = state;
   }
 
   public long getStateEnterTime() {
@@ -100,6 +115,16 @@ public class ContainerInfo
     return allocatedBytes;
   }
 
+  /**
+   * Set Allocated bytes.
+   *
+   * @param size - newly allocated bytes -- negative size is case of deletes
+   * can be used.
+   */
+  public void updateAllocatedBytes(long size) {
+    this.allocatedBytes += size;
+  }
+
   public long getUsedBytes() {
     return usedBytes;
   }
@@ -108,8 +133,13 @@ public class ContainerInfo
     return numberOfKeys;
   }
 
+  public ContainerID containerID() {
+    return new ContainerID(getContainerID());
+  }
+
   /**
    * Gets the last used time from SCM's perspective.
+   *
    * @return time in milliseconds.
    */
   public long getLastUsed() {
@@ -135,6 +165,7 @@ public class ContainerInfo
     builder.setNumberOfKeys(getNumberOfKeys());
     builder.setState(state);
     builder.setStateEnterTime(stateEnterTime);
+    builder.setContainerID(getContainerID());
 
     if (getOwner() != null) {
       builder.setOwner(getOwner());
@@ -180,7 +211,7 @@ public class ContainerInfo
         // TODO : Fix this later. If we add these factors some tests fail.
         // So Commenting this to continue and will enforce this with
         // Changes in pipeline where we remove Container Name to
-        // SCMContainerinfo from Pipline.
+        // SCMContainerinfo from Pipeline.
         // .append(pipeline.getFactor(), that.pipeline.getFactor())
         // .append(pipeline.getType(), that.pipeline.getType())
         .append(owner, that.owner)
@@ -233,7 +264,9 @@ public class ContainerInfo
     return this.compare(this, o);
   }
 
-  /** Builder class for ContainerInfo. */
+  /**
+   * Builder class for ContainerInfo.
+   */
   public static class Builder {
     private OzoneProtos.LifeCycleState state;
     private Pipeline pipeline;
@@ -243,6 +276,13 @@ public class ContainerInfo
     private long stateEnterTime;
     private String owner;
     private String containerName;
+    private long containerID;
+
+    public Builder setContainerID(long id) {
+      Preconditions.checkState(id >= 0);
+      this.containerID = id;
+      return this;
+    }
 
     public Builder setState(OzoneProtos.LifeCycleState lifeCycleState) {
       this.state = lifeCycleState;
@@ -286,8 +326,8 @@ public class ContainerInfo
 
     public ContainerInfo build() {
       return new
-          ContainerInfo(containerName, state, pipeline, allocated, used,
-          keys, stateEnterTime, owner);
+          ContainerInfo(containerID, containerName, state, pipeline,
+          allocated, used, keys, stateEnterTime, owner);
     }
   }
 }

@@ -35,6 +35,17 @@ public class ContainerReport {
   private long writeCount;
   private long readBytes;
   private long writeBytes;
+  private long containerID;
+
+  public long getContainerID() {
+    return containerID;
+  }
+
+  public void setContainerID(long containerID) {
+    this.containerID = containerID;
+  }
+
+
 
 
   /**
@@ -87,6 +98,7 @@ public class ContainerReport {
       report.setWriteBytes(info.getWriteBytes());
     }
 
+    report.setContainerID(info.getContainerID());
     return report;
   }
 
@@ -200,6 +212,7 @@ public class ContainerReport {
         .setWriteCount(this.getWriteCount())
         .setWriteBytes(this.getWriteBytes())
         .setFinalhash(this.getFinalhash())
+        .setContainerID(this.getContainerID())
         .build();
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.scm.container.ContainerStates.ContainerID;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
@@ -43,11 +44,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Tests for Container Mapping.
@@ -187,15 +188,13 @@ public class TestContainerMapping {
         OzoneProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
 
-    List<ContainerInfo> deleteContainers = mapping.getStateManager()
-        .getMatchingContainers(
-            containerInfo.getOwner(),
+    NavigableSet<ContainerID> deleteContainers = mapping.getStateManager()
+        .getMatchingContainerIDs(
+            "OZONE",
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.DELETING);
-    Assert.assertTrue(deleteContainers.stream().map(
-        container -> container.getContainerName()).collect(
-        Collectors.toList()).contains(containerName));
+    Assert.assertTrue(deleteContainers.contains(containerInfo.containerID()));
 
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
@@ -207,7 +206,7 @@ public class TestContainerMapping {
   public void testFullContainerReport() throws IOException,
       InterruptedException {
     String containerName = UUID.randomUUID().toString();
-    createContainer(containerName);
+    ContainerInfo info = createContainer(containerName);
     DatanodeID datanodeID = SCMTestUtils.getDatanodeID();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
@@ -224,7 +223,8 @@ public class TestContainerMapping {
         .setReadCount(100000000L)
         .setWriteCount(100000000L)
         .setReadBytes(2000000000L)
-        .setWriteBytes(2000000000L);
+        .setWriteBytes(2000000000L)
+        .setContainerID(info.getContainerID());
 
     reports.add(ciBuilder.build());
     mapping.processContainerReports(datanodeID, reportType, reports);
@@ -237,7 +237,7 @@ public class TestContainerMapping {
   @Test
   public void testContainerCloseWithContainerReport() throws IOException {
     String containerName = UUID.randomUUID().toString();
-    createContainer(containerName);
+    ContainerInfo info = createContainer(containerName);
     DatanodeID datanodeID = SCMTestUtils.getDatanodeID();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
@@ -255,7 +255,8 @@ public class TestContainerMapping {
         .setReadCount(500000000L)
         .setWriteCount(500000000L)
         .setReadBytes(5368705120L)
-        .setWriteBytes(5368705120L);
+        .setWriteBytes(5368705120L)
+        .setContainerID(info.getContainerID());
 
     reports.add(ciBuilder.build());
 
@@ -264,43 +265,38 @@ public class TestContainerMapping {
     ContainerInfo updatedContainer = mapping.getContainer(containerName);
     Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
-    List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
-        .getMatchingContainers(
+    NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
+        .getMatchingContainerIDs(
             containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSING);
-    Assert.assertTrue(pendingCloseContainers.stream().map(
-        container -> container.getContainerName()).collect(
-        Collectors.toList()).contains(containerName));
+    Assert.assertTrue(
+         pendingCloseContainers.contains(updatedContainer.containerID()));
   }
 
   @Test
   public void testCloseContainer() throws IOException {
     String containerName = UUID.randomUUID().toString();
-    createContainer(containerName);
+    ContainerInfo info = createContainer(containerName);
     mapping.updateContainerState(containerName,
         OzoneProtos.LifeCycleEvent.FINALIZE);
-    List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
-        .getMatchingContainers(
+    NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
+        .getMatchingContainerIDs(
             containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSING);
-    Assert.assertTrue(pendingCloseContainers.stream().map(
-        container -> container.getContainerName()).collect(
-        Collectors.toList()).contains(containerName));
+    Assert.assertTrue(pendingCloseContainers.contains(info.containerID()));
     mapping.updateContainerState(containerName,
         OzoneProtos.LifeCycleEvent.CLOSE);
-    List<ContainerInfo> closeContainers = mapping.getStateManager()
-        .getMatchingContainers(
+    NavigableSet<ContainerID> closeContainers = mapping.getStateManager()
+        .getMatchingContainerIDs(
             containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSED);
-    Assert.assertTrue(closeContainers.stream().map(
-        container -> container.getContainerName()).collect(
-        Collectors.toList()).contains(containerName));
+    Assert.assertTrue(closeContainers.contains(info.containerID()));
   }
 
   /**
@@ -309,7 +305,8 @@ public class TestContainerMapping {
    *          Name of the container
    * @throws IOException
    */
-  private void createContainer(String containerName) throws IOException {
+  private ContainerInfo createContainer(String containerName)
+      throws IOException {
     nodeManager.setChillmode(false);
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
@@ -320,6 +317,7 @@ public class TestContainerMapping {
         OzoneProtos.LifeCycleEvent.CREATE);
     mapping.updateContainerState(containerInfo.getContainerName(),
         OzoneProtos.LifeCycleEvent.CREATED);
+    return containerInfo;
   }
 
 }

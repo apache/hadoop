@@ -122,6 +122,8 @@ public final class ContainerTestHelper {
     final Pipeline pipeline = new Pipeline(leader.getDatanodeUuid());
     pipeline.setContainerName(containerName);
     pipeline.addMember(leader);
+    pipeline.setFactor(OzoneProtos.ReplicationFactor.ONE);
+    pipeline.setType(OzoneProtos.ReplicationType.STAND_ALONE);
 
     for(; i.hasNext();) {
       pipeline.addMember(i.next());
@@ -346,7 +348,7 @@ public final class ContainerTestHelper {
    */
   public static ContainerCommandRequestProto getCreateContainerRequest(
       String containerName, Pipeline pipeline) throws IOException {
-    LOG.trace("createContainer: {}", containerName);
+    LOG.trace("addContainer: {}", containerName);
 
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto

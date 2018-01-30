@@ -72,14 +72,17 @@ public class ReplicationDatanodeStateManager {
           "required container reports");
     }
 
+    int containerID = 1;
     while (containerList.size() < dataNodeCount && nodesInPool.size() > 0) {
       DatanodeID id = nodesInPool.get(r.nextInt(nodesInPool.size()));
       nodesInPool.remove(id);
+      containerID++;
       // We return container reports only for nodes that are healthy.
       if (nodeManager.getNodeState(id) == HEALTHY) {
         ContainerInfo info = ContainerInfo.newBuilder()
             .setContainerName(containerName)
             .setFinalhash(DigestUtils.sha256Hex(containerName))
+            .setContainerID(containerID)
             .build();
         ContainerReportsRequestProto containerReport =
             ContainerReportsRequestProto.newBuilder().addReports(info)

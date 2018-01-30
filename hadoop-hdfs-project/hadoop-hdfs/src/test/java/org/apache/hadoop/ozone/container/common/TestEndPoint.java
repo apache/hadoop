@@ -448,6 +448,8 @@ public class TestEndPoint {
       report.setReadBytes(OzoneConsts.GB * 1);
       report.setWriteCount(50);
       report.setWriteBytes(OzoneConsts.GB * 2);
+      report.setContainerID(1);
+
       reportsBuilder.addReports(report.getProtoBufMessage());
     }
     reportsBuilder.setDatanodeID(SCMTestUtils.getDatanodeID()

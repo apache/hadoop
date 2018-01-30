@@ -40,7 +40,7 @@ import static org.apache.hadoop.ozone.scm.cli.container
     .ListContainerHandler.CONTAINER_LIST;
 
 /**
- * The handler class of container-specific commands, e.g. createContainer.
+ * The handler class of container-specific commands, e.g. addContainer.
  */
 public class ContainerCommandHandler extends OzoneCommandHandler {
 
