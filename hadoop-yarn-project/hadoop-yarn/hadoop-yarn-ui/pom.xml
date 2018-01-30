@@ -30,11 +30,9 @@
 
   <properties>
     <packagingType>pom</packagingType>
-
     <webappDir>${basedir}/target/webapp</webappDir>
     <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
     <packageManagerScript>node/yarn/dist/bin/yarn.js</packageManagerScript>
-
     <keepUIBuildCache>false</keepUIBuildCache>
   </properties>
 
@@ -178,7 +176,7 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
 
-              <!-- Build -->
+              <!-- Ember Build -->
               <execution>
                 <id>ember build</id>
                 <phase>generate-resources</phase>
