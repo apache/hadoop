@@ -244,6 +244,12 @@ is running, please verify it is fully functional by running some commands like
  need to start SCM and KSM. Currently we assume that both KSM and SCM
   is running on the same node, this will change in future.
 
+ The first time you bring up Ozone, SCM must be initialized.
+
+   - `./hdfs scm -init`
+
+ Start SCM and KSM.
+
    - `./hdfs --daemon start scm`
    - `./hdfs --daemon start ksm`
 
