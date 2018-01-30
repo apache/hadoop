@@ -103,6 +103,7 @@ message ContainerInfo {
   optional int64 writeCount = 7;
   optional int64 readBytes = 8;
   optional int64 writeBytes = 9;
+  required int64 containerID = 10;
 }
 
 // The deleted blocks which are stored in deletedBlock.db of scm.
