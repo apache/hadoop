@@ -885,7 +885,6 @@ public class ContainerManagerImpl implements ContainerManager {
       StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
           StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
       ciBuilder.setContainerName(container.getContainer().getContainerName())
-          .setFinalhash(container.getContainer().getHash())
           .setSize(container.getContainer().getMaxSize())
           .setUsed(container.getContainer().getBytesUsed())
           .setKeyCount(container.getContainer().getKeyCount())
@@ -894,6 +893,9 @@ public class ContainerManagerImpl implements ContainerManager {
           .setReadBytes(container.getReadBytes())
           .setWriteBytes(container.getWriteBytes());
 
+      if (container.getContainer().getHash() != null) {
+        ciBuilder.setFinalhash(container.getContainer().getHash());
+      }
       crBuilder.addReports(ciBuilder.build());
     }
 
