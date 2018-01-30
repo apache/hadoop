@@ -24,4 +24,4 @@ const getDefaultTimezone = () => {
 };
 
 export const convertTimestampWithTz = (timestamp, format = "YYYY/MM/DD") =>
-  moment.tz(timestamp, getDefaultTimezone()).format(format);
+  moment.tz(parseInt(timestamp), getDefaultTimezone()).format(format);

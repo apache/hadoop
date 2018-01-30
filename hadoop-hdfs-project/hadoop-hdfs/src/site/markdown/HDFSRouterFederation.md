@@ -81,6 +81,10 @@ The Routers are stateless and metadata operations are atomic at the NameNodes.
 If a Router becomes unavailable, any Router can take over for it.
 The clients configure their DFS HA client (e.g., ConfiguredFailoverProvider or RequestHedgingProxyProvider) with all the Routers in the federation as endpoints.
 
+* **Unavailable State Store:**
+If a Router cannot contact the State Store, it will enter into a Safe Mode state which disallows it from serving requests.
+Clients will treat Routers in Safe Mode as it was an Standby NameNode and try another Router.
+
 * **NameNode heartbeat HA:**
 For high availability and flexibility, multiple Routers can monitor the same NameNode and heartbeat the information to the State Store.
 This increases clients' resiliency to stale information, should a Router fail.

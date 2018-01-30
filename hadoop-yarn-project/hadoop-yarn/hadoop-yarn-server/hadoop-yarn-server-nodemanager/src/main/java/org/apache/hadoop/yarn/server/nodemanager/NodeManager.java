@@ -454,18 +454,15 @@ public class NodeManager extends CompositeService
     ((NMContext) context).setNodeStatusUpdater(nodeStatusUpdater);
     nmStore.setNodeStatusUpdater(nodeStatusUpdater);
 
-    super.serviceInit(conf);
-    // TODO add local dirs to del
-  }
-
-  @Override
-  protected void serviceStart() throws Exception {
+    // Do secure login before calling init for added services.
     try {
       doSecureLogin();
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed NodeManager login", e);
     }
-    super.serviceStart();
+
+    super.serviceInit(conf);
+    // TODO add local dirs to del
   }
 
   @Override

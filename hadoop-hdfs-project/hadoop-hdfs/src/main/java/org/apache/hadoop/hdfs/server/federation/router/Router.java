@@ -37,11 +37,13 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,6 +114,20 @@ public class Router extends CompositeService {
   /** Quota cache manager. */
   private RouterQuotaManager quotaManager;
 
+  /** Manages the current state of the router. */
+  private RouterStore routerStateManager;
+  /** Heartbeat our run status to the router state manager. */
+  private RouterHeartbeatService routerHeartbeatService;
+  /** Enter/exit safemode. */
+  private RouterSafemodeService safemodeService;
+
+  /** The start time of the namesystem. */
+  private final long startTime = Time.now();
+
+  /** State of the Router. */
+  private RouterServiceState state = RouterServiceState.UNINITIALIZED;
+
+
   /////////////////////////////////////////////////////////
   // Constructor
   /////////////////////////////////////////////////////////
@@ -127,6 +143,7 @@ public class Router extends CompositeService {
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
+    updateRouterState(RouterServiceState.INITIALIZING);
 
     if (conf.getBoolean(
         DFSConfigKeys.DFS_ROUTER_STORE_ENABLE,
@@ -188,6 +205,10 @@ public class Router extends CompositeService {
       if (this.namenodeHearbeatServices.isEmpty()) {
         LOG.error("Heartbeat is enabled but there are no namenodes to monitor");
       }
+
+      // Periodically update the router state
+      this.routerHeartbeatService = new RouterHeartbeatService(this);
+      addService(this.routerHeartbeatService);
     }
 
     // Router metrics system
@@ -213,11 +234,25 @@ public class Router extends CompositeService {
       addService(this.quotaUpdateService);
     }
 
+    // Safemode service to refuse RPC calls when the router is out of sync
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT)) {
+      // Create safemode monitoring service
+      this.safemodeService = new RouterSafemodeService(this);
+      addService(this.safemodeService);
+    }
+
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
+
+    if (this.safemodeService == null) {
+      // Router is running now
+      updateRouterState(RouterServiceState.RUNNING);
+    }
 
     if (this.pauseMonitor != null) {
       this.pauseMonitor.start();
@@ -232,6 +267,9 @@ public class Router extends CompositeService {
 
   @Override
   protected void serviceStop() throws Exception {
+
+    // Update state
+    updateRouterState(RouterServiceState.SHUTDOWN);
 
     // JVM pause monitor
     if (this.pauseMonitor != null) {
@@ -454,6 +492,31 @@ public class Router extends CompositeService {
   }
 
   /////////////////////////////////////////////////////////
+  // Router State Management
+  /////////////////////////////////////////////////////////
+
+  /**
+   * Update the router state and heartbeat to the state store.
+   *
+   * @param state The new router state.
+   */
+  public void updateRouterState(RouterServiceState newState) {
+    this.state = newState;
+    if (this.routerHeartbeatService != null) {
+      this.routerHeartbeatService.updateStateAsync();
+    }
+  }
+
+  /**
+   * Get the status of the router.
+   *
+   * @return Status of the router.
+   */
+  public RouterServiceState getRouterState() {
+    return this.state;
+  }
+
+  /////////////////////////////////////////////////////////
   // Submodule getters
   /////////////////////////////////////////////////////////
 
@@ -508,9 +571,31 @@ public class Router extends CompositeService {
     return this.namenodeResolver;
   }
 
+  /**
+   * Get the state store interface for the router heartbeats.
+   *
+   * @return FederationRouterStateStore state store API handle.
+   */
+  public RouterStore getRouterStateManager() {
+    if (this.routerStateManager == null && this.stateStore != null) {
+      this.routerStateManager = this.stateStore.getRegisteredRecordStore(
+          RouterStore.class);
+    }
+    return this.routerStateManager;
+  }
+
   /////////////////////////////////////////////////////////
   // Router info
   /////////////////////////////////////////////////////////
+
+  /**
+   * Get the start date of the Router.
+   *
+   * @return Start date of the router.
+   */
+  public long getStartTime() {
+    return this.startTime;
+  }
 
   /**
    * Unique ID for the router, typically the hostname:port string for the

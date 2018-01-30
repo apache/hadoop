@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -101,7 +100,27 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
-  private static CGroupsCpuResourceHandlerImpl getCGroupsCpuResourceHandler(
+  public static NetworkPacketTaggingHandlerImpl
+      getNetworkResourceHandler() {
+    return networkPacketTaggingHandlerImpl;
+  }
+
+  public static DiskResourceHandler
+      getDiskResourceHandler() {
+    return cGroupsBlkioResourceHandler;
+  }
+
+  public static MemoryResourceHandler
+      getMemoryResourceHandler() {
+    return cGroupsMemoryResourceHandler;
+  }
+
+  public static CpuResourceHandler
+      getCpuResourceHandler() {
+    return cGroupsCpuResourceHandler;
+  }
+
+  private static CGroupsCpuResourceHandlerImpl initCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -150,7 +169,7 @@ public class ResourceHandlerModule {
     }
   }
 
-  public static ResourceHandler getNetworkResourceHandler(Configuration conf)
+  public static ResourceHandler initNetworkResourceHandler(Configuration conf)
         throws ResourceHandlerException {
     boolean useNetworkTagHandler = conf.getBoolean(
         YarnConfiguration.NM_NETWORK_TAG_HANDLER_ENABLED,
@@ -181,12 +200,12 @@ public class ResourceHandlerModule {
   }
 
   public static OutboundBandwidthResourceHandler
-      getOutboundBandwidthResourceHandler(Configuration conf)
+      initOutboundBandwidthResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
 
-  public static DiskResourceHandler getDiskResourceHandler(Configuration conf)
+  public static DiskResourceHandler initDiskResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_DISK_RESOURCE_ENABLED)) {
@@ -210,7 +229,7 @@ public class ResourceHandlerModule {
     return cGroupsBlkioResourceHandler;
   }
 
-  public static MemoryResourceHandler getMemoryResourceHandler(
+  public static MemoryResourceHandler initMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENABLED)) {
@@ -246,10 +265,14 @@ public class ResourceHandlerModule {
       throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
-    addHandlerIfNotNull(handlerList, getNetworkResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initNetworkResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initDiskResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initMemoryResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initCGroupsCpuResourceHandler(conf));
     addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }

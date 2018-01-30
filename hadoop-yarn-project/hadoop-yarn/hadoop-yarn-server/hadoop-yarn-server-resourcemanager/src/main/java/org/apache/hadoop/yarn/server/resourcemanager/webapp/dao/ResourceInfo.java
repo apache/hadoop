@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class ResourceInfo {
@@ -34,6 +35,9 @@ public class ResourceInfo {
   long memory;
   @XmlElement
   int vCores;
+  @XmlElement
+  ResourceInformationsInfo resourceInformations =
+      new ResourceInformationsInfo();
 
   private Resource resources;
 
@@ -41,9 +45,13 @@ public class ResourceInfo {
   }
 
   public ResourceInfo(Resource res) {
-    memory = res.getMemorySize();
-    vCores = res.getVirtualCores();
-    resources = Resources.clone(res);
+    // Make sure no NPE.
+    if (res != null) {
+      memory = res.getMemorySize();
+      vCores = res.getVirtualCores();
+      resources = Resources.clone(res);
+      resourceInformations.addAll(res.getAllResourcesListCopy());
+    }
   }
 
   public long getMemorySize() {
@@ -83,5 +91,9 @@ public class ResourceInfo {
 
   public Resource getResource() {
     return Resource.newInstance(resources);
+  }
+
+  public ResourceInformationsInfo getResourcesInformations() {
+    return resourceInformations;
   }
 }

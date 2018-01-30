@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -499,7 +500,7 @@ public class TestTaskAttempt{
           new TaskAttemptDiagnosticsUpdateEvent(attemptID,
               "Test Diagnostic Event"));
       getContext().getEventHandler().handle(
-          new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+          new TaskAttemptFailEvent(attemptID));
     }
 
     protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
@@ -1357,8 +1358,7 @@ public class TestTaskAttempt{
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
-    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
-        TaskAttemptEventType.TA_FAILMSG));
+    taImpl.handle(new TaskAttemptFailEvent(taImpl.getID()));
 
     assertEquals("Task attempt is not in FAILED state", taImpl.getState(),
         TaskAttemptState.FAILED);
@@ -1484,8 +1484,7 @@ public class TestTaskAttempt{
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
 
-    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
-        TaskAttemptEventType.TA_FAILMSG));
+    taImpl.handle(new TaskAttemptFailEvent(taImpl.getID()));
 
     assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
         TaskAttemptState.FAILED);
