@@ -18,13 +18,6 @@
 package org.apache.hadoop.yarn.service.provider.docker;
 
 public interface DockerKeys {
-  String PROVIDER_DOCKER = "docker";
   String DOCKER_PREFIX = "docker.";
-  String DOCKER_IMAGE = DOCKER_PREFIX + "image";
   String DOCKER_NETWORK = DOCKER_PREFIX + "network";
-  String DOCKER_USE_PRIVILEGED = DOCKER_PREFIX + "usePrivileged";
-  String DOCKER_START_COMMAND = DOCKER_PREFIX + "startCommand";
-
-  String DEFAULT_DOCKER_NETWORK = "bridge";
-  Boolean DEFAULT_DOCKER_USE_PRIVILEGED = false;
 }
