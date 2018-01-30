@@ -156,7 +156,7 @@ public class TestPlacementConstraintTransformations {
     SingleConstraintTransformer singleTransformer =
         new SingleConstraintTransformer(specConstraint);
     PlacementConstraint simConstraint = singleTransformer.transform();
-    Assert.assertTrue(constraintExpr instanceof Or);
+    Assert.assertTrue(simConstraint.getConstraintExpr() instanceof Or);
     Or simOrExpr = (Or) specConstraint.getConstraintExpr();
     for (AbstractConstraint child : simOrExpr.getChildren()) {
       Assert.assertTrue(child instanceof SingleConstraint);

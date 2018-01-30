@@ -60,6 +60,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.Thread.sleep;
+import static org.apache.hadoop.yarn.api.records.RejectionReason.COULD_NOT_PLACE_ON_NODE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
@@ -142,7 +143,8 @@ public class TestPlacementProcessor {
     allocatedContainers.addAll(allocResponse.getAllocatedContainers());
 
     // kick the scheduler
-    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 4);
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 4);
 
     Assert.assertEquals(4, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
@@ -195,7 +197,8 @@ public class TestPlacementProcessor {
     allocatedContainers.addAll(allocResponse.getAllocatedContainers());
 
     // kick the scheduler
-    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 5);
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 5);
 
     Assert.assertEquals(5, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
@@ -244,7 +247,8 @@ public class TestPlacementProcessor {
     allocatedContainers.addAll(allocResponse.getAllocatedContainers());
 
     // kick the scheduler
-    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 8);
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 8);
 
     Assert.assertEquals(8, allocatedContainers.size());
     Map<NodeId, Long> nodeIdContainerIdMap =
@@ -294,7 +298,8 @@ public class TestPlacementProcessor {
     allocatedContainers.addAll(allocResponse.getAllocatedContainers());
 
     // kick the scheduler
-    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 5);
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 5);
 
     Assert.assertEquals(5, allocatedContainers.size());
     Set<NodeId> nodeIds = allocatedContainers.stream().map(x -> x.getNodeId())
@@ -347,7 +352,8 @@ public class TestPlacementProcessor {
     allocatedContainers.addAll(allocResponse.getAllocatedContainers());
 
     // kick the scheduler
-    waitForContainerAllocation(nodes.values(), am1, allocatedContainers, 6);
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 6);
 
     Assert.assertEquals(6, allocatedContainers.size());
     Map<NodeId, Long> nodeIdContainerIdMap =
@@ -584,7 +590,7 @@ public class TestPlacementProcessor {
     // Ensure unique nodes
     Assert.assertEquals(4, nodeIds.size());
     RejectedSchedulingRequest rej = rejectedReqs.get(0);
-    Assert.assertEquals(RejectionReason.COULD_NOT_PLACE_ON_NODE,
+    Assert.assertEquals(COULD_NOT_PLACE_ON_NODE,
         rej.getReason());
 
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -592,9 +598,145 @@ public class TestPlacementProcessor {
     verifyMetrics(metrics, 11264, 11, 5120, 5, 5);
   }
 
+  @Test(timeout = 300000)
+  public void testAndOrPlacement() throws Exception {
+    HashMap<NodeId, MockNM> nodes = new HashMap<>();
+    MockNM nm1 = new MockNM("h1:1234", 40960, 100,
+        rm.getResourceTrackerService());
+    nodes.put(nm1.getNodeId(), nm1);
+    MockNM nm2 = new MockNM("h2:1234", 40960, 100,
+        rm.getResourceTrackerService());
+    nodes.put(nm2.getNodeId(), nm2);
+    MockNM nm3 = new MockNM("h3:1234", 40960, 100,
+        rm.getResourceTrackerService());
+    nodes.put(nm3.getNodeId(), nm3);
+    MockNM nm4 = new MockNM("h4:1234", 40960, 100,
+        rm.getResourceTrackerService());
+    nodes.put(nm4.getNodeId(), nm4);
+    nm1.registerNode();
+    nm2.registerNode();
+    nm3.registerNode();
+    nm4.registerNode();
+
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+
+    // Register app1 with following constraints
+    // 1) foo anti-affinity with foo on node
+    // 2) bar anti-affinity with foo on node AND maxCardinality = 2
+    // 3) moo affinity with foo OR bar
+    Map<Set<String>, PlacementConstraint> app1Constraints = new HashMap<>();
+    app1Constraints.put(Collections.singleton("foo"),
+        PlacementConstraints.build(
+            PlacementConstraints.targetNotIn(NODE, allocationTag("foo"))));
+    app1Constraints.put(Collections.singleton("bar"),
+        PlacementConstraints.build(
+            PlacementConstraints.and(
+            PlacementConstraints.targetNotIn(NODE, allocationTag("foo")),
+            PlacementConstraints.maxCardinality(NODE, 2, "bar"))));
+    app1Constraints.put(Collections.singleton("moo"),
+        PlacementConstraints.build(
+            PlacementConstraints.or(
+                PlacementConstraints.targetIn(NODE, allocationTag("foo")),
+                PlacementConstraints.targetIn(NODE, allocationTag("bar")))));
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2, app1Constraints);
+
+    // Allocates 3 foo containers on 3 different nodes,
+    // in anti-affinity fashion.
+    am1.addSchedulingRequest(
+        Arrays.asList(
+            schedulingRequest(1, 1, 1, 512, "foo"),
+            schedulingRequest(1, 2, 1, 512, "foo"),
+            schedulingRequest(1, 3, 1, 512, "foo")
+    ));
+    List<Container> allocatedContainers = new ArrayList<>();
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 3);
+    printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
+    Assert.assertEquals(3, allocatedContainers.size());
+
+    /** Testing AND placement constraint**/
+    // Now allocates a bar container, as restricted by the AND constraint,
+    // bar could be only allocated to the node without foo
+    am1.addSchedulingRequest(
+        Arrays.asList(
+            schedulingRequest(1, 1, 1, 512, "bar")
+        ));
+    allocatedContainers.clear();
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 1);
+    printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
+    Assert.assertEquals(1, allocatedContainers.size());
+    NodeId barNode = allocatedContainers.get(0).getNodeId();
+
+    // Sends another 3 bar request, 2 of them can be allocated
+    // as maxCardinality is 2, for placed containers, they should be all
+    // on the node where the last bar was placed.
+    allocatedContainers.clear();
+    List<RejectedSchedulingRequest> rejectedContainers = new ArrayList<>();
+    am1.addSchedulingRequest(
+        Arrays.asList(
+            schedulingRequest(1, 2, 1, 512, "bar"),
+            schedulingRequest(1, 3, 1, 512, "bar"),
+            schedulingRequest(1, 4, 1, 512, "bar")
+        ));
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, rejectedContainers, 2);
+    printTags(nodes.values(), rm.getRMContext().getAllocationTagsManager());
+    Assert.assertEquals(2, allocatedContainers.size());
+    Assert.assertTrue(allocatedContainers.stream().allMatch(
+        container -> container.getNodeId().equals(barNode)));
+
+    // The third request could not be satisfied because it violates
+    // the cardinality constraint. Validate rejected request correctly
+    // capture this.
+    Assert.assertEquals(1, rejectedContainers.size());
+    Assert.assertEquals(COULD_NOT_PLACE_ON_NODE,
+        rejectedContainers.get(0).getReason());
+
+    /** Testing OR placement constraint**/
+    // Register one more NM for testing
+    MockNM nm5 = new MockNM("h5:1234", 4096, 100,
+        rm.getResourceTrackerService());
+    nodes.put(nm5.getNodeId(), nm5);
+    nm5.registerNode();
+    nm5.nodeHeartbeat(true);
+
+    List<SchedulingRequest> mooRequests = new ArrayList<>();
+    for (int i=5; i<25; i++) {
+      mooRequests.add(schedulingRequest(1, i, 1, 100, "moo"));
+    }
+    am1.addSchedulingRequest(mooRequests);
+    allocatedContainers.clear();
+    waitForContainerAllocation(nodes.values(), am1,
+        allocatedContainers, new ArrayList<>(), 20);
+
+    // All 20 containers should be allocated onto nodes besides nm5,
+    // because moo affinity to foo or bar which only exists on rest of nodes.
+    Assert.assertEquals(20, allocatedContainers.size());
+    for (Container mooContainer : allocatedContainers) {
+      // nm5 has no moo allocated containers.
+      Assert.assertFalse(mooContainer.getNodeId().equals(nm5.getNodeId()));
+    }
+  }
+
+  private static void printTags(Collection<MockNM> nodes,
+      AllocationTagsManager atm){
+    for (MockNM nm : nodes) {
+      Map<String, Long> nmTags = atm
+          .getAllocationTagsWithCount(nm.getNodeId());
+      StringBuffer sb = new StringBuffer();
+      if (nmTags != null) {
+        nmTags.forEach((tag, count) ->
+            sb.append(tag + "(" + count + "),"));
+        LOG.info("nm_" + nm.getNodeId() + ": " + sb.toString());
+      }
+    }
+  }
+
   private static void waitForContainerAllocation(Collection<MockNM> nodes,
-      MockAM am, List<Container> allocatedContainers, int containerNum)
-      throws Exception {
+      MockAM am, List<Container> allocatedContainers,
+      List<RejectedSchedulingRequest> rejectedRequests,
+      int containerNum) throws Exception {
     int attemptCount = 10;
     while (allocatedContainers.size() < containerNum && attemptCount > 0) {
       for (MockNM node : nodes) {
@@ -605,6 +747,7 @@ public class TestPlacementProcessor {
       sleep(1000);
       AllocateResponse allocResponse = am.schedule();
       allocatedContainers.addAll(allocResponse.getAllocatedContainers());
+      rejectedRequests.addAll(allocResponse.getRejectedSchedulingRequests());
       attemptCount--;
     }
   }
