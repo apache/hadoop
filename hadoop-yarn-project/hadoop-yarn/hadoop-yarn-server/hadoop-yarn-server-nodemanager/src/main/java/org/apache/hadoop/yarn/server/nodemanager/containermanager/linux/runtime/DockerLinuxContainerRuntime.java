@@ -437,7 +437,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     DockerVolumeCommand dockerVolumeInspectCommand = new DockerVolumeCommand(
         DockerVolumeCommand.VOLUME_LS_SUB_COMMAND);
-    dockerVolumeInspectCommand.setFormat("{{.Name}},{{.Driver}}");
     String output = runDockerVolumeCommand(dockerVolumeInspectCommand,
         container);
 
@@ -450,13 +449,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     for (String line : output.split("\n")) {
       line = line.trim();
-      String[] arr = line.split(",");
-      String v = arr[0].trim();
-      String d = null;
-      if (arr.length > 1) {
-        d = arr[1].trim();
-      }
-      if (d != null && volumeName.equals(v) && driverName.equals(d)) {
+      if (line.contains(volumeName) && line.contains(driverName)) {
         // Good we found it.
         LOG.info(
             "Docker volume-name=" + volumeName + " driver-name=" + driverName

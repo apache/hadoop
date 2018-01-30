@@ -1473,9 +1473,9 @@ public class TestDockerContainerRuntime {
     commandFile = new File(StringUtils.join(",", op.getArguments()));
     fileInputStream = new FileInputStream(commandFile);
     fileContent = new String(IOUtils.toByteArray(fileInputStream));
-    Assert.assertEquals("[docker-command-execution]\n"
-        + "  docker-command=volume\n" + "  format={{.Name}},{{.Driver}}\n"
-        + "  sub-command=ls\n", fileContent);
+    Assert.assertEquals(
+        "[docker-command-execution]\n" + "  docker-command=volume\n"
+            + "  sub-command=ls\n", fileContent);
     fileInputStream.close();
   }
 
@@ -1577,16 +1577,33 @@ public class TestDockerContainerRuntime {
     // For following tests, we expect to have volume1,local in output
 
     // Failure cases
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n", true);
     testDockerCommandPluginWithVolumesOutput("", true);
     testDockerCommandPluginWithVolumesOutput("volume1", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "nvidia-docker       nvidia_driver_375.66\n", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "                    volume1\n", true);
     testDockerCommandPluginWithVolumesOutput("local", true);
     testDockerCommandPluginWithVolumesOutput("volume2,local", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "local               volume2\n", true);
     testDockerCommandPluginWithVolumesOutput("volum1,something", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "something               volume1\n", true);
     testDockerCommandPluginWithVolumesOutput("volum1,something\nvolum2,local",
         true);
 
     // Success case
-    testDockerCommandPluginWithVolumesOutput("volume1,local\n", false);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "nvidia-docker       nvidia_driver_375.66\n" +
+        "local               volume1\n", false);
     testDockerCommandPluginWithVolumesOutput(
         "volume_xyz,nvidia\nvolume1,local\n\n", false);
     testDockerCommandPluginWithVolumesOutput(" volume1,  local \n", false);
