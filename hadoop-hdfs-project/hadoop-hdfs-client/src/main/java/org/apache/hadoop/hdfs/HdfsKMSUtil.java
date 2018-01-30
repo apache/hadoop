@@ -20,15 +20,21 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.security.GeneralSecurityException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -186,5 +192,40 @@ public final class HdfsKMSUtil {
   public static Text getKeyProviderMapKey(URI namenodeUri) {
     return new Text(DFS_KMS_PREFIX + namenodeUri.getScheme()
         +"://" + namenodeUri.getAuthority());
+  }
+
+  public static CryptoInputStream createWrappedInputStream(InputStream is,
+      KeyProvider keyProvider, FileEncryptionInfo fileEncryptionInfo,
+      Configuration conf) throws IOException {
+    // File is encrypted, wrap the stream in a crypto stream.
+    // Currently only one version, so no special logic based on the version#
+    HdfsKMSUtil.getCryptoProtocolVersion(fileEncryptionInfo);
+    final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(
+        conf, fileEncryptionInfo);
+    final KeyVersion decrypted =
+        decryptEncryptedDataEncryptionKey(fileEncryptionInfo, keyProvider);
+    return new CryptoInputStream(is, codec, decrypted.getMaterial(),
+        fileEncryptionInfo.getIV());
+  }
+
+  /**
+   * Decrypts a EDEK by consulting the KeyProvider.
+   */
+  static KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
+      feInfo, KeyProvider keyProvider) throws IOException {
+    if (keyProvider == null) {
+      throw new IOException("No KeyProvider is configured, cannot access" +
+          " an encrypted file");
+    }
+    EncryptedKeyVersion ekv = EncryptedKeyVersion.createForDecryption(
+        feInfo.getKeyName(), feInfo.getEzKeyVersionName(), feInfo.getIV(),
+        feInfo.getEncryptedDataEncryptionKey());
+    try {
+      KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
+          .createKeyProviderCryptoExtension(keyProvider);
+      return cryptoProvider.decryptEncryptedKey(ekv);
+    } catch (GeneralSecurityException e) {
+      throw new IOException(e);
+    }
   }
 }
