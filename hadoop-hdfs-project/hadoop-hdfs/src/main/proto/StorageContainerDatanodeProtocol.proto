@@ -94,7 +94,7 @@ A container report contains the following information.
 */
 message ContainerInfo {
   required string containerName = 1;
-  required string finalhash = 2;
+  optional string finalhash = 2;
   optional int64 size = 3;
   optional int64 used = 4;
   optional int64 keyCount = 5;
