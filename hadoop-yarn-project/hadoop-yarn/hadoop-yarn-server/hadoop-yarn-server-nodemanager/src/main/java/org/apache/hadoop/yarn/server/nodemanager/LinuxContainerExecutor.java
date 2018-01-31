@@ -63,7 +63,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -466,13 +465,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       linuxContainerRuntime.prepareContainer(builder.build());
     } catch (ContainerExecutionException e) {
       throw new IOException("Unable to prepare container: ", e);
-    }
-  }
-
-  @Override
-  protected void updateEnvForWhitelistVars(Map<String, String> env) {
-    if (linuxContainerRuntime.useWhitelistEnv(env)) {
-      super.updateEnvForWhitelistVars(env);
     }
   }
 
