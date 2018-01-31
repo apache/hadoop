@@ -45,19 +45,29 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final Log LOG = LogFactory.getLog(
       FairSchedulerConfiguration.class.getName());
 
-  /** Increment request grant-able by the RM scheduler.
-   * These properties are looked up in the yarn-site.xml.
-   * Kept for backward-compatibility - the new preferred way to configure the
-   * increment is the yarn.resource-types.{RESOURCE_NAME}.increment-allocation
-   * property, specifically: yarn.resource-types.memory-mb.increment-allocation
-   * for memory and yarn.resource-types.vcores.increment-allocation for CPU */
+  /**
+   * Resource Increment request grant-able by the FairScheduler.
+   * This property is looked up in the yarn-site.xml.
+   * @deprecated The preferred way to configure the increment is by using the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property,
+   * for memory: yarn.resource-types.memory-mb.increment-allocation
+   */
   @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_MB =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-mb";
+  @Deprecated
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB = 1024;
+  /**
+   * Resource Increment request grant-able by the FairScheduler.
+   * This property is looked up in the yarn-site.xml.
+   * @deprecated The preferred way to configure the increment is by using the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property,
+   * for CPU: yarn.resource-types.vcores.increment-allocation
+   */
   @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
+  @Deprecated
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
 
   /** Threshold for container size for making a container reservation as a

@@ -278,7 +278,7 @@ public class ShortCircuitCache implements Closeable {
    * Maximum total size of the cache, including both mmapped and
    * no$-mmapped elements.
    */
-  private final int maxTotalSize;
+  private int maxTotalSize;
 
   /**
    * Non-mmaped elements older than this will be closed.
@@ -367,6 +367,11 @@ public class ShortCircuitCache implements Closeable {
 
   public long getStaleThresholdMs() {
     return staleThresholdMs;
+  }
+
+  @VisibleForTesting
+  public void setMaxTotalSize(int maxTotalSize) {
+    this.maxTotalSize = maxTotalSize;
   }
 
   /**
@@ -1024,5 +1029,14 @@ public class ShortCircuitCache implements Closeable {
   @VisibleForTesting
   public DfsClientShmManager getDfsClientShmManager() {
     return shmManager;
+  }
+
+  /**
+   * Can be used in testing to verify whether a read went through SCR, after
+   * the read is done and before the stream is closed.
+   */
+  @VisibleForTesting
+  public int getReplicaInfoMapSize() {
+    return replicaInfoMap.size();
   }
 }

@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -71,6 +72,8 @@ public class TestCapacitySchedulerAsyncScheduling {
   private YarnConfiguration conf;
 
   RMNodeLabelsManager mgr;
+
+  private NMHeartbeatThread nmHeartbeatThread = null;
 
   @Before
   public void setUp() throws Exception {
@@ -122,8 +125,10 @@ public class TestCapacitySchedulerAsyncScheduling {
     List<MockNM> nms = new ArrayList<>();
     // Add 10 nodes to the cluster, in the cluster we have 200 GB resource
     for (int i = 0; i < 10; i++) {
-      nms.add(rm.registerNode("h-" + i + ":1234", 20 * GB));
+      nms.add(rm.registerNode("127.0.0." + i + ":1234", 20 * GB));
     }
+
+    keepNMHeartbeat(nms, 1000);
 
     List<MockAM> ams = new ArrayList<>();
     // Add 3 applications to the cluster, one app in one queue
@@ -185,8 +190,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // init RM & NMs & Nodes
     final MockRM rm = new MockRM(disableAsyncConf);
     rm.start();
-    final MockNM nm1 = rm.registerNode("h1:1234", 9 * GB);
-    final MockNM nm2 = rm.registerNode("h2:2234", 9 * GB);
+    final MockNM nm1 = rm.registerNode("192.168.0.1:1234", 9 * GB);
+    final MockNM nm2 = rm.registerNode("192.168.0.2:2234", 9 * GB);
     List<MockNM> nmLst = new ArrayList<>();
     nmLst.add(nm1);
     nmLst.add(nm2);
@@ -277,8 +282,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // init RM & NMs & Nodes
     final MockRM rm = new MockRM(disableAsyncConf);
     rm.start();
-    final MockNM nm1 = rm.registerNode("h1:1234", 9 * GB);
-    final MockNM nm2 = rm.registerNode("h2:2234", 9 * GB);
+    final MockNM nm1 = rm.registerNode("127.0.0.1:1234", 9 * GB);
+    final MockNM nm2 = rm.registerNode("127.0.0.2:2234", 9 * GB);
 
     // init scheduler nodes
     int waitTime = 1000;
@@ -416,8 +421,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // init RM & NMs & Nodes
     final MockRM rm = new MockRM(disableAsyncConf);
     rm.start();
-    final MockNM nm1 = rm.registerNode("h1:1234", 9 * GB);
-    final MockNM nm2 = rm.registerNode("h2:1234", 9 * GB);
+    final MockNM nm1 = rm.registerNode("127.0.0.1:1234", 9 * GB);
+    final MockNM nm2 = rm.registerNode("127.0.0.2:1234", 9 * GB);
     List<MockNM> nmLst = new ArrayList<>();
     nmLst.add(nm1);
     nmLst.add(nm2);
@@ -474,6 +479,146 @@ public class TestCapacitySchedulerAsyncScheduling {
     Assert.assertTrue("Node resource is Over-allocated!",
         sn1.getUnallocatedResource().getMemorySize() > 0);
     rm.stop();
+  }
+
+  /**
+   * Make sure scheduler skips NMs which haven't heartbeat for a while.
+   * @throws Exception
+   */
+  @Test
+  public void testAsyncSchedulerSkipNoHeartbeatNMs() throws Exception {
+    int heartbeatInterval = 100;
+    conf.setInt(
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
+        1);
+    conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
+        + ".scheduling-interval-ms", 100);
+    // Heartbeat interval is 100 ms.
+    conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, heartbeatInterval);
+
+    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(conf);
+
+    // inject node label manager
+    MockRM rm = new MockRM(TestUtils.getConfigurationWithMultipleQueues(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+
+    List<MockNM> nms = new ArrayList<>();
+    // Add 10 nodes to the cluster, in the cluster we have 200 GB resource
+    for (int i = 0; i < 10; i++) {
+      nms.add(rm.registerNode("127.0.0." + i + ":1234", 20 * GB));
+    }
+
+    List<MockAM> ams = new ArrayList<>();
+
+    keepNMHeartbeat(nms, heartbeatInterval);
+
+    for (int i = 0; i < 3; i++) {
+      RMApp rmApp = rm.submitApp(1024, "app", "user", null, false,
+          Character.toString((char) (i % 34 + 97)), 1, null, null, false);
+      MockAM am = MockRM.launchAMWhenAsyncSchedulingEnabled(rmApp, rm);
+      am.registerAppAttempt();
+      ams.add(am);
+    }
+
+    pauseNMHeartbeat();
+
+    Thread.sleep(heartbeatInterval * 3);
+
+    // Applications request containers.
+    for (int i = 0; i < 3; i++) {
+      ams.get(i).allocate("*", 1024, 20 * (i + 1), new ArrayList<>());
+    }
+
+    for (int i = 0; i < 5; i++) {
+      // Do heartbeat for NM 0-4
+      nms.get(i).nodeHeartbeat(true);
+    }
+
+    // Wait for 2000 ms.
+    Thread.sleep(2000);
+
+    // Make sure that NM5-9 don't have non-AM containers.
+    for (int i = 0; i < 9; i++) {
+      if (i < 5) {
+        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) > 0);
+      } else {
+        Assert.assertTrue(checkNumNonAMContainersOnNode(cs, nms.get(i)) == 0);
+      }
+    }
+
+    rm.close();
+  }
+
+  public static class NMHeartbeatThread extends Thread {
+    private List<MockNM> mockNMS;
+    private int interval;
+    private volatile boolean shouldStop = false;
+
+    public NMHeartbeatThread(List<MockNM> mockNMs, int interval) {
+      this.mockNMS = mockNMs;
+      this.interval = interval;
+    }
+
+    public void run() {
+      while (true) {
+        if (shouldStop) {
+          break;
+        }
+        for (MockNM nm : mockNMS) {
+          try {
+            nm.nodeHeartbeat(true);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+        try {
+          Thread.sleep(interval);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+
+    public void setShouldStop() {
+      shouldStop = true;
+    }
+  }
+
+  private void keepNMHeartbeat(List<MockNM> mockNMs, int interval) {
+    if (nmHeartbeatThread != null) {
+      nmHeartbeatThread.setShouldStop();
+      nmHeartbeatThread = null;
+    }
+    nmHeartbeatThread = new NMHeartbeatThread(mockNMs, interval);
+    nmHeartbeatThread.start();
+  }
+
+  private void pauseNMHeartbeat() {
+    if (nmHeartbeatThread != null) {
+      nmHeartbeatThread.setShouldStop();
+      nmHeartbeatThread = null;
+    }
+  }
+
+  private int checkNumNonAMContainersOnNode(CapacityScheduler cs, MockNM nm) {
+    SchedulerNode node = cs.getNode(nm.getNodeId());
+    int nonAMContainer = 0;
+    for (RMContainer c : node.getCopiedListOfRunningContainers()) {
+      if (!c.isAMContainer()) {
+         nonAMContainer++;
+      }
+    }
+    return nonAMContainer;
   }
 
   private void allocateAndLaunchContainers(MockAM am, MockNM nm, MockRM rm,

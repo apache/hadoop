@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -76,6 +77,9 @@ public abstract class SchedulerNode {
 
   private volatile Set<String> labels = null;
 
+  // Last updated time
+  private volatile long lastHeartbeatMonotonicTime;
+
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
@@ -87,6 +91,7 @@ public abstract class SchedulerNode {
       nodeName = rmNode.getHostName();
     }
     this.labels = ImmutableSet.copyOf(labels);
+    this.lastHeartbeatMonotonicTime = Time.monotonicNow();
   }
 
   public SchedulerNode(RMNode node, boolean usePortForNodeName) {
@@ -451,6 +456,17 @@ public abstract class SchedulerNode {
    */
   public ResourceUtilization getNodeUtilization() {
     return this.nodeUtilization;
+  }
+
+  public long getLastHeartbeatMonotonicTime() {
+    return lastHeartbeatMonotonicTime;
+  }
+
+  /**
+   * This will be called for each node heartbeat.
+   */
+  public void notifyNodeUpdate() {
+    this.lastHeartbeatMonotonicTime = Time.monotonicNow();
   }
 
 

@@ -63,6 +63,28 @@
 </property>
 
 <property>
+  <name>mapreduce.job.local-fs.single-disk-limit.bytes</name>
+  <value>-1</value>
+  <description>Enable an in task monitor thread to watch for single disk
+    consumption by jobs. By setting this to x nr of bytes, the task will fast
+    fail in case it is reached. This is a per disk configuration.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.local-fs.single-disk-limit.check.interval-ms</name>
+  <value>5000</value>
+  <description>Interval of disk limit check to run in ms.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.local-fs.single-disk-limit.check.kill-limit-exceed</name>
+  <value>true</value>
+  <description>If mapreduce.job.local-fs.single-disk-limit.bytes is triggered
+    should the task be killed or logged. If false the intent to kill the task
+    is only logged in the container logs.</description>
+</property>
+
+<property>
   <name>mapreduce.job.maps</name>
   <value>2</value>
   <description>The default number of map tasks per job.
@@ -1492,6 +1514,17 @@
   output directory as they were completing and commitJob had
   very little to do.
   </description>
+</property>
+
+<property>
+  <name>mapreduce.fileoutputcommitter.task.cleanup.enabled</name>
+  <value>false</value>
+  <description>Whether tasks should delete their task temporary directories. This is purely an
+    optimization for filesystems without O(1) recursive delete, as commitJob will recursively delete
+    the entire job temporary directory. HDFS has O(1) recursive delete, so this parameter is left
+    false by default. Users of object stores, for example, may want to set this to true.
+
+    Note: this is only used if mapreduce.fileoutputcommitter.algorithm.version=2</description>
 </property>
 
 <property>

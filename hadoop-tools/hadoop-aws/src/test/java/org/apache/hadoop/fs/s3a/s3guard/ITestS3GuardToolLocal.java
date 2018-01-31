@@ -305,9 +305,9 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       // 6. Confirm part exists via CLI, direct path and parent path
       describe("Confirming CLI lists one part");
       LambdaTestUtils.eventually(5000, 1000,
-          () -> assertNumUploads(path, 1));
+          () -> { assertNumUploads(path, 1); });
       LambdaTestUtils.eventually(5000, 1000,
-          () -> assertNumUploads(path.getParent(), 1));
+          () -> { assertNumUploads(path.getParent(), 1); });
 
       // 7. Use CLI to delete part, assert it worked
       describe("Deleting part via CLI");
@@ -363,7 +363,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       describe("Sleeping 1 second then confirming upload still there");
       Thread.sleep(1000);
       LambdaTestUtils.eventually(5000, 1000,
-          () -> assertNumUploadsAge(path, 1, 1));
+          () -> { assertNumUploadsAge(path, 1, 1); });
 
       // 7. Assert deletion works when age filter matches
       describe("Doing aged deletion");
@@ -415,7 +415,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
    *                   search all parts
    * @throws Exception on failure
    */
-  private void uploadCommandAssertCount(S3AFileSystem fs, String[] options,
+  private void uploadCommandAssertCount(S3AFileSystem fs, String options[],
       Path path, int numUploads, int ageSeconds)
       throws Exception {
     List<String> allOptions = new ArrayList<>();

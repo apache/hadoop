@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2017</release-year>
+    <release-year>2018</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>

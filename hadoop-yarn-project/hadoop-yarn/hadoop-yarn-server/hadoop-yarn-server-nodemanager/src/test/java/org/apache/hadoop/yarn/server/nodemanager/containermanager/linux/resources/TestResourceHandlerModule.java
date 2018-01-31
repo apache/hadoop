@@ -36,8 +36,8 @@ import static org.mockito.Mockito.mock;
 public class TestResourceHandlerModule {
   private static final Logger LOG =
        LoggerFactory.getLogger(TestResourceHandlerModule.class);
-  Configuration emptyConf;
-  Configuration networkEnabledConf;
+  private Configuration emptyConf;
+  private Configuration networkEnabledConf;
 
   @Before
   public void setup() throws Exception {
@@ -55,23 +55,28 @@ public class TestResourceHandlerModule {
       //This resourceHandler should be non-null only if network as a resource
       //is explicitly enabled
       OutboundBandwidthResourceHandler resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(emptyConf);
+          .initOutboundBandwidthResourceHandler(emptyConf);
       Assert.assertNull(resourceHandler);
 
       //When network as a resource is enabled this should be non-null
       resourceHandler = ResourceHandlerModule
-          .getOutboundBandwidthResourceHandler(networkEnabledConf);
+          .initOutboundBandwidthResourceHandler(networkEnabledConf);
       Assert.assertNotNull(resourceHandler);
 
       //Ensure that outbound bandwidth resource handler is present in the chain
       ResourceHandlerChain resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(networkEnabledConf, mock(Context.class));
-      List<ResourceHandler> resourceHandlers = resourceHandlerChain
-          .getResourceHandlerList();
-      //Exactly one resource handler in chain
-      Assert.assertEquals(resourceHandlers.size(), 1);
-      //Same instance is expected to be in the chain.
-      Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+          .getConfiguredResourceHandlerChain(networkEnabledConf,
+              mock(Context.class));
+      if (resourceHandlerChain != null) {
+        List<ResourceHandler> resourceHandlers = resourceHandlerChain
+            .getResourceHandlerList();
+        //Exactly one resource handler in chain
+        Assert.assertEquals(resourceHandlers.size(), 1);
+        //Same instance is expected to be in the chain.
+        Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
+      } else {
+        Assert.fail("Null returned");
+      }
     } catch (ResourceHandlerException e) {
       Assert.fail("Unexpected ResourceHandlerException: " + e);
     }
@@ -81,23 +86,27 @@ public class TestResourceHandlerModule {
   public void testDiskResourceHandler() throws Exception {
 
     DiskResourceHandler handler =
-        ResourceHandlerModule.getDiskResourceHandler(emptyConf);
+        ResourceHandlerModule.initDiskResourceHandler(emptyConf);
     Assert.assertNull(handler);
 
     Configuration diskConf = new YarnConfiguration();
     diskConf.setBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED, true);
 
-    handler = ResourceHandlerModule.getDiskResourceHandler(diskConf);
+    handler = ResourceHandlerModule.initDiskResourceHandler(diskConf);
     Assert.assertNotNull(handler);
 
     ResourceHandlerChain resourceHandlerChain =
         ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf,
             mock(Context.class));
-    List<ResourceHandler> resourceHandlers =
-        resourceHandlerChain.getResourceHandlerList();
-    // Exactly one resource handler in chain
-    Assert.assertEquals(resourceHandlers.size(), 1);
-    // Same instance is expected to be in the chain.
-    Assert.assertTrue(resourceHandlers.get(0) == handler);
+    if (resourceHandlerChain != null) {
+      List<ResourceHandler> resourceHandlers =
+          resourceHandlerChain.getResourceHandlerList();
+      // Exactly one resource handler in chain
+      Assert.assertEquals(resourceHandlers.size(), 1);
+      // Same instance is expected to be in the chain.
+      Assert.assertTrue(resourceHandlers.get(0) == handler);
+    } else {
+      Assert.fail("Null returned");
+    }
   }
 }

@@ -346,6 +346,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>FederationProtocol.proto</include>
                   <include>RouterProtocol.proto</include>
                   <include>AliasMapProtocol.proto</include>
+                  <include>InterQJournalProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

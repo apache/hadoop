@@ -92,6 +92,7 @@ public class AppInfo {
   protected String amContainerLogs;
   protected String amHostHttpAddress;
   private String amRPCAddress;
+  private String masterNodeId;
   private long allocatedMB;
   private long allocatedVCores;
   private long reservedMB;
@@ -162,6 +163,7 @@ public class AppInfo {
       this.name = app.getName().toString();
       this.queue = app.getQueue().toString();
       this.priority = 0;
+      this.masterNodeId = "";
 
       if (app.getApplicationPriority() != null) {
         this.priority = app.getApplicationPriority().getPriority();
@@ -192,6 +194,7 @@ public class AppInfo {
                 schemePrefix + masterContainer.getNodeHttpAddress(),
                 masterContainer.getId().toString(), app.getUser());
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
+            this.masterNodeId = masterContainer.getNodeId().toString();
           }
 
           this.amRPCAddress = getAmRPCAddressFromRMAppAttempt(attempt);
@@ -614,5 +617,13 @@ public class AppInfo {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public String getMasterNodeId() {
+    return masterNodeId;
+  }
+
+  public void setMasterNodeId(String masterNodeId) {
+    this.masterNodeId = masterNodeId;
   }
 }

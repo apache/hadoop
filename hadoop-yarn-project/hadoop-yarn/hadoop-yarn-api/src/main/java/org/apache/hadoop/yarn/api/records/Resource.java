@@ -369,6 +369,9 @@ public abstract class Resource implements Comparable<Resource> {
       return;
     }
     if (resource.equals(ResourceInformation.VCORES_URI)) {
+      if (value > Integer.MAX_VALUE) {
+        value = (long) Integer.MAX_VALUE;
+      }
       this.setVirtualCores((int)value);
       return;
     }

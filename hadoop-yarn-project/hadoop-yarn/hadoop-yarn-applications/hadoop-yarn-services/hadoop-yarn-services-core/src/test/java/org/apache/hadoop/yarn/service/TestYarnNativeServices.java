@@ -123,10 +123,13 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         report.getFinalApplicationStatus());
 
     LOG.info("Destroy the service");
-    //destroy the service and check the app dir is deleted from fs.
-    client.actionDestroy(exampleApp.getName());
+    // destroy the service and check the app dir is deleted from fs.
+    Assert.assertEquals(0, client.actionDestroy(exampleApp.getName()));
     // check the service dir on hdfs (in this case, local fs) are deleted.
     Assert.assertFalse(getFS().exists(appDir));
+
+    // check that destroying again does not succeed
+    Assert.assertEquals(-1, client.actionDestroy(exampleApp.getName()));
   }
 
   // Create compa with 2 containers
@@ -272,10 +275,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     }
   }
 
-  private void checkRegistryAndCompDirDeleted() {
-
-  }
-
   private void checkEachCompInstancesInOrder(Component component) {
     long expectedNumInstances = component.getNumberOfContainers();
     Assert.assertEquals(expectedNumInstances, component.getContainers().size());
@@ -289,32 +288,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       Assert.assertEquals(component.getName() + "-" + i, s);
       i++;
     }
-  }
-
-  private void waitForOneCompToBeReady(ServiceClient client,
-      Service exampleApp, String readyComp)
-      throws TimeoutException, InterruptedException {
-    long numExpectedContainers =
-        exampleApp.getComponent(readyComp).getNumberOfContainers();
-    GenericTestUtils.waitFor(() -> {
-      try {
-        Service retrievedApp = client.getStatus(exampleApp.getName());
-        Component retrievedComp = retrievedApp.getComponent(readyComp);
-
-        if (retrievedComp.getContainers() != null
-            && retrievedComp.getContainers().size() == numExpectedContainers) {
-          LOG.info(readyComp + " found " + numExpectedContainers
-              + " containers running");
-          return true;
-        } else {
-          LOG.info(" Waiting for " + readyComp + "'s containers to be running");
-          return false;
-        }
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, 2000, 200000);
   }
 
   /**

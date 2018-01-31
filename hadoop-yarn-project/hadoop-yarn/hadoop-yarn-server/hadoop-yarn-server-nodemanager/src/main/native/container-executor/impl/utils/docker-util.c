@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -217,6 +218,10 @@ const char *get_docker_error_message(const int error_code) {
       return "Invalid docker volume name";
     case INVALID_DOCKER_VOLUME_COMMAND:
       return "Invalid docker volume command";
+    case PID_HOST_DISABLED:
+      return "Host pid namespace is disabled";
+    case INVALID_PID_NAMESPACE:
+      return "Invalid pid namespace";
     default:
       return "Unknown error";
   }
@@ -779,6 +784,52 @@ static int set_network(const struct configuration *command_config,
   return ret;
 }
 
+static int set_pid_namespace(const struct configuration *command_config,
+                   const struct configuration *conf, char *out,
+                   const size_t outlen) {
+  size_t tmp_buffer_size = 1024;
+  char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
+  char *value = get_configuration_value("pid", DOCKER_COMMAND_FILE_SECTION,
+      command_config);
+  char *pid_host_enabled = get_configuration_value("docker.host-pid-namespace.enabled",
+      CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
+  int ret = 0;
+
+  if (value != NULL) {
+    if (strcmp(value, "host") == 0) {
+      if (pid_host_enabled != NULL) {
+        if (strcmp(pid_host_enabled, "1") == 0 ||
+            strcasecmp(pid_host_enabled, "True") == 0) {
+          ret = add_to_buffer(out, outlen, "--pid='host' ");
+          if (ret != 0) {
+            ret = BUFFER_TOO_SMALL;
+          }
+        } else {
+          fprintf(ERRORFILE, "Host pid namespace is disabled\n");
+          ret = PID_HOST_DISABLED;
+          goto free_and_exit;
+        }
+      } else {
+        fprintf(ERRORFILE, "Host pid namespace is disabled\n");
+        ret = PID_HOST_DISABLED;
+        goto free_and_exit;
+      }
+    } else {
+      fprintf(ERRORFILE, "Invalid pid namespace\n");
+      ret = INVALID_PID_NAMESPACE;
+    }
+  }
+
+  free_and_exit:
+  free(tmp_buffer);
+  free(value);
+  free(pid_host_enabled);
+  if (ret != 0) {
+    memset(out, 0, outlen);
+  }
+  return ret;
+}
+
 static int set_capabilities(const struct configuration *command_config,
                             const struct configuration *conf, char *out,
                             const size_t outlen) {
@@ -1045,9 +1096,10 @@ static int set_privileged(const struct configuration *command_config, const stru
       = get_configuration_value("docker.privileged-containers.enabled", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
   int ret = 0;
 
-  if (value != NULL && strcmp(value, "true") == 0) {
+  if (value != NULL && strcasecmp(value, "true") == 0 ) {
     if (privileged_container_enabled != NULL) {
-      if (strcmp(privileged_container_enabled, "1") == 0) {
+      if (strcmp(privileged_container_enabled, "1") == 0 ||
+          strcasecmp(privileged_container_enabled, "True") == 0) {
         ret = add_to_buffer(out, outlen, "--privileged ");
         if (ret != 0) {
           ret = BUFFER_TOO_SMALL;
@@ -1142,6 +1194,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
 
   ret = set_network(&command_config, conf, out, outlen);
+  if (ret != 0) {
+    return ret;
+  }
+
+  ret = set_pid_namespace(&command_config, conf, out, outlen);
   if (ret != 0) {
     return ret;
   }

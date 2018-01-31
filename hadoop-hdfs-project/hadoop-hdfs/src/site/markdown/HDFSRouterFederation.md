@@ -81,6 +81,10 @@ The Routers are stateless and metadata operations are atomic at the NameNodes.
 If a Router becomes unavailable, any Router can take over for it.
 The clients configure their DFS HA client (e.g., ConfiguredFailoverProvider or RequestHedgingProxyProvider) with all the Routers in the federation as endpoints.
 
+* **Unavailable State Store:**
+If a Router cannot contact the State Store, it will enter into a Safe Mode state which disallows it from serving requests.
+Clients will treat Routers in Safe Mode as it was an Standby NameNode and try another Router.
+
 * **NameNode heartbeat HA:**
 For high availability and flexibility, multiple Routers can monitor the same NameNode and heartbeat the information to the State Store.
 This increases clients' resiliency to stale information, should a Router fail.
@@ -127,6 +131,11 @@ Examples users may encounter include the following.
 * Copy file/folder in two different nameservices.
 * Write into a file/folder being rebalanced.
 
+### Quota management
+Federation supports and controls global quota at mount table level.
+For performance reasons, the Router caches the quota usage and updates it periodically. These quota usage values
+will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html)
+for the quota detail.
 
 ### State Store
 The (logically centralized, but physically distributed) State Store maintains:
@@ -199,6 +208,21 @@ Mount table permission can be set by following command:
 
 The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
+Router-based federation supports global quota at mount table level. Mount table entries may spread multiple subclusters and the global quota will be
+accounted across these subclusters.
+
+The federation admin tool supports setting quotas for specified mount table entries:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -setQuota /path -nsQuota 100 -ssQuota 1024
+
+The above command means that we allow the path to have a maximum of 100 file/directories and use at most 1024 bytes storage space. The parameter for *ssQuota*
+supports multiple size-unit suffix (e.g. 1k is 1KB, 5m is 5MB). If no suffix is specified then bytes is assumed.
+
+Ls command will show below information for each mount table entry:
+
+    Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
+    /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
+
 Client configuration
 --------------------
 
@@ -212,7 +236,7 @@ For example, a cluster with 4 namespaces **ns0, ns1, ns2, ns3**, can add a new o
     <value>ns0,ns1,ns2,ns3,ns-fed</value>
   </property>
   <property>
-    <name>dfs.namenodes.ns-fed</name>
+    <name>dfs.ha.namenodes.ns-fed</name>
     <value>r1,r2</value>
   </property>
   <property>
@@ -321,6 +345,15 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
+
+### Quota
+
+Global quota supported in federation.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. |
+| dfs.federation.router.quota-cache.update.interval | 60s | How often the Router updates quota cache. This setting supports multiple time unit suffixes. If no suffix is specified then milliseconds is assumed. |
 
 Metrics
 -------

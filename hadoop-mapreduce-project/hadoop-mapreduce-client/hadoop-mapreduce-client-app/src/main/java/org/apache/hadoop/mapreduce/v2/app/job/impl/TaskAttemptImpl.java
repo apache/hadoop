@@ -94,6 +94,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunched
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
@@ -101,6 +102,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptTooManyFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptKilledEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
@@ -194,6 +196,7 @@ public abstract class TaskAttemptImpl implements
   private Locality locality;
   private Avataar avataar;
   private boolean rescheduleNextAttempt = false;
+  private boolean failFast = false;
 
   private static final CleanupContainerTransition
       CLEANUP_CONTAINER_TRANSITION = new CleanupContainerTransition();
@@ -1412,6 +1415,14 @@ public abstract class TaskAttemptImpl implements
   public void setAvataar(Avataar avataar) {
     this.avataar = avataar;
   }
+
+  public void setTaskFailFast(boolean failFast) {
+    this.failFast = failFast;
+  }
+
+  public boolean isTaskFailFast() {
+    return failFast;
+  }
   
   @SuppressWarnings("unchecked")
   public TaskAttemptStateInternal recover(TaskAttemptInfo taInfo,
@@ -1921,9 +1932,12 @@ public abstract class TaskAttemptImpl implements
 
       switch(finalState) {
         case FAILED:
-          taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-              taskAttempt.attemptId,
-              TaskEventType.T_ATTEMPT_FAILED));
+          boolean fastFail = false;
+          if (event instanceof TaskAttemptFailEvent) {
+            fastFail = ((TaskAttemptFailEvent) event).isFastFail();
+          }
+          taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+              taskAttempt.attemptId, fastFail));
           break;
         case KILLED:
           taskAttempt.eventHandler.handle(new TaskTAttemptKilledEvent(
@@ -2041,13 +2055,16 @@ public abstract class TaskAttemptImpl implements
 
   private static class FailedTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+
+
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt,
         TaskAttemptEvent event) {
       // set the finish time
       taskAttempt.setFinishTime();
-      notifyTaskAttemptFailed(taskAttempt);
+
+      notifyTaskAttemptFailed(taskAttempt, taskAttempt.isTaskFailFast());
     }
   }
 
@@ -2154,8 +2171,8 @@ public abstract class TaskAttemptImpl implements
         LOG.debug("Not generating HistoryFinish event since start event not " +
             "generated for taskAttempt: " + taskAttempt.getID());
       }
-      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
+      taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+          taskAttempt.attemptId));
     }
   }
   
@@ -2332,6 +2349,8 @@ public abstract class TaskAttemptImpl implements
       if (event instanceof TaskAttemptKillEvent) {
         taskAttempt.setRescheduleNextAttempt(
             ((TaskAttemptKillEvent)event).getRescheduleAttempt());
+      } else if (event instanceof TaskAttemptFailEvent) {
+        taskAttempt.setTaskFailFast(((TaskAttemptFailEvent)event).isFastFail());
       }
     }
   }
@@ -2400,12 +2419,13 @@ public abstract class TaskAttemptImpl implements
       // register it to finishing state
       taskAttempt.appContext.getTaskAttemptFinishingMonitor().register(
           taskAttempt.attemptId);
-      notifyTaskAttemptFailed(taskAttempt);
+      notifyTaskAttemptFailed(taskAttempt, false);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private static void notifyTaskAttemptFailed(TaskAttemptImpl taskAttempt) {
+  private static void notifyTaskAttemptFailed(TaskAttemptImpl taskAttempt,
+      boolean fastFail) {
     if (taskAttempt.getLaunchTime() == 0) {
       sendJHStartEventForAssignedFailTask(taskAttempt);
     }
@@ -2419,8 +2439,8 @@ public abstract class TaskAttemptImpl implements
     taskAttempt.eventHandler.handle(new JobHistoryEvent(
         taskAttempt.attemptId.getTaskId().getJobId(), tauce));
 
-    taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-        taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
+    taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+        taskAttempt.attemptId, fastFail));
 
   }
 

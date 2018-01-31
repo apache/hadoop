@@ -42,6 +42,7 @@ module.exports = function(defaults) {
   app.import("bower_components/datatables/media/css/jquery.dataTables.min.css");
   app.import("bower_components/datatables/media/js/jquery.dataTables.min.js");
   app.import("bower_components/momentjs/min/moment.min.js");
+  app.import("bower_components/moment-timezone/builds/moment-timezone-with-data-2010-2020.min.js");
   app.import("bower_components/select2/dist/css/select2.min.css");
   app.import("bower_components/select2/dist/js/select2.min.js");
   app.import('bower_components/jquery-ui/jquery-ui.js');
@@ -50,6 +51,7 @@ module.exports = function(defaults) {
   app.import('bower_components/bootstrap/dist/css/bootstrap-theme.css');
   app.import('bower_components/bootstrap/dist/js/bootstrap.min.js');
   app.import('bower_components/alasql/dist/alasql.js');
+  app.import('bower_components/abdmob/x2js/xml2json.js');
 
   // Use `app.import` to add additional libraries to the generated
   // output files.

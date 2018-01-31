@@ -404,7 +404,8 @@ public class AdminService extends CompositeService implements
       throws IOException, YarnException {
     // Retrieve yarn-site.xml in order to refresh scheduling monitor properties.
     Configuration conf = getConfiguration(new Configuration(false),
-        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
     // The reason we call Configuration#size() is because when getConfiguration
     // been called, it invokes Configuration#addResouce, which invokes
     // Configuration#reloadConfiguration which triggers the reload process in a

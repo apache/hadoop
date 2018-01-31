@@ -270,7 +270,7 @@ public class ContainerLaunch implements Callable<Integer> {
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
             localResources, launchContext.getCommands(),
-            new Path(containerLogDirs.get(0)), user);
+            containerLogDir, user);
       }
       // /////////// End of writing out container-script
 

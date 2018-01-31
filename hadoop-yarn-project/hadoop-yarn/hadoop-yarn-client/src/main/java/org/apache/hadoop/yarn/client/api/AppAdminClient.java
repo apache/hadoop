@@ -39,6 +39,9 @@ public abstract class AppAdminClient extends CompositeService {
       ".application.admin.client.class.";
   public static final String DEFAULT_TYPE = "yarn-service";
   public static final String DEFAULT_CLASS_NAME = "org.apache.hadoop.yarn" +
+      ".service.client.ApiServiceClient";
+  public static final String UNIT_TEST_TYPE = "unit-test";
+  public static final String UNIT_TEST_CLASS_NAME = "org.apache.hadoop.yarn" +
       ".service.client.ServiceClient";
 
   @Private
@@ -63,6 +66,9 @@ public abstract class AppAdminClient extends CompositeService {
         conf.getPropsWithPrefix(YARN_APP_ADMIN_CLIENT_PREFIX);
     if (!clientClassMap.containsKey(DEFAULT_TYPE)) {
       clientClassMap.put(DEFAULT_TYPE, DEFAULT_CLASS_NAME);
+    }
+    if (!clientClassMap.containsKey(UNIT_TEST_TYPE)) {
+      clientClassMap.put(UNIT_TEST_TYPE, UNIT_TEST_CLASS_NAME);
     }
     if (!clientClassMap.containsKey(appType)) {
       throw new IllegalArgumentException("App admin client class name not " +
@@ -196,14 +202,18 @@ public abstract class AppAdminClient extends CompositeService {
    * faster since the dependencies do not have to be uploaded on each launch.
    * </p>
    *
+   * @param destinationFolder
+   *          an optional HDFS folder where dependency tarball will be uploaded
    * @return exit code
-   * @throws IOException IOException
-   * @throws YarnException exception in client or server
+   * @throws IOException
+   *           IOException
+   * @throws YarnException
+   *           exception in client or server
    */
   @Public
   @Unstable
-  public abstract int enableFastLaunch() throws IOException,
-      YarnException;
+  public abstract int enableFastLaunch(String destinationFolder)
+      throws IOException, YarnException;
 
   /**
    * <p>

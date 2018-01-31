@@ -30,6 +30,7 @@ export default Ember.Component.extend({
 
   clusterMetrics: undefined,
   modelArr: [],
+  containerIdArr: [],
   colors: d3.scale.category10().range(),
   _selected: undefined,
   gridColumns: [],
@@ -232,19 +233,21 @@ export default Ember.Component.extend({
     // init tooltip
     this.initTooltip();
     this.modelArr = [];
+    this.containerIdArr = [];
 
     // init model
     if (this.get("rmModel")) {
       this.get("rmModel").forEach(function(o) {
         if(!this.modelArr.contains(o)) {
           this.modelArr.push(o);
+          this.containerIdArr.push(o.id);
         }
       }.bind(this));
     }
 
     if (this.get("tsModel")) {
       this.get("tsModel").forEach(function(o) {
-        if(!this.modelArr.contains(o)) {
+        if(!this.containerIdArr.contains(o.id)) {
           this.modelArr.push(o);
         }
       }.bind(this));

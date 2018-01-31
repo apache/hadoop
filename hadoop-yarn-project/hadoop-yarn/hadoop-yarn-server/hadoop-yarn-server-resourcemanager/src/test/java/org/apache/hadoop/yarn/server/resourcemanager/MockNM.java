@@ -131,7 +131,7 @@ public class MockNM {
             container.getResource());
     List<Container> increasedConts = Collections.singletonList(container);
     nodeHeartbeat(Collections.singletonList(containerStatus), increasedConts,
-        true, ++responseId);
+        true, responseId);
   }
 
   public void addRegisteringCollector(ApplicationId appId,
@@ -190,12 +190,13 @@ public class MockNM {
         }
       }
     }
+    responseId = 0;
     return registrationResponse;
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
     return nodeHeartbeat(Collections.<ContainerStatus>emptyList(),
-        Collections.<Container>emptyList(), isHealthy, ++responseId);
+        Collections.<Container>emptyList(), isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
@@ -208,12 +209,12 @@ public class MockNM {
     containerStatusList.add(containerStatus);
     Log.getLog().info("ContainerStatus: " + containerStatus);
     return nodeHeartbeat(containerStatusList,
-        Collections.<Container>emptyList(), true, ++responseId);
+        Collections.<Container>emptyList(), true, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy) throws Exception {
-    return nodeHeartbeat(conts, isHealthy, ++responseId);
+    return nodeHeartbeat(conts, isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
@@ -229,7 +230,7 @@ public class MockNM {
   public NodeHeartbeatResponse nodeHeartbeat(
       List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
-        isHealthy, ++responseId);
+        isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
@@ -265,7 +266,8 @@ public class MockNM {
 
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
-    
+    responseId = heartbeatResponse.getResponseId();
+
     MasterKey masterKeyFromRM = heartbeatResponse.getContainerTokenMasterKey();
     if (masterKeyFromRM != null
         && masterKeyFromRM.getKeyId() != this.currentContainerTokenMasterKey
@@ -302,5 +304,9 @@ public class MockNM {
 
   public String getVersion() {
     return version;
+  }
+
+  public void setResponseId(int id) {
+    this.responseId = id;
   }
 }

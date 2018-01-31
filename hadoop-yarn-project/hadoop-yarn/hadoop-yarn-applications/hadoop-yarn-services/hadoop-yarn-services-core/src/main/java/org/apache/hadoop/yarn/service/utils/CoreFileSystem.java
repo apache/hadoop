@@ -295,6 +295,9 @@ public class CoreFileSystem {
    *          reasons including if file check throws IOException
    */
   public boolean isFile(Path path) {
+    if (path == null) {
+      return false;
+    }
     boolean isFile = false;
     try {
       FileStatus status = fileSystem.getFileStatus(path);
@@ -321,26 +324,18 @@ public class CoreFileSystem {
   }
 
   /**
-   * Get slider dependency parent dir in HDFS
+   * Get service dependency absolute filepath in HDFS used for application
+   * submission.
    * 
-   * @return the parent dir path of slider.tar.gz in HDFS
-   */
-  public Path getDependencyPath() {
-    String parentDir = YarnServiceConstants.DEPENDENCY_DIR;
-    return new Path(String.format(parentDir, VersionInfo.getVersion()));
-  }
-
-  /**
-   * Get slider.tar.gz absolute filepath in HDFS
-   * 
-   * @return the absolute path to slider.tar.gz in HDFS
+   * @return the absolute path to service dependency tarball in HDFS
    */
   public Path getDependencyTarGzip() {
-    Path dependencyLibAmPath = getDependencyPath();
-    Path dependencyLibTarGzip = new Path(
-        dependencyLibAmPath.toUri().toString(),
-        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
-            + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
+    Path dependencyLibTarGzip = null;
+    String configuredDependencyTarballPath = configuration
+        .get(YarnServiceConf.DEPENDENCY_TARBALL_PATH);
+    if (configuredDependencyTarballPath != null) {
+      dependencyLibTarGzip = new Path(configuredDependencyTarballPath);
+    }
     return dependencyLibTarGzip;
   }
 
@@ -467,8 +462,7 @@ public class CoreFileSystem {
     fileSystem.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
         "000");
     fileSystem.mkdirs(destPath.getParent(), fp);
-    log.info("Copying file {} to {}", localPath.toURI(),
-        fileSystem.getScheme() + ":/" + destPath.toUri());
+    log.info("Copying file {} to {}", localPath.toURI(), destPath);
     
     fileSystem.copyFromLocalFile(false, true, new Path(localPath.getPath()),
         destPath);

@@ -52,6 +52,20 @@ public interface MRJobConfig {
 
   public static final String TASK_CLEANUP_NEEDED = "mapreduce.job.committer.task.cleanup.needed";
 
+  public static final String JOB_SINGLE_DISK_LIMIT_BYTES =
+          "mapreduce.job.local-fs.single-disk-limit.bytes";
+  // negative values disable the limit
+  public static final long DEFAULT_JOB_SINGLE_DISK_LIMIT_BYTES = -1;
+
+  public static final String JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED =
+      "mapreduce.job.local-fs.single-disk-limit.check.kill-limit-exceed";
+  // setting to false only logs the kill
+  public static final boolean DEFAULT_JOB_SINGLE_DISK_LIMIT_KILL_LIMIT_EXCEED = true;
+
+  public static final String JOB_SINGLE_DISK_LIMIT_CHECK_INTERVAL_MS =
+      "mapreduce.job.local-fs.single-disk-limit.check.interval-ms";
+  public static final long DEFAULT_JOB_SINGLE_DISK_LIMIT_CHECK_INTERVAL_MS = 5000;
+
   public static final String TASK_LOCAL_WRITE_LIMIT_BYTES =
           "mapreduce.task.local-fs.write-limit.bytes";
   // negative values disable the limit

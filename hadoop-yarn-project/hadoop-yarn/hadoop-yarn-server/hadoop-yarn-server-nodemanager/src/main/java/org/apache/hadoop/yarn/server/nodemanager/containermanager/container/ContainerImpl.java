@@ -34,6 +34,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
@@ -834,7 +835,8 @@ public class ContainerImpl implements Container {
       ContainerStatus status = BuilderUtils.newContainerStatus(this.containerId,
           getCurrentState(), diagnostics.toString(), exitCode, getResource(),
           this.containerTokenIdentifier.getExecutionType());
-      status.setIPs(ips == null ? null : Arrays.asList(ips.split(",")));
+      status.setIPs(StringUtils.isEmpty(ips) ? null :
+          Arrays.asList(ips.split(",")));
       status.setHost(host);
       status.setContainerSubState(getContainerSubState());
       return status;

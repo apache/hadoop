@@ -36,6 +36,7 @@ function hadoop_usage
   hadoop_add_subcommand "sampler" client "sampler"
   hadoop_add_subcommand "frameworkuploader" admin "mapreduce framework upload"
   hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "minicluster" client "CLI MiniCluster"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -100,6 +101,11 @@ function mapredcmd_case
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    minicluster)
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/timelineservice"'/*'
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/test"'/*'
+      HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.MiniHadoopClusterManager
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

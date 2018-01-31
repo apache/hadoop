@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -111,6 +113,17 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     value as determined by the
  *     {@code yarn.nodemanager.runtime.linux.docker.allowed-container-networks}
  *     property.
+ *   </li>
+ *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE}
+ *     controls which PID namespace will be used by the Docker container. By
+ *     default, each Docker container has its own PID namespace. To share the
+ *     namespace of the host, the
+ *     {@code yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed}
+ *     property must be set to {@code true}. If the host PID namespace is
+ *     allowed and this environment variable is set to {@code host}, the
+ *     Docker container will share the host's PID namespace. No other value is
+ *     allowed.
  *   </li>
  *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME} sets the
@@ -192,6 +205,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_NETWORK =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK";
   @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_PID_NAMESPACE =
+      "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE";
+  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_HOSTNAME =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME";
   @InterfaceAudience.Private
@@ -216,7 +232,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
-  private String cgroupsRootDirectory;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
   private boolean enableUserReMapping;
@@ -276,7 +291,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.info("cGroupsHandler is null - cgroups not in use.");
     } else {
       this.cGroupsHandler = cGroupsHandler;
-      this.cgroupsRootDirectory = cGroupsHandler.getCGroupMountPath();
     }
   }
 
@@ -423,7 +437,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     DockerVolumeCommand dockerVolumeInspectCommand = new DockerVolumeCommand(
         DockerVolumeCommand.VOLUME_LS_SUB_COMMAND);
-    dockerVolumeInspectCommand.setFormat("{{.Name}},{{.Driver}}");
     String output = runDockerVolumeCommand(dockerVolumeInspectCommand,
         container);
 
@@ -436,13 +449,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     for (String line : output.split("\n")) {
       line = line.trim();
-      String[] arr = line.split(",");
-      String v = arr[0].trim();
-      String d = null;
-      if (arr.length > 1) {
-        d = arr[1].trim();
-      }
-      if (d != null && volumeName.equals(v) && driverName.equals(d)) {
+      if (line.contains(volumeName) && line.contains(driverName)) {
         // Good we found it.
         LOG.info(
             "Docker volume-name=" + volumeName + " driver-name=" + driverName
@@ -478,6 +485,47 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         + "' specified. Allowed networks: are " + allowedNetworks
         .toString();
     throw new ContainerExecutionException(msg);
+  }
+
+  /**
+   * Return whether the YARN container is allowed to run using the host's PID
+   * namespace for the Docker container. For this to be allowed, the submitting
+   * user must request the feature and the feature must be enabled on the
+   * cluster.
+   *
+   * @param container the target YARN container
+   * @return whether host pid namespace is requested and allowed
+   * @throws ContainerExecutionException if host pid namespace is requested
+   * but is not allowed
+   */
+  private boolean allowHostPidNamespace(Container container)
+      throws ContainerExecutionException {
+    Map<String, String> environment = container.getLaunchContext()
+        .getEnvironment();
+    String pidNamespace = environment.get(ENV_DOCKER_CONTAINER_PID_NAMESPACE);
+
+    if (pidNamespace == null) {
+      return false;
+    }
+
+    if (!pidNamespace.equalsIgnoreCase("host")) {
+      LOG.warn("NOT requesting PID namespace. Value of " +
+          ENV_DOCKER_CONTAINER_PID_NAMESPACE + "is invalid: " + pidNamespace);
+      return false;
+    }
+
+    boolean hostPidNamespaceEnabled = conf.getBoolean(
+        YarnConfiguration.NM_DOCKER_ALLOW_HOST_PID_NAMESPACE,
+        YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE);
+
+    if (!hostPidNamespaceEnabled) {
+      String message = "Host pid namespace being requested but this is not "
+          + "enabled on this cluster";
+      LOG.warn(message);
+      throw new ContainerExecutionException(message);
+    }
+
+    return true;
   }
 
   public static void validateHostname(String hostname) throws
@@ -741,11 +789,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     setHostname(runCommand, containerIdStr, hostname);
     runCommand.setCapabilities(capabilities);
 
-    if(cgroupsRootDirectory != null) {
-      runCommand.addReadOnlyMountLocation(cgroupsRootDirectory,
-          cgroupsRootDirectory, false);
-    }
-
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
     allDirs.addAll(filecacheDirs);
     allDirs.add(containerWorkDir.toString());
@@ -796,6 +839,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           runCommand.addReadWriteMountLocation(src, dst);
         }
       }
+    }
+
+    if (allowHostPidNamespace(container)) {
+      runCommand.setPidNamespace("host");
     }
 
     if (allowPrivilegedContainerExecution(container)) {
@@ -961,6 +1008,32 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
       String ips = output.substring(0, index).trim();
       String host = output.substring(index+1).trim();
+      if (ips.equals("")) {
+        String network;
+        try {
+          network = container.getLaunchContext().getEnvironment()
+              .get("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK");
+          if (network == null || network.isEmpty()) {
+            network = defaultNetwork;
+          }
+        } catch (NullPointerException e) {
+          network = defaultNetwork;
+        }
+        boolean useHostNetwork = network.equalsIgnoreCase("host");
+        if (useHostNetwork) {
+          // Report back node manager IP in the event where docker
+          // inspect reports no IP address.  This is for bridging a gap for
+          // docker environment to run with host network.
+          InetAddress address;
+          try {
+            address = InetAddress.getLocalHost();
+            ips = address.getHostAddress();
+          } catch (UnknownHostException e) {
+            LOG.error("Can not determine IP for container:"
+                + containerId);
+          }
+        }
+      }
       String[] ipAndHost = new String[2];
       ipAndHost[0] = ips;
       ipAndHost[1] = host;

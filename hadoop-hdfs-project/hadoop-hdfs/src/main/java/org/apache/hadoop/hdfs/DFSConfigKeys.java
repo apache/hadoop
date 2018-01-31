@@ -1222,6 +1222,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_ROUTER_MONITOR_LOCAL_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.localnamenode.enable";
   public static final boolean DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT = true;
+  public static final String DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "heartbeat-state.interval";
+  public static final long DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
 
   // HDFS Router NN client
   public static final String DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE =
@@ -1282,6 +1286,23 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
+      FEDERATION_STORE_PREFIX + "router.expiration";
+  public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
+      TimeUnit.MINUTES.toMillis(5);
+
+  // HDFS Router safe mode
+  public static final String DFS_ROUTER_SAFEMODE_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "safemode.enable";
+  public static final boolean DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_SAFEMODE_EXTENSION =
+      FEDERATION_ROUTER_PREFIX + "safemode.extension";
+  public static final long DFS_ROUTER_SAFEMODE_EXTENSION_DEFAULT =
+      TimeUnit.SECONDS.toMillis(30);
+  public static final String DFS_ROUTER_SAFEMODE_EXPIRATION =
+      FEDERATION_ROUTER_PREFIX + "safemode.expiration";
+  public static final long DFS_ROUTER_SAFEMODE_EXPIRATION_DEFAULT =
+      3 * DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT;
 
   // HDFS Router-based federation mount table entries
   /** Maximum number of cache entries to have. */

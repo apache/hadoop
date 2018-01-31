@@ -2604,6 +2604,17 @@
 </property>
 
 <property>
+  <name>dfs.domain.socket.disable.interval.seconds</name>
+  <value>600</value>
+  <description>
+    The interval that a DataNode is disabled for future Short-Circuit Reads,
+    after an error happens during a Short-Circuit Read. Setting this to 0 will
+    not disable Short-Circuit Reads at all after errors happen. Negative values
+    are invalid.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.shortcircuit.skip.checksum</name>
   <value>false</value>
   <description>
@@ -5080,9 +5091,12 @@
 
   <property>
     <name>dfs.federation.router.cache.ttl</name>
-    <value>60000</value>
+    <value>1m</value>
     <description>
-      How often to refresh the State Store caches in milliseconds.
+      How often to refresh the State Store caches in milliseconds. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
     </description>
   </property>
 
@@ -5107,6 +5121,55 @@
     <value>5000</value>
     <description>
       How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat-state.interval</name>
+    <value>5s</value>
+    <description>
+      How often the Router should heartbeat its state into the State Store in
+      milliseconds. This setting supports multiple time unit suffixes as
+      described in dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration</name>
+    <value>5m</value>
+    <description>
+      Expiration time in milliseconds for a router state record. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.enable</name>
+    <value>true</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.extension</name>
+    <value>30s</value>
+    <description>
+      Time after startup that the Router is in safe mode. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.expiration</name>
+    <value>3m</value>
+    <description>
+      Time without being able to reach the State Store to enter safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
     </description>
   </property>
 

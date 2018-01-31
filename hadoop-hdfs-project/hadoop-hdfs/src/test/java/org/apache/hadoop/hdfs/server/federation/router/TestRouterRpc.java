@@ -82,6 +82,7 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -89,6 +90,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 
 /**
@@ -501,9 +503,37 @@ public class TestRouterRpc {
 
   @Test
   public void testProxyGetStats() throws Exception {
+    // Some of the statistics are out of sync because of the mini cluster
+    Supplier<Boolean> check = new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          long[] combinedData = routerProtocol.getStats();
+          long[] individualData = getAggregateStats();
+          int len = Math.min(combinedData.length, individualData.length);
+          for (int i = 0; i < len; i++) {
+            if (combinedData[i] != individualData[i]) {
+              LOG.error("Stats for {} don't match: {} != {}",
+                  i, combinedData[i], individualData[i]);
+              return false;
+            }
+          }
+          return true;
+        } catch (Exception e) {
+          LOG.error("Cannot get stats: {}", e.getMessage());
+          return false;
+        }
+      }
+    };
+    GenericTestUtils.waitFor(check, 500, 5 * 1000);
+  }
 
-    long[] combinedData = routerProtocol.getStats();
-
+  /**
+   * Get the sum of each subcluster statistics.
+   * @return Aggregated statistics.
+   * @throws Exception If it cannot get the stats from the Router or Namenode.
+   */
+  private long[] getAggregateStats() throws Exception {
     long[] individualData = new long[10];
     for (String nameservice : cluster.getNameservices()) {
       NamenodeContext n = cluster.getNamenode(nameservice, null);
@@ -513,18 +543,8 @@ public class TestRouterRpc {
       for (int i = 0; i < data.length; i++) {
         individualData[i] += data[i];
       }
-      assertEquals(data.length, combinedData.length);
     }
-
-    for (int i = 0; i < combinedData.length && i < individualData.length; i++) {
-      if (i == ClientProtocol.GET_STATS_REMAINING_IDX) {
-        // Skip available storage as this fluctuates in mini cluster
-        continue;
-      }
-      assertEquals("Stats for " + i + " don't match: " +
-          combinedData[i] + "!=" + individualData[i],
-          combinedData[i], individualData[i]);
-    }
+    return individualData;
   }
 
   @Test

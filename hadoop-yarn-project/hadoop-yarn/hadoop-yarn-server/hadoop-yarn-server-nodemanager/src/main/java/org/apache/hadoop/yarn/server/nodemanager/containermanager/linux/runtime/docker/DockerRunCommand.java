@@ -56,6 +56,11 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand setPidNamespace(String type) {
+    super.addCommandArguments("pid", type);
+    return this;
+  }
+
   public DockerRunCommand addMountLocation(String sourcePath, String
       destinationPath, boolean createSource) {
     boolean sourceExists = new File(sourcePath).exists();

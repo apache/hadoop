@@ -1357,22 +1357,20 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MEMORY_RESOURCE_PREFIX = NM_PREFIX
       + "resource.memory.";
 
-  @Private
   public static final String NM_MEMORY_RESOURCE_ENABLED =
       NM_MEMORY_RESOURCE_PREFIX + "enabled";
-  @Private
   public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENABLED = false;
 
-  @Private
+  public static final String NM_MEMORY_RESOURCE_ENFORCED =
+      NM_MEMORY_RESOURCE_PREFIX + "enforced";
+  public static final boolean DEFAULT_NM_MEMORY_RESOURCE_ENFORCED = true;
+
   public static final String NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS =
       NM_MEMORY_RESOURCE_PREFIX + "cgroups.swappiness";
-  @Private
   public static final int DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS = 0;
 
-  @Private
   public static final String NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
       NM_MEMORY_RESOURCE_PREFIX + "cgroups.soft-limit-percentage";
-  @Private
   public static final float
       DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE =
       90.0f;
@@ -1830,6 +1828,14 @@ public class YarnConfiguration extends Configuration {
    * . */
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
+
+  /** Allow host pid namespace for containers. Use with care. */
+  public static final String NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
+
+  /** Host pid namespace for containers is disabled by default. */
+  public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
+      false;
 
   /**
    * Whether or not users are allowed to request that Docker containers honor

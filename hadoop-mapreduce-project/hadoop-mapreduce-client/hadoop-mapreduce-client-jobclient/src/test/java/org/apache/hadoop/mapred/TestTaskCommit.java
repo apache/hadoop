@@ -124,7 +124,7 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public void fatalError(TaskAttemptID taskId, String message)
+    public void fatalError(TaskAttemptID taskId, String message, boolean fastFail)
         throws IOException { }
 
     @Override

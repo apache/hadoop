@@ -232,9 +232,10 @@ public class ApplicationCLI extends YarnCLI {
           "the number of components/containers running for an application / " +
           "long-running service. Supports absolute or relative changes, such " +
           "as +1, 2, or -3.");
-      opts.addOption(ENABLE_FAST_LAUNCH, false, "Uploads AM dependencies " +
-          "to HDFS to make future launches faster.  Supports -appTypes option" +
-          " to specify which client implementation to use.");
+      opts.addOption(ENABLE_FAST_LAUNCH, true, "Uploads AM dependencies " +
+          "to HDFS to make future launches faster. Supports -appTypes option " +
+          "to specify which client implementation to use. Optionally a " +
+          "destination folder for the tarball can be specified.");
       opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
       opts.getOption(LAUNCH_CMD).setArgs(2);
       opts.getOption(START_CMD).setArgName("Application Name");
@@ -245,6 +246,8 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(FLEX_CMD).setArgName("Application Name or ID");
       opts.getOption(COMPONENT).setArgName("Component Name> <Count");
       opts.getOption(COMPONENT).setArgs(2);
+      opts.getOption(ENABLE_FAST_LAUNCH).setOptionalArg(true);
+      opts.getOption(ENABLE_FAST_LAUNCH).setArgName("Destination Folder");
     } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
@@ -318,6 +321,9 @@ public class ApplicationCLI extends YarnCLI {
           } catch (ApplicationNotFoundException exception) {
             System.err.println("Application with name '" + appIdOrName
                 + "' doesn't exist in RM or Timeline Server.");
+            return -1;
+          } catch (Exception ie) {
+            System.err.println(ie.getMessage());
             return -1;
           }
         }
@@ -513,13 +519,15 @@ public class ApplicationCLI extends YarnCLI {
           .actionFlex(appNameAndType[0], counts);
     } else if (cliParser.hasOption(ENABLE_FAST_LAUNCH)) {
       String appType = getSingleAppTypeFromCLI(cliParser);
+      String uploadDestinationFolder = cliParser
+          .getOptionValue(ENABLE_FAST_LAUNCH);
       if (hasAnyOtherCLIOptions(cliParser, opts, ENABLE_FAST_LAUNCH,
           APP_TYPE_CMD)) {
         printUsage(title, opts);
         return exitCode;
       }
       return AppAdminClient.createAppAdminClient(appType, getConf())
-          .enableFastLaunch();
+          .enableFastLaunch(uploadDestinationFolder);
     } else if (cliParser.hasOption(UPDATE_LIFETIME)) {
       if (!cliParser.hasOption(APP_ID)) {
         printUsage(title, opts);

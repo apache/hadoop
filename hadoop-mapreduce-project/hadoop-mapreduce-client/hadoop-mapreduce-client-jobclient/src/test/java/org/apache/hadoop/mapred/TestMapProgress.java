@@ -91,8 +91,8 @@ public class TestMapProgress {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
-    public void fatalError(TaskAttemptID taskId, String msg) throws IOException {
-      LOG.info("Task " + taskId + " reporting fatal error: " + msg);
+    public void fatalError(TaskAttemptID taskId, String msg, boolean fastFail) throws IOException {
+      LOG.info("Task " + taskId + " reporting fatal error: " + msg + " fast fail: " + fastFail);
     }
 
     public JvmTask getTask(JvmContext context) throws IOException {

@@ -224,6 +224,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   SECURITY_NAMENODE_PROTOCOL_ACL = "security.namenode.protocol.acl";
   public static final String SECURITY_QJOURNAL_SERVICE_PROTOCOL_ACL =
       "security.qjournal.service.protocol.acl";
+  public static final String SECURITY_INTERQJOURNAL_SERVICE_PROTOCOL_ACL =
+      "security.interqjournal.service.protocol.acl";
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =

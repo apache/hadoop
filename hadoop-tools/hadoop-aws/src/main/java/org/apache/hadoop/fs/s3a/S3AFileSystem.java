@@ -3166,8 +3166,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return Iterator over multipart uploads.
    * @throws IOException on failure
    */
-  @InterfaceAudience.Private
-  @Retries.RetryTranslated
   public MultipartUtils.UploadIterator listUploads(@Nullable String prefix)
       throws IOException {
     return MultipartUtils.listMultipartUploads(s3, invoker, bucket, maxKeys,

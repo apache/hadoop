@@ -37,7 +37,7 @@ public class DockerProviderService extends AbstractProviderService
     launcher.setYarnDockerMode(true);
     launcher.setDockerImage(compInstance.getCompSpec().getArtifact().getId());
     launcher.setDockerNetwork(compInstance.getCompSpec().getConfiguration()
-        .getProperty(DOCKER_NETWORK, DEFAULT_DOCKER_NETWORK));
+        .getProperty(DOCKER_NETWORK));
     String domain = compInstance.getComponent().getScheduler().getConfig()
         .get(RegistryConstants.KEY_DNS_DOMAIN);
     String hostname;

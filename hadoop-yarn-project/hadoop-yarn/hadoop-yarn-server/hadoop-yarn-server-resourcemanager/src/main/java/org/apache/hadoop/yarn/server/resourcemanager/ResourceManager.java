@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -945,11 +947,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     public void handle(RMAppAttemptEvent event) {
-      ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      ApplicationId appAttemptId = appAttemptID.getApplicationId();
-      RMApp rmApp = this.rmContext.getRMApps().get(appAttemptId);
+      ApplicationAttemptId appAttemptId = event.getApplicationAttemptId();
+      ApplicationId appId = appAttemptId.getApplicationId();
+      RMApp rmApp = this.rmContext.getRMApps().get(appId);
       if (rmApp != null) {
-        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptID);
+        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
         if (rmAppAttempt != null) {
           try {
             rmAppAttempt.handle(event);
@@ -1049,11 +1051,23 @@ public class ResourceManager extends CompositeService implements Recoverable {
     RMWebAppUtil.setupSecurityAndFilters(conf,
         getClientRMService().rmDTSecretManager);
 
+    Map<String, String> params = new HashMap<String, String>();
+    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+        false)) {
+      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
+          "org.apache.hadoop.yarn.webapp";
+      params.put("com.sun.jersey.config.property.resourceConfigClass",
+          "com.sun.jersey.api.core.PackagesResourceConfig");
+      params.put("com.sun.jersey.config.property.packages", apiPackages);
+    }
+
     Builder<ApplicationMasterService> builder = 
         WebApps
             .$for("cluster", ApplicationMasterService.class, masterService,
                 "ws")
             .with(conf)
+            .withServlet("API-Service", "/app/*",
+                ServletContainer.class, params)
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
@@ -1109,15 +1123,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
 
-    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
-        false)) {
-      serviceConfig = new HashMap<String, String>();
-      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
-          "org.apache.hadoop.yarn.webapp";
-      serviceConfig.put("PackageName", apiPackages);
-      serviceConfig.put("PathSpec", "/app/*");
-    }
-    webApp = builder.start(new RMWebApp(this), uiWebAppContext, serviceConfig);
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 
   private String getWebAppsPath(String appName) {

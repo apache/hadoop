@@ -51,4 +51,7 @@ public class EncryptionFaultInjector {
 
   @VisibleForTesting
   public void reencryptUpdaterProcessCheckpoint() throws IOException {}
+
+  @VisibleForTesting
+  public void ensureKeyIsInitialized() throws IOException {}
 }
