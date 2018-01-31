@@ -1534,9 +1534,9 @@ em-helpers@^0.8.0:
   optionalDependencies:
     phantomjs-prebuilt "2.1.13"
 
-em-table@0.11.3:
-  version "0.11.3"
-  resolved "https://registry.yarnpkg.com/em-table/-/em-table-0.11.3.tgz#20e605cc3814214e644199399a2383cee8d23eeb"
+em-table@0.12.0:
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/em-table/-/em-table-0.12.0.tgz#a47c63ab2a4a02a0d4a728ec3857bfa870fff08c"
   dependencies:
     ember-cli-htmlbars "^1.0.1"
     ember-cli-less "^1.4.0"

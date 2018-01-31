@@ -22,6 +22,7 @@ import AppTableController from '../app-table-columns';
 
 export default AppTableController.extend({
   tableDefinition: TableDefinition.create({
+    searchType: 'manual',
     enableFaceting: true,
     rowCount: 25
   }),
