@@ -113,6 +113,8 @@ public class Router extends CompositeService {
   private RouterStore routerStateManager;
   /** Heartbeat our run status to the router state manager. */
   private RouterHeartbeatService routerHeartbeatService;
+  /** Enter/exit safemode. */
+  private RouterSafemodeService safemodeService;
 
   /** The start time of the namesystem. */
   private final long startTime = Time.now();
@@ -219,13 +221,25 @@ public class Router extends CompositeService {
       this.pauseMonitor.init(conf);
     }
 
+    // Safemode service to refuse RPC calls when the router is out of sync
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT)) {
+      // Create safemode monitoring service
+      this.safemodeService = new RouterSafemodeService(this);
+      addService(this.safemodeService);
+    }
+
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
 
-    updateRouterState(RouterServiceState.RUNNING);
+    if (this.safemodeService == null) {
+      // Router is running now
+      updateRouterState(RouterServiceState.RUNNING);
+    }
 
     if (this.pauseMonitor != null) {
       this.pauseMonitor.start();

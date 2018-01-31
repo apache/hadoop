@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.store;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.PeriodicService;
@@ -52,9 +54,10 @@ public class StateStoreCacheUpdateService extends PeriodicService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
 
-    this.setIntervalMs(conf.getLong(
+    this.setIntervalMs(conf.getTimeDuration(
         DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS,
-        DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT));
+        DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT,
+        TimeUnit.MILLISECONDS));
 
     super.serviceInit(conf);
   }
