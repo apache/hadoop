@@ -337,7 +337,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
     // Available in env and in whitelist
     Assert.assertTrue(shellContent.contains(
-        "export HADOOP_YARN_HOME=\"nodemanager_yarn_home\""));
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+      ));
     fos.flush();
     fos.close();
   }
@@ -382,9 +383,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // Whitelisted variable overridden by container
     Assert.assertTrue(shellContent.contains(
         "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
-    // Verify no whitelisted variables inherited from NM env
+    // Available in env but not in whitelist
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
-    Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
+    // Available in env and in whitelist
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+    ));
     fos.flush();
     fos.close();
   }
