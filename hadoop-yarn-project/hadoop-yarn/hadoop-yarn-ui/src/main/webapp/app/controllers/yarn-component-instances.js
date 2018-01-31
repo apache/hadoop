@@ -42,7 +42,7 @@ export default Ember.Controller.extend({
     if (appId && serviceName && componentName) {
       crumbs.push({
         text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}/info?service=${serviceName}`
+        href: `#/yarn-app/${appId}/components?service=${serviceName}`
       }, {
         text: 'Components',
         href: `#/yarn-app/${appId}/components?service=${serviceName}`
