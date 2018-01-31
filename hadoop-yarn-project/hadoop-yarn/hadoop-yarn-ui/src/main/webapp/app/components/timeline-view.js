@@ -19,8 +19,13 @@
 import Ember from 'ember';
 import Converter from 'yarn-ui/utils/converter';
 import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Component.extend({
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
+
   canvas: {
     svg: undefined,
     h: 0,
