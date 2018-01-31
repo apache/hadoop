@@ -232,7 +232,7 @@ For example, a cluster with 4 namespaces **ns0, ns1, ns2, ns3**, can add a new o
     <value>ns0,ns1,ns2,ns3,ns-fed</value>
   </property>
   <property>
-    <name>dfs.namenodes.ns-fed</name>
+    <name>dfs.ha.namenodes.ns-fed</name>
     <value>r1,r2</value>
   </property>
   <property>
