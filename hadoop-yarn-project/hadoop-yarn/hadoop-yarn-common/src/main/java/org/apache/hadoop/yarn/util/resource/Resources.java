@@ -228,7 +228,7 @@ public class Resources {
   }  
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts(), res.getPortsCount());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -246,7 +246,7 @@ public class Resources {
     } else {
       lhs.setPorts(rhs.getPorts());
     }
-
+    lhs.setPortsCount(lhs.getPortsCount() + rhs.getPortsCount());
     return lhs;
   }
 
