@@ -122,7 +122,7 @@ export default Ember.Controller.extend({
       getCellContent: function(row) {
         return {
           displayText: row.get('appName'),
-          href: `#/yarn-app/${row.id}/attempts?service=${row.get('appName')}`
+          href: `#/yarn-app/${row.id}/components?service=${row.get('appName')}`
         };
       }
     }, {
