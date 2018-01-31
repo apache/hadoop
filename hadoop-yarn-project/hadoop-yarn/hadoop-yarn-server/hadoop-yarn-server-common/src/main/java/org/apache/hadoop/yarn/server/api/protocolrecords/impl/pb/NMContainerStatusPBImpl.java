@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerSta
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class NMContainerStatusPBImpl extends NMContainerStatus {
 
   NMContainerStatusProto proto = NMContainerStatusProto
@@ -47,6 +50,7 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
   private ContainerId containerId = null;
   private Resource resource = null;
   private Priority priority = null;
+  private Set<String> allocationTags = null;
 
   public NMContainerStatusPBImpl() {
     builder = NMContainerStatusProto.newBuilder();
@@ -91,8 +95,11 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
         .append("Diagnostics: ").append(getDiagnostics()).append(", ")
         .append("ExitStatus: ").append(getContainerExitStatus()).append(", ")
         .append("NodeLabelExpression: ").append(getNodeLabelExpression())
+        .append(", ")
         .append("Priority: ").append(getPriority()).append(", ")
         .append("AllocationRequestId: ").append(getAllocationRequestId())
+        .append(", ")
+        .append("AllocationTags: ").append(getAllocationTags()).append(", ")
         .append("]");
     return sb.toString();
   }
@@ -283,6 +290,28 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
     builder.setAllocationRequestId(allocationRequestId);
   }
 
+  private void initAllocationTags() {
+    if (this.allocationTags != null) {
+      return;
+    }
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    this.allocationTags = new HashSet<>();
+    this.allocationTags.addAll(p.getAllocationTagsList());
+  }
+
+  @Override
+  public Set<String> getAllocationTags() {
+    initAllocationTags();
+    return this.allocationTags;
+  }
+
+  @Override
+  public void setAllocationTags(Set<String> allocationTags) {
+    maybeInitBuilder();
+    builder.clearAllocationTags();
+    this.allocationTags = allocationTags;
+  }
+
   private void mergeLocalToBuilder() {
     if (this.containerId != null
         && !((ContainerIdPBImpl) containerId).getProto().equals(
@@ -296,6 +325,10 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
 
     if (this.priority != null) {
       builder.setPriority(convertToProtoFormat(this.priority));
+    }
+    if (this.allocationTags != null) {
+      builder.clearAllocationTags();
+      builder.addAllAllocationTags(this.allocationTags);
     }
   }
 

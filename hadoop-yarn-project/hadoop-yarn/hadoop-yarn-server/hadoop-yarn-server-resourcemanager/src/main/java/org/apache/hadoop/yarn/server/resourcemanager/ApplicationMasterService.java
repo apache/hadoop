@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.PlacementProcessor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
@@ -114,11 +115,25 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+    initializeProcessingChain(conf);
+  }
+
+  private void initializeProcessingChain(Configuration conf) {
     amsProcessingChain.init(rmContext, null);
+    boolean enablePlacementConstraints = conf.getBoolean(
+        YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ENABLED,
+        YarnConfiguration.DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED);
+    if (enablePlacementConstraints) {
+      amsProcessingChain.addProcessor(new PlacementProcessor());
+    }
     List<ApplicationMasterServiceProcessor> processors = getProcessorList(conf);
     if (processors != null) {
       Collections.reverse(processors);
       for (ApplicationMasterServiceProcessor p : processors) {
+        // Ensure only single instance of PlacementProcessor is included
+        if (enablePlacementConstraints && p instanceof PlacementProcessor) {
+          continue;
+        }
         this.amsProcessingChain.addProcessor(p);
       }
     }

@@ -170,7 +170,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           1 * GB, 1, true, priority, recordFactory);
 
       cs.allocate(appAttemptId, Collections.<ResourceRequest>singletonList(r1),
-          Collections.<ContainerId>emptyList(), Collections.singletonList(host),
+          null, Collections.<ContainerId>emptyList(), Collections.singletonList(host),
           null, NULL_UPDATE_REQUESTS);
 
       //And this will result in container assignment for app1
