@@ -36,6 +36,7 @@ export default AbstractRoute.extend(AppAttemptMixin, {
 
   activate() {
     const controller = this.controllerFor("yarn-app.logs");
+    controller.resetAfterRefresh();
     controller.initializeSelect();
   },
 
