@@ -346,7 +346,6 @@ public abstract class ContainerExecutor implements Configurable {
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
       Map<Path, List<String>> resources, List<String> command, Path logDir,
       String user, String outFilename) throws IOException {
-    updateEnvForWhitelistVars(environment);
 
     ContainerLaunch.ShellScriptBuilder sb =
         ContainerLaunch.ShellScriptBuilder.create();
@@ -363,6 +362,19 @@ public abstract class ContainerExecutor implements Configurable {
       sb.echo("Setting up env variables");
       for (Map.Entry<String, String> env : environment.entrySet()) {
         sb.env(env.getKey(), env.getValue());
+      }
+      // Whitelist environment variables are treated specially.
+      // Only add them if they are not already defined in the environment.
+      // Add them using special syntax to prevent them from eclipsing
+      // variables that may be set explicitly in the container image (e.g,
+      // in a docker image)
+      for(String var : whitelistVars) {
+        if (!environment.containsKey(var)) {
+          String val = getNMEnvVar(var);
+          if (val != null) {
+            sb.whitelistedEnv(var, val);
+          }
+        }
       }
     }
 
@@ -660,23 +672,6 @@ public abstract class ContainerExecutor implements Configurable {
       return (this.pidFiles.containsKey(containerId));
     } finally {
       readLock.unlock();
-    }
-  }
-
-  /**
-   * Propagate variables from the nodemanager's environment into the
-   * container's environment if unspecified by the container.
-   * @param env the environment to update
-   * @see org.apache.hadoop.yarn.conf.YarnConfiguration#NM_ENV_WHITELIST
-   */
-  protected void updateEnvForWhitelistVars(Map<String, String> env) {
-    for(String var : whitelistVars) {
-      if (!env.containsKey(var)) {
-        String val = getNMEnvVar(var);
-        if (val != null) {
-          env.put(var, val);
-        }
-      }
     }
   }
 
