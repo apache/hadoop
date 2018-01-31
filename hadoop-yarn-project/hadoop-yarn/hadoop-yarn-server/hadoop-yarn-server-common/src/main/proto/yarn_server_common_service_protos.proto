@@ -58,6 +58,10 @@ message NodeLabelsProto {
   repeated NodeLabelProto nodeLabels = 1;
 }
 
+message NodeAttributesProto {
+  repeated NodeAttributeProto nodeAttributes = 1;
+}
+
 message RegisterNodeManagerRequestProto {
   optional NodeIdProto node_id = 1;
   optional int32 http_port = 3;
@@ -95,6 +99,7 @@ message NodeHeartbeatRequestProto {
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
   repeated AppCollectorDataProto registering_collectors = 6;
+  optional NodeAttributesProto nodeAttributes = 7;
 }
 
 message LogAggregationReportProto {
