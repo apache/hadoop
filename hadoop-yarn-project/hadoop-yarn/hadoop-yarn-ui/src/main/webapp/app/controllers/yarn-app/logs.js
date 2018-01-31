@@ -47,10 +47,14 @@ export default Ember.Controller.extend({
         this.fetchContainersForAttemptId(attemptId)
           .then(hash => {
             let containers = null;
+            let containerIdArr = [];
             if (
               hash.rmContainers.get("length") > 0 &&
               hash.rmContainers.get("content")
             ) {
+              hash.rmContainers.get("content").forEach(function(o) {
+                containerIdArr.push(o.id);
+              }.bind(this));
               containers = (containers || []).concat(
                 hash.rmContainers.get("content")
               );
@@ -59,9 +63,14 @@ export default Ember.Controller.extend({
               hash.tsContainers.get("length") > 0 &&
               hash.tsContainers.get("content")
             ) {
+              let tscontainer = [];
+              hash.tsContainers.get("content").forEach(function(o) {
+                if(!containerIdArr.contains(o.id)) {
+                  tscontainer.push(o);
+                }
+              }.bind(this));
               containers = (containers || []).concat(
-                hash.tsContainers.get("content")
-              );
+                tscontainer);
             }
             this.set("attemptContainerList", containers);
             this.initializeSelect(".js-fetch-logs-containers");
