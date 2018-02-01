@@ -249,7 +249,8 @@ public abstract class Resource implements Comparable<Resource> {
     Resource other = (Resource) obj;
     if (getMemory() != other.getMemory() ||
         getVirtualCores() != other.getVirtualCores() ||
-        getGPUs() != other.getGPUs()) {
+        getGPUs() != other.getGPUs() ||
+        getPortsCount() != other.getPortsCount()) {
       return false;
     }
     return true;

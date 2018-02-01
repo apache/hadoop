@@ -1449,12 +1449,12 @@ public class LeafQueue extends AbstractCSQueue {
     //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
     //container.setGPULocation(allocated);
     if(capability.getGPUs() > 0) {
-      LOG.info("GPU/Ports allocation request: " + capability.toString() + " from availability: " + available.toString());
+      LOG.info("GPU/Ports allocation request: " + capability + " from availability: " + available);
       long allocated = Resources.allocateGPUs(capability, available);
       capability.setGPUAttribute(allocated);
     }
 
-    if(capability.getPortsCount() > 0) {
+    if(capability.getPortsCount() > 0 && (capability.getPorts() == null || capability.getPorts().getRangesCount() <= 0)) {
       ValueRanges allocatedPorts = Resources.allocatePorts(capability, available);
       capability.setPorts(allocatedPorts);
     }
