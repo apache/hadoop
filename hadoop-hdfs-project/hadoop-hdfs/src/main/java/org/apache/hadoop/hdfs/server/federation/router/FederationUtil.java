@@ -107,12 +107,12 @@ public final class FederationUtil {
   }
 
   /**
-   * Fetch the compile timestamp for this jar.
+   * Fetch the Hadoop version string for this jar.
    *
-   * @return Date compiled.
+   * @return Hadoop version string, e.g., 3.0.1.
    */
-  public static String getBuildVersion() {
-    return VersionInfo.getBuildVersion();
+  public static String getVersion() {
+    return VersionInfo.getVersion();
   }
 
   /**

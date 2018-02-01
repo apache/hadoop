@@ -133,10 +133,36 @@
         }
       }
 
+      function augment_routers(nodes) {
+        for (var i = 0, e = nodes.length; i < e; ++i) {
+          var n = nodes[i];
+          n.title = "Unavailable"
+          n.iconState = "down";
+          if (n.status === "INITIALIZING") {
+            n.title = capitalise(n.status);
+            n.iconState = "alive";
+          } else if (n.status === "RUNNING") {
+            n.title = capitalise(n.status);
+            n.iconState = "alive";
+          } else if (n.status === "SAFEMODE") {
+            n.title = capitalise(n.status);
+            n.iconState = "down-decommisioned";
+          } else if (n.status === "STOPPING") {
+            n.title = capitalise(n.status);
+            n.iconState = "decommisioned";
+          } else if (n.status === "SHUTDOWN") {
+            n.title = capitalise(n.status);
+            n.iconState = "down";
+          }
+        }
+      }
+
       r.Nameservices = node_map_to_array(JSON.parse(r.Nameservices));
       augment_namenodes(r.Nameservices);
       r.Namenodes = node_map_to_array(JSON.parse(r.Namenodes));
       augment_namenodes(r.Namenodes);
+      r.Routers = node_map_to_array(JSON.parse(r.Routers));
+      augment_routers(r.Routers);
       return r;
     }
 
