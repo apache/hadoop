@@ -93,6 +93,17 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     }
   }
 
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    try {
+      LinuxContainerRuntime runtime = pickContainerRuntime(env);
+      return runtime.useWhitelistEnv(env);
+    } catch (ContainerExecutionException e) {
+      LOG.debug("Unable to determine runtime");
+      return false;
+    }
+  }
+
   @VisibleForTesting
   LinuxContainerRuntime pickContainerRuntime(
       Map<String, String> environment) throws ContainerExecutionException {

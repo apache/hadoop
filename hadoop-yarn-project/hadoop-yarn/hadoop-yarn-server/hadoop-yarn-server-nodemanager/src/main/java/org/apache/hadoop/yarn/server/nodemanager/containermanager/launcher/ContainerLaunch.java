@@ -1077,9 +1077,6 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void env(String key, String value) throws IOException;
 
-    public abstract void whitelistedEnv(String key, String value)
-        throws IOException;
-
     public abstract void echo(String echoStr) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
@@ -1200,11 +1197,6 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
-    }
-
-    @Override
     public void echo(final String echoStr) throws IOException {
       line("echo \"" + echoStr + "\"");
     }
@@ -1292,11 +1284,6 @@ public class ContainerLaunch implements Callable<Integer> {
     public void env(String key, String value) throws IOException {
       lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
-    }
-
-    @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      env(key, value);
     }
 
     @Override
@@ -1398,6 +1385,8 @@ public class ContainerLaunch implements Callable<Integer> {
     
     environment.put(Environment.PWD.name(), pwd.toString());
     
+    putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
+
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
     }
