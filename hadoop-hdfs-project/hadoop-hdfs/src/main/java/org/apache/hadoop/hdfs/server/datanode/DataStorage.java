@@ -147,8 +147,8 @@ public class DataStorage extends Storage {
     final String oldStorageID = sd.getStorageUuid();
     if (oldStorageID == null || regenerateStorageIds) {
       sd.setStorageUuid(DatanodeStorage.generateUuid());
-      LOG.info("Generated new storageID " + sd.getStorageUuid() +
-          " for directory " + sd.getRoot() +
+      LOG.info("Generated new storageID {} for directory {} {}", sd
+              .getStorageUuid(), sd.getRoot(),
           (oldStorageID == null ? "" : (" to replace " + oldStorageID)));
       return true;
     }
@@ -163,7 +163,7 @@ public class DataStorage extends Storage {
   public void enableTrash(String bpid) {
     if (trashEnabledBpids.add(bpid)) {
       getBPStorage(bpid).stopTrashCleaner();
-      LOG.info("Enabled trash for bpid " + bpid);
+      LOG.info("Enabled trash for bpid {}",  bpid);
     }
   }
 
@@ -171,7 +171,7 @@ public class DataStorage extends Storage {
     if (trashEnabledBpids.contains(bpid)) {
       getBPStorage(bpid).clearTrash();
       trashEnabledBpids.remove(bpid);
-      LOG.info("Cleared trash for bpid " + bpid);
+      LOG.info("Cleared trash for bpid {}", bpid);
     }
   }
 
@@ -265,14 +265,12 @@ public class DataStorage extends Storage {
       case NORMAL:
         break;
       case NON_EXISTENT:
-        LOG.info("Storage directory with location " + location
-            + " does not exist");
+        LOG.info("Storage directory with location {} does not exist", location);
         throw new IOException("Storage directory with location " + location
             + " does not exist");
       case NOT_FORMATTED: // format
-        LOG.info("Storage directory with location " + location
-            + " is not formatted for namespace " + nsInfo.getNamespaceID()
-            + ". Formatting...");
+        LOG.info("Storage directory with location {} is not formatted for "
+            + "namespace {}. Formatting...", location, nsInfo.getNamespaceID());
         format(sd, nsInfo, datanode.getDatanodeUuid());
         break;
       default:  // recovery part is common
@@ -315,8 +313,8 @@ public class DataStorage extends Storage {
       StorageLocation location, List<NamespaceInfo> nsInfos)
           throws IOException {
     if (containsStorageDir(location)) {
-      final String errorMessage = "Storage directory is in use";
-      LOG.warn(errorMessage + ".");
+      final String errorMessage = "Storage directory is in use.";
+      LOG.warn(errorMessage);
       throw new IOException(errorMessage);
     }
 
@@ -343,8 +341,8 @@ public class DataStorage extends Storage {
       throw new HadoopIllegalArgumentException(key + " = " + n + " < 1");
     }
     final int min = Math.min(n, dataDirs);
-    LOG.info("Using " + min + " threads to upgrade data directories ("
-        + key + "=" + n + ", dataDirs=" + dataDirs + ")");
+    LOG.info("Using {} threads to upgrade data directories ({}={}, "
+        + "dataDirs={})", min, key, n, dataDirs);
     return min;
   }
 
@@ -407,22 +405,22 @@ public class DataStorage extends Storage {
             }
           }
         } catch (IOException e) {
-          LOG.warn("Failed to add storage directory " + dataDir, e);
+          LOG.warn("Failed to add storage directory {}", dataDir, e);
         }
       } else {
-        LOG.info("Storage directory " + dataDir + " has already been used.");
+        LOG.info("Storage directory {} has already been used.", dataDir);
         success.add(dataDir);
       }
     }
 
     if (!tasks.isEmpty()) {
-      LOG.info("loadDataStorage: " + tasks.size() + " upgrade tasks");
+      LOG.info("loadDataStorage: {} upgrade tasks", tasks.size());
       for(UpgradeTask t : tasks) {
         try {
           addStorageDir(t.future.get());
           success.add(t.dataDir);
         } catch (ExecutionException e) {
-          LOG.warn("Failed to upgrade storage directory " + t.dataDir, e);
+          LOG.warn("Failed to upgrade storage directory {}", t.dataDir, e);
         } catch (InterruptedException e) {
           throw DFSUtilClient.toInterruptedIOException("Task interrupted", e);
         }
@@ -455,19 +453,19 @@ public class DataStorage extends Storage {
           }
         }
       } catch (IOException e) {
-        LOG.warn("Failed to add storage directory " + dataDir
-            + " for block pool " + bpid, e);
+        LOG.warn("Failed to add storage directory {} for block pool {}",
+            dataDir, bpid, e);
       }
     }
 
     if (!tasks.isEmpty()) {
-      LOG.info("loadBlockPoolSliceStorage: " + tasks.size() + " upgrade tasks");
+      LOG.info("loadBlockPoolSliceStorage: {} upgrade tasks", tasks.size());
       for(UpgradeTask t : tasks) {
         try {
           success.add(t.future.get());
         } catch (ExecutionException e) {
-          LOG.warn("Failed to upgrade storage directory " + t.dataDir
-              + " for block pool " + bpid, e);
+          LOG.warn("Failed to upgrade storage directory {} for block pool {}",
+              t.dataDir, bpid, e);
         } catch (InterruptedException e) {
           throw DFSUtilClient.toInterruptedIOException("Task interrupted", e);
         }
@@ -481,7 +479,7 @@ public class DataStorage extends Storage {
    * Remove storage dirs from DataStorage. All storage dirs are removed even when the
    * IOException is thrown.
    *
-   * @param dirsToRemove a set of storage directories to be removed.
+   * @param storageLocations a set of storage directories to be removed.
    * @throws IOException if I/O error when unlocking storage directory.
    */
   synchronized void removeVolumes(
@@ -511,9 +509,8 @@ public class DataStorage extends Storage {
         try {
           sd.unlock();
         } catch (IOException e) {
-          LOG.warn(String.format(
-            "I/O error attempting to unlock storage directory %s.",
-            sd.getRoot()), e);
+          LOG.warn("I/O error attempting to unlock storage directory {}.",
+              sd.getRoot(), e);
           errorMsgBuilder.append(String.format("Failed to remove %s: %s%n",
               sd.getRoot(), e.getMessage()));
         }
@@ -659,7 +656,7 @@ public class DataStorage extends Storage {
     try (RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
       FileLock oldLock = oldFile.getChannel().tryLock()) {
       if (null == oldLock) {
-        LOG.error("Unable to acquire file lock on path " + oldF.toString());
+        LOG.error("Unable to acquire file lock on path {}", oldF);
         throw new OverlappingFileLockException();
       }
       oldFile.seek(0);
@@ -776,11 +773,10 @@ public class DataStorage extends Storage {
       final List<Callable<StorageDirectory>> callables,
       final Configuration conf) throws IOException {
     final int oldLV = getLayoutVersion();
-    LOG.info("Upgrading storage directory " + sd.getRoot()
-             + ".\n   old LV = " + oldLV
-             + "; old CTime = " + this.getCTime()
-             + ".\n   new LV = " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
-             + "; new CTime = " + nsInfo.getCTime());
+    LOG.info("Upgrading storage directory {}.\n old LV = {}; old CTime = {}"
+            + ".\n new LV = {}; new CTime = {}", sd.getRoot(), oldLV,
+        this.getCTime(), HdfsServerConstants.DATANODE_LAYOUT_VERSION,
+        nsInfo.getCTime());
     
     final File curDir = sd.getCurrentDir();
     final File prevDir = sd.getPreviousDir();
@@ -833,14 +829,15 @@ public class DataStorage extends Storage {
     
     // 5. Rename <SD>/previous.tmp to <SD>/previous
     rename(tmpDir, prevDir);
-    LOG.info("Upgrade of " + sd.getRoot()+ " is complete");
+    LOG.info("Upgrade of {} is complete", sd.getRoot());
   }
 
-  void upgradeProperties(StorageDirectory sd) throws IOException {
+  void upgradeProperties(StorageDirectory sd)
+      throws IOException {
     createStorageID(sd, layoutVersion);
-    LOG.info("Updating layout version from " + layoutVersion
-        + " to " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
-        + " for storage " + sd.getRoot());
+    LOG.info("Updating layout version from {} to {} for storage {}",
+        layoutVersion, HdfsServerConstants.DATANODE_LAYOUT_VERSION,
+        sd.getRoot());
     layoutVersion = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
     writeProperties(sd);
   }
@@ -896,9 +893,8 @@ public class DataStorage extends Storage {
           HdfsServerConstants.DATANODE_LAYOUT_VERSION)) {
         readProperties(sd, HdfsServerConstants.DATANODE_LAYOUT_VERSION);
         writeProperties(sd);
-        LOG.info("Layout version rolled back to "
-            + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " for storage "
-            + sd.getRoot());
+        LOG.info("Layout version rolled back to {} for storage {}",
+            HdfsServerConstants.DATANODE_LAYOUT_VERSION, sd.getRoot());
       }
       return;
     }
@@ -915,9 +911,9 @@ public class DataStorage extends Storage {
               + " is newer than the namespace state: LV = "
               + HdfsServerConstants.DATANODE_LAYOUT_VERSION + " CTime = "
               + nsInfo.getCTime());
-    LOG.info("Rolling back storage directory " + sd.getRoot()
-        + ".\n   target LV = " + HdfsServerConstants.DATANODE_LAYOUT_VERSION
-        + "; target CTime = " + nsInfo.getCTime());
+    LOG.info("Rolling back storage directory {}.\n   target LV = {}; target "
+            + "CTime = {}", sd.getRoot(),
+        HdfsServerConstants.DATANODE_LAYOUT_VERSION, nsInfo.getCTime());
     File tmpDir = sd.getRemovedTmp();
     assert !tmpDir.exists() : "removed.tmp directory must not exist.";
     // rename current to tmp
@@ -928,7 +924,7 @@ public class DataStorage extends Storage {
     rename(prevDir, curDir);
     // delete tmp dir
     deleteDir(tmpDir);
-    LOG.info("Rollback of " + sd.getRoot() + " is complete");
+    LOG.info("Rollback of {} is complete", sd.getRoot());
   }
   
   /**
@@ -946,10 +942,9 @@ public class DataStorage extends Storage {
       return; // already discarded
     
     final String dataDirPath = sd.getRoot().getCanonicalPath();
-    LOG.info("Finalizing upgrade for storage directory " 
-             + dataDirPath 
-             + ".\n   cur LV = " + this.getLayoutVersion()
-             + "; cur CTime = " + this.getCTime());
+    LOG.info("Finalizing upgrade for storage directory {}.\n   cur LV = {}; "
+        + "cur CTime = {}", dataDirPath, this.getLayoutVersion(), this
+        .getCTime());
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();//finalized.tmp directory
     final File bbwDir = new File(sd.getRoot(), Storage.STORAGE_1_BBW);
@@ -1037,8 +1032,8 @@ public class DataStorage extends Storage {
             diskLayoutVersion, hardLink, conf);
       }
     }
-    LOG.info("Linked blocks from " + fromDir + " to " + toDir + ". "
-        + hardLink.linkStats.report());
+    LOG.info("Linked blocks from {} to {}. {}", fromDir, toDir, hardLink
+        .linkStats.report());
   }
 
   private static class LinkArgs {
@@ -1059,7 +1054,7 @@ public class DataStorage extends Storage {
 
   private static void linkBlocks(File from, File to, int oldLV,
       HardLink hl, Configuration conf) throws IOException {
-    LOG.info("Start linking block files from " + from + " to " + to);
+    LOG.info("Start linking block files from {} to {}", from, to);
     boolean upgradeToIdBasedLayout = false;
     // If we are upgrading from a version older than the one where we introduced
     // block ID-based layout (32x32) AND we're working with the finalized
@@ -1080,8 +1075,8 @@ public class DataStorage extends Storage {
     final ArrayList<LinkArgs> duplicates =
         findDuplicateEntries(idBasedLayoutSingleLinks);
     if (!duplicates.isEmpty()) {
-      LOG.error("There are " + duplicates.size() + " duplicate block " +
-          "entries within the same volume.");
+      LOG.error("There are {} duplicate block " +
+          "entries within the same volume.", duplicates.size());
       removeDuplicateEntries(idBasedLayoutSingleLinks, duplicates);
     }
 
@@ -1223,8 +1218,8 @@ public class DataStorage extends Storage {
           }
         }
         if (!found) {
-          LOG.warn("Unexpectedly low genstamp on " +
-                   duplicate.src.getAbsolutePath() + ".");
+          LOG.warn("Unexpectedly low genstamp on {}.",
+              duplicate.src.getAbsolutePath());
           iter.remove();
         }
       }
@@ -1247,13 +1242,13 @@ public class DataStorage extends Storage {
       long blockLength = duplicate.src.length();
       long prevBlockLength = prevLongest.src.length();
       if (blockLength < prevBlockLength) {
-        LOG.warn("Unexpectedly short length on " +
-            duplicate.src.getAbsolutePath() + ".");
+        LOG.warn("Unexpectedly short length on {}.",
+            duplicate.src.getAbsolutePath());
         continue;
       }
       if (blockLength > prevBlockLength) {
-        LOG.warn("Unexpectedly short length on " +
-            prevLongest.src.getAbsolutePath() + ".");
+        LOG.warn("Unexpectedly short length on {}.",
+            prevLongest.src.getAbsolutePath());
       }
       longestBlockFiles.put(blockId, duplicate);
     }
@@ -1268,7 +1263,7 @@ public class DataStorage extends Storage {
         continue; // file has no duplicates
       }
       if (!bestDuplicate.src.getParent().equals(args.src.getParent())) {
-        LOG.warn("Discarding " + args.src.getAbsolutePath() + ".");
+        LOG.warn("Discarding {}.", args.src.getAbsolutePath());
         iter.remove();
       }
     }
