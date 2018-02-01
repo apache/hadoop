@@ -387,6 +387,11 @@
     <Method name="initAndStartNodeManager" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator" />
+    <Medhod name="startGPG" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
  
   <!-- Ignore heartbeat exception when killing localizer -->
   <Match>

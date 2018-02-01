@@ -62,9 +62,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolic
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,6 +223,22 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * Deregister a <em>subcluster</em> identified by {@code SubClusterId} to
+   * change state in federation. This can be done to mark the sub cluster lost,
+   * deregistered, or decommissioned.
+   *
+   * @param subClusterId the target subclusterId
+   * @param subClusterState the state to update it to
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void deregisterSubCluster(SubClusterId subClusterId,
+      SubClusterState subClusterState) throws YarnException {
+    stateStore.deregisterSubCluster(
+        SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState));
+    return;
+  }
+
+  /**
    * Returns the {@link SubClusterInfo} for the specified {@link SubClusterId}.
    *
    * @param subClusterId the identifier of the sub-cluster
@@ -255,8 +273,7 @@ public final class FederationStateStoreFacade {
   public SubClusterInfo getSubCluster(final SubClusterId subClusterId,
       final boolean flushCache) throws YarnException {
     if (flushCache && isCachingEnabled()) {
-      LOG.info("Flushing subClusters from cache and rehydrating from store,"
-          + " most likely on account of RM failover.");
+      LOG.info("Flushing subClusters from cache and rehydrating from store.");
       cache.remove(buildGetSubClustersCacheRequest(false));
     }
     return getSubCluster(subClusterId);
@@ -284,6 +301,26 @@ public final class FederationStateStoreFacade {
     } catch (Throwable ex) {
       throw new YarnException(ex);
     }
+  }
+
+  /**
+   * Updates the cache with the central {@link FederationStateStore} and returns
+   * the {@link SubClusterInfo} of all active sub cluster(s).
+   *
+   * @param filterInactiveSubClusters whether to filter out inactive
+   *          sub-clusters
+   * @param flushCache flag to indicate if the cache should be flushed or not
+   * @return the sub cluster information
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public Map<SubClusterId, SubClusterInfo> getSubClusters(
+      final boolean filterInactiveSubClusters, final boolean flushCache)
+      throws YarnException {
+    if (flushCache && isCachingEnabled()) {
+      LOG.info("Flushing subClusters from cache and rehydrating from store.");
+      cache.remove(buildGetSubClustersCacheRequest(filterInactiveSubClusters));
+    }
+    return getSubClusters(filterInactiveSubClusters);
   }
 
   /**

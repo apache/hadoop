@@ -68,6 +68,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * In-memory implementation of {@link FederationStateStore}.
  */
@@ -156,6 +158,17 @@ public class MemoryFederationStateStore implements FederationStateStore {
     subClusterInfo.setCapability(request.getCapability());
 
     return SubClusterHeartbeatResponse.newInstance();
+  }
+
+  @VisibleForTesting
+  public void setSubClusterLastHeartbeat(SubClusterId subClusterId,
+      long lastHeartbeat) throws YarnException {
+    SubClusterInfo subClusterInfo = membership.get(subClusterId);
+    if (subClusterInfo == null) {
+      throw new YarnException(
+          "Subcluster " + subClusterId.toString() + " does not exist");
+    }
+    subClusterInfo.setLastHeartBeat(lastHeartbeat);
   }
 
   @Override

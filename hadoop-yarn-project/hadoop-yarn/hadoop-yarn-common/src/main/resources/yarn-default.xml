@@ -3647,6 +3647,30 @@
 
   <property>
     <description>
+      The number of threads to use for the GPG scheduled executor service.
+    </description>
+    <name>yarn.federation.gpg.scheduled.executor.threads</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the subcluster cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.subcluster.cleaner.interval-ms</name>
+    <value>-1</value>
+  </property>
+
+  <property>
+    <description>
+      The expiration time for a subcluster heartbeat, default is 30 minutes.
+    </description>
+    <name>yarn.federation.gpg.subcluster.heartbeat.expiration-ms</name>
+    <value>1800000</value>
+  </property>
+
+  <property>
+    <description>
        It is TimelineClient 1.5 configuration whether to store active
        application’s timeline data with in user directory i.e
        ${yarn.timeline-service.entity-group-fs-store.active-dir}/${user.name}
