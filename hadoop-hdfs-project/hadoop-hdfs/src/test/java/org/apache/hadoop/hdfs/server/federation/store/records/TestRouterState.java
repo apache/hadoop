@@ -31,7 +31,7 @@ import org.junit.Test;
 public class TestRouterState {
 
   private static final String ADDRESS = "address";
-  private static final String BUILD_VERSION = "buildVersion";
+  private static final String VERSION = "version";
   private static final String COMPILE_INFO = "compileInfo";
   private static final long START_TIME = 100;
   private static final long DATE_MODIFIED = 200;
@@ -42,7 +42,7 @@ public class TestRouterState {
 
   private RouterState generateRecord() throws IOException {
     RouterState record = RouterState.newInstance(ADDRESS, START_TIME, STATE);
-    record.setBuildVersion(BUILD_VERSION);
+    record.setVersion(VERSION);
     record.setCompileInfo(COMPILE_INFO);
     record.setDateCreated(DATE_CREATED);
     record.setDateModified(DATE_MODIFIED);
@@ -58,7 +58,7 @@ public class TestRouterState {
     assertEquals(START_TIME, record.getDateStarted());
     assertEquals(STATE, record.getStatus());
     assertEquals(COMPILE_INFO, record.getCompileInfo());
-    assertEquals(BUILD_VERSION, record.getBuildVersion());
+    assertEquals(VERSION, record.getVersion());
 
     StateStoreVersion version = record.getStateStoreVersion();
     assertEquals(FILE_RESOLVER_VERSION, version.getMountTableVersion());

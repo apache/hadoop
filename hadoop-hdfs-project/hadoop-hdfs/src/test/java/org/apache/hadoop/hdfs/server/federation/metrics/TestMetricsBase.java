@@ -34,11 +34,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
+import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RouterHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 
@@ -49,12 +57,14 @@ public class TestMetricsBase {
 
   private StateStoreService stateStore;
   private MembershipStore membershipStore;
+  private RouterStore routerStore;
   private Router router;
   private Configuration routerConfig;
 
   private List<MembershipState> activeMemberships;
   private List<MembershipState> standbyMemberships;
   private List<MountTable> mockMountTable;
+  private List<RouterState> mockRouters;
   private List<String> nameservices;
 
   @Before
@@ -74,6 +84,7 @@ public class TestMetricsBase {
 
       membershipStore =
           stateStore.getRegisteredRecordStore(MembershipStore.class);
+      routerStore = stateStore.getRegisteredRecordStore(RouterStore.class);
 
       // Read all data and load all caches
       waitStateStore(stateStore, 10000);
@@ -123,6 +134,36 @@ public class TestMetricsBase {
     // Add 2 mount table memberships
     mockMountTable = createMockMountTable(nameservices);
     synchronizeRecords(stateStore, mockMountTable, MountTable.class);
+
+    // Add 2 router memberships in addition to the running router.
+    long t1 = Time.now();
+    mockRouters = new ArrayList<>();
+    RouterState router1 = RouterState.newInstance(
+        "router1", t1, RouterServiceState.RUNNING);
+    router1.setStateStoreVersion(StateStoreVersion.newInstance(
+        t1 - 1000, t1 - 2000));
+    RouterHeartbeatRequest heartbeatRequest =
+        RouterHeartbeatRequest.newInstance(router1);
+    assertTrue(routerStore.routerHeartbeat(heartbeatRequest).getStatus());
+
+    GetRouterRegistrationRequest getRequest =
+        GetRouterRegistrationRequest.newInstance("router1");
+    GetRouterRegistrationResponse getResponse =
+        routerStore.getRouterRegistration(getRequest);
+    RouterState routerState1 = getResponse.getRouter();
+    mockRouters.add(routerState1);
+
+    long t2 = Time.now();
+    RouterState router2 = RouterState.newInstance(
+        "router2", t2, RouterServiceState.RUNNING);
+    router2.setStateStoreVersion(StateStoreVersion.newInstance(
+        t2 - 6000, t2 - 7000));
+    heartbeatRequest.setRouter(router2);
+    assertTrue(routerStore.routerHeartbeat(heartbeatRequest).getStatus());
+    getRequest.setRouterId("router2");
+    getResponse = routerStore.getRouterRegistration(getRequest);
+    RouterState routerState2 = getResponse.getRouter();
+    mockRouters.add(routerState2);
   }
 
   protected Router getRouter() {
@@ -143,6 +184,10 @@ public class TestMetricsBase {
 
   protected List<String> getNameservices() {
     return nameservices;
+  }
+
+  protected List<RouterState> getMockRouters() {
+    return mockRouters;
   }
 
   protected StateStoreService getStateStore() {

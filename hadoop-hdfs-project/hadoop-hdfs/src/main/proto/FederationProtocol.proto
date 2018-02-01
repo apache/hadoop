@@ -184,7 +184,7 @@ message RouterRecordProto {
   optional string address = 3;
   optional string status = 4;
   optional StateStoreVersionRecordProto stateStoreVersion = 5;
-  optional string buildVersion = 6;
+  optional string version = 6;
   optional string compileInfo = 7;
   optional uint64 dateStarted = 8;
 }

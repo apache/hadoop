@@ -245,6 +245,47 @@
 </small>
 </script>
 
+<div class="page-header"><h1>Routers Information</h1></div>
+<div>
+  <ul class="dfshealth-node-legend">
+    <li class="dfshealth-node-icon dfshealth-node-alive">Active</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommisioned">Safe mode</li>
+    <li class="dfshealth-node-icon dfshealth-node-down">Unavailable</li>
+  </ul>
+</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th colspan="4"></th>
+      <th colspan="2">Last update</th>
+      <th></th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>Address</th>
+      <th>Status</th>
+      <th>Heartbeat</th>
+      <th>Membership</th>
+      <th>Mount table</th>
+      <th>Version</th>
+    </tr>
+  </thead>
+  <tbody>
+    {#Routers}
+    <tr>
+      <td class="dfshealth-node-icon dfshealth-node-{iconState}" title="{title}"></td>
+      <td>{address}</td>
+      <td>{status}</td>
+      <td>{lastHeartbeat} sec ago</td>
+      <td>{lastMembershipUpdate}</td>
+      <td>{lastMountTableUpdate}</td>
+      <td>{version}</td>
+    </tr>
+    {/Routers}
+  </tbody>
+</table>
+</script>
+
 <!-- Datanodes -->
 <script type="text/x-dust-template" id="tmpl-datanode">
 <div class="page-header"><h1>Datanode Information</h1></div>
