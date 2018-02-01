@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.store;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyException;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -125,7 +126,7 @@ public class TestStateStoreRouterState extends TestStateStoreBase {
     assertEquals(address, record.getAddress());
     assertEquals(FederationUtil.getCompileInfo(), record.getCompileInfo());
     // Build version may vary a bit
-    assertTrue(record.getBuildVersion().length() > 0);
+    assertFalse(record.getVersion().isEmpty());
   }
 
   @Test

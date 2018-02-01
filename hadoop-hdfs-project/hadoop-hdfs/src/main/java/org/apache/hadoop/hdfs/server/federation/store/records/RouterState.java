@@ -60,7 +60,7 @@ public abstract class RouterState extends BaseRecord {
     record.setAddress(addr);
     record.setStatus(status);
     record.setCompileInfo(FederationUtil.getCompileInfo());
-    record.setBuildVersion(FederationUtil.getBuildVersion());
+    record.setVersion(FederationUtil.getVersion());
     return record;
   }
 
@@ -78,9 +78,9 @@ public abstract class RouterState extends BaseRecord {
 
   public abstract void setStatus(RouterServiceState newStatus);
 
-  public abstract String getBuildVersion();
+  public abstract String getVersion();
 
-  public abstract void setBuildVersion(String version);
+  public abstract void setVersion(String version);
 
   public abstract String getCompileInfo();
 
@@ -116,7 +116,7 @@ public abstract class RouterState extends BaseRecord {
 
   @Override
   public String toString() {
-    return getAddress() + " -> " + getStatus() + "," + getBuildVersion();
+    return getAddress() + " -> " + getStatus() + "," + getVersion();
   }
 
   @Override
