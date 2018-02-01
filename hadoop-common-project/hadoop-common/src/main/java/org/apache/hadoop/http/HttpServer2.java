@@ -136,7 +136,7 @@ public final class HttpServer2 implements FilterContainer {
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
-  static final String FILTER_INITIALIZER_PROPERTY
+  public static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
   // The ServletContext attribute where the daemon Configuration
