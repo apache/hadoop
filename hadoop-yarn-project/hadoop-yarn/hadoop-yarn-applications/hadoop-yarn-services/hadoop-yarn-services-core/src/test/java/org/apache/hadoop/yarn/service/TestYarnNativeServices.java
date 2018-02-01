@@ -22,6 +22,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +51,7 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
@@ -156,6 +159,109 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     client.actionStop(exampleApp.getName(), true);
     client.actionDestroy(exampleApp.getName());
+  }
+
+  @Test(timeout = 200000)
+  public void testCreateServiceSameNameDifferentUser() throws Exception {
+    String sameAppName = "same-name";
+    String userA = "usera";
+    String userB = "userb";
+
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient();
+    String origBasePath = getConf().get(YARN_SERVICE_BASE_PATH);
+
+    Service userAApp = new Service();
+    userAApp.setName(sameAppName);
+    userAApp.addComponent(createComponent("comp", 1, "sleep 1000"));
+    Service userBApp = new Service();
+    userBApp.setName(sameAppName);
+    userBApp.addComponent(createComponent("comp", 1, "sleep 1000"));
+
+    File userABasePath = null, userBBasePath = null;
+    try {
+      userABasePath = new File(origBasePath, userA);
+      userABasePath.mkdirs();
+      getConf().set(YARN_SERVICE_BASE_PATH, userABasePath.getAbsolutePath());
+      client.actionCreate(userAApp);
+      waitForServiceToBeStarted(client, userAApp);
+
+      userBBasePath = new File(origBasePath, userB);
+      userBBasePath.mkdirs();
+      getConf().set(YARN_SERVICE_BASE_PATH, userBBasePath.getAbsolutePath());
+      client.actionBuild(userBApp);
+    } catch (Exception e) {
+      Assert
+          .fail("Exception should not be thrown - " + e.getLocalizedMessage());
+    } finally {
+      if (userABasePath != null) {
+        getConf().set(YARN_SERVICE_BASE_PATH, userABasePath.getAbsolutePath());
+        client.actionStop(sameAppName, true);
+        client.actionDestroy(sameAppName);
+      }
+      if (userBBasePath != null) {
+        getConf().set(YARN_SERVICE_BASE_PATH, userBBasePath.getAbsolutePath());
+        client.actionDestroy(sameAppName);
+      }
+    }
+
+    // Need to extend this test to validate that different users can create
+    // apps of exact same name. So far only create followed by build is tested.
+    // Need to test create followed by create.
+  }
+
+  @Test(timeout = 200000)
+  public void testCreateServiceSameNameSameUser() throws Exception {
+    String sameAppName = "same-name";
+    String user = UserGroupInformation.getCurrentUser().getUserName();
+    System.setProperty("user.name", user);
+
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient();
+
+    Service appA = new Service();
+    appA.setName(sameAppName);
+    appA.addComponent(createComponent("comp", 1, "sleep 1000"));
+    Service appB = new Service();
+    appB.setName(sameAppName);
+    appB.addComponent(createComponent("comp", 1, "sleep 1000"));
+
+    try {
+      client.actionBuild(appA);
+      client.actionBuild(appB);
+    } catch (Exception e) {
+      String expectedMsg = "Service Instance dir already exists:";
+      if (e.getLocalizedMessage() != null) {
+        Assert.assertThat(e.getLocalizedMessage(),
+            CoreMatchers.containsString(expectedMsg));
+      } else {
+        Assert.fail("Message cannot be null. It has to say - " + expectedMsg);
+      }
+    } finally {
+      // cleanup
+      client.actionDestroy(sameAppName);
+    }
+
+    try {
+      client.actionCreate(appA);
+      waitForServiceToBeStarted(client, appA);
+
+      client.actionCreate(appB);
+      waitForServiceToBeStarted(client, appB);
+    } catch (Exception e) {
+      String expectedMsg = "Failed to create service " + sameAppName
+          + ", because it already exists.";
+      if (e.getLocalizedMessage() != null) {
+        Assert.assertThat(e.getLocalizedMessage(),
+            CoreMatchers.containsString(expectedMsg));
+      } else {
+        Assert.fail("Message cannot be null. It has to say - " + expectedMsg);
+      }
+    } finally {
+      // cleanup
+      client.actionStop(sameAppName, true);
+      client.actionDestroy(sameAppName);
+    }
   }
 
   // Test to verify recovery of SeviceMaster after RM is restarted.
@@ -362,6 +468,28 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         Service retrievedApp = client.getStatus(exampleApp.getName());
         System.out.println(retrievedApp);
         return retrievedApp.getState() == ServiceState.STABLE;
+      } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+      }
+    }, 2000, 200000);
+  }
+
+  /**
+   * Wait until service is started. It does not have to reach a stable state.
+   *
+   * @param client
+   * @param exampleApp
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  private void waitForServiceToBeStarted(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        Service retrievedApp = client.getStatus(exampleApp.getName());
+        System.out.println(retrievedApp);
+        return retrievedApp.getState() == ServiceState.STARTED;
       } catch (Exception e) {
         e.printStackTrace();
         return false;

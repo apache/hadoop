@@ -540,6 +540,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     request.setApplicationTypes(types);
     request.setApplicationTags(tags);
     request.setApplicationStates(liveStates);
+    String user = UserGroupInformation.getCurrentUser().getUserName();
+    if (user != null) {
+      request.setUsers(Collections.singleton(user));
+    }
     List<ApplicationReport> reports = yarnClient.getApplications(request);
     if (!reports.isEmpty()) {
       String message = "";
