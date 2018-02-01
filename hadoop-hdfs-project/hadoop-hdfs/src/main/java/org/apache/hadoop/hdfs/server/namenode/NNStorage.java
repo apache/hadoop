@@ -202,7 +202,7 @@ public class NNStorage extends Storage implements Closeable,
         return false;
       }
     } finally {
-      IOUtils.cleanup(LOG, oldFile);
+      IOUtils.cleanupWithLogger(LOG, oldFile);
     }
     return true;
   }
@@ -220,7 +220,7 @@ public class NNStorage extends Storage implements Closeable,
    * @param val Whether restoration attempt should be made.
    */
   void setRestoreFailedStorage(boolean val) {
-    LOG.warn("set restore failed storage to " + val);
+    LOG.warn("set restore failed storage to {}", val);
     restoreFailedStorage=val;
   }
 
@@ -243,14 +243,14 @@ public class NNStorage extends Storage implements Closeable,
     /* We don't want more than one thread trying to restore at a time */
     synchronized (this.restorationLock) {
       LOG.info("NNStorage.attemptRestoreRemovedStorage: check removed(failed) "+
-               "storage. removedStorages size = " + removedStorageDirs.size());
+               "storage. removedStorages size = {}", removedStorageDirs.size());
       for (StorageDirectory sd : this.removedStorageDirs) {
         File root = sd.getRoot();
-        LOG.info("currently disabled dir " + root.getAbsolutePath() +
-            "; type=" + sd.getStorageDirType()
-            + ";canwrite=" + FileUtil.canWrite(root));
+        LOG.info("currently disabled dir {}; type={} ;canwrite={}", root
+                .getAbsolutePath(), sd.getStorageDirType(),
+            FileUtil.canWrite(root));
         if (root.exists() && FileUtil.canWrite(root)) {
-          LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
+          LOG.info("restoring dir {}", sd.getRoot().getAbsolutePath());
           this.addStorageDir(sd); // restore
           this.removedStorageDirs.remove(sd);
         }
@@ -510,7 +510,7 @@ public class NNStorage extends Storage implements Closeable,
         writeTransactionIdFile(sd, txid);
       } catch(IOException e) {
         // Close any edits stream associated with this dir and remove directory
-        LOG.warn("writeTransactionIdToStorage failed on " + sd,
+        LOG.warn("writeTransactionIdToStorage failed on {}", sd,
             e);
         reportErrorsOnDirectory(sd);
       }
@@ -580,8 +580,8 @@ public class NNStorage extends Storage implements Closeable,
     writeProperties(sd);
     writeTransactionIdFile(sd, 0);
 
-    LOG.info("Storage directory " + sd.getRoot()
-             + " has been successfully formatted.");
+    LOG.info("Storage directory {} has been successfully formatted.",
+        sd.getRoot());
   }
 
   /**
@@ -861,26 +861,30 @@ public class NNStorage extends Storage implements Closeable,
    * @param sd A storage directory to mark as errored.
    */
   private void reportErrorsOnDirectory(StorageDirectory sd) {
-    LOG.error("Error reported on storage directory " + sd);
+    LOG.error("Error reported on storage directory {}", sd);
 
-    String lsd = listStorageDirectories();
-    LOG.debug("current list of storage dirs:" + lsd);
+    if(LOG.isDebugEnabled()){
+      String lsd = listStorageDirectories();
+      LOG.debug("current list of storage dirs:{}", lsd);
+    }
 
-    LOG.warn("About to remove corresponding storage: "
-             + sd.getRoot().getAbsolutePath());
+    LOG.warn("About to remove corresponding storage: {}", sd.getRoot()
+        .getAbsolutePath());
     try {
       sd.unlock();
     } catch (Exception e) {
-      LOG.warn("Unable to unlock bad storage directory: "
-               +  sd.getRoot().getPath(), e);
+      LOG.warn("Unable to unlock bad storage directory: {}", sd.getRoot()
+          .getPath(), e);
     }
 
     if (getStorageDirs().remove(sd)) {
       this.removedStorageDirs.add(sd);
     }
-    
-    lsd = listStorageDirectories();
-    LOG.debug("at the end current list of storage dirs:" + lsd);
+
+    if(LOG.isDebugEnabled()){
+      String lsd = listStorageDirectories();
+      LOG.debug("at the end current list of storage dirs:{}", lsd);
+    }
   }
   
   /** 
@@ -911,11 +915,12 @@ public class NNStorage extends Storage implements Closeable,
         // clusterid.
         if (startOpt.getClusterId() != null
             && !startOpt.getClusterId().equals(getClusterID())) {
-          LOG.warn("Clusterid mismatch - current clusterid: " + getClusterID()
-              + ", Ignoring given clusterid: " + startOpt.getClusterId());
+          LOG.warn("Clusterid mismatch - current clusterid: {}, Ignoring "
+              + "given clusterid: {}", getClusterID(),
+              startOpt.getClusterId());
         }
       }
-      LOG.info("Using clusterid: " + getClusterID());
+      LOG.info("Using clusterid: {}", getClusterID());
     }
   }
   
@@ -984,14 +989,14 @@ public class NNStorage extends Storage implements Closeable,
         } else {
           cid = props.getProperty("clusterID");
         }
-        LOG.info("current cluster id for sd="+sd.getCurrentDir() + 
-            ";lv=" + layoutVersion + ";cid=" + cid);
+        LOG.info("current cluster id for sd={};lv={};"
+                + "cid={}", sd.getCurrentDir(), layoutVersion, cid);
         
         if(cid != null && !cid.equals("")) {
           return cid;
         }
       } catch (Exception e) {
-        LOG.warn("this sd not available: " + e.getLocalizedMessage());
+        LOG.warn("this sd not available: {}", e.getLocalizedMessage());
       } //ignore
     }
     LOG.warn("couldn't find any VERSION file containing valid ClusterId");
@@ -1151,8 +1156,8 @@ public class NNStorage extends Storage implements Closeable,
       try {
         writeProperties(sd);
       } catch (Exception e) {
-        LOG.warn("Error during write properties to the VERSION file to " +
-            sd.toString(), e);
+        LOG.warn("Error during write properties to the VERSION file to {}",
+            sd, e);
         reportErrorsOnDirectory(sd);
         if (getStorageDirs().isEmpty()) {
           throw new IOException("All the storage failed while writing " +
