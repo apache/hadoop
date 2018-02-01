@@ -133,21 +133,21 @@ public class RouterStatePBImpl extends RouterState implements PBRecord {
   }
 
   @Override
-  public String getBuildVersion() {
+  public String getVersion() {
     RouterRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
-    if (!proto.hasBuildVersion()) {
+    if (!proto.hasVersion()) {
       return null;
     }
-    return proto.getBuildVersion();
+    return proto.getVersion();
   }
 
   @Override
-  public void setBuildVersion(String version) {
+  public void setVersion(String version) {
     RouterRecordProto.Builder builder = this.translator.getBuilder();
     if (version == null) {
-      builder.clearBuildVersion();
+      builder.clearVersion();
     } else {
-      builder.setBuildVersion(version);
+      builder.setVersion(version);
     }
   }
 
