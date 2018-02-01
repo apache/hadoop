@@ -47,6 +47,12 @@ public interface FederationMBean {
   String getMountTable();
 
   /**
+   * Get the latest state of all routers.
+   * @return JSON with all of the known routers or null if failure.
+   */
+  String getRouters();
+
+  /**
    * Get the total capacity of the federated cluster.
    * @return Total capacity of the federated cluster.
    */
