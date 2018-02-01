@@ -307,6 +307,40 @@ public class TestErasureCodingPolicies {
   }
 
   @Test
+  public void testErasureCodingPolicyOnReservedDir() throws IOException {
+    final Path reserveDir = new Path("/.reserved");
+    // verify the EC policy is null, not an exception
+    ErasureCodingPolicy policy = fs.getErasureCodingPolicy(reserveDir);
+    assertNull("Got unexpected erasure coding policy", policy);
+
+    // root EC policy before being set is null, verify the reserved raw dir
+    // is treated as root
+    final Path root = new Path("/");
+    final Path rawRoot = new Path("/.reserved/raw");
+    final Path rawRootSlash = new Path("/.reserved/raw/");
+    assertNull("Got unexpected erasure coding policy",
+        fs.getErasureCodingPolicy(root));
+    assertNull("Got unexpected erasure coding policy",
+        fs.getErasureCodingPolicy(rawRoot));
+    assertNull("Got unexpected erasure coding policy",
+        fs.getErasureCodingPolicy(rawRootSlash));
+
+    // verify the EC policy correctness under the reserved raw dir
+    final Path ecDir = new Path("/ec");
+    fs.mkdirs(ecDir);
+    fs.setErasureCodingPolicy(ecDir, ecPolicy.getName());
+
+    ErasureCodingPolicy policyBase = fs.getErasureCodingPolicy(ecDir);
+    assertEquals("Got unexpected erasure coding policy", ecPolicy,
+        policyBase);
+
+    final Path rawRootEc = new Path("/.reserved/raw/ec");
+    ErasureCodingPolicy policyMap = fs.getErasureCodingPolicy(rawRootEc);
+    assertEquals("Got unexpected erasure coding policy", ecPolicy,
+        policyMap);
+  }
+
+  @Test
   public void testGetErasureCodingPolicy() throws Exception {
     List<ErasureCodingPolicy> sysECPolicies =
         SystemErasureCodingPolicies.getPolicies();
