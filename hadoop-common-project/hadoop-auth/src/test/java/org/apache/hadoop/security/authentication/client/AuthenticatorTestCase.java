@@ -13,9 +13,6 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
-import org.apache.catalina.deploy.FilterDef;
-import org.apache.catalina.deploy.FilterMap;
-import org.apache.catalina.startup.Tomcat;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
@@ -45,7 +42,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -65,17 +61,11 @@ public class AuthenticatorTestCase {
   private Server server;
   private String host = null;
   private int port = -1;
-  private boolean useTomcat = false;
-  private Tomcat tomcat = null;
   ServletContextHandler context;
 
   private static Properties authenticatorConfig;
 
   public AuthenticatorTestCase() {}
-
-  public AuthenticatorTestCase(boolean useTomcat) {
-    this.useTomcat = useTomcat;
-  }
 
   protected static void setAuthenticationHandlerConfig(Properties config) {
     authenticatorConfig = config;
@@ -120,8 +110,7 @@ public class AuthenticatorTestCase {
   }
 
   protected void start() throws Exception {
-    if (useTomcat) startTomcat();
-    else startJetty();
+    startJetty();
   }
 
   protected void startJetty() throws Exception {
@@ -142,32 +131,8 @@ public class AuthenticatorTestCase {
     System.out.println("Running embedded servlet container at: http://" + host + ":" + port);
   }
 
-  protected void startTomcat() throws Exception {
-    tomcat = new Tomcat();
-    File base = new File(System.getProperty("java.io.tmpdir"));
-    org.apache.catalina.Context ctx =
-      tomcat.addContext("/foo",base.getAbsolutePath());
-    FilterDef fd = new FilterDef();
-    fd.setFilterClass(TestFilter.class.getName());
-    fd.setFilterName("TestFilter");
-    FilterMap fm = new FilterMap();
-    fm.setFilterName("TestFilter");
-    fm.addURLPattern("/*");
-    fm.addServletName("/bar");
-    ctx.addFilterDef(fd);
-    ctx.addFilterMap(fm);
-    tomcat.addServlet(ctx, "/bar", TestServlet.class.getName());
-    ctx.addServletMapping("/bar", "/bar");
-    host = "localhost";
-    port = getLocalPort();
-    tomcat.setHostname(host);
-    tomcat.setPort(port);
-    tomcat.start();
-  }
-
   protected void stop() throws Exception {
-    if (useTomcat) stopTomcat();
-    else stopJetty();
+    stopJetty();
   }
 
   protected void stopJetty() throws Exception {
@@ -178,18 +143,6 @@ public class AuthenticatorTestCase {
 
     try {
       server.destroy();
-    } catch (Exception e) {
-    }
-  }
-
-  protected void stopTomcat() throws Exception {
-    try {
-      tomcat.stop();
-    } catch (Exception e) {
-    }
-
-    try {
-      tomcat.destroy();
     } catch (Exception e) {
     }
   }
