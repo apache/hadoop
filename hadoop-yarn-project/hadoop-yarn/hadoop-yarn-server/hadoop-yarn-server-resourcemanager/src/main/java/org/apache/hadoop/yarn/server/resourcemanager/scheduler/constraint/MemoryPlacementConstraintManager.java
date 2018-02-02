@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -234,6 +237,45 @@ public class MemoryPlacementConstraintManager
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public PlacementConstraint getMultilevelConstraint(ApplicationId appId,
+      Set<String> sourceTags, PlacementConstraint schedulingRequestConstraint) {
+    List<PlacementConstraint> constraints = new ArrayList<>();
+    // Add scheduling request-level constraint.
+    if (schedulingRequestConstraint != null) {
+      constraints.add(schedulingRequestConstraint);
+    }
+    // Add app-level constraint if appId is given.
+    if (appId != null && sourceTags != null
+        && !sourceTags.isEmpty()) {
+      constraints.add(getConstraint(appId, sourceTags));
+    }
+    // Add global constraint.
+    if (sourceTags != null && !sourceTags.isEmpty()) {
+      constraints.add(getGlobalConstraint(sourceTags));
+    }
+
+    // Remove all null or duplicate constraints.
+    List<PlacementConstraint.AbstractConstraint> allConstraints =
+        constraints.stream()
+            .filter(placementConstraint -> placementConstraint != null
+            && placementConstraint.getConstraintExpr() != null)
+            .map(PlacementConstraint::getConstraintExpr)
+            .distinct()
+            .collect(Collectors.toList());
+
+    // Compose an AND constraint
+    // When merge request(RC), app(AC) and global constraint(GC),
+    // we do a merge on them with CC=AND(GC, AC, RC) and returns a
+    // composite AND constraint. Subsequently we check if CC could
+    // be satisfied. This ensures that every level of constraint
+    // is satisfied.
+    PlacementConstraint.And andConstraint = PlacementConstraints.and(
+        allConstraints.toArray(new PlacementConstraint
+            .AbstractConstraint[allConstraints.size()]));
+    return andConstraint.build();
   }
 
   @Override

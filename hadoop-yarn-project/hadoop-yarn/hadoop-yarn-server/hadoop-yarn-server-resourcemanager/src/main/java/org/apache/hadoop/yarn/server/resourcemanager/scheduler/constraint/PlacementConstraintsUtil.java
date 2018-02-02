@@ -248,22 +248,14 @@ public final class PlacementConstraintsUtil {
       SchedulingRequest request, SchedulerNode schedulerNode,
       PlacementConstraintManager pcm, AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
-    // TODO do proper merge on different level of constraints, see YARN-7778.
-
-    // Request level constraint
-    PlacementConstraint constraint = request.getPlacementConstraint();
-    if (constraint == null) {
-      // Application level constraint
-      constraint = pcm.getConstraint(applicationId,
-          request.getAllocationTags());
-      if (constraint == null) {
-        // Global level constraint
-        constraint = pcm.getGlobalConstraint(request.getAllocationTags());
-        if (constraint == null) {
-          return true;
-        }
-      }
+    Set<String> sourceTags = null;
+    PlacementConstraint pc = null;
+    if (request != null) {
+      sourceTags = request.getAllocationTags();
+      pc = request.getPlacementConstraint();
     }
-    return canSatisfyConstraints(applicationId, constraint, schedulerNode, atm);
+    return canSatisfyConstraints(applicationId,
+        pcm.getMultilevelConstraint(applicationId, sourceTags, pc),
+        schedulerNode, atm);
   }
 }

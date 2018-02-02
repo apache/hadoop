@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,10 +78,13 @@ public class TestSingleConstraintAppPlacementAllocator {
     // Create allocation tags manager
     AllocationTagsManager allocationTagsManager = new AllocationTagsManager(
         rmContext);
+    PlacementConstraintManager placementConstraintManager =
+        new MemoryPlacementConstraintManager();
     spyAllocationTagsManager = spy(allocationTagsManager);
     schedulerRequestKey = new SchedulerRequestKey(Priority.newInstance(1), 2L,
         TestUtils.getMockContainerId(1, 1));
     rmContext.setAllocationTagsManager(spyAllocationTagsManager);
+    rmContext.setPlacementConstraintManager(placementConstraintManager);
 
     // Create allocator
     allocator = new SingleConstraintAppPlacementAllocator();
