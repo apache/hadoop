@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.RejectionReason;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.Placem
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.DefaultPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.PlacedSchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.SchedulingRequestWithPlacementAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.SchedulingResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -208,6 +210,12 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
   private void dispatchRequestsForPlacement(ApplicationAttemptId appAttemptId,
       List<SchedulingRequest> schedulingRequests) {
     if (schedulingRequests != null && !schedulingRequests.isEmpty()) {
+      // Normalize the Requests before dispatching
+      schedulingRequests.forEach(req -> {
+        Resource reqResource = req.getResourceSizing().getResources();
+        req.getResourceSizing()
+            .setResources(this.scheduler.getNormalizedResource(reqResource));
+      });
       this.placementDispatcher.dispatch(new BatchedRequests(iteratorType,
           appAttemptId.getApplicationId(), schedulingRequests, 1));
     }
@@ -261,20 +269,28 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
 
   private void handleRejectedRequests(ApplicationAttemptId appAttemptId,
       AllocateResponse response) {
-    List<SchedulingRequest> rejectedRequests =
+    List<SchedulingRequestWithPlacementAttempt> rejectedAlgoRequests =
         this.placementDispatcher.pullRejectedRequests(
             appAttemptId.getApplicationId());
-    if (rejectedRequests != null && !rejectedRequests.isEmpty()) {
+    if (rejectedAlgoRequests != null && !rejectedAlgoRequests.isEmpty()) {
       LOG.warn("Following requests of [{}] were rejected by" +
               " the PlacementAlgorithmOutput Algorithm: {}",
-          appAttemptId.getApplicationId(), rejectedRequests);
+          appAttemptId.getApplicationId(), rejectedAlgoRequests);
+      rejectedAlgoRequests.stream()
+          .filter(req -> req.getPlacementAttempt() < retryAttempts)
+          .forEach(req -> handleSchedulingResponse(
+              new Response(false, appAttemptId.getApplicationId(),
+                  req.getSchedulingRequest(), req.getPlacementAttempt(),
+                  null)));
       ApplicationMasterServiceUtils.addToRejectedSchedulingRequests(response,
-          rejectedRequests.stream()
+          rejectedAlgoRequests.stream()
+              .filter(req -> req.getPlacementAttempt() >= retryAttempts)
               .map(sr -> RejectedSchedulingRequest.newInstance(
-                  RejectionReason.COULD_NOT_PLACE_ON_NODE, sr))
+                  RejectionReason.COULD_NOT_PLACE_ON_NODE,
+                  sr.getSchedulingRequest()))
               .collect(Collectors.toList()));
     }
-    rejectedRequests =
+    List<SchedulingRequest> rejectedRequests =
         this.requestsToReject.get(appAttemptId.getApplicationId());
     if (rejectedRequests != null && !rejectedRequests.isEmpty()) {
       synchronized (rejectedRequests) {

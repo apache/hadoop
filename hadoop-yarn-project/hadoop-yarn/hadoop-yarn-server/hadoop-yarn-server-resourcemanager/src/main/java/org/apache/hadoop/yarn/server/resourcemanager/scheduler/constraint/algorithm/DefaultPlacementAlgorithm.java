@@ -18,10 +18,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -35,8 +40,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.Co
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmOutput;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmOutputCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.PlacedSchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.SchedulingRequestWithPlacementAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.BatchedRequests;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.NodeCandidateSelector;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,25 +64,31 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
   private LocalAllocationTagsManager tagsManager;
   private PlacementConstraintManager constraintManager;
   private NodeCandidateSelector nodeSelector;
+  private ResourceCalculator resourceCalculator;
 
   @Override
   public void init(RMContext rmContext) {
     this.tagsManager = new LocalAllocationTagsManager(
         rmContext.getAllocationTagsManager());
     this.constraintManager = rmContext.getPlacementConstraintManager();
+    this.resourceCalculator = rmContext.getScheduler().getResourceCalculator();
     this.nodeSelector =
         filter -> ((AbstractYarnScheduler) (rmContext).getScheduler())
             .getNodes(filter);
   }
 
-  public boolean attemptPlacementOnNode(ApplicationId appId,
-      SchedulingRequest schedulingRequest, SchedulerNode schedulerNode)
+  boolean attemptPlacementOnNode(ApplicationId appId,
+      Resource availableResources, SchedulingRequest schedulingRequest,
+      SchedulerNode schedulerNode, boolean ignoreResourceCheck)
       throws InvalidAllocationTagsQueryException {
-    if (PlacementConstraintsUtil.canSatisfyConstraints(appId,
-        schedulingRequest, schedulerNode, constraintManager, tagsManager)) {
-      return true;
-    }
-    return false;
+    boolean fitsInNode = ignoreResourceCheck ||
+        Resources.fitsIn(resourceCalculator,
+            schedulingRequest.getResourceSizing().getResources(),
+            availableResources);
+    boolean constraintsSatisfied =
+        PlacementConstraintsUtil.canSatisfyConstraints(appId,
+        schedulingRequest, schedulerNode, constraintManager, tagsManager);
+    return fitsInNode && constraintsSatisfied;
   }
 
 
@@ -82,17 +96,19 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
   public void place(ConstraintPlacementAlgorithmInput input,
       ConstraintPlacementAlgorithmOutputCollector collector) {
     BatchedRequests requests = (BatchedRequests) input;
+    int placementAttempt = requests.getPlacementAttempt();
     ConstraintPlacementAlgorithmOutput resp =
         new ConstraintPlacementAlgorithmOutput(requests.getApplicationId());
     List<SchedulerNode> allNodes = nodeSelector.selectNodes(null);
 
     List<SchedulingRequest> rejectedRequests = new ArrayList<>();
+    Map<NodeId, Resource> availResources = new HashMap<>();
     int rePlacementCount = RE_ATTEMPT_COUNT;
     while (rePlacementCount > 0) {
-      doPlacement(requests, resp, allNodes, rejectedRequests);
+      doPlacement(requests, resp, allNodes, rejectedRequests, availResources);
       // Double check if placement constraints are really satisfied
       validatePlacement(requests.getApplicationId(), resp,
-          rejectedRequests);
+          rejectedRequests, availResources);
       if (rejectedRequests.size() == 0 || rePlacementCount == 1) {
         break;
       }
@@ -103,7 +119,10 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
       rePlacementCount--;
     }
 
-    resp.getRejectedRequests().addAll(rejectedRequests);
+    resp.getRejectedRequests().addAll(
+        rejectedRequests.stream().map(
+            x -> new SchedulingRequestWithPlacementAttempt(
+                placementAttempt, x)).collect(Collectors.toList()));
     collector.collect(resp);
     // Clean current temp-container tags
     this.tagsManager.cleanTempContainers(requests.getApplicationId());
@@ -112,7 +131,8 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
   private void doPlacement(BatchedRequests requests,
       ConstraintPlacementAlgorithmOutput resp,
       List<SchedulerNode> allNodes,
-      List<SchedulingRequest> rejectedRequests) {
+      List<SchedulingRequest> rejectedRequests,
+      Map<NodeId, Resource> availableResources) {
     Iterator<SchedulingRequest> requestIterator = requests.iterator();
     Iterator<SchedulerNode> nIter = allNodes.iterator();
     SchedulerNode lastSatisfiedNode = null;
@@ -135,11 +155,17 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
         try {
           String tag = schedulingRequest.getAllocationTags() == null ? "" :
               schedulingRequest.getAllocationTags().iterator().next();
+          Resource unallocatedResource =
+              availableResources.computeIfAbsent(node.getNodeID(),
+                  x -> Resource.newInstance(node.getUnallocatedResource()));
           if (!requests.getBlacklist(tag).contains(node.getNodeID()) &&
               attemptPlacementOnNode(
-                  requests.getApplicationId(), schedulingRequest, node)) {
+                  requests.getApplicationId(), unallocatedResource,
+                  schedulingRequest, node, false)) {
             schedulingRequest.getResourceSizing()
                 .setNumAllocations(--numAllocs);
+            Resources.addTo(unallocatedResource,
+                schedulingRequest.getResourceSizing().getResources());
             placedReq.getNodes().add(node);
             numAllocs =
                 schedulingRequest.getResourceSizing().getNumAllocations();
@@ -200,10 +226,12 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
    * @param applicationId
    * @param resp
    * @param rejectedRequests
+   * @param availableResources
    */
   private void validatePlacement(ApplicationId applicationId,
       ConstraintPlacementAlgorithmOutput resp,
-      List<SchedulingRequest> rejectedRequests) {
+      List<SchedulingRequest> rejectedRequests,
+      Map<NodeId, Resource> availableResources) {
     Iterator<PlacedSchedulingRequest> pReqIter =
         resp.getPlacedRequests().iterator();
     while (pReqIter.hasNext()) {
@@ -217,10 +245,13 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
           // Remove just the tags for this placement.
           this.tagsManager.removeTempTags(node.getNodeID(),
               applicationId, pReq.getSchedulingRequest().getAllocationTags());
-          if (!attemptPlacementOnNode(
-              applicationId, pReq.getSchedulingRequest(), node)) {
+          Resource availOnNode = availableResources.get(node.getNodeID());
+          if (!attemptPlacementOnNode(applicationId, availOnNode,
+              pReq.getSchedulingRequest(), node, true)) {
             nodeIter.remove();
             num++;
+            Resources.subtractFrom(availOnNode,
+                pReq.getSchedulingRequest().getResourceSizing().getResources());
           } else {
             // Add back the tags if everything is fine.
             this.tagsManager.addTempTags(node.getNodeID(),

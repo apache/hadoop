@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,14 +40,14 @@ public class ConstraintPlacementAlgorithmOutput {
   private final List<PlacedSchedulingRequest> placedRequests =
       new ArrayList<>();
 
-  private final List<SchedulingRequest> rejectedRequests =
+  private final List<SchedulingRequestWithPlacementAttempt> rejectedRequests =
       new ArrayList<>();
 
   public List<PlacedSchedulingRequest> getPlacedRequests() {
     return placedRequests;
   }
 
-  public List<SchedulingRequest> getRejectedRequests() {
+  public List<SchedulingRequestWithPlacementAttempt> getRejectedRequests() {
     return rejectedRequests;
   }
 
