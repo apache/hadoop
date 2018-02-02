@@ -429,21 +429,6 @@ public class Resources {
     }
   }
 
-  // Calculate the candidate GPUs from bigger resource.
-  // If the request contains the GPU information, allocate according the request gpu attribute.
-  // If the request does't contains the GPU information, sequencing allocate the free GPUs.
-
-  public static ValueRanges allocatePorts(Resource smaller, Resource bigger) {
-    if (smaller.getPorts() != null && smaller.getPorts().getRangesList() != null && smaller.getPorts().getRangesList().size() > 0) {
-      if ((smaller.getPorts().isLessOrEqual(bigger.getPorts()))) {
-        return smaller.getPorts();
-      } else {
-        return null;
-      }
-    }
-    return allocatePortsByCount(smaller.getPortsCount(), bigger.getPorts());
-  }
-
   //Sequencing allocate the free GPUs.
   private static ValueRanges allocatePortsByCount(int requestCount, ValueRanges ports) {
     List<ValueRange> rangeList = ports.getRangesList();
