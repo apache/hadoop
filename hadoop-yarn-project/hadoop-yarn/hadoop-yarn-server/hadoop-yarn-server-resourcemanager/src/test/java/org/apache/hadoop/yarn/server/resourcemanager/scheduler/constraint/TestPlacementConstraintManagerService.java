@@ -34,8 +34,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
@@ -178,5 +181,84 @@ public class TestPlacementConstraintManagerService {
     // a constraint. TODO: More tests to be added for YARN-6621.
     Assert.assertTrue(pcm.validateConstraint(sourceTag1, c1));
     Assert.assertFalse(pcm.validateConstraint(sourceTag4, c1));
+  }
+
+  @Test
+  public void testGetRequestConstraint() {
+    // Request Constraint(RC), App Constraint(AC), Global Constraint(GC)
+    PlacementConstraint constraint;
+    And mergedConstraint;
+    SchedulingRequest request;
+
+    // RC = c1
+    // AC = null
+    // GC = null
+    constraint = pcm.getMultilevelConstraint(appId1, null, c1);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    Assert.assertEquals(1, mergedConstraint.getChildren().size());
+    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+
+    // RC = null
+    // AC = tag1->c1, tag2->c2
+    // GC = null
+    pcm.registerApplication(appId1, constraintMap1);
+    // if the source tag in the request is not mapped to any existing
+    // registered constraint, we should get an empty AND constraint.
+    constraint = pcm.getMultilevelConstraint(appId1,
+        Sets.newHashSet("not_exist_tag"), null);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    // AND()
+    Assert.assertEquals(0, mergedConstraint.getChildren().size());
+    // if a mapping is found for a given source tag
+    constraint = pcm.getMultilevelConstraint(appId1, sourceTag1, null);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    // AND(c1)
+    Assert.assertEquals(1, mergedConstraint.getChildren().size());
+    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    pcm.unregisterApplication(appId1);
+
+    // RC = null
+    // AC = null
+    // GC = tag1->c1
+    pcm.addGlobalConstraint(sourceTag1, c1, true);
+    constraint = pcm.getMultilevelConstraint(appId1,
+        Sets.newHashSet(sourceTag1), null);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    // AND(c1)
+    Assert.assertEquals(1, mergedConstraint.getChildren().size());
+    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    pcm.removeGlobalConstraint(sourceTag1);
+
+    // RC = c2
+    // AC = tag1->c1, tag2->c2
+    // GC = tag1->c3
+    pcm.addGlobalConstraint(sourceTag1, c3, true);
+    pcm.registerApplication(appId1, constraintMap1);
+    // both RC, AC and GC should be respected
+    constraint = pcm.getMultilevelConstraint(appId1, sourceTag1, c2);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    // AND(c1, c2, c3)
+    Assert.assertEquals(3, mergedConstraint.getChildren().size());
+    pcm.removeGlobalConstraint(sourceTag1);
+    pcm.unregisterApplication(appId1);
+
+    // RC = c1
+    // AC = tag1->c1, tag2->c2
+    // GC = tag1->c2
+    pcm.addGlobalConstraint(sourceTag1, c2, true);
+    pcm.registerApplication(appId1, constraintMap1);
+    constraint = pcm.getMultilevelConstraint(appId1,
+        Sets.newHashSet(sourceTag1), c1);
+    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    mergedConstraint = (And) constraint.getConstraintExpr();
+    // AND(c1, c2)
+    Assert.assertEquals(2, mergedConstraint.getChildren().size());
+    pcm.removeGlobalConstraint(sourceTag1);
+    pcm.unregisterApplication(appId1);
   }
 }

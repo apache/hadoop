@@ -105,6 +105,19 @@ public interface PlacementConstraintManager {
   PlacementConstraint getGlobalConstraint(Set<String> sourceTags);
 
   /**
+   * Consider all levels of constraints (scheduling request, app, cluster) and
+   * return a merged constraint.
+   *
+   * @param applicationId application ID
+   * @param sourceTags a set of source allocation tags
+   * @param schedulingRequestConstraint placement constraint at scheduling
+   *          request level
+   * @return a merged placement constraint
+   */
+  PlacementConstraint getMultilevelConstraint(ApplicationId applicationId,
+      Set<String> sourceTags, PlacementConstraint schedulingRequestConstraint);
+
+  /**
    * Remove the constraints that correspond to a given application.
    *
    * @param appId the application that will be removed.
