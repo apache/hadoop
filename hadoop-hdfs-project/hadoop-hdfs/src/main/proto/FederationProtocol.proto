@@ -215,3 +215,28 @@ message RouterHeartbeatRequestProto {
 message RouterHeartbeatResponseProto {
   optional bool status = 1;
 }
+
+/////////////////////////////////////////////////
+// Route State
+/////////////////////////////////////////////////
+
+message EnterSafeModeRequestProto {
+}
+
+message EnterSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message LeaveSafeModeRequestProto {
+}
+
+message LeaveSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message GetSafeModeRequestProto {
+}
+
+message GetSafeModeResponseProto {
+  optional bool isInSafeMode = 1;
+}

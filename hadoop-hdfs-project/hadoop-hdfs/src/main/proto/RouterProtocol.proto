@@ -44,4 +44,19 @@ service RouterAdminProtocolService {
    * Get matching mount entries
    */
   rpc getMountTableEntries(GetMountTableEntriesRequestProto) returns(GetMountTableEntriesResponseProto);
+
+  /**
+   * Transform Router state to safe mode state.
+   */
+  rpc enterSafeMode(EnterSafeModeRequestProto) returns (EnterSafeModeResponseProto);
+
+  /**
+   * Transform Router state from safe mode to running state.
+   */
+  rpc leaveSafeMode(LeaveSafeModeRequestProto) returns (LeaveSafeModeResponseProto);
+
+  /**
+   * Verify if current Router state is safe mode state.
+   */
+  rpc getSafeMode(GetSafeModeRequestProto) returns (GetSafeModeResponseProto);
 }
