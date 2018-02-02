@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,7 +44,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final Log LOG =
-      LogFactory.getLog(LinuxResourceCalculatorPlugin.class);
+    LogFactory.getLog(LinuxResourceCalculatorPlugin.class);
 
   /**
    * proc's meminfo virtual file has keys-values in the format
@@ -52,7 +52,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    */
   private static final String PROCFS_MEMFILE = "/proc/meminfo";
   private static final Pattern PROCFS_MEMFILE_FORMAT =
-      Pattern.compile("^([a-zA-Z]*):[ \t]*([0-9]*)[ \t]kB");
+    Pattern.compile("^([a-zA-Z]*):[ \t]*([0-9]*)[ \t]kB");
 
   // We need the values for the following keys in meminfo
   private static final String MEMTOTAL_STRING = "MemTotal";
@@ -60,21 +60,63 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final String MEMFREE_STRING = "MemFree";
   private static final String SWAPFREE_STRING = "SwapFree";
   private static final String INACTIVE_STRING = "Inactive";
-  
+
   public static final long REFRESH_INTERVAL_MS = 60 * 1000;
 
-  private static final String REFRESH_GPUINFO_CMD = "nvidia-smi --query-gpu=index,gpu_uuid --format=csv";
-
-  private static final String REFRESH_GPU_USING_CMD = "nvidia-smi --query-compute-apps=gpu_uuid,process_name --format=csv";
+  private static final String REFRESH_GPU_INFO_CMD = "nvidia-smi";
   private static final String REFRESH_PORTS_CMD = "netstat -anlut";
 
   /**
-   The out put format of this command is:
-   index, memory.total [MiB], memory.used [MiB]
-   0,
+   Wed Mar  7 08:28:10 2018
+   +-----------------------------------------------------------------------------+
+   | NVIDIA-SMI 384.111                Driver Version: 384.111                   |
+   |-------------------------------+----------------------+----------------------+
+   | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+   |===============================+======================+======================|
+   |   0  Tesla K80           Off  | 00006B24:00:00.0 Off |                    0 |
+   | N/A   26C    P8    34W / 149W |   3322MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   1  Tesla K80           Off  | 000083D4:00:00.0 Off |                    1 |
+   | N/A   32C    P8    28W / 149W |     11MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   2  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
+   | N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   3  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |
+   | N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   4  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
+   | N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   5  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |
+   | N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   6  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
+   | N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+   |   7  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |
+   | N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |
+   +-------------------------------+----------------------+----------------------+
+
+   +-----------------------------------------------------------------------------+
+   | Processes:                                                       GPU Memory |
+   |  GPU       PID   Type   Process name                             Usage      |
+   |=============================================================================|
+   |  0         11111  c     test_process_.bin                        400MiB     |
+   |  2         12222  c     test_process_.bin                        401MiB     |
+   |  3         14441  c     test_process_.bin                        402MiB     |
+   |  4         11555  c     test_process_.bin                        403MiB     |
+   |  7         11777  c     test_process_.bin                        405MiB     |
+   +-----------------------------------------------------------------------------+
    */
-  private static final Pattern GPUINFO_FORMAT =
-    Pattern.compile("^\\s*([0-9]{1,2})\\s*,(.)+");
+  Pattern GPU_INFO_FORMAT =
+    Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+(0|1)\\s+");
+  Pattern GPU_MEM_FORMAT =
+    Pattern.compile("([0-9]+)MiB\\s*/\\s*([0-9]+)MiB");
+
+  Pattern GPU_PROCESS_FORMAT =
+    Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+([0-9]+)MiB");
   /**
    * the output format of the Ports information:
    Proto Recv-Q Send-Q Local Address           Foreign Address         State
@@ -92,9 +134,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    */
   private static final String PROCFS_CPUINFO = "/proc/cpuinfo";
   private static final Pattern PROCESSOR_FORMAT =
-      Pattern.compile("^processor[ \t]:[ \t]*([0-9]*)");
+    Pattern.compile("^processor[ \t]:[ \t]*([0-9]*)");
   private static final Pattern FREQUENCY_FORMAT =
-      Pattern.compile("^cpu MHz[ \t]*:[ \t]*([0-9.]*)");
+    Pattern.compile("^cpu MHz[ \t]*:[ \t]*([0-9.]*)");
 
   /**
    * Pattern for parsing /proc/stat
@@ -102,7 +144,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final String PROCFS_STAT = "/proc/stat";
   private static final Pattern CPU_TIME_FORMAT =
     Pattern.compile("^cpu[ \t]*([0-9]*)" +
-    		            "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
+      "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
   private CpuTimeTracker cpuTimeTracker;
 
   private String procfsMemFile;
@@ -121,11 +163,12 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private int numProcessors = 0; // number of processors on the system
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
   private int numGPUs = 0; // number of GPUs on the system
-  private int gpuAttribute = 0; // bit map of GPU utilization, 1 means free, 0 means occupied
+  private Long gpuAttributeCapacity = 0L; // bit map of GPU utilization, 1 means free, 0 means occupied
+  private Long gpuAttributeUsed = 0L; // bit map of GPU utilization, 1 means free, 0 means occupied
   private long lastRefreshGpuTime = 0L;
   private long lastRefreshPortsTime = 0L;
   private String usedPorts = "";
-  
+
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
 
@@ -139,7 +182,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   public LinuxResourceCalculatorPlugin() {
     this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null, null, null,
-        ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
+      ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
   /**
@@ -152,12 +195,12 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    * @param jiffyLengthInMillis fake jiffy length value
    */
   public LinuxResourceCalculatorPlugin(String procfsMemFile,
-                                       String procfsCpuFile,
-                                       String procfsStatFile,
-                                       String procfsGpuFile,
-                                       String procfsGpuUsingFile,
-                                       String procfsPortsFile,
-                                       long jiffyLengthInMillis) {
+    String procfsCpuFile,
+    String procfsStatFile,
+    String procfsGpuFile,
+    String procfsGpuUsingFile,
+    String procfsPortsFile,
+    long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
@@ -190,7 +233,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     InputStreamReader fReader = null;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsMemFile), Charset.forName("UTF-8"));
+        new FileInputStream(procfsMemFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -250,7 +293,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     InputStreamReader fReader = null;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsCpuFile), Charset.forName("UTF-8"));
+        new FileInputStream(procfsCpuFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -267,7 +310,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         }
         mat = FREQUENCY_FORMAT.matcher(str);
         if (mat.find()) {
-          cpuFrequency = (long)(Double.parseDouble(mat.group(1)) * 1000); // kHz
+          cpuFrequency = (long) (Double.parseDouble(mat.group(1)) * 1000); // kHz
         }
         str = in.readLine();
       }
@@ -299,7 +342,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     InputStreamReader fReader = null;
     try {
       fReader = new InputStreamReader(
-          new FileInputStream(procfsStatFile), Charset.forName("UTF-8"));
+        new FileInputStream(procfsStatFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -316,8 +359,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           long nTime = Long.parseLong(mat.group(2));
           long sTime = Long.parseLong(mat.group(3));
           cpuTimeTracker.updateElapsedJiffies(
-              BigInteger.valueOf(uTime + nTime + sTime),
-              getCurrentTime());
+            BigInteger.valueOf(uTime + nTime + sTime),
+            getCurrentTime());
           break;
         }
         str = in.readLine();
@@ -401,16 +444,16 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs() {
-    refreshGpuIfNeeded();
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpus) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
     return numGPUs;
   }
-  
+
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttribute() {
-      refreshGpuIfNeeded();
-      return gpuAttribute;
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
+    return gpuAttributeCapacity;
   }
 
   @Override
@@ -420,11 +463,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
 
-  private InputStreamReader getInputGpuInfoStreamReader() throws Exception
-  {
-    if(procfsGpuFile == null){
-      LOG.info("exec:" + REFRESH_GPUINFO_CMD);
-      Process pos = Runtime.getRuntime().exec(REFRESH_GPUINFO_CMD);
+  private InputStreamReader getInputGpuInfoStreamReader() throws Exception {
+    if (procfsGpuFile == null) {
+      LOG.info("exec:" + REFRESH_GPU_INFO_CMD);
+      Process pos = Runtime.getRuntime().exec(REFRESH_GPU_INFO_CMD);
       pos.waitFor();
       return new InputStreamReader(pos.getInputStream());
 
@@ -435,77 +477,79 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
   }
 
-  private InputStreamReader getInputGpuUsingStreamReader() throws Exception
-  {
-    if(procfsGpuUsingFile == null){
-      LOG.info("exec:" + REFRESH_GPU_USING_CMD);
-      Process pos = Runtime.getRuntime().exec(REFRESH_GPU_USING_CMD);
-      pos.waitFor();
-      return new InputStreamReader(pos.getInputStream());
-
-    } else {
-      LOG.info("read GPU info from file:" + procfsGpuFile);
-      return new InputStreamReader(
-        new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
-    }
-  }
-
-
-
-  private void refreshGpuIfNeeded() {
+  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus) {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
       LOG.info("lastUpdateTime:" + lastRefreshGpuTime + " now:" + now);
       lastRefreshGpuTime = now;
       try {
-
         String ln = "";
-        int gpuInfo = 0;
-        int gpuMask = 0;
+        Long gpuAttributeUsed = 0L;
+        Long gpuAttributeProcess = 0xFFFFFFFFFFFFFFFFL;
+        Long gpuAttributeCapacity = 0L;
         Map<String, String> usingMap = new HashMap<String, String>();
 
-        InputStreamReader ir = getInputGpuUsingStreamReader();
+        Matcher mat = null;
+        InputStreamReader ir = getInputGpuInfoStreamReader();
         BufferedReader input = new BufferedReader(ir);
 
+        long currentIndex = 0;
         while ((ln = input.readLine()) != null) {
-          String[] usingProcessInfo = ln.split(",");
-          usingMap.put(usingProcessInfo[0].trim().toLowerCase(), usingProcessInfo[1]);
-        }
-        input.close();
-        ir.close();
-
-        Matcher mat = null;
-        ir = getInputGpuInfoStreamReader();
-        input = new BufferedReader(ir);
-
-        while ((ln = input.readLine()) != null) {
-          LOG.info(ln);
-          mat = GPUINFO_FORMAT.matcher(ln);
+          mat = GPU_INFO_FORMAT.matcher(ln);
           if (mat.find()) {
-            long index = Long.parseLong(mat.group(1));
-            String gpuUUID = mat.group(2);
-            gpuMask |= (1 << index);
-            if (!usingMap.containsKey(gpuUUID.trim().toLowerCase())) {
-              gpuInfo |= (1 << index);
+            if (mat.group(1) != null && mat.group(2) != null) {
+              long index = Long.parseLong(mat.group(1));
+              currentIndex = index;
+              long errCode = Long.parseLong(mat.group(2));
+              if (errCode == 0) {
+                gpuAttributeCapacity |= (1L << index);
+              } else {
+                LOG.error("ignored error: gpu " + index + " ECC code is 1, will make this gpu unavailable");
+              }
+            }
+          }
+          mat = GPU_MEM_FORMAT.matcher(ln);
+          if (mat.find()) {
+            if (mat.group(1) != null && mat.group(2) != null) {
+              int usedMem = Integer.parseInt(mat.group(1));
+              if (usedMem == 0) {
+                gpuAttributeUsed |= (1L << currentIndex);
+              }
+            }
+          }
+          mat = GPU_PROCESS_FORMAT.matcher(ln);
+          if (mat.find()) {
+            if (mat.group(1) != null && mat.group(2) != null) {
+              long index = Long.parseLong(mat.group(1));
+              gpuAttributeProcess -= (1 << index);
             }
           }
         }
         input.close();
         ir.close();
+        Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
+        if ((ownerLessGpus != 0)) {
+          if (excludeOwnerlessUsingGpus) {
+            gpuAttributeCapacity -= ownerLessGpus;
+            LOG.error("GPU:" + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
 
+          } else {
+            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
+          }
+        }
+        numGPUs = Long.bitCount(gpuAttributeCapacity);
+        this.gpuAttributeCapacity = gpuAttributeCapacity;
+        this.gpuAttributeUsed = gpuAttributeUsed;
 
-        numGPUs = Integer.bitCount(gpuMask);
-        gpuAttribute = gpuInfo;
       } catch (Exception e) {
         LOG.warn("error get GPU status info:" + e.toString());
       }
     }
   }
 
-  private InputStreamReader getInputPortsStreamReader(String cmdLine) throws Exception
-  {
-    if(procfsPortsFile == null){
+  private InputStreamReader getInputPortsStreamReader(String cmdLine) throws Exception {
+    if (procfsPortsFile == null) {
       LOG.info("exec:" + cmdLine);
       Process pos = Runtime.getRuntime().exec(cmdLine);
       pos.waitFor();
@@ -527,16 +571,16 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       try {
 
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
-        BufferedReader  input = new BufferedReader (ir);
+        BufferedReader input = new BufferedReader(ir);
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
-        while ((ln =input.readLine()) != null) {
+        while ((ln = input.readLine()) != null) {
           LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
             String port = mat.group().substring(1);
-            if(usedPorts.isEmpty()) {
+            if (usedPorts.isEmpty()) {
               usedPorts = port;
             } else {
               usedPorts = usedPorts + "," + port;
@@ -546,14 +590,14 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         input.close();
         ir.close();
         LOG.info("used Ports:" + usedPorts);
-      }catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
     } else {
       LOG.info("getlastTime result usedPorts=" + usedPorts);
     }
   }
-  
+
 
   /**
    * Test the {@link LinuxResourceCalculatorPlugin}
@@ -563,19 +607,19 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   public static void main(String[] args) {
     LinuxResourceCalculatorPlugin plugin = new LinuxResourceCalculatorPlugin();
     System.out.println("Physical memory Size (bytes) : "
-        + plugin.getPhysicalMemorySize());
+      + plugin.getPhysicalMemorySize());
     System.out.println("Total Virtual memory Size (bytes) : "
-        + plugin.getVirtualMemorySize());
+      + plugin.getVirtualMemorySize());
     System.out.println("Available Physical memory Size (bytes) : "
-        + plugin.getAvailablePhysicalMemorySize());
+      + plugin.getAvailablePhysicalMemorySize());
     System.out.println("Total Available Virtual memory Size (bytes) : "
-        + plugin.getAvailableVirtualMemorySize());
+      + plugin.getAvailableVirtualMemorySize());
     System.out.println("Number of Processors : " + plugin.getNumProcessors());
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
-            plugin.getCumulativeCpuTime());
-    System.out.println("Number of GPUs : " + plugin.getNumGPUs());
-    System.out.println("GPUs attibute : " + plugin.getGpuAttribute());
+      plugin.getCumulativeCpuTime());
+    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true));
+    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true));
     System.out.println("used Ports : " + plugin.getPortsUsage());
 
     try {

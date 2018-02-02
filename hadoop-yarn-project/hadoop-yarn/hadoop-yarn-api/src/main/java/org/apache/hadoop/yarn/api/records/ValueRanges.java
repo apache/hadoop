@@ -177,7 +177,7 @@ public abstract class ValueRanges implements Comparable<ValueRanges> {
     }
   }
 
-  public ValueRanges add(ValueRanges left, ValueRanges right) {
+  public static ValueRanges add(ValueRanges left, ValueRanges right) {
     if (left == null) {
       return coalesce(right);
     }
@@ -187,7 +187,7 @@ public abstract class ValueRanges implements Comparable<ValueRanges> {
     return coalesce(left, right);
   }
 
-  public ValueRanges minus(ValueRanges left, ValueRanges right) {
+  public static ValueRanges minus(ValueRanges left, ValueRanges right) {
     if (left == null) {
       return null;
     }
@@ -295,7 +295,7 @@ public abstract class ValueRanges implements Comparable<ValueRanges> {
    * @param right, may be ValueRanges or BitSetStores
    * @return merged ValueRanges whose internal store type is the same as left
    */
-  private ValueRanges coalesce(ValueRanges left, ValueRanges right) {
+  private static ValueRanges coalesce(ValueRanges left, ValueRanges right) {
     if (left == null) {
       return right;
     }

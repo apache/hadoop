@@ -96,14 +96,14 @@ public abstract class ResourceCalculatorPlugin extends Configured {
    *
    * @return number of GPUs
    */
-  public abstract int getNumGPUs();
+  public abstract int getNumGPUs(boolean excludeOwnerlessUsingGpu);
   
   /**
    * Obtain the GPUs utilization information. 
    *
-   * @return bit map set of gpu utlization.
+   * @return bit map set of gpu capacity.
    */
-  public abstract long getGpuAttribute();
+  public abstract long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpu);
 
   /**
    * Obtain the PORTs utilization information.

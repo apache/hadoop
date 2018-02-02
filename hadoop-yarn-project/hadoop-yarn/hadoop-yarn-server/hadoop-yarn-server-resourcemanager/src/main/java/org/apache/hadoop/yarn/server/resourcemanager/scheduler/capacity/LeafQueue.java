@@ -1406,16 +1406,31 @@ public class LeafQueue extends AbstractCSQueue {
     }
     
     // check if the resource request can access the label
-    if (!SchedulerUtils.checkNodeLabelExpression(
+    String requestedResourceName = request.getResourceName();
+    if (requestedResourceName.equals(ResourceRequest.ANY)) {
+      // check if the resource request can access the label
+      if (!SchedulerUtils.checkNodeLabelExpression(
         node.getLabels(),
         request.getNodeLabelExpression())) {
-      // this is a reserved container, but we cannot allocate it now according
-      // to label not match. This can be caused by node label changed
-      // We should un-reserve this container.
-      if (rmContainer != null) {
-        unreserve(application, priority, node, rmContainer);
+        // this is a reserved container, but we cannot allocate it now according
+        // to label not match. This can be caused by node label changed
+        // We should un-reserve this container.
+        if (rmContainer != null) {
+          unreserve(application, priority, node, rmContainer);
+        }
+        return Resources.none();
       }
-      return Resources.none();
+    } else {
+      // In addition, we use the requested resource name to match the node.
+      // It is safe, since the node which is not accessible for the queue will
+      // not be sent here.
+      if (!requestedResourceName.equals(node.getNodeName()) &&
+        !requestedResourceName.equals(node.getRackName())) {
+        if (rmContainer != null) {
+          unreserve(application, priority, node, rmContainer);
+        }
+        return Resources.none();
+      }
     }
     
     Resource capability = request.getCapability();

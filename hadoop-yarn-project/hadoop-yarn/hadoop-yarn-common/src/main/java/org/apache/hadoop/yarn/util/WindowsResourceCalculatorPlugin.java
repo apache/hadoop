@@ -170,14 +170,14 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs() {
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpu) {
     refreshIfNeeded();
     return -1;
   }
   
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttribute() {
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpu) {
       //Not support
       return 0;
   }

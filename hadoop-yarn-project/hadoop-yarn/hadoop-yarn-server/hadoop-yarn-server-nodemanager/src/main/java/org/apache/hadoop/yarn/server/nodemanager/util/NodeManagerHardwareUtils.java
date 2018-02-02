@@ -119,7 +119,7 @@ public class NodeManagerHardwareUtils {
    */
   public static float getContainersGPUs(ResourceCalculatorPlugin plugin,
                                          Configuration conf) {
-    int numGPUs = plugin.getNumGPUs();
+    int numGPUs = plugin.getNumGPUs(false);
     int nodeGpuPercentage = getNodeGpuPercentage(conf);
 
     return (nodeGpuPercentage * numGPUs) / 100.0f;
