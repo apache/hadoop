@@ -39,12 +39,15 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.base.Supplier;
 /**
  * Tests Router admin commands.
  */
@@ -293,5 +296,50 @@ public class TestRouterAdminCLI {
     // execute remove command
     argv = new String[] {"-rm", mount};
     assertEquals(rmCommandCode, ToolRunner.run(admin, argv));
+  }
+
+  @Test
+  public void testManageSafeMode() throws Exception {
+    // ensure the Router become RUNNING state
+    waitState(RouterServiceState.RUNNING);
+    assertFalse(routerContext.getRouter().getRpcServer().isInSafeMode());
+    assertEquals(0, ToolRunner.run(admin,
+            new String[] {"-safemode", "enter"}));
+    // verify state
+    assertEquals(RouterServiceState.SAFEMODE,
+        routerContext.getRouter().getRouterState());
+    assertTrue(routerContext.getRouter().getRpcServer().isInSafeMode());
+
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-safemode", "get"}));
+    assertTrue(out.toString().contains("true"));
+
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-safemode", "leave"}));
+    // verify state
+    assertEquals(RouterServiceState.RUNNING,
+        routerContext.getRouter().getRouterState());
+    assertFalse(routerContext.getRouter().getRpcServer().isInSafeMode());
+
+    out.reset();
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-safemode", "get"}));
+    assertTrue(out.toString().contains("false"));
+  }
+
+  /**
+   * Wait for the Router transforming to expected state.
+   * @param expectedState Expected Router state.
+   * @throws Exception
+   */
+  private void waitState(final RouterServiceState expectedState)
+      throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return expectedState == routerContext.getRouter().getRouterState();
+      }
+    }, 1000, 30000);
   }
 }
