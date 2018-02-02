@@ -146,18 +146,6 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
-  public int getPortsCount() {
-    ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getPortsCount());
-  }
-
-  @Override
-  public void setPortsCount(int portsCount) {
-    maybeInitBuilder();
-    builder.setPortsCount((portsCount));
-  }
-
-  @Override
   public int compareTo(Resource other) {
     int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {

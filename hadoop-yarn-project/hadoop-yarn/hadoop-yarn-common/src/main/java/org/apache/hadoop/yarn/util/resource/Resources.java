@@ -87,16 +87,6 @@ public class Resources {
     }
 
     @Override
-    public int getPortsCount() {
-      return 0;
-    }
-
-    @Override
-    public void setPortsCount(int portsCount) {
-      throw new RuntimeException("NONE cannot be modified!");
-    }
-
-    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
@@ -162,16 +152,6 @@ public class Resources {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
-    @Override
-    public int getPortsCount() {
-      return Integer.MAX_VALUE;
-    }
-
-    @Override
-    public void setPortsCount(int portsCount) {
-      throw new RuntimeException("NONE cannot be modified!");
-    }
-
 
     @Override
     public int compareTo(Resource o) {
@@ -204,17 +184,12 @@ public class Resources {
   }
 
   public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute, ValueRanges ports) {
-    return createResource(memory, cores, GPUs, GPUAttribute, ports, 0);
-  }
-
-  public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute, ValueRanges ports, int portsCount) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
     resource.setPorts(ports);
-    resource.setPortsCount(portsCount);
     return resource;
   }
 
@@ -228,7 +203,7 @@ public class Resources {
   }  
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts(), res.getPortsCount());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -246,7 +221,6 @@ public class Resources {
     } else {
       lhs.setPorts(rhs.getPorts());
     }
-    lhs.setPortsCount(lhs.getPortsCount() + rhs.getPortsCount());
     return lhs;
   }
 
@@ -266,7 +240,6 @@ public class Resources {
 
     if (lhs.getPorts() != null) {
       lhs.setPorts(lhs.getPorts().minusSelf(rhs.getPorts()));
-      lhs.setPortsCount(lhs.getPortsCount() - rhs.getPortsCount());
     }
 
     return lhs;
@@ -395,8 +368,7 @@ public class Resources {
   public static boolean fitsIn(Resource smaller, Resource bigger) {
       boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
                        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
-                       smaller.getGPUs() <= bigger.getGPUs() &&
-                       smaller.getPortsCount() <= bigger.getPortsCount();
+                       smaller.getGPUs() <= bigger.getGPUs();
       if (fitsIn) {
           if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
               fitsIn = false;

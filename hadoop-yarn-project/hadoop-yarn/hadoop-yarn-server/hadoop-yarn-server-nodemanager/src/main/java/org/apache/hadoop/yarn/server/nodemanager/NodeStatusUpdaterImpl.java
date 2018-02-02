@@ -185,18 +185,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
 
     ValueRanges ports = null;
-    ValueRanges usedPorts = null;
-    int portsCount = 0;
+
     if (enablePortsAsResource) {
+
       ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS, YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
-      usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
+      ValueRanges usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
       ports = ports.minusSelf(usedPorts);
-      for (ValueRange rv : ports.getRangesList()) {
-        portsCount += (rv.getEnd() - rv.getBegin()) + 1;
-      }
     }
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports, portsCount);
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports);
 
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);

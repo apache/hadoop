@@ -72,25 +72,12 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports) {
-    int portsCount = 0;
-    if(ports != null && ports.getRangesList() != null) {
-      for (ValueRange vr : ports.getRangesList()) {
-        portsCount += (vr.getEnd() - vr.getBegin() + 1);
-      }
-    }
-    return newInstance(memory, vCores, GPUs, GPUAttribute, ports, portsCount);
-  }
-
-  @Public
-  @Stable
-  public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports, int portsCount) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
     resource.setPorts(ports);
-    resource.setPortsCount(portsCount);
     return resource;
   }
 
@@ -215,18 +202,6 @@ public abstract class Resource implements Comparable<Resource> {
    * Get <em>portsCount</em> of the resource.
    * @return <em>portsCount</em> of the resource
    */
-  @Public
-  @Stable
-  public abstract int getPortsCount();
-
-  /**
-   * Set <em>ports</em> of the resource.
-   * @param ports <em>ports</em> of the resource
-   */
-  @Public
-  @Stable
-  public abstract void setPortsCount(int portsCount);
-
 
   @Override
   public int hashCode() {
@@ -282,6 +257,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ", ports: " + getPorts() + ", portsCount :" + getPortsCount() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ", ports: " + getPorts() + ">";
   }
 }

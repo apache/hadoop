@@ -1454,11 +1454,6 @@ public class LeafQueue extends AbstractCSQueue {
       capability.setGPUAttribute(allocated);
     }
 
-    if(capability.getPortsCount() > 0 && (capability.getPorts() == null || capability.getPorts().getRangesCount() <= 0)) {
-      ValueRanges allocatedPorts = Resources.allocatePorts(capability, available);
-      capability.setPorts(allocatedPorts);
-    }
-
     boolean shouldAllocOrReserveNewContainer = shouldAllocOrReserveNewContainer(
         application, priority, capability);
 

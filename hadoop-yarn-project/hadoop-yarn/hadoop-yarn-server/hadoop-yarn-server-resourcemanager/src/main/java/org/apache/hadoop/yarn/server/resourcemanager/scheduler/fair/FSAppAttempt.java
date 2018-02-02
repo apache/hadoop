@@ -514,11 +514,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         capability.setGPUAttribute(allocated);
       }
 
-      if(capability.getPortsCount() > 0) {
-        ValueRanges allocatedPorts = Resources.allocatePorts(capability, available);
-        capability.setPorts(allocatedPorts);
-      }
-
       if (reserved) {
         container = node.getReservedContainer().getContainer();
       } else {
