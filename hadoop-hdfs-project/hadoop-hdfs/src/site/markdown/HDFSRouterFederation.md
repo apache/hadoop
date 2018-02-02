@@ -83,7 +83,11 @@ The clients configure their DFS HA client (e.g., ConfiguredFailoverProvider or R
 
 * **Unavailable State Store:**
 If a Router cannot contact the State Store, it will enter into a Safe Mode state which disallows it from serving requests.
-Clients will treat Routers in Safe Mode as it was an Standby NameNode and try another Router.
+Clients will treat Routers in Safe Mode as it was an Standby NameNode and try another Router. There is a manual way to manage the Safe Mode for the Router.
+
+The Safe Mode state can be managed by using the following command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -safemode enter | leave | get
 
 * **NameNode heartbeat HA:**
 For high availability and flexibility, multiple Routers can monitor the same NameNode and heartbeat the information to the State Store.
