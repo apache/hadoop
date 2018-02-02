@@ -18,12 +18,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmOutput;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmOutputCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.PlacedSchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.SchedulingRequestWithPlacementAttempt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ class PlacementDispatcher implements
 
   private Map<ApplicationId, List<PlacedSchedulingRequest>>
       placedRequests = new ConcurrentHashMap<>();
-  private Map<ApplicationId, List<SchedulingRequest>>
+  private Map<ApplicationId, List<SchedulingRequestWithPlacementAttempt>>
       rejectedRequests = new ConcurrentHashMap<>();
 
   public void init(RMContext rmContext,
@@ -90,12 +90,12 @@ class PlacementDispatcher implements
     return Collections.EMPTY_LIST;
   }
 
-  public List<SchedulingRequest> pullRejectedRequests(
+  public List<SchedulingRequestWithPlacementAttempt> pullRejectedRequests(
       ApplicationId applicationId) {
-    List<SchedulingRequest> rejectedReqs =
+    List<SchedulingRequestWithPlacementAttempt> rejectedReqs =
         this.rejectedRequests.get(applicationId);
     if (rejectedReqs != null && !rejectedReqs.isEmpty()) {
-      List<SchedulingRequest> retList = new ArrayList<>();
+      List<SchedulingRequestWithPlacementAttempt> retList = new ArrayList<>();
       synchronized (rejectedReqs) {
         if (rejectedReqs.size() > 0) {
           retList.addAll(rejectedReqs);
@@ -130,7 +130,7 @@ class PlacementDispatcher implements
       }
     }
     if (!placement.getRejectedRequests().isEmpty()) {
-      List<SchedulingRequest> rejected =
+      List<SchedulingRequestWithPlacementAttempt> rejected =
           rejectedRequests.computeIfAbsent(
               placement.getApplicationId(), k -> new ArrayList());
       LOG.warn(

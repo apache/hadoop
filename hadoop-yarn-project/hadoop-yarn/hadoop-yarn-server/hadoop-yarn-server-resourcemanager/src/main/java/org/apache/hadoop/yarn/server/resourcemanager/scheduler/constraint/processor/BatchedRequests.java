@@ -109,7 +109,7 @@ public class BatchedRequests
   }
 
   public void addToBlacklist(Set<String> tags, SchedulerNode node) {
-    if (tags != null && !tags.isEmpty()) {
+    if (tags != null && !tags.isEmpty() && node != null) {
       // We are currently assuming a single allocation tag
       // per scheduler request currently.
       blacklist.computeIfAbsent(tags.iterator().next(),
