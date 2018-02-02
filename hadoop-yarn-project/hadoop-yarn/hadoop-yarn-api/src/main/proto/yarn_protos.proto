@@ -377,9 +377,10 @@ enum NodeAttributeTypeProto {
 }
 
 message NodeAttributeProto {
-  optional string attributeName = 1;
-  optional NodeAttributeTypeProto attributeType = 2;
-  optional string attributeValue = 3;
+  optional string attributePrefix = 1;
+  required string attributeName = 2;
+  optional NodeAttributeTypeProto attributeType = 3 [default = STRING];
+  optional string attributeValue = 4 [default=""];
 }
 
 

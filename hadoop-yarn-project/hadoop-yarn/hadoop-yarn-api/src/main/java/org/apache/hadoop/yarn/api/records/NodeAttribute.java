@@ -37,20 +37,40 @@ import org.apache.hadoop.yarn.util.Records;
  * Its not compulsory for all the attributes to have value, empty string is the
  * default value of the <code>NodeAttributeType.STRING</code>
  * </p>
- *
+ * <p>
+ * Node Attribute Prefix is used as namespace to segregate the attributes.
+ * </p>
  */
 @Public
 @Unstable
 public abstract class NodeAttribute {
 
+  public static final String DEFAULT_PREFIX = "";
+
   public static NodeAttribute newInstance(String attributeName,
       NodeAttributeType attributeType, String attributeValue) {
+    return newInstance(DEFAULT_PREFIX, attributeName, attributeType,
+        attributeValue);
+  }
+
+  public static NodeAttribute newInstance(String attributePrefix,
+      String attributeName, NodeAttributeType attributeType,
+      String attributeValue) {
     NodeAttribute nodeAttribute = Records.newRecord(NodeAttribute.class);
+    nodeAttribute.setAttributePrefix(attributePrefix);
     nodeAttribute.setAttributeName(attributeName);
     nodeAttribute.setAttributeType(attributeType);
     nodeAttribute.setAttributeValue(attributeValue);
     return nodeAttribute;
   }
+
+  @Public
+  @Unstable
+  public abstract String getAttributePrefix();
+
+  @Public
+  @Unstable
+  public abstract void setAttributePrefix(String attributePrefix);
 
   @Public
   @Unstable

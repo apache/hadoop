@@ -63,6 +63,10 @@ public class NodeAttributePBImpl extends NodeAttribute {
   @Override
   public void setAttributeName(String attributeName) {
     maybeInitBuilder();
+    if(attributeName == null) {
+      builder.clearAttributeName();
+      return;
+    }
     builder.setAttributeName(attributeName);
   }
 
@@ -78,6 +82,10 @@ public class NodeAttributePBImpl extends NodeAttribute {
   @Override
   public void setAttributeValue(String attributeValue) {
     maybeInitBuilder();
+    if(attributeValue == null) {
+      builder.clearAttributeValue();
+      return;
+    }
     builder.setAttributeValue(attributeValue);
   }
 
@@ -108,12 +116,6 @@ public class NodeAttributePBImpl extends NodeAttribute {
   private NodeAttributeType convertFromProtoFormat(
       NodeAttributeTypeProto containerState) {
     return NodeAttributeType.valueOf(containerState.name());
-  }
-
-  @Override
-  public String toString() {
-    return " name-" + getAttributeName() + ":value-" + getAttributeValue()
-        + ":type-" + getAttributeType();
   }
 
   @Override
@@ -151,5 +153,30 @@ public class NodeAttributePBImpl extends NodeAttribute {
     } else {
       return left.equals(right);
     }
+  }
+
+  @Override
+  public String getAttributePrefix() {
+    NodeAttributeProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAttributePrefix()) {
+      return null;
+    }
+    return p.getAttributePrefix();
+  }
+
+  @Override
+  public void setAttributePrefix(String attributePrefix) {
+    maybeInitBuilder();
+    if(attributePrefix == null) {
+      builder.clearAttributePrefix();
+      return;
+    }
+    builder.setAttributePrefix(attributePrefix);
+  }
+
+  @Override
+  public String toString() {
+    return "Prefix-" + getAttributePrefix() + " :Name-" + getAttributeName()
+        + ":Value-" + getAttributeValue() + ":Type-" + getAttributeType();
   }
 }

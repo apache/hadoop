@@ -1245,19 +1245,18 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
 
   @Test
   public void testNodeAttributePBImpl() throws Exception {
-    validatePBImplRecord(NodeAttributePBImpl.class,
-	NodeAttributeProto.class);
+    validatePBImplRecord(NodeAttributePBImpl.class, NodeAttributeProto.class);
   }
 
   @Test
   public void testNodeToAttributesPBImpl() throws Exception {
     validatePBImplRecord(NodeToAttributesPBImpl.class,
-	NodeToAttributesProto.class);
+        NodeToAttributesProto.class);
   }
 
   @Test
   public void testNodesToAttributesMappingRequestPBImpl() throws Exception {
     validatePBImplRecord(NodesToAttributesMappingRequestPBImpl.class,
-	NodesToAttributesMappingRequestProto.class);
+        NodesToAttributesMappingRequestProto.class);
   }
 }
