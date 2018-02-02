@@ -124,6 +124,21 @@ public class TestLowRedundancyBlockQueues {
   }
 
   @Test
+  public void testRemoveWithWrongPriority() {
+    final LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    final BlockInfo corruptBlock = genBlockInfo(1);
+    assertAdded(queues, corruptBlock, 0, 0, 3);
+    assertInLevel(queues, corruptBlock,
+        LowRedundancyBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+    verifyBlockStats(queues, 0, 1, 0, 0, 0);
+
+    // Remove with wrong priority
+    queues.remove(corruptBlock, LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY);
+    // Verify the number of corrupt block is decremented
+    verifyBlockStats(queues, 0, 0, 0, 0, 0);
+  }
+
+  @Test
   public void testStripedBlockPriorities() throws Throwable {
     int dataBlkNum = ecPolicy.getNumDataUnits();
     int parityBlkNUm = ecPolicy.getNumParityUnits();
