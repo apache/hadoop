@@ -401,7 +401,7 @@ public class FSDownload implements Callable<Path> {
     }
 
     final Path destinationTmp = new Path(destDirPath + "_tmp");
-    createDir(destinationTmp, PRIVATE_DIR_PERMS);
+    createDir(destinationTmp, cachePerms);
     Path dFinal =
         files.makeQualified(new Path(destinationTmp, sCopy.getName()));
     try {
@@ -416,10 +416,7 @@ public class FSDownload implements Callable<Path> {
           }
         });
       }
-      Path destinationTmpfilesQualified = files.makeQualified(destinationTmp);
-      changePermissions(
-          destinationTmpfilesQualified.getFileSystem(conf),
-          destinationTmpfilesQualified);
+      changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(destinationTmp, destDirPath, Rename.OVERWRITE);
 
       if (LOG.isDebugEnabled()) {
