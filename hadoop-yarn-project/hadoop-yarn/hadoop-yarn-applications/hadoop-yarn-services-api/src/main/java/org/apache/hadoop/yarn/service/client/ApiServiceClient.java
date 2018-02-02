@@ -171,6 +171,10 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Authentication required");
       return EXIT_EXCEPTION_THROWN;
     }
+    if (response.getStatus() == 503) {
+      LOG.error("YARN Service is unavailable or disabled.");
+      return EXIT_EXCEPTION_THROWN;
+    }
     try {
       ServiceStatus ss = response.getEntity(ServiceStatus.class);
       output = ss.getDiagnostics();
