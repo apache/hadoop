@@ -123,7 +123,8 @@ public class ApiServiceClient extends AppAdminClient {
       api.append("/");
       api.append(appName);
     }
-    if (!UserGroupInformation.isSecurityEnabled()) {
+    Configuration conf = getConfig();
+    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase("simple")) {
       api.append("?user.name=" + UrlEncoded
           .encodeString(System.getProperty("user.name")));
     }
@@ -147,7 +148,7 @@ public class ApiServiceClient extends AppAdminClient {
     client.setChunkedEncodingSize(null);
     Builder builder = client
         .resource(getApiUrl(appName)).type(MediaType.APPLICATION_JSON);
-    if (conf.get("hadoop.security.authentication").equals("kerberos")) {
+    if (conf.get("hadoop.http.authentication.type").equals("kerberos")) {
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
       builder.header("WWW-Authenticate", token);
     }
