@@ -34,6 +34,8 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -894,7 +896,7 @@ public class FileUtil {
     }
   }
 
-  private static void unTarUsingJava(File inFile, File untarDir,
+  static void unTarUsingJava(File inFile, File untarDir,
       boolean gzipped) throws IOException {
     InputStream inputStream = null;
     TarArchiveInputStream tis = null;
@@ -953,6 +955,14 @@ public class FileUtil {
         unpackEntries(tis, e, subDir);
       }
 
+      return;
+    }
+
+    if (entry.isSymbolicLink()) {
+      // Create symbolic link relative to tar parent dir
+      Files.createSymbolicLink(FileSystems.getDefault()
+              .getPath(outputDir.getPath(), entry.getName()),
+          FileSystems.getDefault().getPath(entry.getLinkName()));
       return;
     }
 
