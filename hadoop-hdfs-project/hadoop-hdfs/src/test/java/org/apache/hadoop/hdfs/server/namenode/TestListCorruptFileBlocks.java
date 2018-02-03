@@ -92,7 +92,7 @@ public class TestListCorruptFileBlocks {
       File storageDir = cluster.getInstanceStorageDir(0, 1);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
-      List<File> metaFiles = MiniDFSCluster.getAllBlockMetadataFiles(data_dir);
+      List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
       assertTrue("Data directory does not contain any blocks or there was an "
           + "IO error", metaFiles != null && !metaFiles.isEmpty());
       File metaFile = metaFiles.get(0);
@@ -172,7 +172,7 @@ public class TestListCorruptFileBlocks {
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, 
           cluster.getNamesystem().getBlockPoolId());
       assertTrue("data directory does not exist", data_dir.exists());
-      List<File> metaFiles = MiniDFSCluster.getAllBlockMetadataFiles(data_dir);
+      List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
       assertTrue("Data directory does not contain any blocks or there was an "
           + "IO error", metaFiles != null && !metaFiles.isEmpty());
       File metaFile = metaFiles.get(0);

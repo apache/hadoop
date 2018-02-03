@@ -1724,6 +1724,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           replicaInfo.getOriginalReplica().getState()
           == ReplicaState.FINALIZED) {
         newReplicaInfo = replicaInfo.getOriginalReplica();
+        ((FinalizedReplica)newReplicaInfo).loadLastPartialChunkChecksum();
       } else {
         FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
         if (v == null) {
