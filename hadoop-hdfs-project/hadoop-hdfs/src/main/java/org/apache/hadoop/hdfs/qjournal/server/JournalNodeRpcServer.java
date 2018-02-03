@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URL;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -31,7 +29,6 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.InterQJournalProtocolService;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
@@ -52,8 +49,9 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URL;
 
 
 @InterfaceAudience.Private
@@ -286,14 +284,15 @@ public class JournalNodeRpcServer implements QJournalProtocol,
 
   @SuppressWarnings("deprecation")
   @Override
-  public GetEditLogManifestFromJournalResponseProto
-      getEditLogManifestFromJournal(String jid, String nameServiceId,
-                                    long sinceTxId, boolean inProgressOk)
+  public GetEditLogManifestResponseProto getEditLogManifestFromJournal(
+      String jid, String nameServiceId,
+      long sinceTxId, boolean inProgressOk)
       throws IOException {
+
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
 
-    return GetEditLogManifestFromJournalResponseProto.newBuilder()
+    return GetEditLogManifestResponseProto.newBuilder()
         .setManifest(PBHelper.convert(manifest))
         .setHttpPort(jn.getBoundHttpAddress().getPort())
         .setFromURL(jn.getHttpServerURI())
