@@ -46,6 +46,7 @@ public class ReplicaBuilder {
   private Thread writer;
   private long recoveryId;
   private Block block;
+  private byte[] lastPartialChunkChecksum;
 
   private ReplicaInfo fromReplica;
 
@@ -178,6 +179,11 @@ public class ReplicaBuilder {
     return this;
   }
 
+  public ReplicaBuilder setLastPartialChunkChecksum(byte[] checksum) {
+    this.lastPartialChunkChecksum = checksum;
+    return this;
+  }
+
   public LocalReplicaInPipeline buildLocalReplicaInPipeline()
       throws IllegalArgumentException {
     LocalReplicaInPipeline info = null;
@@ -258,10 +264,11 @@ public class ReplicaBuilder {
           + "state: " + fromReplica.getState());
     } else {
       if (null != block) {
-        return new FinalizedReplica(block, volume, directoryUsed);
+        return new FinalizedReplica(block, volume, directoryUsed,
+            lastPartialChunkChecksum);
       } else {
         return new FinalizedReplica(blockId, length, genStamp, volume,
-            directoryUsed);
+            directoryUsed, lastPartialChunkChecksum);
       }
     }
   }
