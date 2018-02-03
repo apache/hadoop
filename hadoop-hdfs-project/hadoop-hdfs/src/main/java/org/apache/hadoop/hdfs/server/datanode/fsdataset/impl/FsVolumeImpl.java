@@ -51,6 +51,8 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -943,10 +945,22 @@ public class FsVolumeImpl implements FsVolumeSpi {
       long bytesReserved) throws IOException {
     releaseReservedSpace(bytesReserved);
     File dest = getBlockPoolSlice(bpid).addFinalizedBlock(b, replicaInfo);
+    byte[] checksum = null;
+    // copy the last partial checksum if the replica is originally
+    // in finalized or rbw state.
+    if (replicaInfo.getState() == ReplicaState.FINALIZED) {
+      FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
+      checksum = finalized.getLastPartialChunkChecksum();
+    } else if (replicaInfo.getState() == ReplicaState.RBW) {
+      ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+      checksum = rbw.getLastChecksumAndDataLen().getChecksum();
+    }
+
     return new ReplicaBuilder(ReplicaState.FINALIZED)
         .setBlock(replicaInfo)
         .setFsVolume(this)
         .setDirectoryToUse(dest.getParentFile())
+        .setLastPartialChunkChecksum(checksum)
         .build();
   }
 
@@ -1176,12 +1190,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
         .setBytesToReserve(bytesReserved)
         .buildLocalReplicaInPipeline();
 
+    // Only a finalized replica can be appended.
+    FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
     // load last checksum and datalen
-    LocalReplica localReplica = (LocalReplica)replicaInfo;
-    byte[] lastChunkChecksum = loadLastPartialChunkChecksum(
-        localReplica.getBlockFile(), localReplica.getMetaFile());
     newReplicaInfo.setLastChecksumAndDataLen(
-        replicaInfo.getNumBytes(), lastChunkChecksum);
+        finalized.getVisibleLength(), finalized.getLastPartialChunkChecksum());
 
     // rename meta file to rbw directory
     // rename block file to rbw directory
