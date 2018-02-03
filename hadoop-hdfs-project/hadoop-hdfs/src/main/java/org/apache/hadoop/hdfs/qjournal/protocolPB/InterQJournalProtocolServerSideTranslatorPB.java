@@ -24,8 +24,8 @@ import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalRequestProto;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 
 import java.io.IOException;
 
@@ -47,10 +47,9 @@ public class InterQJournalProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetEditLogManifestFromJournalResponseProto
-      getEditLogManifestFromJournal(RpcController controller,
-                                    GetEditLogManifestFromJournalRequestProto
-                                        request) throws ServiceException {
+  public GetEditLogManifestResponseProto getEditLogManifestFromJournal(
+      RpcController controller, GetEditLogManifestRequestProto request)
+      throws ServiceException {
     try {
       return impl.getEditLogManifestFromJournal(
           request.getJid().getIdentifier(),
