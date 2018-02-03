@@ -1852,8 +1852,17 @@ public class WebHdfsFileSystem extends FileSystem
     try {
       keyProviderUri = getServerDefaults().getKeyProviderUri();
     } catch (UnsupportedOperationException e) {
-      // This means server doesn't supports GETSERVERDEFAULTS call.
+      // This means server doesn't support GETSERVERDEFAULTS call.
       // Do nothing, let keyProviderUri = null.
+    } catch (RemoteException e) {
+      if (e.getClassName() != null &&
+          e.getClassName().equals("java.lang.IllegalArgumentException")) {
+        // See HDFS-13100.
+        // This means server doesn't support GETSERVERDEFAULTS call.
+        // Do nothing, let keyProviderUri = null.
+      } else {
+        throw e;
+      }
     }
     return HdfsKMSUtil.getKeyProviderUri(ugi, getUri(), keyProviderUri,
         getConf());
