@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
@@ -24,48 +26,52 @@ import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Collections;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 
 /**
- * Provides base implementation of NodeLabelsProvider with Timer and expects
- * subclass to provide TimerTask which can fetch NodeLabels
+ * Provides base implementation of NodeDescriptorsProvider with Timer and
+ * expects subclass to provide TimerTask which can fetch node descriptors.
  */
-public abstract class AbstractNodeLabelsProvider extends AbstractService
-    implements NodeLabelsProvider {
-  public static final long DISABLE_NODE_LABELS_PROVIDER_FETCH_TIMER = -1;
+public abstract class AbstractNodeDescriptorsProvider<T>
+    extends AbstractService implements NodeDescriptorsProvider<T> {
+  public static final long DISABLE_NODE_DESCRIPTORS_PROVIDER_FETCH_TIMER = -1;
 
-  // Delay after which timer task are triggered to fetch NodeLabels
-  protected long intervalTime;
+  // Delay after which timer task are triggered to fetch node descriptors.
+  // Default interval is -1 means it is an one time task, each implementation
+  // will override this value from configuration.
+  private long intervalTime = -1;
 
-  // Timer used to schedule node labels fetching
-  protected Timer nodeLabelsScheduler;
-
-  public static final String NODE_LABELS_SEPRATOR = ",";
+  // Timer used to schedule node descriptors fetching
+  private Timer scheduler;
 
   protected Lock readLock = null;
   protected Lock writeLock = null;
 
   protected TimerTask timerTask;
 
-  protected Set<NodeLabel> nodeLabels =
-      CommonNodeLabelsManager.EMPTY_NODELABEL_SET;
+  private Set<T> nodeDescriptors = Collections
+      .unmodifiableSet(new HashSet<>(0));
 
-
-  public AbstractNodeLabelsProvider(String name) {
+  public AbstractNodeDescriptorsProvider(String name) {
     super(name);
+  }
+
+  public long getIntervalTime() {
+    return intervalTime;
+  }
+
+  public void setIntervalTime(long intervalMS) {
+    this.intervalTime = intervalMS;
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    this.intervalTime =
-        conf.getLong(YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS);
-
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     readLock = readWriteLock.readLock();
     writeLock = readWriteLock.writeLock();
@@ -76,13 +82,13 @@ public abstract class AbstractNodeLabelsProvider extends AbstractService
   protected void serviceStart() throws Exception {
     timerTask = createTimerTask();
     timerTask.run();
-    if (intervalTime != DISABLE_NODE_LABELS_PROVIDER_FETCH_TIMER) {
-      nodeLabelsScheduler =
-          new Timer("DistributedNodeLabelsRunner-Timer", true);
+    long taskInterval = getIntervalTime();
+    if (taskInterval != DISABLE_NODE_DESCRIPTORS_PROVIDER_FETCH_TIMER) {
+      scheduler =
+          new Timer("DistributedNodeDescriptorsRunner-Timer", true);
       // Start the timer task and then periodically at the configured interval
       // time. Illegal values for intervalTime is handled by timer api
-      nodeLabelsScheduler.scheduleAtFixedRate(timerTask, intervalTime,
-          intervalTime);
+      scheduler.schedule(timerTask, taskInterval, taskInterval);
     }
     super.serviceStart();
   }
@@ -93,8 +99,8 @@ public abstract class AbstractNodeLabelsProvider extends AbstractService
    */
   @Override
   protected void serviceStop() throws Exception {
-    if (nodeLabelsScheduler != null) {
-      nodeLabelsScheduler.cancel();
+    if (scheduler != null) {
+      scheduler.cancel();
     }
     cleanUp();
     super.serviceStop();
@@ -109,21 +115,53 @@ public abstract class AbstractNodeLabelsProvider extends AbstractService
    * @return Returns output from provider.
    */
   @Override
-  public Set<NodeLabel> getNodeLabels() {
+  public Set<T> getDescriptors() {
     readLock.lock();
     try {
-      return nodeLabels;
+      return this.nodeDescriptors;
     } finally {
       readLock.unlock();
     }
   }
 
-  protected void setNodeLabels(Set<NodeLabel> nodeLabelsSet) {
+  @Override
+  public void setDescriptors(Set<T> descriptorsSet) {
     writeLock.lock();
     try {
-      nodeLabels = nodeLabelsSet;
+      this.nodeDescriptors = descriptorsSet;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  /**
+   * Method used to determine if or not node descriptors fetching script is
+   * configured and whether it is fit to run. Returns true if following
+   * conditions are met:
+   *
+   * <ol>
+   * <li>Path to the script is not empty</li>
+   * <li>The script file exists</li>
+   * </ol>
+   *
+   * @throws IOException
+   */
+  protected void verifyConfiguredScript(String scriptPath)
+      throws IOException {
+    boolean invalidConfiguration;
+    if (scriptPath == null
+        || scriptPath.trim().isEmpty()) {
+      invalidConfiguration = true;
+    } else {
+      File f = new File(scriptPath);
+      invalidConfiguration = !f.exists() || !FileUtil.canExecute(f);
+    }
+    if (invalidConfiguration) {
+      throw new IOException(
+          "Node descriptors provider script \"" + scriptPath
+              + "\" is not configured properly. Please check whether"
+              + " the script path exists, owner and the access rights"
+              + " are suitable for NM process to execute it");
     }
   }
 
@@ -145,5 +183,15 @@ public abstract class AbstractNodeLabelsProvider extends AbstractService
     return timerTask;
   }
 
+  @VisibleForTesting
+  public Timer getScheduler() {
+    return this.scheduler;
+  }
+
+  /**
+   * Creates a timer task which be scheduled periodically by the provider,
+   * and the task is responsible to update node descriptors to the provider.
+   * @return a timer task.
+   */
   public abstract TimerTask createTimerTask();
 }

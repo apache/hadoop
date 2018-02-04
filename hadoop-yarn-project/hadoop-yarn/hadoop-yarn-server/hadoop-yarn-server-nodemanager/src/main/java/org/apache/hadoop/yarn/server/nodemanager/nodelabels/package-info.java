@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,13 @@
  * limitations under the License.
  */
 
+/**
+ * Package to encapsulate classes used to handle node labels and node
+ * attributes in NM.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
-import org.apache.hadoop.yarn.api.records.NodeLabel;
-
-/**
- * Abstract class which will be responsible for fetching the node labels.
- *
- */
-public abstract class NodeLabelsProvider
-    extends AbstractNodeDescriptorsProvider<NodeLabel>{
-
-  public NodeLabelsProvider(String name) {
-    super(name);
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

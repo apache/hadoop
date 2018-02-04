@@ -15,19 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
-import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+
+import java.util.Set;
 
 /**
- * Abstract class which will be responsible for fetching the node labels.
+ * Abstract class which will be responsible for fetching the node attributes.
  *
  */
-public abstract class NodeLabelsProvider
-    extends AbstractNodeDescriptorsProvider<NodeLabel>{
+public abstract class NodeAttributesProvider
+    extends AbstractNodeDescriptorsProvider<NodeAttribute> {
 
-  public NodeLabelsProvider(String name) {
+  public NodeAttributesProvider(String name) {
     super(name);
   }
 }

@@ -18,16 +18,28 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
-import org.apache.hadoop.yarn.api.records.NodeLabel;
+import java.util.Set;
 
 /**
- * Abstract class which will be responsible for fetching the node labels.
- *
+ * Interface which will be responsible for fetching node descriptors,
+ * a node descriptor could be a
+ * {@link org.apache.hadoop.yarn.api.records.NodeLabel} or a
+ * {@link org.apache.hadoop.yarn.api.records.NodeAttribute}.
  */
-public abstract class NodeLabelsProvider
-    extends AbstractNodeDescriptorsProvider<NodeLabel>{
+public interface NodeDescriptorsProvider<T> {
 
-  public NodeLabelsProvider(String name) {
-    super(name);
-  }
+  /**
+   * Provides the descriptors. The provider is expected to give same
+   * descriptors continuously until there is a change.
+   * If null is returned then an empty set is assumed by the caller.
+   *
+   * @return Set of node descriptors applicable for a node
+   */
+  Set<T> getDescriptors();
+
+  /**
+   * Sets a set of descriptors to the provider.
+   * @param descriptors node descriptors.
+   */
+  void setDescriptors(Set<T> descriptors);
 }
