@@ -636,9 +636,8 @@ public class MiniYARNCluster extends CompositeService {
       if(nodeStatus == null) {
         return currentStatus;
       } else {
-        // Increment response ID, the RMNodeStatusEvent will not get recorded
-        // for a duplicate heartbeat
-        nodeStatus.setResponseId(nodeStatus.getResponseId() + 1);
+        // Use the same responseId for the custom node status
+        nodeStatus.setResponseId(currentStatus.getResponseId());
         return nodeStatus;
       }
     }
