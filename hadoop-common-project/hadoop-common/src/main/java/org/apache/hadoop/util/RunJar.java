@@ -38,6 +38,7 @@ import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 
+import com.google.common.io.NullOutputStream;
 import org.apache.commons.io.input.TeeInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -131,6 +132,9 @@ public class RunJar {
         LOG.warn("Could not set last modfied time for {} file(s)",
             numOfFailedLastModifiedSet);
       }
+      // ZipInputStream does not need the end of the file. Let's read it out.
+      // This helps with an additional TeeInputStream on the input.
+      IOUtils.copyBytes(inputStream, new NullOutputStream(), BUFFER_SIZE);
     }
   }
 
