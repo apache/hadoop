@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +96,8 @@ public class ContainerRelaunch extends ContainerLaunch {
       List<String> logDirs = dirsHandler.getLogDirs();
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
+      List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> userLocalDirs = getUserLocalDirs(localDirs);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -114,6 +115,8 @@ public class ContainerRelaunch extends ContainerLaunch {
           .setContainerWorkDir(containerWorkDir)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
+          .setFilecacheDirs(filecacheDirs)
+          .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
           .build());
