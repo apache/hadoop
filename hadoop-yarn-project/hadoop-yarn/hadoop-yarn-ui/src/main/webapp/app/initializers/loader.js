@@ -73,6 +73,9 @@ function updateConfigs(application) {
           Ember.Logger.log("Timeline Updated Address: " + updatedAddress);
         }
         application.advanceReadiness();
+      },
+      error: function() {
+        application.advanceReadiness();
       }
     });
   } else {
@@ -102,6 +105,9 @@ function updateConfigs(application) {
           ENV.hosts.timelineV1WebAddress = updatedAddress;
           Ember.Logger.log("Timeline V1 Updated Address: " + updatedAddress);
         }
+        application.advanceReadiness();
+      },
+      error: function() {
         application.advanceReadiness();
       }
     });

@@ -36,6 +36,8 @@ export default AbstractRoute.extend({
 
       if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
         this.intermediateTransitionTo('/notfound');
+      } else if (error && error.errors[0] && parseInt(error.errors[0].status) === 401) {
+        this.intermediateTransitionTo('/notauth');
       } else {
         this.intermediateTransitionTo('/error');
       }
