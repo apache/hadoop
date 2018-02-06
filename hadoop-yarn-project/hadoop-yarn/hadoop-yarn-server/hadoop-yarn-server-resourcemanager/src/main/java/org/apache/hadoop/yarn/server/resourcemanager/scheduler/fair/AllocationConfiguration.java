@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileParser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.QueueProperties;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -47,7 +49,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private final Map<String, ConfigurableResource> maxChildQueueResources;
   // Sharing weights for each queue
   private final Map<String, Float> queueWeights;
-  
+
   // Max concurrent running applications for each queue and for each user; in addition,
   // for users that have no max specified, we use the userMaxJobsDefault.
   @VisibleForTesting
@@ -88,13 +90,13 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private final Set<String> reservableQueues;
 
   private final Map<String, SchedulingPolicy> schedulingPolicies;
-  
+
   private final SchedulingPolicy defaultSchedulingPolicy;
-  
+
   // Policy for mapping apps to queues
   @VisibleForTesting
   QueuePlacementPolicy placementPolicy;
-  
+
   //Configured queues in the alloc xml
   @VisibleForTesting
   Map<FSQueueType, Set<String>> configuredQueues;
@@ -104,53 +106,42 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   private final Set<String> nonPreemptableQueues;
 
-  public AllocationConfiguration(Map<String, Resource> minQueueResources,
-      Map<String, ConfigurableResource> maxQueueResources,
-      Map<String, ConfigurableResource> maxChildQueueResources,
-      Map<String, Integer> queueMaxApps,
-      Map<String, Integer> userMaxApps,
-      Map<String, Float> queueWeights,
-      Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
-      int queueMaxAppsDefault,
-      ConfigurableResource queueMaxResourcesDefault,
-      float queueMaxAMShareDefault,
-      Map<String, SchedulingPolicy> schedulingPolicies,
-      SchedulingPolicy defaultSchedulingPolicy,
-      Map<String, Long> minSharePreemptionTimeouts,
-      Map<String, Long> fairSharePreemptionTimeouts,
-      Map<String, Float> fairSharePreemptionThresholds,
-      Map<String, Map<AccessType, AccessControlList>> queueAcls,
-      Map<String, Map<ReservationACL, AccessControlList>> resAcls,
-      QueuePlacementPolicy placementPolicy,
-      Map<FSQueueType, Set<String>> configuredQueues,
-      ReservationQueueConfiguration globalReservationQueueConfig,
-      Set<String> reservableQueues,
-      Set<String> nonPreemptableQueues) {
-    this.minQueueResources = minQueueResources;
-    this.maxQueueResources = maxQueueResources;
-    this.maxChildQueueResources = maxChildQueueResources;
-    this.queueMaxApps = queueMaxApps;
-    this.userMaxApps = userMaxApps;
-    this.queueMaxAMShares = queueMaxAMShares;
-    this.queueWeights = queueWeights;
-    this.userMaxAppsDefault = userMaxAppsDefault;
-    this.queueMaxResourcesDefault = queueMaxResourcesDefault;
-    this.queueMaxAppsDefault = queueMaxAppsDefault;
-    this.queueMaxAMShareDefault = queueMaxAMShareDefault;
-    this.defaultSchedulingPolicy = defaultSchedulingPolicy;
-    this.schedulingPolicies = schedulingPolicies;
-    this.minSharePreemptionTimeouts = minSharePreemptionTimeouts;
-    this.fairSharePreemptionTimeouts = fairSharePreemptionTimeouts;
-    this.fairSharePreemptionThresholds = fairSharePreemptionThresholds;
-    this.queueAcls = queueAcls;
-    this.resAcls = resAcls;
-    this.reservableQueues = reservableQueues;
+  public AllocationConfiguration(QueueProperties queueProperties,
+      AllocationFileParser allocationFileParser,
+      QueuePlacementPolicy newPlacementPolicy,
+      ReservationQueueConfiguration globalReservationQueueConfig)
+      throws AllocationConfigurationException {
+    this.minQueueResources = queueProperties.getMinQueueResources();
+    this.maxQueueResources = queueProperties.getMaxQueueResources();
+    this.maxChildQueueResources = queueProperties.getMaxChildQueueResources();
+    this.queueMaxApps = queueProperties.getQueueMaxApps();
+    this.userMaxApps = allocationFileParser.getUserMaxApps();
+    this.queueMaxAMShares = queueProperties.getQueueMaxAMShares();
+    this.queueWeights = queueProperties.getQueueWeights();
+    this.userMaxAppsDefault = allocationFileParser.getUserMaxAppsDefault();
+    this.queueMaxResourcesDefault =
+            allocationFileParser.getQueueMaxResourcesDefault();
+    this.queueMaxAppsDefault = allocationFileParser.getQueueMaxAppsDefault();
+    this.queueMaxAMShareDefault =
+        allocationFileParser.getQueueMaxAMShareDefault();
+    this.defaultSchedulingPolicy =
+        allocationFileParser.getDefaultSchedulingPolicy();
+    this.schedulingPolicies = queueProperties.getQueuePolicies();
+    this.minSharePreemptionTimeouts =
+        queueProperties.getMinSharePreemptionTimeouts();
+    this.fairSharePreemptionTimeouts =
+        queueProperties.getFairSharePreemptionTimeouts();
+    this.fairSharePreemptionThresholds =
+        queueProperties.getFairSharePreemptionThresholds();
+    this.queueAcls = queueProperties.getQueueAcls();
+    this.resAcls = queueProperties.getReservationAcls();
+    this.reservableQueues = queueProperties.getReservableQueues();
     this.globalReservationQueueConfig = globalReservationQueueConfig;
-    this.placementPolicy = placementPolicy;
-    this.configuredQueues = configuredQueues;
-    this.nonPreemptableQueues = nonPreemptableQueues;
+    this.placementPolicy = newPlacementPolicy;
+    this.configuredQueues = queueProperties.getConfiguredQueues();
+    this.nonPreemptableQueues = queueProperties.getNonPreemptableQueues();
   }
-  
+
   public AllocationConfiguration(Configuration conf) {
     minQueueResources = new HashMap<>();
     maxChildQueueResources = new HashMap<>();
@@ -179,7 +170,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
         QueuePlacementPolicy.fromConfiguration(conf, configuredQueues);
     nonPreemptableQueues = new HashSet<>();
   }
-  
+
   /**
    * Get the ACLs associated with this queue. If a given ACL is not explicitly
    * configured, include the default value for that ACL.  The default for the
@@ -300,7 +291,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     }
     return maxQueueResource;
   }
-  
+
   /**
    * Get the maximum resource allocation for children of the given queue.
    *
@@ -317,15 +308,15 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     SchedulingPolicy policy = schedulingPolicies.get(queueName);
     return (policy == null) ? defaultSchedulingPolicy : policy;
   }
-  
+
   public SchedulingPolicy getDefaultSchedulingPolicy() {
     return defaultSchedulingPolicy;
   }
-  
+
   public Map<FSQueueType, Set<String>> getConfiguredQueues() {
     return configuredQueues;
   }
-  
+
   public QueuePlacementPolicy getPlacementPolicy() {
     return placementPolicy;
   }
