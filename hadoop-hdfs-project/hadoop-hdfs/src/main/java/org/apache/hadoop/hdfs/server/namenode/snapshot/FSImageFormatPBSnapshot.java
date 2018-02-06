@@ -155,7 +155,8 @@ public class FSImageFormatPBSnapshot {
           dir.addSnapshottableFeature();
         } else {
           // dir is root, and admin set root to snapshottable before
-          dir.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
+          dir.setSnapshotQuota(
+              DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT);
         }
         sm.addSnapshottable(dir);
       }
