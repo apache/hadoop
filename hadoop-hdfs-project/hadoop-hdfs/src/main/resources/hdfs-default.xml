@@ -37,7 +37,7 @@
     RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 9820.
+    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 8020.
   </description>
 </property>
 

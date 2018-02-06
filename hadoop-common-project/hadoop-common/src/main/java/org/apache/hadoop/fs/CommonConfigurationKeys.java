@@ -98,7 +98,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /**
    * CallQueue related settings. These are not used directly, but rather
    * combined with a namespace and port. For instance:
-   * IPC_NAMESPACE + ".9820." + IPC_CALLQUEUE_IMPL_KEY
+   * IPC_NAMESPACE + ".8020." + IPC_CALLQUEUE_IMPL_KEY
    */
   public static final String IPC_NAMESPACE = "ipc";
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";

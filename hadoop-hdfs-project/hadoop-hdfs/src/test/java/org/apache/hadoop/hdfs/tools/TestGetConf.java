@@ -367,7 +367,7 @@ public class TestGetConf {
   public void testGetJournalNodes() throws Exception {
 
     final int nsCount = 3;
-    final String journalsBaseUri = "qjournal://jn0:9820;jn1:9820;jn2:9820";
+    final String journalsBaseUri = "qjournal://jn0:8020;jn1:8020;jn2:8020";
     setupStaticHostResolution(nsCount, "jn");
 
     // With out Name service Id
@@ -490,7 +490,7 @@ public class TestGetConf {
   @Test(expected = UnknownHostException.class, timeout = 10000)
   public void testUnknownJournalNodeHost()
       throws URISyntaxException, IOException {
-    String journalsBaseUri = "qjournal://jn1:9820;jn2:9820;jn3:9820";
+    String journalsBaseUri = "qjournal://jn1:8020;jn2:8020;jn3:8020";
     HdfsConfiguration conf = new HdfsConfiguration(false);
     conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
         journalsBaseUri + "/jndata");
@@ -504,7 +504,7 @@ public class TestGetConf {
   public void testJournalNodeUriError()
       throws URISyntaxException, IOException {
     final int nsCount = 3;
-    String journalsBaseUri = "qjournal://jn0 :9820;jn1:9820;jn2:9820";
+    String journalsBaseUri = "qjournal://jn0 :8020;jn1:8020;jn2:8020";
     setupStaticHostResolution(nsCount, "jn");
     HdfsConfiguration conf = new HdfsConfiguration(false);
     conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
