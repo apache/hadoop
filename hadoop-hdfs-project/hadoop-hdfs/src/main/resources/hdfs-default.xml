@@ -4364,6 +4364,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.snapshot.max.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed per snapshottable
+    directory.If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+
+<property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
   <description>
