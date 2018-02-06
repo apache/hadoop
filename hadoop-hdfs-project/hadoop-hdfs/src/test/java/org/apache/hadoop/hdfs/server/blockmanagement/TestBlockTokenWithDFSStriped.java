@@ -79,7 +79,7 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     }
 
     cluster = new MiniDFSCluster.Builder(conf)
-        .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+        .nameNodePort(ServerSocketUtil.getPort(18020, 100))
         .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
         .numDataNodes(numDNs)
         .build();

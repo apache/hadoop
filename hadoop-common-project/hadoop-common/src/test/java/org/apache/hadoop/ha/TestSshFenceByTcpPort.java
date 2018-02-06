@@ -38,7 +38,7 @@ public class TestSshFenceByTcpPort {
   private static String TEST_FENCING_HOST = System.getProperty(
       "test.TestSshFenceByTcpPort.host", "localhost");
   private static final String TEST_FENCING_PORT = System.getProperty(
-      "test.TestSshFenceByTcpPort.port", "9820");
+      "test.TestSshFenceByTcpPort.port", "8020");
   private static final String TEST_KEYFILE = System.getProperty(
       "test.TestSshFenceByTcpPort.key");
 

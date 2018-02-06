@@ -291,7 +291,7 @@ We are going to remove the file test1.
 The comment below shows that the file has been moved to Trash directory.
 
     $ hadoop fs -rm -r delete/test1
-    Moved: hdfs://localhost:9820/user/hadoop/delete/test1 to trash at: hdfs://localhost:9820/user/hadoop/.Trash/Current
+    Moved: hdfs://localhost:8020/user/hadoop/delete/test1 to trash at: hdfs://localhost:8020/user/hadoop/.Trash/Current
 
 now we are going to remove the file with skipTrash option,
 which will not send the file to Trash.It will be completely removed from HDFS.
