@@ -70,10 +70,10 @@ public class TestRequestHedgingProxyProvider {
         HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns, "nn1,nn2");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn1",
-        "machine1.foo.bar:9820");
+        "machine1.foo.bar:8020");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn2",
-        "machine2.foo.bar:9820");
+        "machine2.foo.bar:8020");
   }
 
   @Test
@@ -236,7 +236,7 @@ public class TestRequestHedgingProxyProvider {
     conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
             "nn1,nn2,nn3");
     conf.set(HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn3",
-            "machine3.foo.bar:9820");
+            "machine3.foo.bar:8020");
 
     final AtomicInteger counter = new AtomicInteger(0);
     final int[] isGood = {1};
