@@ -87,21 +87,38 @@ public class ApiServiceClient extends AppAdminClient {
       rmAddress = conf
           .get("yarn.resourcemanager.webapp.https.address");
     }
-
+    boolean useKerberos = UserGroupInformation.isSecurityEnabled();
     List<String> rmServers = RMHAUtils
         .getRMHAWebappAddresses(new YarnConfiguration(conf));
     for (String host : rmServers) {
-      StringBuilder sb = new StringBuilder();
-      sb.append(scheme);
-      sb.append(host);
-      sb.append(path);
-      Client client = Client.create();
-      WebResource webResource = client
-          .resource(sb.toString());
-      String test = webResource.get(String.class);
-      if (test.contains("hadoop_version")) {
-        rmAddress = host;
-        break;
+      try {
+        Client client = Client.create();
+        StringBuilder sb = new StringBuilder();
+        sb.append(scheme);
+        sb.append(host);
+        sb.append(path);
+        if (!useKerberos) {
+          try {
+            String username = UserGroupInformation.getCurrentUser().getShortUserName();
+            sb.append("?user.name=");
+            sb.append(username);
+          } catch (IOException e) {
+            LOG.debug("Fail to resolve username: {}", e);
+          }
+        }
+        WebResource webResource = client
+            .resource(sb.toString());
+        if (useKerberos) {
+          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+          webResource.header("WWW-Authenticate", token);
+        }
+        ClientResponse test = webResource.get(ClientResponse.class);
+        if (test.getStatus() == 200) {
+          rmAddress = host;
+          break;
+        }
+      } catch (Exception e) {
+        LOG.debug("Fail to connect to: "+host, e);
       }
     }
     return scheme+rmAddress;
