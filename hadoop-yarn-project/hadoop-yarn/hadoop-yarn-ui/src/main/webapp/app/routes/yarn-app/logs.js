@@ -30,7 +30,8 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       serviceName: service,
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
-      })
+      }),
+      app: this.fetchAppInfoFromRMorATS(app_id, this.store)
     });
   },
 

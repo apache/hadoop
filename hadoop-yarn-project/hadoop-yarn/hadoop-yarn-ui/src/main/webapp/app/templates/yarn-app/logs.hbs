@@ -23,6 +23,10 @@
         Logs {{collapsible-panel targetId="logFilesCollapsablePanel"}}
       </div>
       <div class="panel-body" id="logFilesCollapsablePanel">
+        <label>Log aggregation status:</label>&nbsp;
+        <span class={{model.app.logAggregationStatusStyle}}>
+          {{model.app.logAggregationStatus}}
+        </span>
         {{#if _isLoadingTopPanel}}
           <div class="text-center" style="z-index: 100; position: absolute; left: 46%;">
             <img src="assets/images/spinner.gif" alt="Loading...">
