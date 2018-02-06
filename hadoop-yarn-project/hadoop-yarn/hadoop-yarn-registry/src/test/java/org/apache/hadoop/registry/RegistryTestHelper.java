@@ -147,7 +147,7 @@ public class RegistryTestHelper extends Assert {
     Map<String, String> url = addressList.get(0);
     String addr = url.get("uri");
     assertTrue(addr.contains("http"));
-    assertTrue(addr.contains(":9820"));
+    assertTrue(addr.contains(":8020"));
 
     Endpoint nnipc = findEndpoint(record, NNIPC, false, 1,2);
     assertEquals("wrong protocol in " + nnipc, ProtocolTypes.PROTOCOL_THRIFT,
@@ -275,7 +275,7 @@ public class RegistryTestHelper extends Assert {
         new URI("http", hostname + ":80", "/")));
     entry.addExternalEndpoint(
         restEndpoint(API_WEBHDFS,
-            new URI("http", hostname + ":9820", "/")));
+            new URI("http", hostname + ":8020", "/")));
 
     Endpoint endpoint = ipcEndpoint(API_HDFS, null);
     endpoint.addresses.add(RegistryTypeUtils.hostnamePortPair(hostname, 8030));
