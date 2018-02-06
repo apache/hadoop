@@ -21,6 +21,9 @@ import Ember from 'ember';
 
 export function lower(params) {
   const string = params[0];
+  if(!string) {
+    return "";
+  }
   return string.toLowerCase();
 }
 
