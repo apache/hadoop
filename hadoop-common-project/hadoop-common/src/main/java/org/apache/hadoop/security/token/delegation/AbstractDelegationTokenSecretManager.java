@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -627,6 +628,11 @@ extends AbstractDelegationTokenIdentifier>
       }
     }
     // don't hold lock on 'this' to avoid edit log updates blocking token ops
+    logExpireTokens(expiredTokens);
+  }
+
+  protected void logExpireTokens(
+      Collection<TokenIdent> expiredTokens) throws IOException {
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
       LOG.info("Removing expired token " + formatTokenId(ident));
