@@ -357,28 +357,32 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       return reader;
     }
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
-    if (scConf.isShortCircuitLocalReads() && allowShortCircuitLocalReads) {
-      if (clientContext.getUseLegacyBlockReaderLocal()) {
-        reader = getLegacyBlockReaderLocal();
-        if (reader != null) {
-          LOG.trace("{}: returning new legacy block reader local.", this);
-          return reader;
+    try {
+      if (scConf.isShortCircuitLocalReads() && allowShortCircuitLocalReads) {
+        if (clientContext.getUseLegacyBlockReaderLocal()) {
+          reader = getLegacyBlockReaderLocal();
+          if (reader != null) {
+            LOG.trace("{}: returning new legacy block reader local.", this);
+            return reader;
+          }
+        } else {
+          reader = getBlockReaderLocal();
+          if (reader != null) {
+            LOG.trace("{}: returning new block reader local.", this);
+            return reader;
+          }
         }
-      } else {
-        reader = getBlockReaderLocal();
+      }
+      if (scConf.isDomainSocketDataTraffic()) {
+        reader = getRemoteBlockReaderFromDomain();
         if (reader != null) {
-          LOG.trace("{}: returning new block reader local.", this);
+          LOG.trace("{}: returning new remote block reader using UNIX domain "
+              + "socket on {}", this, pathInfo.getPath());
           return reader;
         }
       }
-    }
-    if (scConf.isDomainSocketDataTraffic()) {
-      reader = getRemoteBlockReaderFromDomain();
-      if (reader != null) {
-        LOG.trace("{}: returning new remote block reader using UNIX domain "
-            + "socket on {}", this, pathInfo.getPath());
-        return reader;
-      }
+    } catch (IOException e) {
+      LOG.debug("Block read failed. Getting remote block reader using TCP", e);
     }
     Preconditions.checkState(!DFSInputStream.tcpReadsDisabledForTesting,
         "TCP reads were disabled for testing, but we failed to " +
@@ -469,7 +473,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     return null;
   }
 
-  private BlockReader getBlockReaderLocal() throws InvalidToken {
+  private BlockReader getBlockReaderLocal() throws IOException {
     LOG.trace("{}: trying to construct a BlockReaderLocal for short-circuit "
         + " reads.", this);
     if (pathInfo == null) {

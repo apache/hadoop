@@ -550,7 +550,11 @@ public class DFSUtilClient {
   private static final Map<String, Boolean> localAddrMap = Collections
       .synchronizedMap(new HashMap<String, Boolean>());
 
-  public static boolean isLocalAddress(InetSocketAddress targetAddr) {
+  public static boolean isLocalAddress(InetSocketAddress targetAddr)
+      throws IOException {
+    if (targetAddr.isUnresolved()) {
+      throw new IOException("Unresolved host: " + targetAddr);
+    }
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {
