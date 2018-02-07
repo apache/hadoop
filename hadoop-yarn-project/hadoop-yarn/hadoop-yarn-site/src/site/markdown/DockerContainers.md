@@ -380,11 +380,14 @@ For [YARN Service HTTPD example](./yarn-service/Examples.html), container-execut
 Connecting to a Secure Docker Repository
 ----------------------------------------
 
-Until YARN-5428 is complete, the Docker client command will draw its
-configuration from the default location, which is $HOME/.docker/config.json on
-the NodeManager host. The Docker configuration is where secure repository
-credentials are stored, so use of the LCE with secure Docker repos is
-discouraged until YARN-5428 is complete.
+The Docker client command will draw its configuration from the default location,
+which is $HOME/.docker/config.json on the NodeManager host. The Docker
+configuration is where secure repository credentials are stored, so use of the
+LCE with secure Docker repos is discouraged using this method.
+
+YARN-5428 added support to Distributed Shell for securely supplying the Docker
+client configuration. See the Distributed Shell help for usage. Support for
+additional frameworks is planned.
 
 As a work-around, you may manually log the Docker daemon on every NodeManager
 host into the secure repo using the Docker login command:
