@@ -68,6 +68,10 @@ public class QueueMetrics implements MetricsSource {
     MutableCounterLong aggregateOffSwitchContainersAllocated;
   @Metric("Aggregate # of preempted containers") MutableCounterLong
       aggregateContainersPreempted;
+  @Metric("Aggregate # of preempted memory seconds") MutableCounterLong
+      aggregateMemoryMBSecondsPreempted;
+  @Metric("Aggregate # of preempted vcore seconds") MutableCounterLong
+      aggregateVcoreSecondsPreempted;
   @Metric("# of active users") MutableGaugeInt activeUsers;
   @Metric("# of active applications") MutableGaugeInt activeApplications;
   @Metric("App Attempt First Container Allocation Delay")
@@ -521,6 +525,27 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
+  public void preemptContainer() {
+    aggregateContainersPreempted.incr();
+    if (parent != null) {
+      parent.preemptContainer();
+    }
+  }
+
+  public void updatePreemptedMemoryMBSeconds(long mbSeconds) {
+    aggregateMemoryMBSecondsPreempted.incr(mbSeconds);
+    if (parent != null) {
+      parent.updatePreemptedMemoryMBSeconds(mbSeconds);
+    }
+  }
+
+  public void updatePreemptedVcoreSeconds(long vcoreSeconds) {
+    aggregateVcoreSecondsPreempted.incr(vcoreSeconds);
+    if (parent != null) {
+      parent.updatePreemptedVcoreSeconds(vcoreSeconds);
+    }
+  }
+
   public void reserveResource(String partition, String user, Resource res) {
     if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
       reserveResource(user, res);
@@ -696,5 +721,9 @@ public class QueueMetrics implements MetricsSource {
 
   public long getAggegatedReleasedContainers() {
     return aggregateContainersReleased.value();
+  }
+
+  public long getAggregatePreemptedContainers() {
+    return aggregateContainersPreempted.value();
   }
 }
