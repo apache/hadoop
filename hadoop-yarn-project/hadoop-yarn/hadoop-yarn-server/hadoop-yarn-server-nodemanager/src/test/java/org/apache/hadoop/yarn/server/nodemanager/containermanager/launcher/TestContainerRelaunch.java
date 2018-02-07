@@ -93,5 +93,7 @@ public class TestContainerRelaunch {
     assertNotNull("tokens path null", csc.getNmPrivateTokensPath());
     assertNotNull("user null", csc.getUser());
     assertNotNull("user local dirs null", csc.getUserLocalDirs());
+    assertNotNull("user filecache dirs null", csc.getUserFilecacheDirs());
+    assertNotNull("application local dirs null", csc.getApplicationLocalDirs());
   }
 }
