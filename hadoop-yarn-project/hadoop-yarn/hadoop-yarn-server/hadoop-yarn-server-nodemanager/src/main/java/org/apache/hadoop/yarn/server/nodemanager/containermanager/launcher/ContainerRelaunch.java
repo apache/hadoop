@@ -98,6 +98,9 @@ public class ContainerRelaunch extends ContainerLaunch {
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
       List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
+          appIdStr);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -119,6 +122,8 @@ public class ContainerRelaunch extends ContainerLaunch {
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
+          .setUserFilecacheDirs(userFilecacheDirs)
+          .setApplicationLocalDirs(applicationLocalDirs)
           .build());
     } catch (ConfigurationException e) {
       LOG.error("Failed to launch container due to configuration error.", e);
