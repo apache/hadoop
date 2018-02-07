@@ -1599,7 +1599,21 @@ public class PBHelperClient {
     }
     DiffType type = DiffType.getTypeFromLabel(entry
         .getModificationLabel());
-    return type == null ? null : new DiffReportEntry(type, entry.getFullpath()
+    SnapshotDiffReport.INodeType inodeType = null;
+    if (entry.hasFileType()) {
+      switch (entry.getFileType()) {
+      case IS_FILE:
+        inodeType = SnapshotDiffReport.INodeType.FILE;
+        break;
+      case IS_DIR:
+        inodeType = SnapshotDiffReport.INodeType.DIRECTORY;
+        break;
+      case IS_SYMLINK:
+        inodeType = SnapshotDiffReport.INodeType.SYMLINK;
+        break;
+      }
+    }
+    return type == null ? null : new DiffReportEntry(inodeType, type, entry.getFullpath()
         .toByteArray(), entry.hasTargetPath() ? entry.getTargetPath()
         .toByteArray() : null);
   }
@@ -1649,14 +1663,26 @@ public class PBHelperClient {
     if (entry == null) {
       return null;
     }
+    DiffReportListingEntry.INodeType inodeType = null;
+    switch(entry.getFileType()) {
+      case IS_FILE:
+        inodeType = DiffReportListingEntry.INodeType.FILE;
+        break;
+      case IS_DIR:
+        inodeType = DiffReportListingEntry.INodeType.DIRECTORY;
+        break;
+      case IS_SYMLINK:
+        inodeType = DiffReportListingEntry.INodeType.SYMLINK;
+        break;
+    }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
     boolean isReference = entry.getIsReference();
     byte[] sourceName = entry.getFullpath().toByteArray();
     byte[] targetName =
         entry.hasTargetPath() ? entry.getTargetPath().toByteArray() : null;
-    return new DiffReportListingEntry(dirId, fileId, sourceName, isReference,
-        targetName);
+    return new DiffReportListingEntry(inodeType, dirId, fileId, sourceName,
+        isReference, targetName);
   }
 
   public static SnapshottableDirectoryStatus[] convert(
@@ -2679,6 +2705,17 @@ public class PBHelperClient {
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
         .newBuilder().setFullpath(sourcePath)
         .setModificationLabel(modification);
+    switch(entry.getINodeType()){
+      case FILE:
+        builder.setFileType(FileType.IS_FILE);
+        break;
+      case DIRECTORY:
+        builder.setFileType(FileType.IS_DIR);
+        break;
+      case SYMLINK:
+        builder.setFileType(FileType.IS_SYMLINK);
+        break;
+    }
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath =
           getByteString(entry.getTargetPath() == null ?
@@ -2696,6 +2733,18 @@ public class PBHelperClient {
     ByteString sourcePath = getByteString(
         entry.getSourcePath() == null ? DFSUtilClient.EMPTY_BYTES :
             DFSUtilClient.byteArray2bytes(entry.getSourcePath()));
+    HdfsFileStatusProto.FileType fileType = null;
+    switch(entry.getINodeType()){
+      case FILE:
+        fileType = FileType.IS_FILE;
+        break;
+      case DIRECTORY:
+        fileType = FileType.IS_DIR;
+        break;
+      case SYMLINK:
+        fileType = FileType.IS_SYMLINK;
+        break;
+    }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
     boolean isReference = entry.isReference();
@@ -2703,7 +2752,9 @@ public class PBHelperClient {
         entry.getTargetPath() == null ? DFSUtilClient.EMPTY_BYTES :
             DFSUtilClient.byteArray2bytes(entry.getTargetPath()));
     SnapshotDiffReportListingEntryProto.Builder builder =
-        SnapshotDiffReportListingEntryProto.newBuilder().setFullpath(sourcePath)
+        SnapshotDiffReportListingEntryProto.newBuilder()
+            .setFileType(fileType)
+            .setFullpath(sourcePath)
             .setDirId(dirId).setFileId(fileId).setIsReference(isReference)
             .setTargetPath(targetPath);
     return builder.build();

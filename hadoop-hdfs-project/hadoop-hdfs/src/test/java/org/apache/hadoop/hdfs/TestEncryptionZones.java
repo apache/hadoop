@@ -112,6 +112,7 @@ import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.FILE;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -1540,12 +1541,12 @@ public class TestEncryptionZones {
     fsWrapper.delete(zoneFile, true);
     fs.createSnapshot(zone, "snap2");
     verifyDiffReport(zone, "snap1", "snap2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
 
     verifyDiffReport(rawZone, "snap1", "snap2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
   }
 
   /**

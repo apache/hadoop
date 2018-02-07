@@ -32,6 +32,9 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.util.ChunkedArrayList;
 
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry.INodeType.*;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry.INodeType.FILE;
+
 /**
  * A class describing the difference between snapshots of a snapshottable
  * directory where the difference is limited by dfs.snapshotDiff-report.limit.
@@ -86,8 +89,8 @@ class SnapshotDiffListingInfo {
     final Snapshot laterSnapshot = getLater();
     if (lastIndex == -1) {
       if (getTotalEntries() < maxEntries) {
-        modifiedList.add(new DiffReportListingEntry(
-            dirId, dirId, parent, true, null));
+        modifiedList.add(new DiffReportListingEntry(DIRECTORY, dirId, dirId,
+            parent, true, null));
       } else {
         setLastPath(parent);
         setLastIndex(-1);
@@ -103,8 +106,8 @@ class SnapshotDiffListingInfo {
         if (getTotalEntries() < maxEntries) {
           INode created = iterator.next();
           byte[][] path = newPath(parent, created.getLocalNameBytes());
-          createdList.add(new DiffReportListingEntry(dirId, created.getId(),
-              path, created.isReference(), null));
+          createdList.add(new DiffReportListingEntry(fromINode(created), dirId,
+              created.getId(), path, created.isReference(), null));
         } else {
           setLastPath(parent);
           setLastIndex(iterator.nextIndex());
@@ -124,9 +127,12 @@ class SnapshotDiffListingInfo {
           final INode d = iterator.next();
           byte[][] path = newPath(parent, d.getLocalNameBytes());
           byte[][] target = findRenameTargetPath(d, laterSnapshot);
+          DiffReportListingEntry.INodeType inodeType = fromINode(d);
           final DiffReportListingEntry e = target != null ?
-              new DiffReportListingEntry(dirId, d.getId(), path, true, target) :
-              new DiffReportListingEntry(dirId, d.getId(), path, false, null);
+              new DiffReportListingEntry(inodeType, dirId, d.getId(), path,
+                  true, target) :
+              new DiffReportListingEntry(inodeType, dirId, d.getId(), path,
+                  false, null);
           deletedList.add(e);
         } else {
           setLastPath(parent);
@@ -156,6 +162,17 @@ class SnapshotDiffListingInfo {
     return fullPath;
   }
 
+  private static DiffReportListingEntry.INodeType fromINode(INode inode) {
+    if (inode.isFile()) {
+      return FILE;
+    } else if (inode.isDirectory()) {
+      return DIRECTORY;
+    } else if (inode.isSymlink()) {
+      return SYMLINK;
+    }
+    throw new IllegalArgumentException("Unable to convert unknown INode type");
+  }
+
   Snapshot getEarlier() {
     return isFromEarlier()? from: to;
   }
@@ -175,7 +192,7 @@ class SnapshotDiffListingInfo {
 
   boolean addFileDiff(INodeFile file, byte[][] relativePath) {
     if (getTotalEntries() < maxEntries) {
-      modifiedList.add(new DiffReportListingEntry(file.getId(),
+      modifiedList.add(new DiffReportListingEntry(FILE, file.getId(),
           file.getId(), relativePath,false, null));
     } else {
       setLastPath(relativePath);

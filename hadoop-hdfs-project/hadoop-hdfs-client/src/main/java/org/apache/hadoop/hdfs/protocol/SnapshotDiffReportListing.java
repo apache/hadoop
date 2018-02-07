@@ -37,6 +37,26 @@ public class SnapshotDiffReportListing {
    * have happened.
    */
   public static class DiffReportListingEntry {
+
+    public enum INodeType {
+
+      FILE(SnapshotDiffReport.INodeType.FILE),
+      DIRECTORY(SnapshotDiffReport.INodeType.DIRECTORY),
+      SYMLINK(SnapshotDiffReport.INodeType.SYMLINK);
+
+      private SnapshotDiffReport.INodeType snapshotDiffReportINodeType;
+
+      INodeType(SnapshotDiffReport.INodeType snapshotDiffReportINodeType) {
+        this.snapshotDiffReportINodeType = snapshotDiffReportINodeType;
+      }
+
+      public SnapshotDiffReport.INodeType toSnapshotDiffReportINodeType() {
+        return snapshotDiffReportINodeType;
+      }
+    }
+
+    private final INodeType inodeType;
+
     /**
      * The type of the difference.
      */
@@ -51,9 +71,10 @@ public class SnapshotDiffReportListing {
     private final byte[][] sourcePath;
     private final byte[][] targetPath;
 
-    public DiffReportListingEntry(long dirId, long fileId, byte[][] sourcePath,
-        boolean isReference, byte[][] targetPath) {
+    public DiffReportListingEntry(INodeType inodeType, long dirId, long fileId,
+        byte[][] sourcePath, boolean isReference, byte[][] targetPath) {
       Preconditions.checkNotNull(sourcePath);
+      this.inodeType = inodeType;
       this.dirId = dirId;
       this.fileId = fileId;
       this.sourcePath = sourcePath;
@@ -61,15 +82,20 @@ public class SnapshotDiffReportListing {
       this.targetPath = targetPath;
     }
 
-    public DiffReportListingEntry(long dirId, long fileId, byte[] sourcePath,
-        boolean isReference, byte[] targetpath) {
+    public DiffReportListingEntry(INodeType inodeType, long dirId, long fileId,
+        byte[] sourcePath, boolean isReference, byte[] targetpath) {
       Preconditions.checkNotNull(sourcePath);
+      this.inodeType = inodeType;
       this.dirId = dirId;
       this.fileId = fileId;
       this.sourcePath = DFSUtilClient.bytes2byteArray(sourcePath);
       this.isReference = isReference;
       this.targetPath =
           targetpath == null ? null : DFSUtilClient.bytes2byteArray(targetpath);
+    }
+
+    public INodeType getINodeType() {
+      return inodeType;
     }
 
     public long getDirId() {
