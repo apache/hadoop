@@ -36,6 +36,7 @@ public class TestDockerRunCommand {
   private static final String CONTAINER_NAME = "foo";
   private static final String USER_ID = "user_id";
   private static final String IMAGE_NAME = "image_name";
+  private static final String CLIENT_CONFIG_PATH = "/path/to/client.json";
 
   @Before
   public void setUp() throws Exception {
@@ -76,5 +77,12 @@ public class TestDockerRunCommand {
         dockerRunCommand.getDockerCommandWithArguments()
             .get("launch-command")));
     assertEquals(7, dockerRunCommand.getDockerCommandWithArguments().size());
+  }
+
+  @Test
+  public void testSetClientConfigDir() {
+    dockerRunCommand.setClientConfigDir(CLIENT_CONFIG_PATH);
+    assertEquals(CLIENT_CONFIG_PATH, StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("docker-config")));
   }
 }

@@ -72,3 +72,8 @@ message YARNDelegationTokenIdentifierProto {
   optional int32 masterKeyId = 7;
 }
 
+message DockerCredentialTokenIdentifierProto {
+  optional string registryUrl = 1;
+  optional string applicationId = 2;
+}
+

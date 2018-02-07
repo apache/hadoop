@@ -21,6 +21,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,8 +60,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -846,6 +851,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       runCommand.setPrivileged();
     }
 
+    addDockerClientConfigToRunCommand(ctx, runCommand);
+
     String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
 
     addCGroupParentIfRequired(resourcesOpts, containerIdStr, runCommand);
@@ -1178,6 +1185,38 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
             env, conf, privilegedOperationExecutor, false);
+      }
+    }
+  }
+
+  private void addDockerClientConfigToRunCommand(ContainerRuntimeContext ctx,
+      DockerRunCommand dockerRunCommand) throws ContainerExecutionException {
+    ByteBuffer tokens = ctx.getContainer().getLaunchContext().getTokens();
+    Credentials credentials;
+    if (tokens != null) {
+      tokens.rewind();
+      if (tokens.hasRemaining()) {
+        try {
+          credentials = DockerClientConfigHandler
+              .getCredentialsFromTokensByteBuffer(tokens);
+        } catch (IOException e) {
+          throw new ContainerExecutionException("Unable to read tokens.");
+        }
+        if (credentials.numberOfTokens() > 0) {
+          Path nmPrivateDir =
+              ctx.getExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH)
+                  .getParent();
+          File dockerConfigPath = new File(nmPrivateDir + "/config.json");
+          try {
+            DockerClientConfigHandler
+                .writeDockerCredentialsToPath(dockerConfigPath, credentials);
+          } catch (IOException e) {
+            throw new ContainerExecutionException(
+                "Unable to write Docker client credentials to "
+                    + dockerConfigPath);
+          }
+          dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
+        }
       }
     }
   }
