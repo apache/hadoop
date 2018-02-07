@@ -74,6 +74,48 @@ static int add_param_to_command(const struct configuration *command_config, cons
   return ret;
 }
 
+int check_trusted_image(const struct configuration *command_config, const struct configuration *conf) {
+  int found = 0;
+  int i = 0;
+  int ret = 0;
+  char *image_name = get_configuration_value("image", DOCKER_COMMAND_FILE_SECTION, command_config);
+  char **privileged_registry = get_configuration_values_delimiter("docker.privileged-containers.registries", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
+  char *registry_ptr = NULL;
+  if (image_name == NULL) {
+    ret = INVALID_DOCKER_IMAGE_NAME;
+    goto free_and_exit;
+  }
+  if (privileged_registry != NULL) {
+    for (i = 0; privileged_registry[i] != NULL; i++) {
+      int len = strlen(privileged_registry[i]);
+      if (privileged_registry[i][len - 1] != '/') {
+        registry_ptr = (char *) alloc_and_clear_memory(len + 2, sizeof(char));
+        strncpy(registry_ptr, privileged_registry[i], len);
+        registry_ptr[len] = '/';
+        registry_ptr[len + 1] = '\0';
+      } else {
+        registry_ptr = strdup(privileged_registry[i]);
+      }
+      if (strncmp(image_name, registry_ptr, strlen(registry_ptr))==0) {
+        fprintf(ERRORFILE, "image: %s is trusted in %s registry.\n", image_name, privileged_registry[i]);
+        found=1;
+        free(registry_ptr);
+        break;
+      }
+      free(registry_ptr);
+    }
+  }
+  if (found==0) {
+    fprintf(ERRORFILE, "image: %s is not trusted.\n", image_name);
+    ret = INVALID_DOCKER_IMAGE_TRUST;
+  }
+  free(image_name);
+
+  free_and_exit:
+  free(privileged_registry);
+  return ret;
+}
+
 static int add_param_to_command_if_allowed(const struct configuration *command_config,
                                            const struct configuration *executor_cfg,
                                            const char *key, const char *allowed_key, const char *param,
@@ -100,6 +142,14 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
   }
 
   if (values != NULL) {
+    // Disable capabilities, devices if image is not trusted.
+    if (strcmp(key, "net") != 0) {
+      if (check_trusted_image(command_config, executor_cfg) != 0) {
+        fprintf(ERRORFILE, "Disable %s for untrusted image\n", key);
+        return INVALID_DOCKER_IMAGE_TRUST;
+      }
+    }
+
     if (permitted_values != NULL) {
       for (i = 0; values[i] != NULL; ++i) {
         memset(tmp_buffer, 0, tmp_buffer_size);
@@ -222,6 +272,8 @@ const char *get_docker_error_message(const int error_code) {
       return "Host pid namespace is disabled";
     case INVALID_PID_NAMESPACE:
       return "Invalid pid namespace";
+    case INVALID_DOCKER_IMAGE_TRUST:
+      return "Docker image is not trusted";
     default:
       return "Unknown error";
   }
@@ -840,14 +892,22 @@ static int set_capabilities(const struct configuration *command_config,
   if (ret != 0) {
     return BUFFER_TOO_SMALL;
   }
+
   ret = add_param_to_command_if_allowed(command_config, conf, "cap-add",
                                         "docker.allowed.capabilities",
                                         "--cap-add=", 1, 0,
                                         out, outlen);
-  if (ret != 0) {
-    fprintf(ERRORFILE, "Invalid docker capability requested\n");
-    ret = INVALID_DOCKER_CAPABILITY;
-    memset(out, 0, outlen);
+  switch (ret) {
+    case 0:
+      break;
+    case INVALID_DOCKER_IMAGE_TRUST:
+      fprintf(ERRORFILE, "Docker capability disabled for untrusted image\n");
+      ret = 0;
+      break;
+    default:
+      fprintf(ERRORFILE, "Invalid docker capability requested\n");
+      ret = INVALID_DOCKER_CAPABILITY;
+      memset(out, 0, outlen);
   }
 
   return ret;
@@ -999,6 +1059,19 @@ static int add_mounts(const struct configuration *command_config, const struct c
   }
 
   if (values != NULL) {
+    // Disable mount volumes if image is not trusted.
+    if (check_trusted_image(command_config, conf) != 0) {
+      fprintf(ERRORFILE, "Disable mount volume for untrusted image\n");
+      // YARN will implicitly bind node manager local directory to
+      // docker image.  This can create file system security holes,
+      // if docker container has binary to escalate privileges.
+      // For untrusted image, we drop mounting without reporting
+      // INVALID_DOCKER_MOUNT messages to allow running untrusted
+      // image in a sandbox.
+      ret = 0;
+      goto free_and_exit;
+    }
+
     ret = normalize_mounts(permitted_ro_mounts);
     ret |= normalize_mounts(permitted_rw_mounts);
     if (ret != 0) {
@@ -1100,6 +1173,12 @@ static int set_privileged(const struct configuration *command_config, const stru
     if (privileged_container_enabled != NULL) {
       if (strcmp(privileged_container_enabled, "1") == 0 ||
           strcasecmp(privileged_container_enabled, "True") == 0) {
+        // Disable set privileged if image is not trusted.
+        if (check_trusted_image(command_config, conf) != 0) {
+          fprintf(ERRORFILE, "Privileged containers are disabled from untrusted source\n");
+          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          goto free_and_exit;
+        }
         ret = add_to_buffer(out, outlen, "--privileged ");
         if (ret != 0) {
           ret = BUFFER_TOO_SMALL;
@@ -1251,6 +1330,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
 
   launch_command = get_configuration_values_delimiter("launch-command", DOCKER_COMMAND_FILE_SECTION, &command_config,
                                                       ",");
+
+  if (check_trusted_image(&command_config, conf) != 0) {
+    launch_command = NULL;
+  }
+
   if (launch_command != NULL) {
     for (i = 0; launch_command[i] != NULL; ++i) {
       memset(tmp_buffer, 0, tmp_buffer_size);
