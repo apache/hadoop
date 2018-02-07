@@ -133,7 +133,8 @@ public class DomainSocketFactory {
    *
    * @return             Information about the socket path.
    */
-  public PathInfo getPathInfo(InetSocketAddress addr, ShortCircuitConf conf) {
+  public PathInfo getPathInfo(InetSocketAddress addr, ShortCircuitConf conf)
+      throws IOException {
     // If there is no domain socket path configured, we can't use domain
     // sockets.
     if (conf.getDomainSocketPath().isEmpty()) return PathInfo.NOT_CONFIGURED;
