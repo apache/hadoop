@@ -19,6 +19,10 @@ This document describes some example service definitions (`Yarnfile`).
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 ## Apache web server - httpd (with registry DNS)
+
+For this example to work, centos/httpd-24-centos7 image must be included in `docker.privileged-containers.registries`.
+For server side configuration, please refer to [Running Applications in Docker Containers](../DockerContainers.html) document.
+
 Below is the `Yarnfile` for a service called `httpd-service` with two `httpd` instances.
 There is also an httpd proxy instance (httpd-proxy-0) that proxies between the other two httpd instances (httpd-0 and httpd-1).
 
