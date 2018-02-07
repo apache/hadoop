@@ -1288,8 +1288,8 @@ public class DFSStripedOutputStream extends DFSOutputStream
       int bgIndex = entry.getKey();
       int corruptBlockCount = entry.getValue();
       StringBuilder sb = new StringBuilder();
-      sb.append("Block group <").append(bgIndex).append("> has ")
-          .append(corruptBlockCount).append(" corrupt blocks.");
+      sb.append("Block group <").append(bgIndex).append("> failed to write ")
+          .append(corruptBlockCount).append(" blocks.");
       if (corruptBlockCount == numAllBlocks - numDataBlocks) {
         sb.append(" It's at high risk of losing data.");
       }
