@@ -838,10 +838,10 @@ message SatisfyStoragePolicyResponseProto {
 
 }
 
-message IsStoragePolicySatisfierRunningRequestProto {  // no parameters
+message IsInternalSatisfierRunningRequestProto {  // no parameters
 }
 
-message IsStoragePolicySatisfierRunningResponseProto {
+message IsInternalSatisfierRunningResponseProto {
   required bool running = 1;
 }
 
@@ -1048,8 +1048,8 @@ service ClientNamenodeProtocol {
       returns(ListOpenFilesResponseProto);
   rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
       returns(SatisfyStoragePolicyResponseProto);
-  rpc isStoragePolicySatisfierRunning(IsStoragePolicySatisfierRunningRequestProto)
-      returns(IsStoragePolicySatisfierRunningResponseProto);
+  rpc isInternalSatisfierRunning(IsInternalSatisfierRunningRequestProto)
+      returns(IsInternalSatisfierRunningResponseProto);
   rpc checkStoragePolicySatisfyPathStatus(CheckStoragePolicySatisfyPathStatusRequestProto)
       returns(CheckStoragePolicySatisfyPathStatusResponseProto);
 }

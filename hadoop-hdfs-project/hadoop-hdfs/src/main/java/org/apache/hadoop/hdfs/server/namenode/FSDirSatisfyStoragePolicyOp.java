@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -75,24 +76,33 @@ final class FSDirSatisfyStoragePolicyOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
       INode inode = FSDirectory.resolveLastINode(iip);
-      if (inodeHasSatisfyXAttr(inode)) {
-        throw new IOException(
-            "Cannot request to call satisfy storage policy on path "
+      if (inode.isFile() && inode.asFile().numBlocks() == 0) {
+        if (NameNode.LOG.isInfoEnabled()) {
+          NameNode.LOG.info(
+              "Skipping satisfy storage policy on path:{} as "
+                  + "this file doesn't have any blocks!",
+              inode.getFullPathName());
+        }
+      } else if (inodeHasSatisfyXAttr(inode)) {
+        NameNode.LOG
+            .warn("Cannot request to call satisfy storage policy on path: "
                 + inode.getFullPathName()
                 + ", as this file/dir was already called for satisfying "
                 + "storage policy.");
-      }
-      if (unprotectedSatisfyStoragePolicy(inode, fsd)) {
+      } else {
         XAttr satisfyXAttr = XAttrHelper
             .buildXAttr(XATTR_SATISFY_STORAGE_POLICY);
-        List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-        xAttrs.add(satisfyXAttr);
+        List<XAttr> xAttrs = Arrays.asList(satisfyXAttr);
         List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
         List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
             xAttrs, EnumSet.of(XAttrSetFlag.CREATE));
         XAttrStorage.updateINodeXAttrs(inode, newXAttrs,
             iip.getLatestSnapshotId());
         fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
+
+        // Adding directory in the pending queue, so FileInodeIdCollector
+        // process directory child in batch and recursively
+        fsd.getBlockManager().getSPSManager().addPathId(inode.getId());
       }
     } finally {
       fsd.writeUnlock();
@@ -106,7 +116,7 @@ final class FSDirSatisfyStoragePolicyOp {
     } else {
       // Adding directory in the pending queue, so FileInodeIdCollector process
       // directory child in batch and recursively
-      fsd.getBlockManager().addSPSPathId(inode.getId());
+      fsd.getBlockManager().getSPSManager().addPathId(inode.getId());
       return true;
     }
   }

@@ -75,9 +75,8 @@ public class StoragePolicySatisfyWorker {
 
   public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode) {
     this.datanode = datanode;
-
-    moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY,
-        DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
+    // Defaulting to 10. This is to minimise the number of move ops.
+    moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 10);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);
     moverCompletionService = new ExecutorCompletionService<>(moveExecutor);
     handler = new BlocksMovementsStatusHandler();
@@ -127,20 +126,12 @@ public class StoragePolicySatisfyWorker {
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
         new Daemon.DaemonFactory() {
           private final AtomicInteger threadIndex = new AtomicInteger(0);
+
           @Override
           public Thread newThread(Runnable r) {
             Thread t = super.newThread(r);
             t.setName("BlockMoverTask-" + threadIndex.getAndIncrement());
             return t;
-          }
-        }, new ThreadPoolExecutor.CallerRunsPolicy() {
-          @Override
-          public void rejectedExecution(Runnable runnable,
-              ThreadPoolExecutor e) {
-            LOG.info("Execution for block movement to satisfy storage policy"
-                + " got rejected, Executing in current thread");
-            // will run in the current thread.
-            super.rejectedExecution(runnable, e);
           }
         });
 

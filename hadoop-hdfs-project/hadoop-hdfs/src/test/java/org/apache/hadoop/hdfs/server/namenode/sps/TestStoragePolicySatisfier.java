@@ -445,15 +445,10 @@ public class TestStoragePolicySatisfier {
       try {
         hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
         hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
-        Assert.fail(String.format("Should failed to satisfy storage policy "
-            + "for %s ,since it has been " + "added to satisfy movement queue.",
-            FILE));
-      } catch (IOException e) {
-        GenericTestUtils.assertExceptionContains(
-            String.format("Cannot request to call satisfy storage policy "
-                + "on path %s, as this file/dir was already called for "
-                + "satisfying storage policy.", FILE),
-            e);
+      } catch (Exception e) {
+        Assert.fail(String.format("Allow to invoke mutlipe times "
+            + "#satisfyStoragePolicy() api for a path %s , internally just "
+            + "skipping addtion to satisfy movement queue.", FILE));
       }
     } finally {
       shutdownCluster();
@@ -563,7 +558,7 @@ public class TestStoragePolicySatisfier {
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           StoragePolicySatisfierMode.NONE.toString());
       running = hdfsCluster.getFileSystem()
-          .getClient().isStoragePolicySatisfierRunning();
+          .getClient().isInternalSatisfierRunning();
       Assert.assertFalse("SPS should stopped as configured.", running);
 
       // Simulate the case by creating MOVER_ID file
@@ -576,7 +571,7 @@ public class TestStoragePolicySatisfier {
           StoragePolicySatisfierMode.INTERNAL.toString());
 
       running = hdfsCluster.getFileSystem()
-          .getClient().isStoragePolicySatisfierRunning();
+          .getClient().isInternalSatisfierRunning();
       Assert.assertFalse("SPS should not be able to run as file "
           + HdfsServerConstants.MOVER_ID_PATH + " is being hold.", running);
 
@@ -591,7 +586,7 @@ public class TestStoragePolicySatisfier {
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           StoragePolicySatisfierMode.INTERNAL.toString());
       running = hdfsCluster.getFileSystem()
-          .getClient().isStoragePolicySatisfierRunning();
+          .getClient().isInternalSatisfierRunning();
       Assert.assertTrue("SPS should be running as "
           + "Mover already exited", running);
 
@@ -623,7 +618,7 @@ public class TestStoragePolicySatisfier {
           HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
       restartNamenode();
       boolean running = hdfsCluster.getFileSystem()
-          .getClient().isStoragePolicySatisfierRunning();
+          .getClient().isInternalSatisfierRunning();
       Assert.assertTrue("SPS should be running as "
           + "no Mover really running", running);
     } finally {
@@ -1293,8 +1288,8 @@ public class TestStoragePolicySatisfier {
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");
-    hdfsCluster.getNamesystem().getBlockManager()
-        .addSPSPathId(rootINode.getId());
+    hdfsCluster.getNamesystem().getBlockManager().getSPSManager()
+        .addPathId(rootINode.getId());
 
     //Wait for thread to reach U.
     Thread.sleep(1000);
@@ -1360,8 +1355,8 @@ public class TestStoragePolicySatisfier {
     sps.getStorageMovementQueue().activate();
 
     INode rootINode = fsDir.getINode("/root");
-    hdfsCluster.getNamesystem().getBlockManager()
-        .addSPSPathId(rootINode.getId());
+    hdfsCluster.getNamesystem().getBlockManager().getSPSManager()
+        .addPathId(rootINode.getId());
 
     // Wait for thread to reach U.
     Thread.sleep(1000);
@@ -1704,7 +1699,8 @@ public class TestStoragePolicySatisfier {
   private void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
       int timeout) throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+        .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
@@ -1723,7 +1719,8 @@ public class TestStoragePolicySatisfier {
       long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+        .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {

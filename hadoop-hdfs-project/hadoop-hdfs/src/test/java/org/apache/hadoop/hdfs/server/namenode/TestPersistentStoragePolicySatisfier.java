@@ -389,7 +389,8 @@ public class TestPersistentStoragePolicySatisfier {
       fs.setStoragePolicy(testFile, ONE_SSD);
       fs.satisfyStoragePolicy(testFile);
 
-      cluster.getNamesystem().getBlockManager().disableSPS();
+      cluster.getNamesystem().getBlockManager().getSPSManager()
+          .changeModeEvent(StoragePolicySatisfierMode.NONE);
 
       // Make sure satisfy xattr has been removed.
       DFSTestUtil.waitForXattrRemoved(testFileName,

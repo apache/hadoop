@@ -178,17 +178,17 @@ public class IntraSPSNameNodeContext implements Context {
 
   @Override
   public Long getNextSPSPathId() {
-    return blockManager.getNextSPSPathId();
+    return blockManager.getSPSManager().getNextPathId();
   }
 
   @Override
   public void removeSPSPathId(long trackId) {
-    blockManager.removeSPSPathId(trackId);
+    blockManager.getSPSManager().removePathId(trackId);
   }
 
   @Override
   public void removeAllSPSPathIds() {
-    blockManager.removeAllSPSPathIds();
+    blockManager.getSPSManager().removeAllPathIds();
   }
 
   @Override

@@ -495,7 +495,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       long expectedBlkMovAttemptedCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+        .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
@@ -566,7 +567,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       long expectedMoveFinishedBlks, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
+    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+        .getSPSManager().getInternalSPSService();
     Assert.assertNotNull("Failed to get SPS object reference!", sps);
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

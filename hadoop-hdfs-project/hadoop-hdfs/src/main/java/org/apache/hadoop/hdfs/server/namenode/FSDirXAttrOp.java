@@ -209,7 +209,7 @@ class FSDirXAttrOp {
       for (XAttr xattr : toRemove) {
         if (XATTR_SATISFY_STORAGE_POLICY
             .equals(XAttrHelper.getPrefixedName(xattr))) {
-          fsd.getBlockManager().getStoragePolicySatisfier()
+          fsd.getBlockManager().getSPSManager().getInternalSPSService()
               .clearQueue(inode.getId());
           break;
         }

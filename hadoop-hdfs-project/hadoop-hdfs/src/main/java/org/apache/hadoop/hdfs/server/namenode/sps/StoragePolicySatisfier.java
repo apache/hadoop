@@ -32,7 +32,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -60,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * Setting storagePolicy on a file after the file write will only update the new
@@ -145,7 +145,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
         new BlockStorageMovementAttemptedItems(this,
         storageMovementNeeded, blockMovementListener);
     this.blockMoveTaskHandler = blockMovementTaskHandler;
-    this.spsWorkMultiplier = DFSUtil.getSPSWorkMultiplier(getConf());
+    this.spsWorkMultiplier = getSPSWorkMultiplier(getConf());
     this.blockMovementMaxRetry = getConf().getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY,
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT);
@@ -163,8 +163,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
           serviceMode);
       return;
     }
-    isRunning = true;
-    this.spsMode = serviceMode;
     if (spsMode == StoragePolicySatisfierMode.INTERNAL
         && ctxt.isMoverRunning()) {
       isRunning = false;
@@ -182,6 +180,8 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
           StringUtils.toLowerCase(spsMode.toString()));
     }
 
+    isRunning = true;
+    this.spsMode = serviceMode;
     // Ensure that all the previously submitted block movements(if any) have to
     // be stopped in all datanodes.
     addDropSPSWorkCommandsToAllDNs();
@@ -193,7 +193,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   @Override
-  public synchronized void disable(boolean forceStop) {
+  public synchronized void stop(boolean forceStop) {
     isRunning = false;
     if (storagePolicySatisfierThread == null) {
       return;
@@ -214,19 +214,22 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   @Override
   public synchronized void stopGracefully() {
     if (isRunning) {
-      disable(true);
+      stop(false);
     }
 
     if (this.storageMovementsMonitor != null) {
       this.storageMovementsMonitor.stopGracefully();
     }
 
-    if (storagePolicySatisfierThread == null) {
-      return;
-    }
-    try {
-      storagePolicySatisfierThread.join(3000);
-    } catch (InterruptedException ie) {
+    if (storagePolicySatisfierThread != null) {
+      try {
+        storagePolicySatisfierThread.join(3000);
+      } catch (InterruptedException ie) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Interrupted Exception while waiting to join sps thread,"
+              + " ignoring it", ie);
+        }
+      }
     }
   }
 
@@ -351,32 +354,26 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
           Thread.sleep(3000);
           blockCount = 0L;
         }
+      } catch (IOException e) {
+        LOG.error("Exception during StoragePolicySatisfier execution - "
+            + "will continue next cycle", e);
       } catch (Throwable t) {
-        handleException(t);
-      }
-    }
-  }
-
-  private void handleException(Throwable t) {
-    // double check to avoid entering into synchronized block.
-    if (isRunning) {
-      synchronized (this) {
-        if (isRunning) {
-          if (t instanceof InterruptedException) {
+        synchronized (this) {
+          if (isRunning) {
             isRunning = false;
-            LOG.info("Stopping StoragePolicySatisfier.");
+            if (t instanceof InterruptedException) {
+              LOG.info("Stopping StoragePolicySatisfier.", t);
+            } else {
+              LOG.error("StoragePolicySatisfier thread received "
+                  + "runtime exception.", t);
+            }
             // Stopping monitor thread and clearing queues as well
             this.clearQueues();
             this.storageMovementsMonitor.stopGracefully();
-          } else {
-            LOG.error(
-                "StoragePolicySatisfier thread received runtime exception, "
-                    + "ignoring", t);
           }
         }
       }
     }
-    return;
   }
 
   private BlocksMovingAnalysis analyseBlocksStorageMovementsAndAssignToDN(
@@ -434,7 +431,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
 
       List<StorageType> existing = new LinkedList<StorageType>(
           Arrays.asList(blockInfo.getStorageTypes()));
-      if (!DFSUtil.removeOverlapBetweenStorageTypes(expectedStorageTypes,
+      if (!removeOverlapBetweenStorageTypes(expectedStorageTypes,
           existing, true)) {
         boolean blocksPaired = computeBlockMovingInfos(blockMovingInfos,
             blockInfo, expectedStorageTypes, existing, blockInfo.getLocations(),
@@ -499,7 +496,7 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
       DatanodeInfo[] storages, DatanodeStorageReport[] liveDns,
       ErasureCodingPolicy ecPolicy) {
     boolean foundMatchingTargetNodesForBlock = true;
-    if (!DFSUtil.removeOverlapBetweenStorageTypes(expectedStorageTypes,
+    if (!removeOverlapBetweenStorageTypes(expectedStorageTypes,
         existing, true)) {
       List<StorageTypeNodePair> sourceWithStorageMap =
           new ArrayList<StorageTypeNodePair>();
@@ -881,21 +878,6 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   }
 
   /**
-   * Set file inode in queue for which storage movement needed for its blocks.
-   *
-   * @param inodeId
-   *          - file inode/blockcollection id.
-   */
-  public void satisfyStoragePolicy(Long inodeId) {
-    //For file startId and trackId is same
-    storageMovementNeeded.add(new ItemInfo(inodeId, inodeId));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Added track info for inode {} to block "
-          + "storageMovementNeeded queue", inodeId);
-    }
-  }
-
-  /**
    * Clear queues for given track id.
    */
   public void clearQueue(long trackId) {
@@ -958,6 +940,10 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   @Override
   public void addFileIdToProcess(ItemInfo trackInfo, boolean scanCompleted) {
     storageMovementNeeded.add(trackInfo, scanCompleted);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Added track info for inode {} to block "
+          + "storageMovementNeeded queue", trackInfo.getFileId());
+    }
   }
 
   @Override
@@ -992,5 +978,64 @@ public class StoragePolicySatisfier implements SPSService, Runnable {
   public void join() throws InterruptedException {
     //TODO Add join here on SPS rpc server also
     storagePolicySatisfierThread.join();
+  }
+
+  /**
+   * Remove the overlap between the expected types and the existing types.
+   *
+   * @param expected
+   *          - Expected storage types list.
+   * @param existing
+   *          - Existing storage types list.
+   * @param ignoreNonMovable
+   *          ignore non-movable storage types by removing them from both
+   *          expected and existing storage type list to prevent non-movable
+   *          storage from being moved.
+   * @returns if the existing types or the expected types is empty after
+   *          removing the overlap.
+   */
+  private static boolean removeOverlapBetweenStorageTypes(
+      List<StorageType> expected,
+      List<StorageType> existing, boolean ignoreNonMovable) {
+    for (Iterator<StorageType> i = existing.iterator(); i.hasNext();) {
+      final StorageType t = i.next();
+      if (expected.remove(t)) {
+        i.remove();
+      }
+    }
+    if (ignoreNonMovable) {
+      removeNonMovable(existing);
+      removeNonMovable(expected);
+    }
+    return expected.isEmpty() || existing.isEmpty();
+  }
+
+  private static void removeNonMovable(List<StorageType> types) {
+    for (Iterator<StorageType> i = types.iterator(); i.hasNext();) {
+      final StorageType t = i.next();
+      if (!t.isMovable()) {
+        i.remove();
+      }
+    }
+  }
+
+  /**
+   * Get DFS_SPS_WORK_MULTIPLIER_PER_ITERATION from
+   * configuration.
+   *
+   * @param conf Configuration
+   * @return Value of DFS_SPS_WORK_MULTIPLIER_PER_ITERATION
+   */
+  private static int getSPSWorkMultiplier(Configuration conf) {
+    int spsWorkMultiplier = conf
+        .getInt(
+            DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION,
+            DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (spsWorkMultiplier > 0),
+        DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION +
+        " = '" + spsWorkMultiplier + "' is invalid. " +
+        "It should be a positive, non-zero integer value.");
+    return spsWorkMultiplier;
   }
 }

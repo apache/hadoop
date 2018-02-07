@@ -133,7 +133,7 @@ public class TestExternalStoragePolicySatisfier
 
     BlockManager blkMgr = cluster.getNameNode().getNamesystem()
         .getBlockManager();
-    SPSService spsService = blkMgr.getSPSService();
+    SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
     spsService.stopGracefully();
 
     ExternalSPSContext context = new ExternalSPSContext(spsService,
@@ -143,12 +143,12 @@ public class TestExternalStoragePolicySatisfier
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(conf, nnc,
-            blkMgr.getSPSService());
+            blkMgr.getSPSManager().getInternalSPSService());
     externalHandler.init();
     spsService.init(context,
-        new ExternalSPSFileIDCollector(context, blkMgr.getSPSService()),
-        externalHandler,
-        blkMoveListener);
+        new ExternalSPSFileIDCollector(context,
+            blkMgr.getSPSManager().getInternalSPSService()),
+        externalHandler, blkMoveListener);
     spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
     return cluster;
   }
@@ -156,14 +156,14 @@ public class TestExternalStoragePolicySatisfier
   public void restartNamenode() throws IOException{
     BlockManager blkMgr = getCluster().getNameNode().getNamesystem()
         .getBlockManager();
-    SPSService spsService = blkMgr.getSPSService();
+    SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
     spsService.stopGracefully();
 
     getCluster().restartNameNodes();
     getCluster().waitActive();
     blkMgr = getCluster().getNameNode().getNamesystem()
         .getBlockManager();
-    spsService = blkMgr.getSPSService();
+    spsService = blkMgr.getSPSManager().getInternalSPSService();
     spsService.stopGracefully();
 
     ExternalSPSContext context = new ExternalSPSContext(spsService,
@@ -172,12 +172,12 @@ public class TestExternalStoragePolicySatisfier
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(getConf(), nnc,
-            blkMgr.getSPSService());
+            blkMgr.getSPSManager().getInternalSPSService());
     externalHandler.init();
     spsService.init(context,
-        new ExternalSPSFileIDCollector(context, blkMgr.getSPSService()),
-        externalHandler,
-        blkMoveListener);
+        new ExternalSPSFileIDCollector(context,
+            blkMgr.getSPSManager().getInternalSPSService()),
+        externalHandler, blkMoveListener);
     spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
   }
 
@@ -323,7 +323,7 @@ public class TestExternalStoragePolicySatisfier
       DistributedFileSystem fs = getFS();
       BlockManager blkMgr = getCluster().getNameNode().getNamesystem()
           .getBlockManager();
-      SPSService spsService = blkMgr.getSPSService();
+      SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
       spsService.stopGracefully(); // stops SPS
 
       // Creates 4 more files. Send all of them for satisfying the storage

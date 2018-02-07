@@ -2536,15 +2536,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public boolean isStoragePolicySatisfierRunning() throws IOException {
+  public boolean isInternalSatisfierRunning() throws IOException {
     checkNNStartup();
-    String operationName = "isStoragePolicySatisfierRunning";
+    String operationName = "isInternalSatisfierRunning";
     namesystem.checkSuperuserPrivilege(operationName);
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    boolean isSPSRunning =
-        namesystem.getBlockManager().isStoragePolicySatisfierRunning();
+    boolean isSPSRunning = namesystem.getBlockManager().getSPSManager()
+        .isInternalSatisfierRunning();
     namesystem.logAuditEvent(true, operationName, null);
     return isSPSRunning;
   }
@@ -2556,8 +2556,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    return namesystem.getBlockManager().checkStoragePolicySatisfyPathStatus(
-        path);
+    return namesystem.getBlockManager().getSPSManager()
+        .checkStoragePolicySatisfyPathStatus(path);
   }
 
   @Override
@@ -2579,17 +2579,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    // Check that internal SPS service is running
-    if (namesystem.getBlockManager()
-        .getSPSMode() == StoragePolicySatisfierMode.INTERNAL
-        && namesystem.getBlockManager().getSPSService().isRunning()) {
+    // Check that SPS daemon service is running inside namenode
+    if (namesystem.getBlockManager().getSPSManager()
+        .getMode() == StoragePolicySatisfierMode.INTERNAL) {
       LOG.debug("SPS service is internally enabled and running inside "
           + "namenode, so external SPS is not allowed to fetch the path Ids");
       throw new IOException("SPS service is internally enabled and running"
           + " inside namenode, so external SPS is not allowed to fetch"
           + " the path Ids");
     }
-    return namesystem.getBlockManager().getNextSPSPathId();
+    return namesystem.getBlockManager().getSPSManager().getNextPathId();
   }
 
   @Override

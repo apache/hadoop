@@ -259,10 +259,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeBlockMoveTaskHandler;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeFileIdCollector;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
@@ -1295,13 +1292,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
             edekCacheLoaderDelay, edekCacheLoaderInterval);
       }
-      blockManager.getSPSService().init(
-          new IntraSPSNameNodeContext(this, blockManager,
-              blockManager.getSPSService()),
-          new IntraSPSNameNodeFileIdCollector(getFSDirectory(),
-              blockManager.getSPSService()),
-          new IntraSPSNameNodeBlockMoveTaskHandler(blockManager, this), null);
-      blockManager.startSPS();
+      blockManager.getSPSManager().start();
     } finally {
       startingActiveService = false;
       blockManager.checkSafeMode();
@@ -1332,7 +1323,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       if (blockManager != null) {
-        blockManager.stopSPS(false);
+        blockManager.getSPSManager().stop();
       }
       stopSecretManager();
       leaseManager.stopMonitor();
@@ -1372,7 +1363,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // Don't want to keep replication queues when not in Active.
         blockManager.clearQueues();
         blockManager.setInitializedReplQueues(false);
-        blockManager.stopSPSGracefully();
+        blockManager.getSPSManager().stopGracefully();
       }
     } finally {
       writeUnlock("stopActiveServices");
@@ -2281,17 +2272,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFS_STORAGE_POLICY_ENABLED_KEY));
     }
     // checks sps status
-    if (!blockManager.isSPSEnabled()
-        || (blockManager.getSPSMode() == StoragePolicySatisfierMode.INTERNAL
-            && !blockManager.getStoragePolicySatisfier().isRunning())) {
+    if (!blockManager.getSPSManager().isEnabled() || (blockManager
+        .getSPSManager().getMode() == StoragePolicySatisfierMode.INTERNAL
+        && !blockManager.getSPSManager().isInternalSatisfierRunning())) {
       throw new UnsupportedActionException(
           "Cannot request to satisfy storage policy "
               + "when storage policy satisfier feature has been disabled"
               + " by admin. Seek for an admin help to enable it "
               + "or use Mover tool.");
     }
-    // checks SPS Q has many outstanding requests.
-    blockManager.verifyOutstandingSPSPathQLimit();
+    // checks SPS Q has many outstanding requests. It will throw IOException if
+    // the limit exceeds.
+    blockManager.getSPSManager().verifyOutstandingPathQLimit();
   }
 
   /**
@@ -3996,17 +3988,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
 
       // Handle blocks movement results sent by the coordinator datanode.
-      StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
-      if (sps != null) {
-        if (!sps.isRunning()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Storage policy satisfier is not running. So, ignoring storage"
-                    + "  movement attempt finished block info sent by DN");
-          }
-        } else {
-          sps.notifyStorageMovementAttemptFinishedBlks(blksMovementsFinished);
+      SPSService sps = blockManager.getSPSManager().getInternalSPSService();
+      if (!sps.isRunning()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Storage policy satisfier is not running. So, ignoring storage"
+                  + "  movement attempt finished block info sent by DN");
         }
+      } else {
+        sps.notifyStorageMovementAttemptFinishedBlks(blksMovementsFinished);
       }
 
       //create ha status

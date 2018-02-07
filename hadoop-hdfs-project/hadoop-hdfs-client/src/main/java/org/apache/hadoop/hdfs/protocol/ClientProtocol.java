@@ -1759,12 +1759,12 @@ public interface ClientProtocol {
   void satisfyStoragePolicy(String path) throws IOException;
 
   /**
-   * Check if StoragePolicySatisfier is running.
-   * @return true if StoragePolicySatisfier is running
+   * Check if internal StoragePolicySatisfier is running.
+   * @return true if internal StoragePolicySatisfier is running
    * @throws IOException
    */
   @Idempotent
-  boolean isStoragePolicySatisfierRunning() throws IOException;
+  boolean isInternalSatisfierRunning() throws IOException;
 
   /**
    * Check the storage policy satisfy status of the path for which

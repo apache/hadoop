@@ -1401,7 +1401,7 @@ public class FSDirectory implements Closeable {
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
-        if (namesystem.getBlockManager().isSPSEnabled()) {
+        if (namesystem.getBlockManager().getSPSManager().isEnabled()) {
           addStoragePolicySatisfier((INodeWithAdditionalFields) inode, xaf);
         }
       }

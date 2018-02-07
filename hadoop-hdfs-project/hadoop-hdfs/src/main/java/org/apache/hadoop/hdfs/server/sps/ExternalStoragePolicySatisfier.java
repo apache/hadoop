@@ -73,7 +73,7 @@ public final class ExternalStoragePolicySatisfier {
 
       boolean spsRunning;
       spsRunning = nnc.getDistributedFileSystem().getClient()
-          .isStoragePolicySatisfierRunning();
+          .isInternalSatisfierRunning();
       if (spsRunning) {
         throw new RuntimeException(
             "Startup failed due to StoragePolicySatisfier"

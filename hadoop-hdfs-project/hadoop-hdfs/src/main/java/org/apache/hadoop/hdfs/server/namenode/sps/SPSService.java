@@ -67,11 +67,12 @@ public interface SPSService {
   void stopGracefully();
 
   /**
-   * Disable the SPS service.
+   * Stops the SPS service.
    *
    * @param forceStop
+   *          true represents to clear all the sps path's hint, false otherwise.
    */
-  void disable(boolean forceStop);
+  void stop(boolean forceStop);
 
   /**
    * Check whether StoragePolicySatisfier is running.
@@ -104,6 +105,11 @@ public interface SPSService {
    * @return current processing queue size.
    */
   int processingQueueSize();
+
+  /**
+   * Clear inodeId present in the processing queue.
+   */
+  void clearQueue(long inodeId);
 
   /**
    * @return the configuration.

@@ -311,7 +311,7 @@ public class BlockStorageMovementNeeded {
             if (Time.monotonicNow()
                 - lastStatusCleanTime > statusClearanceElapsedTimeMs) {
               lastStatusCleanTime = Time.monotonicNow();
-              cleanSpsStatus();
+              cleanSPSStatus();
             }
             startINodeId = null; // Current inode id successfully scanned.
           }
@@ -333,7 +333,7 @@ public class BlockStorageMovementNeeded {
       }
     }
 
-    private synchronized void cleanSpsStatus() {
+    private synchronized void cleanSPSStatus() {
       for (Iterator<Entry<Long, StoragePolicySatisfyPathStatusInfo>> it =
           spsStatus.entrySet().iterator(); it.hasNext();) {
         Entry<Long, StoragePolicySatisfyPathStatusInfo> entry = it.next();

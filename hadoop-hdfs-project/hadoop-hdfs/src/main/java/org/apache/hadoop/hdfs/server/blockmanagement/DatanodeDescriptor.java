@@ -211,8 +211,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * A queue of blocks corresponding to trackID for moving its storage
    * placements by this datanode.
    */
-  private final Queue<BlockMovingInfo> storageMovementBlocks =
-      new LinkedList<>();
+  private final BlockQueue<BlockMovingInfo> storageMovementBlocks =
+      new BlockQueue<>();
   private volatile boolean dropSPSWork = false;
 
   /* Variables for maintaining number of blocks scheduled to be written to
@@ -369,6 +369,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.pendingCached.clear();
     this.cached.clear();
     this.pendingUncached.clear();
+    this.storageMovementBlocks.clear();
   }
 
   public int numBlocks() {
@@ -1082,9 +1083,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    *          - storage mismatched block info
    */
   public void addBlocksToMoveStorage(BlockMovingInfo blkMovingInfo) {
-    synchronized (storageMovementBlocks) {
-      storageMovementBlocks.offer(blkMovingInfo);
-    }
+    storageMovementBlocks.offer(blkMovingInfo);
+    BlockManager.LOG
+        .debug("Adding block move task " + blkMovingInfo + " to " + getName()
+            + ", current queue size is " + storageMovementBlocks.size());
   }
 
   /**
@@ -1101,23 +1103,18 @@ public class DatanodeDescriptor extends DatanodeInfo {
    *          total number of blocks which will be send to this datanode for
    *          block movement.
    *
-   * @return block infos which needs to move its storage locations.
+   * @return block infos which needs to move its storage locations or null if
+   *         there is no block infos to move.
    */
   public BlockMovingInfo[] getBlocksToMoveStorages(int numBlocksToMoveTasks) {
-    synchronized (storageMovementBlocks) {
-      List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-      for (; !storageMovementBlocks.isEmpty()
-          && numBlocksToMoveTasks > 0; numBlocksToMoveTasks--) {
-        blockMovingInfos.add(storageMovementBlocks.poll());
-      }
-      BlockMovingInfo[] blkMoveArray = new BlockMovingInfo[blockMovingInfos
-          .size()];
-      blkMoveArray = blockMovingInfos.toArray(blkMoveArray);
-      if (blkMoveArray.length > 0) {
-        return blkMoveArray;
-      }
+    List<BlockMovingInfo> blockMovingInfos = storageMovementBlocks
+        .poll(numBlocksToMoveTasks);
+    if (blockMovingInfos == null || blockMovingInfos.size() <= 0) {
       return null;
     }
+    BlockMovingInfo[] blkMoveArray = new BlockMovingInfo[blockMovingInfos
+        .size()];
+    return blockMovingInfos.toArray(blkMoveArray);
   }
 
   /**

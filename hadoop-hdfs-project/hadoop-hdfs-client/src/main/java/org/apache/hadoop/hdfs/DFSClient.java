@@ -3110,8 +3110,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public boolean isStoragePolicySatisfierRunning() throws IOException {
-    return namenode.isStoragePolicySatisfierRunning();
+  public boolean isInternalSatisfierRunning() throws IOException {
+    return namenode.isInternalSatisfierRunning();
   }
 
   Tracer getTracer() {

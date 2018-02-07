@@ -374,7 +374,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       }
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
-        if(dfs.getClient().isStoragePolicySatisfierRunning()){
+        if(dfs.getClient().isInternalSatisfierRunning()){
           System.out.println("yes");
         }else{
           System.out.println("no");

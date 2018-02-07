@@ -2043,7 +2043,7 @@ public class NameNode extends ReconfigurableBase implements
     } else if (property.equals(ipcClientRPCBackoffEnable)) {
       return reconfigureIPCBackoffEnabled(newVal);
     } else if (property.equals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY)) {
-      return reconfigureSPSEnabled(newVal, property);
+      return reconfigureSPSModeEvent(newVal, property);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2127,39 +2127,27 @@ public class NameNode extends ReconfigurableBase implements
     return Boolean.toString(clientBackoffEnabled);
   }
 
-  String reconfigureSPSEnabled(String newVal, String property)
+  String reconfigureSPSModeEvent(String newVal, String property)
       throws ReconfigurationException {
     if (newVal == null
         || StoragePolicySatisfierMode.fromString(newVal) == null) {
       throw new ReconfigurationException(property, newVal,
           getConf().get(property),
           new HadoopIllegalArgumentException(
-              "For enabling or disabling storage policy satisfier, we must "
-                  + "pass either none/internal/external string value only"));
+              "For enabling or disabling storage policy satisfier, must "
+                  + "pass either internal/external/none string value only"));
     }
 
     if (!isActiveState()) {
       throw new ReconfigurationException(property, newVal,
-          getConf().get(property), new HadoopIllegalArgumentException(
-          "Enabling or disabling storage policy satisfier service on "
-              + state + " NameNode is not allowed"));
+          getConf().get(property),
+          new HadoopIllegalArgumentException(
+              "Enabling or disabling storage policy satisfier service on "
+                  + state + " NameNode is not allowed"));
     }
     StoragePolicySatisfierMode mode = StoragePolicySatisfierMode
         .fromString(newVal);
-    switch(mode){
-    case NONE:
-      namesystem.getBlockManager().disableSPS();
-      break;
-    case INTERNAL:
-      namesystem.getBlockManager().enableInternalSPS();
-      break;
-    case EXTERNAL:
-      namesystem.getBlockManager().enableExternalSPS();
-      break;
-    default:
-      // nothing
-      break;
-    }
+    namesystem.getBlockManager().getSPSManager().changeModeEvent(mode);
     return newVal;
   }
 

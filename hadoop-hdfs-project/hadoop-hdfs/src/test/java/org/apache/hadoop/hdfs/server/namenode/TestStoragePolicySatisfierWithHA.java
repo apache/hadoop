@@ -103,7 +103,7 @@ public class TestStoragePolicySatisfierWithHA {
       dfs = cluster.getFileSystem(1);
 
       try {
-        dfs.getClient().isStoragePolicySatisfierRunning();
+        dfs.getClient().isInternalSatisfierRunning();
         Assert.fail("Call this function to Standby NN should "
             + "raise an exception.");
       } catch (RemoteException e) {
@@ -115,14 +115,14 @@ public class TestStoragePolicySatisfierWithHA {
 
       cluster.transitionToActive(0);
       dfs = cluster.getFileSystem(0);
-      running = dfs.getClient().isStoragePolicySatisfierRunning();
+      running = dfs.getClient().isInternalSatisfierRunning();
       Assert.assertTrue("StoragePolicySatisfier should be active "
           + "when NN transits from Standby to Active mode.", running);
 
       // NN transits from Active to Standby
       cluster.transitionToStandby(0);
       try {
-        dfs.getClient().isStoragePolicySatisfierRunning();
+        dfs.getClient().isInternalSatisfierRunning();
         Assert.fail("NN in Standby again, call this function should "
             + "raise an exception.");
       } catch (RemoteException e) {

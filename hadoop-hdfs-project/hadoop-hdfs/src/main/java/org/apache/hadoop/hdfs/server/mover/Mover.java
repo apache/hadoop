@@ -661,7 +661,7 @@ public class Mover {
           boolean spsRunning;
           try {
             spsRunning = nnc.getDistributedFileSystem().getClient()
-                .isStoragePolicySatisfierRunning();
+                .isInternalSatisfierRunning();
           } catch (RemoteException e) {
             IOException cause = e.unwrapRemoteException();
             if (cause instanceof StandbyException) {

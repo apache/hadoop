@@ -69,8 +69,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -94,12 +92,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeBlockMoveTaskHandler;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
-import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeFileIdCollector;
-import org.apache.hadoop.hdfs.server.namenode.sps.SPSPathIds;
-import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -435,11 +428,7 @@ public class BlockManager implements BlockStatsMXBean {
   private final BlockIdManager blockIdManager;
 
   /** For satisfying block storage policies. */
-  private final StoragePolicySatisfier sps;
-  private final boolean storagePolicyEnabled;
-  private StoragePolicySatisfierMode spsMode;
-  private SPSPathIds spsPaths;
-  private final int spsOutstandingPathsLimit;
+  private final StoragePolicySatisfyManager spsManager;
 
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
@@ -479,19 +468,10 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT)
         * 1000L);
-    // StoragePolicySatisfier(SPS) configs
-    storagePolicyEnabled =
-        conf.getBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
-            DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT);
-    String spsModeVal = conf.get(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
-    spsOutstandingPathsLimit = conf.getInt(
-        DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_KEY,
-        DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT);
-    spsMode = StoragePolicySatisfierMode.fromString(spsModeVal);
-    spsPaths = new SPSPathIds();
-    sps = new StoragePolicySatisfier(conf);
+
+    // sps manager manages the user invoked sps paths and does the movement.
+    spsManager = new StoragePolicySatisfyManager(conf, namesystem, this);
+
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
     providedStorageMap = new ProvidedStorageMap(namesystem, this, conf);
@@ -719,7 +699,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void close() {
-    stopSPS(false);
+    getSPSManager().stop();
     bmSafeMode.close();
     try {
       redundancyThread.interrupt();
@@ -733,7 +713,7 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.close();
     pendingReconstruction.stop();
     blocksMap.close();
-    stopSPSGracefully();
+    getSPSManager().stopGracefully();
   }
 
   /** @return the datanodeManager */
@@ -5046,222 +5026,9 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
-   * Gets the storage policy satisfier instance.
-   *
-   * @return sps
+   * @return sps manager.
    */
-  public StoragePolicySatisfier getStoragePolicySatisfier() {
-    return sps;
-  }
-
-  /**
-   * Start storage policy satisfier service.
-   */
-  public void startSPS() {
-    if (!(storagePolicyEnabled && spsMode != StoragePolicySatisfierMode.NONE)) {
-      LOG.info(
-          "Failed to start StoragePolicySatisfier "
-              + " as {} set to {} and {} set to {}.",
-          DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, storagePolicyEnabled,
-          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY, spsMode);
-      return;
-    } else if (sps.isRunning()) {
-      LOG.info("Storage policy satisfier is already running"
-          + " as internal service.");
-      return;
-    }
-    // starting internal SPS service
-    if (spsMode == StoragePolicySatisfierMode.INTERNAL) {
-      sps.start(false, spsMode);
-    }
-  }
-
-  /**
-   * Stop storage policy satisfier service.
-   *
-   * @param forceStop
-   *          true represents that it should stop SPS service by clearing all
-   *          pending SPS work
-   */
-  public void stopSPS(boolean forceStop) {
-    if (!(storagePolicyEnabled
-        && (spsMode != StoragePolicySatisfierMode.NONE))) {
-      LOG.info("Storage policy satisfier is not enabled.");
-      return;
-    } else if (!sps.isRunning()) {
-      removeAllSPSPathIds();
-      LOG.info("Storage policy satisfier is not running.");
-      return;
-    }
-
-    sps.disable(forceStop);
-  }
-
-  /**
-   * Enable storage policy satisfier by starting its service.
-   */
-  public void enableInternalSPS() {
-    if (!storagePolicyEnabled){
-      LOG.info("Failed to start StoragePolicySatisfier as {} set to {}.",
-          DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, storagePolicyEnabled);
-      return;
-    }
-    if (sps.isRunning()) {
-      LOG.info("Storage policy satisfier is already running as SPS mode:{}.",
-          spsMode);
-      return;
-    }
-    updateSPSMode(StoragePolicySatisfierMode.INTERNAL);
-    sps.init(new IntraSPSNameNodeContext(this.namesystem, this, sps),
-        new IntraSPSNameNodeFileIdCollector(this.namesystem.getFSDirectory(),
-            sps),
-        new IntraSPSNameNodeBlockMoveTaskHandler(this, this.namesystem), null);
-    sps.start(true, spsMode);
-  }
-
-
-
-  /**
-   * Enable storage policy satisfier by starting its service.
-   */
-  public void enableExternalSPS() {
-    if (!storagePolicyEnabled){
-      LOG.info("Failed to start StoragePolicySatisfier as {} set to {}.",
-          DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, storagePolicyEnabled);
-      return;
-    }
-    if (spsMode == StoragePolicySatisfierMode.EXTERNAL) {
-      LOG.info("Storage policy satisfier is already enabled as SPS mode:{}.",
-          spsMode);
-      return;
-    }
-    updateSPSMode(StoragePolicySatisfierMode.EXTERNAL);
-    sps.stopGracefully();
-  }
-
-  private void updateSPSMode(StoragePolicySatisfierMode newSpsMode) {
-    LOG.debug("Updating SPS service status, current mode:{}, new mode:{}",
-        spsMode, newSpsMode);
-    spsMode = newSpsMode;
-  }
-
-  /**
-   * Disable the storage policy satisfier by stopping its services.
-   */
-  public void disableSPS() {
-    switch (spsMode) {
-    case NONE:
-      break;
-    case INTERNAL:
-    case EXTERNAL:
-      if (!sps.isRunning()) {
-        LOG.info("Storage policy satisfier is already stopped.");
-      } else {
-        LOG.info("Stopping StoragePolicySatisfier mode {}, as admin "
-            + "requested to stop it.", spsMode);
-        sps.disable(true);
-      }
-      removeAllSPSPathIds();
-      break;
-    default:
-      // nothing
-      break;
-    }
-    updateSPSMode(StoragePolicySatisfierMode.NONE);
-  }
-
-  /**
-   * Timed wait to stop storage policy satisfier daemon threads.
-   */
-  public void stopSPSGracefully() {
-    removeAllSPSPathIds();
-    sps.stopGracefully();
-  }
-  /**
-   * @return True if storage policy satisfier running.
-   */
-  public boolean isStoragePolicySatisfierRunning() {
-    return sps.isRunning();
-  }
-
-  /**
-   * @return status
-   *                Storage policy satisfy status of the path.
-   * @throws IOException
-   */
-  public StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
-      String path) throws IOException {
-    if (spsMode != StoragePolicySatisfierMode.INTERNAL) {
-      LOG.debug("Satisfier is not running inside namenode, so status "
-          + "can't be returned.");
-      throw new IOException("Satisfier is not running inside namenode, "
-          + "so status can't be returned.");
-    }
-    return sps.checkStoragePolicySatisfyPathStatus(path);
-  }
-
-  /**
-   * @return SPS service instance.
-   */
-  public SPSService getSPSService() {
-    return this.sps;
-  }
-
-  /**
-   * @return the next SPS path id, on which path users has invoked to satisfy
-   *         storages.
-   */
-  public Long getNextSPSPathId() {
-    return spsPaths.pollNext();
-  }
-
-  /**
-   * Verify that satisfier queue limit exceeds allowed outstanding limit.
-   */
-  public void verifyOutstandingSPSPathQLimit() throws IOException {
-    long size = spsPaths.size();
-    // Checking that the SPS call Q exceeds the allowed limit.
-    if (spsOutstandingPathsLimit - size <= 0) {
-      LOG.debug("Satisifer Q - outstanding limit:{}, current size:{}",
-          spsOutstandingPathsLimit, size);
-      throw new IOException("Outstanding satisfier queue limit: "
-          + spsOutstandingPathsLimit + " exceeded, try later!");
-    }
-  }
-
-  /**
-   * Removes the SPS path id from the list of sps paths.
-   */
-  public void removeSPSPathId(long trackId) {
-    spsPaths.remove(trackId);
-  }
-
-  /**
-   * Clean up all sps path ids.
-   */
-  public void removeAllSPSPathIds() {
-    spsPaths.clear();
-  }
-
-  /**
-   * Adds the sps path to SPSPathIds list.
-   */
-  public void addSPSPathId(long id) {
-    spsPaths.add(id);
-  }
-
-  /**
-   * @return true if sps is running as an internal service or external service.
-   */
-  public boolean isSPSEnabled() {
-    return spsMode == StoragePolicySatisfierMode.INTERNAL
-        || spsMode == StoragePolicySatisfierMode.EXTERNAL;
-  }
-
-  /**
-   * @return sps service mode.
-   */
-  public StoragePolicySatisfierMode getSPSMode() {
-    return spsMode;
+  public StoragePolicySatisfyManager getSPSManager() {
+    return spsManager;
   }
 }
