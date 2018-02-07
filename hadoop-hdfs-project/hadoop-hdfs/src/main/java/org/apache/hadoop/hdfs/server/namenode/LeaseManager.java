@@ -145,7 +145,15 @@ public class LeaseManager {
       + "acquired before counting under construction blocks";
     long numUCBlocks = 0;
     for (Long id : getINodeIdWithLeases()) {
-      final INodeFile cons = fsnamesystem.getFSDirectory().getInode(id).asFile();
+      INode inode = fsnamesystem.getFSDirectory().getInode(id);
+      if (inode == null) {
+        // The inode could have been deleted after getINodeIdWithLeases() is
+        // called, check here, and ignore it if so
+        LOG.warn("Failed to find inode " + id +
+            " in getNumUnderConstructionBlocks().");
+        continue;
+      }
+      final INodeFile cons = inode.asFile();
       if (!cons.isUnderConstruction()) {
         LOG.warn("The file " + cons.getFullPathName()
             + " is not under construction but has lease.");
@@ -156,8 +164,9 @@ public class LeaseManager {
         continue;
       }
       for(BlockInfo b : blocks) {
-        if(!b.isComplete())
+        if(!b.isComplete()) {
           numUCBlocks++;
+        }
       }
     }
     LOG.info("Number of blocks under construction: " + numUCBlocks);
