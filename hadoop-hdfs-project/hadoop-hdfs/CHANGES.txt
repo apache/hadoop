@@ -27,6 +27,8 @@ Release 2.7.6 - UNRELEASED
     HDFS-12371. BlockVerificationFailures and BlocksVerified show up as 0
     in Datanode JMX. (Hanisha Koneru via Kihwal Lee, shv).
 
+    HDFS-13120. Snapshot diff could be corrupted after concat. (xyao)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
