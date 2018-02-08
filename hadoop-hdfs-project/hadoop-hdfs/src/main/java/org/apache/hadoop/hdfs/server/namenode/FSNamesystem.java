@@ -4265,7 +4265,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   void setBalancerBandwidth(long bandwidth) throws IOException {
-    checkOperation(OperationCategory.UNCHECKED);
+    checkOperation(OperationCategory.WRITE);
     checkSuperuserPrivilege();
     getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
