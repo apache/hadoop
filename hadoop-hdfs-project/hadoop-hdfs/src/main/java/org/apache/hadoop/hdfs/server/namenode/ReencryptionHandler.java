@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -672,7 +671,7 @@ public class ReencryptionHandler implements Runnable {
       if (batch.isEmpty()) {
         return new ReencryptionTask(zoneNodeId, 0, batch);
       }
-      final Stopwatch kmsSW = new Stopwatch().start();
+      final StopWatch kmsSW = new StopWatch().start();
 
       int numFailures = 0;
       String result = "Completed";
