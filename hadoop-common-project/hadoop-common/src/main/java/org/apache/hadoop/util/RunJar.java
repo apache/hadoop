@@ -38,12 +38,12 @@ import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 
-import com.google.common.io.NullOutputStream;
 import org.apache.commons.io.input.TeeInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.IOUtils.NullOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
