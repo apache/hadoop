@@ -31,7 +31,7 @@ import org.apache.hadoop.util.DataChecksum;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public class CompositeCrcFileChecksum extends FileChecksum {
-  public static final int LENGTH = Integer.SIZE;
+  public static final int LENGTH = Integer.SIZE / Byte.SIZE;
 
   private int crc;
   private DataChecksum.Type crcType;
@@ -48,7 +48,9 @@ public class CompositeCrcFileChecksum extends FileChecksum {
   }
 
   @Override
-  public int getLength() {return LENGTH;}
+  public int getLength() {
+    return LENGTH;
+  }
 
   @Override
   public byte[] getBytes() {
