@@ -89,9 +89,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * Ozone Client REST protocol implementation. It uses REST protocol to
- * connect to Ozone Handler that executes client calls. RestClient uses
- * <code>ozone.rest.servers</code> and <code>ozone.rest.client.port</code>
- * to discover Ozone Rest Server.
+ * connect to Ozone Handler that executes client calls.
  */
 public class RestClient implements ClientProtocol {
 

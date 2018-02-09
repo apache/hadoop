@@ -415,8 +415,7 @@ public class ContainerStateManager implements Closeable {
     // Get the container with space to meet our request.
     for (ContainerID id : searchSet) {
       ContainerInfo containerInfo = containers.getContainerInfo(id.getId());
-      if ((containerInfo.getAllocatedBytes() <= this.containerSize) &&
-          (containerInfo.getAllocatedBytes() <=  size)) {
+      if (containerInfo.getAllocatedBytes() + size <= this.containerSize) {
         containerInfo.updateLastUsedTime();
 
         ContainerState key = new ContainerState(owner,
