@@ -5085,9 +5085,15 @@
 
   <property>
     <name>dfs.federation.router.store.driver.class</name>
-    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl</value>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl</value>
     <description>
-      Class to implement the State Store. By default it uses the local disk.
+      Class to implement the State Store. There are three implementation classes currently
+      being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
+      By default it uses the ZooKeeper as the default State Store.
     </description>
   </property>
 
