@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileBaseImpl;
+import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
@@ -50,17 +51,21 @@ import org.apache.hadoop.util.Time;
  */
 public final class FederationStateStoreTestUtils {
 
+  /** The State Store Driver implementation class for testing .*/
+  private static final Class<? extends StateStoreDriver>
+      FEDERATION_STORE_DRIVER_CLASS_FOR_TEST = StateStoreFileImpl.class;
+
   private FederationStateStoreTestUtils() {
     // Utility Class
   }
 
   /**
-   * Get the default State Store driver implementation.
+   * Get the State Store driver implementation for testing.
    *
-   * @return Class of the default State Store driver implementation.
+   * @return Class of the State Store driver implementation.
    */
-  public static Class<? extends StateStoreDriver> getDefaultDriver() {
-    return DFSConfigKeys.FEDERATION_STORE_DRIVER_CLASS_DEFAULT;
+  public static Class<? extends StateStoreDriver> getTestDriverClass() {
+    return FEDERATION_STORE_DRIVER_CLASS_FOR_TEST;
   }
 
   /**
@@ -69,7 +74,7 @@ public final class FederationStateStoreTestUtils {
    * @return State Store configuration.
    */
   public static Configuration getStateStoreConfiguration() {
-    Class<? extends StateStoreDriver> clazz = getDefaultDriver();
+    Class<? extends StateStoreDriver> clazz = getTestDriverClass();
     return getStateStoreConfiguration(clazz);
   }
 
@@ -146,7 +151,7 @@ public final class FederationStateStoreTestUtils {
    * @throws IOException
    */
   public static void deleteStateStore() throws IOException {
-    Class<? extends StateStoreDriver> driverClass = getDefaultDriver();
+    Class<? extends StateStoreDriver> driverClass = getTestDriverClass();
     deleteStateStore(driverClass);
   }
 
