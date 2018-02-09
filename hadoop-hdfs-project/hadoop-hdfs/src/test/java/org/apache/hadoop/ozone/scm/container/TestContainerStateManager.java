@@ -159,11 +159,13 @@ public class TestContainerStateManager {
     scmContainerMapping.updateContainerState(container2,
         OzoneProtos.LifeCycleEvent.CREATED);
 
+    // space has already been allocated in container1, now container 2 should
+    // be chosen.
     info = stateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.OPEN);
-    Assert.assertEquals(container1, info.getContainerName());
+    Assert.assertEquals(container2, info.getContainerName());
   }
 
   @Test
