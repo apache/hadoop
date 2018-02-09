@@ -140,12 +140,12 @@
 
 {{confirm-dialog
   dialogId="stopServiceConfirmDialog"
-  message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
+  message=(concat 'Are you sure you want to stop service "' model.serviceName '" for user "' model.app.user '" ?')
   action="stopService"
 }}
 
 {{confirm-dialog
   dialogId="deleteServiceConfirmDialog"
-  message=(concat 'Are you sure you want to delete service "' model.serviceName '" ?')
+  message=(concat 'Are you sure you want to delete service "' model.serviceName '" for user "' model.app.user '" ?')
   action="deleteService"
 }}

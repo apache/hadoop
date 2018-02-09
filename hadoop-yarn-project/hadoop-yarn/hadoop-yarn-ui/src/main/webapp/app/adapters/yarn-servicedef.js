@@ -24,21 +24,24 @@ export default RESTAbstractAdapter.extend({
   restNameSpace: "dashService",
   serverName: "DASH",
 
-  deployService(request) {
+  deployService(request, user) {
     var url = this.buildURL();
+    url += "/?user.name=" + user;
     return this.ajax(url, "POST", {data: request});
   },
 
-  stopService(serviceName) {
+  stopService(serviceName, user) {
     var url = this.buildURL();
     url += "/" + serviceName;
+    url += "/?user.name=" + user;
     var data = {"state": "STOPPED", "name": serviceName};
     return this.ajax(url, "PUT", {data: data});
   },
 
-  deleteService(serviceName) {
+  deleteService(serviceName, user) {
     var url = this.buildURL();
     url += "/" + serviceName;
+    url += "/?user.name=" + user;
     return this.ajax(url, "DELETE", {data: {}});
   }
 });
