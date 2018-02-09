@@ -325,7 +325,7 @@ The connection to the State Store and the internal caching at the Router.
 |:---- |:---- |:---- |
 | dfs.federation.router.store.enable | `true` | If `true`, the Router connects to the State Store. |
 | dfs.federation.router.store.serializer | `StateStoreSerializerPBImpl` | Class to serialize State Store records. |
-| dfs.federation.router.store.driver.class | `StateStoreZKImpl` | Class to implement the State Store. |
+| dfs.federation.router.store.driver.class | `StateStoreZooKeeperImpl` | Class to implement the State Store. |
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
