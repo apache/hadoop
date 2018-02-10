@@ -27,17 +27,15 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * A pipeline represents the group of machines over which a container lives.
@@ -48,7 +46,7 @@ public class Pipeline {
 
   static {
     ObjectMapper mapper = new ObjectMapper();
-    String[] ignorableFieldNames = {"data", "leaderID", "datanodes"};
+    String[] ignorableFieldNames = {"data"};
     FilterProvider filters = new SimpleFilterProvider()
         .addFilter(PIPELINE_INFO, SimpleBeanPropertyFilter
             .serializeAllExcept(ignorableFieldNames));
@@ -60,25 +58,22 @@ public class Pipeline {
   }
 
   private String containerName;
-  private String leaderID;
-  private Map<String, DatanodeID> datanodes;
-  private OzoneProtos.LifeCycleState lifeCycleState;
-  private OzoneProtos.ReplicationType type;
-  private OzoneProtos.ReplicationFactor factor;
-  private String pipelineName;
+  private PipelineChannel pipelineChannel;
   /**
    * Allows you to maintain private data on pipelines. This is not serialized
    * via protobuf, just allows us to maintain some private data.
    */
+  @JsonIgnore
   private byte[] data;
   /**
    * Constructs a new pipeline data structure.
    *
-   * @param leaderID - First machine in this pipeline.
+   * @param containerName - Container
+   * @param pipelineChannel - transport information for this container
    */
-  public Pipeline(String leaderID) {
-    this.leaderID = leaderID;
-    datanodes = new TreeMap<>();
+  public Pipeline(String containerName, PipelineChannel pipelineChannel) {
+    this.containerName = containerName;
+    this.pipelineChannel = pipelineChannel;
     data = null;
   }
 
@@ -90,36 +85,13 @@ public class Pipeline {
    */
   public static Pipeline getFromProtoBuf(OzoneProtos.Pipeline pipeline) {
     Preconditions.checkNotNull(pipeline);
-    Pipeline newPipeline = new Pipeline(pipeline.getLeaderID());
-    for (HdfsProtos.DatanodeIDProto dataID : pipeline.getMembersList()) {
-      newPipeline.addMember(DatanodeID.getFromProtoBuf(dataID));
-    }
-
-    newPipeline.setContainerName(pipeline.getContainerName());
-    newPipeline.setLifeCycleState(pipeline.getState());
-    newPipeline.setType(pipeline.getType());
-    newPipeline.setFactor(pipeline.getFactor());
-    if (pipeline.hasPipelineName()) {
-      newPipeline.setPipelineName(pipeline.getPipelineName());
-    }
-    return newPipeline;
+    PipelineChannel pipelineChannel =
+        PipelineChannel.getFromProtoBuf(pipeline.getPipelineChannel());
+    return new Pipeline(pipeline.getContainerName(), pipelineChannel);
   }
 
   public OzoneProtos.ReplicationFactor getFactor() {
-    return factor;
-  }
-
-  public void setFactor(OzoneProtos.ReplicationFactor factor) {
-    this.factor = factor;
-  }
-
-  /**
-   * Adds a member to the pipeline.
-   *
-   * @param dataNodeId - Datanode to be added.
-   */
-  public void addMember(DatanodeID dataNodeId) {
-    datanodes.put(dataNodeId.getDatanodeUuid(), dataNodeId);
+    return pipelineChannel.getFactor();
   }
 
   /**
@@ -129,7 +101,7 @@ public class Pipeline {
    */
   @JsonIgnore
   public DatanodeID getLeader() {
-    return datanodes.get(leaderID);
+    return pipelineChannel.getDatanodes().get(pipelineChannel.getLeaderID());
   }
 
   /**
@@ -138,7 +110,8 @@ public class Pipeline {
    * @return First Machine.
    */
   public String getLeaderHost() {
-    return datanodes.get(leaderID).getHostName();
+    return pipelineChannel.getDatanodes()
+        .get(pipelineChannel.getLeaderID()).getHostName();
   }
 
   /**
@@ -148,7 +121,7 @@ public class Pipeline {
    */
   @JsonIgnore
   public List<DatanodeID> getMachines() {
-    return new ArrayList<>(datanodes.values());
+    return new ArrayList<>(pipelineChannel.getDatanodes().values());
   }
 
   /**
@@ -158,7 +131,7 @@ public class Pipeline {
    */
   public List<String> getDatanodeHosts() {
     List<String> dataHosts = new ArrayList<>();
-    for (DatanodeID id : datanodes.values()) {
+    for (DatanodeID id : pipelineChannel.getDatanodes().values()) {
       dataHosts.add(id.getHostName());
     }
     return dataHosts;
@@ -173,22 +146,8 @@ public class Pipeline {
   public OzoneProtos.Pipeline getProtobufMessage() {
     OzoneProtos.Pipeline.Builder builder =
         OzoneProtos.Pipeline.newBuilder();
-    for (DatanodeID datanode : datanodes.values()) {
-      builder.addMembers(datanode.getProtoBufMessage());
-    }
-    builder.setLeaderID(leaderID);
     builder.setContainerName(this.containerName);
-
-    if (this.getLifeCycleState() != null) {
-      builder.setState(this.getLifeCycleState());
-    }
-    if (this.getType() != null) {
-      builder.setType(this.getType());
-    }
-
-    if (this.getFactor() != null) {
-      builder.setFactor(this.getFactor());
-    }
+    builder.setPipelineChannel(this.pipelineChannel.getProtobufMessage());
     return builder.build();
   }
 
@@ -202,15 +161,6 @@ public class Pipeline {
   }
 
   /**
-   * Sets the container Name.
-   *
-   * @param containerName - Name of the container.
-   */
-  public void setContainerName(String containerName) {
-    this.containerName = containerName;
-  }
-
-  /**
    * Returns private data that is set on this pipeline.
    *
    * @return blob, the user can interpret it any way they like.
@@ -221,6 +171,11 @@ public class Pipeline {
     } else {
       return null;
     }
+  }
+
+  @VisibleForTesting
+  public PipelineChannel getPipelineChannel() {
+    return pipelineChannel;
   }
 
   /**
@@ -240,16 +195,7 @@ public class Pipeline {
    * @return - LifeCycleStates.
    */
   public OzoneProtos.LifeCycleState getLifeCycleState() {
-    return lifeCycleState;
-  }
-
-  /**
-   * Sets the lifecycleState.
-   *
-   * @param lifeCycleStates - Enum
-   */
-  public void setLifeCycleState(OzoneProtos.LifeCycleState lifeCycleStates) {
-    this.lifeCycleState = lifeCycleStates;
+    return pipelineChannel.getLifeCycleState();
   }
 
   /**
@@ -258,16 +204,7 @@ public class Pipeline {
    * @return - Name of the pipeline
    */
   public String getPipelineName() {
-    return pipelineName;
-  }
-
-  /**
-   * Sets the pipeline name.
-   *
-   * @param pipelineName - Sets the name.
-   */
-  public void setPipelineName(String pipelineName) {
-    this.pipelineName = pipelineName;
+    return pipelineChannel.getName();
   }
 
   /**
@@ -276,24 +213,16 @@ public class Pipeline {
    * @return type - Standalone, Ratis, Chained.
    */
   public OzoneProtos.ReplicationType getType() {
-    return type;
-  }
-
-  /**
-   * Sets the type of this pipeline.
-   *
-   * @param type - Standalone, Ratis, Chained.
-   */
-  public void setType(OzoneProtos.ReplicationType type) {
-    this.type = type;
+    return pipelineChannel.getType();
   }
 
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
         .append("[");
-    datanodes.keySet().stream()
-        .forEach(id -> b.append(id.endsWith(leaderID) ? "*" + id : id));
+    pipelineChannel.getDatanodes().keySet().stream()
+        .forEach(id -> b.
+            append(id.endsWith(pipelineChannel.getLeaderID()) ? "*" + id : id));
     b.append("] container:").append(containerName);
     b.append(" name:").append(getPipelineName());
     if (getType() != null) {

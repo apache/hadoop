@@ -22,6 +22,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -29,6 +31,7 @@ import org.apache.hadoop.ozone.scm.pipelines.ratis.RatisManagerImpl;
 import org.apache.hadoop.ozone.scm.pipelines.standalone.StandaloneManagerImpl;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,20 +83,19 @@ public class PipelineSelector {
    * The first of the list will be the leader node.
    * @return pipeline corresponding to nodes
    */
-  public static Pipeline newPipelineFromNodes(final List<DatanodeID> nodes) {
+  public static PipelineChannel newPipelineFromNodes(List<DatanodeID> nodes,
+      LifeCycleState state, ReplicationType replicationType,
+      ReplicationFactor replicationFactor, String name) {
     Preconditions.checkNotNull(nodes);
     Preconditions.checkArgument(nodes.size() > 0);
     String leaderId = nodes.get(0).getDatanodeUuid();
-    Pipeline pipeline = new Pipeline(leaderId);
+    PipelineChannel
+        pipelineChannel = new PipelineChannel(leaderId, state, replicationType,
+        replicationFactor, name);
     for (DatanodeID node : nodes) {
-      pipeline.addMember(node);
+      pipelineChannel.addMember(node);
     }
-
-    // A Standalone pipeline is always open, no action from the client
-    // is needed to make it open.
-    pipeline.setType(ReplicationType.STAND_ALONE);
-    pipeline.setLifeCycleState(OzoneProtos.LifeCycleState.OPEN);
-    return pipeline;
+    return pipelineChannel;
   }
 
   /**
@@ -167,7 +169,8 @@ public class PipelineSelector {
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
     LOG.debug("Getting replication pipeline for {} : Replication {}",
         containerName, replicationFactor.toString());
-    return manager.getPipeline(containerName, replicationFactor);
+    return manager.
+        getPipeline(containerName, replicationFactor, replicationType);
   }
 
   /**

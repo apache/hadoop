@@ -21,10 +21,14 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.Mapping;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -328,12 +332,14 @@ public class TestDeletedBlockLog {
 
   private void mockContainerInfo(Mapping mappingService, String containerName,
       DatanodeID dnID) throws IOException {
-    Pipeline pipeline = new Pipeline("fake");
-    pipeline.addMember(dnID);
+    PipelineChannel pipelineChannel =
+        new PipelineChannel("fake", LifeCycleState.OPEN,
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "fake");
+    pipelineChannel.addMember(dnID);
+    Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
 
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     builder.setPipeline(pipeline);
-    builder.setContainerName(containerName);
 
     ContainerInfo conatinerInfo = builder.build();
     Mockito.doReturn(conatinerInfo).when(mappingService)
