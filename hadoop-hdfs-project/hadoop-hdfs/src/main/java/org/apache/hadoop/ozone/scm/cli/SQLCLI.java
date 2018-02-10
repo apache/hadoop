@@ -532,10 +532,12 @@ public class SQLCLI  extends Configured implements Tool {
       Pipeline pipeline, Set<String> uuidChecked) throws SQLException {
     LOG.info("Insert to sql container db, for container {}", containerName);
     String insertContainerInfo = String.format(
-        INSERT_CONTAINER_INFO, containerName, pipeline.getLeaderID());
+        INSERT_CONTAINER_INFO, containerName,
+        pipeline.getPipelineChannel().getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
-    for (HdfsProtos.DatanodeIDProto dnID : pipeline.getMembersList()) {
+    for (HdfsProtos.DatanodeIDProto dnID :
+        pipeline.getPipelineChannel().getMembersList()) {
       String uuid = dnID.getDatanodeUuid();
       if (!uuidChecked.contains(uuid)) {
         // we may also not use this checked set, but catch exception instead

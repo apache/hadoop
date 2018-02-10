@@ -29,8 +29,12 @@ import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -301,7 +305,10 @@ public class TestCBlockReadWrite {
     String data = RandomStringUtils.random(4 * KB);
 
     List<Pipeline> fakeContainerPipelines = new LinkedList<>();
-    Pipeline fakePipeline = new Pipeline("fake");
+    PipelineChannel pipelineChannel = new PipelineChannel("fake",
+        LifeCycleState.OPEN, ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
+        "fake");
+    Pipeline fakePipeline = new Pipeline("fake", pipelineChannel);
     fakePipeline.setData(Longs.toByteArray(1));
     fakeContainerPipelines.add(fakePipeline);
 

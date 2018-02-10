@@ -16,30 +16,38 @@
  */
 package org.apache.hadoop.ozone.scm.pipelines.standalone;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.LinkedList;
 
 /**
  * Standalone Manager Impl to prove that pluggable interface
  * works with current tests.
  */
-public class StandaloneManagerImpl implements PipelineManager {
+public class StandaloneManagerImpl extends PipelineManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(StandaloneManagerImpl.class);
   private final NodeManager nodeManager;
   private final ContainerPlacementPolicy placementPolicy;
   private final long containerSize;
+  private final Set<DatanodeID> standAloneMembers;
 
   /**
    * Constructor for Standalone Node Manager Impl.
@@ -49,34 +57,42 @@ public class StandaloneManagerImpl implements PipelineManager {
    */
   public StandaloneManagerImpl(NodeManager nodeManager,
       ContainerPlacementPolicy placementPolicy, long containerSize) {
+    super();
     this.nodeManager = nodeManager;
     this.placementPolicy = placementPolicy;
     this.containerSize =  containerSize;
+    this.standAloneMembers = new HashSet<>();
   }
 
 
   /**
-   * This function is called by the Container Manager while allocating a new
-   * container. The client specifies what kind of replication pipeline is needed
-   * and based on the replication type in the request appropriate Interface is
-   * invoked.
+   * Allocates a new standalone PipelineChannel from the free nodes.
    *
-   * @param containerName Name of the container
-   * @param replicationFactor - Replication Factor
-   * @return a Pipeline.
+   * @param factor - One
+   * @return PipelineChannel.
    */
-  @Override
-  public Pipeline getPipeline(String containerName, OzoneProtos
-      .ReplicationFactor replicationFactor) throws IOException {
-    List<DatanodeID> datanodes = placementPolicy.chooseDatanodes(
-        replicationFactor.getNumber(), containerSize);
-    Pipeline pipeline = PipelineSelector.newPipelineFromNodes(datanodes);
-    String pipelineName = "SA-" + UUID.randomUUID().toString().substring(3);
-    pipeline.setContainerName(containerName);
-    pipeline.setPipelineName(pipelineName);
-    pipeline.setFactor(replicationFactor);
-    LOG.info("Creating new standalone pipeline: {}", pipeline.toString());
-    return pipeline;
+  public PipelineChannel allocatePipelineChannel(ReplicationFactor factor) {
+    List<DatanodeID> newNodesList = new LinkedList<>();
+    List<DatanodeID> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+    int count = getReplicationCount(factor);
+    for (DatanodeID datanode : datanodes) {
+      Preconditions.checkNotNull(datanode);
+      if (!standAloneMembers.contains(datanode)) {
+        newNodesList.add(datanode);
+        if (newNodesList.size() == count) {
+          // once a datanode has been added to a pipeline, exclude it from
+          // further allocations
+          standAloneMembers.addAll(newNodesList);
+          LOG.info("Allocating a new pipeline channel of size: {}", count);
+          String channelName =
+              "SA-" + UUID.randomUUID().toString().substring(3);
+          return PipelineSelector.newPipelineFromNodes(newNodesList,
+              LifeCycleState.OPEN, ReplicationType.STAND_ALONE,
+              ReplicationFactor.ONE, channelName);
+        }
+      }
+    }
+    return null;
   }
 
   /**

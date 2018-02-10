@@ -54,7 +54,6 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_DB_CACHE_SIZE_MB;
-import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -164,32 +163,6 @@ public class TestContainerPlacement {
           .getPipeline();
       assertEquals(xceiverClientManager.getFactor().getNumber(),
           pipeline1.getMachines().size());
-
-      final long newUsed = 7L * OzoneConsts.GB;
-      final long newRemaining = capacity - newUsed;
-
-      for (DatanodeID datanodeID : datanodes) {
-        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
-        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
-        srb.setStorageUuid(UUID.randomUUID().toString());
-        srb.setCapacity(capacity).setScmUsed(newUsed).
-            setRemaining(newRemaining).build();
-        nodeManager.sendHeartbeat(datanodeID,
-            nrb.addStorageReport(srb).build(), reportState);
-      }
-
-      GenericTestUtils.waitFor(() -> nodeManager.getStats().getRemaining()
-              .get() == nodeCount * newRemaining,
-          100, 4 * 1000);
-
-      thrown.expect(IOException.class);
-      thrown.expectMessage(
-          startsWith("Unable to find enough nodes that meet "
-              + "the space requirement"));
-      String container2 = UUID.randomUUID().toString();
-      containerManager.allocateContainer(xceiverClientManager.getType(),
-          xceiverClientManager.getFactor(), container2,
-          "OZONE");
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);

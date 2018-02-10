@@ -27,9 +27,11 @@ import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
@@ -105,9 +107,13 @@ public class TestMiniOzoneCluster {
       // Create a single member pipe line
       String containerName = OzoneUtils.getRequestID();
       DatanodeID dnId = dn.getDatanodeId();
-      Pipeline pipeline = new Pipeline(dnId.getDatanodeUuid());
-      pipeline.addMember(dnId);
-      pipeline.setContainerName(containerName);
+      final PipelineChannel pipelineChannel =
+          new PipelineChannel(dnId.getDatanodeUuid(),
+              OzoneProtos.LifeCycleState.OPEN,
+              OzoneProtos.ReplicationType.STAND_ALONE,
+              OzoneProtos.ReplicationFactor.ONE, "test");
+      pipelineChannel.addMember(dnId);
+      Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
 
       // Verify client is able to connect to the container
       try (XceiverClient client = new XceiverClient(pipeline, conf)){

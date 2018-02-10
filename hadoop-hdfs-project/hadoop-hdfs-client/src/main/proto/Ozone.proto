@@ -29,16 +29,20 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs.ozone;
 import "hdfs.proto";
 
-
-// A pipeline is composed of one or more datanodes that back a container.
-message Pipeline {
+message PipelineChannel {
     required string leaderID = 1;
     repeated DatanodeIDProto members = 2;
-    required string containerName = 3;
-    optional LifeCycleState state = 4 [default = OPEN];
-    optional ReplicationType type = 5 [default = STAND_ALONE];
-    optional ReplicationFactor factor = 6 [default = ONE];
-    optional string pipelineName = 7;
+    optional LifeCycleState state = 3 [default = OPEN];
+    optional ReplicationType type = 4 [default = STAND_ALONE];
+    optional ReplicationFactor factor = 5 [default = ONE];
+    optional string name = 6;
+}
+
+// A pipeline is composed of PipelineChannel (Ratis/StandAlone) that back a
+// container.
+message Pipeline {
+    required string containerName = 1;
+    required PipelineChannel pipelineChannel = 2;
 }
 
 message KeyValue {

@@ -371,18 +371,19 @@ public class TestContainerPersistence {
       Pipeline pipeline) throws IOException,
       NoSuchAlgorithmException {
     final int datalen = 1024;
-    pipeline.setContainerName(containerName);
+    Pipeline newPipeline =
+        new Pipeline(containerName, pipeline.getPipelineChannel());
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner", "bilbo");
     if(!containerManager.getContainerMap()
         .containsKey(containerName)) {
-      containerManager.createContainer(pipeline, cData);
+      containerManager.createContainer(newPipeline, cData);
     }
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+    chunkManager.writeChunk(newPipeline, keyName, info, data, COMBINED);
     return info;
 
   }
@@ -420,7 +421,6 @@ public class TestContainerPersistence {
     Pipeline pipeline = createSingleNodePipeline(containerName);
     Map<String, ChunkInfo> fileHashMap = new HashMap<>();
 
-    pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
@@ -484,7 +484,6 @@ public class TestContainerPersistence {
     String keyName = OzoneUtils.getRequestID();
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
-    pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
@@ -519,7 +518,6 @@ public class TestContainerPersistence {
     String keyName = OzoneUtils.getRequestID();
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
-    pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
@@ -562,7 +560,6 @@ public class TestContainerPersistence {
     String keyName = OzoneUtils.getRequestID();
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
-    pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
@@ -601,7 +598,6 @@ public class TestContainerPersistence {
     String keyName = OzoneUtils.getRequestID();
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
-    pipeline.setContainerName(containerName);
     ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");

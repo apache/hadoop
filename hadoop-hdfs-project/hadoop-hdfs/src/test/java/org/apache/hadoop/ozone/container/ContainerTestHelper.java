@@ -32,7 +32,11 @@ import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.KeyValue;
+import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -119,16 +123,15 @@ public final class ContainerTestHelper {
     final Iterator<DatanodeID> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
     final DatanodeID leader = i.next();
-    final Pipeline pipeline = new Pipeline(leader.getDatanodeUuid());
-    pipeline.setContainerName(containerName);
-    pipeline.addMember(leader);
-    pipeline.setFactor(OzoneProtos.ReplicationFactor.ONE);
-    pipeline.setType(OzoneProtos.ReplicationType.STAND_ALONE);
-
+    String pipelineName = "TEST-" + UUID.randomUUID().toString().substring(3);
+    final PipelineChannel pipelineChannel =
+        new PipelineChannel(leader.getDatanodeUuid(), LifeCycleState.OPEN,
+            ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
+    pipelineChannel.addMember(leader);
     for(; i.hasNext();) {
-      pipeline.addMember(i.next());
+      pipelineChannel.addMember(i.next());
     }
-    return pipeline;
+    return new Pipeline(containerName, pipelineChannel);
   }
 
   /**
@@ -193,8 +196,9 @@ public final class ContainerTestHelper {
         ContainerProtos.WriteChunkRequestProto
             .newBuilder();
 
-    pipeline.setContainerName(containerName);
-    writeRequest.setPipeline(pipeline.getProtobufMessage());
+    Pipeline newPipeline =
+        new Pipeline(containerName, pipeline.getPipelineChannel());
+    writeRequest.setPipeline(newPipeline.getProtobufMessage());
     writeRequest.setKeyName(keyName);
 
     byte[] data = getData(datalen);
@@ -209,7 +213,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.WriteChunk);
     request.setWriteChunk(writeRequest);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid().toString());
+    request.setDatanodeID(newPipeline.getLeader().getDatanodeUuid());
 
     return request.build();
   }
@@ -228,7 +232,8 @@ public final class ContainerTestHelper {
       throws Exception {
     ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.PutSmallFileRequestProto.newBuilder();
-    pipeline.setContainerName(containerName);
+    Pipeline newPipeline =
+        new Pipeline(containerName, pipeline.getPipelineChannel());
     byte[] data = getData(dataLen);
     ChunkInfo info = getChunk(keyName, 0, 0, dataLen);
     setDataChecksum(info, data);
@@ -237,7 +242,7 @@ public final class ContainerTestHelper {
     ContainerProtos.PutKeyRequestProto.Builder putRequest =
         ContainerProtos.PutKeyRequestProto.newBuilder();
 
-    putRequest.setPipeline(pipeline.getProtobufMessage());
+    putRequest.setPipeline(newPipeline.getProtobufMessage());
     KeyData keyData = new KeyData(containerName, keyName);
 
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
@@ -254,7 +259,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
     request.setPutSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
-    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
+    request.setDatanodeID(newPipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -390,8 +395,7 @@ public final class ContainerTestHelper {
     containerData.setName(containerName);
     String[] keys = metaData.keySet().toArray(new String[]{});
     for(int i=0; i<keys.length; i++) {
-      OzoneProtos.KeyValue.Builder kvBuilder =
-          OzoneProtos.KeyValue.newBuilder();
+      KeyValue.Builder kvBuilder = KeyValue.newBuilder();
       kvBuilder.setKey(keys[i]);
       kvBuilder.setValue(metaData.get(keys[i]));
       containerData.addMetadata(i, kvBuilder.build());
