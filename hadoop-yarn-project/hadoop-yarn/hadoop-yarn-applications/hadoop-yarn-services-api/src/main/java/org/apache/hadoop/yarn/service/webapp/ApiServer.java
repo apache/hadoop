@@ -94,7 +94,7 @@ public class ApiServer {
   @GET
   @Path(VERSION)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
   public Response getVersion() {
     String version = VersionInfo.getBuildVersion();
     LOG.info(version);
@@ -104,7 +104,7 @@ public class ApiServer {
   @POST
   @Path(SERVICE_ROOT_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
   public Response createService(@Context HttpServletRequest request,
       Service service) {
     ServiceStatus serviceStatus = new ServiceStatus();
@@ -167,7 +167,7 @@ public class ApiServer {
   @GET
   @Path(SERVICE_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
   public Response getService(@Context HttpServletRequest request,
       @PathParam(SERVICE_NAME) String appName) {
     ServiceStatus serviceStatus = new ServiceStatus();
@@ -210,7 +210,7 @@ public class ApiServer {
   @DELETE
   @Path(SERVICE_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
   public Response deleteService(@Context HttpServletRequest request,
       @PathParam(SERVICE_NAME) String appName) {
     try {
@@ -273,7 +273,8 @@ public class ApiServer {
   @PUT
   @Path(COMPONENT_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN  })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8",
+              MediaType.TEXT_PLAIN  })
   public Response updateComponent(@Context HttpServletRequest request,
       @PathParam(SERVICE_NAME) String appName,
       @PathParam(COMPONENT_NAME) String componentName, Component component) {
@@ -322,7 +323,7 @@ public class ApiServer {
   @PUT
   @Path(SERVICE_PATH)
   @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
+  @Produces({ MediaType.APPLICATION_JSON + ";charset=utf-8" })
   public Response updateService(@Context HttpServletRequest request,
       @PathParam(SERVICE_NAME) String appName,
       Service updateServiceData) {
