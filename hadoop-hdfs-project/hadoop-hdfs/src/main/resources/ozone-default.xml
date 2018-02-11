@@ -294,6 +294,51 @@
       TCP port returned during the iscsi discovery.
     </description>
   </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.dynamic-provisioner.enabled</name>
+    <value>false</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Flag to enable automatic creation of cblocks and
+      kubernetes PersitentVolumes in kubernetes environment.</description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.cblock-user</name>
+    <value>iqn.2001-04.org.apache.hadoop</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>CBlock user to use for the dynamic provisioner.
+      This user will own all of the auto-created cblocks.</description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.configfile</name>
+    <value></value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Location of the kubernetes configuration file
+      to access the kubernetes cluster. Not required inside a pod
+      as the default service account will be if this value is
+      empty.</description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.ip</name>
+    <value></value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>IP where the cblock target server is available
+      from the kubernetes nodes. Usually it's a cluster ip address
+    which is defined by a deployed Service.</description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.port</name>
+    <value>3260</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Port where the cblock target server is available
+      from the kubernetes nodes. Could be different from the
+      listening port if jscsi is behind a Service.</description>
+  </property>
+
   <!--Container Settings used by Datanode-->
   <property>
     <name>ozone.container.cache.size</name>

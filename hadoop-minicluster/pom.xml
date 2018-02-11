@@ -67,6 +67,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>io.kubernetes</groupId>
+          <artifactId>client-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

@@ -44,5 +44,6 @@ public enum OzonePropertyTag implements PropertyTag {
   REST,
   STORAGE,
   PIPELINE,
-  STANDALONE
+  STANDALONE,
+  KUBERNETES
 }

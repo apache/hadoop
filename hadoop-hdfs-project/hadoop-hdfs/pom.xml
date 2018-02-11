@@ -231,6 +231,21 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>3.8.7</version>
     </dependency>
     <dependency>
+      <groupId>io.kubernetes</groupId>
+      <artifactId>client-java</artifactId>
+      <version>1.0.0-beta1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.swagger</groupId>
+          <artifactId>swagger-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.github.stefanbirkner</groupId>
+          <artifactId>system-rules</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>

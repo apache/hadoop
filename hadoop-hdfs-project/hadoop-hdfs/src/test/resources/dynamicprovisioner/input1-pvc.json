@@ -1,0 +1,38 @@
+{
+    "apiVersion": "v1",
+    "kind": "PersistentVolumeClaim",
+    "metadata": {
+        "annotations": {
+            "pv.kubernetes.io/bind-completed": "yes",
+            "pv.kubernetes.io/bound-by-controller": "yes",
+            "volume.beta.kubernetes.io/storage-provisioner": "hadoop.apache.org/cblock"
+        },
+        "creationTimestamp": "2018-01-14T13:27:48Z",
+        "name": "volume1",
+        "namespace": "ns",
+        "resourceVersion": "5532691",
+        "selfLink": "/api/v1/namespaces/demo1/persistentvolumeclaims/persistent",
+        "uid": "b65d053d-f92e-11e7-be3b-84b261c34638"
+    },
+    "spec": {
+        "accessModes": [
+            "ReadWriteOnce"
+        ],
+        "resources": {
+            "requests": {
+                "storage": "1Gi"
+            }
+        },
+        "storageClassName": "cblock",
+        "volumeName": "persistent-b65d053d-f92e-11e7-be3b-84b261c34638"
+    },
+    "status": {
+        "accessModes": [
+            "ReadWriteOnce"
+        ],
+        "capacity": {
+            "storage": "1Gi"
+        },
+        "phase": "Bound"
+    }
+}
