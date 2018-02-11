@@ -49,4 +49,12 @@ public class OzoneInputStream extends InputStream {
     inputStream.close();
   }
 
+  @Override
+  public int available() throws IOException {
+    return inputStream.available();
+  }
+
+  public InputStream getInputStream() {
+    return inputStream;
+  }
 }

@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.client.io;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
@@ -27,18 +29,21 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
+import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Maintaining a list of ChunkInputStream. Read based on offset.
  */
-public class ChunkGroupInputStream extends InputStream {
+public class ChunkGroupInputStream extends InputStream implements Seekable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ChunkGroupInputStream.class);
@@ -46,7 +51,13 @@ public class ChunkGroupInputStream extends InputStream {
   private static final int EOF = -1;
 
   private final ArrayList<ChunkInputStreamEntry> streamEntries;
+  // streamOffset[i] stores the offset at which chunkInputStream i stores
+  // data in the key
+  private long[] streamOffset = null;
   private int currentStreamIndex;
+  private long length = 0;
+  private boolean closed = false;
+  private String key;
 
   public ChunkGroupInputStream() {
     streamEntries = new ArrayList<>();
@@ -66,19 +77,21 @@ public class ChunkGroupInputStream extends InputStream {
   /**
    * Append another stream to the end of the list.
    *
-   * @param stream the stream instance.
-   * @param length the max number of bytes that should be written to this
-   *               stream.
+   * @param stream       the stream instance.
+   * @param streamLength the max number of bytes that should be written to this
+   *                     stream.
    */
-  public synchronized void addStream(InputStream stream, long length) {
-    streamEntries.add(new ChunkInputStreamEntry(stream, length));
+  public synchronized void addStream(ChunkInputStream stream,
+      long streamLength) {
+    streamEntries.add(new ChunkInputStreamEntry(stream, streamLength));
   }
 
 
   @Override
   public synchronized int read() throws IOException {
+    checkNotClosed();
     if (streamEntries.size() <= currentStreamIndex) {
-      throw new IndexOutOfBoundsException();
+      return EOF;
     }
     ChunkInputStreamEntry entry = streamEntries.get(currentStreamIndex);
     int data = entry.read();
@@ -87,6 +100,7 @@ public class ChunkGroupInputStream extends InputStream {
 
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
+    checkNotClosed();
     if (b == null) {
       throw new NullPointerException();
     }
@@ -122,15 +136,82 @@ public class ChunkGroupInputStream extends InputStream {
     return totalReadLen;
   }
 
-  private static class ChunkInputStreamEntry extends InputStream {
+  @Override
+  public void seek(long pos) throws IOException {
+    checkNotClosed();
+    if (pos < 0 || pos >= length) {
+      if (pos == 0) {
+        // It is possible for length and pos to be zero in which case
+        // seek should return instead of throwing exception
+        return;
+      }
+      throw new EOFException(
+          "EOF encountered at pos: " + pos + " for key: " + key);
+    }
+    Preconditions.assertTrue(currentStreamIndex >= 0);
+    if (currentStreamIndex >= streamEntries.size()) {
+      currentStreamIndex = Arrays.binarySearch(streamOffset, pos);
+    } else if (pos < streamOffset[currentStreamIndex]) {
+      currentStreamIndex =
+          Arrays.binarySearch(streamOffset, 0, currentStreamIndex, pos);
+    } else if (pos >= streamOffset[currentStreamIndex] + streamEntries
+        .get(currentStreamIndex).length) {
+      currentStreamIndex = Arrays
+          .binarySearch(streamOffset, currentStreamIndex + 1,
+              streamEntries.size(), pos);
+    }
+    if (currentStreamIndex < 0) {
+      // Binary search returns -insertionPoint - 1  if element is not present
+      // in the array. insertionPoint is the point at which element would be
+      // inserted in the sorted array. We need to adjust the currentStreamIndex
+      // accordingly so that currentStreamIndex = insertionPoint - 1
+      currentStreamIndex = -currentStreamIndex - 2;
+    }
+    // seek to the proper offset in the ChunkInputStream
+    streamEntries.get(currentStreamIndex)
+        .seek(pos - streamOffset[currentStreamIndex]);
+  }
 
-    private final InputStream inputStream;
+  @Override
+  public long getPos() throws IOException {
+    return length == 0 ? 0 :
+        streamOffset[currentStreamIndex] + streamEntries.get(currentStreamIndex)
+            .getPos();
+  }
+
+  @Override
+  public boolean seekToNewSource(long targetPos) throws IOException {
+    return false;
+  }
+
+  @Override
+  public int available() throws IOException {
+    checkNotClosed();
+    long remaining = length - getPos();
+    return remaining <= Integer.MAX_VALUE ? (int) remaining : Integer.MAX_VALUE;
+  }
+
+  @Override
+  public void close() throws IOException {
+    closed = true;
+    for (int i = 0; i < streamEntries.size(); i++) {
+      streamEntries.get(i).close();
+    }
+  }
+
+  /**
+   * Encapsulates ChunkInputStream.
+   */
+  public static class ChunkInputStreamEntry extends InputStream
+      implements Seekable {
+
+    private final ChunkInputStream chunkInputStream;
     private final long length;
     private long currentPosition;
 
-
-    ChunkInputStreamEntry(InputStream chunkInputStream, long length) {
-      this.inputStream = chunkInputStream;
+    public ChunkInputStreamEntry(ChunkInputStream chunkInputStream,
+        long length) {
+      this.chunkInputStream = chunkInputStream;
       this.length = length;
       this.currentPosition = 0;
     }
@@ -142,21 +223,36 @@ public class ChunkGroupInputStream extends InputStream {
     @Override
     public synchronized int read(byte[] b, int off, int len)
         throws IOException {
-      int readLen = inputStream.read(b, off, len);
+      int readLen = chunkInputStream.read(b, off, len);
       currentPosition += readLen;
       return readLen;
     }
 
     @Override
     public synchronized int read() throws IOException {
-      int data = inputStream.read();
+      int data = chunkInputStream.read();
       currentPosition += 1;
       return data;
     }
 
     @Override
     public synchronized void close() throws IOException {
-      inputStream.close();
+      chunkInputStream.close();
+    }
+
+    @Override
+    public void seek(long pos) throws IOException {
+      chunkInputStream.seek(pos);
+    }
+
+    @Override
+    public long getPos() throws IOException {
+      return chunkInputStream.getPos();
+    }
+
+    @Override
+    public boolean seekToNewSource(long targetPos) throws IOException {
+      return false;
     }
   }
 
@@ -168,8 +264,12 @@ public class ChunkGroupInputStream extends InputStream {
     long length = 0;
     String containerKey;
     ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream();
-    for (KsmKeyLocationInfo ksmKeyLocationInfo :
-        keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly()) {
+    groupInputStream.key = keyInfo.getKeyName();
+    List<KsmKeyLocationInfo> keyLocationInfos =
+        keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly();
+    groupInputStream.streamOffset = new long[keyLocationInfos.size()];
+    for (int i = 0; i < keyLocationInfos.size(); i++) {
+      KsmKeyLocationInfo ksmKeyLocationInfo = keyLocationInfos.get(i);
       String containerName = ksmKeyLocationInfo.getContainerName();
       Pipeline pipeline =
           storageContainerLocationClient.getContainer(containerName);
@@ -180,6 +280,7 @@ public class ChunkGroupInputStream extends InputStream {
       try {
         LOG.debug("get key accessing {} {}",
             xceiverClient.getPipeline().getContainerName(), containerKey);
+        groupInputStream.streamOffset[i] = length;
         ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
             .containerKeyDataForRead(
                 xceiverClient.getPipeline().getContainerName(), containerKey);
@@ -202,6 +303,19 @@ public class ChunkGroupInputStream extends InputStream {
         }
       }
     }
+    groupInputStream.length = length;
     return new LengthInputStream(groupInputStream, length);
+  }
+
+  /**
+   * Verify that the input stream is open. Non blocking; this gives
+   * the last state of the volatile {@link #closed} field.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (closed) {
+      throw new IOException(
+          ": " + FSExceptionMessages.STREAM_IS_CLOSED + " Key: " + key);
+    }
   }
 }

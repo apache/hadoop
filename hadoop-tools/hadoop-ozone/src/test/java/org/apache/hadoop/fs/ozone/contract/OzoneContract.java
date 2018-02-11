@@ -35,6 +35,8 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -76,6 +78,10 @@ class OzoneContract extends AbstractFSContract {
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 
+  private void copyClusterConfigs(String configKey) {
+    getConf().set(configKey, cluster.getConf().get(configKey));
+  }
+
   @Override
   public FileSystem getTestFileSystem() throws IOException {
     //assumes cluster is not null
@@ -95,8 +101,6 @@ class OzoneContract extends AbstractFSContract {
     BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
     try {
       storageHandler.createVolume(volumeArgs);
-
-
       storageHandler.createBucket(bucketArgs);
     } catch (OzoneException e) {
       throw new IOException(e.getMessage());
@@ -107,6 +111,8 @@ class OzoneContract extends AbstractFSContract {
     String uri = String.format("%s://localhost:%d/%s/%s",
         Constants.OZONE_URI_SCHEME, port, volumeName, bucketName);
     getConf().set("fs.defaultFS", uri);
+    copyClusterConfigs(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY);
+    copyClusterConfigs(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
     return FileSystem.get(getConf());
   }
 

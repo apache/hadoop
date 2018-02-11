@@ -57,4 +57,8 @@ public class OzoneOutputStream extends OutputStream {
     //commitKey can be done here, if needed.
     outputStream.close();
   }
+
+  public OutputStream getOutputStream() {
+    return outputStream;
+  }
 }
