@@ -18,13 +18,14 @@
 package org.apache.hadoop.yarn.applications.distributedshell;
 
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParseException;
+import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser;
+import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.SourceTags;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 /**
  * Class encapsulating a SourceTag, number of container and a Placement
@@ -34,12 +35,6 @@ public class PlacementSpec {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(PlacementSpec.class);
-  private static final String SPEC_DELIM = ":";
-  private static final String KV_SPLIT_DELIM = "=";
-  private static final String SPEC_VAL_DELIM = ",";
-  private static final String IN = "in";
-  private static final String NOT_IN = "notin";
-  private static final String CARDINALITY = "cardinality";
 
   public final String sourceTag;
   public final int numContainers;
@@ -73,65 +68,28 @@ public class PlacementSpec {
    * @param specs Placement spec.
    * @return Mapping from source tag to placement constraint.
    */
-  public static Map<String, PlacementSpec> parse(String specs) {
+  public static Map<String, PlacementSpec> parse(String specs)
+      throws IllegalArgumentException {
     LOG.info("Parsing Placement Specs: [{}]", specs);
-    Scanner s = new Scanner(specs).useDelimiter(SPEC_DELIM);
     Map<String, PlacementSpec> pSpecs = new HashMap<>();
-    while (s.hasNext()) {
-      String sp = s.next();
-      LOG.info("Parsing Spec: [{}]", sp);
-      String[] specSplit = sp.split(KV_SPLIT_DELIM);
-      String sourceTag = specSplit[0];
-      Scanner ps = new Scanner(specSplit[1]).useDelimiter(SPEC_VAL_DELIM);
-      int numContainers = ps.nextInt();
-      if (!ps.hasNext()) {
-        pSpecs.put(sourceTag,
-            new PlacementSpec(sourceTag, numContainers, null));
-        LOG.info("Creating Spec without constraint {}: num[{}]",
-            sourceTag, numContainers);
-        continue;
+    Map<SourceTags, PlacementConstraint> parsed;
+    try {
+      parsed = PlacementConstraintParser.parsePlacementSpec(specs);
+      for (Map.Entry<SourceTags, PlacementConstraint> entry :
+          parsed.entrySet()) {
+        LOG.info("Parsed source tag: {}, number of allocations: {}",
+            entry.getKey().getTag(), entry.getKey().getNumOfAllocations());
+        LOG.info("Parsed constraint: {}", entry.getValue()
+            .getConstraintExpr().getClass().getSimpleName());
+        pSpecs.put(entry.getKey().getTag(), new PlacementSpec(
+            entry.getKey().getTag(),
+            entry.getKey().getNumOfAllocations(),
+            entry.getValue()));
       }
-      String cType = ps.next().toLowerCase();
-      String scope = ps.next().toLowerCase();
-
-      String targetTag = ps.next();
-      scope = scope.equals("rack") ? PlacementConstraints.RACK :
-          PlacementConstraints.NODE;
-
-      PlacementConstraint pc;
-      if (cType.equals(IN)) {
-        pc = PlacementConstraints.build(
-            PlacementConstraints.targetIn(scope,
-                PlacementConstraints.PlacementTargets.allocationTag(
-                    targetTag)));
-        LOG.info("Creating IN Constraint for source tag [{}], num[{}]: " +
-                "scope[{}], target[{}]",
-            sourceTag, numContainers, scope, targetTag);
-      } else if (cType.equals(NOT_IN)) {
-        pc = PlacementConstraints.build(
-            PlacementConstraints.targetNotIn(scope,
-                PlacementConstraints.PlacementTargets.allocationTag(
-                    targetTag)));
-        LOG.info("Creating NOT_IN Constraint for source tag [{}], num[{}]: " +
-                "scope[{}], target[{}]",
-            sourceTag, numContainers, scope, targetTag);
-      } else if (cType.equals(CARDINALITY)) {
-        int minCard = ps.nextInt();
-        int maxCard = ps.nextInt();
-        pc = PlacementConstraints.build(
-            PlacementConstraints.targetCardinality(scope, minCard, maxCard,
-                PlacementConstraints.PlacementTargets.allocationTag(
-                    targetTag)));
-        LOG.info("Creating CARDINALITY Constraint source tag [{}], num[{}]: " +
-                "scope[{}], min[{}], max[{}], target[{}]",
-            sourceTag, numContainers, scope, minCard, maxCard, targetTag);
-      } else {
-        throw new RuntimeException(
-            "Could not parse constraintType [" + cType + "]" +
-                " in [" + specSplit[1] + "]");
-      }
-      pSpecs.put(sourceTag, new PlacementSpec(sourceTag, numContainers, pc));
+      return pSpecs;
+    } catch (PlacementConstraintParseException e) {
+      throw new IllegalArgumentException(
+          "Invalid placement spec: " + specs, e);
     }
-    return pSpecs;
   }
 }
