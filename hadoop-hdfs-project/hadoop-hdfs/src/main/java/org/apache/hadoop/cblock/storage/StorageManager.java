@@ -204,6 +204,8 @@ public class StorageManager {
           LOGGER.error("Error creating container Container:{}:" +
               " index:{} error:{}", container.getContainerID(),
               containerIdx, e);
+        } else {
+          LOGGER.error("Error creating container.", e);
         }
       }
     }

@@ -208,7 +208,7 @@ public class CBlockCli extends Configured implements Tool {
     System.exit(res);
   }
 
-  private long parseSize(String volumeSizeArgs) throws IOException {
+  public static long parseSize(String volumeSizeArgs) throws IOException {
     long multiplier = 1;
 
     Pattern p = Pattern.compile("([0-9]+)([a-zA-Z]+)");
@@ -221,9 +221,14 @@ public class CBlockCli extends Configured implements Tool {
     int size = Integer.parseInt(m.group(1));
     String s = m.group(2);
 
-    if (s.equalsIgnoreCase("GB")) {
+    if (s.equalsIgnoreCase("MB") ||
+        s.equalsIgnoreCase("Mi")) {
+      multiplier = 1024L * 1024;
+    } else if (s.equalsIgnoreCase("GB") ||
+        s.equalsIgnoreCase("Gi")) {
       multiplier = 1024L * 1024 * 1024;
-    } else if (s.equalsIgnoreCase("TB")) {
+    } else if (s.equalsIgnoreCase("TB") ||
+        s.equalsIgnoreCase("Ti")) {
       multiplier = 1024L * 1024 * 1024 * 1024;
     } else {
       throw new IOException("Invalid volume size args " + volumeSizeArgs);

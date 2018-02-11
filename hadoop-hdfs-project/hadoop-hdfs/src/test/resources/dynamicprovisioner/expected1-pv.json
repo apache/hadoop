@@ -1,0 +1,37 @@
+{
+    "apiVersion": "v1",
+    "kind": "PersistentVolume",
+    "metadata": {
+        "annotations": {
+            "volume.beta.kubernetes.io/storage-class": "cblock",
+            "pv.kubernetes.io/provisioned-by": "hadoop.apache.org/cblock"
+        },
+        "name": "volume1-b65d053d-f92e-11e7-be3b-84b261c34638",
+        "namespace": "ns"
+    },
+    "spec": {
+        "accessModes": [
+            "ReadWriteOnce"
+        ],
+        "capacity": {
+            "storage": "1Gi"
+        },
+        "claimRef": {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "name": "volume1",
+            "namespace": "ns",
+            "uid": "b65d053d-f92e-11e7-be3b-84b261c34638"
+        },
+        "iscsi": {
+            "fsType": "ext4",
+            "iqn": "iqn.2001-04.org.apache.hadoop:volume1-b65d053d-f92e-11e7-be3b-84b261c34638",
+            "lun": 0,
+            "portals": [
+                "1.2.3.4:3260"
+            ],
+            "targetPortal": "1.2.3.4:3260"
+        },
+        "persistentVolumeReclaimPolicy": "Delete"
+    }
+}
