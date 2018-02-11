@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @InterfaceStability.Unstable
 public class SlowDiskTracker {
   public static final Logger LOG =
-      LoggerFactory.getLogger(SlowPeerTracker.class);
+      LoggerFactory.getLogger(SlowDiskTracker.class);
 
   /**
    * Time duration after which a report is considered stale. This is
