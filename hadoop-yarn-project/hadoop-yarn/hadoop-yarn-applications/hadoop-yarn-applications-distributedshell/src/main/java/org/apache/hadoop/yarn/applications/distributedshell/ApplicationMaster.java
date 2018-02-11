@@ -28,6 +28,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -671,8 +673,14 @@ public class ApplicationMaster {
   }
 
   private void parsePlacementSpecs(String placementSpecifications) {
+    // Client sends placement spec in encoded format
+    Base64.Decoder decoder = Base64.getDecoder();
+    byte[] decodedBytes = decoder.decode(
+        placementSpecifications.getBytes(StandardCharsets.UTF_8));
+    String decodedSpec = new String(decodedBytes, StandardCharsets.UTF_8);
+    LOG.info("Decode placement spec: " + decodedSpec);
     Map<String, PlacementSpec> pSpecs =
-        PlacementSpec.parse(placementSpecifications);
+        PlacementSpec.parse(decodedSpec);
     this.placementSpecs = new HashMap<>();
     this.numTotalContainers = 0;
     for (PlacementSpec pSpec : pSpecs.values()) {

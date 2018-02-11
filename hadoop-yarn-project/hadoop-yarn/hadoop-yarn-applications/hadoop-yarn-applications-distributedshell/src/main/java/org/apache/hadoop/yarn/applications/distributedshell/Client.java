@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.Arrays;
+import java.util.Base64;
 
 import com.google.common.base.Joiner;
 import org.apache.commons.cli.CommandLine;
@@ -857,7 +859,11 @@ public class Client {
     }
     vargs.add("--num_containers " + String.valueOf(numContainers));
     if (placementSpec != null && placementSpec.length() > 0) {
-      vargs.add("--placement_spec " + placementSpec);
+      // Encode the spec to avoid passing special chars via shell arguments.
+      String encodedSpec = Base64.getEncoder()
+          .encodeToString(placementSpec.getBytes(StandardCharsets.UTF_8));
+      LOG.info("Encode placement spec: " + encodedSpec);
+      vargs.add("--placement_spec " + encodedSpec);
     }
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
