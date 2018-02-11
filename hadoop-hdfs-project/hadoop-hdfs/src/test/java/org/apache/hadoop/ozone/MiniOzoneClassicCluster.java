@@ -206,6 +206,10 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
     return this.scm;
   }
 
+  public OzoneConfiguration getConf() {
+    return conf;
+  }
+
   @Override
   public KeySpaceManager getKeySpaceManager() {
     return this.ksm;

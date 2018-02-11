@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.client.io;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
@@ -72,6 +73,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
   private final String requestID;
+  private boolean closed;
 
   /**
    * A constructor for testing purpose only.
@@ -86,6 +88,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     xceiverClientManager = null;
     chunkSize = 0;
     requestID = null;
+    closed = false;
   }
 
   /**
@@ -196,6 +199,8 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   @Override
   public synchronized void write(int b) throws IOException {
+    checkNotClosed();
+
     if (streamEntries.size() <= currentStreamIndex) {
       Preconditions.checkNotNull(ksmClient);
       // allocate a new block, if a exception happens, log an error and
@@ -230,6 +235,8 @@ public class ChunkGroupOutputStream extends OutputStream {
   @Override
   public synchronized void write(byte[] b, int off, int len)
       throws IOException {
+    checkNotClosed();
+
     if (b == null) {
       throw new NullPointerException();
     }
@@ -286,6 +293,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   @Override
   public synchronized void flush() throws IOException {
+    checkNotClosed();
     for (int i = 0; i <= currentStreamIndex; i++) {
       streamEntries.get(i).flush();
     }
@@ -298,6 +306,10 @@ public class ChunkGroupOutputStream extends OutputStream {
    */
   @Override
   public synchronized void close() throws IOException {
+    if (closed) {
+      return;
+    }
+    closed = true;
     for (ChunkOutputStreamEntry entry : streamEntries) {
       if (entry != null) {
         entry.close();
@@ -462,6 +474,19 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream != null) {
         this.outputStream.close();
       }
+    }
+  }
+
+  /**
+   * Verify that the output stream is open. Non blocking; this gives
+   * the last state of the volatile {@link #closed} field.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (closed) {
+      throw new IOException(
+          ": " + FSExceptionMessages.STREAM_IS_CLOSED + " Key: " + keyArgs
+              .getKeyName());
     }
   }
 }

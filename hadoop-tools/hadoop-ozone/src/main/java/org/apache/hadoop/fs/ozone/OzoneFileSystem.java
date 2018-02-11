@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.fs.ozone;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Iterator;
 
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -35,12 +34,18 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
-import org.apache.hadoop.ozone.web.client.OzoneKey;
-import org.apache.hadoop.ozone.web.client.OzoneRestClient;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.ReplicationFactor;
+import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,19 +55,16 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_SCHEME;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
-import static org.apache.hadoop.fs.ozone.Constants.OZONE_HTTP_SCHEME;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
-import static org.apache.hadoop.fs.ozone.Constants.BUFFER_DIR_KEY;
 
 /**
  * The Ozone Filesystem implementation.
@@ -78,11 +80,15 @@ public class OzoneFileSystem extends FileSystem {
   static final Logger LOG = LoggerFactory.getLogger(OzoneFileSystem.class);
 
   /** The Ozone client for connecting to Ozone server. */
-  private OzoneRestClient ozone;
+  private OzoneClient ozoneClient;
+  private ObjectStore objectStore;
+  private OzoneVolume volume;
   private OzoneBucket bucket;
   private URI uri;
   private String userName;
   private Path workingDir;
+  private ReplicationType replicationType;
+  private ReplicationFactor replicationFactor;
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
@@ -115,23 +121,24 @@ public class OzoneFileSystem extends FileSystem {
           .setPath(OZONE_URI_DELIMITER + volumeStr + OZONE_URI_DELIMITER
               + bucketStr + OZONE_URI_DELIMITER).build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
-      this.ozone = new OzoneRestClient(OZONE_HTTP_SCHEME + hostStr);
+      this.ozoneClient = OzoneClientFactory.getRpcClient(conf);
+      objectStore = ozoneClient.getObjectStore();
+      this.volume = objectStore.getVolume(volumeStr);
+      this.bucket = volume.getBucket(bucketStr);
+      this.replicationType = ReplicationType.valueOf(
+          conf.get(OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+              OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
+      this.replicationFactor = ReplicationFactor.valueOf(
+          conf.getInt(OzoneConfigKeys.OZONE_REPLICATION,
+              OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
       try {
         this.userName =
             UserGroupInformation.getCurrentUser().getShortUserName();
       } catch (IOException e) {
         this.userName = OZONE_DEFAULT_USER;
       }
-      this.ozone.setUserAuth(userName);
-
-      OzoneVolume volume = ozone.getVolume(volumeStr);
-      this.bucket = volume.getBucket(bucketStr);
       this.workingDir = new Path(OZONE_USER_DIR, this.userName)
               .makeQualified(this.uri, this.workingDir);
-    } catch (OzoneException oe) {
-      final String msg = "Ozone server exception when initializing file system";
-      LOG.error(msg, oe);
-      throw new IOException(msg, oe);
     } catch (URISyntaxException ue) {
       final String msg = "Invalid Ozone endpoint " + name;
       LOG.error(msg, ue);
@@ -142,7 +149,7 @@ public class OzoneFileSystem extends FileSystem {
   @Override
   public void close() throws IOException {
     try {
-      ozone.close();
+      ozoneClient.close();
     } finally {
       super.close();
     }
@@ -162,14 +169,13 @@ public class OzoneFileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     LOG.trace("open() path:{}", f);
     final FileStatus fileStatus = getFileStatus(f);
-
+    final String key = pathToKey(f);
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException("Can't open directory " + f + " to read");
     }
 
     return new FSDataInputStream(
-        new OzoneInputStream(getConf(), uri, bucket, pathToKey(f),
-            fileStatus.getLen(), bufferSize, statistics));
+        new OzoneFSInputStream(bucket.readKey(key).getInputStream()));
   }
 
   @Override
@@ -206,11 +212,12 @@ public class OzoneFileSystem extends FileSystem {
       // does not exists and a new file can thus be created.
     }
 
-    final OzoneOutputStream stream =
-        new OzoneOutputStream(getConf(), uri, bucket, key, this.statistics);
+    OzoneOutputStream ozoneOutputStream =
+        bucket.createKey(key, 0, replicationType, replicationFactor);
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
-    return new FSDataOutputStream(stream, null);
+    return new FSDataOutputStream(
+        new OzoneFSOutputStream(ozoneOutputStream.getOutputStream()), null);
   }
 
   @Override
@@ -245,7 +252,7 @@ public class OzoneFileSystem extends FileSystem {
 
     RenameIterator(Path srcPath, Path dstPath)
         throws IOException {
-      super(srcPath, true);
+      super(srcPath);
       srcKey = pathToKey(srcPath);
       dstKey = pathToKey(dstPath);
       LOG.trace("rename from:{} to:{}", srcKey, dstKey);
@@ -253,30 +260,17 @@ public class OzoneFileSystem extends FileSystem {
 
     boolean processKey(String key) throws IOException {
       String newKeyName = dstKey.concat(key.substring(srcKey.length()));
-      return rename(key, newKeyName);
+      rename(key, newKeyName);
+      return true;
     }
 
-    // TODO: currently rename work by copying the file, with changes in KSM,
-    // this operation can be made improved by renaming the keys in KSM directly.
-    private boolean rename(String src, String dst) throws IOException {
-      final LocalDirAllocator dirAlloc = new LocalDirAllocator(BUFFER_DIR_KEY);
-      final File tmpFile = dirAlloc.createTmpFileForWrite("output-",
-          LocalDirAllocator.SIZE_UNKNOWN, getConf());
-
-      try {
-        LOG.trace("rename by copying file from:{} to:{}", src, dst);
-        bucket.getKey(src, tmpFile.toPath());
-        bucket.putKey(dst, tmpFile);
-        return true;
-      } catch (OzoneException oe) {
-        String msg = String.format("Error when renaming key from:%s to:%s",
-            src, dst);
-        LOG.error(msg, oe);
-        throw new IOException(msg, oe);
-      } finally {
-        if (!tmpFile.delete()) {
-          LOG.warn("Can not delete tmpFile: " + tmpFile);
-        }
+    // TODO: currently rename work by copying the streams, with changes in KSM,
+    // this operation can be improved by renaming the keys in KSM directly.
+    private void rename(String src, String dst) throws IOException {
+      try (OzoneInputStream inputStream = bucket.readKey(src);
+          OzoneOutputStream outputStream = bucket
+              .createKey(dst, 0, replicationType, replicationFactor)) {
+        IOUtils.copyBytes(inputStream, outputStream, getConf());
       }
     }
   }
@@ -386,8 +380,13 @@ public class OzoneFileSystem extends FileSystem {
     private boolean recursive;
     DeleteIterator(Path f, boolean recursive)
         throws IOException {
-      super(f, recursive);
+      super(f);
       this.recursive = recursive;
+      if (getStatus().isDirectory()
+          && !this.recursive
+          && listStatus(f).length != 0) {
+        throw new PathIsNotEmptyDirectoryException(f.toString());
+      }
     }
 
     boolean processKey(String key) throws IOException {
@@ -421,7 +420,7 @@ public class OzoneFileSystem extends FileSystem {
     private Path f;
 
     ListStatusIterator(Path f) throws IOException  {
-      super(f, true);
+      super(f);
       this.f = f;
     }
 
@@ -532,8 +531,7 @@ public class OzoneFileSystem extends FileSystem {
 
     if (key.length() == 0) {
       return new FileStatus(0, true, 1, 0,
-          getModifiedTime(bucket.getCreatedOn(), OZONE_URI_DELIMITER),
-          qualifiedPath);
+          bucket.getCreationTime(), qualifiedPath);
     }
 
     // consider this a file and get key status
@@ -548,14 +546,11 @@ public class OzoneFileSystem extends FileSystem {
       throw new FileNotFoundException(f + ": No such file or directory!");
     } else if (isDirectory(meta)) {
       return new FileStatus(0, true, 1, 0,
-          getModifiedTime(meta.getObjectInfo().getModifiedOn(), key),
-          qualifiedPath);
+          meta.getModificationTime(), qualifiedPath);
     } else {
       //TODO: Fetch replication count from ratis config
-      return new FileStatus(meta.getObjectInfo().getSize(), false, 1,
-            getDefaultBlockSize(f),
-          getModifiedTime(meta.getObjectInfo().getModifiedOn(), key),
-          qualifiedPath);
+      return new FileStatus(meta.getDataSize(), false, 1,
+            getDefaultBlockSize(f), meta.getModificationTime(), qualifiedPath);
     }
   }
 
@@ -566,24 +561,10 @@ public class OzoneFileSystem extends FileSystem {
    */
   private OzoneKey getKeyInfo(String key) {
     try {
-      return bucket.getKeyInfo(key);
-    } catch (OzoneException e) {
+      return bucket.getKey(key);
+    } catch (IOException e) {
       LOG.trace("Key:{} does not exists", key);
       return null;
-    }
-  }
-
-  /**
-   * Helper method to get the modified time of the key.
-   * @param key key to fetch the modified time
-   * @return last modified time of the key
-   */
-  private long getModifiedTime(String modifiedTime, String key) {
-    try {
-      return OzoneUtils.formatDate(modifiedTime);
-    } catch (ParseException pe) {
-      LOG.error("Invalid time:{} for key:{}", modifiedTime, key, pe);
-      return 0;
     }
   }
 
@@ -593,27 +574,10 @@ public class OzoneFileSystem extends FileSystem {
    * @return true if key is a directory, false otherwise
    */
   private boolean isDirectory(OzoneKey key) {
-    LOG.trace("key name:{} size:{}", key.getObjectInfo().getKeyName(),
-        key.getObjectInfo().getSize());
-    return key.getObjectInfo().getKeyName().endsWith(OZONE_URI_DELIMITER)
-        && (key.getObjectInfo().getSize() == 0);
-  }
-
-  /**
-   * Helper method to list entries matching the key name in bucket.
-   * @param dirKey key prefix for listing the keys
-   * @param lastKey last iterated key
-   * @return List of Keys
-   */
-  List<OzoneKey> listKeys(String dirKey, String lastKey)
-      throws IOException {
-    LOG.trace("list keys dirKey:{} lastKey:{}", dirKey, lastKey);
-    try {
-      return bucket.listKeys(dirKey, LISTING_PAGE_SIZE, lastKey);
-    } catch (OzoneException oe) {
-      LOG.error("list keys failed dirKey:{} lastKey:{}", dirKey, lastKey, oe);
-      throw new IOException("List keys failed " + oe.getMessage());
-    }
+    LOG.trace("key name:{} size:{}", key.getName(),
+        key.getDataSize());
+    return key.getName().endsWith(OZONE_URI_DELIMITER)
+        && (key.getDataSize() == 0);
   }
 
   /**
@@ -623,11 +587,11 @@ public class OzoneFileSystem extends FileSystem {
    */
   private boolean createDirectory(String keyName) {
     try {
-      LOG.trace("creating dir for key:{}", keyName);
-      bucket.putKey(keyName, "");
+      LOG.info("creating dir for key:{}", keyName);
+      bucket.createKey(keyName, 0, replicationType, replicationFactor).close();
       return true;
-    } catch (OzoneException oe) {
-      LOG.error("create key failed for key:{}", keyName, oe);
+    } catch (IOException ioe) {
+      LOG.error("create key failed for key:{}", keyName, ioe);
       return false;
     }
   }
@@ -642,8 +606,8 @@ public class OzoneFileSystem extends FileSystem {
     try {
       bucket.deleteKey(keyName);
       return true;
-    } catch (OzoneException oe) {
-      LOG.error("delete key failed " + oe.getMessage());
+    } catch (IOException ioe) {
+      LOG.error("delete key failed " + ioe.getMessage());
       return false;
     }
   }
@@ -671,7 +635,7 @@ public class OzoneFileSystem extends FileSystem {
    * @param key the ozone Key which needs to be appended
    * @return delimiter appended key
    */
-  String addTrailingSlashIfNeeded(String key) {
+  private String addTrailingSlashIfNeeded(String key) {
     if (StringUtils.isNotEmpty(key) && !key.endsWith(OZONE_URI_DELIMITER)) {
       return key + OZONE_URI_DELIMITER;
     } else {
@@ -690,47 +654,36 @@ public class OzoneFileSystem extends FileSystem {
 
   private abstract class OzoneListingIterator {
     private final Path path;
-    private final boolean recursive;
     private final FileStatus status;
     private String pathKey;
+    private Iterator<OzoneKey> keyIterator;
 
-    OzoneListingIterator(Path path, boolean recursive)
+    OzoneListingIterator(Path path)
         throws IOException {
       this.path = path;
-      this.recursive = recursive;
       this.status = getFileStatus(path);
       this.pathKey = pathToKey(path);
       if (status.isDirectory()) {
         this.pathKey = addTrailingSlashIfNeeded(pathKey);
       }
+      keyIterator = bucket.listKeys(pathKey);
     }
 
     abstract boolean processKey(String key) throws IOException;
 
     // iterates all the keys in the particular path
     boolean iterate() throws IOException {
-      LOG.trace("Iterating path {} - recursive {}", path, recursive);
+      LOG.trace("Iterating path {}", path);
       if (status.isDirectory()) {
         LOG.trace("Iterating directory:{}", pathKey);
-        String lastKey = pathKey;
-        while (true) {
-          List<OzoneKey> ozoneKeys = listKeys(pathKey, lastKey);
-          LOG.trace("number of sub keys:{}", ozoneKeys.size());
-          if (ozoneKeys.size() == 0) {
-            return processKey(pathKey);
-          } else {
-            if (!recursive) {
-              throw new PathIsNotEmptyDirectoryException(path.toString());
-            } else {
-              for (OzoneKey ozoneKey : ozoneKeys) {
-                lastKey = ozoneKey.getObjectInfo().getKeyName();
-                if (!processKey(lastKey)) {
-                  return false;
-                }
-              }
-            }
+        while (keyIterator.hasNext()) {
+          OzoneKey key = keyIterator.next();
+          LOG.info("iterating key:{}", key.getName());
+          if (!processKey(key.getName())) {
+            return false;
           }
         }
+        return true;
       } else {
         LOG.trace("iterating file:{}", path);
         return processKey(pathKey);
@@ -743,6 +696,10 @@ public class OzoneFileSystem extends FileSystem {
 
     boolean pathIsDirectory() {
       return status.isDirectory();
+    }
+
+    FileStatus getStatus() {
+      return status;
     }
   }
 }

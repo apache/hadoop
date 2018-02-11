@@ -114,7 +114,9 @@ public class TestOzoneFileInterfaces {
     }
 
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertTrue(status.getModificationTime() < currentTime);
+    // The timestamp of the newly created file should always be greater than
+    // the time when the test was started
+    Assert.assertTrue(status.getModificationTime() > currentTime);
 
     try (FSDataInputStream inputStream = fs.open(path)) {
       byte[] buffer = new byte[stringLen];

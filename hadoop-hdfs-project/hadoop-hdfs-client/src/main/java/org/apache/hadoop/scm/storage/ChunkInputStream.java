@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.scm.storage;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.protobuf.ByteString;
 
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.scm.XceiverClientSpi;
@@ -38,7 +41,7 @@ import org.apache.hadoop.scm.XceiverClientManager;
  * instances.  This class encapsulates all state management for iterating
  * through the sequence of chunks and the sequence of buffers within each chunk.
  */
-public class ChunkInputStream extends InputStream {
+public class ChunkInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
@@ -47,9 +50,10 @@ public class ChunkInputStream extends InputStream {
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
   private List<ChunkInfo> chunks;
-  private int chunkOffset;
+  private int chunkIndex;
+  private long[] chunkOffset;
   private List<ByteBuffer> buffers;
-  private int bufferOffset;
+  private int bufferIndex;
 
   /**
    * Creates a new ChunkInputStream.
@@ -67,9 +71,21 @@ public class ChunkInputStream extends InputStream {
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
     this.chunks = chunks;
-    this.chunkOffset = 0;
+    this.chunkIndex = -1;
+    // chunkOffset[i] stores offset at which chunk i stores data in
+    // ChunkInputStream
+    this.chunkOffset = new long[this.chunks.size()];
+    initializeChunkOffset();
     this.buffers = null;
-    this.bufferOffset = 0;
+    this.bufferIndex = 0;
+  }
+
+  private void initializeChunkOffset() {
+    int tempOffset = 0;
+    for (int i = 0; i < chunks.size(); i++) {
+      chunkOffset[i] = tempOffset;
+      tempOffset += chunks.get(i).getLen();
+    }
   }
 
   @Override
@@ -77,7 +93,8 @@ public class ChunkInputStream extends InputStream {
       throws IOException {
     checkOpen();
     int available = prepareRead(1);
-    return available == EOF ? EOF : buffers.get(bufferOffset).get();
+    return available == EOF ? EOF :
+        Byte.toUnsignedInt(buffers.get(bufferIndex).get());
   }
 
   @Override
@@ -106,7 +123,7 @@ public class ChunkInputStream extends InputStream {
     if (available == EOF) {
       return EOF;
     }
-    buffers.get(bufferOffset).get(b, off, available);
+    buffers.get(bufferIndex).get(b, off, available);
     return available;
   }
 
@@ -144,20 +161,20 @@ public class ChunkInputStream extends InputStream {
         return EOF;
       } else if (buffers == null) {
         // The first read triggers fetching the first chunk.
-        readChunkFromContainer(0);
+        readChunkFromContainer();
       } else if (!buffers.isEmpty() &&
-          buffers.get(bufferOffset).hasRemaining()) {
+          buffers.get(bufferIndex).hasRemaining()) {
         // Data is available from the current buffer.
-        ByteBuffer bb = buffers.get(bufferOffset);
+        ByteBuffer bb = buffers.get(bufferIndex);
         return len > bb.remaining() ? bb.remaining() : len;
       } else if (!buffers.isEmpty() &&
-          !buffers.get(bufferOffset).hasRemaining() &&
-          bufferOffset < buffers.size() - 1) {
+          !buffers.get(bufferIndex).hasRemaining() &&
+          bufferIndex < buffers.size() - 1) {
         // There are additional buffers available.
-        ++bufferOffset;
-      } else if (chunkOffset < chunks.size() - 1) {
+        ++bufferIndex;
+      } else if (chunkIndex < chunks.size() - 1) {
         // There are additional chunks available.
-        readChunkFromContainer(chunkOffset + 1);
+        readChunkFromContainer();
       } else {
         // All available input has been consumed.
         return EOF;
@@ -170,20 +187,75 @@ public class ChunkInputStream extends InputStream {
    * successful, then the data of the read chunk is saved so that its bytes can
    * be returned from subsequent read calls.
    *
-   * @param readChunkOffset offset in the chunk list of which chunk to read
    * @throws IOException if there is an I/O error while performing the call
    */
-  private synchronized void readChunkFromContainer(int readChunkOffset)
-      throws IOException {
+  private synchronized void readChunkFromContainer() throws IOException {
+    // On every chunk read chunkIndex should be increased so as to read the
+    // next chunk
+    chunkIndex += 1;
     final ReadChunkResponseProto readChunkResponse;
     try {
       readChunkResponse = ContainerProtocolCalls.readChunk(xceiverClient,
-          chunks.get(readChunkOffset), key, traceID);
+          chunks.get(chunkIndex), key, traceID);
     } catch (IOException e) {
       throw new IOException("Unexpected OzoneException: " + e.toString(), e);
     }
-    chunkOffset = readChunkOffset;
     ByteString byteString = readChunkResponse.getData();
     buffers = byteString.asReadOnlyByteBufferList();
+    bufferIndex = 0;
+  }
+
+  @Override
+  public synchronized void seek(long pos) throws IOException {
+    if (pos < 0 || (chunks.size() == 0 && pos > 0)
+        || pos >= chunkOffset[chunks.size() - 1] + chunks.get(chunks.size() - 1)
+        .getLen()) {
+      throw new EOFException(
+          "EOF encountered pos: " + pos + " container key: " + key);
+    }
+    if (chunkIndex == -1) {
+      chunkIndex = Arrays.binarySearch(chunkOffset, pos);
+    } else if (pos < chunkOffset[chunkIndex]) {
+      chunkIndex = Arrays.binarySearch(chunkOffset, 0, chunkIndex, pos);
+    } else if (pos >= chunkOffset[chunkIndex] + chunks.get(chunkIndex)
+        .getLen()) {
+      chunkIndex =
+          Arrays.binarySearch(chunkOffset, chunkIndex + 1, chunks.size(), pos);
+    }
+    if (chunkIndex < 0) {
+      // Binary search returns -insertionPoint - 1  if element is not present
+      // in the array. insertionPoint is the point at which element would be
+      // inserted in the sorted array. We need to adjust the chunkIndex
+      // accordingly so that chunkIndex = insertionPoint - 1
+      chunkIndex = -chunkIndex -2;
+    }
+    // adjust chunkIndex so that readChunkFromContainer reads the correct chunk
+    chunkIndex -= 1;
+    readChunkFromContainer();
+    adjustBufferIndex(pos);
+  }
+
+  private void adjustBufferIndex(long pos) {
+    long tempOffest = chunkOffset[chunkIndex];
+    for (int i = 0; i < buffers.size(); i++) {
+      if (pos - tempOffest >= buffers.get(i).capacity()) {
+        tempOffest += buffers.get(i).capacity();
+      } else {
+        bufferIndex = i;
+        break;
+      }
+    }
+    buffers.get(bufferIndex).position((int) (pos - tempOffest));
+  }
+
+  @Override
+  public synchronized long getPos() throws IOException {
+    return chunkIndex == -1 ? 0 :
+        chunkOffset[chunkIndex] + buffers.get(bufferIndex).position();
+  }
+
+  @Override
+  public boolean seekToNewSource(long targetPos) throws IOException {
+    return false;
   }
 }

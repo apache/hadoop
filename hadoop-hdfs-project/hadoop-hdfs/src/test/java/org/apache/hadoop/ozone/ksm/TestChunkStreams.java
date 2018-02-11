@@ -19,14 +19,15 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
+import org.apache.hadoop.scm.storage.ChunkInputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import static org.junit.Assert.assertEquals;
@@ -111,13 +112,44 @@ public class TestChunkStreams {
   @Test
   public void testReadGroupInputStream() throws Exception {
     try (ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream()) {
-      ArrayList<InputStream> inputStreams = new ArrayList<>();
+      ArrayList<ChunkInputStream> inputStreams = new ArrayList<>();
 
       String dataString = RandomStringUtils.randomAscii(500);
       byte[] buf = dataString.getBytes();
       int offset = 0;
       for (int i = 0; i < 5; i++) {
-        ByteArrayInputStream in = new ByteArrayInputStream(buf, offset, 100);
+        int tempOffset = offset;
+        ChunkInputStream in =
+            new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+              private ByteArrayInputStream in =
+                  new ByteArrayInputStream(buf, tempOffset, 100);
+
+              @Override
+              public void seek(long pos) throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public long getPos() throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public boolean seekToNewSource(long targetPos)
+                  throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public int read() throws IOException {
+                return in.read();
+              }
+
+              @Override
+              public int read(byte[] b, int off, int len) throws IOException {
+                return in.read(b, off, len);
+              }
+            };
         inputStreams.add(in);
         offset += 100;
         groupInputStream.addStream(in, 100);
@@ -134,13 +166,44 @@ public class TestChunkStreams {
   @Test
   public void testErrorReadGroupInputStream() throws Exception {
     try (ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream()) {
-      ArrayList<InputStream> inputStreams = new ArrayList<>();
+      ArrayList<ChunkInputStream> inputStreams = new ArrayList<>();
 
       String dataString = RandomStringUtils.randomAscii(500);
       byte[] buf = dataString.getBytes();
       int offset = 0;
       for (int i = 0; i < 5; i++) {
-        ByteArrayInputStream in = new ByteArrayInputStream(buf, offset, 100);
+        int tempOffset = offset;
+        ChunkInputStream in =
+            new ChunkInputStream(null, null, null, new ArrayList<>(), null) {
+              private ByteArrayInputStream in =
+                  new ByteArrayInputStream(buf, tempOffset, 100);
+
+              @Override
+              public void seek(long pos) throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public long getPos() throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public boolean seekToNewSource(long targetPos)
+                  throws IOException {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public int read() throws IOException {
+                return in.read();
+              }
+
+              @Override
+              public int read(byte[] b, int off, int len) throws IOException {
+                return in.read(b, off, len);
+              }
+            };
         inputStreams.add(in);
         offset += 100;
         groupInputStream.addStream(in, 100);
