@@ -21,6 +21,9 @@ Release 2.7.6 - UNRELEASED
     MAPREDUCE-7020. Task timeout in uber mode can crash AM. (Peter Bacsko
     via jlowe)
 
+    MAPREDUCE-7048. Uber AM can crash due to unknown task in statusUpdate.
+    (Peter Bacsko via jlowe)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
