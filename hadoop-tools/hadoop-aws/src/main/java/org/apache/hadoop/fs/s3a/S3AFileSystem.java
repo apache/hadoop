@@ -574,6 +574,16 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Make this protected method public so that {@link S3AGlobber} can access it}.
+   * @param p path
+   * @return the fixed path.
+   */
+  @Override
+  public Path fixRelativePart(Path p) {
+    return super.fixRelativePart(p);
+  }
+
+  /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
@@ -2470,21 +2480,40 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Override superclass to use the new {@code S3AGlobber}.
    * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
    * {@inheritDoc}
    */
   @Override
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
-    incrementStatistic(INVOCATION_GLOB_STATUS);
-    return super.globStatus(pathPattern);
+    return globStatus(pathPattern, ACCEPT_ALL);
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * Override superclass to use the new {@code S3AGlobber}.
+   * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
    * {@inheritDoc}
    */
   @Override
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    incrementStatistic(INVOCATION_GLOB_STATUS);
+    return new S3AGlobber(this, pathPattern, filter).glob();
+  }
+
+  /**
+   * Invoke the base {@link FileSystem#globStatus(Path, PathFilter)}.
+   * This is purely to allow tests to compare both the performance
+   * and results of the glob operation.
+   * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
+   * <p>
+   * <i>For Testing only.</i>
+   * @param pathPattern a regular expression specifying the path pattern
+   * @param filter a user-supplied path filter
+   * @return an array of FileStatus objects
+   * @throws IOException if any I/O error occurs when fetching file status
+   */
+  public FileStatus[] globStatusClassic(Path pathPattern, PathFilter filter)
       throws IOException {
     incrementStatistic(INVOCATION_GLOB_STATUS);
     return super.globStatus(pathPattern, filter);
