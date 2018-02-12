@@ -32,6 +32,10 @@ Release 2.7.6 - UNRELEASED
     HDFS-7959. WebHdfs logging is missing on Datanode (Kihwal Lee via sjlee)
     Backport HDFS-13126 by Erik Krogen.
 
+    HDFS-10453. ReplicationMonitor thread could stuck for long time
+    due to the race between replication and delete of same file in a
+    large cluster. Contributed by He Xiaoqiao.
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
