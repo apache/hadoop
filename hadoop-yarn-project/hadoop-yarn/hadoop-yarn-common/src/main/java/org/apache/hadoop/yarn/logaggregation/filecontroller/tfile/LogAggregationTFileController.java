@@ -335,14 +335,15 @@ public class LogAggregationTFileController
   }
 
   @Override
-  public String getApplicationOwner(Path aggregatedLog) throws IOException {
+  public String getApplicationOwner(Path aggregatedLog, ApplicationId appId)
+      throws IOException {
     createTFileLogReader(aggregatedLog);
     return this.tfReader.getLogReader().getApplicationOwner();
   }
 
   @Override
   public Map<ApplicationAccessType, String> getApplicationAcls(
-      Path aggregatedLog) throws IOException {
+      Path aggregatedLog, ApplicationId appId) throws IOException {
     createTFileLogReader(aggregatedLog);
     return this.tfReader.getLogReader().getApplicationAcls();
   }
