@@ -135,7 +135,7 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
         IndexedLogsMeta indexedLogsMeta = null;
         try {
           indexedLogsMeta = fileController.loadIndexedLogsMeta(
-              thisNodeFile.getPath(), endIndex);
+              thisNodeFile.getPath(), endIndex, appId);
         } catch (Exception ex) {
           // DO NOTHING
           LOG.warn("Can not load log meta from the log file:"
