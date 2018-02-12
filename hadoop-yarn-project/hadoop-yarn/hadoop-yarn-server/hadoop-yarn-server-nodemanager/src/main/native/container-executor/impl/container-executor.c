@@ -1577,57 +1577,57 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       sleep(1);
     }
 #endif
+  }
 
-    sprintf(docker_inspect_exitcode_command,
-      "%s inspect --format {{.State.ExitCode}} %s",
-    docker_binary, container_id);
-    fprintf(LOGFILE, "Obtaining the exit code...\n");
-    fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
-    FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
-    if(inspect_exitcode_docker == NULL) {
-      fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
-      fflush(ERRORFILE);
-      exit_code = -1;
-      goto cleanup;
-    }
-    res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
-    if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
-    fprintf (ERRORFILE,
-     "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
-      fflush(ERRORFILE);
-      exit_code = -1;
-      goto cleanup;
-    }
-    fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
-    if(exit_code != 0) {
-      fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
-      exit_code);
-      snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
-        docker_binary, container_id);
-      FILE* logs = popen(docker_logs_command, "r");
-      if(logs != NULL) {
-        clearerr(logs);
-        res = fread(buffer, BUFFER_SIZE, 1, logs);
-        if(res < 1) {
-          fprintf(ERRORFILE, "%s %d %d\n",
-            "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
-          fflush(ERRORFILE);
-        }
-        else {
-          fprintf(ERRORFILE, "%s\n", buffer);
-          fflush(ERRORFILE);
-        }
+  sprintf(docker_inspect_exitcode_command,
+    "%s inspect --format {{.State.ExitCode}} %s",
+  docker_binary, container_id);
+  fprintf(LOGFILE, "Obtaining the exit code...\n");
+  fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
+  FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
+  if(inspect_exitcode_docker == NULL) {
+    fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
+    fflush(ERRORFILE);
+    exit_code = -1;
+    goto cleanup;
+  }
+  res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
+  if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
+  fprintf (ERRORFILE,
+   "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
+    fflush(ERRORFILE);
+    exit_code = -1;
+    goto cleanup;
+  }
+  fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
+  if(exit_code != 0) {
+    fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
+    exit_code);
+    snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
+      docker_binary, container_id);
+    FILE* logs = popen(docker_logs_command, "r");
+    if(logs != NULL) {
+      clearerr(logs);
+      res = fread(buffer, BUFFER_SIZE, 1, logs);
+      if(res < 1) {
+        fprintf(ERRORFILE, "%s %d %d\n",
+          "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
+        fflush(ERRORFILE);
       }
       else {
-        fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
-        fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
-        fprintf(ERRORFILE, "%s\n", strerror(errno));
+        fprintf(ERRORFILE, "%s\n", buffer);
         fflush(ERRORFILE);
       }
-      if(pclose(logs) != 0) {
-        fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
-        fflush(ERRORFILE);
-      }
+    }
+    else {
+      fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
+      fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
+      fprintf(ERRORFILE, "%s\n", strerror(errno));
+      fflush(ERRORFILE);
+    }
+    if(pclose(logs) != 0) {
+      fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
+      fflush(ERRORFILE);
     }
   }
 
