@@ -478,9 +478,11 @@ public class TestUtils {
   public static Resource createResource(long memory, int vcores,
       Map<String, Integer> nameToValues) {
     Resource res = Resource.newInstance(memory, vcores);
-    for (Map.Entry<String, Integer> entry : nameToValues.entrySet()) {
-      res.setResourceInformation(entry.getKey(), ResourceInformation
-          .newInstance(entry.getKey(), "", entry.getValue()));
+    if (nameToValues != null) {
+      for (Map.Entry<String, Integer> entry : nameToValues.entrySet()) {
+        res.setResourceInformation(entry.getKey(), ResourceInformation
+            .newInstance(entry.getKey(), "", entry.getValue()));
+      }
     }
     return res;
   }
