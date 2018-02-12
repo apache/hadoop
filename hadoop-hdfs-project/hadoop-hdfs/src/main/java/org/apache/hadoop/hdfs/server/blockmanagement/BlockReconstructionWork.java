@@ -33,6 +33,7 @@ abstract class BlockReconstructionWork {
   private final BlockInfo block;
 
   private final String srcPath;
+  private final long blockSize;
   private final byte storagePolicyID;
 
   /**
@@ -59,6 +60,7 @@ abstract class BlockReconstructionWork {
       int priority) {
     this.block = block;
     this.srcPath = bc.getName();
+    this.blockSize = block.getNumBytes();
     this.storagePolicyID = bc.getStoragePolicyID();
     this.srcNodes = srcNodes;
     this.containingNodes = containingNodes;
@@ -98,6 +100,10 @@ abstract class BlockReconstructionWork {
 
   public String getSrcPath() {
     return srcPath;
+  }
+
+  public long getBlockSize() {
+    return blockSize;
   }
 
   public byte getStoragePolicyID() {
