@@ -1775,7 +1775,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 16;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -1797,12 +1797,12 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
     Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
