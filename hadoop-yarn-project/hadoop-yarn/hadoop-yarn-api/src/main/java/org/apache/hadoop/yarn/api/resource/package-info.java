@@ -18,6 +18,4 @@
 /**
  * API related to resources.
  */
-@InterfaceAudience.Private
 package org.apache.hadoop.yarn.api.resource;
-import org.apache.hadoop.classification.InterfaceAudience;
