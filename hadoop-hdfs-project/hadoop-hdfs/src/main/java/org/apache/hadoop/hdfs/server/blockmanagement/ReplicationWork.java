@@ -45,10 +45,8 @@ class ReplicationWork extends BlockReconstructionWork {
     try {
       DatanodeStorageInfo[] chosenTargets = blockplacement.chooseTarget(
           getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-          getLiveReplicaStorages(), false, excludedNodes,
-          getBlock().getNumBytes(),
-          storagePolicySuite.getPolicy(getStoragePolicyID()),
-          null);
+          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
       setTargets(chosenTargets);
     } finally {
       getSrcNodes()[0].decrementPendingReplicationWithoutTargets();
