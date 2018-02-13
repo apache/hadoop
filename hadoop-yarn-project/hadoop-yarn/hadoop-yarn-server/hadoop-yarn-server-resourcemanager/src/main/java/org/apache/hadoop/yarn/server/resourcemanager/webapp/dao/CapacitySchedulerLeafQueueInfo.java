@@ -49,6 +49,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected ResourceInfo usedAMResource;
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
+  protected boolean intraQueuePreemptionDisabled;
   protected String defaultNodeLabelExpression;
   protected int defaultPriority;
   protected boolean isAutoCreatedLeafQueue;
@@ -72,6 +73,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     AMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
     preemptionDisabled = q.getPreemptionDisabled();
+    intraQueuePreemptionDisabled = q.getIntraQueuePreemptionDisabled();
     orderingPolicyInfo = q.getOrderingPolicy().getInfo();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
@@ -149,6 +151,10 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public boolean getPreemptionDisabled() {
     return preemptionDisabled;
+  }
+
+  public boolean getIntraQueuePreemptionDisabled() {
+    return intraQueuePreemptionDisabled;
   }
   
   public String getOrderingPolicyInfo() {
