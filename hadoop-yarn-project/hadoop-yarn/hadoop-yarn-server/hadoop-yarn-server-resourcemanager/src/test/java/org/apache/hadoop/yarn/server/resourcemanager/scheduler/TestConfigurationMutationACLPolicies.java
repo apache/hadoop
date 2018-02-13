@@ -67,7 +67,7 @@ public class TestConfigurationMutationACLPolicies {
   private void mockQueue(String queueName, MutableConfScheduler scheduler)
       throws IOException {
     QueueInfo queueInfo = QueueInfo.newInstance(queueName, 0, 0, 0, null, null,
-        null, null, null, null, false);
+        null, null, null, null, false, null, false);
     when(scheduler.getQueueInfo(eq(queueName), anyBoolean(), anyBoolean()))
         .thenReturn(queueInfo);
     Queue queue = mock(Queue.class);
