@@ -108,6 +108,9 @@ import org.w3c.dom.Element;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 /**
  * Provides access to configuration parameters.
  *
@@ -1797,6 +1800,83 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       durations[i] = getTimeDurationHelper(name, strings[i], unit);
     }
     return durations;
+  }
+  /**
+   * Gets the Storage Size from the config, or returns the defaultValue. The
+   * unit of return value is specified in target unit.
+   *
+   * @param name - Key Name
+   * @param defaultValue - Default Value -- e.g. 100MB
+   * @param targetUnit - The units that we want result to be in.
+   * @return double -- formatted in target Units
+   */
+  public double getStorageSize(String name, String defaultValue,
+      StorageUnit targetUnit) {
+    Preconditions.checkState(isNotBlank(name), "Key cannot be blank.");
+    String vString = get(name);
+    if (isBlank(vString)) {
+      vString = defaultValue;
+    }
+
+    // Please note: There is a bit of subtlety here. If the user specifies
+    // the default unit as "1GB", but the requested unit is MB, we will return
+    // the format in MB even thought the default string is specified in GB.
+
+    // Converts a string like "1GB" to to unit specified in targetUnit.
+
+    StorageSize measure = StorageSize.parse(vString);
+    return convertStorageUnit(measure.getValue(), measure.getUnit(),
+        targetUnit);
+  }
+
+  /**
+   * Gets storage size from a config file.
+   *
+   * @param name - Key to read.
+   * @param defaultValue - The default value to return in case the key is
+   * not present.
+   * @param targetUnit - The Storage unit that should be used
+   * for the return value.
+   * @return - double value in the Storage Unit specified.
+   */
+  public double getStorageSize(String name, double defaultValue,
+      StorageUnit targetUnit) {
+    Preconditions.checkNotNull(targetUnit, "Conversion unit cannot be null.");
+    Preconditions.checkState(isNotBlank(name), "Name cannot be blank.");
+    String vString = get(name);
+    if (isBlank(vString)) {
+      return targetUnit.getDefault(defaultValue);
+    }
+
+    StorageSize measure = StorageSize.parse(vString);
+    return convertStorageUnit(measure.getValue(), measure.getUnit(),
+        targetUnit);
+
+  }
+
+  /**
+   * Sets Storage Size for the specified key.
+   *
+   * @param name - Key to set.
+   * @param value - The numeric value to set.
+   * @param unit - Storage Unit to be used.
+   */
+  public void setStorageSize(String name, double value, StorageUnit unit) {
+    set(name, value + unit.getShortName());
+  }
+
+  /**
+   * convert the value from one storage unit to another.
+   *
+   * @param value - value
+   * @param sourceUnit - Source unit to convert from
+   * @param targetUnit - target unit.
+   * @return double.
+   */
+  private double convertStorageUnit(double value, StorageUnit sourceUnit,
+      StorageUnit targetUnit) {
+    double byteValue = sourceUnit.toBytes(value);
+    return targetUnit.fromBytes(byteValue);
   }
 
   /**
