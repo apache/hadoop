@@ -183,7 +183,10 @@ class CapacitySchedulerPage extends RmView {
           __("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
           __("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
           __("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
-          __("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+          __("Preemption:",
+              lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+          __("Intra-queue Preemption:", lqinfo.getIntraQueuePreemptionDisabled()
+                  ? "disabled" : "enabled").
           __("Default Node Label Expression:",
               lqinfo.getDefaultNodeLabelExpression() == null
                   ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
