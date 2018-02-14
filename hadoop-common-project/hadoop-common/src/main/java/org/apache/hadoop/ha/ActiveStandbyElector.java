@@ -888,9 +888,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       Stat oldBreadcrumbStat = fenceOldActive();
       writeBreadCrumbNode(oldBreadcrumbStat);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Becoming active for " + this);
-      }
+      LOG.debug("Becoming active for {}", this);
+
       appClient.becomeActive();
       state = State.ACTIVE;
       return true;
@@ -910,8 +909,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       throws KeeperException, InterruptedException {
     Preconditions.checkState(appData != null, "no appdata");
     
-    LOG.info("Writing znode " + zkBreadCrumbPath +
-        " to indicate that the local node is the most recent active...");
+    LOG.info("Writing znode {} to indicate that the local " +
+        "node is the most recent active...", zkBreadCrumbPath);
     if (oldBreadcrumbStat == null) {
       // No previous active, just create the node
       createWithRetries(zkBreadCrumbPath, appData, zkAcl,
@@ -948,9 +947,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       
       deleteWithRetries(zkBreadCrumbPath, stat.getVersion());
     } catch (Exception e) {
-      LOG.warn("Unable to delete our own bread-crumb of being active at " +
-          zkBreadCrumbPath + ": " + e.getLocalizedMessage() + ". " +
-          "Expecting to be fenced by the next active.");
+      LOG.warn("Unable to delete our own bread-crumb of being active at {}." +
+          ". Expecting to be fenced by the next active.", zkBreadCrumbPath, e);
     }
   }
 
@@ -984,7 +982,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       throw ke;
     }
 
-    LOG.info("Old node exists: " + StringUtils.byteToHexString(data));
+    LOG.info("Old node exists: {}", StringUtils.byteToHexString(data));
     if (Arrays.equals(data, appData)) {
       LOG.info("But old node has our own data, so don't need to fence it.");
     } else {
@@ -995,9 +993,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private void becomeStandby() {
     if (state != State.STANDBY) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Becoming standby for " + this);
-      }
+      LOG.debug("Becoming standby for {}", this);
       state = State.STANDBY;
       appClient.becomeStandby();
     }
@@ -1005,9 +1001,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private void enterNeutralMode() {
     if (state != State.NEUTRAL) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Entering neutral mode for " + this);
-      }
+      LOG.debug("Entering neutral mode for {}", this);
       state = State.NEUTRAL;
       appClient.enterNeutralMode();
     }
@@ -1124,7 +1118,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private synchronized boolean isStaleClient(Object ctx) {
     Preconditions.checkNotNull(ctx);
     if (zkClient != (ZooKeeper)ctx) {
-      LOG.warn("Ignoring stale result from old client with sessionId " +
+      LOG.warn("Ignoring stale result from old client with sessionId {}",
           String.format("0x%08x", ((ZooKeeper)ctx).getSessionId()));
       return true;
     }
@@ -1162,8 +1156,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         throws KeeperException, IOException {
       try {
         if (!hasReceivedEvent.await(connectionTimeoutMs, TimeUnit.MILLISECONDS)) {
-          LOG.error("Connection timed out: couldn't connect to ZooKeeper in "
-              + connectionTimeoutMs + " milliseconds");
+          LOG.error("Connection timed out: couldn't connect to ZooKeeper in " +
+              "{} milliseconds", connectionTimeoutMs);
           zk.close();
           throw KeeperException.create(Code.CONNECTIONLOSS);
         }

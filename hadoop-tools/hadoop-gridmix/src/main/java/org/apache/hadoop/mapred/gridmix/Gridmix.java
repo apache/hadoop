@@ -45,8 +45,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Driver class for the Gridmix3 benchmark. Gridmix accepts a timestamped
@@ -58,7 +58,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class Gridmix extends Configured implements Tool {
 
-  public static final Log LOG = LogFactory.getLog(Gridmix.class);
+  public static final Logger LOG = LoggerFactory.getLogger(Gridmix.class);
 
   /**
    * Output (scratch) directory for submitted jobs. Relative paths are
@@ -184,8 +184,8 @@ public class Gridmix extends Configured implements Tool {
       final Configuration conf = getConf();
 
       if (inputDir.getFileSystem(conf).exists(inputDir)) {
-        LOG.error("Gridmix input data directory " + inputDir
-                  + " already exists when -generate option is used.\n");
+        LOG.error("Gridmix input data directory {} already exists " +
+            "when -generate option is used.", inputDir);
         return STARTUP_FAILED_ERROR;
       }
 
@@ -193,13 +193,13 @@ public class Gridmix extends Configured implements Tool {
       CompressionEmulationUtil.setupDataGeneratorConfig(conf);
     
       final GenerateData genData = new GenerateData(conf, inputDir, genbytes);
-      LOG.info("Generating " + StringUtils.humanReadableInt(genbytes) +
-               " of test data...");
+      LOG.info("Generating {} of test data...",
+          StringUtils.TraditionalBinaryPrefix.long2String(genbytes, "", 1));
       launchGridmixJob(genData);
     
       FsShell shell = new FsShell(conf);
       try {
-        LOG.info("Changing the permissions for inputPath " + inputDir.toString());
+        LOG.info("Changing the permissions for inputPath {}", inputDir);
         shell.run(new String[] {"-chmod","-R","777", inputDir.toString()});
       } catch (Exception e) {
         LOG.error("Couldnt change the file permissions " , e);
@@ -528,9 +528,7 @@ public class Gridmix extends Configured implements Tool {
         statistics.start();
       } catch (Throwable e) {
         LOG.error("Startup failed. " + e.toString() + "\n");
-        if (LOG.isDebugEnabled()) {
-          e.printStackTrace();
-        }
+        LOG.debug("Startup failed", e);
         if (factory != null) factory.abort(); // abort pipeline
         exitCode = STARTUP_FAILED_ERROR;
       } finally {
@@ -561,7 +559,7 @@ public class Gridmix extends Configured implements Tool {
         summarizer.finalize(factory, traceIn, genbytes, userResolver, stats, 
                             conf);
       }
-      IOUtils.cleanup(LOG, trace);
+      IOUtils.cleanupWithLogger(LOG, trace);
     }
     return exitCode;
   }
