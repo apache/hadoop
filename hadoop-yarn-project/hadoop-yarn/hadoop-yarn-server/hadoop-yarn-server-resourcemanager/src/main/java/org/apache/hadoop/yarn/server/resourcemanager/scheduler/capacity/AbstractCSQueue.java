@@ -97,9 +97,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       new HashMap<AccessType, AccessControlList>();
   volatile boolean reservationsContinueLooking;
   private volatile boolean preemptionDisabled;
-  // Indicates if the in-queue preemption setting is ever disabled within the
-  // hierarchy of this queue.
-  private boolean intraQueuePreemptionDisabledInHierarchy;
 
   // Track resource usage-by-label like used-resource/pending-resource, etc.
   volatile ResourceUsage queueUsage;
@@ -408,8 +405,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
           configuration);
-      this.intraQueuePreemptionDisabledInHierarchy =
-          isIntraQueueHierarchyPreemptionDisabled(this, configuration);
 
       this.priority = configuration.getQueuePriority(
           getQueuePath());
@@ -618,8 +613,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setCurrentCapacity(getUsedCapacity());
     queueInfo.setQueueStatistics(getQueueStatistics());
     queueInfo.setPreemptionDisabled(preemptionDisabled);
-    queueInfo.setIntraQueuePreemptionDisabled(
-        getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations());
     return queueInfo;
   }
@@ -742,16 +735,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getPreemptionDisabled() {
     return preemptionDisabled;
   }
-
-  @Private
-  public boolean getIntraQueuePreemptionDisabled() {
-    return intraQueuePreemptionDisabledInHierarchy || preemptionDisabled;
-  }
-
-  @Private
-  public boolean getIntraQueuePreemptionDisabledInHierarchy() {
-    return intraQueuePreemptionDisabledInHierarchy;
-  }
   
   @Private
   public QueueCapacities getQueueCapacities() {
@@ -774,19 +757,17 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * The specified queue is cross-queue preemptable if system-wide cross-queue
-   * preemption is turned on unless any queue in the <em>qPath</em> hierarchy
-   * has explicitly turned cross-queue preemption off.
-   * NOTE: Cross-queue preemptability is inherited from a queue's parent.
-   *
-   * @param q queue to check preemption state
-   * @param configuration capacity scheduler config
-   * @return true if queue has cross-queue preemption disabled, false otherwise
+   * The specified queue is preemptable if system-wide preemption is turned on
+   * unless any queue in the <em>qPath</em> hierarchy has explicitly turned
+   * preemption off.
+   * NOTE: Preemptability is inherited from a queue's parent.
+   * 
+   * @return true if queue has preemption disabled, false otherwise
    */
   private boolean isQueueHierarchyPreemptionDisabled(CSQueue q,
       CapacitySchedulerConfiguration configuration) {
     boolean systemWidePreemption =
-        configuration
+        csContext.getConfiguration()
             .getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
                        YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS);
     CSQueue parentQ = q.getParent();
@@ -809,44 +790,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     return configuration.getPreemptionDisabled(q.getQueuePath(),
                                         parentQ.getPreemptionDisabled());
   }
-
-  /**
-   * The specified queue is intra-queue preemptable if
-   * 1) system-wide intra-queue preemption is turned on
-   * 2) no queue in the <em>qPath</em> hierarchy has explicitly turned off intra
-   *    queue preemption.
-   * NOTE: Intra-queue preemptability is inherited from a queue's parent.
-   *
-   * @param q queue to check intra-queue preemption state
-   * @param configuration capacity scheduler config
-   * @return true if queue has intra-queue preemption disabled, false otherwise
-   */
-  private boolean isIntraQueueHierarchyPreemptionDisabled(CSQueue q,
-      CapacitySchedulerConfiguration configuration) {
-    boolean systemWideIntraQueuePreemption =
-        configuration.getBoolean(
-            CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED,
-            CapacitySchedulerConfiguration
-            .DEFAULT_INTRAQUEUE_PREEMPTION_ENABLED);
-    // Intra-queue preemption is disabled for this queue if the system-wide
-    // intra-queue preemption flag is false
-    if (!systemWideIntraQueuePreemption) return true;
-
-    // Check if this is the root queue and the root queue's intra-queue
-    // preemption disable switch is set
-    CSQueue parentQ = q.getParent();
-    if (parentQ == null) {
-      return configuration
-          .getIntraQueuePreemptionDisabled(q.getQueuePath(), false);
-    }
-
-    // At this point, the master preemption switch is enabled down to this
-    // queue's level. Determine whether or not intra-queue preemption is enabled
-    // down to this queu's level and return that value.
-    return configuration.getIntraQueuePreemptionDisabled(q.getQueuePath(),
-        parentQ.getIntraQueuePreemptionDisabledInHierarchy());
-  }
-
+  
   private Resource getCurrentLimitResource(String nodePartition,
       Resource clusterResource, ResourceLimits currentResourceLimits,
       SchedulingMode schedulingMode) {
