@@ -139,7 +139,7 @@ public class LocalFileSystem extends ChecksumFileSystem {
           LOG.warn("Ignoring failure of renameTo");
         }
     } catch (IOException e) {
-      LOG.warn("Error moving bad file " + p + ": " + e);
+      LOG.warn("Error moving bad file " + p, e);
     }
     return false;
   }
