@@ -1332,7 +1332,7 @@ public class MiniDFSCluster implements AutoCloseable {
     try {
       uri = new URI("hdfs://" + hostPort);
     } catch (URISyntaxException e) {
-      NameNode.LOG.warn("unexpected URISyntaxException: " + e );
+      NameNode.LOG.warn("unexpected URISyntaxException", e);
     }
     return uri;
   }

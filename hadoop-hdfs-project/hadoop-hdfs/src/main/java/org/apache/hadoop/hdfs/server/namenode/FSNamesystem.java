@@ -6185,7 +6185,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         LOG.debug("Get corrupt file blocks returned error: " + e.getMessage());
       }
     } catch (IOException e) {
-      LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
+      LOG.warn("Get corrupt file blocks returned error", e);
     }
     return JSON.toString(list);
   }
