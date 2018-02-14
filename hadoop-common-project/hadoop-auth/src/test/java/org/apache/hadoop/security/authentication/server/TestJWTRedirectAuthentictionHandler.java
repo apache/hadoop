@@ -47,7 +47,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jose.crypto.RSASSASigner;
 
-public class TestJWTRedirectAuthenticationHandler extends
+public class TestJWTRedirectAuthentictionHandler extends
     KerberosSecurityTestcase {
   private static final String SERVICE_URL = "https://localhost:8888/resource";
   private static final String REDIRECT_LOCATION =
@@ -392,7 +392,7 @@ public class TestJWTRedirectAuthenticationHandler extends
         new StringBuffer(SERVICE_URL));
     Mockito.when(request.getQueryString()).thenReturn("name=value");
 
-    String loginURL = handler.constructLoginURL(request);
+    String loginURL = ((TestJWTRedirectAuthenticationHandler)handler).testConstructLoginURL(request);
     Assert.assertNotNull("loginURL should not be null.", loginURL);
     Assert.assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL + "?name=value", loginURL);
   }
@@ -409,7 +409,7 @@ public class TestJWTRedirectAuthenticationHandler extends
         new StringBuffer(SERVICE_URL));
     Mockito.when(request.getQueryString()).thenReturn(null);
 
-    String loginURL = handler.constructLoginURL(request);
+    String loginURL = ((TestJWTRedirectAuthenticationHandler)handler).testConstructLoginURL(request);
     Assert.assertNotNull("LoginURL should not be null.", loginURL);
     Assert.assertEquals("https://localhost:8443/authserver?originalUrl=" + SERVICE_URL, loginURL);
   }
@@ -425,7 +425,7 @@ public class TestJWTRedirectAuthenticationHandler extends
     publicKey = (RSAPublicKey) kp.getPublic();
     privateKey = (RSAPrivateKey) kp.getPrivate();
 
-    handler = new JWTRedirectAuthenticationHandler();
+    handler = new TestJWTRedirectAuthenticationHandler();
   }
 
   protected void setupKerberosRequirements() throws Exception {
@@ -453,16 +453,15 @@ public class TestJWTRedirectAuthenticationHandler extends
 
   protected SignedJWT getJWT(String sub, Date expires, RSAPrivateKey privateKey)
       throws Exception {
-    JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-        .subject(sub)
-        .issueTime(new Date(new Date().getTime()))
-        .issuer("https://c2id.com")
-        .claim("scope", "openid")
-        .audience("bar")
-        .expirationTime(expires)
-        .build();
+    JWTClaimsSet claimsSet = new JWTClaimsSet();
+    claimsSet.setSubject(sub);
+    claimsSet.setIssueTime(new Date(new Date().getTime()));
+    claimsSet.setIssuer("https://c2id.com");
+    claimsSet.setCustomClaim("scope", "openid");
+    claimsSet.setExpirationTime(expires);
     List<String> aud = new ArrayList<String>();
     aud.add("bar");
+    claimsSet.setAudience("bar");
 
     JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256).build();
 
@@ -473,4 +472,10 @@ public class TestJWTRedirectAuthenticationHandler extends
 
     return signedJWT;
   }
+
+  class TestJWTRedirectAuthenticationHandler extends JWTRedirectAuthenticationHandler {
+    public String testConstructLoginURL(HttpServletRequest req) {
+      return constructLoginURL(req);
+    }
+  };
 }
