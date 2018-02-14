@@ -1216,21 +1216,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Indicates whether intra-queue preemption is disabled on the specified queue
-   *
-   * @param queue queue path to query
-   * @param defaultVal used as default if the property is not set in the
-   * configuration
-   * @return true if preemption is disabled on queue, false otherwise
-   */
-  public boolean getIntraQueuePreemptionDisabled(String queue,
-      boolean defaultVal) {
-    return
-        getBoolean(getQueuePrefix(queue) + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX
-            + QUEUE_PREEMPTION_DISABLED, defaultVal);
-  }
-
-  /**
    * Get configured node labels in a given queuePath
    */
   public Set<String> getConfiguredNodeLabels(String queuePath) {

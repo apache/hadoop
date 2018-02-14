@@ -500,17 +500,4 @@ public class QueueInfoPBImpl extends QueueInfo {
     this.queueConfigurations.putAll(queueConfigurations);
   }
 
-  @Override
-  public Boolean getIntraQueuePreemptionDisabled() {
-    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasIntraQueuePreemptionDisabled()) ? p
-        .getIntraQueuePreemptionDisabled() : null;
-  }
-
-  @Override
-  public void setIntraQueuePreemptionDisabled(
-      boolean intraQueuePreemptionDisabled) {
-    maybeInitBuilder();
-    builder.setIntraQueuePreemptionDisabled(intraQueuePreemptionDisabled);
-  }
 }
