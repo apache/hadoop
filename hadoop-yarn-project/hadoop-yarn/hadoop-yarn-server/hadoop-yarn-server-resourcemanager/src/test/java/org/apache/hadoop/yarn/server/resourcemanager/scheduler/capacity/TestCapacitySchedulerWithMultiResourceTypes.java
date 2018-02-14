@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
@@ -285,5 +287,40 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
             .getResourceValue(ResourceInformation.VCORES_URI));
 
     rm.close();
+  }
+
+  @Test
+  public void testDefaultResourceCalculatorWithThirdResourceTypes() throws Exception {
+
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setResourceComparator(DefaultResourceCalculator.class);
+
+    YarnConfiguration conf = new YarnConfiguration(csconf);
+
+    String[] res1 = {"resource1", "M"};
+    String[] res2 = {"resource2", "G"};
+    String[] res3 = {"resource3", "H"};
+
+    String[][] test = {res1, res2, res3};
+
+    String resSt = "";
+    for (String[] resources : test) {
+      resSt += (resources[0] + ",");
+    }
+    resSt = resSt.substring(0, resSt.length() - 1);
+    conf.set(YarnConfiguration.RESOURCE_TYPES, resSt);
+
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    boolean exception = false;
+    try {
+      MockRM rm = new MockRM(conf);
+    } catch (YarnRuntimeException e) {
+      exception = true;
+    }
+
+    Assert.assertTrue("Should have exception in CS", exception);
   }
 }
