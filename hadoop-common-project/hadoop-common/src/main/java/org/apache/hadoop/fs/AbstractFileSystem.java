@@ -1362,4 +1362,16 @@ public abstract class AbstractFileSystem {
         new CompletableFuture<>(), () -> open(path, bufferSize));
   }
 
+  /**
+   * Return the base capabilities of the filesystems
+   * may override to declare different behavior.
+   * @param capability string to query the stream support for.
+   * @param path path to query the capability of.
+   * @return true if the capability is supported under that part of the FS.
+   * @throws IOException on failure
+   */
+  public boolean hasCapability(String capability, Path path)
+      throws IOException {
+    return false;
+  }
 }

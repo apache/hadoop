@@ -933,8 +933,17 @@ public class ViewFileSystem extends FileSystem {
     return res.targetFileSystem.getLinkTarget(res.remainingPath);
   }
 
+  /**
+   * Fail fast on known write capabilities (append, concat),
+   * forward the rest to the viewed FS.
+   * @param capability string to query the stream support for.
+   * @param path path to query the capability of.
+   * @return the capability
+   * @throws IOException if there is no resolved FS, or it raises an IOE.
+   */
   @Override
-  public boolean hasCapability(String capability, Path path) {
+  public boolean hasCapability(String capability, Path path)
+      throws IOException {
 
     // fail fast on capabilities whose operations are all write access
     // (so will always fail later on)
@@ -951,7 +960,7 @@ public class ViewFileSystem extends FileSystem {
       return res.targetFileSystem.hasCapability(capability, res.remainingPath);
     } catch (FileNotFoundException e) {
       // no mount point, nothing will work.
-      return false;
+      throw new NotInMountpointException(path, "hasCapability");
     }
   }
 

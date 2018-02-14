@@ -2934,4 +2934,25 @@ public class FileContext {
       }.resolve(FileContext.this, absF);
     }
   }
+
+  /**
+   * Return the base capabilities of all filesystems; subclasses
+   * may override to declare different behavior.
+   * @param capability string to query the stream support for.
+   * @param path path to query the capability of.
+   * @return true if the capability is supported under that part of the FS.
+   * @throws IOException path resolution failure
+   */
+  public boolean hasCapability(String capability, Path path)
+      throws IOException {
+    return new FSLinkResolver<Boolean>() {
+      @Override
+      public Boolean next(final AbstractFileSystem fs,
+          final Path p)
+          throws IOException {
+        return fs.hasCapability(capability, p);
+      }
+    }.resolve(this, fixRelativePart(path));
+  }
+
 }

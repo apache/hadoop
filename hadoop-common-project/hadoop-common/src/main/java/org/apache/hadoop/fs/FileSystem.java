@@ -3219,8 +3219,11 @@ public abstract class FileSystem extends Configured
    * @param capability string to query the stream support for.
    * @param path path to query the capability of.
    * @return true if the capability is supported under that part of the FS.
+   * @throws IOException this should not be raised, except on problems
+   * resolving paths or relaying the call.
    */
-  public boolean hasCapability(String capability, Path path) {
+  public boolean hasCapability(String capability, Path path)
+      throws IOException {
     return false;
   }
 

@@ -42,13 +42,15 @@ import org.apache.hadoop.util.Progressable;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class DelegateToFileSystem extends AbstractFileSystem {
+
   private static final int DELEGATE_TO_FS_DEFAULT_PORT = -1;
+
   protected final FileSystem fsImpl;
-  
+
   protected DelegateToFileSystem(URI theUri, FileSystem theFsImpl,
       Configuration conf, String supportedScheme, boolean authorityRequired)
       throws IOException, URISyntaxException {
-    super(theUri, supportedScheme, authorityRequired, 
+    super(theUri, supportedScheme, authorityRequired,
         getDefaultPortIfDefined(theFsImpl));
     fsImpl = theFsImpl;
     fsImpl.initialize(theUri, conf);
@@ -74,15 +76,15 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public Path getInitialWorkingDirectory() {
     return fsImpl.getInitialWorkingDirectory();
   }
-  
+
   @Override
   @SuppressWarnings("deprecation") // call to primitiveCreate
-  public FSDataOutputStream createInternal (Path f,
+  public FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
       short replication, long blockSize, Progressable progress,
       ChecksumOpt checksumOpt, boolean createParent) throws IOException {
     checkPath(f);
-    
+
     // Default impl assumes that permissions do not matter
     // calling the regular create is good enough.
     // FSs that implement permissions should override this.
@@ -95,7 +97,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
         throw new FileNotFoundException("Missing parent:" + f);
       }
       if (!stat.isDirectory()) {
-          throw new ParentNotDirectoryException("parent is not a dir:" + f);
+        throw new ParentNotDirectoryException("parent is not a dir:" + f);
       }
       // parent does exist - go ahead with create of file.
     }
@@ -155,7 +157,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public FsServerDefaults getServerDefaults() throws IOException {
     return fsImpl.getServerDefaults();
   }
-  
+
   @Override
   public FsServerDefaults getServerDefaults(final Path f) throws IOException {
     return fsImpl.getServerDefaults(f);
@@ -183,7 +185,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       throws IOException {
     checkPath(dir);
     fsImpl.primitiveMkdir(dir, permission, createParent);
-    
+
   }
 
   @Override
@@ -241,14 +243,14 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   @Override
   public boolean supportsSymlinks() {
     return fsImpl.supportsSymlinks();
-  }  
-  
+  }
+
   @Override
-  public void createSymlink(Path target, Path link, boolean createParent) 
-      throws IOException { 
+  public void createSymlink(Path target, Path link, boolean createParent)
+      throws IOException {
     fsImpl.createSymlink(target, link, createParent);
-  } 
-  
+  }
+
   @Override
   public Path getLinkTarget(final Path f) throws IOException {
     return fsImpl.getLinkTarget(f);
@@ -258,7 +260,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public String getCanonicalServiceName() {
     return fsImpl.getCanonicalServiceName();
   }
-  
+
   @Override //AbstractFileSystem
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return Arrays.asList(fsImpl.addDelegationTokens(renewer, null));
@@ -280,5 +282,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       Configuration options,
       int bufferSize) throws IOException {
     return fsImpl.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
+  }
+
+  @Override
+  public boolean hasCapability(final String capability, final Path path)
+      throws IOException {
+    return fsImpl.hasCapability(capability, path);
   }
 }
