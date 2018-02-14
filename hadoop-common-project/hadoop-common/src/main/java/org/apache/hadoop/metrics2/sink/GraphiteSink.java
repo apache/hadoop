@@ -69,17 +69,19 @@ public class GraphiteSink implements MetricsSink, Closeable {
     public void putMetrics(MetricsRecord record) {
         StringBuilder lines = new StringBuilder();
         StringBuilder metricsPathPrefix = new StringBuilder();
+        StringBuilder pointTags = new StringBuilder("");
 
         // Configure the hierarchical place to display the graph.
         metricsPathPrefix.append(metricsPrefix).append(".")
                 .append(record.context()).append(".").append(record.name());
 
+        // collect point tags to be appended at the end of the metric name
         for (MetricsTag tag : record.tags()) {
-            if (tag.value() != null) {
-                metricsPathPrefix.append(".");
-                metricsPathPrefix.append(tag.name());
-                metricsPathPrefix.append("=");
-                metricsPathPrefix.append(tag.value());
+            if (tag.value() != null && tag.value().trim().length() > 0) {
+                pointTags.append(";");
+                pointTags.append(tag.name().replace(' ', '_'));
+                pointTags.append("=");
+                pointTags.append(tag.value().replace(' ', '_'));
             }
         }
 
@@ -90,7 +92,7 @@ public class GraphiteSink implements MetricsSink, Closeable {
         for (AbstractMetric metric : record.metrics()) {
             lines.append(
                     metricsPathPrefix.toString() + "."
-                            + metric.name().replace(' ', '.')).append(" ")
+                            + metric.name().replace(' ', '.')).append(pointTags.toString()).append(" ")
                     .append(metric.value()).append(" ").append(timestamp)
                     .append("\n");
         }
