@@ -131,9 +131,13 @@
   </property>
 
   <property>
-    <description>Enable Constraint Placement.</description>
-    <name>yarn.resourcemanager.placement-constraints.enabled</name>
-    <value>false</value>
+    <description>
+      Specify which handler will be used to process PlacementConstraints.
+      Acceptable values are: `placement-processor`, `scheduler` and `disabled`.
+      For a detailed explanation of these values, please refer to documentation.
+    </description>
+    <name>yarn.resourcemanager.placement-constraints.handler</name>
+    <value>disabled</value>
   </property>
 
   <property>

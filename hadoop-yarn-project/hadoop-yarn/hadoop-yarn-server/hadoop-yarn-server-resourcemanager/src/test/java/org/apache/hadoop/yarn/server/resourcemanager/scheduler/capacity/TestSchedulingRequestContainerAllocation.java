@@ -58,8 +58,8 @@ public class TestSchedulingRequestContainerAllocation {
   public void testIntraAppAntiAffinity() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
         new Configuration());
-    csConf.setBoolean(CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED,
-        true);
+    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
@@ -141,8 +141,8 @@ public class TestSchedulingRequestContainerAllocation {
   public void testIntraAppAntiAffinityWithMultipleTags() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
         new Configuration());
-    csConf.setBoolean(CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED,
-        true);
+    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
