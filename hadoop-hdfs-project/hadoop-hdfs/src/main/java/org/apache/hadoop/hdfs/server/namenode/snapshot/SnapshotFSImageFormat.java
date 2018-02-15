@@ -82,7 +82,7 @@ public class SnapshotFSImageFormat {
     if (diffs == null) {
       out.writeInt(-1); // no diffs
     } else {
-      final List<D> list = diffs.asList();
+      final DiffList<D> list = diffs.asList();
       final int size = list.size();
       out.writeInt(size);
       for (int i = size - 1; i >= 0; i--) {
@@ -306,7 +306,7 @@ public class SnapshotFSImageFormat {
     List<INode> deletedList = loadDeletedList(parent, createdList, in, loader);
     
     // 6. Compose the SnapshotDiff
-    List<DirectoryDiff> diffs = parent.getDiffs().asList();
+    DiffList<DirectoryDiff> diffs = parent.getDiffs().asList();
     DirectoryDiff sdiff = new DirectoryDiff(snapshot.getId(), snapshotINode,
         diffs.isEmpty() ? null : diffs.get(0), childrenSize, createdList,
         deletedList, snapshotINode == snapshot.getRoot());

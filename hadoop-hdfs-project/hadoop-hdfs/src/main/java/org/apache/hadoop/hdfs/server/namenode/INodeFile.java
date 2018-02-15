@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.io.erasurecode.ErasureCodeConstants.REPLICATION_POLICY_ID;
@@ -988,7 +989,7 @@ public class INodeFile extends INodeWithAdditionalFields
     } else {
       // Collect all distinct blocks
       Set<BlockInfo> allBlocks = new HashSet<>(Arrays.asList(getBlocks()));
-      List<FileDiff> diffs = sf.getDiffs().asList();
+      DiffList<FileDiff> diffs = sf.getDiffs().asList();
       for(FileDiff diff : diffs) {
         BlockInfo[] diffBlocks = diff.getBlocks();
         if (diffBlocks != null) {

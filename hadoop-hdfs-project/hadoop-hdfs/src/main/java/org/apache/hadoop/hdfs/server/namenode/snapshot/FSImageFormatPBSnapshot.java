@@ -523,7 +523,7 @@ public class FSImageFormatPBSnapshot {
         throws IOException {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       if (sf != null) {
-        List<FileDiff> diffList = sf.getDiffs().asList();
+        DiffList<FileDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
             .newBuilder().setInodeId(file.getId()).setType(Type.FILEDIFF)
             .setNumOfDiff(diffList.size()).build();
@@ -563,7 +563,7 @@ public class FSImageFormatPBSnapshot {
         throws IOException {
       DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
       if (sf != null) {
-        List<DirectoryDiff> diffList = sf.getDiffs().asList();
+        DiffList<DirectoryDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
             .newBuilder().setInodeId(dir.getId()).setType(Type.DIRECTORYDIFF)
             .setNumOfDiff(diffList.size()).build();

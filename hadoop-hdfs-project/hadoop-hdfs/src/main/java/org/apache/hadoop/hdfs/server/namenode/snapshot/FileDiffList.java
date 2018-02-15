@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -66,8 +63,8 @@ public class FileDiffList extends
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
-    List<FileDiff> diffs = this.asList();
-    int i = Collections.binarySearch(diffs, snapshotId);
+    DiffList<FileDiff> diffs = this.asList();
+    int i = diffs.binarySearch(snapshotId);
     BlockInfo[] blocks = null;
     for(i = i >= 0 ? i : -i-2; i >= 0; i--) {
       blocks = diffs.get(i).getBlocks();
@@ -83,8 +80,8 @@ public class FileDiffList extends
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
-    List<FileDiff> diffs = this.asList();
-    int i = Collections.binarySearch(diffs, snapshotId);
+    DiffList<FileDiff> diffs = this.asList();
+    int i = diffs.binarySearch(snapshotId);
     BlockInfo[] blocks = null;
     for (i = i >= 0 ? i+1 : -i-1; i < diffs.size(); i++) {
       blocks = diffs.get(i).getBlocks();
