@@ -493,4 +493,40 @@ public class TestLambdaTestUtils extends Assert {
     assertMinRetryCount(0);
   }
 
+  @Test
+  public void testEvalToSuccess() {
+    assertTrue("Eval to success", eval(() -> true));
+  }
+
+  /**
+   * There's no attempt to wrap an unchecked exception
+   * with an AssertionError.
+   */
+  @Test
+  public void testEvalDoesntWrapRTEs() throws Throwable {
+    intercept(RuntimeException.class, "",
+        () -> eval(() -> {
+          throw new RuntimeException("t");
+        }));
+  }
+
+  /**
+   * Verify that IOEs are caught and wrapped, and that the
+   * inner cause is the original IOE.
+   */
+  @Test
+  public void testEvalDoesWrapIOEs() throws Throwable {
+    AssertionError ex = intercept(AssertionError.class, "ioe",
+        () -> eval(() -> {
+          throw new IOException("ioe");
+        }));
+    Throwable cause = ex.getCause();
+    if (cause == null) {
+      throw ex;
+    }
+    if (!(cause instanceof IOException)) {
+      throw cause;
+    }
+  }
+
 }

@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -33,13 +27,19 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
@@ -248,10 +248,10 @@ public class TestS3AAWSCredentialsProvider {
       AWSCredentialsProvider provider = providers.get(i);
       assertNotNull(
           String.format("At position %d, expected class is %s, but found null.",
-          i, expectedClass), provider);
+              i, expectedClass), provider);
       assertTrue(
           String.format("At position %d, expected class is %s, but found %s.",
-          i, expectedClass, provider.getClass()),
+              i, expectedClass, provider.getClass()),
           expectedClass.isAssignableFrom(provider.getClass()));
     }
   }
@@ -269,7 +269,23 @@ public class TestS3AAWSCredentialsProvider {
     assertNotNull(provider2);
     assertInstanceOf(InstanceProfileCredentialsProvider.class, provider2);
     assertSame("Expected all usage of InstanceProfileCredentialsProvider to "
-        + "share a singleton instance, but found unique instances.",
+            + "share a singleton instance, but found unique instances.",
         provider1, provider2);
   }
+
+  /**
+   * This is here to check up on the S3ATestUtils probes themselves.
+   * @see S3ATestUtils#authenticationContains(Configuration, String).
+   */
+  @Test
+  public void testAuthenticationContainsProbes() {
+    Configuration conf = new Configuration(false);
+    assertFalse("found AssumedRoleCredentialProvider",
+        authenticationContains(conf, AssumedRoleCredentialProvider.NAME));
+
+    conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
+    assertTrue("didn't find AssumedRoleCredentialProvider",
+        authenticationContains(conf, AssumedRoleCredentialProvider.NAME));
+  }
+
 }
