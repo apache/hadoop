@@ -84,9 +84,9 @@ import com.google.common.collect.Sets;
 
 public class TestDFSUtil {
 
-  static final String NS1_NN_ADDR    = "ns1-nn.example.com:9820";
-  static final String NS1_NN1_ADDR   = "ns1-nn1.example.com:9820";
-  static final String NS1_NN2_ADDR   = "ns1-nn2.example.com:9820";
+  static final String NS1_NN_ADDR    = "ns1-nn.example.com:8020";
+  static final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
+  static final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
 
   /**
    * Reset to default UGI settings since some tests change them.
@@ -478,7 +478,7 @@ public class TestDFSUtil {
         DFS_NAMENODE_HTTP_PORT_DEFAULT, null, null, null), httpport);
 
     URI httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
-        "localhost", 9820), conf, "http");
+        "localhost", 8020), conf, "http");
     assertEquals(
         URI.create("http://localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT),
         httpAddress);
@@ -488,10 +488,10 @@ public class TestDFSUtil {
   public void testHANameNodesWithFederation() throws URISyntaxException {
     HdfsConfiguration conf = new HdfsConfiguration();
     
-    final String NS1_NN1_HOST = "ns1-nn1.example.com:9820";
-    final String NS1_NN2_HOST = "ns1-nn2.example.com:9820";
-    final String NS2_NN1_HOST = "ns2-nn1.example.com:9820";
-    final String NS2_NN2_HOST = "ns2-nn2.example.com:9820";
+    final String NS1_NN1_HOST = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_HOST = "ns1-nn2.example.com:8020";
+    final String NS2_NN1_HOST = "ns2-nn1.example.com:8020";
+    final String NS2_NN2_HOST = "ns2-nn2.example.com:8020";
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1");
     
     // Two nameservices, each with two NNs.
@@ -555,9 +555,9 @@ public class TestDFSUtil {
     HdfsConfiguration conf = new HdfsConfiguration();
     
     // One nameservice with two NNs
-    final String NS1_NN1_HOST = "ns1-nn1.example.com:9820";
+    final String NS1_NN1_HOST = "ns1-nn1.example.com:8020";
     final String NS1_NN1_HOST_SVC = "ns1-nn2.example.com:9821";
-    final String NS1_NN2_HOST = "ns1-nn1.example.com:9820";
+    final String NS1_NN2_HOST = "ns1-nn1.example.com:8020";
     final String NS1_NN2_HOST_SVC = "ns1-nn2.example.com:9821";
    
     conf.set(DFS_NAMESERVICES, "ns1");
@@ -641,10 +641,10 @@ public class TestDFSUtil {
   public void testGetNNUris() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
 
-    final String NS2_NN_ADDR    = "ns2-nn.example.com:9820";
-    final String NN1_ADDR       = "nn.example.com:9820";
+    final String NS2_NN_ADDR    = "ns2-nn.example.com:8020";
+    final String NN1_ADDR       = "nn.example.com:8020";
     final String NN1_SRVC_ADDR  = "nn.example.com:9821";
-    final String NN2_ADDR       = "nn2.example.com:9820";
+    final String NN2_ADDR       = "nn2.example.com:8020";
 
     conf.set(DFS_NAMESERVICES, "ns1");
     conf.set(DFSUtil.addKeySuffixes(
@@ -822,7 +822,7 @@ public class TestDFSUtil {
     // Make sure when config FS_DEFAULT_NAME_KEY using IP address,
     // it will automatically convert it to hostname
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:9820");
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
     Collection<URI> uris = getInternalNameServiceUris(conf);
     assertEquals(1, uris.size());
     for (URI uri : uris) {

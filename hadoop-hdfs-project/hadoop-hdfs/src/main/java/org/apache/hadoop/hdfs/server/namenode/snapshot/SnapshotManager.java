@@ -99,6 +99,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
+  private final int maxSnapshotLimit;
   
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
@@ -116,11 +117,16 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
         DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT);
+    this.maxSnapshotLimit = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT);
     LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
         + ", skipCaptureAccessTimeOnlyChange: "
         + skipCaptureAccessTimeOnlyChange
         + ", snapshotDiffAllowSnapRootDescendant: "
-        + snapshotDiffAllowSnapRootDescendant);
+        + snapshotDiffAllowSnapRootDescendant
+        + ", maxSnapshotLimit: "
+        + maxSnapshotLimit);
   }
 
   @VisibleForTesting
@@ -176,7 +182,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
     if (d.isSnapshottable()) {
       //The directory is already a snapshottable directory.
-      d.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
+      d.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT);
     } else {
       d.addSnapshottableFeature();
     }
@@ -301,7 +307,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles);
+        this.captureOpenFiles, maxSnapshotLimit);
       
     //create success, update id
     snapshotCounter++;

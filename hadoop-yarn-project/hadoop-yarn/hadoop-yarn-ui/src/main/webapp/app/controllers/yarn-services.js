@@ -23,6 +23,7 @@ import TableDefinition from 'em-table/utils/table-definition';
 export default AppTableController.extend({
   queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
   tableDefinition: TableDefinition.create({
+    searchType: 'manual',
     sortColumnId: 'stTime',
     sortOrder: 'desc',
     rowCount: 25,

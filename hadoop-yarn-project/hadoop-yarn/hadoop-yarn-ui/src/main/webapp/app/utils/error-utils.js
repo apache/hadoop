@@ -39,6 +39,9 @@ export default {
         case "404":
           errorType = "Not Found";
           break;
+        case "401":
+          errorType = "Authorization required";
+          break;
         default:
           errorType = "";
           break;

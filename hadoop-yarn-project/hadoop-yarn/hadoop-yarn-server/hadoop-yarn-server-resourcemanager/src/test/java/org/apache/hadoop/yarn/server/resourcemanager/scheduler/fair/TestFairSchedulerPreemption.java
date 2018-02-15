@@ -18,8 +18,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -384,6 +387,13 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
+  private void setAllAMContainersOnNode(NodeId nodeId) {
+    SchedulerNode node = scheduler.getNodeTracker().getNode(nodeId);
+    for (RMContainer container: node.getCopiedListOfRunningContainers()) {
+      ((RMContainerImpl) container).setAMContainer(true);
+    }
+  }
+
   @Test
   public void testPreemptionSelectNonAMContainer() throws Exception {
     takeAllResources("root.preemptable.child-1");
@@ -400,6 +410,51 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // the preemption happens on both nodes.
     assertTrue("Preempted containers should come from two different "
         + "nodes.", !host0.equals(host1));
+  }
+
+  @Test
+  public void testRelaxLocalityToNotPreemptAM() throws Exception {
+    takeAllResources("root.preemptable.child-1");
+    RMNode node1 = rmNodes.get(0);
+    setAllAMContainersOnNode(node1.getNodeID());
+    SchedulerNode node = scheduler.getNodeTracker().getNode(node1.getNodeID());
+    ApplicationAttemptId greedyAppAttemptId =
+            node.getCopiedListOfRunningContainers().get(0)
+                    .getApplicationAttemptId();
+
+    // Make the RACK_LOCAL and OFF_SWITCH requests big enough that they can't be
+    // satisfied. This forces the RR that we consider for preemption to be the
+    // NODE_LOCAL one.
+    ResourceRequest nodeRequest =
+            createResourceRequest(GB, node1.getHostName(), 1, 4, true);
+    ResourceRequest rackRequest =
+            createResourceRequest(GB * 10, node1.getRackName(), 1, 1, true);
+    ResourceRequest anyRequest =
+            createResourceRequest(GB * 10, ResourceRequest.ANY, 1, 1, true);
+
+    List<ResourceRequest> resourceRequests =
+            Arrays.asList(nodeRequest, rackRequest, anyRequest);
+
+    ApplicationAttemptId starvedAppAttemptId = createSchedulingRequest(
+            "root.preemptable.child-2", "default", resourceRequests);
+    starvingApp = scheduler.getSchedulerApp(starvedAppAttemptId);
+
+    // Move clock enough to identify starvation
+    clock.tickSec(1);
+    scheduler.update();
+
+    // Make sure 4 containers were preempted from the greedy app, but also that
+    // none were preempted on our all-AM node, even though the NODE_LOCAL RR
+    // asked for resources on it.
+
+    // TODO (YARN-7655) The starved app should be allocated 4 containers.
+    // It should be possible to modify the RRs such that this is true
+    // after YARN-7903.
+    verifyPreemption(0, 4);
+    for (RMContainer container : node.getCopiedListOfRunningContainers()) {
+      assert (container.isAMContainer());
+      assert (container.getApplicationAttemptId().equals(greedyAppAttemptId));
+    }
   }
 
   @Test

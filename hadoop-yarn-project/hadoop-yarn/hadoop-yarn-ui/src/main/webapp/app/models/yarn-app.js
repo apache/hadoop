@@ -127,5 +127,21 @@ export default DS.Model.extend({
     }
 
     return "label label-" + style;
-  }.property("finalStatus")
+  }.property("finalStatus"),
+
+  logAggregationStatusStyle: function() {
+    const logAggregationStatus = this.get("logAggregationStatus");
+    var style = "";
+    if (logAggregationStatus === "FAILED" ||
+        logAggregationStatus === "TIME_OUT") {
+      style = "danger";
+    } else if (logAggregationStatus === "RUNNING_WITH_FAILURE") {
+      style = "warning";
+    } else if (logAggregationStatus === "SUCCEEDED") {
+      style = "success";
+    } else {
+      style = "default";
+    }
+    return "label label-" + style;
+  }.property("logAggregationStatus")
 });

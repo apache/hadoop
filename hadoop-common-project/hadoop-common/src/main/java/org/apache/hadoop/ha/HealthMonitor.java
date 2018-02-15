@@ -204,12 +204,11 @@ public class HealthMonitor {
         healthy = true;
       } catch (Throwable t) {
         if (isHealthCheckFailedException(t)) {
-          LOG.warn("Service health check failed for " + targetToMonitor
-              + ": " + t.getMessage());
+          LOG.warn("Service health check failed for {}", targetToMonitor, t);
           enterState(State.SERVICE_UNHEALTHY);
         } else {
-          LOG.warn("Transport-level exception trying to monitor health of " +
-              targetToMonitor + ": " + t.getCause() + " " + t.getLocalizedMessage());
+          LOG.warn("Transport-level exception trying to monitor health of {}",
+              targetToMonitor, t);
           RPC.stopProxy(proxy);
           proxy = null;
           enterState(State.SERVICE_NOT_RESPONDING);
@@ -246,7 +245,7 @@ public class HealthMonitor {
 
   private synchronized void enterState(State newState) {
     if (newState != state) {
-      LOG.info("Entering state " + newState);
+      LOG.info("Entering state {}", newState);
       state = newState;
       synchronized (callbacks) {
         for (Callback cb : callbacks) {

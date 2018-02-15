@@ -106,7 +106,7 @@ public class TestCapacitySchedulerAsyncScheduling {
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
         numThreads);
     conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
-        + ".scheduling-interval-ms", 100);
+        + ".scheduling-interval-ms", 0);
 
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
@@ -264,7 +264,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     reservedProposals.add(reservedForAttempt1Proposal);
     ResourceCommitRequest request =
         new ResourceCommitRequest(null, reservedProposals, null);
-    scheduler.tryCommit(scheduler.getClusterResource(), request);
+    scheduler.tryCommit(scheduler.getClusterResource(), request, true);
     Assert.assertNull("Outdated proposal should not be accepted!",
         sn2.getReservedContainer());
 
@@ -385,7 +385,7 @@ public class TestCapacitySchedulerAsyncScheduling {
           // call real apply
           try {
             cs.tryCommit((Resource) invocation.getArguments()[0],
-                (ResourceCommitRequest) invocation.getArguments()[1]);
+                (ResourceCommitRequest) invocation.getArguments()[1], true);
           } catch (Exception e) {
             e.printStackTrace();
             Assert.fail();
@@ -393,12 +393,12 @@ public class TestCapacitySchedulerAsyncScheduling {
           isChecked.set(true);
         } else {
           cs.tryCommit((Resource) invocation.getArguments()[0],
-              (ResourceCommitRequest) invocation.getArguments()[1]);
+              (ResourceCommitRequest) invocation.getArguments()[1], true);
         }
         return null;
       }
     }).when(spyCs).tryCommit(Mockito.any(Resource.class),
-        Mockito.any(ResourceCommitRequest.class));
+        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
 
     spyCs.handle(new NodeUpdateSchedulerEvent(sn1.getRMNode()));
 
@@ -473,7 +473,7 @@ public class TestCapacitySchedulerAsyncScheduling {
       newProposals.add(newContainerProposal);
       ResourceCommitRequest request =
           new ResourceCommitRequest(newProposals, null, null);
-      scheduler.tryCommit(scheduler.getClusterResource(), request);
+      scheduler.tryCommit(scheduler.getClusterResource(), request, true);
     }
     // make sure node resource can't be over-allocated!
     Assert.assertTrue("Node resource is Over-allocated!",

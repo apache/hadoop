@@ -469,6 +469,24 @@ public abstract class SchedulerNode {
     this.lastHeartbeatMonotonicTime = Time.monotonicNow();
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof SchedulerNode)) {
+      return false;
+    }
+
+    SchedulerNode that = (SchedulerNode) o;
+
+    return getNodeID().equals(that.getNodeID());
+  }
+
+  @Override
+  public int hashCode() {
+    return getNodeID().hashCode();
+  }
 
   private static class ContainerInfo {
     private final RMContainer container;

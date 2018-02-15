@@ -35,7 +35,7 @@ export default Ember.Controller.extend({
       Ember.$("#stopServiceConfirmDialog").modal('hide');
       var adapter = this.store.adapterFor('yarn-servicedef');
       self.set('isLoading', true);
-      adapter.stopService(this.get('service')).then(function() {
+      adapter.stopService(this.get('service'),  this.get('model.app.user')).then(function() {
         self.set('actionResponse', {msg: 'Service stopped successfully. Auto refreshing in 5 seconds.', type: 'success'});
         Ember.run.later(self, function() {
           this.set('actionResponse', null);
@@ -59,7 +59,7 @@ export default Ember.Controller.extend({
       Ember.$("#deleteServiceConfirmDialog").modal('hide');
       var adapter = this.store.adapterFor('yarn-servicedef');
       self.set('isLoading', true);
-      adapter.deleteService(this.get('service')).then(function() {
+      adapter.deleteService(this.get('service'),  this.get('model.app.user')).then(function() {
         self.set('actionResponse', {msg: 'Service deleted successfully. Redirecting to services in 5 seconds.', type: 'success'});
         Ember.run.later(self, function() {
           this.set('actionResponse', null);

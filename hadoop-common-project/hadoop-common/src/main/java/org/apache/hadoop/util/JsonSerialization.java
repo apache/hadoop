@@ -90,6 +90,14 @@ public class JsonSerialization<T> {
   }
 
   /**
+   * Get the mapper of this class.
+   * @return the mapper
+   */
+  public ObjectMapper getMapper() {
+    return mapper;
+  }
+
+  /**
    * Convert from JSON.
    *
    * @param json input

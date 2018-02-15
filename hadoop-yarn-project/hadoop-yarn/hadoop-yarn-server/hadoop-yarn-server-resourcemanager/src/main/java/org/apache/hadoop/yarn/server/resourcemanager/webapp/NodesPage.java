@@ -81,12 +81,14 @@ class NodesPage extends RmView {
 
       if (!this.opportunisticContainersEnabled) {
         trbody.th(".containers", "Containers")
+            .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used")
             .th(".mem", "Mem Avail")
             .th(".vcores", "VCores Used")
             .th(".vcores", "VCores Avail");
       } else {
         trbody.th(".containers", "Running Containers (G)")
+            .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used (G)")
             .th(".mem", "Mem Avail (G)")
             .th(".vcores", "VCores Used (G)")
@@ -167,6 +169,7 @@ class NodesPage extends RmView {
             .append(Times.format(info.getLastHealthUpdate())).append("\",\"")
             .append(info.getHealthReport()).append("\",\"")
             .append(String.valueOf(info.getNumContainers())).append("\",\"")
+            .append(info.getAllocationTagsSummary()).append("\",\"")
             .append("<br title='").append(String.valueOf(usedMemory))
             .append("'>").append(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))
             .append("\",\"").append("<br title='")

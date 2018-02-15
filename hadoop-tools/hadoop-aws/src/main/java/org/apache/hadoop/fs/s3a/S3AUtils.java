@@ -30,6 +30,7 @@ import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import com.google.common.base.Preconditions;
@@ -248,6 +249,14 @@ public final class S3AUtils {
         ioe = new AWSStatus500Exception(message, ase);
         break;
 
+      case 200:
+        if (exception instanceof MultiObjectDeleteException) {
+          // failure during a bulk delete
+          return translateMultiObjectDeleteException(message,
+              (MultiObjectDeleteException) exception);
+        }
+        // other 200: FALL THROUGH
+
       default:
         // no specific exit code. Choose an IOE subclass based on the class
         // of the caught exception
@@ -376,6 +385,40 @@ public final class S3AUtils {
           .initCause(ex);
     }
     return new AWSServiceIOException(message, ex);
+  }
+
+  /**
+   * A MultiObjectDeleteException is raised if one or more delete objects
+   * listed in a bulk DELETE operation failed.
+   * The top-level exception is therefore just "something wasn't deleted",
+   * but doesn't include the what or the why.
+   * This translation will extract an AccessDeniedException if that's one of
+   * the causes, otherwise grabs the status code and uses it in the
+   * returned exception.
+   * @param message text for the exception
+   * @param ex exception to translate
+   * @return an IOE with more detail.
+   */
+  public static IOException translateMultiObjectDeleteException(String message,
+      MultiObjectDeleteException ex) {
+    List<String> keys;
+    StringBuffer result = new StringBuffer(ex.getErrors().size() * 100);
+    result.append(message).append(": ");
+    String exitCode = "";
+    for (MultiObjectDeleteException.DeleteError error : ex.getErrors()) {
+      String code = error.getCode();
+      result.append(String.format("%s: %s: %s%n", code, error.getKey(),
+          error.getMessage()));
+      if (exitCode.isEmpty() ||  "AccessDenied".equals(code)) {
+        exitCode = code;
+      }
+    }
+    if ("AccessDenied".equals(exitCode)) {
+      return (IOException) new AccessDeniedException(result.toString())
+          .initCause(ex);
+    } else {
+      return new AWSS3IOException(result.toString(), ex);
+    }
   }
 
   /**
@@ -534,7 +577,7 @@ public final class S3AUtils {
    * @return the list of classes, possibly empty
    * @throws IOException on a failure to load the list.
    */
-  static Class<?>[] loadAWSProviderClasses(Configuration conf,
+  public static Class<?>[] loadAWSProviderClasses(Configuration conf,
       String key,
       Class<?>... defaultValue) throws IOException {
     try {
@@ -564,7 +607,7 @@ public final class S3AUtils {
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
-  static AWSCredentialsProvider createAWSCredentialProvider(
+  public static AWSCredentialsProvider createAWSCredentialProvider(
       Configuration conf, Class<?> credClass) throws IOException {
     AWSCredentialsProvider credentials;
     String className = credClass.getName();
@@ -973,14 +1016,18 @@ public final class S3AUtils {
    * iterator.
    * @param iterator iterator from a list
    * @param eval closure to evaluate
+   * @return the number of files processed
    * @throws IOException anything in the closure, or iteration logic.
    */
-  public static void applyLocatedFiles(
+  public static long applyLocatedFiles(
       RemoteIterator<LocatedFileStatus> iterator,
       CallOnLocatedFileStatus eval) throws IOException {
+    long count = 0;
     while (iterator.hasNext()) {
+      count++;
       eval.call(iterator.next());
     }
+    return count;
   }
 
   /**

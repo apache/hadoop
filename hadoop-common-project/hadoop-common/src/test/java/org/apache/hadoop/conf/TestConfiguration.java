@@ -48,7 +48,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+
+import static org.apache.hadoop.conf.StorageUnit.BYTES;
+import static org.apache.hadoop.conf.StorageUnit.GB;
+import static org.apache.hadoop.conf.StorageUnit.KB;
+import static org.apache.hadoop.conf.StorageUnit.MB;
+import static org.apache.hadoop.conf.StorageUnit.TB;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -68,10 +76,13 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hamcrest.CoreMatchers;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 public class TestConfiguration {
 
+  @Rule
+  public ExpectedException thrown= ExpectedException.none();
   private static final double DOUBLE_DELTA = 0.000000001f;
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
@@ -1323,6 +1334,71 @@ public class TestConfiguration {
       assertEquals(1 + ptd.suffix(), conf.get("test.time.unit"));
       assertEquals(1, conf.getTimeDuration("test.time.unit", 2, ptd.unit()));
     }
+  }
+
+  @Test
+  public void testStorageUnit() {
+    final String key = "valid.key";
+    final String nonKey = "not.a.key";
+    Configuration conf = new Configuration(false);
+
+    conf.setStorageSize(key, 10, MB);
+    // This call returns the value specified in the Key as a double in MBs.
+    assertThat(conf.getStorageSize(key, "1GB", MB),
+        is(10.0));
+
+    // Since this key is missing, This call converts the default value of  1GB
+    // to MBs are returns that value.
+    assertThat(conf.getStorageSize(nonKey, "1GB", MB),
+        is(1024.0));
+
+
+    conf.setStorageSize(key, 1024, BYTES);
+    assertThat(conf.getStorageSize(key, 100, KB), is(1.0));
+
+    assertThat(conf.getStorageSize(nonKey, 100.0, KB), is(100.0));
+
+    // We try out different kind of String formats to see if they work and
+    // during read, we also try to read using a different Storage Units.
+    conf.setStrings(key, "1TB");
+    assertThat(conf.getStorageSize(key, "1PB", GB), is(1024.0));
+
+    conf.setStrings(key, "1bytes");
+    assertThat(conf.getStorageSize(key, "1PB", KB), is(0.001));
+
+    conf.setStrings(key, "2048b");
+    assertThat(conf.getStorageSize(key, "1PB", KB), is(2.0));
+
+    conf.setStrings(key, "64 GB");
+    assertThat(conf.getStorageSize(key, "1PB", GB), is(64.0));
+
+    // Match the parsing patterns of getLongBytes, which takes single char
+    // suffix.
+    conf.setStrings(key, "1T");
+    assertThat(conf.getStorageSize(key, "1GB", TB), is(1.0));
+
+    conf.setStrings(key, "1k");
+    assertThat(conf.getStorageSize(key, "1GB", KB), is(1.0));
+
+    conf.setStrings(key, "10m");
+    assertThat(conf.getStorageSize(key, "1GB", MB), is(10.0));
+
+
+
+    // Missing format specification, this should throw.
+    conf.setStrings(key, "100");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
+
+    // illegal format specification, this should throw.
+    conf.setStrings(key, "1HB");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
+
+    // Illegal number  specification, this should throw.
+    conf.setStrings(key, "HadoopGB");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
   }
 
   @Test

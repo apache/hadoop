@@ -20,15 +20,15 @@
 <hr>
 
 <h3>GENERAL Metrics</h3>
-{{em-table columns=columns rows=generalConfigRows}}
+{{em-table columns=columns rows=generalConfigRows definition=tableDefinition}}
 
 {{#if mapMetrics}}
   <hr>
   <h3>MAP Metrics</h3>
-  {{em-table columns=columns rows=mapConfigRows}}
+  {{em-table columns=columns rows=mapConfigRows definition=tableDefinition}}
 {{/if}}
 
 {{#if reduceMetrics}}
   <h3>REDUCER Metrics</h3>
-  {{em-table columns=columns rows=reduceConfigRows}}
+  {{em-table columns=columns rows=reduceConfigRows definition=tableDefinition}}
 {{/if}}

@@ -88,4 +88,20 @@ public abstract class DockerCommand {
     }
     return ret.toString();
   }
+
+  /**
+   * Add the client configuration directory to the docker command.
+   *
+   * The client configuration option proceeds any of the docker subcommands
+   * (such as run, load, pull, etc). Ordering will be handled by
+   * container-executor. Docker expects the value to be a directory containing
+   * the file config.json. This file is typically generated via docker login.
+   *
+   * @param clientConfigDir - directory containing the docker client config.
+   */
+  public void setClientConfigDir(String clientConfigDir) {
+    if (clientConfigDir != null) {
+      addCommandArguments("docker-config", clientConfigDir);
+    }
+  }
 }

@@ -24,6 +24,10 @@ import ColumnDef from 'em-table/utils/column-definition';
 import YarnConf from '../../models/yarn-conf';
 
 export default Ember.Controller.extend({
+  tableDefinition: TableDef.create({
+    searchType: 'manual',
+  }),
+
   init: function () {
     var that = this;
     this.get('store').query('yarn-conf', {})

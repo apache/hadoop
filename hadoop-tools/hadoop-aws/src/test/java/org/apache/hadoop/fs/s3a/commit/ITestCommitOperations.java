@@ -528,7 +528,9 @@ public class ITestCommitOperations extends AbstractCommitITest {
   @Test
   public void testWriteNormalStream() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    Assume.assumeTrue(fs.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+    Assume.assumeTrue(
+        "Filesystem does not have magic support enabled: " + fs,
+        fs.hasCapability(STORE_CAPABILITY_MAGIC_COMMITTER));
 
     Path destFile = path("normal");
     try (FSDataOutputStream out = fs.create(destFile, true)) {

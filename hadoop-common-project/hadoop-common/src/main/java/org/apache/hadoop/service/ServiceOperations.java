@@ -81,9 +81,7 @@ public final class ServiceOperations {
     try {
       stop(service);
     } catch (Exception e) {
-      log.warn("When stopping the service " + service.getName()
-               + " : " + e,
-               e);
+      log.warn("When stopping the service " + service.getName(), e);
       return e;
     }
     return null;
@@ -103,7 +101,7 @@ public final class ServiceOperations {
     try {
       stop(service);
     } catch (Exception e) {
-      log.warn("When stopping the service {} : {}", service.getName(), e, e);
+      log.warn("When stopping the service {}", service.getName(), e);
       return e;
     }
     return null;

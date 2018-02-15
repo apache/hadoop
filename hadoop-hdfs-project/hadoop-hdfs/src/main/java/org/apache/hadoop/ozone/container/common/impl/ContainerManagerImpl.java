@@ -747,6 +747,11 @@ public class ContainerManagerImpl implements ContainerManager {
 
   }
 
+  @Override
+  public void readLockInterruptibly() throws InterruptedException {
+    this.lock.readLock().lockInterruptibly();
+  }
+
   /**
    * Release read lock.
    */

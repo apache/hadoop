@@ -37,7 +37,7 @@
     RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 9820.
+    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 8020.
   </description>
 </property>
 
@@ -2604,6 +2604,17 @@
 </property>
 
 <property>
+  <name>dfs.domain.socket.disable.interval.seconds</name>
+  <value>600</value>
+  <description>
+    The interval that a DataNode is disabled for future Short-Circuit Reads,
+    after an error happens during a Short-Circuit Read. Setting this to 0 will
+    not disable Short-Circuit Reads at all after errors happen. Negative values
+    are invalid.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.shortcircuit.skip.checksum</name>
   <value>false</value>
   <description>
@@ -4353,6 +4364,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.snapshot.max.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed per snapshottable
+    directory.If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+
+<property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
   <description>
@@ -5064,9 +5085,15 @@
 
   <property>
     <name>dfs.federation.router.store.driver.class</name>
-    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl</value>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl</value>
     <description>
-      Class to implement the State Store. By default it uses the local disk.
+      Class to implement the State Store. There are three implementation classes currently
+      being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
+      By default it uses the ZooKeeper as the default State Store.
     </description>
   </property>
 

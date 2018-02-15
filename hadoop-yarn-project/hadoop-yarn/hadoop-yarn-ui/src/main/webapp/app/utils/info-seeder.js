@@ -22,5 +22,6 @@ export default {
   lifetime: "Life time (in seconds) of the application from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.",
   components: "One or more components of the application. If the application is HBase say, then the component can be a simple role like master or regionserver. If the application is a complex business webapp then a component can be other applications say Kafka or Storm. Thereby it opens up the support for complex and nested applications.",
   configurations: "Set of configuration properties that can be injected into the application components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.",
-  fileConfigs: "Set of file configurations that needs to be created and made available as a volume in an application component container."
+  fileConfigs: "Set of file configurations that needs to be created and made available as a volume in an application component container.",
+  userName: "Name of the user who launches the service."
 };

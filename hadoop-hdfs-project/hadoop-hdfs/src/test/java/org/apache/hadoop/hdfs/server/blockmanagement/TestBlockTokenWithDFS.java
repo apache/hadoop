@@ -353,7 +353,7 @@ public class TestBlockTokenWithDFS {
     try {
       // prefer non-ephemeral port to avoid port collision on restartNameNode
       cluster = new MiniDFSCluster.Builder(conf)
-          .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+          .nameNodePort(ServerSocketUtil.getPort(18020, 100))
           .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
           .numDataNodes(numDataNodes)
           .build();

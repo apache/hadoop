@@ -87,21 +87,38 @@ public class ApiServiceClient extends AppAdminClient {
       rmAddress = conf
           .get("yarn.resourcemanager.webapp.https.address");
     }
-
+    boolean useKerberos = UserGroupInformation.isSecurityEnabled();
     List<String> rmServers = RMHAUtils
         .getRMHAWebappAddresses(new YarnConfiguration(conf));
     for (String host : rmServers) {
-      StringBuilder sb = new StringBuilder();
-      sb.append(scheme);
-      sb.append(host);
-      sb.append(path);
-      Client client = Client.create();
-      WebResource webResource = client
-          .resource(sb.toString());
-      String test = webResource.get(String.class);
-      if (test.contains("hadoop_version")) {
-        rmAddress = host;
-        break;
+      try {
+        Client client = Client.create();
+        StringBuilder sb = new StringBuilder();
+        sb.append(scheme);
+        sb.append(host);
+        sb.append(path);
+        if (!useKerberos) {
+          try {
+            String username = UserGroupInformation.getCurrentUser().getShortUserName();
+            sb.append("?user.name=");
+            sb.append(username);
+          } catch (IOException e) {
+            LOG.debug("Fail to resolve username: {}", e);
+          }
+        }
+        WebResource webResource = client
+            .resource(sb.toString());
+        if (useKerberos) {
+          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+          webResource.header("WWW-Authenticate", token);
+        }
+        ClientResponse test = webResource.get(ClientResponse.class);
+        if (test.getStatus() == 200) {
+          rmAddress = host;
+          break;
+        }
+      } catch (Exception e) {
+        LOG.debug("Fail to connect to: "+host, e);
       }
     }
     return scheme+rmAddress;
@@ -123,7 +140,8 @@ public class ApiServiceClient extends AppAdminClient {
       api.append("/");
       api.append(appName);
     }
-    if (!UserGroupInformation.isSecurityEnabled()) {
+    Configuration conf = getConfig();
+    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase("simple")) {
       api.append("?user.name=" + UrlEncoded
           .encodeString(System.getProperty("user.name")));
     }
@@ -147,7 +165,7 @@ public class ApiServiceClient extends AppAdminClient {
     client.setChunkedEncodingSize(null);
     Builder builder = client
         .resource(getApiUrl(appName)).type(MediaType.APPLICATION_JSON);
-    if (conf.get("hadoop.security.authentication").equals("kerberos")) {
+    if (conf.get("hadoop.http.authentication.type").equals("kerberos")) {
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
       builder.header("WWW-Authenticate", token);
     }
@@ -169,6 +187,10 @@ public class ApiServiceClient extends AppAdminClient {
     String output;
     if (response.getStatus() == 401) {
       LOG.error("Authentication required");
+      return EXIT_EXCEPTION_THROWN;
+    }
+    if (response.getStatus() == 503) {
+      LOG.error("YARN Service is unavailable or disabled.");
       return EXIT_EXCEPTION_THROWN;
     }
     try {

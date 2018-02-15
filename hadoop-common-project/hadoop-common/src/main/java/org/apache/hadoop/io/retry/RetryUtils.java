@@ -72,9 +72,7 @@ public class RetryUtils {
             retryPolicySpecKey, defaultRetryPolicySpec
             );
     
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("multipleLinearRandomRetry = " + multipleLinearRandomRetry);
-    }
+    LOG.debug("multipleLinearRandomRetry = {}", multipleLinearRandomRetry);
 
     if (multipleLinearRandomRetry == null) {
       //no retry
@@ -124,10 +122,9 @@ public class RetryUtils {
         p = RetryPolicies.TRY_ONCE_THEN_FAIL;
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("RETRY " + retries + ") policy="
-            + p.getClass().getSimpleName() + ", exception=" + e);
-      }
+      LOG.debug("RETRY {}) policy={}", retries,
+            p.getClass().getSimpleName(), e);
+
       return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
     }
 

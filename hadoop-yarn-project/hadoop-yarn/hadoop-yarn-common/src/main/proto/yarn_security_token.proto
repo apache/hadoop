@@ -54,6 +54,7 @@ message ContainerTokenIdentifierProto {
   optional ExecutionTypeProto executionType = 13 [default = GUARANTEED];
   optional int32 version = 14 [default = 0];
   optional int64 allocation_request_id = 15 [default = -1];
+  repeated string allocation_tags = 16;
 }
 
 message ClientToAMTokenIdentifierProto {
@@ -69,5 +70,10 @@ message YARNDelegationTokenIdentifierProto {
   optional int64 maxDate = 5;
   optional int32 sequenceNumber = 6;
   optional int32 masterKeyId = 7;
+}
+
+message DockerCredentialTokenIdentifierProto {
+  optional string registryUrl = 1;
+  optional string applicationId = 2;
 }
 

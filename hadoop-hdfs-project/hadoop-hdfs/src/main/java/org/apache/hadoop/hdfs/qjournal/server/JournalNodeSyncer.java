@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -245,7 +245,7 @@ public class JournalNodeSyncer {
       return;
     }
 
-    GetEditLogManifestFromJournalResponseProto editLogManifest;
+    GetEditLogManifestResponseProto editLogManifest;
     try {
       editLogManifest = jnProxy.getEditLogManifestFromJournal(jid,
           nameServiceId, 0, false);
@@ -318,8 +318,8 @@ public class JournalNodeSyncer {
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,
-      GetEditLogManifestFromJournalResponseProto response,
-      JournalNodeProxy remoteJNproxy) {
+                                     GetEditLogManifestResponseProto response,
+                                     JournalNodeProxy remoteJNproxy) {
 
     List<RemoteEditLog> otherJournalEditLogs = PBHelper.convert(
         response.getManifest()).getLogs();

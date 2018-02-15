@@ -206,6 +206,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
 | `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
 | `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
+| `docker.privileged-containers.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
 
 Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
 
@@ -226,6 +227,8 @@ Part of a container-executor.cfg which allows Docker containers to be launched i
 yarn.nodemanager.linux-container-executor.group=yarn
 [docker]
   module.enabled=true
+  docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=centos
   docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
   docker.allowed.networks=bridge,host,none
   docker.allowed.ro-mounts=/sys/fs/cgroup
@@ -361,14 +364,30 @@ the environment variable would be set to "/sys/fs/cgroup:/sys/fs/cgroup:ro".
 The destination path is not restricted, "/sys/fs/cgroup:/cgroup:ro" would also
 be valid given the example admin whitelist.
 
+Privileged Container Security Consideration
+-------------------------------------------
+
+Privileged docker container can interact with host system devices.  This can cause harm to host operating system without proper care.  In order to mitigate risk of allowing privileged container to run on Hadoop cluster, we implemented a controlled process to sandbox unauthorized privileged docker images.
+
+The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
+
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.privileged-containers.registries`, and setup private docker registry server to promote trusted images.
+
+Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
+
+For [YARN Service HTTPD example](./yarn-service/Examples.html), container-executor.cfg must define centos docker registry to be trusted for the example to run.
+
 Connecting to a Secure Docker Repository
 ----------------------------------------
 
-Until YARN-5428 is complete, the Docker client command will draw its
-configuration from the default location, which is $HOME/.docker/config.json on
-the NodeManager host. The Docker configuration is where secure repository
-credentials are stored, so use of the LCE with secure Docker repos is
-discouraged until YARN-5428 is complete.
+The Docker client command will draw its configuration from the default location,
+which is $HOME/.docker/config.json on the NodeManager host. The Docker
+configuration is where secure repository credentials are stored, so use of the
+LCE with secure Docker repos is discouraged using this method.
+
+YARN-5428 added support to Distributed Shell for securely supplying the Docker
+client configuration. See the Distributed Shell help for usage. Support for
+additional frameworks is planned.
 
 As a work-around, you may manually log the Docker daemon on every NodeManager
 host into the secure repo using the Docker login command:

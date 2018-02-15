@@ -29,14 +29,17 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.SchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.SchedulingRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProtoOrBuilder;
@@ -53,6 +56,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private List<ResourceRequest> ask = null;
   private List<ContainerId> release = null;
   private List<UpdateContainerRequest> updateRequests = null;
+  private List<SchedulingRequest> schedulingRequests = null;
   private ResourceBlacklistRequest blacklistRequest = null;
   
   public AllocateRequestPBImpl() {
@@ -100,6 +104,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.updateRequests != null) {
       addUpdateRequestsToProto();
+    }
+    if (this.schedulingRequests != null) {
+      addSchedulingRequestsToProto();
     }
     if (this.blacklistRequest != null) {
       builder.setBlacklistRequest(convertToProtoFormat(this.blacklistRequest));
@@ -175,6 +182,24 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     initUpdateRequests();
     this.updateRequests.clear();
     this.updateRequests.addAll(updateRequests);
+  }
+
+  @Override
+  public List<SchedulingRequest> getSchedulingRequests() {
+    initSchedulingRequests();
+    return this.schedulingRequests;
+  }
+
+  @Override
+  public void setSchedulingRequests(
+      List<SchedulingRequest> schedulingRequests) {
+    if (schedulingRequests == null) {
+      builder.clearSchedulingRequests();
+      return;
+    }
+    initSchedulingRequests();
+    this.schedulingRequests.clear();
+    this.schedulingRequests.addAll(schedulingRequests);
   }
 
   @Override
@@ -261,6 +286,20 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
   }
 
+  private void initSchedulingRequests() {
+    if (this.schedulingRequests != null) {
+      return;
+    }
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<SchedulingRequestProto> list =
+        p.getSchedulingRequestsList();
+    this.schedulingRequests = new ArrayList<>();
+
+    for (SchedulingRequestProto c : list) {
+      this.schedulingRequests.add(convertFromProtoFormat(c));
+    }
+  }
+
   private void addUpdateRequestsToProto() {
     maybeInitBuilder();
     builder.clearUpdateRequests();
@@ -297,6 +336,41 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     builder.addAllUpdateRequests(iterable);
   }
 
+  private void addSchedulingRequestsToProto() {
+    maybeInitBuilder();
+    builder.clearSchedulingRequests();
+    if (schedulingRequests == null) {
+      return;
+    }
+    Iterable<SchedulingRequestProto> iterable =
+        new Iterable<SchedulingRequestProto>() {
+          @Override
+          public Iterator<SchedulingRequestProto> iterator() {
+            return new Iterator<SchedulingRequestProto>() {
+
+              private Iterator<SchedulingRequest> iter =
+                  schedulingRequests.iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public SchedulingRequestProto next() {
+                return convertToProtoFormat(iter.next());
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+
+          }
+        };
+    builder.addAllSchedulingRequests(iterable);
+  }
   @Override
   public List<ContainerId> getReleaseList() {
     initReleases();
@@ -375,6 +449,16 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private UpdateContainerRequestProto convertToProtoFormat(
       UpdateContainerRequest t) {
     return ((UpdateContainerRequestPBImpl) t).getProto();
+  }
+
+  private SchedulingRequestPBImpl convertFromProtoFormat(
+      SchedulingRequestProto p) {
+    return new SchedulingRequestPBImpl(p);
+  }
+
+  private SchedulingRequestProto convertToProtoFormat(
+      SchedulingRequest t) {
+    return ((SchedulingRequestPBImpl) t).getProto();
   }
 
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {

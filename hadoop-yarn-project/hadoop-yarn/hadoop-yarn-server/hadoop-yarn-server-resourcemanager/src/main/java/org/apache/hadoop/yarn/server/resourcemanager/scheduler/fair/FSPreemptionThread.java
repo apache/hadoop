@@ -99,7 +99,10 @@ class FSPreemptionThread extends Thread {
    * starvation.
    * 2. For each {@link ResourceRequest}, iterate through matching
    * nodes and identify containers to preempt all on one node, also
-   * optimizing for least number of AM container preemptions.
+   * optimizing for least number of AM container preemptions. Only nodes
+   * that match the locality level specified in the {@link ResourceRequest}
+   * are considered. However, if this would lead to AM preemption, and locality
+   * relaxation is allowed, then the search space is expanded to all nodes.
    *
    * @param starvedApp starved application for which we are identifying
    *                   preemption targets
@@ -111,27 +114,21 @@ class FSPreemptionThread extends Thread {
 
     // Iterate through enough RRs to address app's starvation
     for (ResourceRequest rr : starvedApp.getStarvedResourceRequests()) {
+      List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
+              .getNodesByResourceName(rr.getResourceName());
       for (int i = 0; i < rr.getNumContainers(); i++) {
-        PreemptableContainers bestContainers = null;
-        List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
-            .getNodesByResourceName(rr.getResourceName());
-        int maxAMContainers = Integer.MAX_VALUE;
+        PreemptableContainers bestContainers =
+                identifyContainersToPreemptForOneContainer(potentialNodes, rr);
 
-        for (FSSchedulerNode node : potentialNodes) {
-          PreemptableContainers preemptableContainers =
-              identifyContainersToPreemptOnNode(
-                  rr.getCapability(), node, maxAMContainers);
-
-          if (preemptableContainers != null) {
-            // This set is better than any previously identified set.
-            bestContainers = preemptableContainers;
-            maxAMContainers = bestContainers.numAMContainers;
-
-            if (maxAMContainers == 0) {
-              break;
-            }
-          }
-        } // End of iteration through nodes for one RR
+        // Don't preempt AM containers just to satisfy local requests if relax
+        // locality is enabled.
+        if (bestContainers != null
+                && bestContainers.numAMContainers > 0
+                && !ResourceRequest.isAnyLocation(rr.getResourceName())
+                && rr.getRelaxLocality()) {
+          bestContainers = identifyContainersToPreemptForOneContainer(
+                  scheduler.getNodeTracker().getAllNodes(), rr);
+        }
 
         if (bestContainers != null) {
           List<RMContainer> containers = bestContainers.getAllContainers();
@@ -152,6 +149,29 @@ class FSPreemptionThread extends Thread {
       }
     } // End of iteration over RRs
     return containersToPreempt;
+  }
+
+  private PreemptableContainers identifyContainersToPreemptForOneContainer(
+          List<FSSchedulerNode> potentialNodes, ResourceRequest rr) {
+    PreemptableContainers bestContainers = null;
+    int maxAMContainers = Integer.MAX_VALUE;
+
+    for (FSSchedulerNode node : potentialNodes) {
+      PreemptableContainers preemptableContainers =
+              identifyContainersToPreemptOnNode(
+                      rr.getCapability(), node, maxAMContainers);
+
+      if (preemptableContainers != null) {
+        // This set is better than any previously identified set.
+        bestContainers = preemptableContainers;
+        maxAMContainers = bestContainers.numAMContainers;
+
+        if (maxAMContainers == 0) {
+          break;
+        }
+      }
+    }
+    return bestContainers;
   }
 
   /**

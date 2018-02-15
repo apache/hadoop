@@ -188,7 +188,7 @@ message RouterRecordProto {
   optional string address = 3;
   optional string status = 4;
   optional StateStoreVersionRecordProto stateStoreVersion = 5;
-  optional string buildVersion = 6;
+  optional string version = 6;
   optional string compileInfo = 7;
   optional uint64 dateStarted = 8;
 }
@@ -215,4 +215,29 @@ message RouterHeartbeatRequestProto {
 
 message RouterHeartbeatResponseProto {
   optional bool status = 1;
+}
+
+/////////////////////////////////////////////////
+// Route State
+/////////////////////////////////////////////////
+
+message EnterSafeModeRequestProto {
+}
+
+message EnterSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message LeaveSafeModeRequestProto {
+}
+
+message LeaveSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message GetSafeModeRequestProto {
+}
+
+message GetSafeModeResponseProto {
+  optional bool isInSafeMode = 1;
 }

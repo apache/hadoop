@@ -18,6 +18,7 @@
 
 import Ember from 'ember';
 import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 function _createColumns() {
   var columns = [];
@@ -49,6 +50,10 @@ export default Ember.Controller.extend({
   mapMetrics: null,
   reduceMetrics: null,
   generalMetrics: null,
+
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
 
   columns: Ember.computed(function() {
     return _createColumns(this.get('model.flowrun_uid'));

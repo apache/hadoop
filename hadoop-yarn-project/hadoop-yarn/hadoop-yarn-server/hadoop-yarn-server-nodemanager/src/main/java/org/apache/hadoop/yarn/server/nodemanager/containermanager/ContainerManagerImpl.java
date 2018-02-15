@@ -451,7 +451,8 @@ public class ContainerManagerImpl extends CompositeService implements
           originalToken.getLogAggregationContext(),
           originalToken.getNodeLabelExpression(),
           originalToken.getContainerType(), originalToken.getExecutionType(),
-          originalToken.getAllocationRequestId());
+          originalToken.getAllocationRequestId(),
+          originalToken.getAllcationTags());
 
     } else {
       token = BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());

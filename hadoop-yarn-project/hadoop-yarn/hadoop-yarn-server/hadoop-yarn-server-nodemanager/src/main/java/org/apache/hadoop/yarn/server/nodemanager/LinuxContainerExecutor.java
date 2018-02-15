@@ -651,6 +651,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       .setExecutionAttribute(FILECACHE_DIRS, ctx.getFilecacheDirs())
       .setExecutionAttribute(USER_LOCAL_DIRS, ctx.getUserLocalDirs())
       .setExecutionAttribute(CONTAINER_LOCAL_DIRS, ctx.getContainerLocalDirs())
+      .setExecutionAttribute(USER_FILECACHE_DIRS, ctx.getUserFilecacheDirs())
+      .setExecutionAttribute(APPLICATION_LOCAL_DIRS,
+          ctx.getApplicationLocalDirs())
       .setExecutionAttribute(CONTAINER_LOG_DIRS, ctx.getContainerLogDirs())
       .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
 

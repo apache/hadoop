@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformance
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
-import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
 import org.apache.hadoop.http.HttpConfig;
 
 /** 
@@ -414,6 +414,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.snapshotdiff.listing.limit";
   public static final int
       DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT = 1000;
+
+  public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
+      "dfs.namenode.snapshot.max.limit";
+
+  public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
@@ -1270,7 +1275,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String FEDERATION_STORE_DRIVER_CLASS =
       FEDERATION_STORE_PREFIX + "driver.class";
   public static final Class<? extends StateStoreDriver>
-      FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreFileImpl.class;
+      FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreZooKeeperImpl.class;
 
   public static final String FEDERATION_STORE_CONNECTION_TEST_MS =
       FEDERATION_STORE_PREFIX + "connection.test";

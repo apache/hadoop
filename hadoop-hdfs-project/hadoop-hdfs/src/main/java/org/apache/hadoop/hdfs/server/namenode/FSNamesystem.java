@@ -1580,6 +1580,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.readLock();
   }
   @Override
+  public void readLockInterruptibly() throws InterruptedException {
+    this.fsLock.readLockInterruptibly();
+  }
+  @Override
   public void readUnlock() {
     this.fsLock.readUnlock();
   }
@@ -4437,7 +4441,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void setBalancerBandwidth(long bandwidth) throws IOException {
     String operationName = "setBalancerBandwidth";
-    checkOperation(OperationCategory.UNCHECKED);
+    checkOperation(OperationCategory.WRITE);
     checkSuperuserPrivilege(operationName);
     getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
     logAuditEvent(true, operationName, null);
@@ -5675,9 +5679,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert !isInSafeMode() :
       "this should never be called while in safemode, since we stop " +
       "the DT manager before entering safemode!";
-    // No need to hold FSN lock since we don't access any internal
-    // structures, and this is stopped before the FSN shuts itself
-    // down, etc.
+    // edit log rolling is not thread-safe and must be protected by the
+    // fsn lock.  not updating namespace so read lock is sufficient.
+    assert hasReadLock();
     getEditLog().logUpdateMasterKey(key);
     getEditLog().logSync();
   }
@@ -5691,9 +5695,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert !isInSafeMode() :
       "this should never be called while in safemode, since we stop " +
       "the DT manager before entering safemode!";
-    // No need to hold FSN lock since we don't access any internal
-    // structures, and this is stopped before the FSN shuts itself
-    // down, etc.
+    // edit log rolling is not thread-safe and must be protected by the
+    // fsn lock.  not updating namespace so read lock is sufficient.
+    assert hasReadLock();
+    // do not logSync so expiration edits are batched
     getEditLog().logCancelDelegationToken(id);
   }  
   
@@ -6185,7 +6190,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         LOG.debug("Get corrupt file blocks returned error: " + e.getMessage());
       }
     } catch (IOException e) {
-      LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
+      LOG.warn("Get corrupt file blocks returned error", e);
     }
     return JSON.toString(list);
   }

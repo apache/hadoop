@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.net.Node;
@@ -182,4 +183,10 @@ public interface RMNode {
    * @return the decommissioning timeout in second.
    */
   Integer getDecommissioningTimeout();
+
+  /**
+   * Get the allocation tags and their counts associated with this node.
+   * @return a map of each allocation tag and its count.
+   */
+  Map<String, Long> getAllocationTagsWithCount();
 }

@@ -169,6 +169,17 @@ public class ContainerLaunch implements Callable<Integer> {
     return var;
   }
 
+  private Map<String, String> expandAllEnvironmentVars(
+      ContainerLaunchContext launchContext, Path containerLogDir) {
+    Map<String, String> environment = launchContext.getEnvironment();
+    for (Entry<String, String> entry : environment.entrySet()) {
+      String value = entry.getValue();
+      value = expandEnvironment(value, containerLogDir);
+      entry.setValue(value);
+    }
+    return environment;
+  }
+
   @Override
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
@@ -202,13 +213,8 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> environment = launchContext.getEnvironment();
-      // Make a copy of env to iterate & do variable expansion
-      for (Entry<String, String> entry : environment.entrySet()) {
-        String value = entry.getValue();
-        value = expandEnvironment(value, containerLogDir);
-        entry.setValue(value);
-      }
+      Map<String, String> environment = expandAllEnvironmentVars(
+          launchContext, containerLogDir);
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
@@ -237,6 +243,9 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
+          appIdStr);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -295,7 +304,9 @@ public class ContainerLaunch implements Callable<Integer> {
           .setFilecacheDirs(filecacheDirs)
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
-          .setContainerLogDirs(containerLogDirs).build());
+          .setContainerLogDirs(containerLogDirs)
+          .setUserFilecacheDirs(userFilecacheDirs)
+          .setApplicationLocalDirs(applicationLocalDirs).build());
     } catch (ConfigurationException e) {
       LOG.error("Failed to launch container due to configuration error.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -426,6 +437,31 @@ public class ContainerLaunch implements Callable<Integer> {
     return filecacheDirs;
   }
 
+  protected List<String> getUserFilecacheDirs(List<String> localDirs) {
+    List<String> userFilecacheDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+    for (String localDir : localDirs) {
+      String userFilecacheDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+          + Path.SEPARATOR + ContainerLocalizer.FILECACHE;
+      userFilecacheDirs.add(userFilecacheDir);
+    }
+    return userFilecacheDirs;
+  }
+
+  protected List<String> getApplicationLocalDirs(List<String> localDirs,
+      String appIdStr) {
+    List<String> applicationLocalDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+    for (String localDir : localDirs) {
+      String appLocalDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+          + Path.SEPARATOR + ContainerLocalizer.APPCACHE
+          + Path.SEPARATOR + appIdStr;
+      applicationLocalDirs.add(appLocalDir);
+    }
+    return applicationLocalDirs;
+  }
 
   protected Map<Path, List<String>> getLocalizedResources()
       throws YarnException {

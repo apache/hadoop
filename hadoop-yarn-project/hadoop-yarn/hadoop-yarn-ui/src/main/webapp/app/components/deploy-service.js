@@ -27,6 +27,7 @@ export default Ember.Component.extend({
   customServiceDef: '',
   serviceResp: null,
   isLoading: false,
+  userName: '',
 
   actions: {
     showSaveTemplateModal() {
@@ -36,11 +37,11 @@ export default Ember.Component.extend({
     deployService() {
       this.set('serviceResp', null);
       if (this.get('isStandardViewType')) {
-        this.sendAction("deployServiceDef", this.get('serviceDef'));
+        this.sendAction("deployServiceDef", this.get('serviceDef'), this.get('userName'));
       } else {
         try {
           var parsed = JSON.parse(this.get('customServiceDef'));
-          this.sendAction("deployServiceJson", parsed);
+          this.sendAction("deployServiceJson", parsed, this.get('userName'));
         } catch (err) {
           this.set('serviceResp', {type: 'error', message: 'Invalid JSON: ' + err.message});
           throw err;
@@ -148,14 +149,19 @@ export default Ember.Component.extend({
 
   isValidTemplateName: Ember.computed.notEmpty('savedTemplateName'),
 
+  isUserNameGiven: Ember.computed.empty('userName'),
+
   isValidServiceDef: Ember.computed('serviceDef.name', 'serviceDef.queue', 'serviceDef.serviceComponents.[]', function () {
     return this.get('serviceDef').isValidServiceDef();
   }),
 
   isValidCustomServiceDef: Ember.computed.notEmpty('customServiceDef'),
 
-  enableSaveOrDeployBtn: Ember.computed('isValidServiceDef', 'isValidCustomServiceDef', 'viewType', 'isLoading', function() {
+  enableSaveOrDeployBtn: Ember.computed('isValidServiceDef', 'isValidCustomServiceDef', 'viewType', 'isLoading', 'isUserNameGiven', function() {
     if (this.get('isLoading')) {
+      return false;
+    }
+    if (this.get('isUserNameGiven')) {
       return false;
     }
     if (this.get('isStandardViewType')) {

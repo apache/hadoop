@@ -971,24 +971,72 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @throws IOException
    */
   private ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
-                                FsVolumeReference volumeRef) throws
-      IOException {
+      FsVolumeReference volumeRef) throws IOException {
+    ReplicaInfo newReplicaInfo = copyReplicaToVolume(block, replicaInfo,
+        volumeRef);
+    finalizeNewReplica(newReplicaInfo, block);
+    removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
+    return newReplicaInfo;
+  }
 
+  /**
+   * Cleanup the replicaInfo object passed.
+   *
+   * @param bpid           - block pool id
+   * @param replicaInfo    - ReplicaInfo
+   */
+  private void cleanupReplica(String bpid, ReplicaInfo replicaInfo) {
+    if (replicaInfo.deleteBlockData() || !replicaInfo.blockDataExists()) {
+      FsVolumeImpl volume = (FsVolumeImpl) replicaInfo.getVolume();
+      volume.onBlockFileDeletion(bpid, replicaInfo.getBytesOnDisk());
+      if (replicaInfo.deleteMetadata() || !replicaInfo.metadataExists()) {
+        volume.onMetaFileDeletion(bpid, replicaInfo.getMetadataLength());
+      }
+    }
+  }
+
+  /**
+   * Create a new temporary replica of replicaInfo object in specified volume.
+   *
+   * @param block       - Extended Block
+   * @param replicaInfo - ReplicaInfo
+   * @param volumeRef   - Volume Ref - Closed by caller.
+   * @return newReplicaInfo new replica object created in specified volume.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  ReplicaInfo copyReplicaToVolume(ExtendedBlock block, ReplicaInfo replicaInfo,
+      FsVolumeReference volumeRef) throws IOException {
     FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
     // Copy files to temp dir first
     ReplicaInfo newReplicaInfo = targetVolume.moveBlockToTmpLocation(block,
         replicaInfo, smallBufferSize, conf);
-
-    // Finalize the copied files
-    newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
-    try (AutoCloseableLock lock = datasetLock.acquire()) {
-      // Increment numBlocks here as this block moved without knowing to BPS
-      FsVolumeImpl volume = (FsVolumeImpl) newReplicaInfo.getVolume();
-      volume.incrNumBlocks(block.getBlockPoolId());
-    }
-
-    removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
     return newReplicaInfo;
+  }
+
+  /**
+   * Finalizes newReplica by calling finalizeReplica internally.
+   *
+   * @param newReplicaInfo - ReplicaInfo
+   * @param block          - Extended Block
+   * @throws IOException
+   */
+  @VisibleForTesting
+  void finalizeNewReplica(ReplicaInfo newReplicaInfo,
+      ExtendedBlock block) throws IOException {
+    // Finalize the copied files
+    try {
+      String bpid = block.getBlockPoolId();
+      finalizeReplica(bpid, newReplicaInfo);
+      FsVolumeImpl volume = (FsVolumeImpl) newReplicaInfo.getVolume();
+      volume.incrNumBlocks(bpid);
+    } catch (IOException ioe) {
+      // Cleanup block data and metadata
+      // Decrement of dfsUsed and noOfBlocks for volume not required
+      newReplicaInfo.deleteBlockData();
+      newReplicaInfo.deleteMetadata();
+      throw ioe;
+    }
   }
 
   /**
@@ -1664,11 +1712,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private ReplicaInfo finalizeReplica(String bpid, ReplicaInfo replicaInfo)
       throws IOException {
     try (AutoCloseableLock lock = datasetLock.acquire()) {
+      // Compare generation stamp of old and new replica before finalizing
+      if (volumeMap.get(bpid, replicaInfo.getBlockId()).getGenerationStamp()
+          > replicaInfo.getGenerationStamp()) {
+        throw new IOException("Generation Stamp should be monotonically "
+            + "increased.");
+      }
+
       ReplicaInfo newReplicaInfo = null;
       if (replicaInfo.getState() == ReplicaState.RUR &&
           replicaInfo.getOriginalReplica().getState()
           == ReplicaState.FINALIZED) {
         newReplicaInfo = replicaInfo.getOriginalReplica();
+        ((FinalizedReplica)newReplicaInfo).loadLastPartialChunkChecksum();
       } else {
         FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
         if (v == null) {
@@ -1689,14 +1745,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       assert newReplicaInfo.getState() == ReplicaState.FINALIZED
           : "Replica should be finalized";
-      if(volumeMap.get(bpid, replicaInfo.getBlockId()).getGenerationStamp() <=
-          newReplicaInfo.getGenerationStamp()) {
-        volumeMap.add(bpid, newReplicaInfo);
-        return newReplicaInfo;
-      } else {
-         throw new IOException("Generation Stamp should be monotonically " +
-             "increased. That assumption is violated here.");
-      }
+      
+      volumeMap.add(bpid, newReplicaInfo);
+      return newReplicaInfo;
     }
   }
 
@@ -2946,6 +2997,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  /**
+   * Cleanup the old replica and notifies the NN about new replica.
+   *
+   * @param replicaInfo    - Old replica to be deleted
+   * @param newReplicaInfo - New replica object
+   * @param bpid           - block pool id
+   */
   private void removeOldReplica(ReplicaInfo replicaInfo,
       ReplicaInfo newReplicaInfo, final String bpid) {
     // Before deleting the files from old storage we must notify the
@@ -2964,13 +3022,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         newReplicaInfo.isOnTransientStorage());
 
     // Remove the old replicas
-    if (replicaInfo.deleteBlockData() || !replicaInfo.blockDataExists()) {
-      FsVolumeImpl volume = (FsVolumeImpl) replicaInfo.getVolume();
-      volume.onBlockFileDeletion(bpid, replicaInfo.getBytesOnDisk());
-      if (replicaInfo.deleteMetadata() || !replicaInfo.metadataExists()) {
-        volume.onMetaFileDeletion(bpid, replicaInfo.getMetadataLength());
-      }
-    }
+    cleanupReplica(bpid, replicaInfo);
 
     // If deletion failed then the directory scanner will cleanup the blocks
     // eventually.

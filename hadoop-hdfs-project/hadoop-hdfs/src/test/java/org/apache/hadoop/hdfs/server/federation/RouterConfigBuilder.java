@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.federation;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 
 /**
  * Constructs a router configuration with individual features enabled/disabled.
@@ -119,6 +121,10 @@ public class RouterConfigBuilder {
   }
 
   public RouterConfigBuilder stateStore() {
+    // reset the State Store driver implementation class for testing
+    conf.setClass(DFSConfigKeys.FEDERATION_STORE_DRIVER_CLASS,
+        FederationStateStoreTestUtils.getTestDriverClass(),
+        StateStoreDriver.class);
     return this.stateStore(true);
   }
 

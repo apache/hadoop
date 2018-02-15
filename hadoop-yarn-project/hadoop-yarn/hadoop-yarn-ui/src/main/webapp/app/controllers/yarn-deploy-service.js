@@ -36,13 +36,13 @@ export default Ember.Controller.extend({
   isLoading: false,
 
   actions: {
-    deployServiceDef(serviceDef) {
+    deployServiceDef(serviceDef, userName) {
       var defjson = serviceDef.getServiceJSON();
-      this.deployServiceApp(defjson);
+      this.deployServiceApp(defjson, userName);
     },
 
-    deployServiceJson(json) {
-      this.deployServiceApp(json);
+    deployServiceJson(json, userName) {
+      this.deployServiceApp(json, userName);
     }
   },
 
@@ -53,11 +53,11 @@ export default Ember.Controller.extend({
     }, 1000);
   },
 
-  deployServiceApp(requestJson) {
+  deployServiceApp(requestJson, userName) {
     var self = this;
     var adapter = this.store.adapterFor('yarn-servicedef');
     this.set('isLoading', true);
-    adapter.deployService(requestJson).then(function() {
+    adapter.deployService(requestJson, userName).then(function() {
       self.set('serviceResponse', {message: 'Service has been accepted successfully. Redirecting to services in a second.', type: 'success'});
       self.gotoServices();
     }, function(errmsg) {

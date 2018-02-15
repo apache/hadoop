@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.Arrays;
+import java.util.Base64;
 
 import com.google.common.base.Joiner;
 import org.apache.commons.cli.CommandLine;
@@ -87,6 +89,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -188,6 +191,8 @@ public class Client {
   // Whether to auto promote opportunistic containers
   private boolean autoPromoteContainers = false;
 
+  // Placement specification
+  private String placementSpec = "";
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
   private String log4jPropFile = "";	
@@ -222,6 +227,9 @@ public class Client {
   private String flowName = null;
   private String flowVersion = null;
   private long flowRunId = 0L;
+
+  // Docker client configuration
+  private String dockerClientConfig = null;
 
   // Command line options
   private Options opts;
@@ -366,6 +374,14 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("docker_client_config", true,
+        "The docker client configuration path. The scheme should be supplied"
+            + " (i.e. file:// or hdfs://)."
+            + " Only used when the Docker runtime is enabled and requested.");
+    opts.addOption("placement_spec", true,
+        "Placement specification. Please note, if this option is specified,"
+            + " The \"num_containers\" option will be ignored. All requested"
+            + " containers will be of type GUARANTEED" );
   }
 
   /**
@@ -419,6 +435,11 @@ public class Client {
       keepContainers = true;
     }
 
+    if (cliParser.hasOption("placement_spec")) {
+      placementSpec = cliParser.getOptionValue("placement_spec");
+      // Check if it is parsable
+      PlacementSpec.parse(this.placementSpec);
+    }
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
@@ -573,6 +594,9 @@ public class Client {
         throw new IllegalArgumentException(
             "Flow run is not a valid long value", e);
       }
+    }
+    if (cliParser.hasOption("docker_client_config")) {
+      dockerClientConfig = cliParser.getOptionValue("docker_client_config");
     }
     return true;
   }
@@ -834,6 +858,13 @@ public class Client {
       vargs.add("--container_resource_profile " + containerResourceProfile);
     }
     vargs.add("--num_containers " + String.valueOf(numContainers));
+    if (placementSpec != null && placementSpec.length() > 0) {
+      // Encode the spec to avoid passing special chars via shell arguments.
+      String encodedSpec = Base64.getEncoder()
+          .encodeToString(placementSpec.getBytes(StandardCharsets.UTF_8));
+      LOG.info("Encode placement spec: " + encodedSpec);
+      vargs.add("--placement_spec " + encodedSpec);
+    }
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
@@ -870,9 +901,10 @@ public class Client {
     // amContainer.setServiceData(serviceData);
 
     // Setup security tokens
+    Credentials rmCredentials = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       // Note: Credentials class is marked as LimitedPrivate for HDFS and MapReduce
-      Credentials credentials = new Credentials();
+      rmCredentials = new Credentials();
       String tokenRenewer = YarnClientUtils.getRmPrincipal(conf);
       if (tokenRenewer == null || tokenRenewer.length() == 0) {
         throw new IOException(
@@ -881,16 +913,32 @@ public class Client {
 
       // For now, only getting tokens for the default file-system.
       final Token<?> tokens[] =
-          fs.addDelegationTokens(tokenRenewer, credentials);
+          fs.addDelegationTokens(tokenRenewer, rmCredentials);
       if (tokens != null) {
         for (Token<?> token : tokens) {
           LOG.info("Got dt for " + fs.getUri() + "; " + token);
         }
       }
+    }
+
+    // Add the docker client config credentials if supplied.
+    Credentials dockerCredentials = null;
+    if (dockerClientConfig != null) {
+      dockerCredentials =
+          DockerClientConfigHandler.readCredentialsFromConfigFile(
+              new Path(dockerClientConfig), conf, appId.toString());
+    }
+
+    if (rmCredentials != null || dockerCredentials != null) {
       DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-      amContainer.setTokens(fsTokens);
+      if (rmCredentials != null) {
+        rmCredentials.writeTokenStorageToStream(dob);
+      }
+      if (dockerCredentials != null) {
+        dockerCredentials.writeTokenStorageToStream(dob);
+      }
+      ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      amContainer.setTokens(tokens);
     }
 
     appContext.setAMContainerSpec(amContainer);
