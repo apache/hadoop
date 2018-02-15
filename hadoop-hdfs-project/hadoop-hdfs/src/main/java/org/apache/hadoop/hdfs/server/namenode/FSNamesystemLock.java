@@ -145,6 +145,13 @@ class FSNamesystemLock {
     }
   }
 
+  public void readLockInterruptibly() throws InterruptedException {
+    coarseLock.readLock().lockInterruptibly();
+    if (coarseLock.getReadHoldCount() == 1) {
+      readLockHeldTimeStampNanos.set(timer.monotonicNowNanos());
+    }
+  }
+
   public void readUnlock() {
     readUnlock(OP_NAME_OTHER);
   }
