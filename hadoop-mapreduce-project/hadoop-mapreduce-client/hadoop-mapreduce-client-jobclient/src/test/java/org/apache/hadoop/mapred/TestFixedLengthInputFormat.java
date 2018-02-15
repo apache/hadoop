@@ -300,7 +300,7 @@ public class TestFixedLengthInputFormat {
       if (i > 0) {
         if (i == (MAX_TESTS-1)) {
           // Test a split size that is less than record len
-          numSplits = (int)(fileSize/Math.floor(recordLength/2));
+          numSplits = (int)(fileSize/ Math.max(1, Math.floor(recordLength/2)));
         } else {
           if (MAX_TESTS % i == 0) {
             // Let us create a split size that is forced to be 
