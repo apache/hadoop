@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 import java.io.DataInput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -365,34 +364,58 @@ public class DelegationTokenSecretManager
   @Override //AbstractDelegationTokenManager
   protected void logUpdateMasterKey(DelegationKey key)
       throws IOException {
-    synchronized (noInterruptsLock) {
+    try {
       // The edit logging code will fail catastrophically if it
       // is interrupted during a logSync, since the interrupt
       // closes the edit log files. Doing this inside the
-      // above lock and then checking interruption status
-      // prevents this bug.
-      if (Thread.interrupted()) {
-        throw new InterruptedIOException(
-            "Interrupted before updating master key");
+      // fsn lock will prevent being interrupted when stopping
+      // the secret manager.
+      namesystem.readLockInterruptibly();
+      try {
+        // this monitor isn't necessary if stopped while holding write lock
+        // but for safety, guard against a stop with read lock.
+        synchronized (noInterruptsLock) {
+          if (Thread.currentThread().isInterrupted()) {
+            return; // leave flag set so secret monitor exits.
+          }
+          namesystem.logUpdateMasterKey(key);
+        }
+      } finally {
+        namesystem.readUnlock();
       }
-      namesystem.logUpdateMasterKey(key);
+    } catch (InterruptedException ie) {
+      // AbstractDelegationTokenManager may crash if an exception is thrown.
+      // The interrupt flag will be detected when it attempts to sleep.
+      Thread.currentThread().interrupt();
     }
   }
   
   @Override //AbstractDelegationTokenManager
   protected void logExpireToken(final DelegationTokenIdentifier dtId)
       throws IOException {
-    synchronized (noInterruptsLock) {
+    try {
       // The edit logging code will fail catastrophically if it
       // is interrupted during a logSync, since the interrupt
       // closes the edit log files. Doing this inside the
-      // above lock and then checking interruption status
-      // prevents this bug.
-      if (Thread.interrupted()) {
-        throw new InterruptedIOException(
-            "Interrupted before expiring delegation token");
+      // fsn lock will prevent being interrupted when stopping
+      // the secret manager.
+      namesystem.readLockInterruptibly();
+      try {
+        // this monitor isn't necessary if stopped while holding write lock
+        // but for safety, guard against a stop with read lock.
+        synchronized (noInterruptsLock) {
+          if (Thread.currentThread().isInterrupted()) {
+            return; // leave flag set so secret monitor exits.
+          }
+          namesystem.logExpireDelegationToken(dtId);
+        }
+      } finally {
+        namesystem.readUnlock();
       }
-      namesystem.logExpireDelegationToken(dtId);
+    } catch (InterruptedException ie) {
+      // AbstractDelegationTokenManager may crash if an exception is thrown.
+      // The interrupt flag will be detected when it attempts to sleep.
+      Thread.currentThread().interrupt();
     }
   }
 

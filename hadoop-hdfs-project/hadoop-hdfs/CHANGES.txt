@@ -36,6 +36,9 @@ Release 2.7.6 - UNRELEASED
     due to the race between replication and delete of same file in a
     large cluster. Contributed by He Xiaoqiao.
 
+    HDFS-13112. Token expiration edits may cause log corruption or deadlock.
+    (daryn via kihwal)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
