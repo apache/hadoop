@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -32,7 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -44,14 +48,18 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.loadAWSProviderClasses;
  * {@code STSAssumeRoleSessionCredentialsProvider} from configuration
  * properties, including wiring up the inner authenticator, and,
  * unless overridden, creating a session name from the current user.
+ *
+ * Classname is used in configuration files; do not move.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     Closeable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AssumedRoleCredentialProvider.class);
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider";
+      = "org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider";
 
   static final String E_FORBIDDEN_PROVIDER =
       "AssumedRoleCredentialProvider cannot be in "
@@ -103,7 +111,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
         ASSUMED_ROLE_SESSION_DURATION_DEFAULT, TimeUnit.SECONDS);
     String policy = conf.getTrimmed(ASSUMED_ROLE_POLICY, "");
 
-    LOG.info("{}", this);
+    LOG.debug("{}", this);
     STSAssumeRoleSessionCredentialsProvider.Builder builder
         = new STSAssumeRoleSessionCredentialsProvider.Builder(arn, sessionName);
     builder.withRoleSessionDurationSeconds((int) duration);

@@ -208,7 +208,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param p probability of a throttling occurring: 0-1.0
    */
   protected void setThrottling(float p) {
-    inconsistentClient.setThrottleProbability(p);
+    if (inconsistentClient != null) {
+      inconsistentClient.setThrottleProbability(p);
+    }
   }
 
   /**
@@ -217,7 +219,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param limit limit to number of calls which fail
    */
   protected void setThrottling(float p, int limit) {
-    inconsistentClient.setThrottleProbability(p);
+    if (inconsistentClient != null) {
+      inconsistentClient.setThrottleProbability(p);
+    }
     setFailureLimit(limit);
   }
 
@@ -235,7 +239,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param limit limit to number of calls which fail
    */
   private void setFailureLimit(int limit) {
-    inconsistentClient.setFailureLimit(limit);
+    if (inconsistentClient != null) {
+      inconsistentClient.setFailureLimit(limit);
+    }
   }
 
   /**

@@ -26,6 +26,9 @@ to obtain the assumed role and refresh it regularly.
 By using per-filesystem configuration, it is possible to use different
 assumed roles for different buckets.
 
+*IAM Assumed Roles are unlikely to be supported by third-party systems
+supporting the S3 APIs.*
+
 ## Using IAM Assumed Roles
 
 ### Before You Begin
@@ -38,14 +41,13 @@ are, how to configure their policies, etc.
 * Have the AWS CLI installed, and test that it works there.
 * Give the role access to S3, and, if using S3Guard, to DynamoDB.
 
-
 Trying to learn how IAM Assumed Roles work by debugging stack traces from
 the S3A client is "suboptimal".
 
 ### <a name="how_it_works"></a> How the S3A connector support IAM Assumed Roles.
 
 To use assumed roles, the client must be configured to use the
-*Assumed Role Credential Provider*, `org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider`,
+*Assumed Role Credential Provider*, `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`,
 in the configuration option `fs.s3a.aws.credentials.provider`.
 
 This AWS Credential provider will read in the `fs.s3a.assumed.role` options needed to connect to the
@@ -54,7 +56,8 @@ first authenticating with the full credentials, then assuming the specific role
 specified. It will then refresh this login at the configured rate of
 `fs.s3a.assumed.role.session.duration`
 
-To authenticate with the STS service both for the initial credential retrieval
+To authenticate with the  [AWS STS service](https://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
+both for the initial credential retrieval
 and for background refreshes, a different credential provider must be
 created, one which uses long-lived credentials (secret keys, environment variables).
 Short lived credentials (e.g other session tokens, EC2 instance credentials) cannot be used.
@@ -76,6 +79,7 @@ the previously created ARN.
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider</value>
+  <value>org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider</value>
 </property>
 
 <property>
@@ -116,7 +120,7 @@ Here are the full set of configuration options.
   <value />
   <description>
     AWS ARN for the role to be assumed.
-    Requires the fs.s3a.aws.credentials.provider list to contain
+    Required if the fs.s3a.aws.credentials.provider contains
     org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider
   </description>
 </property>
@@ -127,7 +131,17 @@ Here are the full set of configuration options.
   <description>
     Session name for the assumed role, must be valid characters according to
     the AWS APIs.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
     If not set, one is generated from the current Hadoop/Kerberos username.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.assumed.role.policy</name>
+  <value/>
+  <description>
+    JSON policy to apply to the role.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
 
@@ -136,14 +150,8 @@ Here are the full set of configuration options.
   <value>30m</value>
   <description>
     Duration of assumed roles before a refresh is attempted.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.assumed.role.policy</name>
-  <value/>
-  <description>
-    Extra policy containing more restrictions to apply to the role.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+    Range: 15m to 1h
   </description>
 </property>
 
@@ -152,29 +160,165 @@ Here are the full set of configuration options.
   <value/>
   <description>
     AWS Simple Token Service Endpoint. If unset, uses the default endpoint.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.assumed.role.credentials.provider</name>
-  <value/>
+  <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
   <description>
-    Credential providers used to authenticate with the STS endpoint and retrieve
-    the role tokens.
+    List of credential providers to authenticate with the STS endpoint and
+    retrieve short-lived role credentials.
+    Only used if AssumedRoleCredentialProvider is the AWS credential provider.
     If unset, uses "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider".
   </description>
 </property>
 ```
+
+## <a name="polices"></a> Restricting S3A operations through AWS Policies
+
+The S3A client needs to be granted specific permissions in order
+to work with a bucket.
+Here is a non-normative list of the permissions which must be granted
+for FileSystem operations to work.
+
+*Disclaimer* The specific set of actions which the S3A connector needs
+will change over time.
+
+As more operations are added to the S3A connector, and as the
+means by which existing operations are implemented change, the
+AWS actions which are required by the client will change.
+
+These lists represent the minimum actions to which the client's principal
+must have in order to work with a bucket.
+
+
+### Read Access Permissions
+
+Permissions which must be granted when reading from a bucket:
+
+
+| Action | S3A operations |
+|--------|----------|
+| `s3:ListBucket` | `listStatus()`, `getFileStatus()` and elsewhere |
+| `s3:GetObject` | `getFileStatus()`, `open()` and elsewhere |
+| `s3:ListBucketMultipartUploads` |  Aborting/cleaning up S3A commit operations|
+
+
+The `s3:ListBucketMultipartUploads` is only needed when committing work
+via the [S3A committers](committers.html).
+However, it must be granted to the root path in order to safely clean up jobs.
+It is simplest to permit this in all buckets, even if it is only actually
+needed when writing data.
+
+
+### Write Access Permissions
+
+These permissions must *also* be granted for write access:
+
+
+| Action | S3A operations |
+|--------|----------|
+| `s3:PutObject` | `mkdir()`, `create()`, `rename()`, `delete()` |
+| `s3:DeleteObject` | `mkdir()`, `create()`, `rename()`, `delete()` |
+| `s3:AbortMultipartUpload` | S3A committer `abortJob()` and `cleanup()` operations |
+| `s3:ListMultipartUploadParts` | S3A committer `abortJob()` and `cleanup()` operations |
+
+
+### Mixed Permissions in a single S3 Bucket
+
+Mixing permissions down the "directory tree" is limited
+only to the extent of supporting writeable directories under
+read-only parent paths.
+
+*Disclaimer:* When a client lacks write access up the entire
+directory tree, there are no guarantees of consistent filesystem
+views or operations.
+
+Particular troublespots are "directory markers" and
+failures of non-atomic operations, particularly `rename()` and `delete()`.
+
+A directory marker such as `/users/` will not be deleted if the user `alice`
+creates a directory `/users/alice` *and* she only has access to `/users/alice`.
+
+When a path or directory is deleted, the parent directory may not exist afterwards.
+In the example above, if `alice` deletes `/users/alice` and there are no
+other entries under `/users/alice`, then the directory marker `/users/` cannot
+be created. The directory `/users` will not exist in listings,
+`getFileStatus("/users")` or similar.
+
+Rename will fail if it cannot delete the items it has just copied, that is
+`rename(read-only-source, writeable-dest)` will fail &mdash;but only after
+performing the COPY of the data.
+Even though the operation failed, for a single file copy, the destination
+file will exist.
+For a directory copy, only a partial copy of the source data may take place
+before the permission failure is raised.
+
+
+*S3Guard*: if [S3Guard](s3guard.html) is used to manage the directory listings,
+then after partial failures of rename/copy the DynamoDB tables can get out of sync.
+
+### Example: Read access to the base, R/W to the path underneath
+
+This example has the base bucket read only, and a directory underneath,
+`/users/alice/` granted full R/W access.
+
+```json
+{
+  "Version" : "2012-10-17",
+  "Statement" : [ {
+    "Sid" : "4",
+    "Effect" : "Allow",
+    "Action" : [
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:GetObject"
+      ],
+    "Resource" : "arn:aws:s3:::example-bucket/*"
+  }, {
+    "Sid" : "5",
+    "Effect" : "Allow",
+    "Action" : [
+      "s3:Get*",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:AbortMultipartUpload",
+      "s3:ListMultipartUploadParts" ],
+    "Resource" : [
+      "arn:aws:s3:::example-bucket/users/alice/*",
+      "arn:aws:s3:::example-bucket/users/alice",
+      "arn:aws:s3:::example-bucket/users/alice/"
+      ]
+  } ]
+}
+```
+
+Note how three resources are provided to represent the path `/users/alice`
+
+|  Path | Matches |
+|-------|----------|
+| `/users/alice` |  Any file `alice` created under `/users` |
+| `/users/alice/` |  The directory marker `alice/` created under `/users` |
+| `/users/alice/*` |  All files and directories under the path `/users/alice` |
+
+Note that the resource `arn:aws:s3:::example-bucket/users/alice*` cannot
+be used to refer to all of these paths, because it would also cover
+adjacent paths like `/users/alice2` and `/users/alicebob`.
+
 
 ## <a name="troubleshooting"></a> Troubleshooting Assumed Roles
 
 1. Make sure the role works and the user trying to enter it can do so from AWS
 the command line before trying to use the S3A client.
 1. Try to access the S3 bucket with reads and writes from the AWS CLI.
-1. Then, with the hadoop settings updated, try to read data from the `hadoop fs` CLI:
+1. With the Hadoop configuration set too use the role,
+ try to read data from the `hadoop fs` CLI:
 `hadoop fs -ls -p s3a://bucket/`
-1. Then, with the hadoop CLI, try to create a new directory with a request such as
+1. With the hadoop CLI, try to create a new directory with a request such as
 `hadoop fs -mkdirs -p s3a://bucket/path/p1/`
+
 
 ### <a name="no_role"></a>IOException: "Unset property fs.s3a.assumed.role.arn"
 
@@ -182,7 +326,7 @@ The Assumed Role Credential Provider is enabled, but `fs.s3a.assumed.role.arn` i
 
 ```
 java.io.IOException: Unset property fs.s3a.assumed.role.arn
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:76)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:76)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -201,7 +345,7 @@ This can arise if the role ARN set in `fs.s3a.assumed.role.arn` is invalid
 or one to which the caller has no access.
 
 ```
-java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider
+java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
  on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
   Not authorized to perform sts:AssumeRole (Service: AWSSecurityTokenService; Status Code: 403;
    Error Code: AccessDenied; Request ID: aad4e59a-f4b0-11e7-8c78-f36aaa9457f6):AccessDenied
@@ -217,12 +361,12 @@ java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.Assu
 
 ### <a name="root_account"></a> "Roles may not be assumed by root accounts"
 
-You can't use assume a role with the root acount of an AWS account;
+You can't assume a role with the root account of an AWS account;
 you need to create a new user and give it the permission to change into
 the role.
 
 ```
-java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider
+java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
  on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
     Roles may not be assumed by root accounts. (Service: AWSSecurityTokenService; Status Code: 403; Error Code: AccessDenied;
     Request ID: e86dfd8f-e758-11e7-88e7-ad127c04b5e2):
@@ -257,7 +401,7 @@ The value of `fs.s3a.assumed.role.session.duration` is out of range.
 ```
 java.lang.IllegalArgumentException: Assume Role session duration should be in the range of 15min - 1Hr
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider$Builder.withRoleSessionDurationSeconds(STSAssumeRoleSessionCredentialsProvider.java:437)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:86)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:86)
 ```
 
 
@@ -268,7 +412,7 @@ The policy set in `fs.s3a.assumed.role.policy` is not valid according to the
 AWS specification of Role Policies.
 
 ```
-rg.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider on :
+rg.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
  com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException:
   The policy is not in the valid JSON format. (Service: AWSSecurityTokenService; Status Code: 400;
    Error Code: MalformedPolicyDocument; Request ID: baf8cb62-f552-11e7-9768-9df3b384e40c):
@@ -308,8 +452,8 @@ Caused by: com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentExc
   at com.amazonaws.auth.RefreshableTask.blockingRefresh(RefreshableTask.java:212)
   at com.amazonaws.auth.RefreshableTask.getValue(RefreshableTask.java:153)
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider.getCredentials(STSAssumeRoleSessionCredentialsProvider.java:299)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -324,7 +468,7 @@ The policy set in `fs.s3a.assumed.role.policy` is not valid JSON.
 
 ```
 org.apache.hadoop.fs.s3a.AWSBadRequestException:
-Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider on :
+Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
  com.amazonaws.services.securitytoken.model.MalformedPolicyDocumentException:
   Syntax errors in policy. (Service: AWSSecurityTokenService;
   Status Code: 400; Error Code: MalformedPolicyDocument;
@@ -363,8 +507,8 @@ Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider on :
   at com.amazonaws.auth.RefreshableTask.blockingRefresh(RefreshableTask.java:212)
   at com.amazonaws.auth.RefreshableTask.getValue(RefreshableTask.java:153)
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider.getCredentials(STSAssumeRoleSessionCredentialsProvider.java:299)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -380,7 +524,7 @@ You can't use the Assumed Role Credential Provider as the provider in
 
 ```
 java.io.IOException: AssumedRoleCredentialProvider cannot be in fs.s3a.assumed.role.credentials.provider
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:86)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:86)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -401,7 +545,7 @@ There's an space or other typo in the `fs.s3a.access.key` or `fs.s3a.secret.key`
 inner authentication which is breaking signature creation.
 
 ```
- org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider
+ org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
   on : com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
    'valid/20180109/us-east-1/sts/aws4_request' not a valid key=value pair (missing equal-sign) in Authorization header:
     'AWS4-HMAC-SHA256 Credential=not valid/20180109/us-east-1/sts/aws4_request,
@@ -447,8 +591,8 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
   at com.amazonaws.auth.RefreshableTask.blockingRefresh(RefreshableTask.java:212)
   at com.amazonaws.auth.RefreshableTask.getValue(RefreshableTask.java:153)
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider.getCredentials(STSAssumeRoleSessionCredentialsProvider.java:299)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -463,7 +607,7 @@ The credentials used to authenticate with the AWS Simple Token Service are inval
 
 ```
 [ERROR] Failures:
-[ERROR] java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider on :
+[ERROR] java.nio.file.AccessDeniedException: : Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on :
  com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
   The security token included in the request is invalid.
   (Service: AWSSecurityTokenService; Status Code: 403; Error Code: InvalidClientTokenId;
@@ -501,8 +645,8 @@ The security token included in the request is invalid.
   at com.amazonaws.auth.RefreshableTask.blockingRefresh(RefreshableTask.java:212)
   at com.amazonaws.auth.RefreshableTask.getValue(RefreshableTask.java:153)
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider.getCredentials(STSAssumeRoleSessionCredentialsProvider.java:299)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:127)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:116)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -521,7 +665,7 @@ match these constraints.
 If set explicitly, it must be valid.
 
 ```
-org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider on
+org.apache.hadoop.fs.s3a.AWSBadRequestException: Instantiate org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider on
     com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException:
     1 validation error detected: Value 'Session Names cannot Hava Spaces!' at 'roleSessionName'
     failed to satisfy constraint: Member must satisfy regular expression pattern: [\w+=,.@-]*
@@ -584,8 +728,8 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
   at com.amazonaws.auth.RefreshableTask.blockingRefresh(RefreshableTask.java:212)
   at com.amazonaws.auth.RefreshableTask.getValue(RefreshableTask.java:153)
   at com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider.getCredentials(STSAssumeRoleSessionCredentialsProvider.java:299)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:135)
-  at org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:124)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.getCredentials(AssumedRoleCredentialProvider.java:135)
+  at org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.<init>(AssumedRoleCredentialProvider.java:124)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
   at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
   at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
@@ -593,3 +737,61 @@ Caused by: com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceExc
   at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:583)
   ... 26 more
 ```
+
+
+### <a name="access_denied"></a> `java.nio.file.AccessDeniedException` within a FileSystem API call
+
+If an operation fails with an `AccessDeniedException`, then the role does not have
+the permission for the S3 Operation invoked during the call
+
+```
+java.nio.file.AccessDeniedException: s3a://bucket/readonlyDir: rename(s3a://bucket/readonlyDir, s3a://bucket/renameDest)
+ on s3a://bucket/readonlyDir:
+  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
+  (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 2805F2ABF5246BB1;
+   S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=),
+   S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=:AccessDenied
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:216)
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:143)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.rename(S3AFileSystem.java:853)
+ ...
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
+ (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied; Request ID: 2805F2ABF5246BB1;
+  S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=),
+  S3 Extended Request ID: iEXDVzjIyRbnkAc40MS8Sjv+uUQNvERRcqLsJsy9B0oyrjHLdkRKwJ/phFfA17Kjn483KSlyJNw=
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1638)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1303)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1055)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:743)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:717)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:699)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:667)
+  at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:649)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:513)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4229)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4176)
+  at com.amazonaws.services.s3.AmazonS3Client.deleteObject(AmazonS3Client.java:2066)
+  at com.amazonaws.services.s3.AmazonS3Client.deleteObject(AmazonS3Client.java:2052)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$deleteObject$7(S3AFileSystem.java:1338)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:314)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:280)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.deleteObject(S3AFileSystem.java:1334)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.removeKeys(S3AFileSystem.java:1657)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.innerRename(S3AFileSystem.java:1046)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.rename(S3AFileSystem.java:851)
+```
+
+This is the policy restriction behaving as intended: the caller is trying to
+perform an action which is forbidden.
+
+1. If a policy has been set in `fs.s3a.assumed.role.policy` then it must declare *all*
+permissions which the caller is allowed to perform. The existing role policies
+act as an outer constraint on what the caller can perform, but are not inherited.
+
+1. If the policy for a bucket is set up with complex rules on different paths,
+check the path for the operation.
+
+1. The policy may have omitted one or more actions which are required.
+Make sure that all the read and write permissions are allowed for any bucket/path
+to which data is being written to, and read permissions for all
+buckets read from.

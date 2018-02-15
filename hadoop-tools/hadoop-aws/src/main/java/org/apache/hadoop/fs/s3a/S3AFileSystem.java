@@ -1399,9 +1399,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     } catch (MultiObjectDeleteException e) {
       // one or more of the operations failed.
       List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
-      LOG.error("Partial failure of delete, {} errors", errors.size(), e);
+      LOG.debug("Partial failure of delete, {} errors", errors.size(), e);
       for (MultiObjectDeleteException.DeleteError error : errors) {
-        LOG.error("{}: \"{}\" - {}",
+        LOG.debug("{}: \"{}\" - {}",
             error.getKey(), error.getCode(), error.getMessage());
       }
       throw e;
@@ -1649,7 +1649,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       blockRootDelete(keyVersion.getKey());
     }
     if (enableMultiObjectsDelete) {
-      deleteObjects(new DeleteObjectsRequest(bucket).withKeys(keysToDelete));
+      deleteObjects(new DeleteObjectsRequest(bucket)
+          .withKeys(keysToDelete)
+          .withQuiet(true));
     } else {
       for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
         deleteObject(keyVersion.getKey());
@@ -1684,7 +1686,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       entryPoint(INVOCATION_DELETE);
       boolean outcome = innerDelete(innerGetFileStatus(f, true), recursive);
       if (outcome) {
-        maybeCreateFakeParentDirectory(f);
+        try {
+          maybeCreateFakeParentDirectory(f);
+        } catch (AccessDeniedException e) {
+          LOG.warn("Cannot create directory marker at {}: {}",
+              f.getParent(), e.toString());
+          LOG.debug("Failed to create fake dir above {}", f, e);
+        }
       }
       return outcome;
     } catch (FileNotFoundException e) {
@@ -1827,6 +1835,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException IO problem
    * @throws AmazonClientException untranslated AWS client problem
    */
+  @Retries.RetryTranslated
   void maybeCreateFakeParentDirectory(Path path)
       throws IOException, AmazonClientException {
     Path parent = path.getParent();

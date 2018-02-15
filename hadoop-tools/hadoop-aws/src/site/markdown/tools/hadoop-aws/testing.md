@@ -1043,24 +1043,25 @@ If this role is not set, the tests which require it will be skipped.
 
 To run the tests in `ITestAssumeRole`, you need:
 
-1. A role in your AWS account with the relevant access rights to
-the S3 buckets used in the tests, and ideally DynamoDB, for S3Guard.
+1. A role in your AWS account will full read and write access rights to
+the S3 bucket used in the tests, and ideally DynamoDB, for S3Guard.
 If your bucket is set up by default to use S3Guard, the role must have access
 to that service.
 
-1.  Your IAM User  to have the permissions to adopt that role.
+1.  Your IAM User to have the permissions to adopt that role.
 
 1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
 
 ```xml
 <property>
   <name>fs.s3a.assumed.role.arn</name>
-  <value>arn:aws:kms:eu-west-1:00000000000:key/0000000-16c9-4832-a1a9-c8bbef25ec8b</value>
+  <value>arn:aws:iam::9878543210123:role/role-s3-restricted</value>
 </property>
 ```
 
-The tests don't do much other than verify that basic file IO works with the role,
-and trigger various failures.
+The tests assume the role with different subsets of permissions and verify
+that the S3A client (mostly) works when the caller has only write access
+to part of the directory tree.
 
 You can also run the entire test suite in an assumed role, a more
 thorough test, by switching to the credentials provider.
@@ -1068,7 +1069,7 @@ thorough test, by switching to the credentials provider.
 ```xml
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider</value>
+  <value>org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider</value>
 </property>
 ```
 

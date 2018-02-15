@@ -977,20 +977,21 @@
 </property>
 
 <property>
-  <name>fs.s3a.assumed.role.session.duration</name>
-  <value>30m</value>
+  <name>fs.s3a.assumed.role.policy</name>
+  <value/>
   <description>
-    Duration of assumed roles before a refresh is attempted.
+    JSON policy to apply to the role.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
   </description>
 </property>
 
 <property>
-  <name>fs.s3a.assumed.role.policy</name>
-  <value/>
+  <name>fs.s3a.assumed.role.session.duration</name>
+  <value>30m</value>
   <description>
-    JSON policy containing more restrictions to apply to the role.
+    Duration of assumed roles before a refresh is attempted.
     Only used if AssumedRoleCredentialProvider is the AWS credential provider.
+    Range: 15m to 1h
   </description>
 </property>
 
