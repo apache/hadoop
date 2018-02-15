@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.hadoop.ozone.tools.Corona;
+import org.apache.hadoop.ozone.tools.Freon;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -35,7 +35,7 @@ public class OzoneTestDriver {
   public OzoneTestDriver(ProgramDriver pgd) {
     this.pgd = pgd;
     try {
-      pgd.addClass("corona", Corona.class,
+      pgd.addClass("freon", Freon.class,
           "Populates ozone with data.");
     } catch(Throwable e) {
       e.printStackTrace();

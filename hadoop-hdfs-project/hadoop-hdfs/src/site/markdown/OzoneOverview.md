@@ -22,11 +22,11 @@ keys.  The following is a high-level overview of the core components of Ozone.
 The main elements of Ozone are :
 
 ### Clients
-Ozone ships with a set of ready-made clients. They are  Ozone CLI and Corona. 
+Ozone ships with a set of ready-made clients. They are  Ozone CLI and Freon. 
 
     * [Ozone CLI](./OzoneCommandShell.html) is the command line interface like 'hdfs' command. 
 
-    * Corona is a  load generation tool for Ozone. 
+    * Freon is a  load generation tool for Ozone. 
 
 ### REST Handler
 Ozone provides both an RPC (Remote Procedure Call) as well as a  REST

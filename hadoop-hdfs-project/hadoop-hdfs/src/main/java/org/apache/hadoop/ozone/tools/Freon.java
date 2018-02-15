@@ -62,7 +62,7 @@ import java.util.function.Supplier;
 import static java.lang.Math.min;
 
 /**
- * Corona - A tool to populate ozone with data for testing.<br>
+ * Freon - A tool to populate ozone with data for testing.<br>
  * This is not a map-reduce program and this is not for benchmarking
  * Ozone write throughput.<br>
  * It supports both online and offline modes. Default mode is offline,
@@ -92,9 +92,9 @@ import static java.lang.Math.min;
  * can be used to override</li>
  * </ul>
  */
-public final class Corona extends Configured implements Tool {
+public final class Freon extends Configured implements Tool {
 
-  enum CoronaOps {
+  enum FreonOps {
     VOLUME_CREATE,
     BUCKET_CREATE,
     KEY_CREATE,
@@ -127,7 +127,7 @@ public final class Corona extends Configured implements Tool {
   private static final int QUANTILES = 10;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(Corona.class);
+      LoggerFactory.getLogger(Freon.class);
 
   private boolean printUsage = false;
   private boolean completed = false;
@@ -176,7 +176,7 @@ public final class Corona extends Configured implements Tool {
   private ArrayList<Histogram> histograms = new ArrayList<>();
 
   @VisibleForTesting
-  Corona(Configuration conf) throws IOException {
+  Freon(Configuration conf) throws IOException {
     startTime = System.nanoTime();
     jobStartTime = System.currentTimeMillis();
     volumeCreationTime = new AtomicLong();
@@ -189,7 +189,7 @@ public final class Corona extends Configured implements Tool {
     numberOfKeysAdded = new AtomicLong();
     ozoneClient = OzoneClientFactory.getClient(conf);
     objectStore = ozoneClient.getObjectStore();
-    for (CoronaOps ops : CoronaOps.values()) {
+    for (FreonOps ops : FreonOps.values()) {
       histograms.add(ops.ordinal(), new Histogram(new UniformReservoir()));
     }
   }
@@ -199,7 +199,7 @@ public final class Corona extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = new OzoneConfiguration();
-    int res = ToolRunner.run(conf, new Corona(conf), args);
+    int res = ToolRunner.run(conf, new Freon(conf), args);
     System.exit(res);
   }
 
@@ -271,7 +271,7 @@ public final class Corona extends Configured implements Tool {
     OptionBuilder.withArgName("online | offline");
     OptionBuilder.hasArg();
     OptionBuilder.withDescription("specifies the mode of " +
-        "Corona run.");
+        "Freon run.");
     Option optMode = OptionBuilder.create(MODE);
 
     OptionBuilder.withArgName("source url");
@@ -400,7 +400,7 @@ public final class Corona extends Configured implements Tool {
     System.out.println("-jsonDir                        "
         + "directory where json is created.");
     System.out.println("-mode [online | offline]        "
-        + "specifies the mode in which Corona should run.");
+        + "specifies the mode in which Freon should run.");
     System.out.println("-source <url>                   "
         + "specifies the URL of s3 commoncrawl warc file to " +
         "be used when the mode is online.");
@@ -446,7 +446,7 @@ public final class Corona extends Configured implements Tool {
   }
 
   /**
-   * Prints stats of {@link Corona} run to the PrintStream.
+   * Prints stats of {@link Freon} run to the PrintStream.
    *
    * @param out PrintStream
    */
@@ -512,10 +512,10 @@ public final class Corona extends Configured implements Tool {
     if (jsonDir != null) {
 
       String[][] quantileTime =
-          new String[CoronaOps.values().length][QUANTILES + 1];
-      String[] deviations = new String[CoronaOps.values().length];
-      String[] means = new String[CoronaOps.values().length];
-      for (CoronaOps ops : CoronaOps.values()) {
+          new String[FreonOps.values().length][QUANTILES + 1];
+      String[] deviations = new String[FreonOps.values().length];
+      String[] means = new String[FreonOps.values().length];
+      for (FreonOps ops : FreonOps.values()) {
         Snapshot snapshot = histograms.get(ops.ordinal()).getSnapshot();
         for (int i = 0; i <= QUANTILES; i++) {
           quantileTime[ops.ordinal()][i] = DurationFormatUtils.formatDuration(
@@ -531,26 +531,26 @@ public final class Corona extends Configured implements Tool {
             DURATION_FORMAT);
       }
 
-      CoronaJobInfo jobInfo = new CoronaJobInfo().setExecTime(execTime)
+      FreonJobInfo jobInfo = new FreonJobInfo().setExecTime(execTime)
           .setGitBaseRevision(VersionInfo.getRevision())
-          .setMeanVolumeCreateTime(means[CoronaOps.VOLUME_CREATE.ordinal()])
+          .setMeanVolumeCreateTime(means[FreonOps.VOLUME_CREATE.ordinal()])
           .setDeviationVolumeCreateTime(
-              deviations[CoronaOps.VOLUME_CREATE.ordinal()])
+              deviations[FreonOps.VOLUME_CREATE.ordinal()])
           .setTenQuantileVolumeCreateTime(
-              quantileTime[CoronaOps.VOLUME_CREATE.ordinal()])
-          .setMeanBucketCreateTime(means[CoronaOps.BUCKET_CREATE.ordinal()])
+              quantileTime[FreonOps.VOLUME_CREATE.ordinal()])
+          .setMeanBucketCreateTime(means[FreonOps.BUCKET_CREATE.ordinal()])
           .setDeviationBucketCreateTime(
-              deviations[CoronaOps.BUCKET_CREATE.ordinal()])
+              deviations[FreonOps.BUCKET_CREATE.ordinal()])
           .setTenQuantileBucketCreateTime(
-              quantileTime[CoronaOps.BUCKET_CREATE.ordinal()])
-          .setMeanKeyCreateTime(means[CoronaOps.KEY_CREATE.ordinal()])
-          .setDeviationKeyCreateTime(deviations[CoronaOps.KEY_CREATE.ordinal()])
+              quantileTime[FreonOps.BUCKET_CREATE.ordinal()])
+          .setMeanKeyCreateTime(means[FreonOps.KEY_CREATE.ordinal()])
+          .setDeviationKeyCreateTime(deviations[FreonOps.KEY_CREATE.ordinal()])
           .setTenQuantileKeyCreateTime(
-              quantileTime[CoronaOps.KEY_CREATE.ordinal()])
-          .setMeanKeyWriteTime(means[CoronaOps.KEY_WRITE.ordinal()])
-          .setDeviationKeyWriteTime(deviations[CoronaOps.KEY_WRITE.ordinal()])
+              quantileTime[FreonOps.KEY_CREATE.ordinal()])
+          .setMeanKeyWriteTime(means[FreonOps.KEY_WRITE.ordinal()])
+          .setDeviationKeyWriteTime(deviations[FreonOps.KEY_WRITE.ordinal()])
           .setTenQuantileKeyWriteTime(
-              quantileTime[CoronaOps.KEY_WRITE.ordinal()]);
+              quantileTime[FreonOps.KEY_WRITE.ordinal()]);
       String jsonName =
           new SimpleDateFormat("yyyyMMddHHmmss").format(Time.now()) + ".json";
       String jsonPath = jsonDir + "/" + jsonName;
@@ -704,7 +704,7 @@ public final class Corona extends Configured implements Tool {
         objectStore.createVolume(volumeName);
         long volumeCreationDuration = System.nanoTime() - start;
         volumeCreationTime.getAndAdd(volumeCreationDuration);
-        histograms.get(CoronaOps.VOLUME_CREATE.ordinal())
+        histograms.get(FreonOps.VOLUME_CREATE.ordinal())
             .update(volumeCreationDuration);
         numberOfVolumesCreated.getAndIncrement();
         volume = objectStore.getVolume(volumeName);
@@ -724,7 +724,7 @@ public final class Corona extends Configured implements Tool {
           start = System.nanoTime();
           volume.createBucket(bucketName);
           long bucketCreationDuration = System.nanoTime() - start;
-          histograms.get(CoronaOps.BUCKET_CREATE.ordinal())
+          histograms.get(FreonOps.BUCKET_CREATE.ordinal())
               .update(bucketCreationDuration);
           bucketCreationTime.getAndAdd(bucketCreationDuration);
           numberOfBucketsCreated.getAndIncrement();
@@ -741,7 +741,7 @@ public final class Corona extends Configured implements Tool {
               OzoneOutputStream os =
                   bucket.createKey(key, keySize, type, factor);
               long keyCreationDuration = System.nanoTime() - keyCreateStart;
-              histograms.get(CoronaOps.KEY_CREATE.ordinal())
+              histograms.get(FreonOps.KEY_CREATE.ordinal())
                   .update(keyCreationDuration);
               keyCreationTime.getAndAdd(keyCreationDuration);
               long keyWriteStart = System.nanoTime();
@@ -750,7 +750,7 @@ public final class Corona extends Configured implements Tool {
               os.close();
               long keyWriteDuration = System.nanoTime() - keyWriteStart;
               threadKeyWriteTime += keyWriteDuration;
-              histograms.get(CoronaOps.KEY_WRITE.ordinal())
+              histograms.get(FreonOps.KEY_WRITE.ordinal())
                   .update(keyWriteDuration);
               totalBytesWritten.getAndAdd(keySize);
               numberOfKeysAdded.getAndIncrement();
@@ -780,7 +780,7 @@ public final class Corona extends Configured implements Tool {
 
   }
 
-  private final class CoronaJobInfo {
+  private final class FreonJobInfo {
 
     private String status;
     private String gitBaseRevision;
@@ -815,17 +815,17 @@ public final class Corona extends Configured implements Tool {
     private String deviationKeyWriteTime;
     private String[] tenQuantileKeyWriteTime;
 
-    private CoronaJobInfo() {
+    private FreonJobInfo() {
       this.status = exception ? "Failed" : "Success";
-      this.numOfVolumes = Corona.this.numOfVolumes;
-      this.numOfBuckets = Corona.this.numOfBuckets;
-      this.numOfKeys = Corona.this.numOfKeys;
-      this.numOfThreads = Corona.this.numOfThreads;
-      this.keySize = Corona.this.keySize;
-      this.mode = Corona.this.mode;
-      this.jobStartTime = Time.formatTime(Corona.this.jobStartTime);
-      this.replicationFactor = Corona.this.factor.name();
-      this.replicationType = Corona.this.type.name();
+      this.numOfVolumes = Freon.this.numOfVolumes;
+      this.numOfBuckets = Freon.this.numOfBuckets;
+      this.numOfKeys = Freon.this.numOfKeys;
+      this.numOfThreads = Freon.this.numOfThreads;
+      this.keySize = Freon.this.keySize;
+      this.mode = Freon.this.mode;
+      this.jobStartTime = Time.formatTime(Freon.this.jobStartTime);
+      this.replicationFactor = Freon.this.factor.name();
+      this.replicationType = Freon.this.type.name();
 
       long totalBytes =
           Long.parseLong(numOfVolumes) * Long.parseLong(numOfBuckets) * Long
@@ -833,7 +833,7 @@ public final class Corona extends Configured implements Tool {
       this.dataWritten = getInStorageUnits((double) totalBytes);
       this.totalThroughputPerSecond = getInStorageUnits(
           (totalBytes * 1.0) / TimeUnit.NANOSECONDS
-              .toSeconds(Corona.this.keyWriteTime.get() / threadPoolSize));
+              .toSeconds(Freon.this.keyWriteTime.get() / threadPoolSize));
     }
 
     private String getInStorageUnits(Double value) {
@@ -858,81 +858,81 @@ public final class Corona extends Configured implements Tool {
       return size + " " + unit;
     }
 
-    public CoronaJobInfo setGitBaseRevision(String gitBaseRevisionVal) {
+    public FreonJobInfo setGitBaseRevision(String gitBaseRevisionVal) {
       gitBaseRevision = gitBaseRevisionVal;
       return this;
     }
 
-    public CoronaJobInfo setExecTime(String execTimeVal) {
+    public FreonJobInfo setExecTime(String execTimeVal) {
       execTime = execTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setMeanKeyWriteTime(String deviationKeyWriteTimeVal) {
+    public FreonJobInfo setMeanKeyWriteTime(String deviationKeyWriteTimeVal) {
       this.meanKeyWriteTime = deviationKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setDeviationKeyWriteTime(
+    public FreonJobInfo setDeviationKeyWriteTime(
         String deviationKeyWriteTimeVal) {
       this.deviationKeyWriteTime = deviationKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setTenQuantileKeyWriteTime(
+    public FreonJobInfo setTenQuantileKeyWriteTime(
         String[] tenQuantileKeyWriteTimeVal) {
       this.tenQuantileKeyWriteTime = tenQuantileKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setMeanKeyCreateTime(String deviationKeyWriteTimeVal) {
+    public FreonJobInfo setMeanKeyCreateTime(String deviationKeyWriteTimeVal) {
       this.meanKeyCreateTime = deviationKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setDeviationKeyCreateTime(
+    public FreonJobInfo setDeviationKeyCreateTime(
         String deviationKeyCreateTimeVal) {
       this.deviationKeyCreateTime = deviationKeyCreateTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setTenQuantileKeyCreateTime(
+    public FreonJobInfo setTenQuantileKeyCreateTime(
         String[] tenQuantileKeyCreateTimeVal) {
       this.tenQuantileKeyCreateTime = tenQuantileKeyCreateTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setMeanBucketCreateTime(
+    public FreonJobInfo setMeanBucketCreateTime(
         String deviationKeyWriteTimeVal) {
       this.meanBucketCreateTime = deviationKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setDeviationBucketCreateTime(
+    public FreonJobInfo setDeviationBucketCreateTime(
         String deviationBucketCreateTimeVal) {
       this.deviationBucketCreateTime = deviationBucketCreateTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setTenQuantileBucketCreateTime(
+    public FreonJobInfo setTenQuantileBucketCreateTime(
         String[] tenQuantileBucketCreateTimeVal) {
       this.tenQuantileBucketCreateTime = tenQuantileBucketCreateTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setMeanVolumeCreateTime(
+    public FreonJobInfo setMeanVolumeCreateTime(
         String deviationKeyWriteTimeVal) {
       this.meanVolumeCreateTime = deviationKeyWriteTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setDeviationVolumeCreateTime(
+    public FreonJobInfo setDeviationVolumeCreateTime(
         String deviationVolumeCreateTimeVal) {
       this.deviationVolumeCreateTime = deviationVolumeCreateTimeVal;
       return this;
     }
 
-    public CoronaJobInfo setTenQuantileVolumeCreateTime(
+    public FreonJobInfo setTenQuantileVolumeCreateTime(
         String[] tenQuantileVolumeCreateTimeVal) {
       this.tenQuantileVolumeCreateTime = tenQuantileVolumeCreateTimeVal;
       return this;
