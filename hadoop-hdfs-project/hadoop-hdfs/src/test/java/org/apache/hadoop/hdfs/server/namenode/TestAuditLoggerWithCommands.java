@@ -53,6 +53,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.mockito.Mockito;
+
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -618,7 +620,7 @@ public class TestAuditLoggerWithCommands {
     final FSDirectory dir = cluster.getNamesystem().getFSDirectory();
     final FSDirectory mockedDir = Mockito.spy(dir);
     AccessControlException ex = new AccessControlException();
-    doThrow(ex).when(mockedDir).getPermissionChecker();
+    doThrow(ex).when(mockedDir).checkTraverse(any(), any(), any());
     cluster.getNamesystem().setFSDirectory(mockedDir);
     String aceGetAclStatus =
         ".*allowed=false.*ugi=theDoctor.*cmd=getAclStatus.*";

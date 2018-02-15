@@ -75,10 +75,13 @@ public class NameNodeAdapter {
       boolean resolveLink, boolean needLocation, boolean needBlockToken)
       throws AccessControlException, UnresolvedLinkException, StandbyException,
       IOException {
+    final FSPermissionChecker pc =
+        namenode.getNamesystem().getPermissionChecker();
     namenode.getNamesystem().readLock();
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
-          .getFSDirectory(), src, resolveLink, needLocation, needBlockToken);
+          .getFSDirectory(), pc, src, resolveLink, needLocation,
+          needBlockToken);
     } finally {
       namenode.getNamesystem().readUnlock();
     }
