@@ -137,8 +137,7 @@ class FSDirXAttrOp {
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
     if (fsd.isPermissionEnabled()) {
-      /* To access xattr names, you need EXECUTE in the owning directory. */
-      fsd.checkParentAccess(pc, iip, FsAction.EXECUTE);
+      fsd.checkPathAccess(pc, iip, FsAction.READ);
     }
     final List<XAttr> all = FSDirXAttrOp.getXAttrs(fsd, iip);
     return XAttrPermissionFilter.
