@@ -32,6 +32,7 @@ This support comes via the JAR file `azure-datalake-store.jar`.
 * Tested for scale.
 * API `setOwner()`, `setAcl`, `removeAclEntries()`, `modifyAclEntries()` accepts UPN or OID
   (Object ID) as user and group names.
+* Supports per-account configuration.
 
 ## Limitations
 
@@ -324,6 +325,42 @@ Add the following properties to `core-site.xml`
   </description>
 </property>
 ```
+## Configurations for different ADL accounts
+Different ADL accounts can be accessed with different ADL client configurations.
+This also allows for different login details.
+
+1. All `fs.adl` options can be set on a per account basis.
+1. The account specific option is set by replacing the `fs.adl.` prefix on an option
+with `fs.adl.account.ACCOUNTNAME.`, where `ACCOUNTNAME` is the name of the account.
+1. When connecting to an account, all options explicitly set will override
+the base `fs.adl.` values.
+
+As an example, a configuration could have a base configuration to use the public account
+`adl://<some-public-account>.azuredatalakestore.net/` and an account-specific configuration
+to use some private account `adl://myprivateaccount.azuredatalakestore.net/`
+
+```xml
+<property>
+  <name>fs.adl.oauth2.client.id</name>
+  <value>CLIENTID</value>
+</property>
+
+<property>
+  <name>fs.adl.oauth2.credential</name>
+  <value>CREDENTIAL</value>
+</property>
+
+<property>
+  <name>fs.adl.account.myprivateaccount.oauth2.client.id</name>
+  <value>CLIENTID1</value>
+</property>
+
+<property>
+  <name>fs.adl.account.myprivateaccount.oauth2.credential</name>
+  <value>CREDENTIAL1</value>
+</property>
+```
+
 ## Testing the azure-datalake-store Module
 The `hadoop-azure` module includes a full suite of unit tests.
 Most of the tests will run without additional configuration by running `mvn test`.
