@@ -83,7 +83,7 @@ public class TestGraphiteMetrics {
 
         assertEquals(true,
             result.equals("null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n" +
-            "null.all.Context.foo2;Context=all;Hostname=host; 2.25 10\n") ||
+            "null.all.Context.foo2;Context=all;Hostname=host 2.25 10\n") ||
             result.equals("null.all.Context.foo2;Context=all;Hostname=host 2.25 10\n" +
             "null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n"));
     }
