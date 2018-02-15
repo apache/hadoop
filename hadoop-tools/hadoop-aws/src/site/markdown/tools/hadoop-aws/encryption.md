@@ -37,6 +37,8 @@ and keys with which the file was encrypted.
 * You can use AWS bucket policies to mandate encryption rules for a bucket.
 * You can use S3A per-bucket configuration to ensure that S3A clients use encryption
 policies consistent with the mandated rules.
+* You can use S3 Default Encryption to encrypt data without needing to
+set anything in the client.
 * Changing the encryption options on the client does not change how existing
 files were encrypted, except when the files are renamed.
 * For all mechanisms other than SSE-C, clients do not need any configuration
@@ -58,14 +60,28 @@ The server-side "SSE" encryption is performed with symmetric AES256 encryption;
 S3 offers different mechanisms for actually defining the key to use.
 
 
-There are thrre key management mechanisms, which in order of simplicity of use,
+There are four key management mechanisms, which in order of simplicity of use,
 are:
 
+* S3 Default Encryption
 * SSE-S3: an AES256 key is generated in S3, and saved alongside the data.
 * SSE-KMS: an AES256 key is generated in S3, and encrypted with a secret key provided
 by Amazon's Key Management Service, a key referenced by name in the uploading client.
 * SSE-C : the client specifies an actual base64 encoded AES-256 key to be used
 to encrypt and decrypt the data.
+
+
+## <a name="sse-s3"></a> S3 Default Encryption
+
+This feature allows the administrators of the AWS account to set the "default"
+encryption policy on a bucket -the encryption to use if the client does
+not explicitly declare an encryption algorithm.
+
+[S3 Default Encryption for S3 Buckets](https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
+
+This supports SSE-S3 and SSE-KMS.
+
+There is no need to set anything up in the client: do it in the AWS console.
 
 
 ## <a name="sse-s3"></a> SSE-S3 Amazon S3-Managed Encryption Keys
@@ -413,7 +429,6 @@ How can you do that from Hadoop? With `rename()`.
 
 The S3A client mimics a real filesystem's' rename operation by copying all the
 source files to the destination paths, then deleting the old ones.
-If you do a rename()
 
 Note: this does not work for SSE-C, because you cannot set a different key
 for reading as for writing, and you must supply that key for reading. There
@@ -421,7 +436,7 @@ you need to copy one bucket to a different bucket, one with a different key.
 Use `distCp`for this, with per-bucket encryption policies.
 
 
-## <a name="Troubleshooting"></a> Troubleshooting Encryption
+## <a name="troubleshooting"></a> Troubleshooting Encryption
 
 The [troubleshooting](./troubleshooting_s3a.html) document covers
 stack traces which may surface when working with encrypted data.
