@@ -25,6 +25,7 @@ Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 See also:
 
 * [Encryption](./encryption.html)
+* [Performance](./performance.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
@@ -1580,80 +1581,8 @@ The S3A Filesystem client supports the notion of input policies, similar
 to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
 client to optimise HTTP GET requests for the different use cases.
 
-*"sequential"*
-
-Read through the file, possibly with some short forward seeks.
-
-The whole document is requested in a single HTTP request; forward seeks
-within the readahead range are supported by skipping over the intermediate
-data.
-
-This is leads to maximum read throughput —but with very expensive
-backward seeks.
-
-
-*"normal" (default)*
-
-The "Normal" policy starts off reading a file  in "sequential" mode,
-but if the caller seeks backwards in the stream, it switches from
-sequential to "random".
-
-This policy effectively recognizes the initial read pattern of columnar
-storage formats (e.g. Apache ORC and Apache Parquet), which seek to the end
-of a file, read in index data and then seek backwards to selectively read
-columns. The first seeks may be be expensive compared to the random policy,
-however the overall process is much less expensive than either sequentially
-reading through a file with the "random" policy, or reading columnar data
-with the "sequential" policy. When the exact format/recommended
-seek policy of data are known in advance, this policy
-
-*"random"*
-
-Optimised for random IO, specifically the Hadoop `PositionedReadable`
-operations —though `seek(offset); read(byte_buffer)` also benefits.
-
-Rather than ask for the whole file, the range of the HTTP request is
-set to that that of the length of data desired in the `read` operation
-(Rounded up to the readahead value set in `setReadahead()` if necessary).
-
-By reducing the cost of closing existing HTTP requests, this is
-highly efficient for file IO accessing a binary file
-through a series of `PositionedReadable.read()` and `PositionedReadable.readFully()`
-calls. Sequential reading of a file is expensive, as now many HTTP requests must
-be made to read through the file.
-
-For operations simply reading through a file: copying, distCp, reading
-Gzipped or other compressed formats, parsing .csv files, etc, the `sequential`
-policy is appropriate. This is the default: S3A does not need to be configured.
-
-For the specific case of high-performance random access IO, the `random` policy
-may be considered. The requirements are:
-
-* Data is read using the `PositionedReadable` API.
-* Long distance (many MB) forward seeks
-* Backward seeks as likely as forward seeks.
-* Little or no use of single character `read()` calls or small `read(buffer)`
-calls.
-* Applications running close to the S3 data store. That is: in EC2 VMs in
-the same datacenter as the S3 instance.
-
-The desired fadvise policy must be set in the configuration option
-`fs.s3a.experimental.input.fadvise` when the filesystem instance is created.
-That is: it can only be set on a per-filesystem basis, not on a per-file-read
-basis.
-
-    <property>
-      <name>fs.s3a.experimental.input.fadvise</name>
-      <value>random</value>
-      <description>Policy for reading files.
-       Values: 'random', 'sequential' or 'normal'
-       </description>
-    </property>
-
-[HDFS-2744](https://issues.apache.org/jira/browse/HDFS-2744),
-*Extend FSDataInputStream to allow fadvise* proposes adding a public API
-to set fadvise policies on input streams. Once implemented,
-this will become the supported mechanism used for configuring the input IO policy.
+See [Improving data input performance through fadvise](./performance.html#fadvise)
+for the details.
 
 ##<a name="metrics"></a>Metrics
 
