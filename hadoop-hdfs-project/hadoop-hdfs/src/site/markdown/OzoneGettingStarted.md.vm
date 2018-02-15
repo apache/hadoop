@@ -61,18 +61,18 @@ the background.
 
  - `docker-compose up -d`
 
-Now let us run some work load against ozone, to do that we will run corona.
+Now let us run some work load against ozone, to do that we will run freon.
 
 This will log into the datanode and run bash.
 
  - `docker-compose exec datanode bash`
  - `cd hadoop/bin`
 
-Now you can run the oz command shell or corona the ozone load generator.
+Now you can run the oz command shell or freon, the ozone load generator.
 
-This is the command to run corona.
+This is the command to run freon.
 
- - `./hdfs corona -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
+ - `./hdfs freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
 
 You can checkout the KSM UI to see the requests information.
 

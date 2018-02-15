@@ -36,9 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests Corona, with MiniOzoneCluster.
+ * Tests Freon, with MiniOzoneCluster.
  */
-public class TestCorona {
+public class TestFreon {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -80,13 +80,13 @@ public class TestCorona {
     args.add("5");
     args.add("-numOfKeys");
     args.add("10");
-    Corona corona = new Corona(conf);
-    int res = ToolRunner.run(conf, corona,
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
         args.toArray(new String[0]));
-    Assert.assertEquals(2, corona.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
-    Assert.assertEquals(10240 - 36, corona.getKeyValueLength());
+    Assert.assertEquals(2, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
+    Assert.assertEquals(10240 - 36, freon.getKeyValueLength());
     Assert.assertEquals(0, res);
   }
 
@@ -103,17 +103,17 @@ public class TestCorona {
     args.add("5");
     args.add("-numOfKeys");
     args.add("10");
-    Corona corona = new Corona(conf);
-    int res = ToolRunner.run(conf, corona,
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
         args.toArray(new String[0]));
     Assert.assertEquals(0, res);
-    Assert.assertEquals(2, corona.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
-    Assert.assertTrue(corona.getValidateWrites());
-    Assert.assertNotEquals(0, corona.getTotalKeysValidated());
-    Assert.assertNotEquals(0, corona.getSuccessfulValidationCount());
-    Assert.assertEquals(0, corona.getUnsuccessfulValidationCount());
+    Assert.assertEquals(2, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
+    Assert.assertTrue(freon.getValidateWrites());
+    Assert.assertNotEquals(0, freon.getTotalKeysValidated());
+    Assert.assertNotEquals(0, freon.getSuccessfulValidationCount());
+    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
     System.setOut(originalStream);
   }
 
@@ -130,12 +130,12 @@ public class TestCorona {
     args.add("10");
     args.add("-keySize");
     args.add("10240");
-    Corona corona = new Corona(conf);
-    int res = ToolRunner.run(conf, corona,
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
         args.toArray(new String[0]));
-    Assert.assertEquals(10, corona.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(10, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
     Assert.assertEquals(0, res);
   }
 
@@ -154,12 +154,12 @@ public class TestCorona {
     args.add("10");
     args.add("-keySize");
     args.add("10240");
-    Corona corona = new Corona(conf);
-    int res = ToolRunner.run(conf, corona,
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
         args.toArray(new String[0]));
-    Assert.assertEquals(10, corona.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(10, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
     Assert.assertEquals(0, res);
   }
 }

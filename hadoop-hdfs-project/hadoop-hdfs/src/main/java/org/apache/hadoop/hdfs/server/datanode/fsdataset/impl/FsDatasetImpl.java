@@ -979,8 +979,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo newReplicaInfo = targetVolume.moveBlockToTmpLocation(block,
         replicaInfo, smallBufferSize, conf);
 
-     // Latch here --> wait for the signal.
-
     // Finalize the copied files
     newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
     try (AutoCloseableLock lock = datasetLock.acquire()) {

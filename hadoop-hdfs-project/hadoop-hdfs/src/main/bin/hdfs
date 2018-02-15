@@ -38,7 +38,6 @@ function hadoop_usage
   hadoop_add_subcommand "cblock" admin "cblock CLI"
   hadoop_add_subcommand "cblockserver" daemon "run cblock server"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
-  hadoop_add_subcommand "corona" client "run an ozone data generator"
   hadoop_add_subcommand "crypto" admin "configure HDFS encryption zones"
   hadoop_add_subcommand "datanode" daemon "run a DFS datanode"
   hadoop_add_subcommand "debug" admin "run a Debug Admin to execute HDFS debug commands"
@@ -50,6 +49,7 @@ function hadoop_usage
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
+  hadoop_add_subcommand "freon" client "runs an ozone data generator"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
   hadoop_add_subcommand "groups" client "get the groups which users belong to"
@@ -107,9 +107,6 @@ function hdfscmd_case
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
     ;;
-    corona)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Corona
-    ;;
     crypto)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CryptoAdmin
     ;;
@@ -159,6 +156,9 @@ function hdfscmd_case
     ;;
     fetchdt)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
+    ;;
+    freon)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Freon
     ;;
     fsck)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck
