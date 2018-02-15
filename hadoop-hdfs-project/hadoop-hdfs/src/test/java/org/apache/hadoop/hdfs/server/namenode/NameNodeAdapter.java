@@ -72,12 +72,14 @@ public class NameNodeAdapter {
   }
   
   public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
-      boolean resolveLink) throws AccessControlException, UnresolvedLinkException,
-        StandbyException, IOException {
+      boolean resolveLink) throws AccessControlException,
+      UnresolvedLinkException, StandbyException, IOException {
+    final FSPermissionChecker pc =
+        namenode.getNamesystem().getPermissionChecker();
     namenode.getNamesystem().readLock();
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
-          .getFSDirectory(), src, resolveLink);
+          .getFSDirectory(), pc, src, resolveLink);
     } finally {
       namenode.getNamesystem().readUnlock();
     }

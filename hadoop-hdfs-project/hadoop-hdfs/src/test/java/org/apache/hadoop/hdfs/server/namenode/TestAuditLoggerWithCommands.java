@@ -46,8 +46,9 @@ import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.mockito.Mock;
 import org.mockito.Mockito;
+
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 
 public class TestAuditLoggerWithCommands {
@@ -529,7 +530,7 @@ public class TestAuditLoggerWithCommands {
 
   @Test
   public void testListXattrs() throws Exception {
-    Path path = new Path("/test");
+    Path path = new Path("/testListXattrs");
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
     fs.mkdirs(path);
     fs.setOwner(path,user1.getUserName(),user1.getPrimaryGroupName());
@@ -548,7 +549,7 @@ public class TestAuditLoggerWithCommands {
     final FSDirectory dir = cluster.getNamesystem().getFSDirectory();
     final FSDirectory mockedDir = Mockito.spy(dir);
     AccessControlException ex = new AccessControlException();
-    doThrow(ex).when(mockedDir).getPermissionChecker();
+    doThrow(ex).when(mockedDir).checkTraverse(any(), any(), any());
     cluster.getNamesystem().setFSDirectory(mockedDir);
     String aceGetAclStatus =
         ".*allowed=false.*ugi=theDoctor.*cmd=getAclStatus.*";
