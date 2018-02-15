@@ -77,11 +77,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   @Private
   public static final String PREFIX = "yarn.scheduler.capacity.";
-
-  @Private
-  public static final String SCHEDULING_REQUEST_ALLOWED =
-      PREFIX + "scheduling-request.allowed";
-  public static final boolean DEFAULT_SCHEDULING_REQUEST_ALLOWED = false;
   
   @Private
   public static final String DOT = ".";

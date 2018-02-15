@@ -532,11 +532,57 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
 
-  /** Enable rich placement constraints. */
-  public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
-      RM_PREFIX + "placement-constraints.enabled";
+  /**
+   * Specify which handler will be used to process PlacementConstraints.
+   * For details on PlacementConstraints, please refer to
+   * {@link org.apache.hadoop.yarn.api.resource.PlacementConstraint}
+   */
+  @Private
+  public static final String RM_PLACEMENT_CONSTRAINTS_HANDLER =
+      RM_PREFIX + "placement-constraints.handler";
 
-  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = false;
+  /**
+   * This handler rejects all allocate calls made by an application, if they
+   * contain a {@link org.apache.hadoop.yarn.api.records.SchedulingRequest}.
+   */
+  @Private
+  public static final String DISABLED_RM_PLACEMENT_CONSTRAINTS_HANDLER =
+      "disabled";
+
+  /**
+   * Using this handler, the placement of containers with constraints is
+   * determined as a pre-processing step before the capacity or the fair
+   * scheduler is called. Once the placement is decided, the capacity/fair
+   * scheduler is invoked to perform the actual allocation. The advantage of
+   * this approach is that it supports all constraint types (affinity,
+   * anti-affinity, cardinality). Moreover, it considers multiple containers at
+   * a time, which allows to satisfy more constraints than a container-at-a-time
+   * approach can achieve. As it sits outside the main scheduler, it can be used
+   * by both the capacity and fair schedulers. Note that at the moment it does
+   * not account for task priorities within an application, given that such
+   * priorities might be conflicting with the placement constraints.
+   */
+  @Private
+  public static final String PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER =
+      "placement-processor";
+
+  /**
+   * Using this handler, containers with constraints will be placed by the main
+   * scheduler. If the configured RM scheduler
+   * <pre>yarn.resourcemanager.scheduler.class</pre>
+   * cannot handle placement constraints, the corresponding SchedulingRequests
+   * will be rejected. As of now, only the capacity scheduler supports
+   * SchedulingRequests. In particular, it currently supports anti-affinity
+   * constraints (no affinity or cardinality) and places one container at a
+   * time. The advantage of this handler compared to the placement-processor is
+   * that it follows the same ordering rules for queues (sorted by utilization,
+   * priority) and apps (sorted by FIFO/fairness/priority) as the ones followed
+   * by the main scheduler.
+   */
+  @Private
+  public static final String
+      SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER =
+      "scheduler";
 
   /** Placement Algorithm. */
   public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_CLASS =
