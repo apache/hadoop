@@ -82,10 +82,10 @@ public class TestGraphiteMetrics {
         String result = argument.getValue();
 
         assertEquals(true,
-            result.equals("null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n" +
-            "null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n") ||
-            result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" + 
-            "null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n"));
+            result.equals("null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n" +
+            "null.all.Context.foo2;Context=all;Hostname=host; 2.25 10\n") ||
+            result.equals("null.all.Context.foo2;Context=all;Hostname=host 2.25 10\n" + 
+            "null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n"));
     }
 
     @Test
@@ -114,10 +114,10 @@ public class TestGraphiteMetrics {
         String result = argument.getValue();
 
         assertEquals(true,
-            result.equals("null.all.Context.Context=all.foo1 1 10\n" + 
-            "null.all.Context.Context=all.foo2 2 10\n") ||
-            result.equals("null.all.Context.Context=all.foo2 2 10\n" + 
-            "null.all.Context.Context=all.foo1 1 10\n"));
+            result.equals("null.all.Context.foo1;Context=all 1 10\n" + 
+            "null.all.Context.foo2;Context=all 2 10\n") ||
+            result.equals("null.all.Context.foo2;Context=all 2 10\n" + 
+            "null.all.Context.foo1;Context=all 1 10\n"));
     }
 
     /**
@@ -189,10 +189,10 @@ public class TestGraphiteMetrics {
       String result = argument.getValue();
 
       assertEquals(true,
-          result.equals("null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n" +
-          "null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n") ||
-          result.equals("null.all.Context.Context=all.Hostname=host.foo2 2.25 10\n" +
-          "null.all.Context.Context=all.Hostname=host.foo1 1.25 10\n"));
+          result.equals("null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n" +
+          "null.all.Context.foo2;Context=all;Hostname=host 2.25 10\n") ||
+          result.equals("null.all.Context.foo2;Context=all;Hostname=host 2.25 10\n" +
+          "null.all.Context.foo1;Context=all;Hostname=host 1.25 10\n"));
     }
 
     @Test
