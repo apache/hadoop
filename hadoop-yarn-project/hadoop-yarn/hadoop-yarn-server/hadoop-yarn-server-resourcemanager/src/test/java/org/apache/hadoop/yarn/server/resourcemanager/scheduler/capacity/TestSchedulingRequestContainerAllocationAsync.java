@@ -57,13 +57,13 @@ public class TestSchedulingRequestContainerAllocationAsync {
   private void testIntraAppAntiAffinityAsync(int numThreads) throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
         new Configuration());
-    csConf.setBoolean(CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED,
-        true);
     csConf.setInt(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
         numThreads);
     csConf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
         + ".scheduling-interval-ms", 0);
+    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
 
     // inject node label manager
     MockRM rm1 = new MockRM(csConf) {
