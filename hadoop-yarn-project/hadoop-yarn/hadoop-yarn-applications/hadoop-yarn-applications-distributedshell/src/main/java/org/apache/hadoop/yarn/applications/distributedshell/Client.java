@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -1123,10 +1122,17 @@ public class Client {
           + " application master, exiting. " +
           "Specified virtual cores=" + amVCores);
     }
-    String tmp = amResourceProfile;
-    if (amResourceProfile.isEmpty()) {
-      tmp = "default";
+    Resource capability = Resource.newInstance(0, 0);
+
+    if (!amResourceProfile.isEmpty()) {
+      if (!profiles.containsKey(amResourceProfile)) {
+        throw new IllegalArgumentException(
+            "Failed to find specified resource profile for application master="
+                + amResourceProfile);
+      }
+      capability = Resources.clone(profiles.get(amResourceProfile));
     }
+
     if (appContext.getAMContainerResourceRequests() == null) {
       List<ResourceRequest> amResourceRequests = new ArrayList<ResourceRequest>();
       amResourceRequests
@@ -1135,31 +1141,26 @@ public class Client {
       appContext.setAMContainerResourceRequests(amResourceRequests);
     }
 
-    if (appContext.getAMContainerResourceRequests().get(0)
-        .getProfileCapability() == null) {
-      appContext.getAMContainerResourceRequests().get(0).setProfileCapability(
-          ProfileCapability.newInstance(tmp, Resource.newInstance(0, 0)));
-    }
-
-    Resource capability = Resource.newInstance(0, 0);
-
     validateResourceTypes(amResources.keySet(), resourceTypes);
     for (Map.Entry<String, Long> entry : amResources.entrySet()) {
       capability.setResourceValue(entry.getKey(), entry.getValue());
     }
     // set amMemory because it's used to set Xmx param
     if (amMemory == -1) {
-      amMemory = (profiles == null) ? DEFAULT_AM_MEMORY :
-          profiles.get(tmp).getMemorySize();
+      amMemory = DEFAULT_AM_MEMORY;
+      LOG.warn("AM Memory not specified, use " + DEFAULT_AM_MEMORY
+          + " mb as AM memory");
     }
     if (amVCores == -1) {
-      amVCores = (profiles == null) ? DEFAULT_AM_VCORES :
-          profiles.get(tmp).getVirtualCores();
+      amVCores = DEFAULT_AM_VCORES;
+      LOG.warn("AM vcore not specified, use " + DEFAULT_AM_VCORES
+          + " mb as AM vcores");
     }
     capability.setMemorySize(amMemory);
     capability.setVirtualCores(amVCores);
-    appContext.getAMContainerResourceRequests().get(0).getProfileCapability()
-        .setProfileCapabilityOverride(capability);
+    appContext.getAMContainerResourceRequests().get(0).setCapability(
+        capability);
+    LOG.warn("AM Resource capability=" + capability);
   }
 
   private void setContainerResources(Map<String, Resource> profiles,

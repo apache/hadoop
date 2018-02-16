@@ -89,7 +89,6 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -1422,10 +1421,11 @@ public class ApplicationMaster {
     Priority pri = Priority.newInstance(requestPriority);
 
     // Set up resource type requirements
-    ContainerRequest request =
-        new ContainerRequest(createProfileCapability(), null, null,
-            pri, 0, true, null,
-            ExecutionTypeRequest.newInstance(containerType));
+    ContainerRequest request = new ContainerRequest(
+        getTaskResourceCapability(),
+        null, null, pri, 0, true, null,
+        ExecutionTypeRequest.newInstance(containerType),
+        containerResourceProfile);
     LOG.info("Requested container ask: " + request.toString());
     return request;
   }
@@ -1437,7 +1437,7 @@ public class ApplicationMaster {
         ExecutionTypeRequest.newInstance(),
         Collections.singleton(spec.sourceTag),
         ResourceSizing.newInstance(
-            createProfileCapability().getProfileCapabilityOverride()), null);
+            getTaskResourceCapability()), null);
     sReq.setPlacementConstraint(spec.constraint);
     LOG.info("Scheduling Request made: " + sReq.toString());
     return sReq;
@@ -1702,7 +1702,7 @@ public class ApplicationMaster {
     }
   }
 
-  private ProfileCapability createProfileCapability()
+  private Resource getTaskResourceCapability()
       throws YarnRuntimeException {
     if (containerMemory < -1 || containerMemory == 0) {
       throw new YarnRuntimeException("Value of AM memory '" + containerMemory
@@ -1727,12 +1727,6 @@ public class ApplicationMaster {
       resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
     }
 
-    String profileName = containerResourceProfile;
-    if ("".equals(containerResourceProfile) && resourceProfiles != null) {
-      profileName = "default";
-    }
-    ProfileCapability capability =
-        ProfileCapability.newInstance(profileName, resourceCapability);
-    return capability;
+    return resourceCapability;
   }
 }
