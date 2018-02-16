@@ -369,16 +369,21 @@ public class TaskAttemptListenerImpl extends CompositeService
         TypeConverter.toYarn(taskAttemptID);
 
     AMFeedback feedback = new AMFeedback();
+    feedback.setTaskFound(true);
+
     AtomicReference<TaskAttemptStatus> lastStatusRef =
         attemptIdToStatus.get(yarnAttemptID);
     if (lastStatusRef == null) {
-      LOG.error("Status update was called with illegal TaskAttemptId: "
-          + yarnAttemptID);
-      feedback.setTaskFound(false);
+      // The task is not known, but it could be in the process of tearing
+      // down gracefully or receiving a thread dump signal. Tolerate unknown
+      // tasks as long as they have unregistered recently.
+      if (!taskHeartbeatHandler.hasRecentlyUnregistered(yarnAttemptID)) {
+        LOG.error("Status update was called with illegal TaskAttemptId: "
+            + yarnAttemptID);
+        feedback.setTaskFound(false);
+      }
       return feedback;
     }
-
-    feedback.setTaskFound(true);
 
     // Propagating preemption to the task if TASK_PREEMPTION is enabled
     if (getConfig().getBoolean(MRJobConfig.TASK_PREEMPTION, false)

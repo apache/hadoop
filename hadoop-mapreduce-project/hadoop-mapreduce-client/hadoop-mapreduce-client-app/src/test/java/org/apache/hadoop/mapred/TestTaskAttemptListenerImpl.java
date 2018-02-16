@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.mapred;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapreduce.checkpoint.EnumCounter;
 
@@ -51,11 +52,13 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.CheckpointAMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
 import org.junit.Test;
@@ -488,14 +491,57 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testStatusUpdateFromUnregisteredTask()
-      throws IOException, InterruptedException{
+  public void testStatusUpdateFromUnregisteredTask() throws Exception {
     configureMocks();
-    startListener(false);
+    ControlledClock clock = new ControlledClock();
+    clock.setTime(0);
+    doReturn(clock).when(appCtx).getClock();
 
-    AMFeedback feedback = listener.statusUpdate(attemptID, firstReduceStatus);
+    final TaskAttemptListenerImpl tal = new TaskAttemptListenerImpl(appCtx,
+        secret, rmHeartbeatHandler, policy) {
+      @Override
+      protected void startRpcServer() {
+        // Empty
+      }
+      @Override
+      protected void stopRpcServer() {
+        // Empty
+      }
+    };
 
+    Configuration conf = new Configuration();
+    conf.setLong(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1);
+    tal.init(conf);
+    tal.start();
+
+    AMFeedback feedback = tal.statusUpdate(attemptID, firstReduceStatus);
     assertFalse(feedback.getTaskFound());
+    tal.registerPendingTask(task, wid);
+    tal.registerLaunchedTask(attemptId, wid);
+    feedback = tal.statusUpdate(attemptID, firstReduceStatus);
+    assertTrue(feedback.getTaskFound());
+
+    // verify attempt is still reported as found if recently unregistered
+    tal.unregister(attemptId, wid);
+    feedback = tal.statusUpdate(attemptID, firstReduceStatus);
+    assertTrue(feedback.getTaskFound());
+
+    // verify attempt is not found if not recently unregistered
+    long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
+        MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
+    clock.setTime(unregisterTimeout + 1);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          AMFeedback response =
+              tal.statusUpdate(attemptID, firstReduceStatus);
+          return !response.getTaskFound();
+        } catch (Exception e) {
+          throw new RuntimeException("status update failed", e);
+        }
+      }
+    }, 10, 10000);
   }
 
   private void configureMocks() {
