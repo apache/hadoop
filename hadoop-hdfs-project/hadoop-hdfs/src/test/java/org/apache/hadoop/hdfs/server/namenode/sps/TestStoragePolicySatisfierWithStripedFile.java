@@ -495,16 +495,17 @@ public class TestStoragePolicySatisfierWithStripedFile {
       long expectedBlkMovAttemptedCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+    final StoragePolicySatisfier<Long> sps =
+        (StoragePolicySatisfier<Long>) blockManager
         .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
             expectedBlkMovAttemptedCount,
-            ((BlockStorageMovementAttemptedItems) sps
+            ((BlockStorageMovementAttemptedItems<Long>) sps
                 .getAttemptedItemsMonitor()).getAttemptedItemsCount());
-        return ((BlockStorageMovementAttemptedItems) sps
+        return ((BlockStorageMovementAttemptedItems<Long>) sps
             .getAttemptedItemsMonitor())
                 .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
@@ -567,7 +568,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
       long expectedMoveFinishedBlks, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+    final StoragePolicySatisfier<Long> sps =
+        (StoragePolicySatisfier<Long>) blockManager
         .getSPSManager().getInternalSPSService();
     Assert.assertNotNull("Failed to get SPS object reference!", sps);
 
@@ -575,9 +577,10 @@ public class TestStoragePolicySatisfierWithStripedFile {
       @Override
       public Boolean get() {
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
-            expectedMoveFinishedBlks, ((BlockStorageMovementAttemptedItems) sps
+            expectedMoveFinishedBlks,
+            ((BlockStorageMovementAttemptedItems<Long>) sps
                 .getAttemptedItemsMonitor()).getMovementFinishedBlocksCount());
-        return ((BlockStorageMovementAttemptedItems) sps
+        return ((BlockStorageMovementAttemptedItems<Long>) sps
             .getAttemptedItemsMonitor())
                 .getMovementFinishedBlocksCount() >= expectedMoveFinishedBlks;
       }

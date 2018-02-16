@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.sps;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -46,15 +48,15 @@ import org.slf4j.LoggerFactory;
  * SPS from Namenode state.
  */
 @InterfaceAudience.Private
-public class ExternalSPSContext implements Context {
+public class ExternalSPSContext implements Context<String> {
   public static final Logger LOG =
       LoggerFactory.getLogger(ExternalSPSContext.class);
-  private SPSService service;
+  private SPSService<String> service;
   private NameNodeConnector nnc = null;
   private BlockStoragePolicySuite createDefaultSuite =
       BlockStoragePolicySuite.createDefaultSuite();
 
-  public ExternalSPSContext(SPSService service, NameNodeConnector nnc) {
+  public ExternalSPSContext(SPSService<String> service, NameNodeConnector nnc) {
     this.service = service;
     this.nnc = nnc;
   }
@@ -110,14 +112,12 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public boolean isFileExist(long inodeId) {
-    String filePath = null;
+  public boolean isFileExist(String filePath) {
     try {
-      filePath = getFilePath(inodeId);
       return nnc.getDistributedFileSystem().exists(new Path(filePath));
     } catch (IllegalArgumentException | IOException e) {
-      LOG.warn("Exception while getting file is for the given path:{} "
-          + "and fileId:{}", filePath, inodeId, e);
+      LOG.warn("Exception while getting file is for the given path:{}",
+          filePath, e);
     }
     return false;
   }
@@ -133,8 +133,8 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public void removeSPSHint(long inodeId) throws IOException {
-    nnc.getDistributedFileSystem().removeXAttr(new Path(getFilePath(inodeId)),
+  public void removeSPSHint(String inodeId) throws IOException {
+    nnc.getDistributedFileSystem().removeXAttr(new Path(inodeId),
         HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
   }
 
@@ -150,26 +150,21 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public HdfsFileStatus getFileInfo(long inodeID) throws IOException {
-    return nnc.getDistributedFileSystem().getClient()
-        .getLocatedFileInfo(getFilePath(inodeID), false);
+  public HdfsFileStatus getFileInfo(String path) throws IOException {
+    HdfsLocatedFileStatus fileInfo = null;
+    try {
+      fileInfo = nnc.getDistributedFileSystem().getClient()
+          .getLocatedFileInfo(path, false);
+    } catch (FileNotFoundException e) {
+      LOG.debug("Path:{} doesn't exists!", path, e);
+    }
+    return fileInfo;
   }
 
   @Override
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
     return nnc.getLiveDatanodeStorageReport();
-  }
-
-  @Override
-  public boolean hasLowRedundancyBlocks(long inodeID) {
-    try {
-      return nnc.getNNProtocolConnection().hasLowRedundancyBlocks(inodeID);
-    } catch (IOException e) {
-      LOG.warn("Failed to check whether fileid:{} has low redundancy blocks.",
-          inodeID, e);
-      return false;
-    }
   }
 
   @Override
@@ -190,9 +185,9 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public Long getNextSPSPathId() {
+  public String getNextSPSPath() {
     try {
-      return nnc.getNNProtocolConnection().getNextSPSPathId();
+      return nnc.getNNProtocolConnection().getNextSPSPath();
     } catch (IOException e) {
       LOG.warn("Exception while getting next sps path id from Namenode.", e);
       return null;
@@ -200,23 +195,12 @@ public class ExternalSPSContext implements Context {
   }
 
   @Override
-  public void removeSPSPathId(long pathId) {
+  public void removeSPSPathId(String pathId) {
     // We need not specifically implement for external.
   }
 
   @Override
   public void removeAllSPSPathIds() {
     // We need not specifically implement for external.
-  }
-
-  @Override
-  public String getFilePath(Long inodeId) {
-    try {
-      return nnc.getNNProtocolConnection().getFilePath(inodeId);
-    } catch (IOException e) {
-      LOG.warn("Exception while getting file path id:{} from Namenode.",
-          inodeId, e);
-      return null;
-    }
   }
 }

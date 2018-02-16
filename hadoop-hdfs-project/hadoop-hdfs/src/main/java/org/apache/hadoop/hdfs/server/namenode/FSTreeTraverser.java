@@ -310,7 +310,7 @@ public abstract class FSTreeTraverser {
    * @throws IOException
    * @throws InterruptedException
    */
-  protected abstract void submitCurrentBatch(long startId)
+  protected abstract void submitCurrentBatch(Long startId)
       throws IOException, InterruptedException;
 
   /**

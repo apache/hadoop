@@ -47,17 +47,17 @@ import org.slf4j.LoggerFactory;
  * movements to satisfy the storage policy.
  */
 @InterfaceAudience.Private
-public class IntraSPSNameNodeContext implements Context {
+public class IntraSPSNameNodeContext implements Context<Long> {
   private static final Logger LOG = LoggerFactory
       .getLogger(IntraSPSNameNodeContext.class);
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
 
-  private SPSService service;
+  private SPSService<Long> service;
 
   public IntraSPSNameNodeContext(Namesystem namesystem,
-      BlockManager blockManager, SPSService service) {
+      BlockManager blockManager, SPSService<Long> service) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
     this.service = service;
@@ -68,20 +68,18 @@ public class IntraSPSNameNodeContext implements Context {
     return blockManager.getDatanodeManager().getNumLiveDataNodes();
   }
 
+  /**
+   * @return object containing information regarding the file or null if file
+   *         not found.
+   */
   @Override
-  public HdfsFileStatus getFileInfo(long inodeID) throws IOException {
+  public HdfsFileStatus getFileInfo(Long inodeID) throws IOException {
     String filePath = namesystem.getFilePath(inodeID);
     if (StringUtils.isBlank(filePath)) {
       LOG.debug("File with inodeID:{} doesn't exists!", inodeID);
       return null;
     }
-    HdfsFileStatus fileInfo = null;
-    try {
-      fileInfo = namesystem.getFileInfo(filePath, true, true);
-    } catch (IOException e) {
-      LOG.debug("File path:{} doesn't exists!", filePath);
-    }
-    return fileInfo;
+    return namesystem.getFileInfo(filePath, true, true);
   }
 
   @Override
@@ -97,17 +95,12 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public boolean hasLowRedundancyBlocks(long inodeId) {
-    return blockManager.hasLowRedundancyBlocks(inodeId);
-  }
-
-  @Override
-  public boolean isFileExist(long inodeId) {
+  public boolean isFileExist(Long inodeId) {
     return namesystem.getFSDirectory().getInode(inodeId) != null;
   }
 
   @Override
-  public void removeSPSHint(long inodeId) throws IOException {
+  public void removeSPSHint(Long inodeId) throws IOException {
     this.namesystem.removeXattr(inodeId, XATTR_SATISFY_STORAGE_POLICY);
   }
 
@@ -177,12 +170,12 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public Long getNextSPSPathId() {
+  public Long getNextSPSPath() {
     return blockManager.getSPSManager().getNextPathId();
   }
 
   @Override
-  public void removeSPSPathId(long trackId) {
+  public void removeSPSPathId(Long trackId) {
     blockManager.getSPSManager().removePathId(trackId);
   }
 
@@ -190,10 +183,4 @@ public class IntraSPSNameNodeContext implements Context {
   public void removeAllSPSPathIds() {
     blockManager.getSPSManager().removeAllPathIds();
   }
-
-  @Override
-  public String getFilePath(Long inodeId) {
-    return namesystem.getFilePath(inodeId);
-  }
-
 }

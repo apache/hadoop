@@ -28,8 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.sps.Context;
-import org.apache.hadoop.hdfs.server.namenode.sps.FileIdCollector;
+import org.apache.hadoop.hdfs.server.namenode.sps.FileCollector;
 import org.apache.hadoop.hdfs.server.namenode.sps.ItemInfo;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.slf4j.Logger;
@@ -38,19 +37,18 @@ import org.slf4j.LoggerFactory;
 /**
  * This class is to scan the paths recursively. If file is directory, then it
  * will scan for files recursively. If the file is non directory, then it will
- * just submit the same file to process.
+ * just submit the same file to process. This will use file string path
+ * representation.
  */
 @InterfaceAudience.Private
-public class ExternalSPSFileIDCollector implements FileIdCollector {
+public class ExternalSPSFilePathCollector implements FileCollector <String>{
   public static final Logger LOG =
-      LoggerFactory.getLogger(ExternalSPSFileIDCollector.class);
-  private Context cxt;
+      LoggerFactory.getLogger(ExternalSPSFilePathCollector.class);
   private DistributedFileSystem dfs;
-  private SPSService service;
+  private SPSService<String> service;
   private int maxQueueLimitToScan;
 
-  public ExternalSPSFileIDCollector(Context cxt, SPSService service) {
-    this.cxt = cxt;
+  public ExternalSPSFilePathCollector(SPSService<String> service) {
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
@@ -74,38 +72,39 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
    * Recursively scan the given path and add the file info to SPS service for
    * processing.
    */
-  private long processPath(long startID, String fullPath) {
+  private long processPath(String startID, String childPath) {
     long pendingWorkCount = 0; // to be satisfied file counter
     for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
       final DirectoryListing children;
       try {
-        children = dfs.getClient().listPaths(fullPath, lastReturnedName, false);
+        children = dfs.getClient().listPaths(childPath, lastReturnedName,
+            false);
       } catch (IOException e) {
-        LOG.warn("Failed to list directory " + fullPath
+        LOG.warn("Failed to list directory " + childPath
             + ". Ignore the directory and continue.", e);
         return pendingWorkCount;
       }
       if (children == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The scanning start dir/sub dir " + fullPath
+          LOG.debug("The scanning start dir/sub dir " + childPath
               + " does not have childrens.");
         }
         return pendingWorkCount;
       }
 
       for (HdfsFileStatus child : children.getPartialListing()) {
+        String childFullPath = child.getFullName(childPath);
         if (child.isFile()) {
-          service.addFileIdToProcess(new ItemInfo(startID, child.getFileId()),
-              false);
+          service.addFileToProcess(
+              new ItemInfo<String>(startID, childFullPath), false);
           checkProcessingQueuesFree();
           pendingWorkCount++; // increment to be satisfied file count
         } else {
-          String fullPathStr = child.getFullName(fullPath);
           if (child.isDirectory()) {
-            if (!fullPathStr.endsWith(Path.SEPARATOR)) {
-              fullPathStr = fullPathStr + Path.SEPARATOR;
+            if (!childFullPath.endsWith(Path.SEPARATOR)) {
+              childFullPath = childFullPath + Path.SEPARATOR;
             }
-            pendingWorkCount += processPath(startID, fullPathStr);
+            pendingWorkCount += processPath(startID, childFullPath);
           }
         }
       }
@@ -151,12 +150,11 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
   }
 
   @Override
-  public void scanAndCollectFileIds(Long inodeId) throws IOException {
+  public void scanAndCollectFiles(String path) throws IOException {
     if (dfs == null) {
       dfs = getFS(service.getConf());
     }
-    long pendingSatisfyItemsCount = processPath(inodeId,
-        cxt.getFilePath(inodeId));
+    long pendingSatisfyItemsCount = processPath(path, path);
     // Check whether the given path contains any item to be tracked
     // or the no to be satisfied paths. In case of empty list, add the given
     // inodeId to the 'pendingWorkForDirectory' with empty list so that later
@@ -164,10 +162,10 @@ public class ExternalSPSFileIDCollector implements FileIdCollector {
     // this path is already satisfied the storage policy.
     if (pendingSatisfyItemsCount <= 0) {
       LOG.debug("There is no pending items to satisfy the given path "
-          + "inodeId:{}", inodeId);
-      service.addAllFileIdsToProcess(inodeId, new ArrayList<>(), true);
+          + "inodeId:{}", path);
+      service.addAllFilesToProcess(path, new ArrayList<>(), true);
     } else {
-      service.markScanCompletedForPath(inodeId);
+      service.markScanCompletedForPath(path);
     }
   }
 

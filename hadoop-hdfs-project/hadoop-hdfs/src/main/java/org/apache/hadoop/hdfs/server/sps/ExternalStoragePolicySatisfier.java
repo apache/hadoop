@@ -68,7 +68,8 @@ public final class ExternalStoragePolicySatisfier {
       HdfsConfiguration spsConf = new HdfsConfiguration();
       // login with SPS keytab
       secureLogin(spsConf);
-      StoragePolicySatisfier sps = new StoragePolicySatisfier(spsConf);
+      StoragePolicySatisfier<String> sps = new StoragePolicySatisfier<String>(
+          spsConf);
       nnc = getNameNodeConnector(spsConf);
 
       boolean spsRunning;
@@ -86,8 +87,8 @@ public final class ExternalStoragePolicySatisfier {
       ExternalSPSBlockMoveTaskHandler externalHandler =
           new ExternalSPSBlockMoveTaskHandler(spsConf, nnc, sps);
       externalHandler.init();
-      sps.init(context, new ExternalSPSFileIDCollector(context, sps),
-          externalHandler, blkMoveListener);
+      sps.init(context, new ExternalSPSFilePathCollector(sps), externalHandler,
+          blkMoveListener);
       sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
       if (sps != null) {
         sps.join();

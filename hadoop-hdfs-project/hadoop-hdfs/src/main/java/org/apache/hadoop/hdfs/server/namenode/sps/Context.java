@@ -33,11 +33,16 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
- * An interface for the communication between NameNode and SPS module.
+ * An interface for the communication between SPS and Namenode module.
+ *
+ * @param <T>
+ *          is identifier of inode or full path name of inode. Internal sps will
+ *          use the file inodeId for the block movement. External sps will use
+ *          file string path representation for the block movement.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Context {
+public interface Context<T> {
 
   /**
    * Returns true if the SPS is running, false otherwise.
@@ -72,13 +77,13 @@ public interface Context {
   NetworkTopology getNetworkTopology();
 
   /**
-   * Returns true if the give Inode exists in the Namespace.
+   * Returns true if the give file exists in the Namespace.
    *
-   * @param inodeId
-   *          - Inode ID
-   * @return true if Inode exists, false otherwise.
+   * @param filePath
+   *          - file info
+   * @return true if the given file exists, false otherwise.
    */
-  boolean isFileExist(long inodeId);
+  boolean isFileExist(T filePath);
 
   /**
    * Gets the storage policy details for the given policy ID.
@@ -97,11 +102,11 @@ public interface Context {
   /**
    * Remove the hint which was added to track SPS call.
    *
-   * @param inodeId
-   *          - Inode ID
+   * @param spsPath
+   *          - user invoked satisfier path
    * @throws IOException
    */
-  void removeSPSHint(long inodeId) throws IOException;
+  void removeSPSHint(T spsPath) throws IOException;
 
   /**
    * Gets the number of live datanodes in the cluster.
@@ -113,11 +118,11 @@ public interface Context {
   /**
    * Get the file info for a specific file.
    *
-   * @param inodeID
-   *          inode identifier
+   * @param file
+   *          file path
    * @return file status metadata information
    */
-  HdfsFileStatus getFileInfo(long inodeID) throws IOException;
+  HdfsFileStatus getFileInfo(T file) throws IOException;
 
   /**
    * Returns all the live datanodes and its storage details.
@@ -126,15 +131,6 @@ public interface Context {
    */
   DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException;
-
-  /**
-   * Returns true if the given inode file has low redundancy blocks.
-   *
-   * @param inodeID
-   *          inode identifier
-   * @return true if block collection has low redundancy blocks
-   */
-  boolean hasLowRedundancyBlocks(long inodeID);
 
   /**
    * Checks whether the given datanode has sufficient space to occupy the given
@@ -153,26 +149,17 @@ public interface Context {
       long blockSize);
 
   /**
-   * @return next SPS path id to process.
+   * @return next SPS path info to process.
    */
-  Long getNextSPSPathId();
+  T getNextSPSPath();
 
   /**
    * Removes the SPS path id.
    */
-  void removeSPSPathId(long pathId);
+  void removeSPSPathId(T pathId);
 
   /**
    * Removes all SPS path ids.
    */
   void removeAllSPSPathIds();
-
-  /**
-   * Gets the file path for a given inode id.
-   *
-   * @param inodeId
-   *          - path inode id.
-   */
-  String getFilePath(Long inodeId);
-
 }

@@ -35,15 +35,16 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
  */
 @InterfaceAudience.Private
 public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
-    implements FileIdCollector {
+    implements FileCollector<Long> {
   private int maxQueueLimitToScan;
-  private final SPSService service;
+  private final SPSService <Long> service;
 
   private int remainingCapacity = 0;
 
-  private List<ItemInfo> currentBatch;
+  private List<ItemInfo<Long>> currentBatch;
 
-  public IntraSPSNameNodeFileIdCollector(FSDirectory dir, SPSService service) {
+  public IntraSPSNameNodeFileIdCollector(FSDirectory dir,
+      SPSService<Long> service) {
     super(dir);
     this.service = service;
     this.maxQueueLimitToScan = service.getConf().getInt(
@@ -63,7 +64,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
       return false;
     }
     if (inode.isFile() && inode.asFile().numBlocks() != 0) {
-      currentBatch.add(new ItemInfo(
+      currentBatch.add(new ItemInfo<Long>(
           ((SPSTraverseInfo) traverseInfo).getStartId(), inode.getId()));
       remainingCapacity--;
     }
@@ -83,10 +84,10 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
   }
 
   @Override
-  protected void submitCurrentBatch(long startId)
+  protected void submitCurrentBatch(Long startId)
       throws IOException, InterruptedException {
     // Add current child's to queue
-    service.addAllFileIdsToProcess(startId,
+    service.addAllFilesToProcess(startId,
         currentBatch, false);
     currentBatch.clear();
   }
@@ -119,7 +120,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
   }
 
   @Override
-  public void scanAndCollectFileIds(final Long startINodeId)
+  public void scanAndCollectFiles(final Long startINodeId)
       throws IOException, InterruptedException {
     FSDirectory fsd = getFSDirectory();
     INode startInode = fsd.getInode(startINodeId);
@@ -129,9 +130,9 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
         throttle();
       }
       if (startInode.isFile()) {
-        currentBatch.add(new ItemInfo(startInode.getId(), startInode.getId()));
+        currentBatch
+            .add(new ItemInfo<Long>(startInode.getId(), startInode.getId()));
       } else {
-
         readLock();
         // NOTE: this lock will not be held for full directory scanning. It is
         // basically a sliced locking. Once it collects a batch size( at max the
@@ -148,7 +149,7 @@ public class IntraSPSNameNodeFileIdCollector extends FSTreeTraverser
         }
       }
       // Mark startInode traverse is done, this is last-batch
-      service.addAllFileIdsToProcess(startInode.getId(), currentBatch, true);
+      service.addAllFilesToProcess(startInode.getId(), currentBatch, true);
       currentBatch.clear();
     }
   }

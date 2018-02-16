@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory;
 public class StoragePolicySatisfyManager {
   private static final Logger LOG = LoggerFactory
       .getLogger(StoragePolicySatisfyManager.class);
-  private final StoragePolicySatisfier spsService;
+  private final StoragePolicySatisfier<Long> spsService;
   private final boolean storagePolicyEnabled;
   private volatile StoragePolicySatisfierMode mode;
   private final Queue<Long> pathsToBeTraveresed;
@@ -84,7 +84,7 @@ public class StoragePolicySatisfyManager {
     pathsToBeTraveresed = new LinkedList<Long>();
     // instantiate SPS service by just keeps config reference and not starting
     // any supporting threads.
-    spsService = new StoragePolicySatisfier(conf);
+    spsService = new StoragePolicySatisfier<Long>(conf);
     this.namesystem = namesystem;
     this.blkMgr = blkMgr;
   }
@@ -309,7 +309,7 @@ public class StoragePolicySatisfyManager {
   /**
    * @return internal SPS service instance.
    */
-  public SPSService getInternalSPSService() {
+  public SPSService<Long> getInternalSPSService() {
     return this.spsService;
   }
 

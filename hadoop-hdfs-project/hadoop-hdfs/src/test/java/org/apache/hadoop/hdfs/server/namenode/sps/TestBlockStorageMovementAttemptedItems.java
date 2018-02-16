@@ -40,22 +40,21 @@ import org.mockito.Mockito;
  */
 public class TestBlockStorageMovementAttemptedItems {
 
-  private BlockStorageMovementAttemptedItems bsmAttemptedItems = null;
-  private BlockStorageMovementNeeded unsatisfiedStorageMovementFiles = null;
+  private BlockStorageMovementAttemptedItems<Long> bsmAttemptedItems;
+  private BlockStorageMovementNeeded<Long> unsatisfiedStorageMovementFiles;
   private final int selfRetryTimeout = 500;
 
   @Before
   public void setup() throws Exception {
     Configuration config = new HdfsConfiguration();
-    Context ctxt = Mockito.mock(Context.class);
-    SPSService sps = Mockito.mock(StoragePolicySatisfier.class);
-    Mockito.when(sps.getConf()).thenReturn(config);
+    Context<Long> ctxt = Mockito.mock(IntraSPSNameNodeContext.class);
+    SPSService<Long> sps = new StoragePolicySatisfier<Long>(config);
     Mockito.when(ctxt.isRunning()).thenReturn(true);
     Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
     Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
     unsatisfiedStorageMovementFiles =
-        new BlockStorageMovementNeeded(ctxt, null);
-    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(sps,
+        new BlockStorageMovementNeeded<Long>(ctxt, null);
+    bsmAttemptedItems = new BlockStorageMovementAttemptedItems<Long>(sps,
         unsatisfiedStorageMovementFiles, null);
   }
 
@@ -72,9 +71,9 @@ public class TestBlockStorageMovementAttemptedItems {
     long stopTime = monotonicNow() + (retryTimeout * 2);
     boolean isItemFound = false;
     while (monotonicNow() < (stopTime)) {
-      ItemInfo ele = null;
+      ItemInfo<Long> ele = null;
       while ((ele = unsatisfiedStorageMovementFiles.get()) != null) {
-        if (item == ele.getFileId()) {
+        if (item == ele.getFile()) {
           isItemFound = true;
           break;
         }
@@ -97,7 +96,7 @@ public class TestBlockStorageMovementAttemptedItems {
     Long item = new Long(1234);
     List<Block> blocks = new ArrayList<Block>();
     blocks.add(new Block(item));
-    bsmAttemptedItems.add(new AttemptedItemInfo(0L, 0L, 0L, blocks, 0));
+    bsmAttemptedItems.add(new AttemptedItemInfo<Long>(0L, 0L, 0L, blocks, 0));
     Block[] blockArray = new Block[blocks.size()];
     blocks.toArray(blockArray);
     bsmAttemptedItems.notifyMovementTriedBlocks(blockArray);
@@ -114,7 +113,7 @@ public class TestBlockStorageMovementAttemptedItems {
     Long item = new Long(1234);
     List<Block> blocks = new ArrayList<>();
     blocks.add(new Block(item));
-    bsmAttemptedItems.add(new AttemptedItemInfo(0L, 0L, 0L, blocks, 0));
+    bsmAttemptedItems.add(new AttemptedItemInfo<Long>(0L, 0L, 0L, blocks, 0));
     assertEquals("Shouldn't receive result", 0,
         bsmAttemptedItems.getMovementFinishedBlocksCount());
     assertEquals("Item doesn't exist in the attempted list", 1,
@@ -135,7 +134,7 @@ public class TestBlockStorageMovementAttemptedItems {
     blocks.add(new Block(5678L));
     Long trackID = 0L;
     bsmAttemptedItems
-        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
+        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
     bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
@@ -160,7 +159,7 @@ public class TestBlockStorageMovementAttemptedItems {
     List<Block> blocks = new ArrayList<>();
     blocks.add(new Block(item));
     bsmAttemptedItems
-        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
+        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
     bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
@@ -188,7 +187,7 @@ public class TestBlockStorageMovementAttemptedItems {
     List<Block> blocks = new ArrayList<>();
     blocks.add(new Block(item));
     bsmAttemptedItems
-        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
+        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
     bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);

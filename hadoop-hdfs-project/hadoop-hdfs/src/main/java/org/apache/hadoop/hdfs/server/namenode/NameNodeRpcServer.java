@@ -2561,20 +2561,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public String getFilePath(Long inodeId) throws IOException {
+  public String getNextSPSPath() throws IOException {
     checkNNStartup();
-    String operationName = "getFilePath";
-    namesystem.checkSuperuserPrivilege(operationName);
-    if (nn.isStandbyState()) {
-      throw new StandbyException("Not supported by Standby Namenode.");
-    }
-    return namesystem.getFilePath(inodeId);
-  }
-
-  @Override
-  public Long getNextSPSPathId() throws IOException {
-    checkNNStartup();
-    String operationName = "getNextSPSPathId";
+    String operationName = "getNextSPSPath";
     namesystem.checkSuperuserPrivilege(operationName);
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
@@ -2588,7 +2577,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + " inside namenode, so external SPS is not allowed to fetch"
           + " the path Ids");
     }
-    return namesystem.getBlockManager().getSPSManager().getNextPathId();
+    Long pathId = namesystem.getBlockManager().getSPSManager().getNextPathId();
+    if (pathId == null) {
+      return null;
+    }
+    return namesystem.getFilePath(pathId);
   }
 
   @Override
@@ -2602,16 +2595,5 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     return namesystem.getBlockManager().getDatanodeManager()
         .verifyTargetDatanodeHasSpaceForScheduling(dn, type, estimatedSize);
-  }
-
-  @Override
-  public boolean hasLowRedundancyBlocks(long inodeId) throws IOException {
-    checkNNStartup();
-    String operationName = "hasLowRedundancyBlocks";
-    namesystem.checkSuperuserPrivilege(operationName);
-    if (nn.isStandbyState()) {
-      throw new StandbyException("Not supported by Standby Namenode.");
-    }
-    return namesystem.getBlockManager().hasLowRedundancyBlocks(inodeId);
   }
 }

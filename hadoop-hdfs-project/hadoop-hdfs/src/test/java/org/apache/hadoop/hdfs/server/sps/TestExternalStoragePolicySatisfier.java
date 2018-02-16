@@ -43,23 +43,23 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
-import org.apache.hadoop.hdfs.server.namenode.sps.Context;
-import org.apache.hadoop.hdfs.server.namenode.sps.FileIdCollector;
-import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
+import org.apache.hadoop.hdfs.server.namenode.sps.BlockStorageMovementAttemptedItems;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier;
 import org.apache.hadoop.http.HttpConfig;
@@ -73,6 +73,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.google.common.base.Supplier;
 
 /**
  * Tests the external sps service plugins.
@@ -88,6 +90,8 @@ public class TestExternalStoragePolicySatisfier
   private String principal;
   private MiniKdc kdc;
   private File baseDir;
+  private StoragePolicySatisfier<String> externalSps;
+  private ExternalSPSContext externalCtxt;
 
   @After
   public void destroy() throws Exception {
@@ -95,6 +99,14 @@ public class TestExternalStoragePolicySatisfier
       kdc.stop();
       FileUtil.fullyDelete(baseDir);
     }
+  }
+
+  @Override
+  public void shutdownCluster() {
+    if (externalSps != null) {
+      externalSps.stopGracefully();
+    }
+    super.shutdownCluster();
   }
 
   @Override
@@ -131,60 +143,44 @@ public class TestExternalStoragePolicySatisfier
 
     nnc = getNameNodeConnector(getConf());
 
-    BlockManager blkMgr = cluster.getNameNode().getNamesystem()
-        .getBlockManager();
-    SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
-    spsService.stopGracefully();
-
-    ExternalSPSContext context = new ExternalSPSContext(spsService,
+    externalSps = new StoragePolicySatisfier<String>(getConf());
+    externalCtxt = new ExternalSPSContext(externalSps,
         getNameNodeConnector(conf));
 
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(conf, nnc,
-            blkMgr.getSPSManager().getInternalSPSService());
+            externalSps);
     externalHandler.init();
-    spsService.init(context,
-        new ExternalSPSFileIDCollector(context,
-            blkMgr.getSPSManager().getInternalSPSService()),
-        externalHandler, blkMoveListener);
-    spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
+    externalSps.init(externalCtxt,
+        new ExternalSPSFilePathCollector(externalSps), externalHandler,
+        blkMoveListener);
+    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
     return cluster;
   }
 
   public void restartNamenode() throws IOException{
-    BlockManager blkMgr = getCluster().getNameNode().getNamesystem()
-        .getBlockManager();
-    SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
-    spsService.stopGracefully();
+    if (externalSps != null) {
+      externalSps.stopGracefully();
+    }
 
     getCluster().restartNameNodes();
     getCluster().waitActive();
-    blkMgr = getCluster().getNameNode().getNamesystem()
-        .getBlockManager();
-    spsService = blkMgr.getSPSManager().getInternalSPSService();
-    spsService.stopGracefully();
+    externalSps = new StoragePolicySatisfier<>(getConf());
 
-    ExternalSPSContext context = new ExternalSPSContext(spsService,
+    externalCtxt = new ExternalSPSContext(externalSps,
         getNameNodeConnector(getConf()));
     ExternalBlockMovementListener blkMoveListener =
         new ExternalBlockMovementListener();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(getConf(), nnc,
-            blkMgr.getSPSManager().getInternalSPSService());
+            externalSps);
     externalHandler.init();
-    spsService.init(context,
-        new ExternalSPSFileIDCollector(context,
-            blkMgr.getSPSManager().getInternalSPSService()),
-        externalHandler, blkMoveListener);
-    spsService.start(true, StoragePolicySatisfierMode.EXTERNAL);
-  }
-
-  @Override
-  public FileIdCollector createFileIdCollector(StoragePolicySatisfier sps,
-      Context ctxt) {
-    return new ExternalSPSFileIDCollector(ctxt, sps);
+    externalSps.init(externalCtxt,
+        new ExternalSPSFilePathCollector(externalSps), externalHandler,
+        blkMoveListener);
+    externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
   }
 
   private class ExternalBlockMovementListener implements BlockMovementListener {
@@ -204,7 +200,7 @@ public class TestExternalStoragePolicySatisfier
       throws IOException {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     Assert.assertEquals(1, namenodes.size());
-    final Path externalSPSPathId = new Path("/system/tmp.id");
+    final Path externalSPSPathId = HdfsServerConstants.MOVER_ID_PATH;
     NameNodeConnector.checkOtherInstanceRunning(false);
     while (true) {
       try {
@@ -220,6 +216,40 @@ public class TestExternalStoragePolicySatisfier
       }
 
     }
+  }
+
+  public void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
+      int timeout) throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
+            expectedBlkMovAttemptedCount,
+            ((BlockStorageMovementAttemptedItems<String>) (externalSps
+                .getAttemptedItemsMonitor())).getAttemptedItemsCount());
+        return ((BlockStorageMovementAttemptedItems<String>) (externalSps
+            .getAttemptedItemsMonitor()))
+            .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
+      }
+    }, 100, timeout);
+  }
+
+  public void waitForBlocksMovementAttemptReport(
+      long expectedMovementFinishedBlocksCount, int timeout)
+          throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
+            expectedMovementFinishedBlocksCount,
+            ((BlockStorageMovementAttemptedItems<String>) (externalSps
+                .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount());
+        return ((BlockStorageMovementAttemptedItems<String>) (externalSps
+            .getAttemptedItemsMonitor()))
+                .getMovementFinishedBlocksCount()
+            >= expectedMovementFinishedBlocksCount;
+      }
+    }, 100, timeout);
   }
 
   private void initSecureConf(Configuration conf) throws Exception {
@@ -321,10 +351,6 @@ public class TestExternalStoragePolicySatisfier
       List<String> files = new ArrayList<>();
       files.add(FILE);
       DistributedFileSystem fs = getFS();
-      BlockManager blkMgr = getCluster().getNameNode().getNamesystem()
-          .getBlockManager();
-      SPSService spsService = blkMgr.getSPSManager().getInternalSPSService();
-      spsService.stopGracefully(); // stops SPS
 
       // Creates 4 more files. Send all of them for satisfying the storage
       // policy together.
@@ -367,6 +393,28 @@ public class TestExternalStoragePolicySatisfier
   }
 
   /**
+   * Tests to verify that SPS should be able to start when the Mover ID file
+   * is not being hold by a Mover. This can be the case when Mover exits
+   * ungracefully without deleting the ID file from HDFS.
+   */
+  @Test(timeout = 300000)
+  public void testWhenMoverExitsWithoutDeleteMoverIDFile()
+      throws IOException {
+    try {
+      createCluster();
+      // Simulate the case by creating MOVER_ID file
+      DFSTestUtil.createFile(getCluster().getFileSystem(),
+          HdfsServerConstants.MOVER_ID_PATH, 0, (short) 1, 0);
+      restartNamenode();
+      boolean running = externalCtxt.isRunning();
+      Assert.assertTrue("SPS should be running as "
+          + "no Mover really running", running);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  /**
    * This test need not run as external scan is not a batch based scanning right
    * now.
    */
@@ -388,5 +436,21 @@ public class TestExternalStoragePolicySatisfier
    */
   @Ignore("Status is not supported for external SPS. So, ignoring it.")
   public void testMaxRetryForFailedBlock() throws Exception {
+  }
+
+  /**
+   * This test is specific to internal SPS. So, ignoring it.
+   */
+  @Ignore("This test is specific to internal SPS. So, ignoring it.")
+  @Override
+  public void testTraverseWhenParentDeleted() throws Exception {
+  }
+
+  /**
+   * This test is specific to internal SPS. So, ignoring it.
+   */
+  @Ignore("This test is specific to internal SPS. So, ignoring it.")
+  @Override
+  public void testTraverseWhenRootParentDeleted() throws Exception {
   }
 }

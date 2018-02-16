@@ -34,12 +34,10 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeys
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeysResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetFilePathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathIdRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathIdResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.HasLowRedundancyBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsRollingUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.IsUpgradeFinalizedRequestProto;
@@ -271,24 +269,13 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  public Long getNextSPSPathId() throws IOException {
-    GetNextSPSPathIdRequestProto req =
-        GetNextSPSPathIdRequestProto.newBuilder().build();
+  public String getNextSPSPath() throws IOException {
+    GetNextSPSPathRequestProto req =
+        GetNextSPSPathRequestProto.newBuilder().build();
     try {
-      GetNextSPSPathIdResponseProto nextSPSPathId =
-          rpcProxy.getNextSPSPathId(NULL_CONTROLLER, req);
-      return nextSPSPathId.hasFileId() ? nextSPSPathId.getFileId() : null;
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-  }
-
-  @Override
-  public String getFilePath(Long inodeId) throws IOException {
-    GetFilePathRequestProto req =
-        GetFilePathRequestProto.newBuilder().setFileId(inodeId).build();
-    try {
-      return rpcProxy.getFilePath(NULL_CONTROLLER, req).getSrcPath();
+      GetNextSPSPathResponseProto nextSPSPath =
+          rpcProxy.getNextSPSPath(NULL_CONTROLLER, req);
+      return nextSPSPath.hasSpsPath() ? nextSPSPath.getSpsPath() : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -308,17 +295,4 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       throw ProtobufHelper.getRemoteException(e);
     }
   }
-
-  @Override
-  public boolean hasLowRedundancyBlocks(long inodeId) throws IOException {
-    HasLowRedundancyBlocksRequestProto req = HasLowRedundancyBlocksRequestProto
-        .newBuilder().setInodeId(inodeId).build();
-    try {
-      return rpcProxy.hasLowRedundancyBlocks(NULL_CONTROLLER, req)
-          .getHasLowRedundancyBlocks();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-  }
-
 }

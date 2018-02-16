@@ -21,48 +21,51 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * ItemInfo is a file info object for which need to satisfy the policy.
+ * ItemInfo is a file info object for which need to satisfy the policy. For
+ * internal satisfier service, it uses inode id which is Long datatype. For the
+ * external satisfier service, it uses the full string representation of the
+ * path.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ItemInfo {
-  private long startId;
-  private long fileId;
+public class ItemInfo<T> {
+  private T startPath;
+  private T file;
   private int retryCount;
 
-  public ItemInfo(long startId, long fileId) {
-    this.startId = startId;
-    this.fileId = fileId;
+  public ItemInfo(T startPath, T file) {
+    this.startPath = startPath;
+    this.file = file;
     // set 0 when item is getting added first time in queue.
     this.retryCount = 0;
   }
 
-  public ItemInfo(final long startId, final long fileId, final int retryCount) {
-    this.startId = startId;
-    this.fileId = fileId;
+  public ItemInfo(final T startPath, final T file, final int retryCount) {
+    this.startPath = startPath;
+    this.file = file;
     this.retryCount = retryCount;
   }
 
   /**
-   * Return the start inode id of the current track Id. This indicates that SPS
-   * was invoked on this inode id.
+   * Returns the start path of the current file. This indicates that SPS
+   * was invoked on this path.
    */
-  public long getStartId() {
-    return startId;
+  public T getStartPath() {
+    return startPath;
   }
 
   /**
-   * Return the File inode Id for which needs to satisfy the policy.
+   * Returns the file for which needs to satisfy the policy.
    */
-  public long getFileId() {
-    return fileId;
+  public T getFile() {
+    return file;
   }
 
   /**
    * Returns true if the tracking path is a directory, false otherwise.
    */
   public boolean isDir() {
-    return (startId != fileId);
+    return !startPath.equals(file);
   }
 
   /**

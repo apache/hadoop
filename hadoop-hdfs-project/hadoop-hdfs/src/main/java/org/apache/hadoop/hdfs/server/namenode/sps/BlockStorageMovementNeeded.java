@@ -43,31 +43,36 @@ import com.google.common.annotations.VisibleForTesting;
  * schedule the block collection IDs for movement. It track the info of
  * scheduled items and remove the SPS xAttr from the file/Directory once
  * movement is success.
+ *
+ * @param <T>
+ *          is identifier of inode or full path name of inode. Internal sps will
+ *          use the file inodeId for the block movement. External sps will use
+ *          file string path representation for the block movement.
  */
 @InterfaceAudience.Private
-public class BlockStorageMovementNeeded {
+public class BlockStorageMovementNeeded<T> {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementNeeded.class);
 
-  private final Queue<ItemInfo> storageMovementNeeded =
-      new LinkedList<ItemInfo>();
+  private final Queue<ItemInfo<T>> storageMovementNeeded =
+      new LinkedList<ItemInfo<T>>();
 
   /**
-   * Map of startId and number of child's. Number of child's indicate the
+   * Map of startPath and number of child's. Number of child's indicate the
    * number of files pending to satisfy the policy.
    */
-  private final Map<Long, DirPendingWorkInfo> pendingWorkForDirectory =
-      new HashMap<Long, DirPendingWorkInfo>();
+  private final Map<T, DirPendingWorkInfo> pendingWorkForDirectory =
+      new HashMap<>();
 
-  private final Map<Long, StoragePolicySatisfyPathStatusInfo> spsStatus =
+  private final Map<T, StoragePolicySatisfyPathStatusInfo> spsStatus =
       new ConcurrentHashMap<>();
 
-  private final Context ctxt;
+  private final Context<T> ctxt;
 
   private Daemon pathIdCollector;
 
-  private FileIdCollector fileIDCollector;
+  private FileCollector<T> fileCollector;
 
   private SPSPathIdProcessor pathIDProcessor;
 
@@ -75,10 +80,10 @@ public class BlockStorageMovementNeeded {
   // NOT_AVAILABLE.
   private static long statusClearanceElapsedTimeMs = 300000;
 
-  public BlockStorageMovementNeeded(Context context,
-      FileIdCollector fileIDCollector) {
+  public BlockStorageMovementNeeded(Context<T> context,
+      FileCollector<T> fileCollector) {
     this.ctxt = context;
-    this.fileIDCollector = fileIDCollector;
+    this.fileCollector = fileCollector;
     pathIDProcessor = new SPSPathIdProcessor();
   }
 
@@ -89,8 +94,8 @@ public class BlockStorageMovementNeeded {
    * @param trackInfo
    *          - track info for satisfy the policy
    */
-  public synchronized void add(ItemInfo trackInfo) {
-    spsStatus.put(trackInfo.getStartId(),
+  public synchronized void add(ItemInfo<T> trackInfo) {
+    spsStatus.put(trackInfo.getFile(),
         new StoragePolicySatisfyPathStatusInfo(
             StoragePolicySatisfyPathStatus.IN_PROGRESS));
     storageMovementNeeded.add(trackInfo);
@@ -100,8 +105,8 @@ public class BlockStorageMovementNeeded {
    * Add the itemInfo list to tracking list for which storage movement expected
    * if necessary.
    *
-   * @param startId
-   *          - start id
+   * @param startPath
+   *          - start path
    * @param itemInfoList
    *          - List of child in the directory
    * @param scanCompleted
@@ -109,10 +114,10 @@ public class BlockStorageMovementNeeded {
    *          scan.
    */
   @VisibleForTesting
-  public synchronized void addAll(long startId, List<ItemInfo> itemInfoList,
+  public synchronized void addAll(T startPath, List<ItemInfo<T>> itemInfoList,
       boolean scanCompleted) {
     storageMovementNeeded.addAll(itemInfoList);
-    updatePendingDirScanStats(startId, itemInfoList.size(), scanCompleted);
+    updatePendingDirScanStats(startPath, itemInfoList.size(), scanCompleted);
   }
 
   /**
@@ -126,22 +131,22 @@ public class BlockStorageMovementNeeded {
    *          elements to scan.
    */
   @VisibleForTesting
-  public synchronized void add(ItemInfo itemInfo, boolean scanCompleted) {
+  public synchronized void add(ItemInfo<T> itemInfo, boolean scanCompleted) {
     storageMovementNeeded.add(itemInfo);
     // This represents sps start id is file, so no need to update pending dir
     // stats.
-    if (itemInfo.getStartId() == itemInfo.getFileId()) {
+    if (itemInfo.getStartPath() == itemInfo.getFile()) {
       return;
     }
-    updatePendingDirScanStats(itemInfo.getStartId(), 1, scanCompleted);
+    updatePendingDirScanStats(itemInfo.getFile(), 1, scanCompleted);
   }
 
-  private void updatePendingDirScanStats(long startId, int numScannedFiles,
+  private void updatePendingDirScanStats(T startPath, int numScannedFiles,
       boolean scanCompleted) {
-    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
+    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startPath);
     if (pendingWork == null) {
       pendingWork = new DirPendingWorkInfo();
-      pendingWorkForDirectory.put(startId, pendingWork);
+      pendingWorkForDirectory.put(startPath, pendingWork);
     }
     pendingWork.addPendingWorkCount(numScannedFiles);
     if (scanCompleted) {
@@ -150,12 +155,12 @@ public class BlockStorageMovementNeeded {
   }
 
   /**
-   * Gets the block collection id for which storage movements check necessary
+   * Gets the satisfier files for which block storage movements check necessary
    * and make the movement if required.
    *
-   * @return block collection ID
+   * @return satisfier files
    */
-  public synchronized ItemInfo get() {
+  public synchronized ItemInfo<T> get() {
     return storageMovementNeeded.poll();
   }
 
@@ -176,12 +181,12 @@ public class BlockStorageMovementNeeded {
    * Decrease the pending child count for directory once one file blocks moved
    * successfully. Remove the SPS xAttr if pending child count is zero.
    */
-  public synchronized void removeItemTrackInfo(ItemInfo trackInfo,
+  public synchronized void removeItemTrackInfo(ItemInfo<T> trackInfo,
       boolean isSuccess) throws IOException {
     if (trackInfo.isDir()) {
       // If track is part of some start inode then reduce the pending
       // directory work count.
-      long startId = trackInfo.getStartId();
+      T startId = trackInfo.getStartPath();
       if (!ctxt.isFileExist(startId)) {
         // directory deleted just remove it.
         this.pendingWorkForDirectory.remove(startId);
@@ -202,17 +207,17 @@ public class BlockStorageMovementNeeded {
     } else {
       // Remove xAttr if trackID doesn't exist in
       // storageMovementAttemptedItems or file policy satisfied.
-      ctxt.removeSPSHint(trackInfo.getFileId());
-      updateStatus(trackInfo.getStartId(), isSuccess);
+      ctxt.removeSPSHint(trackInfo.getFile());
+      updateStatus(trackInfo.getFile(), isSuccess);
     }
   }
 
-  public synchronized void clearQueue(long trackId) {
+  public synchronized void clearQueue(T trackId) {
     ctxt.removeSPSPathId(trackId);
-    Iterator<ItemInfo> iterator = storageMovementNeeded.iterator();
+    Iterator<ItemInfo<T>> iterator = storageMovementNeeded.iterator();
     while (iterator.hasNext()) {
-      ItemInfo next = iterator.next();
-      if (next.getStartId() == trackId) {
+      ItemInfo<T> next = iterator.next();
+      if (next.getFile() == trackId) {
         iterator.remove();
       }
     }
@@ -222,7 +227,7 @@ public class BlockStorageMovementNeeded {
   /**
    * Mark inode status as SUCCESS in map.
    */
-  private void updateStatus(long startId, boolean isSuccess){
+  private void updateStatus(T startId, boolean isSuccess){
     StoragePolicySatisfyPathStatusInfo spsStatusInfo =
         spsStatus.get(startId);
     if (spsStatusInfo == null) {
@@ -244,8 +249,8 @@ public class BlockStorageMovementNeeded {
    */
   public synchronized void clearQueuesWithNotification() {
     // Remove xAttr from directories
-    Long trackId;
-    while ((trackId = ctxt.getNextSPSPathId()) != null) {
+    T trackId;
+    while ((trackId = ctxt.getNextSPSPath()) != null) {
       try {
         // Remove xAttr for file
         ctxt.removeSPSHint(trackId);
@@ -256,17 +261,17 @@ public class BlockStorageMovementNeeded {
 
     // File's directly added to storageMovementNeeded, So try to remove
     // xAttr for file
-    ItemInfo itemInfo;
+    ItemInfo<T> itemInfo;
     while ((itemInfo = get()) != null) {
       try {
         // Remove xAttr for file
         if (!itemInfo.isDir()) {
-          ctxt.removeSPSHint(itemInfo.getFileId());
+          ctxt.removeSPSHint(itemInfo.getFile());
         }
       } catch (IOException ie) {
         LOG.warn(
             "Failed to remove SPS xattr for track id "
-                + itemInfo.getFileId(), ie);
+                + itemInfo.getFile(), ie);
       }
     }
     this.clearAll();
@@ -282,29 +287,29 @@ public class BlockStorageMovementNeeded {
     public void run() {
       LOG.info("Starting SPSPathIdProcessor!.");
       long lastStatusCleanTime = 0;
-      Long startINodeId = null;
+      T startINode = null;
       while (ctxt.isRunning()) {
         try {
           if (!ctxt.isInSafeMode()) {
-            if (startINodeId == null) {
-              startINodeId = ctxt.getNextSPSPathId();
+            if (startINode == null) {
+              startINode = ctxt.getNextSPSPath();
             } // else same id will be retried
-            if (startINodeId == null) {
+            if (startINode == null) {
               // Waiting for SPS path
               Thread.sleep(3000);
             } else {
-              spsStatus.put(startINodeId,
+              spsStatus.put(startINode,
                   new StoragePolicySatisfyPathStatusInfo(
                       StoragePolicySatisfyPathStatus.IN_PROGRESS));
-              fileIDCollector.scanAndCollectFileIds(startINodeId);
+              fileCollector.scanAndCollectFiles(startINode);
               // check if directory was empty and no child added to queue
               DirPendingWorkInfo dirPendingWorkInfo =
-                  pendingWorkForDirectory.get(startINodeId);
+                  pendingWorkForDirectory.get(startINode);
               if (dirPendingWorkInfo != null
                   && dirPendingWorkInfo.isDirWorkDone()) {
-                ctxt.removeSPSHint(startINodeId);
-                pendingWorkForDirectory.remove(startINodeId);
-                updateStatus(startINodeId, true);
+                ctxt.removeSPSHint(startINode);
+                pendingWorkForDirectory.remove(startINode);
+                updateStatus(startINode, true);
               }
             }
             //Clear the SPS status if status is in SUCCESS more than 5 min.
@@ -313,7 +318,7 @@ public class BlockStorageMovementNeeded {
               lastStatusCleanTime = Time.monotonicNow();
               cleanSPSStatus();
             }
-            startINodeId = null; // Current inode id successfully scanned.
+            startINode = null; // Current inode successfully scanned.
           }
         } catch (Throwable t) {
           String reClass = t.getClass().getName();
@@ -334,9 +339,9 @@ public class BlockStorageMovementNeeded {
     }
 
     private synchronized void cleanSPSStatus() {
-      for (Iterator<Entry<Long, StoragePolicySatisfyPathStatusInfo>> it =
-          spsStatus.entrySet().iterator(); it.hasNext();) {
-        Entry<Long, StoragePolicySatisfyPathStatusInfo> entry = it.next();
+      for (Iterator<Entry<T, StoragePolicySatisfyPathStatusInfo>> it = spsStatus
+          .entrySet().iterator(); it.hasNext();) {
+        Entry<T, StoragePolicySatisfyPathStatusInfo> entry = it.next();
         if (entry.getValue().canRemove()) {
           it.remove();
         }
@@ -472,8 +477,8 @@ public class BlockStorageMovementNeeded {
     return statusClearanceElapsedTimeMs;
   }
 
-  public void markScanCompletedForDir(Long inodeId) {
-    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(inodeId);
+  public void markScanCompletedForDir(T inode) {
+    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(inode);
     if (pendingWork != null) {
       pendingWork.markScanCompleted();
     }

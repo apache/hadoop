@@ -105,7 +105,7 @@ public class TestStoragePolicySatisfier {
   public static final int NUM_OF_DATANODES = 3;
   public static final int STORAGES_PER_DATANODE = 2;
   public static final long CAPACITY = 2 * 256 * 1024 * 1024;
-  public static final String FILE = "/testMoveWhenStoragePolicyNotSatisfying";
+  public static final String FILE = "/testMoveToSatisfyStoragePolicy";
   public static final int DEFAULT_BLOCK_SIZE = 1024;
 
   /**
@@ -1269,8 +1269,9 @@ public class TestStoragePolicySatisfier {
 
     //Queue limit can control the traverse logic to wait for some free
     //entry in queue. After 10 files, traverse control will be on U.
-    StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
-    Context ctxt = new IntraSPSNameNodeContext(hdfsCluster.getNamesystem(),
+    StoragePolicySatisfier<Long> sps = new StoragePolicySatisfier<Long>(config);
+    Context<Long> ctxt = new IntraSPSNameNodeContext(
+        hdfsCluster.getNamesystem(),
         hdfsCluster.getNamesystem().getBlockManager(), sps) {
       @Override
       public boolean isInSafeMode() {
@@ -1283,7 +1284,7 @@ public class TestStoragePolicySatisfier {
       }
     };
 
-    FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
+    FileCollector<Long> fileIDCollector = createFileIdCollector(sps, ctxt);
     sps.init(ctxt, fileIDCollector, null, null);
     sps.getStorageMovementQueue().activate();
 
@@ -1300,9 +1301,9 @@ public class TestStoragePolicySatisfier {
     dfs.delete(new Path("/root"), true);
   }
 
-  public FileIdCollector createFileIdCollector(StoragePolicySatisfier sps,
-      Context ctxt) {
-    FileIdCollector fileIDCollector = new IntraSPSNameNodeFileIdCollector(
+  public FileCollector<Long> createFileIdCollector(
+      StoragePolicySatisfier<Long> sps, Context<Long> ctxt) {
+    FileCollector<Long> fileIDCollector = new IntraSPSNameNodeFileIdCollector(
         hdfsCluster.getNamesystem().getFSDirectory(), sps);
     return fileIDCollector;
   }
@@ -1337,8 +1338,9 @@ public class TestStoragePolicySatisfier {
 
     // Queue limit can control the traverse logic to wait for some free
     // entry in queue. After 10 files, traverse control will be on U.
-    StoragePolicySatisfier sps = new StoragePolicySatisfier(config);
-    Context ctxt = new IntraSPSNameNodeContext(hdfsCluster.getNamesystem(),
+    StoragePolicySatisfier<Long> sps = new StoragePolicySatisfier<Long>(config);
+    Context<Long> ctxt = new IntraSPSNameNodeContext(
+        hdfsCluster.getNamesystem(),
         hdfsCluster.getNamesystem().getBlockManager(), sps) {
       @Override
       public boolean isInSafeMode() {
@@ -1350,7 +1352,7 @@ public class TestStoragePolicySatisfier {
         return true;
       }
     };
-    FileIdCollector fileIDCollector = createFileIdCollector(sps, ctxt);
+    FileCollector<Long> fileIDCollector = createFileIdCollector(sps, ctxt);
     sps.init(ctxt, fileIDCollector, null, null);
     sps.getStorageMovementQueue().activate();
 
@@ -1368,16 +1370,16 @@ public class TestStoragePolicySatisfier {
   }
 
   private void assertTraversal(List<String> expectedTraverseOrder,
-      FSDirectory fsDir, StoragePolicySatisfier sps)
+      FSDirectory fsDir, StoragePolicySatisfier<Long> sps)
           throws InterruptedException {
     // Remove 10 element and make queue free, So other traversing will start.
     for (int i = 0; i < 10; i++) {
       String path = expectedTraverseOrder.remove(0);
-      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
+      ItemInfo<Long> itemInfo = sps.getStorageMovementQueue().get();
       if (itemInfo == null) {
         continue;
       }
-      long trackId = itemInfo.getFileId();
+      Long trackId = itemInfo.getFile();
       INode inode = fsDir.getInode(trackId);
       assertTrue("Failed to traverse tree, expected " + path + " but got "
           + inode.getFullPathName(), path.equals(inode.getFullPathName()));
@@ -1388,11 +1390,11 @@ public class TestStoragePolicySatisfier {
     // Check other element traversed in order and E, M, U, R, S should not be
     // added in queue which we already removed from expected list
     for (String path : expectedTraverseOrder) {
-      ItemInfo itemInfo = sps.getStorageMovementQueue().get();
+      ItemInfo<Long> itemInfo = sps.getStorageMovementQueue().get();
       if (itemInfo == null) {
         continue;
       }
-      long trackId = itemInfo.getFileId();
+      Long trackId = itemInfo.getFile();
       INode inode = fsDir.getInode(trackId);
       assertTrue("Failed to traverse tree, expected " + path + " but got "
           + inode.getFullPathName(), path.equals(inode.getFullPathName()));
@@ -1696,39 +1698,41 @@ public class TestStoragePolicySatisfier {
     return file1;
   }
 
-  private void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
+  public void waitForAttemptedItems(long expectedBlkMovAttemptedCount,
       int timeout) throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
-        .getSPSManager().getInternalSPSService();
+    final StoragePolicySatisfier<Long> sps =
+        (StoragePolicySatisfier<Long>) blockManager.getSPSManager()
+        .getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
             expectedBlkMovAttemptedCount,
-            ((BlockStorageMovementAttemptedItems) (sps
+            ((BlockStorageMovementAttemptedItems<Long>) (sps
                 .getAttemptedItemsMonitor())).getAttemptedItemsCount());
-        return ((BlockStorageMovementAttemptedItems) (sps
+        return ((BlockStorageMovementAttemptedItems<Long>) (sps
             .getAttemptedItemsMonitor()))
             .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
     }, 100, timeout);
   }
 
-  private void waitForBlocksMovementAttemptReport(
+  public void waitForBlocksMovementAttemptReport(
       long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier sps = (StoragePolicySatisfier) blockManager
+    final StoragePolicySatisfier<Long> sps =
+        (StoragePolicySatisfier<Long>) blockManager
         .getSPSManager().getInternalSPSService();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
             expectedMovementFinishedBlocksCount,
-            ((BlockStorageMovementAttemptedItems) (sps
+            ((BlockStorageMovementAttemptedItems<Long>) (sps
                 .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount());
-        return ((BlockStorageMovementAttemptedItems) (sps
+        return ((BlockStorageMovementAttemptedItems<Long>) (sps
             .getAttemptedItemsMonitor()))
                 .getMovementFinishedBlocksCount()
             >= expectedMovementFinishedBlocksCount;

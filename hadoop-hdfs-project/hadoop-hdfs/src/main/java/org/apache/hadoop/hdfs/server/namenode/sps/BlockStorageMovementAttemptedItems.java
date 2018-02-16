@@ -45,8 +45,13 @@ import com.google.common.annotations.VisibleForTesting;
  * entries from tracking. If there is no DN reports about movement attempt
  * finished for a longer time period, then such items will retries automatically
  * after timeout. The default timeout would be 5 minutes.
+ *
+ * @param <T>
+ *          is identifier of inode or full path name of inode. Internal sps will
+ *          use the file inodeId for the block movement. External sps will use
+ *          file string path representation for the block movement.
  */
-public class BlockStorageMovementAttemptedItems{
+public class BlockStorageMovementAttemptedItems<T> {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class);
 
@@ -54,7 +59,7 @@ public class BlockStorageMovementAttemptedItems{
    * A map holds the items which are already taken for blocks movements
    * processing and sent to DNs.
    */
-  private final List<AttemptedItemInfo> storageMovementAttemptedItems;
+  private final List<AttemptedItemInfo<T>> storageMovementAttemptedItems;
   private final List<Block> movementFinishedBlocks;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
@@ -70,11 +75,11 @@ public class BlockStorageMovementAttemptedItems{
   // a request is timed out.
   //
   private long minCheckTimeout = 1 * 60 * 1000; // minimum value
-  private BlockStorageMovementNeeded blockStorageMovementNeeded;
-  private final SPSService service;
+  private BlockStorageMovementNeeded<T> blockStorageMovementNeeded;
+  private final SPSService<T> service;
 
-  public BlockStorageMovementAttemptedItems(SPSService service,
-      BlockStorageMovementNeeded unsatisfiedStorageMovementFiles,
+  public BlockStorageMovementAttemptedItems(SPSService<T> service,
+      BlockStorageMovementNeeded<T> unsatisfiedStorageMovementFiles,
       BlockMovementListener blockMovementListener) {
     this.service = service;
     long recheckTimeout = this.service.getConf().getLong(
@@ -100,7 +105,7 @@ public class BlockStorageMovementAttemptedItems{
    * @param itemInfo
    *          - tracking info
    */
-  public void add(AttemptedItemInfo itemInfo) {
+  public void add(AttemptedItemInfo<T> itemInfo) {
     synchronized (storageMovementAttemptedItems) {
       storageMovementAttemptedItems.add(itemInfo);
     }
@@ -190,25 +195,24 @@ public class BlockStorageMovementAttemptedItems{
   @VisibleForTesting
   void blocksStorageMovementUnReportedItemsCheck() {
     synchronized (storageMovementAttemptedItems) {
-      Iterator<AttemptedItemInfo> iter = storageMovementAttemptedItems
+      Iterator<AttemptedItemInfo<T>> iter = storageMovementAttemptedItems
           .iterator();
       long now = monotonicNow();
       while (iter.hasNext()) {
-        AttemptedItemInfo itemInfo = iter.next();
+        AttemptedItemInfo<T> itemInfo = iter.next();
         if (now > itemInfo.getLastAttemptedOrReportedTime()
             + selfRetryTimeout) {
-          Long blockCollectionID = itemInfo.getFileId();
+          T file = itemInfo.getFile();
           synchronized (movementFinishedBlocks) {
-            ItemInfo candidate = new ItemInfo(itemInfo.getStartId(),
-                blockCollectionID, itemInfo.getRetryCount() + 1);
+            ItemInfo<T> candidate = new ItemInfo<T>(itemInfo.getStartPath(),
+                file, itemInfo.getRetryCount() + 1);
             blockStorageMovementNeeded.add(candidate);
             iter.remove();
             LOG.info("TrackID: {} becomes timed out and moved to needed "
-                + "retries queue for next iteration.", blockCollectionID);
+                + "retries queue for next iteration.", file);
           }
         }
       }
-
     }
   }
 
@@ -219,17 +223,17 @@ public class BlockStorageMovementAttemptedItems{
       while (finishedBlksIter.hasNext()) {
         Block blk = finishedBlksIter.next();
         synchronized (storageMovementAttemptedItems) {
-          Iterator<AttemptedItemInfo> iterator = storageMovementAttemptedItems
-              .iterator();
+          Iterator<AttemptedItemInfo<T>> iterator =
+              storageMovementAttemptedItems.iterator();
           while (iterator.hasNext()) {
-            AttemptedItemInfo attemptedItemInfo = iterator.next();
+            AttemptedItemInfo<T> attemptedItemInfo = iterator.next();
             attemptedItemInfo.getBlocks().remove(blk);
             if (attemptedItemInfo.getBlocks().isEmpty()) {
               // TODO: try add this at front of the Queue, so that this element
               // gets the chance first and can be cleaned from queue quickly as
               // all movements already done.
-              blockStorageMovementNeeded.add(new ItemInfo(attemptedItemInfo
-                  .getStartId(), attemptedItemInfo.getFileId(),
+              blockStorageMovementNeeded.add(new ItemInfo<T>(attemptedItemInfo
+                  .getStartPath(), attemptedItemInfo.getFile(),
                   attemptedItemInfo.getRetryCount() + 1));
               iterator.remove();
             }

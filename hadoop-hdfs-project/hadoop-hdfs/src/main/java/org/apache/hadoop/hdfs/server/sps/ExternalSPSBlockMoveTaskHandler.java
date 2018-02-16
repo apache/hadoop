@@ -81,11 +81,11 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
   private final SaslDataTransferClient saslClient;
   private final BlockStorageMovementTracker blkMovementTracker;
   private Daemon movementTrackerThread;
-  private final SPSService service;
+  private final SPSService<String> service;
   private final BlockDispatcher blkDispatcher;
 
   public ExternalSPSBlockMoveTaskHandler(Configuration conf,
-      NameNodeConnector nnc, SPSService spsService) {
+      NameNodeConnector nnc, SPSService<String> spsService) {
     int moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY,
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);

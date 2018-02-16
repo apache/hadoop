@@ -206,21 +206,11 @@ public interface NamenodeProtocol {
   boolean isRollingUpgrade() throws IOException;
 
   /**
-   * Gets the file path for the given file id. This API used by External SPS.
-   *
-   * @param inodeId
-   *          - file inode id.
-   * @return path
-   */
-  @Idempotent
-  String getFilePath(Long inodeId) throws IOException;
-
-  /**
-   * @return Gets the next available sps path id, otherwise null. This API used
+   * @return Gets the next available sps path, otherwise null. This API used
    *         by External SPS.
    */
   @AtMostOnce
-  Long getNextSPSPathId() throws IOException;
+  String getNextSPSPath() throws IOException;
 
   /**
    * Verifies whether the given Datanode has the enough estimated size with
@@ -236,15 +226,5 @@ public interface NamenodeProtocol {
   @Idempotent
   boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
       long estimatedSize) throws IOException;
-
-  /**
-   * Check if any low redundancy blocks for given file id. This API used by
-   * External SPS.
-   *
-   * @param inodeID
-   *          - inode id.
-   */
-  @Idempotent
-  boolean hasLowRedundancyBlocks(long inodeID) throws IOException;
 }
 

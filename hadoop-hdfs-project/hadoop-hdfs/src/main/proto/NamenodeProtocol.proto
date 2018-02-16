@@ -214,11 +214,11 @@ message GetFilePathResponseProto {
   required string srcPath = 1;
 }
 
-message GetNextSPSPathIdRequestProto {
+message GetNextSPSPathRequestProto {
 }
 
-message GetNextSPSPathIdResponseProto {
-  optional uint64 fileId = 1;
+message GetNextSPSPathResponseProto {
+  optional string spsPath = 1;
 }
 
 message CheckDNSpaceRequestProto {
@@ -322,26 +322,15 @@ service NamenodeProtocolService {
       returns (IsRollingUpgradeResponseProto);
 
   /**
-   * Return the corresponding file path for give file id
+   * Return the sps path from namenode
    */
-  rpc getFilePath(GetFilePathRequestProto)
-      returns (GetFilePathResponseProto);
+  rpc getNextSPSPath(GetNextSPSPathRequestProto)
+      returns (GetNextSPSPathResponseProto);
 
   /**
-   * Return the sps path id from namenode
-   */
-  rpc getNextSPSPathId(GetNextSPSPathIdRequestProto)
-      returns (GetNextSPSPathIdResponseProto);
-
-  /**
-   * Return the sps path id from namenode
+   * Verifies whether the given Datanode has the enough estimated size with
+   * given storage type for scheduling the block movement.
    */
   rpc checkDNSpaceForScheduling(CheckDNSpaceRequestProto)
       returns (CheckDNSpaceResponseProto);
-
-  /**
-   * check whether given file id has low redundancy blocks.
-   */
-  rpc hasLowRedundancyBlocks(HasLowRedundancyBlocksRequestProto)
-      returns (HasLowRedundancyBlocksResponseProto);
 }
