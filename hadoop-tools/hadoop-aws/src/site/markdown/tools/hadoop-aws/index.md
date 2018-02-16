@@ -548,14 +548,32 @@ to keep secrets outside Hadoop configuration files, storing them in encrypted
 files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
-(`fs.s3a.secret.key`, `fs.s3a.access.key` and `fs.s3a.session.token`) can
+(`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
+and `fs.s3a.server-side-encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
-credential provider is all that is passed as a direct configuration option.
+credential provider then declareed in the hadoop configuration.
 
 For additional reading on the Hadoop Credential Provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
+
+The following configuration options can be storeed in Hadoop Credential Provider
+stores.
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.session.token
+fs.s3a.server-side-encryption.key
+fs.s3a.server-side-encryption-algorithm
+```
+
+The first three are for authentication; the final two for
+[encryption](./encryption.html). Of the latter, only the encryption key can
+be considered "sensitive". However, being able to include the algorithm in
+the credentials allows for a JCECKS file to contain all the options needed
+to encrypt new data written to S3.
 
 ### Step 1: Create a credential file
 
@@ -564,7 +582,6 @@ a Unix filesystem the permissions are automatically set to keep the file
 private to the reader —though as directory permissions are not touched,
 users should verify that the directory containing the file is readable only by
 the current user.
-
 
 ```bash
 hadoop credential create fs.s3a.access.key -value 123 \
@@ -621,9 +638,12 @@ over that of the `hadoop.security` list (i.e. they are prepended to the common l
 </property>
 ```
 
-Supporting a separate list in an `fs.s3a.` prefix permits per-bucket configuration
-of credential files.
-
+This was added to suppport binding different credential providers on a per
+bucket basis, without adding alternative secrets in the credential list.
+However, some applications (e.g Hive) prevent the list of credential providers
+from being dynamically updated by users. As per-bucket secrets are now supported,
+it is better to include per-bucket keys in JCEKS files and other sources
+of credentials.
 
 ### Using secrets from credential providers
 
@@ -1133,16 +1153,28 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 
 ### Customizing S3A secrets held in credential files
 
-Although most properties are automatically propagated from their
-`fs.s3a.bucket.`-prefixed custom entry to that of the base `fs.s3a.` option
-supporting secrets kept in Hadoop credential files is slightly more complex.
-This is because the property values are kept in these files, and cannot be
-dynamically patched.
 
-Instead, callers need to create different configuration files for each
-bucket, setting the base secrets (`fs.s3a.access.key`, etc),
-then declare the path to the appropriate credential file in
-a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
+Secrets in JCEKS files or provided by other Hadoop credential providers
+can also be configured on a per bucket basis. The S3A client will
+look for the per-bucket secrets be
+
+
+Consider a JCEKS file with six keys:
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.server-side-encryption-algorithm
+fs.s3a.bucket.nightly.access.key
+fs.s3a.bucket.nightly.secret.key
+fs.s3a.bucket.nightly.session.token
+fs.s3a.bucket.nightly.server-side-encryption.key
+fs.s3a.bucket.nightly.server-side-encryption-algorithm
+```
+
+When accessing the bucket `s3a://nightly/`, the per-bucket configuration
+options for that backet will be used, here the access keys and token,
+and including the encryption algorithm and key.
 
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world

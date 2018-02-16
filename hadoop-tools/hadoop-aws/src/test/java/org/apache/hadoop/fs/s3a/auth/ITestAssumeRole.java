@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -74,6 +76,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   private static final Path ROOT = new Path("/");
 
   /**
+   * test URI, built in setup.
+   */
+  private URI uri;
+
+  /**
    * A role FS; if non-null it is closed in teardown.
    */
   private S3AFileSystem roleFS;
@@ -82,6 +89,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
+    uri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
   }
 
   @Override
@@ -128,7 +136,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
     bindRolePolicy(conf, RESTRICTED_POLICY);
     try (AssumedRoleCredentialProvider provider
-             = new AssumedRoleCredentialProvider(conf)) {
+             = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
       AWSCredentials credentials = provider.getCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
@@ -141,7 +149,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
     interceptClosing(AWSSecurityTokenServiceException.class,
         E_BAD_ROLE,
-        () -> new AssumedRoleCredentialProvider(conf));
+        () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
   @Test
@@ -264,7 +272,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, "");
     interceptClosing(IOException.class,
         AssumedRoleCredentialProvider.E_NO_ROLE,
-        () -> new AssumedRoleCredentialProvider(conf));
+        () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
   @Test
@@ -273,7 +281,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "30s");
     interceptClosing(IllegalArgumentException.class, "",
-        () -> new AssumedRoleCredentialProvider(conf));
+        () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
 

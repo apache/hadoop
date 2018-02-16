@@ -79,7 +79,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -122,6 +121,8 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.commons.lang.StringUtils.isNotEmpty;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -300,7 +301,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
       verifyBucketExists();
 
-      serverSideEncryptionAlgorithm = getEncryptionAlgorithm(conf);
+      serverSideEncryptionAlgorithm = getEncryptionAlgorithm(bucket, conf);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
       LOG.debug("Input fadvise policy = {}", inputPolicy);
@@ -700,7 +701,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           bucket,
           pathToKey(f),
           serverSideEncryptionAlgorithm,
-          getServerSideEncryptionKey(getConf())),
+          getServerSideEncryptionKey(bucket, getConf())),
             fileStatus.getLen(),
             s3,
             statistics,
@@ -1217,7 +1218,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
     if(S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
+        isNotBlank(getServerSideEncryptionKey(bucket, getConf()))){
       request.setSSECustomerKey(generateSSECustomerKey());
     }
     ObjectMetadata meta = invoker.retryUntranslated("GET " + key, true,
@@ -1440,7 +1441,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       ObjectMetadata metadata,
       InputStream inputStream) {
     Preconditions.checkNotNull(inputStream);
-    Preconditions.checkArgument(StringUtils.isNotEmpty(key), "Null/empty key");
+    Preconditions.checkArgument(isNotEmpty(key), "Null/empty key");
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
@@ -2545,7 +2546,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       req.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
         //at the moment, only supports copy using the same key
         req.setSSECustomerKey(generateSSECustomerKey());
       }
@@ -2579,7 +2580,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       );
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
         //at the moment, only supports copy using the same key
         SSECustomerKey customerKey = generateSSECustomerKey();
         copyObjectRequest.setSourceSSECustomerKey(customerKey);
@@ -2596,7 +2597,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       request.setSSEAwsKeyManagementParams(generateSSEAwsKeyParams());
       break;
     case SSE_C:
-      if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
         request.setSSECustomerKey(generateSSECustomerKey());
       }
       break;
@@ -2610,23 +2611,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
   }
 
+  /**
+   * Create the AWS SDK structure used to configure SSE, based on the
+   * configuration.
+   * @return an instance of the class, which main contain the encryption key
+   */
+  @Retries.OnceExceptionsSwallowed
   private SSEAwsKeyManagementParams generateSSEAwsKeyParams() {
     //Use specified key, otherwise default to default master aws/s3 key by AWS
     SSEAwsKeyManagementParams sseAwsKeyManagementParams =
         new SSEAwsKeyManagementParams();
-    if (StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))) {
-      sseAwsKeyManagementParams =
-        new SSEAwsKeyManagementParams(
-          getServerSideEncryptionKey(getConf())
-        );
+    String encryptionKey = getServerSideEncryptionKey(bucket, getConf());
+    if (isNotBlank(encryptionKey)) {
+      sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(encryptionKey);
     }
     return sseAwsKeyManagementParams;
   }
 
+  /**
+   * Create the SSE-C structure for the AWS SDK.
+   * This will contain a secret extracted from the bucket/configuration.
+   * @return the customer key.
+   */
+  @Retries.OnceExceptionsSwallowed
   private SSECustomerKey generateSSECustomerKey() {
     SSECustomerKey customerKey = new SSECustomerKey(
-        getServerSideEncryptionKey(getConf())
-    );
+        getServerSideEncryptionKey(bucket, getConf()));
     return customerKey;
   }
 
