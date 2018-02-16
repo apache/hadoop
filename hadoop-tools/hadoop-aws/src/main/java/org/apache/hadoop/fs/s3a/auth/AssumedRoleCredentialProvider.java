@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -80,12 +81,14 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
    * Instantiate.
    * This calls {@link #getCredentials()} to fail fast on the inner
    * role credential retrieval.
+   * @param uri URI of endpoint.
    * @param conf configuration
    * @throws IOException on IO problems and some parameter checking
    * @throws IllegalArgumentException invalid parameters
    * @throws AWSSecurityTokenServiceException problems getting credentials
    */
-  public AssumedRoleCredentialProvider(Configuration conf) throws IOException {
+  public AssumedRoleCredentialProvider(URI uri, Configuration conf)
+      throws IOException {
 
     arn = conf.getTrimmed(ASSUMED_ROLE_ARN, "");
     if (StringUtils.isEmpty(arn)) {
@@ -101,7 +104,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
       if (this.getClass().equals(aClass)) {
         throw new IOException(E_FORBIDDEN_PROVIDER);
       }
-      credentials.add(createAWSCredentialProvider(conf, aClass));
+      credentials.add(createAWSCredentialProvider(conf, aClass, uri));
     }
 
     // then the STS binding
