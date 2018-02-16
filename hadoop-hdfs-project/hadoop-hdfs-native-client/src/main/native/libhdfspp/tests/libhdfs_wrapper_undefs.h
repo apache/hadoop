@@ -100,3 +100,8 @@
 #undef hdfsRenameSnapshot
 #undef hdfsAllowSnapshot
 #undef hdfsDisallowSnapshot
+#undef hdfsHedgedReadMetrics
+#undef hdfsGetHedgedReadMetrics
+#undef hdfsFreeHedgedReadMetrics
+#undef hdfsStreamBuilderAlloc
+#undef hdfsStreamBuilderBuild

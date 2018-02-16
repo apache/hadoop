@@ -38,7 +38,6 @@ ENV DEBCONF_TERSE true
 # WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
 # Ubuntu Java.  See Java section below!
 ######
-<<<<<<< 5f556eacf0fedbaec3cdb819847c7c6c3bacc048
 RUN apt-get -q update && apt-get -q install -y \
     apt-utils \
     build-essential \
@@ -56,6 +55,7 @@ RUN apt-get -q update && apt-get -q install -y \
     libfuse-dev \
     libprotobuf-dev \
     libprotoc-dev \
+    libsasl2-dev \
     libsnappy-dev \
     libssl-dev \
     libtool \
@@ -65,7 +65,6 @@ RUN apt-get -q update && apt-get -q install -y \
     pkg-config \
     python \
     python2.7 \
-    pylint \
     python-pip \
     python-pkg-resources \
     python-setuptools \
@@ -74,8 +73,8 @@ RUN apt-get -q update && apt-get -q install -y \
     software-properties-common \
     snappy \
     sudo \
-    zlib1g-dev \
-    valgrind
+    valgrind \
+    zlib1g-dev
 
 #######
 # OpenJDK 8
@@ -203,3 +202,4 @@ ENV FORREST_HOME=/opt/apache-forrest
 ADD hadoop_env_checks.sh /root/hadoop_env_checks.sh
 RUN chmod 755 /root/hadoop_env_checks.sh
 RUN echo '~/hadoop_env_checks.sh' >> /root/.bashrc
+

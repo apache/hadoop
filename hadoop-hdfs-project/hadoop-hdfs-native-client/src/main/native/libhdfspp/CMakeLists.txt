@@ -35,7 +35,10 @@ SET(BUILD_SHARED_HDFSPP TRUE CACHE STRING "BUILD_SHARED_HDFSPP defaulting to 'TR
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
 
 # If there's a better way to inform FindCyrusSASL.cmake, let's make this cleaner:
-SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CYRUS_SASL_DIR};${GSASL_DIR}")
+SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CYRUS_SASL_DIR};${GSASL_DIR};$ENV{PROTOBUF_HOME}")
+
+# Specify PROTOBUF_HOME so that find_package picks up the correct version
+SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};$ENV{PROTOBUF_HOME}")
 
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
