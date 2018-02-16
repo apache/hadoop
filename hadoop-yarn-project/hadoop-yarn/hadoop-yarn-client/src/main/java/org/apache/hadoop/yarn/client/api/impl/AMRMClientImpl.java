@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,9 +59,9 @@ import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -124,14 +125,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     LinkedHashSet<T> containerRequests;
 
     ResourceRequestInfo(Long allocationRequestId, Priority priority,
-        String resourceName, Resource capability, boolean relaxLocality,
-        String resourceProfile) {
-      ProfileCapability profileCapability = ProfileCapability
-          .newInstance(resourceProfile, capability);
+        String resourceName, Resource capability, boolean relaxLocality) {
       remoteRequest = ResourceRequest.newBuilder().priority(priority)
           .resourceName(resourceName).capability(capability).numContainers(0)
           .allocationRequestId(allocationRequestId).relaxLocality(relaxLocality)
-          .profileCapability(profileCapability).build();
+          .build();
       containerRequests = new LinkedHashSet<T>();
     }
   }
@@ -140,32 +138,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
    * Class compares Resource by memory, then cpu and then the remaining resource
    * types in reverse order.
    */
-  static class ProfileCapabilityComparator<T extends ProfileCapability>
-      implements Comparator<T> {
-
-    HashMap<String, Resource> resourceProfilesMap;
-
-    public ProfileCapabilityComparator(
-        HashMap<String, Resource> resourceProfileMap) {
-      this.resourceProfilesMap = resourceProfileMap;
+  static class ResourceReverseComparator<T extends Resource>
+      implements Comparator<T>, Serializable {
+    public int compare(Resource res0, Resource res1) {
+      return res1.compareTo(res0);
     }
-
-    public int compare(T arg0, T arg1) {
-      Resource resource0 =
-          ProfileCapability.toResource(arg0, resourceProfilesMap);
-      Resource resource1 =
-          ProfileCapability.toResource(arg1, resourceProfilesMap);
-      return resource1.compareTo(resource0);
-    }
-  }
-
-  boolean canFit(ProfileCapability arg0, ProfileCapability arg1) {
-    Resource resource0 =
-        ProfileCapability.toResource(arg0, resourceProfilesMap);
-    Resource resource1 =
-        ProfileCapability.toResource(arg1, resourceProfilesMap);
-    return Resources.fitsIn(resource0, resource1);
-
   }
 
   private final Map<Long, RemoteRequestsTable<T>> remoteRequests =
@@ -567,7 +544,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
               .nodeLabelExpression(r.getNodeLabelExpression())
               .executionTypeRequest(r.getExecutionTypeRequest())
               .allocationRequestId(r.getAllocationRequestId())
-              .profileCapability(r.getProfileCapability()).build();
+              .build();
       askList.add(rr);
     }
     return askList;
@@ -649,8 +626,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public synchronized void addContainerRequest(T req) {
     Preconditions.checkArgument(req != null,
         "Resource request can not be null.");
-    ProfileCapability profileCapability = ProfileCapability
-        .newInstance(req.getResourceProfile(), req.getCapability());
     Set<String> dedupedRacks = new HashSet<String>();
     if (req.getRacks() != null) {
       dedupedRacks.addAll(req.getRacks());
@@ -663,7 +638,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     Set<String> inferredRacks = resolveRacks(req.getNodes());
     inferredRacks.removeAll(dedupedRacks);
 
-    checkResourceProfile(req.getResourceProfile());
+    Resource resource = checkAndGetResourceProfile(req.getResourceProfile(),
+        req.getCapability());
 
     // check that specific and non-specific requests cannot be mixed within a
     // priority
@@ -689,26 +665,26 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       }
       for (String node : dedupedNodes) {
         addResourceRequest(req.getPriority(), node,
-            req.getExecutionTypeRequest(), profileCapability, req, true,
+            req.getExecutionTypeRequest(), resource, req, true,
             req.getNodeLabelExpression());
       }
     }
 
     for (String rack : dedupedRacks) {
       addResourceRequest(req.getPriority(), rack, req.getExecutionTypeRequest(),
-          profileCapability, req, true, req.getNodeLabelExpression());
+          resource, req, true, req.getNodeLabelExpression());
     }
 
     // Ensure node requests are accompanied by requests for
     // corresponding rack
     for (String rack : inferredRacks) {
       addResourceRequest(req.getPriority(), rack, req.getExecutionTypeRequest(),
-          profileCapability, req, req.getRelaxLocality(),
+          resource, req, req.getRelaxLocality(),
           req.getNodeLabelExpression());
     }
     // Off-switch
     addResourceRequest(req.getPriority(), ResourceRequest.ANY,
-        req.getExecutionTypeRequest(), profileCapability, req,
+        req.getExecutionTypeRequest(), resource, req,
         req.getRelaxLocality(), req.getNodeLabelExpression());
   }
 
@@ -716,8 +692,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   public synchronized void removeContainerRequest(T req) {
     Preconditions.checkArgument(req != null,
         "Resource request can not be null.");
-    ProfileCapability profileCapability = ProfileCapability
-        .newInstance(req.getResourceProfile(), req.getCapability());
+    Resource resource = checkAndGetResourceProfile(req.getResourceProfile(),
+        req.getCapability());
     Set<String> allRacks = new HashSet<String>();
     if (req.getRacks() != null) {
       allRacks.addAll(req.getRacks());
@@ -728,17 +704,17 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     if (req.getNodes() != null) {
       for (String node : new HashSet<String>(req.getNodes())) {
         decResourceRequest(req.getPriority(), node,
-            req.getExecutionTypeRequest(), profileCapability, req);
+            req.getExecutionTypeRequest(), resource, req);
       }
     }
 
     for (String rack : allRacks) {
       decResourceRequest(req.getPriority(), rack,
-          req.getExecutionTypeRequest(), profileCapability, req);
+          req.getExecutionTypeRequest(), resource, req);
     }
 
     decResourceRequest(req.getPriority(), ResourceRequest.ANY,
-        req.getExecutionTypeRequest(), profileCapability, req);
+        req.getExecutionTypeRequest(), resource, req);
   }
 
   @Override
@@ -833,26 +809,23 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public synchronized List<? extends Collection<T>> getMatchingRequests(
-      Priority priority, String resourceName, ExecutionType executionType,
-      Resource capability) {
-    ProfileCapability profileCapability =
-        ProfileCapability.newInstance(capability);
-    return getMatchingRequests(priority, resourceName, executionType,
-        profileCapability);
+  public List<? extends Collection<T>> getMatchingRequests(Priority priority,
+      String resourceName, ExecutionType executionType,
+      Resource capability, String profile) {
+    capability = checkAndGetResourceProfile(profile, capability);
+    return getMatchingRequests(priority, resourceName, executionType, capability);
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public synchronized List<? extends Collection<T>> getMatchingRequests(
       Priority priority, String resourceName, ExecutionType executionType,
-      ProfileCapability capability) {
+      Resource capability) {
     Preconditions.checkArgument(capability != null,
         "The Resource to be requested should not be null ");
     Preconditions.checkArgument(priority != null,
         "The priority at which to request containers should not be null ");
-    List<LinkedHashSet<T>> list = new LinkedList<LinkedHashSet<T>>();
+    List<LinkedHashSet<T>> list = new LinkedList<>();
 
     RemoteRequestsTable remoteRequestsTable = getTable(0);
 
@@ -864,7 +837,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         // If no exact match. Container may be larger than what was requested.
         // get all resources <= capability. map is reverse sorted.
         for (ResourceRequestInfo<T> resReqInfo : matchingRequests) {
-          if (canFit(resReqInfo.remoteRequest.getProfileCapability(),
+          if (Resources.fitsIn(resReqInfo.remoteRequest.getCapability(),
               capability) && !resReqInfo.containerRequests.isEmpty()) {
             list.add(resReqInfo.containerRequests);
           }
@@ -921,13 +894,34 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     }
   }
 
-  private void checkResourceProfile(String profile) {
-    if (resourceProfilesMap != null && !resourceProfilesMap.isEmpty()
-        && !resourceProfilesMap.containsKey(profile)) {
-      throw new InvalidContainerRequestException(
-          "Invalid profile name, valid profile names are " + resourceProfilesMap
-              .keySet());
+  // When profile and override resource are specified at the same time, override
+  // predefined resource value in profile if any resource type has a positive
+  // value.
+  private Resource checkAndGetResourceProfile(String profile,
+      Resource overrideResource) {
+    Resource returnResource = overrideResource;
+
+    // if application requested a non-empty/null profile, and the
+    if (profile != null && !profile.isEmpty()) {
+      if (resourceProfilesMap == null || (!resourceProfilesMap.containsKey(
+          profile))) {
+        throw new InvalidContainerRequestException(
+            "Invalid profile name specified=" + profile + (
+                resourceProfilesMap == null ?
+                    "" :
+                    (", valid profile names are " + resourceProfilesMap
+                        .keySet())));
+      }
+      returnResource = Resources.clone(resourceProfilesMap.get(profile));
+      for (ResourceInformation info : overrideResource
+          .getAllResourcesListCopy()) {
+        if (info.getValue() > 0) {
+          returnResource.setResourceInformation(info.getName(), info);
+        }
+      }
     }
+
+    return returnResource;
   }
   
   /**
@@ -1016,16 +1010,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   private void addResourceRequest(Priority priority, String resourceName,
-      ExecutionTypeRequest execTypeReq, ProfileCapability capability, T req,
+      ExecutionTypeRequest execTypeReq, Resource capability, T req,
       boolean relaxLocality, String labelExpression) {
     RemoteRequestsTable<T> remoteRequestsTable =
         getTable(req.getAllocationRequestId());
     if (remoteRequestsTable == null) {
-      remoteRequestsTable = new RemoteRequestsTable<T>();
-      if (this.resourceProfilesMap instanceof HashMap) {
-        remoteRequestsTable.setResourceComparator(
-            new ProfileCapabilityComparator((HashMap) resourceProfilesMap));
-      }
+      remoteRequestsTable = new RemoteRequestsTable<>();
       putTable(req.getAllocationRequestId(), remoteRequestsTable);
     }
     @SuppressWarnings("unchecked")
@@ -1048,7 +1038,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   private void decResourceRequest(Priority priority, String resourceName,
-      ExecutionTypeRequest execTypeReq, ProfileCapability capability, T req) {
+      ExecutionTypeRequest execTypeReq, Resource capability, T req) {
     RemoteRequestsTable<T> remoteRequestsTable =
         getTable(req.getAllocationRequestId());
     if (remoteRequestsTable != null) {
