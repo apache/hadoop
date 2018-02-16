@@ -66,7 +66,7 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
     metrics.add(makeMetric("foo1", 1.25));
     metrics.add(makeMetric("foo2", 2.25));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 
+    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context,
         (long) 10000, tags, metrics);
 
     ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
@@ -100,7 +100,7 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
     metrics.add(makeMetric("foo1", 1));
     metrics.add(makeMetric("foo2", 2));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 
+    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context,
         (long) 10000, tags, metrics);
 
     ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
@@ -140,9 +140,9 @@ public class TestGraphiteMetrics {
     List<MetricsTag> tags = Collections.emptyList();
     Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
     metrics.add(makeMetric("foo1", 1));
-    MetricsRecord record1 = new MetricsRecordImpl(MsInfo.Context, 
+    MetricsRecord record1 = new MetricsRecordImpl(MsInfo.Context,
         1000000000000L, tags, metrics);
-    MetricsRecord record2 = new MetricsRecordImpl(MsInfo.Context, 
+    MetricsRecord record2 = new MetricsRecordImpl(MsInfo.Context,
         1000000001000L, tags, metrics);
 
     sink.putMetrics(record1);
@@ -175,7 +175,7 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
     metrics.add(makeMetric("foo1", 1.25));
     metrics.add(makeMetric("foo2", 2.25));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 
+    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context,
         (long) 10000, tags, metrics);
 
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
