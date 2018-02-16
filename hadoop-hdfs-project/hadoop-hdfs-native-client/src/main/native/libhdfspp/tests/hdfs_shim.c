@@ -470,6 +470,13 @@ void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer) {
   return libhdfs_hadoopRzBufferFree(file->libhdfsRep, buffer);
 }
 
+int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics) {
+  return  libhdfs_hdfsGetHedgedReadMetrics(fs->libhdfsRep, (struct libhdfs_hdfsHedgedReadMetrics **) metrics);
+}
+
+void hdfsFreeHedgedReadMetrics(struct hdfsHedgedReadMetrics *metrics) {
+  return  libhdfs_hdfsFreeHedgedReadMetrics((struct libhdfs_hdfsHedgedReadMetrics *) metrics);
+}
 
 /*************
  * hdfs_ext functions

@@ -90,3 +90,8 @@
 #define kObjectKindDirectory libhdfs_kObjectKindDirectory
 #define hdfsReadStatistics libhdfs_hdfsReadStatistics
 #define hdfsFileInfo libhdfs_hdfsFileInfo
+#define hdfsHedgedReadMetrics libhdfs_hdfsHedgedReadMetrics
+#define hdfsGetHedgedReadMetrics libhdfs_hdfsGetHedgedReadMetrics
+#define hdfsFreeHedgedReadMetrics libhdfs_hdfsFreeHedgedReadMetrics
+#define hdfsStreamBuilderAlloc libhdfs_hdfsStreamBuilderAlloc
+#define hdfsStreamBuilderBuild libhdfs_hdfsStreamBuilderBuild

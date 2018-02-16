@@ -29,6 +29,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   ${PROTO_HDFS_DIR}/hdfs.proto
   ${PROTO_HDFS_DIR}/inotify.proto
   ${PROTO_HDFS_DIR}/xattr.proto
+  ${PROTO_HDFS_DIR}/ReconfigurationProtocol.proto
   ${PROTO_HADOOP_DIR}/IpcConnectionContext.proto
   ${PROTO_HADOOP_DIR}/ProtobufRpcEngine.proto
   ${PROTO_HADOOP_DIR}/RpcHeader.proto
