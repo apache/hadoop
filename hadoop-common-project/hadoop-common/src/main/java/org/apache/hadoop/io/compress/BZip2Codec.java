@@ -362,9 +362,29 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       bufferedIn = new BufferedInputStream(super.in);
       this.startingPos = super.getPos();
       this.readMode = readMode;
+      long numSkipped = 0;
       if (this.startingPos == 0) {
         // We only strip header if it is start of file
         bufferedIn = readStreamHeader();
+      } else if (this.readMode == READ_MODE.BYBLOCK  &&
+          this.startingPos <= HEADER_LEN + SUB_HEADER_LEN) {
+        // When we're in BYBLOCK mode and the start position is >=0
+        // and < HEADER_LEN + SUB_HEADER_LEN, we should skip to after
+        // start of the first bz2 block to avoid duplicated records
+        numSkipped = HEADER_LEN + SUB_HEADER_LEN + 1 - this.startingPos;
+        long skipBytes = numSkipped;
+        while (skipBytes > 0) {
+          long s = bufferedIn.skip(skipBytes);
+          if (s > 0) {
+            skipBytes -= s;
+          } else {
+            if (bufferedIn.read() == -1) {
+              break; // end of the split
+            } else {
+              skipBytes--;
+            }
+          }
+        }
       }
       input = new CBZip2InputStream(bufferedIn, readMode);
       if (this.isHeaderStripped) {
@@ -375,7 +395,15 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         input.updateReportedByteCount(SUB_HEADER_LEN);
       }
 
-      this.updatePos(false);
+      if (numSkipped > 0) {
+        input.updateReportedByteCount((int) numSkipped);
+      }
+
+      // To avoid dropped records, not advertising a new byte position
+      // when we are in BYBLOCK mode and the start position is 0
+      if (!(this.readMode == READ_MODE.BYBLOCK && this.startingPos == 0)) {
+        this.updatePos(false);
+      }
     }
 
     private BufferedInputStream readStreamHeader() throws IOException {
