@@ -4633,10 +4633,10 @@
 
   <property>
     <name>dfs.disk.balancer.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <description>
         This enables the diskbalancer feature on a cluster. By default, disk
-      balancer is disabled.
+      balancer is enabled.
     </description>
   </property>
 
