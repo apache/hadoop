@@ -109,9 +109,9 @@ public class TestGraphiteMetrics {
     sink.putMetrics(record);
 
     try {
-        verify(mockGraphite).write(argument.capture());
+      verify(mockGraphite).write(argument.capture());
     } catch (IOException e) {
-        e.printStackTrace();
+      e.printStackTrace();
     }
 
     String result = argument.getValue();
@@ -126,7 +126,7 @@ public class TestGraphiteMetrics {
   }
 
   /**
-   * Assert that timestamps are converted correctly, ticket HADOOP-11182
+   * Assert that timestamps are converted correctly, ticket HADOOP-11182.
    */
   @Test
   public void testPutMetrics3() {
@@ -158,9 +158,9 @@ public class TestGraphiteMetrics {
     // then the timestamps in the graphite stream should differ by one second.
     try {
       verify(mockGraphite).write(eq(
-        "null.default.Context.foo1 1 1000000000\n"));
+          "null.default.Context.foo1 1 1000000000\n"));
       verify(mockGraphite).write(eq(
-        "null.default.Context.foo1 1 1000000001\n"));
+          "null.default.Context.foo1 1 1000000001\n"));
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -215,15 +215,15 @@ public class TestGraphiteMetrics {
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
     Whitebox.setInternalState(sink, "graphite", mockGraphite);
     try {
-        sink.close();
+      sink.close();
     } catch (IOException ioe) {
-        ioe.printStackTrace();
+      ioe.printStackTrace();
     }
 
     try {
-        verify(mockGraphite).close();
+      verify(mockGraphite).close();
     } catch (IOException ioe) {
-        ioe.printStackTrace();
+      ioe.printStackTrace();
     }
   }
 }

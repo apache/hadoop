@@ -133,7 +133,7 @@ public class GraphiteSink implements MetricsSink, Closeable {
 
   /**
    * internal class for managing connection and writing
-   * metrics to Graphite server
+   * metrics to Graphite server.
    */
   public static class Graphite {
     private final static int MAX_CONNECTION_FAILURES = 5;
