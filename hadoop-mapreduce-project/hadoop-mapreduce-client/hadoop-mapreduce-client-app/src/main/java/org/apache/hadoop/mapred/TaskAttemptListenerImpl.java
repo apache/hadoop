@@ -342,9 +342,15 @@ public class TaskAttemptListenerImpl extends CompositeService
     AtomicReference<TaskAttemptStatus> lastStatusRef =
         attemptIdToStatus.get(yarnAttemptID);
     if (lastStatusRef == null) {
-      LOG.error("Status update was called with illegal TaskAttemptId: "
-          + yarnAttemptID);
-      return false;
+      // The task is not known, but it could be in the process of tearing
+      // down gracefully or receiving a thread dump signal. Tolerate unknown
+      // tasks as long as they have unregistered recently.
+      if (!taskHeartbeatHandler.hasRecentlyUnregistered(yarnAttemptID)) {
+        LOG.error("Status update was called with illegal TaskAttemptId: "
+            + yarnAttemptID);
+        return false;
+      }
+      return true;
     }
 
     taskHeartbeatHandler.progressing(yarnAttemptID);

@@ -17,12 +17,14 @@
 */
 package org.apache.hadoop.mapred;
 
+import com.google.common.base.Supplier;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -35,6 +37,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -51,11 +54,13 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -398,14 +403,52 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testStatusUpdateFromUnregisteredTask()
-      throws IOException, InterruptedException{
+  public void testStatusUpdateFromUnregisteredTask() throws Exception {
     configureMocks();
-    startListener(false);
+    ControlledClock clock = new ControlledClock();
+    clock.setTime(0);
+    doReturn(clock).when(appCtx).getClock();
 
-    boolean taskFound = listener.statusUpdate(attemptID, firstReduceStatus);
+    final TaskAttemptListenerImpl tal = new TaskAttemptListenerImpl(appCtx,
+        secret, rmHeartbeatHandler, null) {
+      @Override
+      protected void startRpcServer() {
+        // Empty
+      }
+      @Override
+      protected void stopRpcServer() {
+        // Empty
+      }
+    };
 
-    assertFalse(taskFound);
+    Configuration conf = new Configuration();
+    conf.setLong(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1);
+    tal.init(conf);
+    tal.start();
+
+    assertFalse(tal.statusUpdate(attemptID, firstReduceStatus));
+    tal.registerPendingTask(task, wid);
+    tal.registerLaunchedTask(attemptId, wid);
+    assertTrue(tal.statusUpdate(attemptID, firstReduceStatus));
+
+    // verify attempt is still reported as found if recently unregistered
+    tal.unregister(attemptId, wid);
+    assertTrue(tal.statusUpdate(attemptID, firstReduceStatus));
+
+    // verify attempt is not found if not recently unregistered
+    long unregisterTimeout = conf.getLong(MRJobConfig.TASK_EXIT_TIMEOUT,
+        MRJobConfig.TASK_EXIT_TIMEOUT_DEFAULT);
+    clock.setTime(unregisterTimeout + 1);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          return !tal.statusUpdate(attemptID, firstReduceStatus);
+        } catch (Exception e) {
+          throw new RuntimeException("status update failed", e);
+        }
+      }
+    }, 10, 10000);
   }
 
   private void configureMocks() {
