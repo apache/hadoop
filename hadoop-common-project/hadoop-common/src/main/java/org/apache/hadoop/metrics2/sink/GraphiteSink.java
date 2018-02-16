@@ -42,7 +42,7 @@ import java.nio.charset.StandardCharsets;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GraphiteSink implements MetricsSink, Closeable {
-  private static final Logger LOG = 
+  private static final Logger LOG =
       LoggerFactory.getLogger(GraphiteSink.class);
   private static final String SERVER_HOST_KEY = "server_host";
   private static final String SERVER_PORT_KEY = "server_port";
@@ -58,8 +58,9 @@ public class GraphiteSink implements MetricsSink, Closeable {
 
     // Get Graphite metrics graph prefix.
     metricsPrefix = conf.getString(METRICS_PREFIX);
-    if (metricsPrefix == null)
+    if (metricsPrefix == null) {
       metricsPrefix = "";
+    }
 
     graphite = new Graphite(serverHost, serverPort);
     graphite.connect();
@@ -85,14 +86,16 @@ public class GraphiteSink implements MetricsSink, Closeable {
       }
     }
 
-    // The record timestamp is in milliseconds while Graphite expects an epoc time in seconds.
+    // The record timestamp is in milliseconds while Graphite expects an epoc
+    // time in seconds.
     long timestamp = record.timestamp() / 1000L;
 
     // Collect datapoints.
     for (AbstractMetric metric : record.metrics()) {
       lines.append(
         metricsPathPrefix.toString() + "."
-            + metric.name().replace(' ', '.')).append(pointTags.toString()).append(" ")
+            + metric.name().replace(' ', '.')).append(pointTags.toString())
+            .append(" ")
             .append(metric.value()).append(" ").append(timestamp)
             .append("\n");
     }
@@ -128,6 +131,10 @@ public class GraphiteSink implements MetricsSink, Closeable {
     graphite.close();
   }
 
+  /**
+   * internal class for managing connection and writing 
+   * metrics to Graphite server
+   */
   public static class Graphite {
     private final static int MAX_CONNECTION_FAILURES = 5;
     private String serverHost;
@@ -146,7 +153,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
         throw new MetricsException("Already connected to Graphite");
       }
       if (tooManyConnectionFailures()) {
-        // return silently (there was ERROR in logs when we reached limit for the first time)
+        // return silently (there was ERROR in logs when we reached limit for
+        // the first time)
         return;
       }
       try {
@@ -158,7 +166,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
         connectionFailures++;
         if (tooManyConnectionFailures()) {
           // first time when connection limit reached, report to logs
-          LOG.error("Too many connection failures, would not try to connect again.");
+          LOG.error("Too many connection failures, would not try to "
+              + "connect again.");
         }
         throw new MetricsException("Error creating connection, "
             + serverHost + ":" + serverPort, e);
