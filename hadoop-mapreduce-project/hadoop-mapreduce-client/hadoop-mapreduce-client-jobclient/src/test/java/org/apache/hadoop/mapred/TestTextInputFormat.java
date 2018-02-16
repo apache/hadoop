@@ -184,6 +184,14 @@ public class TestTextInputFormat {
     // corner case when we have byte alignment and position of stream are same
     verifyPartitions(471507, 218, file, codec, conf);
     verifyPartitions(473608, 110, file, codec, conf);
+
+    // corner case when split size is small and position of stream is before
+    // the first BZip2 block
+    verifyPartitions(100, 20, file, codec, conf);
+    verifyPartitions(100, 25, file, codec, conf);
+    verifyPartitions(100, 30, file, codec, conf);
+    verifyPartitions(100, 50, file, codec, conf);
+    verifyPartitions(100, 100, file, codec, conf);
   }
 
   // Test a corner case when position of stream is right after BZip2 marker

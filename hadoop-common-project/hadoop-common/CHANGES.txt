@@ -46,6 +46,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-13508. FsPermission string constructor does not recognize
     sticky bit. (Atul Sikaria via Wei-Chiu Chuang, shv)
 
+    HADOOP-15206. BZip2 drops and duplicates records when input split size
+    is small. (Aki Tanaka via jlowe)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
