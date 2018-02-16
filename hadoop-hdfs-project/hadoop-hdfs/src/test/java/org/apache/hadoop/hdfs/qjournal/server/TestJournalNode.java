@@ -83,6 +83,7 @@ public class TestJournalNode {
     File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
         File.separator + "TestJournalNode");
     FileUtil.fullyDelete(editsDir);
+    journalId = "test-journalid-" + GenericTestUtils.uniqueSequenceId();
 
     if (testName.getMethodName().equals("testJournalDirPerNameSpace")) {
       setFederationConf();
@@ -113,33 +114,33 @@ public class TestJournalNode {
       conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY,
           false);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-          "qjournal://jn0:9900;jn1:9901");
+          "qjournal://jn0:9900;jn1:9901/" + journalId);
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncerNotStartWhenSyncEnabledIncorrectURI")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-          "qjournal://journal0\\:9900;journal1:9901");
+          "qjournal://journal0\\:9900;journal1:9901/" + journalId);
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncerNotStartWhenSyncEnabled")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-          "qjournal://jn0:9900;jn1:9901");
+          "qjournal://jn0:9900;jn1:9901/" + journalId);
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncwithFederationTypeConfigWithNameServiceId")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1",
-          "qjournal://journalnode0:9900;journalnode0:9901");
+          "qjournal://journalnode0:9900;journalnode0:9901/" + journalId);
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncwithFederationTypeConfigWithNamenodeId")) {
       conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn1",
-          "qjournal://journalnode0:9900;journalnode1:9901");
+          "qjournal://journalnode0:9900;journalnode1:9901/" +journalId);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
-          "qjournal://journalnode0:9900;journalnode1:9901");
+          "qjournal://journalnode0:9900;journalnode1:9901/" +journalId);
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncwithFederationTypeIncorrectConfigWithNamenodeId")) {
       conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn1",
-          "qjournal://journalnode0:9900;journalnode1:9901");
+          "qjournal://journalnode0:9900;journalnode1:9901/" + journalId);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
-          "qjournal://journalnode0:9902;journalnode1:9903");
+          "qjournal://journalnode0:9902;journalnode1:9903/" + journalId);
     }
     jn = new JournalNode();
     jn.setConf(conf);
@@ -161,7 +162,6 @@ public class TestJournalNode {
         journal.format(fakeNameSpaceInfo);
       }
     } else {
-      journalId = "test-journalid-" + GenericTestUtils.uniqueSequenceId();
       journal = jn.getOrCreateJournal(journalId);
       journal.format(FAKE_NSINFO);
     }
@@ -176,16 +176,16 @@ public class TestJournalNode {
     //ns1
     conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn1",
-        "qjournal://journalnode0:9900;journalnode1:9901/ns1");
+        "qjournal://journalnode0:9900;journalnode1:9901/test-journalid-ns1");
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
-        "qjournal://journalnode0:9900;journalnode1:9901/ns2");
+        "qjournal://journalnode0:9900;journalnode1:9901/test-journalid-ns1");
 
     //ns2
     conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns2", "nn3,nn4");
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns2" +".nn3",
-        "qjournal://journalnode0:9900;journalnode1:9901/ns2");
+        "qjournal://journalnode0:9900;journalnode1:9901/test-journalid-ns2");
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns2" +".nn4",
-        "qjournal://journalnode0:9900;journalnode1:9901/ns2");
+        "qjournal://journalnode0:9900;journalnode1:9901/test-journalid-ns2");
   }
   
   @After
