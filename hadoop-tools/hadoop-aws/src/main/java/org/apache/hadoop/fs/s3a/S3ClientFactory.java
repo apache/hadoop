@@ -34,9 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface S3ClientFactory {
 
   /**
-   * Creates a new {@link AmazonS3} client.  This method accepts the S3A file
-   * system URI both in raw input form and validated form as separate arguments,
-   * because both values may be useful in logging.
+   * Creates a new {@link AmazonS3} client.
    *
    * @param name raw input S3A file system URI
    * @return S3 client
