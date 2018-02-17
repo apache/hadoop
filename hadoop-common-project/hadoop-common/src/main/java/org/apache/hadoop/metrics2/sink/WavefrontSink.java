@@ -26,7 +26,6 @@ import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,7 +95,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
 
         // if point tag contains key of hostname,
         // use it instead.
-        if(tag.name().equalsIgnoreCase(MsInfo.Hostname)) {
+        if(tag.name().equalsIgnoreCase(MsInfo.Hostname.name())) {
           source = tag.value();
         }
       }
@@ -107,7 +106,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
       source = "unknown";
     }
 
-    // The record timestamp is in milliseconds while Graphite expects an epoc
+    // The record timestamp is in milliseconds while wavefront expects an epoc
     // time in seconds.
     long timestamp = record.timestamp() / 1000L;
 
@@ -150,7 +149,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
 
   @Override
   public void close() throws IOException {
-    graphite.close();
+    wavefront.close();
   }
 
   public static class Wavefront {
