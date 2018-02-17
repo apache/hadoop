@@ -213,7 +213,11 @@
     </fileSet>
     <!-- Copy dependecies from hadoop-yarn-server-timelineservice as well -->
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/target/lib</directory>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/hadoop-yarn-server-timelineservice-hbase-client/target/lib</directory>
+      <outputDirectory>share/hadoop/${hadoop.component}/timelineservice/lib</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/hadoop-yarn-server-timelineservice-hbase-common/target/lib</directory>
       <outputDirectory>share/hadoop/${hadoop.component}/timelineservice/lib</outputDirectory>
     </fileSet>
   </fileSets>
@@ -221,12 +225,26 @@
     <moduleSet>
       <includes>
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice</include>
-        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-client</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-common</include>
       </includes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
+      </binaries>
+    </moduleSet>
+    <moduleSet>
+      <includes>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-server</include>
+      </includes>
+      <binaries>
+        <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
+        <includeDependencies>false</includeDependencies>
+        <!-- This is the id of the timelineservice-hbase-coprocessor assembly descriptor -->
+        <attachmentClassifier>coprocessor</attachmentClassifier>
+        <unpack>false</unpack>
+        <outputFileNameMapping>hadoop-yarn-server-timelineservice-hbase-coprocessor-${module.version}.${module.extension}</outputFileNameMapping>
       </binaries>
     </moduleSet>
     <moduleSet>

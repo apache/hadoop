@@ -68,10 +68,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTableRW;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnRWHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
@@ -173,7 +174,7 @@ public class TestHBaseTimelineStorageApps {
       scan.setStartRow(Bytes.toBytes(cluster));
       scan.setStopRow(Bytes.toBytes(cluster + "1"));
       Connection conn = ConnectionFactory.createConnection(c1);
-      ResultScanner resultScanner = new ApplicationTable()
+      ResultScanner resultScanner = new ApplicationTableRW()
           .getResultScanner(c1, conn, scan);
 
       assertTrue(resultScanner != null);
@@ -308,7 +309,7 @@ public class TestHBaseTimelineStorageApps {
       Get get = new Get(rowKey);
       get.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
-      Result result = new ApplicationTable().getResult(c1, conn, get);
+      Result result = new ApplicationTableRW().getResult(c1, conn, get);
 
       assertTrue(result != null);
       assertEquals(17, result.size());
@@ -319,24 +320,24 @@ public class TestHBaseTimelineStorageApps {
           appId));
 
       // check info column family
-      String id1 = ApplicationColumn.ID.readResult(result).toString();
+      String id1 =
+          ColumnRWHelper.readResult(result, ApplicationColumn.ID).toString();
       assertEquals(appId, id1);
 
-      Long cTime1 =
-          (Long) ApplicationColumn.CREATED_TIME.readResult(result);
+      Long cTime1 = (Long)
+          ColumnRWHelper.readResult(result, ApplicationColumn.CREATED_TIME);
       assertEquals(cTime, cTime1);
 
-      Map<String, Object> infoColumns =
-          ApplicationColumnPrefix.INFO.readResults(result,
-              new StringKeyConverter());
+      Map<String, Object> infoColumns = ColumnRWHelper.readResults(
+          result, ApplicationColumnPrefix.INFO, new StringKeyConverter());
       assertEquals(infoMap, infoColumns);
 
       // Remember isRelatedTo is of type Map<String, Set<String>>
       for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
           .entrySet()) {
-        Object isRelatedToValue =
-            ApplicationColumnPrefix.IS_RELATED_TO.readResult(result,
-                isRelatedToEntry.getKey());
+        Object isRelatedToValue = ColumnRWHelper.readResult(
+            result, ApplicationColumnPrefix.IS_RELATED_TO,
+            isRelatedToEntry.getKey());
         String compoundValue = isRelatedToValue.toString();
         // id7?id9?id6
         Set<String> isRelatedToValues =
@@ -351,9 +352,9 @@ public class TestHBaseTimelineStorageApps {
       // RelatesTo
       for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
           .entrySet()) {
-        String compoundValue =
-            ApplicationColumnPrefix.RELATES_TO.readResult(result,
-                relatesToEntry.getKey()).toString();
+        String compoundValue = ColumnRWHelper.readResult(result,
+            ApplicationColumnPrefix.RELATES_TO, relatesToEntry.getKey())
+            .toString();
         // id3?id4?id5
         Set<String> relatesToValues =
             new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
@@ -366,14 +367,13 @@ public class TestHBaseTimelineStorageApps {
 
       KeyConverter<String> stringKeyConverter = new StringKeyConverter();
       // Configuration
-      Map<String, Object> configColumns =
-          ApplicationColumnPrefix.CONFIG
-              .readResults(result, stringKeyConverter);
+      Map<String, Object> configColumns = ColumnRWHelper.readResults(
+          result, ApplicationColumnPrefix.CONFIG, stringKeyConverter);
       assertEquals(conf, configColumns);
 
       NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-          ApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result,
-              stringKeyConverter);
+          ColumnRWHelper.readResultsWithTimestamps(
+              result, ApplicationColumnPrefix.METRIC, stringKeyConverter);
 
       NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
       matchMetrics(metricValues, metricMap);
@@ -500,7 +500,7 @@ public class TestHBaseTimelineStorageApps {
     event.addInfo(expKey, expVal);
 
     final TimelineEntity entity = new ApplicationEntity();
-    entity.setId(HBaseTimelineStorageUtils.convertApplicationIdToString(
+    entity.setId(HBaseTimelineSchemaUtils.convertApplicationIdToString(
         ApplicationId.newInstance(0, 1)));
     entity.addEvent(event);
 
@@ -531,7 +531,7 @@ public class TestHBaseTimelineStorageApps {
       Get get = new Get(rowKey);
       get.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
-      Result result = new ApplicationTable().getResult(c1, conn, get);
+      Result result = new ApplicationTableRW().getResult(c1, conn, get);
 
       assertTrue(result != null);
 
@@ -541,8 +541,8 @@ public class TestHBaseTimelineStorageApps {
           appName));
 
       Map<EventColumnName, Object> eventsResult =
-          ApplicationColumnPrefix.EVENT.readResults(result,
-              new EventColumnNameConverter());
+          ColumnRWHelper.readResults(result,
+              ApplicationColumnPrefix.EVENT, new EventColumnNameConverter());
       // there should be only one event
       assertEquals(1, eventsResult.size());
       for (Map.Entry<EventColumnName, Object> e : eventsResult.entrySet()) {
