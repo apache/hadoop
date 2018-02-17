@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
     StringBuilder lines = new StringBuilder();
     StringBuilder metricsPathPrefix = new StringBuilder();
     StringBuilder pointTags = new StringBuilder("");
+    String source = metricsSource;
 
     // Configure the hierarchical place to display the graph.
     metricsPathPrefix.append(metricsPrefix).append(".")
@@ -92,13 +94,17 @@ public class WavefrontSink implements MetricsSink, Closeable {
         pointTags.append(tag.value().replaceAll("\\\"", "\\\\\""));
         pointTags.append("\"");
 
-        // if point tag contains key of hostname, and source is null or
-        // empty, use it instead.
-        if((metricsSource == null || metricsSource.trim().length() == 0)
-            && tag.name().equalsIgnoreCase("hostname")) {
-          metricsSource = tag.value();
+        // if point tag contains key of hostname,
+        // use it instead.
+        if(tag.name().equalsIgnoreCase(MsInfo.Hostname)) {
+          source = tag.value();
         }
       }
+    }
+
+    // if source is not defined, default to unknown.
+    if(source == null || source.trim().length() == 0) {
+      source = "unknown";
     }
 
     // The record timestamp is in milliseconds while Graphite expects an epoc
@@ -111,7 +117,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
           metricsPathPrefix.toString() + "."
                   + metric.name().replace(' ', '.')).append(" ")
           .append(metric.value()).append(" ").append(timestamp)
-          .append(" source=").append(metricsSource)
+          .append(" source=").append(source)
           .append(pointTags.toString())
           .append("\n");
     }
