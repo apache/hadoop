@@ -62,9 +62,10 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnRWHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
@@ -73,12 +74,12 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKeyPrefix;
-import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -208,7 +209,7 @@ public class TestHBaseTimelineStorageEntities {
       String flow = "some_flow_name";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      String appName = HBaseTimelineStorageUtils.convertApplicationIdToString(
+      String appName = HBaseTimelineSchemaUtils.convertApplicationIdToString(
           ApplicationId.newInstance(System.currentTimeMillis() + 9000000L, 1)
       );
       hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
@@ -224,7 +225,7 @@ public class TestHBaseTimelineStorageEntities {
       s.setStartRow(startRow);
       s.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
-      ResultScanner scanner = new EntityTable().getResultScanner(c1, conn, s);
+      ResultScanner scanner = new EntityTableRW().getResultScanner(c1, conn, s);
 
       int rowCount = 0;
       int colCount = 0;
@@ -238,26 +239,27 @@ public class TestHBaseTimelineStorageEntities {
               entity));
 
           // check info column family
-          String id1 = EntityColumn.ID.readResult(result).toString();
+          String id1 =
+              ColumnRWHelper.readResult(result, EntityColumn.ID).toString();
           assertEquals(id, id1);
 
-          String type1 = EntityColumn.TYPE.readResult(result).toString();
+          String type1 =
+              ColumnRWHelper.readResult(result, EntityColumn.TYPE).toString();
           assertEquals(type, type1);
 
-          Long cTime1 = (Long) EntityColumn.CREATED_TIME.readResult(result);
+          Long cTime1 = (Long)
+              ColumnRWHelper.readResult(result, EntityColumn.CREATED_TIME);
           assertEquals(cTime1, cTime);
 
-          Map<String, Object> infoColumns =
-              EntityColumnPrefix.INFO.readResults(result,
-                  new StringKeyConverter());
+          Map<String, Object> infoColumns = ColumnRWHelper.readResults(
+              result, EntityColumnPrefix.INFO, new StringKeyConverter());
           assertEquals(infoMap, infoColumns);
 
           // Remember isRelatedTo is of type Map<String, Set<String>>
           for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
               .entrySet()) {
-            Object isRelatedToValue =
-                EntityColumnPrefix.IS_RELATED_TO.readResult(result,
-                    isRelatedToEntry.getKey());
+            Object isRelatedToValue = ColumnRWHelper.readResult(result,
+                EntityColumnPrefix.IS_RELATED_TO, isRelatedToEntry.getKey());
             String compoundValue = isRelatedToValue.toString();
             // id7?id9?id6
             Set<String> isRelatedToValues =
@@ -273,8 +275,9 @@ public class TestHBaseTimelineStorageEntities {
           // RelatesTo
           for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
               .entrySet()) {
-            String compoundValue = EntityColumnPrefix.RELATES_TO
-                .readResult(result, relatesToEntry.getKey()).toString();
+            String compoundValue = ColumnRWHelper.readResult(result,
+                EntityColumnPrefix.RELATES_TO, relatesToEntry.getKey())
+                .toString();
             // id3?id4?id5
             Set<String> relatesToValues =
                 new HashSet<String>(
@@ -287,13 +290,13 @@ public class TestHBaseTimelineStorageEntities {
           }
 
           // Configuration
-          Map<String, Object> configColumns =
-              EntityColumnPrefix.CONFIG.readResults(result, stringKeyConverter);
+          Map<String, Object> configColumns = ColumnRWHelper.readResults(
+              result, EntityColumnPrefix.CONFIG, stringKeyConverter);
           assertEquals(conf, configColumns);
 
           NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-              EntityColumnPrefix.METRIC.readResultsWithTimestamps(result,
-                  stringKeyConverter);
+              ColumnRWHelper.readResultsWithTimestamps(
+                  result, EntityColumnPrefix.METRIC, stringKeyConverter);
 
           NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
           matchMetrics(metricValues, metricMap);
@@ -386,14 +389,14 @@ public class TestHBaseTimelineStorageEntities {
       Set<TimelineMetric> metrics, Long cTime, TimelineMetric m1)
       throws IOException {
     Scan s = new Scan();
-    // read from SubApplicationTable
+    // read from SubApplicationTableRW
     byte[] startRow = new SubApplicationRowKeyPrefix(cluster, subAppUser, null,
         null, null, null).getRowKeyPrefix();
     s.setStartRow(startRow);
     s.setMaxVersions(Integer.MAX_VALUE);
     Connection conn = ConnectionFactory.createConnection(c1);
     ResultScanner scanner =
-        new SubApplicationTable().getResultScanner(c1, conn, s);
+        new SubApplicationTableRW().getResultScanner(c1, conn, s);
 
     int rowCount = 0;
     int colCount = 0;
@@ -407,25 +410,28 @@ public class TestHBaseTimelineStorageEntities {
             user, entity));
 
         // check info column family
-        String id1 = SubApplicationColumn.ID.readResult(result).toString();
+        String id1 = ColumnRWHelper.readResult(result, SubApplicationColumn.ID)
+            .toString();
         assertEquals(id, id1);
 
-        String type1 = SubApplicationColumn.TYPE.readResult(result).toString();
+        String type1 = ColumnRWHelper.readResult(result,
+            SubApplicationColumn.TYPE).toString();
         assertEquals(type, type1);
 
-        Long cTime1 =
-            (Long) SubApplicationColumn.CREATED_TIME.readResult(result);
+        Long cTime1 = (Long) ColumnRWHelper.readResult(result,
+            SubApplicationColumn.CREATED_TIME);
         assertEquals(cTime1, cTime);
 
-        Map<String, Object> infoColumns = SubApplicationColumnPrefix.INFO
-            .readResults(result, new StringKeyConverter());
+        Map<String, Object> infoColumns = ColumnRWHelper.readResults(
+            result, SubApplicationColumnPrefix.INFO, new StringKeyConverter());
         assertEquals(infoMap, infoColumns);
 
         // Remember isRelatedTo is of type Map<String, Set<String>>
         for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
             .entrySet()) {
-          Object isRelatedToValue = SubApplicationColumnPrefix.IS_RELATED_TO
-              .readResult(result, isRelatedToEntry.getKey());
+          Object isRelatedToValue = ColumnRWHelper.readResult(
+              result, SubApplicationColumnPrefix.IS_RELATED_TO,
+              isRelatedToEntry.getKey());
           String compoundValue = isRelatedToValue.toString();
           // id7?id9?id6
           Set<String> isRelatedToValues =
@@ -440,8 +446,9 @@ public class TestHBaseTimelineStorageEntities {
         // RelatesTo
         for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
             .entrySet()) {
-          String compoundValue = SubApplicationColumnPrefix.RELATES_TO
-              .readResult(result, relatesToEntry.getKey()).toString();
+          String compoundValue = ColumnRWHelper.readResult(result,
+              SubApplicationColumnPrefix.RELATES_TO, relatesToEntry.getKey())
+              .toString();
           // id3?id4?id5
           Set<String> relatesToValues =
               new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
@@ -453,13 +460,13 @@ public class TestHBaseTimelineStorageEntities {
         }
 
         // Configuration
-        Map<String, Object> configColumns = SubApplicationColumnPrefix.CONFIG
-            .readResults(result, stringKeyConverter);
+        Map<String, Object> configColumns = ColumnRWHelper.readResults(
+            result, SubApplicationColumnPrefix.CONFIG, stringKeyConverter);
         assertEquals(conf, configColumns);
 
         NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-            SubApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result,
-                stringKeyConverter);
+            ColumnRWHelper.readResultsWithTimestamps(
+                result, SubApplicationColumnPrefix.METRIC, stringKeyConverter);
 
         NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
         matchMetrics(metricValues, metricMap);
@@ -511,7 +518,7 @@ public class TestHBaseTimelineStorageEntities {
       String flow = "other_flow_name";
       String flowVersion = "1111F01C2287BA";
       long runid = 1009876543218L;
-      String appName = HBaseTimelineStorageUtils.convertApplicationIdToString(
+      String appName = HBaseTimelineSchemaUtils.convertApplicationIdToString(
           ApplicationId.newInstance(System.currentTimeMillis() + 9000000L, 1));
       byte[] startRow =
           new EntityRowKeyPrefix(cluster, user, flow, runid, appName)
@@ -525,7 +532,7 @@ public class TestHBaseTimelineStorageEntities {
       s.setStartRow(startRow);
       s.addFamily(EntityColumnFamily.INFO.getBytes());
       Connection conn = ConnectionFactory.createConnection(c1);
-      ResultScanner scanner = new EntityTable().getResultScanner(c1, conn, s);
+      ResultScanner scanner = new EntityTableRW().getResultScanner(c1, conn, s);
 
       int rowCount = 0;
       for (Result result : scanner) {
@@ -538,8 +545,8 @@ public class TestHBaseTimelineStorageEntities {
               entity));
 
           Map<EventColumnName, Object> eventsResult =
-              EntityColumnPrefix.EVENT.readResults(result,
-                  new EventColumnNameConverter());
+              ColumnRWHelper.readResults(result,
+                  EntityColumnPrefix.EVENT, new EventColumnNameConverter());
           // there should be only one event
           assertEquals(1, eventsResult.size());
           for (Map.Entry<EventColumnName, Object> e : eventsResult.entrySet()) {
@@ -604,7 +611,7 @@ public class TestHBaseTimelineStorageEntities {
 
     final TimelineEntity entity = new ApplicationEntity();
     entity.setId(
-        HBaseTimelineStorageUtils.convertApplicationIdToString(
+        HBaseTimelineSchemaUtils.convertApplicationIdToString(
             ApplicationId.newInstance(0, 1)));
     entity.addEvent(event);
 
