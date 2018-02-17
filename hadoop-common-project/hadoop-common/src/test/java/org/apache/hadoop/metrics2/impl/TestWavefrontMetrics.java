@@ -51,7 +51,7 @@ public class TestWavefrontMetrics {
   }
 
   private WavefrontSink.Wavefront makeWavefront() {
-    WavefrontSink.Wavefront mockWavefront = 
+    WavefrontSink.Wavefront mockWavefront =
         mock(WavefrontSink.Wavefront.class);
     when(mockWavefront.isConnected()).thenReturn(true);
     return mockWavefront;
@@ -84,7 +84,7 @@ public class TestWavefrontMetrics {
 
     assertEquals(true,
         result.equals(
-            "null.all.Context.foo1 1.25 10 source=host Context=all " + 
+            "null.all.Context.foo1 1.25 10 source=host Context=all " +
             "Hostname=host\n" +
             "null.all.Context.foo2 2.25 10 source=host Context=all " +
             "Hostname=host\n") ||

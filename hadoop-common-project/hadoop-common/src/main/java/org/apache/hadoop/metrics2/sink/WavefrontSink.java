@@ -161,7 +161,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
     private Socket socket = null;
     private int connectionFailures = 0;
 
-    public Graphite(String serverHost, int serverPort) {
+    public Wavefront(String serverHost, int serverPort) {
       this.serverHost = serverHost;
       this.serverPort = serverPort;
     }
@@ -176,7 +176,7 @@ public class WavefrontSink implements MetricsSink, Closeable {
         return;
       }
       try {
-        // Open a connection to Graphite server.
+        // Open a connection to Wavefront proxy server.
         socket = new Socket(serverHost, serverPort);
         writer = new OutputStreamWriter(socket.getOutputStream(),
             StandardCharsets.UTF_8);
