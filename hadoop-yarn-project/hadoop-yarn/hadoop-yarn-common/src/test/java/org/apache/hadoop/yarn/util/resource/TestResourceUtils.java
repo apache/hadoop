@@ -287,7 +287,7 @@ public class TestResourceUtils {
     Map<String, Resource> testRun = new HashMap<>();
     setupResourceTypes(conf, "resource-types-4.xml");
     // testRun.put("node-resources-1.xml", Resource.newInstance(1024, 1));
-    Resource test3Resources = Resource.newInstance(1024, 1);
+    Resource test3Resources = Resource.newInstance(0, 0);
     test3Resources.setResourceInformation("resource1",
         ResourceInformation.newInstance("resource1", "Gi", 5L));
     test3Resources.setResourceInformation("resource2",
@@ -312,6 +312,32 @@ public class TestResourceUtils {
         Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
       }
       dest.delete();
+    }
+  }
+
+  @Test
+  public void testGetNodeResourcesConfigErrors() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    Map<String, Resource> testRun = new HashMap<>();
+    setupResourceTypes(conf, "resource-types-4.xml");
+    String invalidNodeResFiles[] = { "node-resources-error-1.xml"};
+
+    for (String resourceFile : invalidNodeResFiles) {
+      ResourceUtils.resetNodeResources();
+      File dest = null;
+      try {
+        File source = new File(conf.getClassLoader().getResource(resourceFile).getFile());
+        dest = new File(source.getParent(), "node-resources.xml");
+        FileUtils.copyFile(source, dest);
+        Map<String, ResourceInformation> actual = ResourceUtils.getNodeResourceInformation(conf);
+        Assert.fail("Expected error with file " + resourceFile);
+      } catch (NullPointerException ne) {
+        throw ne;
+      } catch (Exception e) {
+        if (dest != null) {
+          dest.delete();
+        }
+      }
     }
   }
 
