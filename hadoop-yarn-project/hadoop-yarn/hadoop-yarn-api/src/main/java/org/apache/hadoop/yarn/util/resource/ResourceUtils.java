@@ -84,20 +84,22 @@ public class ResourceUtils {
       Map<String, ResourceInformation> resourceInformationMap)
       throws YarnRuntimeException {
     /*
-     * Supporting 'memory' also as invalid resource name, in addition to
+     * Supporting 'memory', 'memory-mb', 'vcores' also as invalid resource names, in addition to
      * 'MEMORY' for historical reasons
      */
-    String key = "memory";
-    if (resourceInformationMap.containsKey(key)) {
-      LOG.warn(
-          "Attempt to define resource '" + key + "', but it is not allowed.");
-      throw new YarnRuntimeException(
-          "Attempt to re-define mandatory resource '" + key + "'.");
+    String keys[] = { "memory", ResourceInformation.MEMORY_URI,
+        ResourceInformation.VCORES_URI };
+    for(String key : keys) {
+      if (resourceInformationMap.containsKey(key)) {
+        LOG.warn("Attempt to define resource '" + key + "', but it is not allowed.");
+        throw new YarnRuntimeException(
+            "Attempt to re-define mandatory resource '" + key + "'.");
+      }
     }
 
     for (Map.Entry<String, ResourceInformation> mandatoryResourceEntry :
         ResourceInformation.MANDATORY_RESOURCES.entrySet()) {
-      key = mandatoryResourceEntry.getKey();
+      String key = mandatoryResourceEntry.getKey();
       ResourceInformation mandatoryRI = mandatoryResourceEntry.getValue();
 
       ResourceInformation newDefinedRI = resourceInformationMap.get(key);
@@ -485,8 +487,8 @@ public class ResourceUtils {
         if (!initializedNodeResources) {
           Map<String, ResourceInformation> nodeResources = initializeNodeResourceInformation(
               conf);
-          addMandatoryResources(nodeResources);
           checkMandatoryResources(nodeResources);
+          addMandatoryResources(nodeResources);
           setAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
           initializedNodeResources = true;
