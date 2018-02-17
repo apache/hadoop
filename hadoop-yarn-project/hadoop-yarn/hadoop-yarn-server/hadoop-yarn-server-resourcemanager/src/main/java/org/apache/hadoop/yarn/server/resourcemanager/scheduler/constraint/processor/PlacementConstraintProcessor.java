@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
@@ -329,7 +330,7 @@ public class PlacementConstraintProcessor extends AbstractPlacementProcessor {
     if (!isAdded) {
       BatchedRequests br = new BatchedRequests(iteratorType,
           schedulerResponse.getApplicationId(),
-          Collections.singleton(schedulerResponse.getSchedulingRequest()),
+          Lists.newArrayList(schedulerResponse.getSchedulingRequest()),
           placementAttempt + 1);
       reqsToRetry.add(br);
       br.addToBlacklist(
