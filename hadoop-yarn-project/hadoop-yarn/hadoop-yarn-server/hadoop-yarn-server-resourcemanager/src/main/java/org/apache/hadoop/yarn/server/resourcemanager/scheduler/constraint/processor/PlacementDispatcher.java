@@ -87,7 +87,7 @@ class PlacementDispatcher implements
       }
       return retList;
     }
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   public List<SchedulingRequestWithPlacementAttempt> pullRejectedRequests(
@@ -104,7 +104,7 @@ class PlacementDispatcher implements
       }
       return retList;
     }
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   void clearApplicationState(ApplicationId applicationId) {

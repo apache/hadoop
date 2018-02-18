@@ -263,7 +263,7 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public Set<String> getAllocationTags() {
-    return Collections.EMPTY_SET;
+    return Collections.emptySet();
   }
 
   @Private

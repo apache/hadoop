@@ -415,7 +415,7 @@ public class TestCopyCommitter {
     @Override
     public List getSplits(JobContext context)
         throws IOException, InterruptedException {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
 
     @Override
