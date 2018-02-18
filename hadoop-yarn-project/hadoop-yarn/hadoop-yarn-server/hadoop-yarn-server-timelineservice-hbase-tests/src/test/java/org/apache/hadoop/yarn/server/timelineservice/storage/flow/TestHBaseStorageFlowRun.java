@@ -62,9 +62,9 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTes
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -91,8 +91,8 @@ public class TestHBaseStorageFlowRun {
   @Test
   public void checkCoProcessorOff() throws IOException, InterruptedException {
     Configuration hbaseConf = util.getConfiguration();
-    TableName table = BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME);
+    TableName table = BaseTableRW.getTableName(hbaseConf,
+        FlowRunTableRW.TABLE_NAME_CONF_NAME, FlowRunTableRW.DEFAULT_TABLE_NAME);
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
     Admin admin = conn.getAdmin();
@@ -106,9 +106,9 @@ public class TestHBaseStorageFlowRun {
       checkCoprocessorExists(table, true);
     }
 
-    table = BaseTable.getTableName(hbaseConf,
-        FlowActivityTable.TABLE_NAME_CONF_NAME,
-        FlowActivityTable.DEFAULT_TABLE_NAME);
+    table = BaseTableRW.getTableName(hbaseConf,
+        FlowActivityTableRW.TABLE_NAME_CONF_NAME,
+        FlowActivityTableRW.DEFAULT_TABLE_NAME);
     if (admin.tableExists(table)) {
       // check the regions.
       // check in flow activity table
@@ -116,8 +116,8 @@ public class TestHBaseStorageFlowRun {
       checkCoprocessorExists(table, false);
     }
 
-    table = BaseTable.getTableName(hbaseConf, EntityTable.TABLE_NAME_CONF_NAME,
-        EntityTable.DEFAULT_TABLE_NAME);
+    table = BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME);
     if (admin.tableExists(table)) {
       // check the regions.
       // check in entity run table
@@ -224,8 +224,10 @@ public class TestHBaseStorageFlowRun {
 
     Connection conn = ConnectionFactory.createConnection(c1);
     // check in flow run table
-    Table table1 = conn.getTable(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     // scan the table and see that we get back the right min and max
     // timestamps
     byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
@@ -380,8 +382,10 @@ public class TestHBaseStorageFlowRun {
         .getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
 
     int loopCount = 0;
@@ -525,8 +529,10 @@ public class TestHBaseStorageFlowRun {
         new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
 
     int rowCount = 0;
@@ -810,8 +816,10 @@ public class TestHBaseStorageFlowRun {
       boolean checkMax) throws IOException {
     Connection conn = ConnectionFactory.createConnection(c1);
     // check in flow run table
-    Table table1 = conn.getTable(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     // scan the table and see that we get back the right min and max
     // timestamps
     byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
