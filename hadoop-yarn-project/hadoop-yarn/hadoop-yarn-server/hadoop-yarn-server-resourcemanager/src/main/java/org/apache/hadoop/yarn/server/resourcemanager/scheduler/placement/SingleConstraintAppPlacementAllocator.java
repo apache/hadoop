@@ -373,9 +373,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Map<String, ResourceRequest> getResourceRequests() {
-    return Collections.EMPTY_MAP;
+    return Collections.emptyMap();
   }
 
   @Override

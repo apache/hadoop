@@ -223,7 +223,7 @@ public abstract class AllocateRequest {
   @Public
   @Unstable
   public List<SchedulingRequest> getSchedulingRequests() {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   /**

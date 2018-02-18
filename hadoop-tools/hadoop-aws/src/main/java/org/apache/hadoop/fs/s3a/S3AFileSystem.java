@@ -2099,7 +2099,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
     // Check MetadataStore, if any.
     PathMetadata pm = metadataStore.get(path, needEmptyDirectoryFlag);
-    Set<Path> tombstones = Collections.EMPTY_SET;
+    Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
       if (pm.isDeleted()) {
         throw new FileNotFoundException("Path " + f + " is recorded as " +

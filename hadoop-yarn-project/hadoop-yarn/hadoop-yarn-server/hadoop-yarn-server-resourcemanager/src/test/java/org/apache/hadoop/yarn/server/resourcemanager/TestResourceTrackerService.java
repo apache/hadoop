@@ -723,13 +723,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private NodeStatus getNodeStatusObject(NodeId nodeId) {
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setNodeId(nodeId);
     status.setResponseId(0);
-    status.setContainersStatuses(Collections.EMPTY_LIST);
-    status.setKeepAliveApplications(Collections.EMPTY_LIST);
+    status.setContainersStatuses(Collections.emptyList());
+    status.setKeepAliveApplications(Collections.emptyList());
     return status;
   }
 
