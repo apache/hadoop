@@ -4366,7 +4366,7 @@ HTTP Request:
 
 ```json
       Accept: application/json
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeout
       Content-Type: application/json
         {
         "timeout":
@@ -4404,7 +4404,7 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      GET http://<rm http address:port>/ws/v1/cluster/apps/{appid}/timeout
+      PUT http://rm-http-address:port/ws/v1/cluster/apps/{appid}/timeout
       Content-Type: application/xml
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <timeout>
