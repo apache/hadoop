@@ -87,15 +87,15 @@ public class TestWavefrontMetrics {
 
     assertEquals(true,
         result.equals(
-            "null.all.Context.foo1 1.25 10 source=host Context=all " +
-            "Hostname=host\n" +
-            "null.all.Context.foo2 2.25 10 source=host Context=all " +
-            "Hostname=host\n") ||
+            "null.all.Context.foo1 1.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n" +
+            "null.all.Context.foo2 2.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n") ||
         result.equals(
-            "null.all.Context.foo2 2.25 10 source=host Context=all " +
-            "Hostname=host\n" +
-            "null.all.Context.foo1 1.25 10 source=host Context=all " +
-            "Hostname=host\n"));
+            "null.all.Context.foo2 2.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n" +
+            "null.all.Context.foo1 1.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n"));
   }
 
   /**
@@ -174,15 +174,15 @@ public class TestWavefrontMetrics {
 
     assertEquals(true,
         result.equals(
-            "null.all.Context.foo1 1.25 10 source=host Context=all " +
-            "Hostname=host\n" +
-            "null.all.Context.foo2 2.25 10 source=host Context=all " +
-            "Hostname=host\n") ||
+            "null.all.Context.foo1 1.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n" +
+            "null.all.Context.foo2 2.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n") ||
         result.equals(
-            "null.all.Context.foo2 2.25 10 source=host Context=all " +
-            "Hostname=host\n" +
-            "null.all.Context.foo1 1.25 10 source=host Context=all " +
-            "Hostname=host\n"));
+            "null.all.Context.foo2 2.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n" +
+            "null.all.Context.foo1 1.25 10 source=host Context=\"all\" " +
+            "Hostname=\"host\"\n"));
   }
 
   @Test
