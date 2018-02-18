@@ -368,7 +368,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     if (proto.getAllocationTagsList() != null) {
       return new HashSet<>(proto.getAllocationTagsList());
     }
-    return Collections.EMPTY_SET;
+    return Collections.emptySet();
   }
 
   // TODO: Needed?

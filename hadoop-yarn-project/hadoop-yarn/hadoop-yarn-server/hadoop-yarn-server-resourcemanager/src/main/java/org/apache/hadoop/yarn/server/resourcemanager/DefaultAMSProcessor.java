@@ -207,10 +207,10 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         request.getResourceBlacklistRequest();
     List<String> blacklistAdditions =
         (blacklistRequest != null) ?
-            blacklistRequest.getBlacklistAdditions() : Collections.EMPTY_LIST;
+            blacklistRequest.getBlacklistAdditions() : Collections.emptyList();
     List<String> blacklistRemovals =
         (blacklistRequest != null) ?
-            blacklistRequest.getBlacklistRemovals() : Collections.EMPTY_LIST;
+            blacklistRequest.getBlacklistRemovals() : Collections.emptyList();
     RMApp app =
         getRmContext().getRMApps().get(appAttemptId.getApplicationId());
 

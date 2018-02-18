@@ -781,7 +781,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       }
     }
 
-    return Collections.EMPTY_MAP;
+    return Collections.emptyMap();
   }
 
   /**
