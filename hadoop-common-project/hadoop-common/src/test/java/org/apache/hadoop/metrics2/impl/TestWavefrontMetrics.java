@@ -42,6 +42,9 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 
+/**
+ * Wavefront unit-test.
+ */
 public class TestWavefrontMetrics {
   private AbstractMetric makeMetric(String name, Number value) {
     AbstractMetric metric = mock(AbstractMetric.class);
@@ -188,15 +191,15 @@ public class TestWavefrontMetrics {
     final WavefrontSink.Wavefront mockWavefront = makeWavefront();
     Whitebox.setInternalState(sink, "wavefront", mockWavefront);
     try {
-        sink.close();
+      sink.close();
     } catch (IOException ioe) {
-        ioe.printStackTrace();
+      ioe.printStackTrace();
     }
 
     try {
-        verify(mockWavefront).close();
+      verify(mockWavefront).close();
     } catch (IOException ioe) {
-        ioe.printStackTrace();
+      ioe.printStackTrace();
     }
   }
 }

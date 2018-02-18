@@ -153,6 +153,9 @@ public class WavefrontSink implements MetricsSink, Closeable {
     wavefront.close();
   }
 
+  /**
+   * Wavefront connection and input/output handler.
+   */
   public static class Wavefront {
     private final static int MAX_CONNECTION_FAILURES = 5;
     private String serverHost;
