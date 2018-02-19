@@ -273,7 +273,21 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return true if <em>disable_preemption</em> is set, false if not
    */
   public boolean getPreemptionDisabled();
-  
+
+  /**
+   * Check whether intra-queue preemption is disabled for this queue
+   * @return true if either intra-queue preemption or inter-queue preemption
+   * is disabled for this queue, false if neither is disabled.
+   */
+  public boolean getIntraQueuePreemptionDisabled();
+
+  /**
+   * Determines whether or not the intra-queue preemption disabled switch is set
+   *  at any level in this queue's hierarchy.
+   * @return state of the intra-queue preemption switch at this queue level
+   */
+  public boolean getIntraQueuePreemptionDisabledInHierarchy();
+
   /**
    * Get QueueCapacities of this queue
    * @return queueCapacities

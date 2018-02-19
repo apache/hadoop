@@ -114,8 +114,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
           continue;
         }
 
-        // Don't preempt if disabled for this queue.
-        if (leafQueue.getPreemptionDisabled()) {
+        // Don't preempt if intra-queue preemption is disabled for this queue.
+        if (leafQueue.getIntraQueuePreemptionDisabled()) {
           continue;
         }
 
