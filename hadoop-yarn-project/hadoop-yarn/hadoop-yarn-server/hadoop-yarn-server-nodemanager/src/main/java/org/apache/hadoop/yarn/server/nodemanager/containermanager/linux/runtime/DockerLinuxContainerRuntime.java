@@ -371,6 +371,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return capabilities;
   }
 
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    // Avoid propagating nodemanager environment variables into the container
+    // so those variables can be picked up from the Docker image instead.
+    return false;
+  }
+
   private String runDockerVolumeCommand(DockerVolumeCommand dockerVolumeCommand,
       Container container) throws ContainerExecutionException {
     try {

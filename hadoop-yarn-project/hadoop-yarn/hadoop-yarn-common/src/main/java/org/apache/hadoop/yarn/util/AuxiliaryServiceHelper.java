@@ -45,7 +45,7 @@ public class AuxiliaryServiceHelper {
         Base64.encodeBase64String(byteData));
   }
 
-  public static String getPrefixServiceName(String serviceName) {
+  private static String getPrefixServiceName(String serviceName) {
     return NM_AUX_SERVICE + serviceName;
   }
 }
