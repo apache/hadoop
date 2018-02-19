@@ -183,6 +183,8 @@ class CapacitySchedulerPage extends RmView {
       _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
       _("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
       _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+      _("Intra-queue Preemption:", lqinfo.getIntraQueuePreemptionDisabled()
+              ? "disabled" : "enabled").
       _("Default Node Label Expression:",
               lqinfo.getDefaultNodeLabelExpression() == null
                   ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION

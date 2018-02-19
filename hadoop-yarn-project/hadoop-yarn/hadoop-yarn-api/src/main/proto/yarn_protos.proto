@@ -424,6 +424,7 @@ message QueueInfoProto {
   optional string defaultNodeLabelExpression = 9;
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
+  optional bool intraQueuePreemptionDisabled = 12;
 }
 
 enum QueueACLProto {

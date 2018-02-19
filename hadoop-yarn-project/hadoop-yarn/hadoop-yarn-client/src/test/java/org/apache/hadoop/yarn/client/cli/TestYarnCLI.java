@@ -1466,7 +1466,7 @@ public class TestYarnCLI {
     nodeLabels.add("GPU");
     nodeLabels.add("JDK_7");
     QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
-        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false);
+        null, null, QueueState.RUNNING, nodeLabels, "GPU", null, false, false);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1482,9 +1482,80 @@ public class TestYarnCLI {
     pw.println("\tDefault Node Label expression : " + "GPU");
     pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
     pw.println("\tPreemption : " + "enabled");
+    pw.println("\tIntra-queue Preemption : " + "enabled");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
+  @Test
+  public void testGetQueueInfoOverrideIntraQueuePreemption() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    ReservationSystemTestUtil.setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+        "org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity."
+        + "ProportionalCapacityPreemptionPolicy");
+    // Turn on cluster-wide intra-queue preemption
+    conf.setBoolean(
+        CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED, true);
+    // Disable intra-queue preemption for all queues
+    conf.setBoolean(CapacitySchedulerConfiguration.PREFIX
+        + "root.intra-queue-preemption.disable_preemption", true);
+    // Enable intra-queue preemption for the a1 queue
+    conf.setBoolean(CapacitySchedulerConfiguration.PREFIX
+        + "root.a.a1.intra-queue-preemption.disable_preemption", false);
+    MiniYARNCluster cluster =
+        new MiniYARNCluster("testGetQueueInfoOverrideIntraQueuePreemption",
+            2, 1, 1);
+
+    YarnClient yarnClient = null;
+    try {
+      cluster.init(conf);
+      cluster.start();
+      final Configuration yarnConf = cluster.getConfig();
+      yarnClient = YarnClient.createYarnClient();
+      yarnClient.init(yarnConf);
+      yarnClient.start();
+
+      QueueCLI cli = new QueueCLI();
+      cli.setClient(yarnClient);
+      cli.setSysOutPrintStream(sysOut);
+      cli.setSysErrPrintStream(sysErr);
+      sysOutStream.reset();
+      // Get status for the root.a queue
+      int result = cli.run(new String[] { "-status", "a" });
+      assertEquals(0, result);
+      String queueStatusOut = sysOutStream.toString();
+      Assert.assertTrue(queueStatusOut
+          .contains("\tPreemption : enabled"));
+      // In-queue preemption is disabled at the "root.a" queue level
+      Assert.assertTrue(queueStatusOut
+          .contains("Intra-queue Preemption : disabled"));
+      cli = new QueueCLI();
+      cli.setClient(yarnClient);
+      cli.setSysOutPrintStream(sysOut);
+      cli.setSysErrPrintStream(sysErr);
+      sysOutStream.reset();
+      // Get status for the root.a.a1 queue
+      result = cli.run(new String[] { "-status", "a1" });
+      assertEquals(0, result);
+      queueStatusOut = sysOutStream.toString();
+      Assert.assertTrue(queueStatusOut
+          .contains("\tPreemption : enabled"));
+      // In-queue preemption is enabled at the "root.a.a1" queue level
+      Assert.assertTrue(queueStatusOut
+          .contains("Intra-queue Preemption : enabled"));
+    } finally {
+      // clean-up
+      if (yarnClient != null) {
+        yarnClient.stop();
+      }
+      cluster.stop();
+      cluster.close();
+    }
   }
 
   @Test
@@ -1497,9 +1568,10 @@ public class TestYarnCLI {
     conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
         "org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity."
         + "ProportionalCapacityPreemptionPolicy");
-    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    conf.setBoolean(
+        CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED, true);
     MiniYARNCluster cluster =
-        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
+        new MiniYARNCluster("testGetQueueInfoPreemptionEnabled", 2, 1, 1);
 
     YarnClient yarnClient = null;
     try {
@@ -1517,8 +1589,11 @@ public class TestYarnCLI {
       sysOutStream.reset();
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
-      Assert.assertTrue(sysOutStream.toString()
-          .contains("Preemption : enabled"));
+      String queueStatusOut = sysOutStream.toString();
+      Assert.assertTrue(queueStatusOut
+          .contains("\tPreemption : enabled"));
+      Assert.assertTrue(queueStatusOut
+          .contains("Intra-queue Preemption : enabled"));
     } finally {
       // clean-up
       if (yarnClient != null) {
@@ -1559,8 +1634,11 @@ public class TestYarnCLI {
       sysOutStream.reset();
       int result = cli.run(new String[] { "-status", "a1" });
       assertEquals(0, result);
-      Assert.assertTrue(sysOutStream.toString()
-          .contains("Preemption : disabled"));
+      String queueStatusOut = sysOutStream.toString();
+      Assert.assertTrue(queueStatusOut
+          .contains("\tPreemption : disabled"));
+      Assert.assertTrue(queueStatusOut
+          .contains("Intra-queue Preemption : disabled"));
     }
   }
   
@@ -1568,7 +1646,7 @@ public class TestYarnCLI {
   public void testGetQueueInfoWithEmptyNodeLabel() throws Exception {
     QueueCLI cli = createAndGetQueueCLI();
     QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
-        null, null, QueueState.RUNNING, null, null, null, true);
+        null, null, QueueState.RUNNING, null, null, null, true, true);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
     int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
@@ -1585,6 +1663,7 @@ public class TestYarnCLI {
         + NodeLabel.DEFAULT_NODE_LABEL_PARTITION);
     pw.println("\tAccessible Node Labels : ");
     pw.println("\tPreemption : " + "disabled");
+    pw.println("\tIntra-queue Preemption : " + "disabled");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
