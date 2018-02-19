@@ -37,23 +37,27 @@ public class CrcUtil {
    * x^31 and has an implicit term x^32.
    */
   public static int getMonomial(long lengthBytes, int mod) {
-    // TODO(dhuo): Exception on negative degree.
     if (lengthBytes == 0) {
-      return 0;
+      return MULTIPLICATIVE_IDENTITY;
+    } else if (lengthBytes < 0) {
+      throw new IllegalArgumentException(
+          "lengthBytes must be positive, got " + lengthBytes);
     }
 
     // Decompose into
     // x^degree == x ^ SUM(bit[i] * 2^i) == PRODUCT(x ^ (bit[i] * 2^i))
     // Generate each x^(2^i) by squaring.
-    int multiplier = 0x40000000;  // x^1
+    // Since 'degree' is in 'bits', but we only need to support byte
+    // granularity we can begin with x^8.
+    int multiplier = MULTIPLICATIVE_IDENTITY >>> 8;
     int product = MULTIPLICATIVE_IDENTITY;
-    long degree = lengthBytes * 8;
+    long degree = lengthBytes;
     while (degree > 0) {
       if ((degree & 1) != 0) {
         product = (product == MULTIPLICATIVE_IDENTITY) ? multiplier :
-            multiply(product, multiplier, mod);
+            galoisFieldMultiply(product, multiplier, mod);
       }
-      multiplier = multiply(multiplier, multiplier, mod);
+      multiplier = galoisFieldMultiply(multiplier, multiplier, mod);
       degree >>= 1;
     }
     return product;
@@ -62,8 +66,9 @@ public class CrcUtil {
   /**
    * @param monomial Precomputed x^(lengthBInBytes * 8) mod {@code mod}
    */
-  public static int composeWithMonomial(int crcA, int crcB, int monomial, int mod) {
-    return multiply(crcA, monomial, mod) ^ crcB;
+  public static int composeWithMonomial(
+      int crcA, int crcB, int monomial, int mod) {
+    return galoisFieldMultiply(crcA, monomial, mod) ^ crcB;
   }
 
   /**
@@ -75,7 +80,8 @@ public class CrcUtil {
   }
 
   /**
-   * @return 4-byte array holding the big-endian representation of {@code value}.
+   * @return 4-byte array holding the big-endian representation of
+   *     {@code value}.
    */
   public static byte[] intToBytes(int value) {
     byte[] buf = new byte[4];
@@ -108,17 +114,21 @@ public class CrcUtil {
   }
 
   /**
-   * @param m The little-endian polynomial to use as the modulus when multiplying p and q,
-   *     with implicit "1" bit beyond the bottom bit.
+   * Galois field multiplication of {@code p} and {@code q} with the
+   * generator polynomial {@code m} as the modulus.
+   *
+   * @param m The little-endian polynomial to use as the modulus when
+   *     multiplying p and q, with implicit "1" bit beyond the bottom bit.
    */
-  private static int multiply(int p, int q, int m) {
+  private static int galoisFieldMultiply(int p, int q, int m) {
     int summation = 0;
 
-    // Top bit is the x^0 place; each right-shift increments the degree of the current term.
+    // Top bit is the x^0 place; each right-shift increments the degree of the
+    // current term.
     int curTerm = MULTIPLICATIVE_IDENTITY;
 
-    // Iteratively multiply p by x mod m as we go to represent the q[i] term (of degree x^i)
-    // times p.
+    // Iteratively multiply p by x mod m as we go to represent the q[i] term
+    // (of degree x^i) times p.
     int px = p;
 
     while (curTerm != 0) {
@@ -126,10 +136,10 @@ public class CrcUtil {
         summation ^= px;
       }
 
-      // Bottom bit represents highest degree since we're little-endian; before we multiply
-      // by "x" for the next term, check bottom bit to know whether the resulting px will
-      // thus have a term matching the implicit "1" term of "m" and thus will need to
-      // subtract "m" after mutiplying by "x".
+      // Bottom bit represents highest degree since we're little-endian; before
+      // we multiply by "x" for the next term, check bottom bit to know whether
+      // the resulting px will thus have a term matching the implicit "1" term
+      // of "m" and thus will need to subtract "m" after mutiplying by "x".
       boolean hasMaxDegree = ((px & 1) != 0);
       px >>>= 1;
       if (hasMaxDegree) {
