@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.ozone.tools;
 
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -29,14 +29,16 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests Freon, with MiniOzoneCluster.
+ * Tests Freon, with MiniOzoneCluster and validate data.
  */
-public class TestFreon {
+public class TestDataValidate {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -70,8 +72,58 @@ public class TestFreon {
   }
 
   @Test
-  public void defaultTest() throws Exception {
+  public void ratisTestLargeKey() throws Exception {
     List<String> args = new ArrayList<>();
+    args.add("-validateWrites");
+    args.add("-numOfVolumes");
+    args.add("1");
+    args.add("-numOfBuckets");
+    args.add("1");
+    args.add("-numOfKeys");
+    args.add("1");
+    args.add("-ratis");
+    args.add("3");
+    args.add("-keySize");
+    args.add("104857600");
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
+        args.toArray(new String[0]));
+    Assert.assertEquals(1, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(1, freon.getNumberOfKeysAdded());
+    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
+    Assert.assertEquals(0, res);
+  }
+
+  @Test
+  public void standaloneTestLargeKey() throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("-validateWrites");
+    args.add("-numOfVolumes");
+    args.add("1");
+    args.add("-numOfBuckets");
+    args.add("1");
+    args.add("-numOfKeys");
+    args.add("1");
+    args.add("-keySize");
+    args.add("104857600");
+    Freon freon = new Freon(conf);
+    int res = ToolRunner.run(conf, freon,
+        args.toArray(new String[0]));
+    Assert.assertEquals(1, freon.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, freon.getNumberOfBucketsCreated());
+    Assert.assertEquals(1, freon.getNumberOfKeysAdded());
+    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
+    Assert.assertEquals(0, res);
+  }
+
+  @Test
+  public void validateWriteTest() throws Exception {
+    PrintStream originalStream = System.out;
+    ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(outStream));
+    List<String> args = new ArrayList<>();
+    args.add("-validateWrites");
     args.add("-numOfVolumes");
     args.add("2");
     args.add("-numOfBuckets");
@@ -81,56 +133,14 @@ public class TestFreon {
     Freon freon = new Freon(conf);
     int res = ToolRunner.run(conf, freon,
         args.toArray(new String[0]));
+    Assert.assertEquals(0, res);
     Assert.assertEquals(2, freon.getNumberOfVolumesCreated());
     Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
     Assert.assertEquals(100, freon.getNumberOfKeysAdded());
-    Assert.assertEquals(10240 - 36, freon.getKeyValueLength());
-    Assert.assertEquals(0, res);
-  }
-
-  @Test
-  public void multiThread() throws Exception {
-    List<String> args = new ArrayList<>();
-    args.add("-numOfVolumes");
-    args.add("10");
-    args.add("-numOfBuckets");
-    args.add("1");
-    args.add("-numOfKeys");
-    args.add("10");
-    args.add("-numOfThread");
-    args.add("10");
-    args.add("-keySize");
-    args.add("10240");
-    Freon freon = new Freon(conf);
-    int res = ToolRunner.run(conf, freon,
-        args.toArray(new String[0]));
-    Assert.assertEquals(10, freon.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
-    Assert.assertEquals(0, res);
-  }
-
-  @Test
-  public void ratisTest3() throws Exception {
-    List<String> args = new ArrayList<>();
-    args.add("-numOfVolumes");
-    args.add("10");
-    args.add("-numOfBuckets");
-    args.add("1");
-    args.add("-numOfKeys");
-    args.add("10");
-    args.add("-ratis");
-    args.add("3");
-    args.add("-numOfThread");
-    args.add("10");
-    args.add("-keySize");
-    args.add("10240");
-    Freon freon = new Freon(conf);
-    int res = ToolRunner.run(conf, freon,
-        args.toArray(new String[0]));
-    Assert.assertEquals(10, freon.getNumberOfVolumesCreated());
-    Assert.assertEquals(10, freon.getNumberOfBucketsCreated());
-    Assert.assertEquals(100, freon.getNumberOfKeysAdded());
-    Assert.assertEquals(0, res);
+    Assert.assertTrue(freon.getValidateWrites());
+    Assert.assertNotEquals(0, freon.getTotalKeysValidated());
+    Assert.assertNotEquals(0, freon.getSuccessfulValidationCount());
+    Assert.assertEquals(0, freon.getUnsuccessfulValidationCount());
+    System.setOut(originalStream);
   }
 }
