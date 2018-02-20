@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedBlockChecksumCompositeCrcReconstructor;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedBlockChecksumMd5CrcReconstructor;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedBlockChecksumReconstructor;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedReconstructionInfo;
@@ -678,8 +679,13 @@ final class BlockChecksumHelper {
       StripedReconstructionInfo stripedReconInfo =
           new StripedReconstructionInfo(
               blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
-      // TODO(dhuo): Plumb through to StripedBlockChecksumReconstructor
+      BlockChecksumType groupChecksumType =
+          getBlockChecksumOptions().getBlockChecksumType();
       final StripedBlockChecksumReconstructor checksumRecon =
+          groupChecksumType == BlockChecksumType.COMPOSITE_CRC ?
+          new StripedBlockChecksumCompositeCrcReconstructor(
+              getDatanode().getErasureCodingWorker(), stripedReconInfo,
+              blockChecksumBuf, blockLength) :
           new StripedBlockChecksumMd5CrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
               blockChecksumBuf, blockLength);

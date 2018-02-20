@@ -24,44 +24,50 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.CrcComposer;
 
 /**
- * Computes running MD5-of-CRC over reconstructed chunk CRCs.
+ * Computes striped composite CRCs over reconstructed chunk CRCs.
  */
 @InterfaceAudience.Private
-public class StripedBlockChecksumMd5CrcReconstructor
+public class StripedBlockChecksumCompositeCrcReconstructor
     extends StripedBlockChecksumReconstructor {
-  private MD5Hash md5;
-  private MessageDigest digester;
+  private final int ecPolicyCellSize;
 
-  public StripedBlockChecksumMd5CrcReconstructor(ErasureCodingWorker worker,
+  private byte[] digestValue;
+  private CrcComposer digester;
+
+  public StripedBlockChecksumCompositeCrcReconstructor(
+      ErasureCodingWorker worker,
       StripedReconstructionInfo stripedReconInfo,
       DataOutputBuffer checksumWriter,
       long requestedBlockLength) throws IOException {
     super(worker, stripedReconInfo, checksumWriter, requestedBlockLength);
+    this.ecPolicyCellSize = stripedReconInfo.getEcPolicy().getCellSize();
   }
 
   @Override
   public Object getDigestObject() {
-    return md5;
+    return digestValue;
   }
 
   @Override
   void prepareDigester() throws IOException {
-    digester = MD5Hash.getDigester();
+    digester = CrcComposer.newStripedCrcComposer(
+        getChecksum().getChecksumType(),
+        getChecksum().getBytesPerChecksum(),
+        ecPolicyCellSize);
   }
 
   @Override
   void updateDigester(byte[] checksumBuf, int dataBytesPerChecksum)
       throws IOException {
-    digester.update(checksumBuf, 0, checksumBuf.length);
+    digester.update(checksumBuf, 0, checksumBuf.length, dataBytesPerChecksum);
   }
 
   @Override
   void commitDigest() throws IOException {
-    byte[] digest = digester.digest();
-    md5 = new MD5Hash(digest);
-    md5.write(getChecksumWriter());
+    digestValue = digester.digest();
+    getChecksumWriter().write(digestValue, 0, digestValue.length);
   }
 }

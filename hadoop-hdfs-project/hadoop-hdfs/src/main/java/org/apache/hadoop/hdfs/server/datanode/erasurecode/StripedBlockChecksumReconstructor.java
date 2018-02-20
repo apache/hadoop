@@ -34,12 +34,11 @@ import org.apache.hadoop.io.MD5Hash;
  */
 @InterfaceAudience.Private
 public abstract class StripedBlockChecksumReconstructor extends StripedReconstructor {
-  protected DataOutputBuffer checksumWriter;
-
   private ByteBuffer targetBuffer;
   private final byte[] targetIndices;
 
   private byte[] checksumBuf;
+  private DataOutputBuffer checksumWriter;
   private long checksumDataLen;
   private long requestedLen;
 
@@ -129,6 +128,10 @@ public abstract class StripedBlockChecksumReconstructor extends StripedReconstru
    * implementation-specific output fields.
    */
   abstract void commitDigest() throws IOException;
+
+  protected DataOutputBuffer getChecksumWriter() {
+    return checksumWriter;
+  }
 
   private long checksumWithTargetOutput(byte[] outputData, int toReconstructLen)
       throws IOException {
