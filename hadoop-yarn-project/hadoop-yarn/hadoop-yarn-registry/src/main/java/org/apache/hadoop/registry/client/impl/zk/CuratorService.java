@@ -288,6 +288,9 @@ public class CuratorService extends CompositeService
       registrySecurity.applySecurityEnvironment(builder);
       //log them
       securityConnectionDiagnostics = buildSecurityDiagnostics();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(securityConnectionDiagnostics);
+      }
       framework = builder.build();
       framework.start();
     }
