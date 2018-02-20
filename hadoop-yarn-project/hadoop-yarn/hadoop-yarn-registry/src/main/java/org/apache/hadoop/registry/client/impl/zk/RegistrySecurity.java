@@ -762,6 +762,8 @@ public class RegistrySecurity extends AbstractService {
           LOG.info(
               "Enabling ZK sasl client: jaasClientEntry = " + jaasClientEntry
                   + ", principal = " + principal + ", keytab = " + keytab);
+          break;
+
         default:
           clearZKSaslClientProperties();
           break;
