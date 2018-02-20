@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 
 /**
@@ -34,6 +35,12 @@ public interface RouterRpcMonitor {
    */
   void init(
       Configuration conf, RouterRpcServer server, StateStoreService store);
+
+  /**
+   * Get Router RPC metrics info.
+   * @return The instance of FederationRPCMetrics.
+   */
+  FederationRPCMetrics getRPCMetrics();
 
   /**
    * Close the monitor.
@@ -72,6 +79,12 @@ public interface RouterRpcMonitor {
    * Failed to proxy an operation because it is not implemented.
    */
   void proxyOpNotImplemented();
+
+  /**
+   * Retry to proxy an operation to a Namenode because of an unexpected
+   * exception.
+   */
+  void proxyOpRetries();
 
   /**
    * If the Router cannot contact the State Store in an operation.

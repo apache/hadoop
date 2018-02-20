@@ -159,6 +159,11 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
+  public void proxyOpRetries() {
+    metrics.incrProxyOpRetries();
+  }
+
+  @Override
   public void routerFailureStateStore() {
     metrics.incrRouterFailureStateStore();
   }
@@ -207,5 +212,10 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
       return getNow() - PROXY_TIME.get();
     }
     return -1;
+  }
+
+  @Override
+  public FederationRPCMetrics getRPCMetrics() {
+    return this.metrics;
   }
 }
