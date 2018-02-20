@@ -20,7 +20,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
@@ -29,7 +28,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.scm.container.replication.ContainerSupervisor;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
@@ -74,6 +75,7 @@ public class ContainerMapping implements Mapping {
   private final PipelineSelector pipelineSelector;
   private final ContainerStateManager containerStateManager;
   private final LeaseManager<ContainerInfo> containerLeaseManager;
+  private final ContainerSupervisor containerSupervisor;
   private final float containerCloseThreshold;
 
   /**
@@ -113,6 +115,9 @@ public class ContainerMapping implements Mapping {
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
     this.containerStateManager =
         new ContainerStateManager(conf, this);
+    this.containerSupervisor =
+        new ContainerSupervisor(conf, nodeManager,
+            nodeManager.getNodePoolManager());
     this.containerCloseThreshold = conf.getFloat(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
@@ -347,16 +352,14 @@ public class ContainerMapping implements Mapping {
   /**
    * Process container report from Datanode.
    *
-   * @param datanodeID Datanode ID
-   * @param reportType Type of report
-   * @param containerInfos container details
+   * @param reports Container report
    */
   @Override
-  public void processContainerReports(
-      DatanodeID datanodeID,
-      ContainerReportsRequestProto.reportType reportType,
-      List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
-          containerInfos) throws IOException {
+  public void processContainerReports(ContainerReportsRequestProto reports)
+      throws IOException {
+    List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
+        containerInfos = reports.getReportsList();
+    containerSupervisor.handleContainerReport(reports);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo containerInfo :
         containerInfos) {
       byte[] dbKey = containerInfo.getContainerNameBytes().toByteArray();
@@ -395,7 +398,7 @@ public class ContainerMapping implements Mapping {
           // TODO: Handling of containers which are already in close queue.
           if (containerUsedPercentage >= containerCloseThreshold) {
             // TODO: The container has to be moved to close container queue.
-            // For now, we are just updating the container state to CLOSED.
+            // For now, we are just updating the container state to CLOSING.
             // Close container implementation can decide on how to maintain
             // list of containers to be closed, this is the place where we
             // have to add the containers to that list.
@@ -412,7 +415,7 @@ public class ContainerMapping implements Mapping {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
               " {}, for container: {}, reason: container doesn't exist in" +
-              "container database.", datanodeID,
+              "container database.", reports.getDatanodeID(),
               containerInfo.getContainerName());
         }
       } finally {

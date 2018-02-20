@@ -224,6 +224,12 @@ public final class ScmConfigKeys {
       OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT = "60s";
 
   /**
+   * This determines the total number of pools to be processed in parallel.
+   */
+  public static final String OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS =
+      "ozone.scm.max.nodepool.processing.threads";
+  public static final int OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS_DEFAULT = 1;
+  /**
    * These 2 settings control the number of threads in executor pool and time
    * outs for thw container reports from all nodes.
    */

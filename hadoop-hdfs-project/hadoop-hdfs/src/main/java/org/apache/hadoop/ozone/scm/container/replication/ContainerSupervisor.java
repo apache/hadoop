@@ -19,12 +19,11 @@ package org.apache.hadoop.ozone.scm.container.replication;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
-import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 import org.apache.hadoop.util.Time;
@@ -43,6 +42,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.google.common.util.concurrent.Uninterruptibles
     .sleepUninterruptibly;
@@ -58,17 +59,20 @@ import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_MAX_CONTAINER_REPORT_THREADS;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_MAX_CONTAINER_REPORT_THREADS_DEFAULT;
+import static org.apache.hadoop.scm.ScmConfigKeys
+    .OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS;
+import static org.apache.hadoop.scm.ScmConfigKeys
+    .OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS_DEFAULT;
 
 /**
  * This class takes a set of container reports that belong to a pool and then
  * computes the replication levels for each container.
  */
-public class ContainerReplicationManager implements Closeable {
+public class ContainerSupervisor implements Closeable {
   public static final Logger LOG =
-      LoggerFactory.getLogger(ContainerReplicationManager.class);
+      LoggerFactory.getLogger(ContainerSupervisor.class);
 
   private final NodePoolManager poolManager;
-  private final CommandQueue commandQueue;
   private final HashSet<String> poolNames;
   private final PriorityQueue<PeriodicPool> poolQueue;
   private final NodeManager nodeManager;
@@ -79,6 +83,9 @@ public class ContainerReplicationManager implements Closeable {
   private long poolProcessCount;
   private final List<InProgressPool> inProgressPoolList;
   private final AtomicInteger threadFaultCount;
+  private final int inProgressPoolMaxCount;
+
+  private final ReadWriteLock inProgressPoolListLock;
 
   /**
    * Returns the number of times we have processed pools.
@@ -95,13 +102,10 @@ public class ContainerReplicationManager implements Closeable {
    * @param conf - OzoneConfiguration
    * @param nodeManager - Node Manager
    * @param poolManager - Pool Manager
-   * @param commandQueue - Datanodes Command Queue.
    */
-  public ContainerReplicationManager(OzoneConfiguration conf,
-      NodeManager nodeManager, NodePoolManager poolManager,
-      CommandQueue commandQueue) {
+  public ContainerSupervisor(Configuration conf, NodeManager nodeManager,
+                             NodePoolManager poolManager) {
     Preconditions.checkNotNull(poolManager);
-    Preconditions.checkNotNull(commandQueue);
     Preconditions.checkNotNull(nodeManager);
     this.containerProcessingLag =
         conf.getTimeDuration(OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL,
@@ -116,18 +120,21 @@ public class ContainerReplicationManager implements Closeable {
         conf.getTimeDuration(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT,
             OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT,
             TimeUnit.MILLISECONDS);
+    this.inProgressPoolMaxCount = conf.getInt(
+        OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS,
+        OZONE_SCM_MAX_NODEPOOL_PROCESSING_THREADS_DEFAULT);
     this.poolManager = poolManager;
-    this.commandQueue = commandQueue;
     this.nodeManager = nodeManager;
     this.poolNames = new HashSet<>();
     this.poolQueue = new PriorityQueue<>();
-    runnable = new AtomicBoolean(true);
+    this.runnable = new AtomicBoolean(true);
     this.threadFaultCount = new AtomicInteger(0);
-    executorService = HadoopExecutors.newCachedThreadPool(
+    this.executorService = HadoopExecutors.newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Container Reports Processing Thread - %d")
             .build(), maxContainerReportThreads);
-    inProgressPoolList = new LinkedList<>();
+    this.inProgressPoolList = new LinkedList<>();
+    this.inProgressPoolListLock = new ReentrantReadWriteLock();
 
     initPoolProcessThread();
   }
@@ -211,31 +218,49 @@ public class ContainerReplicationManager implements Closeable {
       while (runnable.get()) {
         // Make sure that we don't have any new pools.
         refreshPools();
-        PeriodicPool pool = poolQueue.poll();
-        if (pool != null) {
-          if (pool.getLastProcessedTime() + this.containerProcessingLag <
-              Time.monotonicNow()) {
-            LOG.debug("Adding pool {} to container processing queue", pool
-                .getPoolName());
-            InProgressPool inProgressPool =  new InProgressPool(maxPoolWait,
-                pool, this.nodeManager, this.poolManager, this.commandQueue,
-                this.executorService);
-            inProgressPool.startReconciliation();
-            inProgressPoolList.add(inProgressPool);
-            poolProcessCount++;
-
-          } else {
-
-            LOG.debug("Not within the time window for processing: {}",
+        while (inProgressPoolList.size() < inProgressPoolMaxCount) {
+          PeriodicPool pool = poolQueue.poll();
+          if (pool != null) {
+            if (pool.getLastProcessedTime() + this.containerProcessingLag >
+                Time.monotonicNow()) {
+              LOG.debug("Not within the time window for processing: {}",
+                  pool.getPoolName());
+              // we might over sleep here, not a big deal.
+              sleepUninterruptibly(this.containerProcessingLag,
+                  TimeUnit.MILLISECONDS);
+            }
+            LOG.debug("Adding pool {} to container processing queue",
                 pool.getPoolName());
-            // Put back this pool since we are not planning to process it.
-            poolQueue.add(pool);
-            // we might over sleep here, not a big deal.
-            sleepUninterruptibly(this.containerProcessingLag,
-                TimeUnit.MILLISECONDS);
+            InProgressPool inProgressPool = new InProgressPool(maxPoolWait,
+                pool, this.nodeManager, this.poolManager, this.executorService);
+            inProgressPool.startReconciliation();
+            inProgressPoolListLock.writeLock().lock();
+            try {
+              inProgressPoolList.add(inProgressPool);
+            } finally {
+              inProgressPoolListLock.writeLock().unlock();
+            }
+            poolProcessCount++;
+          } else {
+            break;
           }
         }
         sleepUninterruptibly(this.maxPoolWait, TimeUnit.MILLISECONDS);
+        inProgressPoolListLock.readLock().lock();
+        try {
+          for (InProgressPool inProgressPool : inProgressPoolList) {
+            inProgressPool.finalizeReconciliation();
+            poolQueue.add(inProgressPool.getPool());
+          }
+        } finally {
+          inProgressPoolListLock.readLock().unlock();
+        }
+        inProgressPoolListLock.writeLock().lock();
+        try {
+          inProgressPoolList.clear();
+        } finally {
+          inProgressPoolListLock.writeLock().unlock();
+        }
       }
     };
 
@@ -263,28 +288,28 @@ public class ContainerReplicationManager implements Closeable {
    */
   public void handleContainerReport(
       ContainerReportsRequestProto containerReport) {
-    String poolName = null;
-    DatanodeID datanodeID = DatanodeID
-        .getFromProtoBuf(containerReport.getDatanodeID());
+    DatanodeID datanodeID = DatanodeID.getFromProtoBuf(
+        containerReport.getDatanodeID());
+    inProgressPoolListLock.readLock().lock();
     try {
-      poolName = poolManager.getNodePool(datanodeID);
+      String poolName = poolManager.getNodePool(datanodeID);
+      for (InProgressPool ppool : inProgressPoolList) {
+        if (ppool.getPoolName().equalsIgnoreCase(poolName)) {
+          ppool.handleContainerReport(containerReport);
+          return;
+        }
+      }
+      // TODO: Decide if we can do anything else with this report.
+      LOG.debug("Discarding the container report for pool {}. " +
+              "That pool is not currently in the pool reconciliation process." +
+              " Container Name: {}", poolName, containerReport.getDatanodeID());
     } catch (SCMException e) {
       LOG.warn("Skipping processing container report from datanode {}, "
               + "cause: failed to get the corresponding node pool",
           datanodeID.toString(), e);
-      return;
+    } finally {
+      inProgressPoolListLock.readLock().unlock();
     }
-
-    for(InProgressPool ppool : inProgressPoolList) {
-      if(ppool.getPoolName().equalsIgnoreCase(poolName)) {
-        ppool.handleContainerReport(containerReport);
-        return;
-      }
-    }
-    // TODO: Decide if we can do anything else with this report.
-    LOG.debug("Discarding the container report for pool {}. That pool is not " +
-        "currently in the pool reconciliation process. Container Name: {}",
-        poolName, containerReport.getDatanodeID());
   }
 
   /**

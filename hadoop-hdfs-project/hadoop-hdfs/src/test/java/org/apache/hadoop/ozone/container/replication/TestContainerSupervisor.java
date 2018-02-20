@@ -28,8 +28,7 @@ import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.ozone.scm.container.replication
-    .ContainerReplicationManager;
+import org.apache.hadoop.ozone.scm.container.replication.ContainerSupervisor;
 import org.apache.hadoop.ozone.scm.container.replication.InProgressPool;
 import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -53,35 +52,37 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT;
+import static org.apache.hadoop.scm.ScmConfigKeys
+    .OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL;
 import static org.apache.ratis.shaded.com.google.common.util.concurrent
     .Uninterruptibles.sleepUninterruptibly;
 
 /**
  * Tests for the container manager.
  */
-public class TestContainerReplicationManager {
+public class TestContainerSupervisor {
   final static String POOL_NAME_TEMPLATE = "Pool%d";
   static final int MAX_DATANODES = 72;
   static final int POOL_SIZE = 24;
   static final int POOL_COUNT = 3;
   private LogCapturer logCapturer = LogCapturer.captureLogs(
-      LogFactory.getLog(ContainerReplicationManager.class));
+      LogFactory.getLog(ContainerSupervisor.class));
   private List<DatanodeID> datanodes = new LinkedList<>();
   private NodeManager nodeManager;
   private NodePoolManager poolManager;
   private CommandQueue commandQueue;
-  private ContainerReplicationManager replicationManager;
+  private ContainerSupervisor containerSupervisor;
   private ReplicationDatanodeStateManager datanodeStateManager;
 
   @After
   public void tearDown() throws Exception {
     logCapturer.stopCapturing();
-    GenericTestUtils.setLogLevel(ContainerReplicationManager.LOG, Level.INFO);
+    GenericTestUtils.setLogLevel(ContainerSupervisor.LOG, Level.INFO);
   }
 
   @Before
   public void setUp() throws Exception {
-    GenericTestUtils.setLogLevel(ContainerReplicationManager.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(ContainerSupervisor.LOG, Level.DEBUG);
     Map<DatanodeID, NodeState> nodeStateMap = new HashMap<>();
     // We are setting up 3 pools with 24 nodes each in this cluster.
     // First we create 72 Datanodes.
@@ -91,10 +92,12 @@ public class TestContainerReplicationManager {
       nodeStateMap.put(datanode, HEALTHY);
     }
 
-    // All nodes in this cluster are healthy for time being.
-    nodeManager = new ReplicationNodeManagerMock(nodeStateMap);
-    poolManager = new ReplicationNodePoolManagerMock();
     commandQueue = new CommandQueue();
+
+    // All nodes in this cluster are healthy for time being.
+    nodeManager = new ReplicationNodeManagerMock(nodeStateMap, commandQueue);
+    poolManager = new ReplicationNodePoolManagerMock();
+
 
     Assert.assertEquals("Max datanodes should be equal to POOL_SIZE * " +
         "POOL_COUNT", POOL_COUNT * POOL_SIZE, MAX_DATANODES);
@@ -108,10 +111,12 @@ public class TestContainerReplicationManager {
       }
     }
     OzoneConfiguration config = SCMTestUtils.getOzoneConf();
-    config.setTimeDuration(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT, 1,
+    config.setTimeDuration(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT, 2,
         TimeUnit.SECONDS);
-    replicationManager = new ContainerReplicationManager(config,
-        nodeManager, poolManager, commandQueue);
+    config.setTimeDuration(OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL, 1,
+        TimeUnit.SECONDS);
+    containerSupervisor = new ContainerSupervisor(config,
+        nodeManager, poolManager);
     datanodeStateManager = new ReplicationDatanodeStateManager(nodeManager,
         poolManager);
     // Sleep for one second to make sure all threads get time to run.
@@ -125,13 +130,13 @@ public class TestContainerReplicationManager {
   public void testAssertPoolsAreProcessed() {
     // This asserts that replication manager has started processing at least
     // one pool.
-    Assert.assertTrue(replicationManager.getInProgressPoolCount() > 0);
+    Assert.assertTrue(containerSupervisor.getInProgressPoolCount() > 0);
 
     // Since all datanodes are flagged as healthy in this test, for each
     // datanode we must have queued a command.
-    Assert.assertEquals("Commands are in queue :", commandQueue
-        .getCommandsInQueue(), POOL_SIZE * replicationManager
-        .getInProgressPoolCount());
+    Assert.assertEquals("Commands are in queue :",
+        POOL_SIZE * containerSupervisor.getInProgressPoolCount(),
+        commandQueue.getCommandsInQueue());
   }
 
   @Test
@@ -144,7 +149,7 @@ public class TestContainerReplicationManager {
       InterruptedException {
     String singleNodeContainer = "SingleNodeContainer";
     String threeNodeContainer = "ThreeNodeContainer";
-    InProgressPool ppool = replicationManager.getInProcessPoolList().get(0);
+    InProgressPool ppool = containerSupervisor.getInProcessPoolList().get(0);
     // Only single datanode reporting that "SingleNodeContainer" exists.
     List<ContainerReportsRequestProto> clist =
         datanodeStateManager.getContainerReport(singleNodeContainer,
@@ -180,7 +185,7 @@ public class TestContainerReplicationManager {
     String normalContainer = "NormalContainer";
     String overReplicated = "OverReplicatedContainer";
     String wayOverReplicated = "WayOverReplicated";
-    InProgressPool ppool = replicationManager.getInProcessPoolList().get(0);
+    InProgressPool ppool = containerSupervisor.getInProcessPoolList().get(0);
 
     List<ContainerReportsRequestProto> clist =
         datanodeStateManager.getContainerReport(normalContainer,
@@ -221,7 +226,7 @@ public class TestContainerReplicationManager {
   public void testAllPoolsAreProcessed() throws TimeoutException,
       InterruptedException {
     // Verify that we saw all three pools being picked up for processing.
-    GenericTestUtils.waitFor(() -> replicationManager.getPoolProcessCount()
+    GenericTestUtils.waitFor(() -> containerSupervisor.getPoolProcessCount()
         >= 3, 200, 15 * 1000);
     Assert.assertTrue(logCapturer.getOutput().contains("Pool1") &&
         logCapturer.getOutput().contains("Pool2") &&
@@ -253,7 +258,7 @@ public class TestContainerReplicationManager {
       List<ContainerReportsRequestProto> clist =
           datanodeStateManager.getContainerReport("NewContainer1",
               "PoolNew", 1);
-      replicationManager.handleContainerReport(clist.get(0));
+      containerSupervisor.handleContainerReport(clist.get(0));
       GenericTestUtils.waitFor(() ->
           inProgressLog.getOutput().contains("NewContainer1") && inProgressLog
               .getOutput().contains(id.getDatanodeUuid()), 200, 10 * 1000);
