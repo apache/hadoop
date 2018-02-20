@@ -1244,10 +1244,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           v, newBlkFile.getParentFile(), Thread.currentThread(), bytesReserved);
 
       // load last checksum and datalen
-      byte[] lastChunkChecksum = v.loadLastPartialChunkChecksum(
-          replicaInfo.getBlockFile(), replicaInfo.getMetaFile());
       newReplicaInfo.setLastChecksumAndDataLen(
-          replicaInfo.getNumBytes(), lastChunkChecksum);
+          replicaInfo.getNumBytes(), replicaInfo.getLastPartialChunkChecksum());
 
       File newmeta = newReplicaInfo.getMetaFile();
 
@@ -1805,6 +1803,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               == ReplicaState.FINALIZED) {
         newReplicaInfo = (FinalizedReplica)
             ((ReplicaUnderRecovery) replicaInfo).getOriginalReplica();
+        newReplicaInfo.loadLastPartialChunkChecksum();
       } else {
         FsVolumeImpl v = (FsVolumeImpl) replicaInfo.getVolume();
         File f = replicaInfo.getBlockFile();
@@ -1817,6 +1816,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             bpid, replicaInfo, f, replicaInfo.getBytesReserved());
         newReplicaInfo =
             new FinalizedReplica(replicaInfo, v, dest.getParentFile());
+
+        byte[] checksum = null;
+        // copy the last partial checksum if the replica is originally
+        // in finalized or rbw state.
+        if (replicaInfo.getState() == ReplicaState.FINALIZED) {
+          FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
+          checksum = finalized.getLastPartialChunkChecksum();
+        } else if (replicaInfo.getState() == ReplicaState.RBW) {
+          ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+          checksum = rbw.getLastChecksumAndDataLen().getChecksum();
+        }
+        newReplicaInfo.setLastPartialChunkChecksum(checksum);
+
         if (v.isTransientStorage()) {
           releaseLockedMemory(
               replicaInfo.getOriginalBytesReserved()
