@@ -111,7 +111,8 @@ public class CrcComposer {
           + "'%d' which is not a multiple of %d!",
           length, offset, CRC_SIZE_BYTES));
     }
-    while (offset < length) {
+    int limit = offset + length;
+    while (offset < limit) {
       int crcB = CrcUtil.readInt(crcBuffer, offset);
       update(crcB, bytesPerCrc);
       offset += CRC_SIZE_BYTES;
