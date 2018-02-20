@@ -43,6 +43,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.CrcComposer;
 import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
@@ -362,40 +363,9 @@ final class BlockChecksumHelper {
       if (stripeLength <= 0 || stripeLength > checksumDataLength) {
         stripeLength = checksumDataLength;
       }
-      
-      // TODO(dhuo): Check bounds; we can't support numStripes >
-      // Integer.MAX_VALUE with this approach because we buffer
-      // all striped CRCs in memory before composing them in correct logical
-      // order. Alternatively we'd either need to spill to disk or pass
-      // around a running composite.
-      int numStripes = (int) (checksumDataLength / stripeLength);
-      if (checksumDataLength % stripeLength != 0) {
-        ++numStripes;
-      }
-      long crcsPerStripe;
-      if (stripeLength == checksumDataLength) {
-        crcsPerStripe = Long.MAX_VALUE;
-      } else if (stripeLength % getBytesPerCRC() == 0) {
-        crcsPerStripe = stripeLength / getBytesPerCRC();
-      } else {
-        throw new IOException(String.format(
-            "stripeLength(=%d) must either be full data length (=%d) or "
-            + "divisible by bytesPerCrc(=%d)",
-            stripeLength, checksumDataLength, getBytesPerCRC()));
-      }
-      LOG.debug("computeCompositeCrc stripeLength={}, checksumDataLength={}, "
-          + "numStripes={}, crcsPerStripe={}, getBytesPerCRC()={}",
-          stripeLength, checksumDataLength, numStripes, crcsPerStripe,
-          getBytesPerCRC());
 
-      // TODO(dhuo): maybe use DataOutputBuffer for this instead, but remember
-      // to deal with the fact that its getData() returns a powers-of-two
-      // buffer larger than actual written data.
-      byte[] stripedCrcs = new byte[4 * numStripes];
-      int stripedCrcsCursor = 0;  // Index into stripedCrcs.
-
-      int compositeCrc = 0;
-      int crcPolynomial = DataChecksum.getCrcPolynomialForType(getCrcType());
+      CrcComposer crcComposer = CrcComposer.newStripedCrcComposer(
+          getCrcType(), getBytesPerCRC(), stripeLength);
       DataInputStream checksumIn = getChecksumIn();
 
       // Whether getting the checksum for the entire block (which itself may
@@ -403,27 +373,7 @@ final class BlockChecksumHelper {
       // getBytesPerCRC()), we begin with a number of full chunks, all of size
       // getBytesPerCRC().
       long numFullChunks = checksumDataLength / getBytesPerCRC();
-      int fullChunkMonomial = CrcUtil.getMonomial(getBytesPerCRC(), crcPolynomial);
-      LOG.debug(String.format(
-          "Using monomial 0x%08x for length %d and CRC polynomial 0x%08x",
-          fullChunkMonomial, getBytesPerCRC(), crcPolynomial));
-      for (long chunkNum = 0; chunkNum < numFullChunks; ++chunkNum) {
-        int chunkCrc = checksumIn.readInt();
-
-        if (compositeCrc == 0) {
-          compositeCrc = chunkCrc;
-        } else {
-          compositeCrc = CrcUtil.composeWithMonomial(
-              compositeCrc, chunkCrc, fullChunkMonomial, crcPolynomial);
-        }
-
-        if ((chunkNum + 1) % crcsPerStripe == 0) {
-          // Commit a single striped crc and reset the current compositeCrc.
-          CrcUtil.writeInt(stripedCrcs, stripedCrcsCursor, compositeCrc);
-          stripedCrcsCursor += 4;
-          compositeCrc = 0;
-        }
-      }
+      crcComposer.update(checksumIn, numFullChunks, getBytesPerCRC());
 
       // There may be a final partial chunk that is not full-sized. Unlike the
       // MD5 case, we still consider this a "partial chunk" even if
@@ -436,32 +386,22 @@ final class BlockChecksumHelper {
       //      stored in block metadata, so we just continue reading checksumIn.
       long partialChunkSize = checksumDataLength % getBytesPerCRC();
       if (partialChunkSize > 0) {
-        int partialChunkCrc;
         if (isPartialBlk()) {
           byte[] partialChunkCrcBytes = crcPartialBlock();
-          partialChunkCrc = CrcUtil.readInt(partialChunkCrcBytes, 0);
+          crcComposer.update(
+              partialChunkCrcBytes, 0, partialChunkCrcBytes.length,
+              partialChunkSize);
         } else {
-          partialChunkCrc = checksumIn.readInt();
+          int partialChunkCrc = checksumIn.readInt();
+          crcComposer.update(partialChunkCrc, partialChunkSize);
         }
-        compositeCrc = CrcUtil.compose(
-            compositeCrc, partialChunkCrc, partialChunkSize, crcPolynomial);
       }
 
-      // TODO(dhuo): Find a cleaner way of accounting the various cases:
-      // 1. Exactly line up with full block (no partial chunk, no uncommitted
-      //    compositeCrc).
-      // 2. No partial chunk, but partial stripe; compositeCrc still needs
-      //    to be committed.
-      // 3. Lined up on full chunks, but partial chunk == partial stripe
-      if (stripedCrcsCursor < stripedCrcs.length) {
-        CrcUtil.writeInt(stripedCrcs, stripedCrcsCursor, compositeCrc);
-      }
-
-      setOutBytes(stripedCrcs);
-      // TODO(dhuo): Support striped crcs in the debug statement.
+      byte[] composedCrcs = crcComposer.digest();
+      setOutBytes(composedCrcs);
+      // TODO(dhuo): Support pretty-print of composedCrcs
       LOG.debug("block={}, getBytesPerCRC={}, crcPerBlock={}, compositeCrc={}",
-          getBlock(), getBytesPerCRC(), getCrcPerBlock(),
-          String.format("0x%08x", compositeCrc));
+          getBlock(), getBytesPerCRC(), getCrcPerBlock(), composedCrcs);
     }
   }
 
@@ -574,10 +514,9 @@ final class BlockChecksumHelper {
           setOutBytes(md5out.getDigest());
           break;
         case COMPOSITE_CRC:
-          // TODO(dhuo): Maybe also use the monomial precompute.
-          int compositeCrc = 0;
-          int crcPolynomial =
-              DataChecksum.getCrcPolynomialForType(getCrcType());
+          CrcComposer crcComposer = CrcComposer.newCrcComposer(
+              getCrcType(), ecPolicy.getCellSize());
+
           // This should hold all the cell-granularity checksums of blk0
           // followed by all cell checksums of blk1, etc. We must unstripe the
           // cell checksums in order of logical file bytes. Also, note that the
@@ -600,12 +539,7 @@ final class BlockChecksumHelper {
             int cellCrc = CrcUtil.readInt(
                 flatBlockChecksumData, checksumCursor);
             blockChecksumCursors[blockIndex] += 4;
-            if (compositeCrc == 0) {
-              compositeCrc = cellCrc;
-            } else {
-              compositeCrc = CrcUtil.compose(
-                  compositeCrc, cellCrc, ecPolicy.getCellSize(), crcPolynomial);
-            }
+            crcComposer.update(cellCrc, ecPolicy.getCellSize());
           }
           if (checksumLen % ecPolicy.getCellSize() != 0) {
             // Final partial cell.
@@ -614,12 +548,11 @@ final class BlockChecksumHelper {
             int cellCrc = CrcUtil.readInt(
                 flatBlockChecksumData, checksumCursor);
             blockChecksumCursors[blockIndex] += 4;
-            compositeCrc = CrcUtil.compose(
-                compositeCrc, cellCrc, checksumLen % ecPolicy.getCellSize(),
-                crcPolynomial);
+            crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
           }
-          // TODO(dhuo): Maybe add a debug statement here.
-          setOutBytes(CrcUtil.intToBytes(compositeCrc));
+          // TODO(dhuo): Maybe add a debug statement here. And assert that the
+          // returned value is exactly 4 bytes.
+          setOutBytes(crcComposer.digest());
           break;
         default:
           throw new IOException(String.format(

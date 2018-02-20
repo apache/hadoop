@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.CrcComposer;
 import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
@@ -292,8 +293,12 @@ final class FileChecksumHelper {
     }
 
     FileChecksum makeCompositeCrcResult() throws IOException {
-      int compositeCrc = 0;
-      int crcPolynomial = DataChecksum.getCrcPolynomialForType(getCrcType());
+      long blockSizeHint = 0;
+      if (locatedBlocks.size() > 0) {
+        blockSizeHint = locatedBlocks.get(0).getBlockSize();
+      }
+      CrcComposer crcComposer =
+          CrcComposer.newCrcComposer(getCrcType(), blockSizeHint);
       byte[] blockChecksumBytes = blockChecksumBuf.getData();
 
       long sumBlockLengths = 0;
@@ -305,15 +310,7 @@ final class FileChecksumHelper {
         sumBlockLengths += block.getBlockSize();
         int blockCrc = CrcUtil.readInt(blockChecksumBytes, i * 4);
 
-        if (compositeCrc == 0) {
-          compositeCrc = blockCrc;
-        } else {
-          // TODO(dhuo): Also used the precomputed monomial here. It's less
-          // important here composing blocks vs chunks since the number of
-          // blocks is generally much smaller than number of chunks.
-          compositeCrc = CrcUtil.compose(
-              compositeCrc, blockCrc, block.getBlockSize(), crcPolynomial);
-        }
+        crcComposer.update(blockCrc, block.getBlockSize());
         if (LOG.isDebugEnabled()) {
           LOG.debug(String.format(
               "Added blockCrc 0x%08x for block index %d of size %d",
@@ -337,14 +334,14 @@ final class FileChecksumHelper {
       // written into the DataOutput.
       int lastBlockCrc = CrcUtil.readInt(
           blockChecksumBytes, 4 * (locatedBlocks.size() - 1));
-      compositeCrc = CrcUtil.compose(
-          compositeCrc, lastBlockCrc, consumedLastBlockLength, crcPolynomial);
+      crcComposer.update(lastBlockCrc, consumedLastBlockLength);
       if (LOG.isDebugEnabled()) {
         LOG.debug(String.format(
             "Added lastBlockCrc 0x%08x for block index %d of size %d",
             lastBlockCrc, locatedBlocks.size() - 1, consumedLastBlockLength));
       }
 
+      int compositeCrc = CrcUtil.readInt(crcComposer.digest(), 0);
       return new CompositeCrcFileChecksum(compositeCrc, getCrcType());
     }
 
