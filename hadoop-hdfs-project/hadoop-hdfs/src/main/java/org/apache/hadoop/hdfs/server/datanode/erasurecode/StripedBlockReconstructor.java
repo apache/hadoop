@@ -79,6 +79,7 @@ class StripedBlockReconstructor extends StripedReconstructor
     }
   }
 
+  @Override
   void reconstruct() throws IOException {
     while (getPositionInBlock() < getMaxTargetLength()) {
       DataNodeFaultInjector.get().stripedBlockReconstruction();

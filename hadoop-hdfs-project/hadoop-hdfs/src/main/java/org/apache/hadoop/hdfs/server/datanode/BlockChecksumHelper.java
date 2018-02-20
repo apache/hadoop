@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedBlockChecksumMd5CrcReconstructor;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedBlockChecksumReconstructor;
 import org.apache.hadoop.hdfs.server.datanode.erasurecode.StripedReconstructionInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
@@ -479,10 +480,12 @@ final class BlockChecksumHelper {
 
     private final DataOutputBuffer blockChecksumBuf = new DataOutputBuffer();
 
-    // Raw blockChecksum data returned for each block by blockIndex; so
-    // blockChecksumBytes[0] is the blockChecksum data for the logical
-    // blockIndex 0 in the block group.
-    private final byte[][] blockChecksumBytes;
+    // Keeps track of the positions within blockChecksumBuf where each data
+    // block's checksum begins; for fixed-size block checksums this is easily
+    // calculated as a multiple of the checksum size, but for striped block
+    // CRCs, it's less error-prone to simply keep track of exact byte offsets
+    // before each block checksum is populated into the buffer.
+    private final int[] blockChecksumPositions;
 
     BlockGroupNonStripedChecksumComputer(DataNode datanode,
                                          StripedBlockInfo stripedBlockInfo,
@@ -496,7 +499,7 @@ final class BlockChecksumHelper {
       this.blockTokens = stripedBlockInfo.getBlockTokens();
       this.blockIndices = stripedBlockInfo.getBlockIndices();
       this.requestedNumBytes = requestedNumBytes;
-      this.blockChecksumBytes = new byte[this.ecPolicy.getNumDataUnits()][];
+      this.blockChecksumPositions = new int[this.ecPolicy.getNumDataUnits()];
     }
 
     private static class LiveBlockInfo {
@@ -532,6 +535,9 @@ final class BlockChecksumHelper {
       }
       long checksumLen = 0;
       for (int idx = 0; idx < numDataUnits && idx < blkIndxLen; idx++) {
+        // Before populating the blockChecksum at this index, record the byte
+        // offset where it will begin.
+        blockChecksumPositions[idx] = blockChecksumBuf.getLength();
         try {
           ExtendedBlock block = getInternalBlock(numDataUnits, idx);
 
@@ -572,13 +578,27 @@ final class BlockChecksumHelper {
           int compositeCrc = 0;
           int crcPolynomial =
               DataChecksum.getCrcPolynomialForType(getCrcType());
+          // This should hold all the cell-granularity checksums of blk0
+          // followed by all cell checksums of blk1, etc. We must unstripe the
+          // cell checksums in order of logical file bytes. Also, note that the
+          // length of this array may not equal the the number of actually valid
+          // bytes in the buffer (blockChecksumBuf.getLength()).
+          byte[] flatBlockChecksumData = blockChecksumBuf.getData();
+
+          // Initialize byte-level cursors to where each block's checksum begins
+          // inside the combined flattened buffer.
           int[] blockChecksumCursors = new int[numDataUnits];
+          for (int idx = 0; idx < numDataUnits; ++idx) {
+            blockChecksumCursors[idx] = blockChecksumPositions[idx];
+          }
+
+          // Reassemble cell-level CRCs in the right order.
           long numFullCells = checksumLen / ecPolicy.getCellSize();
           for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
             int blockIndex = (int) (cellIndex % numDataUnits);
             int checksumCursor = blockChecksumCursors[blockIndex];
             int cellCrc = CrcUtil.readInt(
-                blockChecksumBytes[blockIndex], checksumCursor);
+                flatBlockChecksumData, checksumCursor);
             blockChecksumCursors[blockIndex] += 4;
             if (compositeCrc == 0) {
               compositeCrc = cellCrc;
@@ -592,10 +612,8 @@ final class BlockChecksumHelper {
             int blockIndex = (int) (numFullCells % numDataUnits);
             int checksumCursor = blockChecksumCursors[blockIndex];
             int cellCrc = CrcUtil.readInt(
-                blockChecksumBytes[blockIndex], checksumCursor);
+                flatBlockChecksumData, checksumCursor);
             blockChecksumCursors[blockIndex] += 4;
-            // At this point all blockChecksumCursor values should be equal to
-            // the lengths of correspending arrays in blockChecksumBytes.
             compositeCrc = CrcUtil.compose(
                 compositeCrc, cellCrc, checksumLen % ecPolicy.getCellSize(),
                 crcPolynomial);
@@ -694,11 +712,12 @@ final class BlockChecksumHelper {
                   "Unexpected blockChecksumType '%s', expecting STRIPED_CRC",
                   returnedType));
             }
-            blockChecksumBytes[blockIdx] =
+            byte[] checksumBytes =
                 checksumData.getBlockChecksum().toByteArray();
+            blockChecksumBuf.write(checksumBytes, 0, checksumBytes.length);
             // TODO(dhuo): Add debug log for returned data.
             LOG.debug("got reply from datanode:{} for blockIdx:{}, length:{}",
-                targetDatanode, blockIdx, blockChecksumBytes[blockIdx].length);
+                targetDatanode, blockIdx, checksumBytes.length);
             break;
           default:
             throw new IOException(
@@ -728,7 +747,7 @@ final class BlockChecksumHelper {
               blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
       // TODO(dhuo): Plumb through to StripedBlockChecksumReconstructor
       final StripedBlockChecksumReconstructor checksumRecon =
-          new StripedBlockChecksumReconstructor(
+          new StripedBlockChecksumMd5CrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
               blockChecksumBuf, blockLength);
       checksumRecon.reconstruct();
@@ -739,8 +758,8 @@ final class BlockChecksumHelper {
       setOrVerifyChecksumProperties(errBlkIndex,
           checksum.getBytesPerChecksum(), crcPerBlock,
           checksum.getChecksumType());
-      LOG.debug("Recalculated checksum for the block index:{}, md5={}",
-          errBlkIndex, checksumRecon.getMD5());
+      LOG.debug("Recalculated checksum for the block index:{}, checksum={}",
+          errBlkIndex, checksumRecon.getDigestObject());
     }
 
     private void setOrVerifyChecksumProperties(int blockIdx, int bpc,

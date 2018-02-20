@@ -1805,7 +1805,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     maker.compute();
 
     return maker.getFileChecksum();
-    //return new CompositeCrcFileChecksum(0, DataChecksum.Type.CRC32C);
   }
 
   /**
