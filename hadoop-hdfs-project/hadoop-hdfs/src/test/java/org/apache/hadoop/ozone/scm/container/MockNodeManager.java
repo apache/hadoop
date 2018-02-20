@@ -35,6 +35,8 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
+import org.apache.hadoop.ozone.scm.node.NodePoolManager;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -267,6 +269,11 @@ public class MockNodeManager implements NodeManager {
   @Override
   public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
     return new SCMNodeMetric(nodeMetricMap.get(datanodeID.toString()));
+  }
+
+  @Override
+  public NodePoolManager getNodePoolManager() {
+    return Mockito.mock(NodePoolManager.class);
   }
 
   /**

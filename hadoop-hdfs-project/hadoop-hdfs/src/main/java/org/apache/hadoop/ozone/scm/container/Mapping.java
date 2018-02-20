@@ -17,10 +17,7 @@
 package org.apache.hadoop.ozone.scm.container;
 
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
@@ -102,14 +99,9 @@ public interface Mapping extends Closeable {
   /**
    * Process container report from Datanode.
    *
-   * @param datanodeID Datanode ID
-   * @param reportType Type of report
-   * @param containerInfos container details
+   * @param reports Container report
    */
-  void processContainerReports(
-      DatanodeID datanodeID,
-      ContainerReportsRequestProto.reportType reportType,
-      List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
-          containerInfos) throws IOException;
+  void processContainerReports(ContainerReportsRequestProto reports)
+      throws IOException;
 
 }

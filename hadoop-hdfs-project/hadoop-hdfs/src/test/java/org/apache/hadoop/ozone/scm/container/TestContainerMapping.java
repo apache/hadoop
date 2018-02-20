@@ -203,8 +203,7 @@ public class TestContainerMapping {
   }
 
   @Test
-  public void testFullContainerReport() throws IOException,
-      InterruptedException {
+  public void testFullContainerReport() throws IOException {
     String containerName = UUID.randomUUID().toString();
     ContainerInfo info = createContainer(containerName);
     DatanodeID datanodeID = SCMTestUtils.getDatanodeID();
@@ -227,7 +226,13 @@ public class TestContainerMapping {
         .setContainerID(info.getContainerID());
 
     reports.add(ciBuilder.build());
-    mapping.processContainerReports(datanodeID, reportType, reports);
+
+    ContainerReportsRequestProto.Builder crBuilder =
+        ContainerReportsRequestProto.newBuilder();
+    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+        .setType(reportType).addAllReports(reports);
+
+    mapping.processContainerReports(crBuilder.build());
 
     ContainerInfo updatedContainer = mapping.getContainer(containerName);
     Assert.assertEquals(100000000L, updatedContainer.getNumberOfKeys());
@@ -260,7 +265,12 @@ public class TestContainerMapping {
 
     reports.add(ciBuilder.build());
 
-    mapping.processContainerReports(datanodeID, reportType, reports);
+    ContainerReportsRequestProto.Builder crBuilder =
+        ContainerReportsRequestProto.newBuilder();
+    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+        .setType(reportType).addAllReports(reports);
+
+    mapping.processContainerReports(crBuilder.build());
 
     ContainerInfo updatedContainer = mapping.getContainer(containerName);
     Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());

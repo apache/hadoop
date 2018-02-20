@@ -21,9 +21,10 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
-import org.apache.hadoop.ozone.scm.node.CommandQueue;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerInfo;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 import org.apache.hadoop.util.Time;
@@ -39,10 +40,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.STALE;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.UNKNOWN;
+import static com.google.common.util.concurrent.Uninterruptibles
+    .sleepUninterruptibly;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
+    .NodeState.HEALTHY;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
+    .NodeState.STALE;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
+    .NodeState.UNKNOWN;
 
 /**
  * These are pools that are actively checking for replication status of the
@@ -51,8 +56,8 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.UNKNO
 public final class InProgressPool {
   public static final Logger LOG =
       LoggerFactory.getLogger(InProgressPool.class);
+
   private final PeriodicPool pool;
-  private final CommandQueue commandQueue;
   private final NodeManager nodeManager;
   private final NodePoolManager poolManager;
   private final ExecutorService executorService;
@@ -70,22 +75,19 @@ public final class InProgressPool {
    * @param pool - Pool that we are working against
    * @param nodeManager - Nodemanager
    * @param poolManager - pool manager
-   * @param commandQueue - Command queue
    * @param executorService - Shared Executor service.
    */
   InProgressPool(long maxWaitTime, PeriodicPool pool,
       NodeManager nodeManager, NodePoolManager poolManager,
-      CommandQueue commandQueue, ExecutorService executorService) {
+                 ExecutorService executorService) {
     Preconditions.checkNotNull(pool);
     Preconditions.checkNotNull(nodeManager);
     Preconditions.checkNotNull(poolManager);
-    Preconditions.checkNotNull(commandQueue);
     Preconditions.checkNotNull(executorService);
     Preconditions.checkArgument(maxWaitTime > 0);
     this.pool = pool;
     this.nodeManager = nodeManager;
     this.poolManager = poolManager;
-    this.commandQueue = commandQueue;
     this.executorService = executorService;
     this.containerCountMap = new ConcurrentHashMap<>();
     this.processedNodeSet = new ConcurrentHashMap<>();
@@ -186,7 +188,7 @@ public final class InProgressPool {
         // Queue commands to all datanodes in this pool to send us container
         // report. Since we ignore dead nodes, it is possible that we would have
         // over replicated the container if the node comes back.
-        commandQueue.addCommand(id, cmd);
+        nodeManager.addDatanodeCommand(id, cmd);
       }
     }
     this.status = ProgressStatus.InProgress;
@@ -235,7 +237,12 @@ public final class InProgressPool {
    */
   public void handleContainerReport(
       ContainerReportsRequestProto containerReport) {
-    executorService.submit(processContainerReport(containerReport));
+    if (status == ProgressStatus.InProgress) {
+      executorService.submit(processContainerReport(containerReport));
+    } else {
+      LOG.debug("Cannot handle container report when the pool is in {} status.",
+          status);
+    }
   }
 
   private Runnable processContainerReport(
@@ -290,6 +297,11 @@ public final class InProgressPool {
    */
   String getPoolName() {
     return pool.getPoolName();
+  }
+
+  public void finalizeReconciliation() {
+    status = ProgressStatus.Done;
+    //TODO: Add finalizing logic. This is where actual reconciliation happens.
   }
 
   /**

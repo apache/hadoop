@@ -858,6 +858,11 @@ public class SCMNodeManager
   }
 
   @Override
+  public NodePoolManager getNodePoolManager() {
+    return nodePoolManager;
+  }
+
+  @Override
   public Map<String, Integer> getNodeCount() {
     Map<String, Integer> nodeCountMap = new HashMap<String, Integer>();
     for(NodeState state : NodeState.values()) {

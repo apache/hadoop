@@ -984,9 +984,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     updateContainerReportMetrics(reports);
 
     // should we process container reports async?
-    scmContainerManager.processContainerReports(
-        DatanodeID.getFromProtoBuf(reports.getDatanodeID()),
-        reports.getType(), reports.getReportsList());
+    scmContainerManager.processContainerReports(reports);
     return ContainerReportsResponseProto.newBuilder().build();
   }
 

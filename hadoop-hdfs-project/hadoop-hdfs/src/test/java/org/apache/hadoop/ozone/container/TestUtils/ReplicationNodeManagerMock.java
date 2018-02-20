@@ -29,26 +29,32 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
+import org.apache.hadoop.ozone.scm.node.NodePoolManager;
+import org.mockito.Mockito;
 
 /**
  * A Node Manager to test replication.
  */
 public class ReplicationNodeManagerMock implements NodeManager {
   private final Map<DatanodeID, NodeState> nodeStateMap;
+  private final CommandQueue commandQueue;
 
   /**
    * A list of Datanodes and current states.
    * @param nodeState A node state map.
    */
-  public ReplicationNodeManagerMock(Map<DatanodeID, NodeState> nodeState) {
+  public ReplicationNodeManagerMock(Map<DatanodeID, NodeState> nodeState,
+                                    CommandQueue commandQueue) {
     Preconditions.checkNotNull(nodeState);
-    nodeStateMap = nodeState;
+    this.nodeStateMap = nodeState;
+    this.commandQueue = commandQueue;
   }
 
   /**
@@ -194,6 +200,11 @@ public class ReplicationNodeManagerMock implements NodeManager {
     return null;
   }
 
+  @Override
+  public NodePoolManager getNodePoolManager() {
+    return Mockito.mock(NodePoolManager.class);
+  }
+
   /**
    * Wait for the heartbeat is processed by NodeManager.
    *
@@ -302,6 +313,11 @@ public class ReplicationNodeManagerMock implements NodeManager {
    */
   public void addNode(DatanodeID id, NodeState state) {
     nodeStateMap.put(id, state);
+  }
+
+  @Override
+  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
+    this.commandQueue.addCommand(id, command);
   }
 
 }
