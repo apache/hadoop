@@ -854,6 +854,20 @@ public class DFSTestUtil {
     }
   }
 
+  /* Write the given bytes to the given file using the specified blockSize */
+  public static void writeFile(
+      FileSystem fs, Path p, byte[] bytes, long blockSize)
+      throws IOException {
+    if (fs.exists(p)) {
+      fs.delete(p, true);
+    }
+    try (InputStream is = new ByteArrayInputStream(bytes);
+      FSDataOutputStream os = fs.create(
+          p, false, 4096, fs.getDefaultReplication(), blockSize)) {
+      IOUtils.copyBytes(is, os, bytes.length);
+    }
+  }
+
   /* Write the given string to the given file */
   public static void writeFile(FileSystem fs, Path p, String s)
       throws IOException {

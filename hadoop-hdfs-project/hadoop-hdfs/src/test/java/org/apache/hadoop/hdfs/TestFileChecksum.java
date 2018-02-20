@@ -83,6 +83,7 @@ public class TestFileChecksum {
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    customizeConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
@@ -104,6 +105,31 @@ public class TestFileChecksum {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  /**
+   * Subclasses may customize the conf to run the full set of tests under
+   * different conditions.
+   */
+  protected void customizeConf(Configuration conf) {
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether equivalent files
+   * in striped and replicated formats are expected to have the same
+   * overall FileChecksum.
+   */
+  protected boolean expectComparableStripedAndReplicatedFiles() {
+    return false;
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether equivalent files
+   * in replicated formats with different block sizes are expected to have the
+   * same overall FileChecksum.
+   */
+  protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
+    return false;
   }
 
   @Test(timeout = 90000)
@@ -182,7 +208,30 @@ public class TestFileChecksum {
     FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
         10, false);
 
-    Assert.assertFalse(stripedFileChecksum1.equals(replicatedFileChecksum));
+    if (expectComparableStripedAndReplicatedFiles()) {
+      Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
+    } else {
+      Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+    }
+  }
+
+  @Test(timeout = 90000)
+  public void testDifferentBlockSizeReplicatedFileChecksum() throws Exception {
+    byte[] fileData = StripedFileTestUtil.generateBytes(fileSize);
+    String replicatedFile1 = "/replicatedFile1";
+    String replicatedFile2 = "/replicatedFile2";
+    DFSTestUtil.writeFile(
+        fs, new Path(replicatedFile1), fileData, blockSize);
+    DFSTestUtil.writeFile(
+        fs, new Path(replicatedFile2), fileData, blockSize / 2);
+    FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
+    FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
+
+    if (expectComparableDifferentBlockSizeReplicatedFiles()) {
+      Assert.assertEquals(checksum1, checksum2);
+    } else {
+      Assert.assertNotEquals(checksum1, checksum2);
+    }
   }
 
   @Test(timeout = 90000)
