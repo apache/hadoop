@@ -103,6 +103,7 @@ import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -2142,5 +2143,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     T[] combinedData = (T[]) Array.newInstance(clazz, set.size());
     combinedData = set.toArray(combinedData);
     return combinedData;
+  }
+
+  /**
+   * Get RPC metrics info.
+   * @return The instance of FederationRPCMetrics.
+   */
+  public FederationRPCMetrics getRPCMetrics() {
+    return this.rpcMonitor.getRPCMetrics();
   }
 }
