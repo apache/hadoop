@@ -124,6 +124,14 @@ public class PlanCommand extends Command {
       throw new IllegalArgumentException("Unable to find the specified node. " +
           cmd.getOptionValue(DiskBalancerCLI.PLAN));
     }
+
+    try (FSDataOutputStream beforeStream = create(String.format(
+        DiskBalancerCLI.BEFORE_TEMPLATE,
+        cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
+      beforeStream.write(getCluster().toJson()
+          .getBytes(StandardCharsets.UTF_8));
+    }
+
     this.thresholdPercentage = getThresholdPercentage(cmd);
 
     LOG.debug("threshold Percentage is {}", this.thresholdPercentage);
@@ -136,14 +144,6 @@ public class PlanCommand extends Command {
 
     if (plans.size() > 0) {
       plan = plans.get(0);
-    }
-
-
-    try (FSDataOutputStream beforeStream = create(String.format(
-        DiskBalancerCLI.BEFORE_TEMPLATE,
-        cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
-      beforeStream.write(getCluster().toJson()
-          .getBytes(StandardCharsets.UTF_8));
     }
 
     try {
