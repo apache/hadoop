@@ -133,6 +133,8 @@
             <exclude>src/test/resources/simulate.info.html.template</exclude>
             <exclude>src/test/resources/track.html.template</exclude>
             <exclude>src/test/resources/syn.json</exclude>
+            <exclude>src/test/resources/syn_generic.json</exclude>
+            <exclude>src/test/resources/syn_stream.json</exclude>
             <exclude>src/test/resources/inputsls.json</exclude>
             <exclude>src/test/resources/nodes.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
