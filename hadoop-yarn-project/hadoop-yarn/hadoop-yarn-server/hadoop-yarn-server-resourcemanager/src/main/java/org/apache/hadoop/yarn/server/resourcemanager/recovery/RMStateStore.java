@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -257,6 +259,9 @@ public abstract class RMStateStore extends AbstractService {
           appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Updating info for app: " + appId);
       try {
+        if (isAppStateFinal(appState)) {
+          pruneAppState(appState);
+        }
         store.updateApplicationStateInternal(appId, appState);
         if (((RMStateUpdateAppEvent) event).isNotifyApplication()) {
           store.notifyApplication(new RMAppEvent(appId,
@@ -276,7 +281,34 @@ public abstract class RMStateStore extends AbstractService {
         }
       }
       return finalState(isFenced);
-    };
+    }
+
+    private boolean isAppStateFinal(ApplicationStateData appState) {
+      RMAppState state = appState.getState();
+      return state == RMAppState.FINISHED || state == RMAppState.FAILED ||
+          state == RMAppState.KILLED;
+    }
+
+    private void pruneAppState(ApplicationStateData appState) {
+      ApplicationSubmissionContext srcCtx =
+          appState.getApplicationSubmissionContext();
+      ApplicationSubmissionContextPBImpl context =
+          new ApplicationSubmissionContextPBImpl();
+      // most fields in the ApplicationSubmissionContext are not needed,
+      // but the following few need to be present for recovery to succeed
+      context.setApplicationId(srcCtx.getApplicationId());
+      context.setResource(srcCtx.getResource());
+      context.setQueue(srcCtx.getQueue());
+      context.setAMContainerResourceRequests(
+          srcCtx.getAMContainerResourceRequests());
+      context.setApplicationType(srcCtx.getApplicationType());
+      ContainerLaunchContextPBImpl amContainerSpec =
+              new ContainerLaunchContextPBImpl();
+      amContainerSpec.setApplicationACLs(
+              srcCtx.getAMContainerSpec().getApplicationACLs());
+      context.setAMContainerSpec(amContainerSpec);
+      appState.setApplicationSubmissionContext(context);
+    }
   }
 
   private static class RemoveAppTransition implements
