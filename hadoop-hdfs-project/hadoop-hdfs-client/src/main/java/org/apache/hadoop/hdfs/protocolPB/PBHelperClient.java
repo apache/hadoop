@@ -256,8 +256,6 @@ public class PBHelperClient {
         return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
       case COMPOSITE_CRC:
         return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
-      case STRIPED_CRC:
-        return HdfsProtos.BlockChecksumTypeProto.STRIPED_CRC;
       default:
         throw new IllegalStateException(
             "BUG: BlockChecksumType not found, type=" + type);
@@ -271,8 +269,6 @@ public class PBHelperClient {
         return BlockChecksumType.MD5CRC;
       case COMPOSITE_CRC:
         return BlockChecksumType.COMPOSITE_CRC;
-      case STRIPED_CRC:
-        return BlockChecksumType.STRIPED_CRC;
       default:
         throw new IllegalStateException(
             "BUG: BlockChecksumTypeProto not found, type=" + blockChecksumTypeProto);

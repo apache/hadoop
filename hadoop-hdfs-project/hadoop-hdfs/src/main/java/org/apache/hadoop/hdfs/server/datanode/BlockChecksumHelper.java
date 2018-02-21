@@ -302,9 +302,6 @@ final class BlockChecksumHelper {
             computeMd5Crc();
             break;
           case COMPOSITE_CRC:
-            computeCompositeCrc(0);
-            break;
-          case STRIPED_CRC:
             computeCompositeCrc(getBlockChecksumOptions().getStripeLength());
             break;
           default:
@@ -587,7 +584,8 @@ final class BlockChecksumHelper {
 
         // get block checksum
         // A BlockGroupCheckum of type COMPOSITE_CRC uses underlying
-        // BlockChecksums of type STRIPED_CRC.
+        // BlockChecksums also of type COMPOSITE_CRC but with
+        // stripeLength == ecPolicy.getCellSize().
         BlockChecksumOptions childOptions;
         BlockChecksumType groupChecksumType =
             getBlockChecksumOptions().getBlockChecksumType();
@@ -597,7 +595,7 @@ final class BlockChecksumHelper {
             break;
           case COMPOSITE_CRC:
             childOptions = new BlockChecksumOptions(
-                BlockChecksumType.STRIPED_CRC, ecPolicy.getCellSize());
+                BlockChecksumType.COMPOSITE_CRC, ecPolicy.getCellSize());
             break;
           default:
             throw new IOException(
@@ -641,9 +639,9 @@ final class BlockChecksumHelper {
           case COMPOSITE_CRC:
             BlockChecksumType returnedType = PBHelperClient.convert(
                 checksumData.getBlockChecksumOptions().getBlockChecksumType());
-            if (returnedType != BlockChecksumType.STRIPED_CRC) {
+            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
               throw new IOException(String.format(
-                  "Unexpected blockChecksumType '%s', expecting STRIPED_CRC",
+                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
                   returnedType));
             }
             byte[] checksumBytes =
@@ -720,9 +718,16 @@ final class BlockChecksumHelper {
         setCrcType(ct);
       } else if (getCrcType() != DataChecksum.Type.MIXED &&
           getCrcType() != ct) {
-        // TODO(dhuo): Throw if getBlockChecksumType() == COMPOSITE_CTC
-        // if crc types are mixed in a file
-        setCrcType(DataChecksum.Type.MIXED);
+        BlockChecksumType groupChecksumType =
+            getBlockChecksumOptions().getBlockChecksumType();
+        if (groupChecksumType == BlockChecksumType.COMPOSITE_CRC) {
+          throw new IOException(String.format(
+              "BlockChecksumType COMPOSITE_CRC doesn't support MIXED underlying "
+              + "types; previous block was %s, next block is %s",
+              getCrcType(), ct));
+        } else {
+          setCrcType(DataChecksum.Type.MIXED);
+        }
       }
 
       if (blockIdx == 0) {

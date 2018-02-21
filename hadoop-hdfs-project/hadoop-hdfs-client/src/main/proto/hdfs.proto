@@ -481,8 +481,7 @@ enum ChecksumTypeProto {
 
 enum BlockChecksumTypeProto {
   MD5CRC = 1;  // BlockChecksum obtained by taking the MD5 digest of chunk CRCs
-  COMPOSITE_CRC = 2;  // Full-block CRC which is chunk-independent
-  STRIPED_CRC = 3;  // List of CRCs corresponding to caller-specified stripe length
+  COMPOSITE_CRC = 2;  // Chunk-independent CRC, optionally striped
 }
 
 /**
@@ -495,7 +494,7 @@ message BlockChecksumOptionsProto {
   optional BlockChecksumTypeProto blockChecksumType = 1 [default = MD5CRC];
 
   // Only used if blockChecksumType specifies a striped format, such as
-  // STRIPED_CRC. If so, then the blockChecksum in the response is expected
+  // COMPOSITE_CRC. If so, then the blockChecksum in the response is expected
   // to be the concatenation of N crcs, where
   // N == ((requestedLength - 1) / stripedLength) + 1
   optional uint64 stripeLength = 2;

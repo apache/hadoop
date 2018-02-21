@@ -106,7 +106,7 @@ public class CrcUtil {
    * {@code offset}. buf.length must be greater than or equal to offset + 4.
    */
   public static int readInt(byte[] buf, int offset) {
-     int value = ((buf[offset + 0] & 0xff) << 24) | 
+     int value = ((buf[offset + 0] & 0xff) << 24) |
                  ((buf[offset + 1] & 0xff) << 16) |
                  ((buf[offset + 2] & 0xff) << 8)  |
                  ((buf[offset + 3] & 0xff));

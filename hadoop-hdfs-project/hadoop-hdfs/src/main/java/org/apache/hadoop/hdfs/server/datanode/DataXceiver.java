@@ -1005,7 +1005,6 @@ class DataXceiver extends Receiver implements Runnable {
               .setCrcPerBlock(maker.getCrcPerBlock())
               .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
               .setCrcType(PBHelperClient.convert(maker.getCrcType()))
-              // TODO(dhuo): Maybe re-fetch blockChecksumOptions from maker instead
               .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);
@@ -1050,7 +1049,6 @@ class DataXceiver extends Receiver implements Runnable {
               .setCrcPerBlock(maker.getCrcPerBlock())
               .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
               .setCrcType(PBHelperClient.convert(maker.getCrcType()))
-              // TODO(dhuo): Maybe re-fetch blockChecksumOptions from maker instead
               .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);

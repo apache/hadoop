@@ -27,8 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public enum BlockChecksumType {
-  // TODO(dhuo): Maybe move this whole enum into BlockChecksumOptions
   MD5CRC,  // BlockChecksum obtained by taking the MD5 digest of chunk CRCs
-  COMPOSITE_CRC,  // Full-block CRC which is chunk-independent
-  STRIPED_CRC  // List of CRCs corresponding to caller-specified stripe length
+  COMPOSITE_CRC  // Chunk-independent CRC, optionally striped
 }

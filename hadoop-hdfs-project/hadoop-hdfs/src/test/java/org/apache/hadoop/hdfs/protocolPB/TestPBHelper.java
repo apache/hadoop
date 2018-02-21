@@ -689,14 +689,10 @@ public class TestPBHelper {
         PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.MD5CRC));
     assertEquals(BlockChecksumType.COMPOSITE_CRC,
         PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC));
-    assertEquals(BlockChecksumType.STRIPED_CRC,
-        PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.STRIPED_CRC));
     assertEquals(PBHelperClient.convert(BlockChecksumType.MD5CRC),
         HdfsProtos.BlockChecksumTypeProto.MD5CRC);
     assertEquals(PBHelperClient.convert(BlockChecksumType.COMPOSITE_CRC),
         HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC);
-    assertEquals(PBHelperClient.convert(BlockChecksumType.STRIPED_CRC),
-        HdfsProtos.BlockChecksumTypeProto.STRIPED_CRC);
   }
 
   @Test
