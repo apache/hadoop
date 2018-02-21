@@ -180,7 +180,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       new DecompressorStream(in, decompressor,
                              conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
                                  IO_FILE_BUFFER_SIZE_DEFAULT)) :
-      new BZip2CompressionInputStream(in);
+      new BZip2CompressionInputStream(
+              in, 0L, Long.MAX_VALUE, READ_MODE.BYBLOCK);
   }
 
   /**
