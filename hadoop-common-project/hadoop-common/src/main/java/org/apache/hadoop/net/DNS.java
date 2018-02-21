@@ -179,8 +179,7 @@ public class DNS {
         netIf = getSubinterface(strInterface);
       }
     } catch (SocketException e) {
-      LOG.warn("I/O error finding interface " + strInterface +
-          ": " + e.getMessage());
+      LOG.warn("I/O error finding interface {}", strInterface, e);
       return new String[] { cachedHostAddress };
     }
     if (netIf == null) {
@@ -265,7 +264,7 @@ public class DNS {
     }
 
     if (hosts.isEmpty()) {
-      LOG.warn("Unable to determine hostname for interface " +
+      LOG.warn("Unable to determine hostname for interface {}",
           strInterface);
       hosts.add(cachedHostname);
     }
@@ -283,8 +282,8 @@ public class DNS {
     try {
       localhost = InetAddress.getLocalHost().getCanonicalHostName();
     } catch (UnknownHostException e) {
-      LOG.warn("Unable to determine local hostname "
-          + "-falling back to \"" + LOCALHOST + "\"", e);
+      LOG.warn("Unable to determine local hostname -falling back to '{}'",
+          LOCALHOST, e);
       localhost = LOCALHOST;
     }
     return localhost;
@@ -303,21 +302,21 @@ public class DNS {
    */
   private static String resolveLocalHostIPAddress() {
     String address;
+    try {
+      address = InetAddress.getLocalHost().getHostAddress();
+    } catch (UnknownHostException e) {
+      LOG.warn("Unable to determine address of the host " +
+          "-falling back to '{}' address", LOCALHOST, e);
       try {
-        address = InetAddress.getLocalHost().getHostAddress();
-      } catch (UnknownHostException e) {
-        LOG.warn("Unable to determine address of the host"
-                + "-falling back to \"" + LOCALHOST + "\" address", e);
-        try {
-          address = InetAddress.getByName(LOCALHOST).getHostAddress();
-        } catch (UnknownHostException noLocalHostAddressException) {
-          //at this point, deep trouble
-          LOG.error("Unable to determine local loopback address "
-                  + "of \"" + LOCALHOST + "\" " +
-                  "-this system's network configuration is unsupported", e);
-          address = null;
-        }
+        address = InetAddress.getByName(LOCALHOST).getHostAddress();
+      } catch (UnknownHostException noLocalHostAddressException) {
+        //at this point, deep trouble
+        LOG.error("Unable to determine local loopback address of '{}' " +
+            "-this system's network configuration is unsupported",
+            LOCALHOST, e);
+        address = null;
       }
+    }
     return address;
   }
 
@@ -431,8 +430,8 @@ public class DNS {
         netIf = getSubinterface(strInterface);
       }
     } catch (SocketException e) {
-      LOG.warn("I/O error finding interface " + strInterface +
-          ": " + e.getMessage());
+      LOG.warn("I/O error finding interface {}: {}",
+          strInterface, e.getMessage());
       return Arrays.asList(InetAddress.getByName(cachedHostAddress));
     }
     if (netIf == null) {
