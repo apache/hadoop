@@ -65,6 +65,9 @@ public class MRAMSimulator extends AMSimulator {
   scheduled when all maps have finished (not support slow-start currently).
   */
 
+  public static final String MAP_TYPE = "map";
+  public static final String REDUCE_TYPE = "reduce";
+
   private static final int PRIORITY_REDUCE = 10;
   private static final int PRIORITY_MAP = 20;
 
@@ -123,10 +126,10 @@ public class MRAMSimulator extends AMSimulator {
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
       long traceStartTime, long traceFinishTime, String user, String queue,
       boolean isTracked, String oldAppId, long baselineStartTimeMS,
-      Resource amContainerResource) {
+      Resource amContainerResource, Map<String, String> params) {
     super.init(heartbeatInterval, containerList, rm, se,
         traceStartTime, traceFinishTime, user, queue, isTracked, oldAppId,
-        baselineStartTimeMS, amContainerResource);
+        baselineStartTimeMS, amContainerResource, params);
     amtype = "mapreduce";
 
     // get map/reduce tasks
