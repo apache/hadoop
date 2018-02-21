@@ -397,9 +397,9 @@ final class BlockChecksumHelper {
 
       byte[] composedCrcs = crcComposer.digest();
       setOutBytes(composedCrcs);
-      // TODO(dhuo): Support pretty-print of composedCrcs
       LOG.debug("block={}, getBytesPerCRC={}, crcPerBlock={}, compositeCrc={}",
-          getBlock(), getBytesPerCRC(), getCrcPerBlock(), composedCrcs);
+          getBlock(), getBytesPerCRC(), getCrcPerBlock(),
+          CrcUtil.newMultiCrcWrapperFromByteArray(composedCrcs));
     }
   }
 
@@ -505,9 +505,6 @@ final class BlockChecksumHelper {
       BlockChecksumType type = getBlockChecksumOptions().getBlockChecksumType();
       switch (type) {
         case MD5CRC:
-          // TODO(dhuo): Check whether digest(DataOutputBuffer.getData() is a
-          // latent bug due to the data buffer being longer than the valid data
-          // length.
           MD5Hash md5out = MD5Hash.digest(blockChecksumBuf.getData());
           setOutBytes(md5out.getDigest());
           break;
@@ -548,9 +545,14 @@ final class BlockChecksumHelper {
             blockChecksumCursors[blockIndex] += 4;
             crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
           }
-          // TODO(dhuo): Maybe add a debug statement here. And assert that the
-          // returned value is exactly 4 bytes.
-          setOutBytes(crcComposer.digest());
+          byte[] digest = crcComposer.digest();
+          LOG.debug("flatBlockChecksumData.length={}, numDataUnits={}, "
+              + "checksumLen={}, digest={}",
+              flatBlockChecksumData.length,
+              numDataUnits,
+              checksumLen,
+              CrcUtil.newSingleCrcWrapperFromByteArray(digest));
+          setOutBytes(digest);
           break;
         default:
           throw new IOException(String.format(
@@ -647,9 +649,9 @@ final class BlockChecksumHelper {
             byte[] checksumBytes =
                 checksumData.getBlockChecksum().toByteArray();
             blockChecksumBuf.write(checksumBytes, 0, checksumBytes.length);
-            // TODO(dhuo): Add debug log for returned data.
-            LOG.debug("got reply from datanode:{} for blockIdx:{}, length:{}",
-                targetDatanode, blockIdx, checksumBytes.length);
+            LOG.debug("got reply from datanode:{} for blockIdx:{}, checksum:{}",
+                targetDatanode, blockIdx,
+                CrcUtil.newMultiCrcWrapperFromByteArray(checksumBytes));
             break;
           default:
             throw new IOException(

@@ -20,12 +20,17 @@ package org.apache.hadoop.util;
 import java.io.IOException;
 import java.util.Random;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.*;
 
 public class TestCrcUtil {
   private Random rand = new Random(1234);
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testComposeCrc32() throws IOException {
@@ -164,5 +169,56 @@ public class TestCrcUtil {
 
     // Assert big-endian format for general Java consistency.
     assertEquals(0xBEEFABCD, CrcUtil.readInt(bytes, 2));
+  }
+
+  @Test
+  public void testNewSingleCrcWrapperFromByteArrayBadLength()
+      throws IOException {
+    exception.expect(IOException.class);
+    CrcUtil.newSingleCrcWrapperFromByteArray(new byte[8]);
+  }
+
+  @Test
+  public void testNewSingleCrcWrapperFromByteArray() throws IOException {
+    byte[] buf = CrcUtil.intToBytes(0xcafebeef);
+    assertEquals(
+        "0xcafebeef", CrcUtil.newSingleCrcWrapperFromByteArray(buf).toString());
+  }
+
+  @Test
+  public void testNewMultiCrcWrapperFromByteArrayBadLength()
+      throws IOException {
+    exception.expect(IOException.class);
+    CrcUtil.newMultiCrcWrapperFromByteArray(new byte[6]);
+  }
+
+  @Test
+  public void testNewMultiCrcWrapperFromByteArrayMultipleElements()
+      throws IOException {
+    byte[] buf = new byte[12];
+    CrcUtil.writeInt(buf, 0, 0xcafebeef);
+    CrcUtil.writeInt(buf, 4, 0xababcccc);
+    CrcUtil.writeInt(buf, 8, 0xddddefef);
+    assertEquals(
+        "[0xcafebeef, 0xababcccc, 0xddddefef]",
+        CrcUtil.newMultiCrcWrapperFromByteArray(buf).toString());
+  }
+
+  @Test
+  public void testNewMultiCrcWrapperFromByteArraySingleElement()
+      throws IOException {
+    byte[] buf = new byte[4];
+    CrcUtil.writeInt(buf, 0, 0xcafebeef);
+    assertEquals(
+        "[0xcafebeef]",
+        CrcUtil.newMultiCrcWrapperFromByteArray(buf).toString());
+  }
+
+  @Test
+  public void testNewMultiCrcWrapperFromByteArrayNoElements()
+      throws IOException {
+    assertEquals(
+        "[]",
+        CrcUtil.newMultiCrcWrapperFromByteArray(new byte[0]).toString());
   }
 }

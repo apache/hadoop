@@ -1781,8 +1781,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return encryptionKey;
   }
 
-  // TODO(dhuo): Figure out a better solution for dealing with the legacy
-  // getFileChecksum vs this method.
   private FileChecksum getFileChecksumInternal(
       String src, long length, ChecksumCombineMode combineMode) throws IOException {
     checkOpen();

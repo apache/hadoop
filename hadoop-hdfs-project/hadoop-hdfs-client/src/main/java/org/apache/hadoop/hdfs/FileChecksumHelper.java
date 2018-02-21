@@ -342,7 +342,8 @@ final class FileChecksumHelper {
       }
 
       int compositeCrc = CrcUtil.readInt(crcComposer.digest(), 0);
-      return new CompositeCrcFileChecksum(compositeCrc, getCrcType());
+      return new CompositeCrcFileChecksum(
+          compositeCrc, getCrcType(), bytesPerCRC);
     }
 
     /**
@@ -496,16 +497,14 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        String blockChecksumDebugString = null;
+        Object blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
           case MD5CRC:
             //read md5
             final MD5Hash md5 =
                 new MD5Hash(checksumData.getBlockChecksum().toByteArray());
             md5.write(getBlockChecksumBuf());
-            if (LOG.isDebugEnabled()) {
-              blockChecksumDebugString = md5.toString();
-            }
+            blockChecksumForDebug = md5;
             break;
           case COMPOSITE_CRC:
             BlockChecksumType returnedType = PBHelperClient.convert(
@@ -515,19 +514,10 @@ final class FileChecksumHelper {
                   "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
                   returnedType));
             }
-            // TODO(dhuo): Maybe create a CRC wrapper which encapsulates
-            // validating size of byte-array and using hex for toString().
             byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-            if (crcBytes.length != 4) {
-              throw new IOException(String.format(
-                  "Unexpected crcBytes.length for COMPOSITE_CRC: %d",
-                  crcBytes.length));
-            }
-            int blockCrc = CrcUtil.readInt(crcBytes, 0);
-            getBlockChecksumBuf().write(CrcUtil.intToBytes(blockCrc));
-            if (LOG.isDebugEnabled()) {
-              blockChecksumDebugString = String.format("0x%08x", blockCrc);
-            }
+            blockChecksumForDebug =
+                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+            getBlockChecksumBuf().write(crcBytes);
             break;
           default:
             throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
@@ -561,8 +551,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from " + datanode + ": blockChecksum="
-              + blockChecksumDebugString);
+          LOG.debug("got reply from {}: blockChecksum={}",
+              datanode, blockChecksumForDebug);
         }
       }
     }
@@ -659,9 +649,6 @@ final class FileChecksumHelper {
                              StripedBlockInfo stripedBlockInfo,
                              DatanodeInfo datanode,
                              long requestedNumBytes) throws IOException {
-
-      // TODO(dhuo): Refactor most of this into a shared helper method with the
-      // replicated computer.
       try (IOStreamPair pair = getClient().connectToDN(datanode,
           getTimeout(), blockGroup.getBlockToken())) {
 
@@ -701,16 +688,14 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        String blockChecksumDebugString = null;
+        Object blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
           case MD5CRC:
             //read md5
             final MD5Hash md5 = new MD5Hash(
                 checksumData.getBlockChecksum().toByteArray());
             md5.write(getBlockChecksumBuf());
-            if (LOG.isDebugEnabled()) {
-              blockChecksumDebugString = md5.toString();
-            }
+            blockChecksumForDebug = md5;
             break;
           case COMPOSITE_CRC:
             BlockChecksumType returnedType = PBHelperClient.convert(
@@ -721,16 +706,9 @@ final class FileChecksumHelper {
                   returnedType));
             }
             byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-            if (crcBytes.length != 4) {
-              throw new IOException(String.format(
-                  "Unexpected crcBytes.length for COMPOSITE_CRC: %d",
-                  crcBytes.length));
-            }
-            int blockCrc = CrcUtil.readInt(crcBytes, 0);
-            getBlockChecksumBuf().write(CrcUtil.intToBytes(blockCrc));
-            if (LOG.isDebugEnabled()) {
-              blockChecksumDebugString = String.format("0x%08x", blockCrc);
-            }
+            blockChecksumForDebug =
+                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+            getBlockChecksumBuf().write(crcBytes);
             break;
           default:
             throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
@@ -764,8 +742,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from " + datanode + ": blockChecksum="
-              + blockChecksumDebugString);
+          LOG.debug("got reply from {}: blockChecksum={}",
+              datanode, blockChecksumForDebug);
         }
       }
     }

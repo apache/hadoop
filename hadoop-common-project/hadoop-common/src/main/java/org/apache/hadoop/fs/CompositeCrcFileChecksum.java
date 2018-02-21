@@ -35,11 +35,14 @@ public class CompositeCrcFileChecksum extends FileChecksum {
 
   private int crc;
   private DataChecksum.Type crcType;
+  private int bytesPerCrc;
 
   /** Create a MD5FileChecksum */
-  public CompositeCrcFileChecksum(int crc, DataChecksum.Type crcType) {
+  public CompositeCrcFileChecksum(
+      int crc, DataChecksum.Type crcType, int bytesPerCrc) {
     this.crc = crc;
     this.crcType = crcType;
+    this.bytesPerCrc = bytesPerCrc;
   }
 
   @Override
@@ -59,8 +62,7 @@ public class CompositeCrcFileChecksum extends FileChecksum {
 
   @Override
   public ChecksumOpt getChecksumOpt() {
-    // TODO(dhuo): Plumb through bytesPerCrc for attribute propagation
-    return new ChecksumOpt(crcType, -1);
+    return new ChecksumOpt(crcType, bytesPerCrc);
   }
 
   @Override

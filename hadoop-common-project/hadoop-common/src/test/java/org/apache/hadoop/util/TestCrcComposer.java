@@ -222,4 +222,12 @@ public class TestCrcComposer {
     exception.expect(IOException.class);
     digester.update(crcsByChunk[1], cellSize);
   }
+
+  @Test
+  public void testUpdateByteArrayLengthUnalignedWithCrcSize() throws IOException {
+    CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
+
+    exception.expect(IOException.class);
+    digester.update(crcBytesByChunk, 0, 6, chunkSize);
+  }
 }

@@ -21,6 +21,9 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.io.IOException;
+import java.util.Arrays;
+
 /**
  * This class provides utilities for working with CRCs.
  */
@@ -111,6 +114,57 @@ public class CrcUtil {
                  ((buf[offset + 2] & 0xff) << 8)  |
                  ((buf[offset + 3] & 0xff));
      return value;
+  }
+
+  /**
+   * For use with debug statements; verifies bytes.length on creation,
+   * expecting it to represent exactly one CRC, and returns an object
+   * whose toString() method lazily evaluates the contents into a hex
+   * formatted value.
+   */
+  public static Object newSingleCrcWrapperFromByteArray(final byte[] bytes)
+      throws IOException {
+    if (bytes.length != 4) {
+      throw new IOException((String.format(
+          "Unexpected byte[] length '%d' for single CRC. Contents: %s",
+          bytes.length, Arrays.toString(bytes))));
+    }
+    return new Object() {
+      @Override
+      public String toString() {
+        return String.format("0x%08x", readInt(bytes, 0));
+      }
+    };
+  }
+
+  /**
+   * For use with debug statements; verifies bytes.length on creation,
+   * expecting it to be divisible by CRC byte size, and returns an object
+   * whose toString() method lazily evaluates the contents into a list of
+   * hex formatted values.
+   */
+  public static Object newMultiCrcWrapperFromByteArray(final byte[] bytes)
+      throws IOException {
+    if (bytes.length % 4 != 0) {
+      throw new IOException((String.format(
+          "Unexpected byte[] length '%d' not divisible by 4. Contents: %s",
+          bytes.length, Arrays.toString(bytes))));
+    }
+    return new Object() {
+      @Override
+      public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        for (int i = 0; i < bytes.length; i += 4) {
+          sb.append(String.format("0x%08x", readInt(bytes, i)));
+          if (i != bytes.length - 4) {
+            sb.append(", ");
+          }
+        }
+        sb.append(']');
+        return sb.toString();
+      }
+    };
   }
 
   /**
