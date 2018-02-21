@@ -412,7 +412,7 @@ public class FifoIntraQueuePreemptionPlugin
         TempUserPerPartition tmpUser = new TempUserPerPartition(
             tq.leafQueue.getUser(userName), tq.queueName,
             Resources.clone(userResourceUsage.getUsed(partition)),
-            Resources.clone(userSpecificAmUsed),
+            Resources.clone(amUsed),
             Resources.clone(userResourceUsage.getReserved(partition)),
             Resources.none());
 
