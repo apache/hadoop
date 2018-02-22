@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.fs.CompositeCrcFileChecksum;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
-import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
@@ -106,14 +105,14 @@ final class FileChecksumHelper {
       this.client = client;
       this.combineMode = combineMode;
       switch (combineMode) {
-        case MD5MD5CRC:
-          this.blockChecksumType = BlockChecksumType.MD5CRC;
-          break;
-        case COMPOSITE_CRC:
-          this.blockChecksumType = BlockChecksumType.COMPOSITE_CRC;
-          break;
-        default:
-          throw new IOException("Unknown ChecksumCombineMode: " + combineMode);
+      case MD5MD5CRC:
+        this.blockChecksumType = BlockChecksumType.MD5CRC;
+        break;
+      case COMPOSITE_CRC:
+        this.blockChecksumType = BlockChecksumType.COMPOSITE_CRC;
+        break;
+      default:
+        throw new IOException("Unknown ChecksumCombineMode: " + combineMode);
       }
 
       this.remaining = length;
@@ -267,12 +266,12 @@ final class FileChecksumHelper {
      */
     FileChecksum makeFinalResult() throws IOException {
       switch (combineMode) {
-        case MD5MD5CRC:
-          return makeMd5CrcResult();
-        case COMPOSITE_CRC:
-          return makeCompositeCrcResult();
-        default:
-          return null;
+      case MD5MD5CRC:
+        return makeMd5CrcResult();
+      case COMPOSITE_CRC:
+        return makeCompositeCrcResult();
+      default:
+        return null;
       }
     }
 
@@ -280,15 +279,15 @@ final class FileChecksumHelper {
       //compute file MD5
       final MD5Hash fileMD5 = MD5Hash.digest(blockChecksumBuf.getData());
       switch (crcType) {
-        case CRC32:
-          return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
-              crcPerBlock, fileMD5);
-        case CRC32C:
-          return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
-              crcPerBlock, fileMD5);
-        default:
-          // we will get here when crcType is "NULL".
-          return null;
+      case CRC32:
+        return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
+            crcPerBlock, fileMD5);
+      case CRC32C:
+        return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
+            crcPerBlock, fileMD5);
+      default:
+        // we will get here when crcType is "NULL".
+        return null;
       }
     }
 
@@ -326,7 +325,7 @@ final class FileChecksumHelper {
       long consumedLastBlockLength = reportedLastBlockSize;
       if (length - sumBlockLengths < reportedLastBlockSize) {
         LOG.warn(
-            "Implied last block length {} is less than reportedLastBlockSize {}",
+            "Last block length {} is less than reportedLastBlockSize {}",
             length - sumBlockLengths, reportedLastBlockSize);
         consumedLastBlockLength = length - sumBlockLengths;
       }
@@ -499,28 +498,29 @@ final class FileChecksumHelper {
 
         Object blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
-          case MD5CRC:
-            //read md5
-            final MD5Hash md5 =
-                new MD5Hash(checksumData.getBlockChecksum().toByteArray());
-            md5.write(getBlockChecksumBuf());
-            blockChecksumForDebug = md5;
-            break;
-          case COMPOSITE_CRC:
-            BlockChecksumType returnedType = PBHelperClient.convert(
-                checksumData.getBlockChecksumOptions().getBlockChecksumType());
-            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
-              throw new IOException(String.format(
-                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
-                  returnedType));
-            }
-            byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-            blockChecksumForDebug =
-                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
-            getBlockChecksumBuf().write(crcBytes);
-            break;
-          default:
-            throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
+        case MD5CRC:
+          //read md5
+          final MD5Hash md5 =
+              new MD5Hash(checksumData.getBlockChecksum().toByteArray());
+          md5.write(getBlockChecksumBuf());
+          blockChecksumForDebug = md5;
+          break;
+        case COMPOSITE_CRC:
+          BlockChecksumType returnedType = PBHelperClient.convert(
+              checksumData.getBlockChecksumOptions().getBlockChecksumType());
+          if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+            throw new IOException(String.format(
+                "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+                returnedType));
+          }
+          byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
+          blockChecksumForDebug =
+              CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          getBlockChecksumBuf().write(crcBytes);
+          break;
+        default:
+          throw new IOException(
+              "Unknown BlockChecksumType: " + getBlockChecksumType());
         }
 
         // read crc-type
@@ -690,28 +690,29 @@ final class FileChecksumHelper {
 
         Object blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
-          case MD5CRC:
-            //read md5
-            final MD5Hash md5 = new MD5Hash(
-                checksumData.getBlockChecksum().toByteArray());
-            md5.write(getBlockChecksumBuf());
-            blockChecksumForDebug = md5;
-            break;
-          case COMPOSITE_CRC:
-            BlockChecksumType returnedType = PBHelperClient.convert(
-                checksumData.getBlockChecksumOptions().getBlockChecksumType());
-            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
-              throw new IOException(String.format(
-                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
-                  returnedType));
-            }
-            byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-            blockChecksumForDebug =
-                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
-            getBlockChecksumBuf().write(crcBytes);
-            break;
-          default:
-            throw new IOException("Unknown BlockChecksumType: " + getBlockChecksumType());
+        case MD5CRC:
+          //read md5
+          final MD5Hash md5 = new MD5Hash(
+              checksumData.getBlockChecksum().toByteArray());
+          md5.write(getBlockChecksumBuf());
+          blockChecksumForDebug = md5;
+          break;
+        case COMPOSITE_CRC:
+          BlockChecksumType returnedType = PBHelperClient.convert(
+              checksumData.getBlockChecksumOptions().getBlockChecksumType());
+          if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+            throw new IOException(String.format(
+                "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+                returnedType));
+          }
+          byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
+          blockChecksumForDebug =
+              CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          getBlockChecksumBuf().write(crcBytes);
+          break;
+        default:
+          throw new IOException(
+              "Unknown BlockChecksumType: " + getBlockChecksumType());
         }
 
         // read crc-type

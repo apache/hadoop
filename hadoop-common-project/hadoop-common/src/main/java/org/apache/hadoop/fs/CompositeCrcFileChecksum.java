@@ -37,7 +37,7 @@ public class CompositeCrcFileChecksum extends FileChecksum {
   private DataChecksum.Type crcType;
   private int bytesPerCrc;
 
-  /** Create a MD5FileChecksum */
+  /** Create a CompositeCrcFileChecksum. */
   public CompositeCrcFileChecksum(
       int crc, DataChecksum.Type crcType, int bytesPerCrc) {
     this.crc = crc;

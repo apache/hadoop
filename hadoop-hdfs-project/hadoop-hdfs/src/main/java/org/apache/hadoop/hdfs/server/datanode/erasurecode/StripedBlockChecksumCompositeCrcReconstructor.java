@@ -18,9 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -60,9 +57,10 @@ public class StripedBlockChecksumCompositeCrcReconstructor
   }
 
   @Override
-  void updateDigester(byte[] checksumBuf, int dataBytesPerChecksum)
+  void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum)
       throws IOException {
-    digester.update(checksumBuf, 0, checksumBuf.length, dataBytesPerChecksum);
+    digester.update(
+        checksumBytes, 0, checksumBytes.length, dataBytesPerChecksum);
   }
 
   @Override

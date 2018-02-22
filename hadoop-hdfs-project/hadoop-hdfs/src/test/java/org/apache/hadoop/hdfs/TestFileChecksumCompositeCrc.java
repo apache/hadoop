@@ -20,10 +20,14 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
+/**
+ * End-to-end tests for COMPOSITE_CRC combine mode.
+ */
 public class TestFileChecksumCompositeCrc extends TestFileChecksum {
   @Override
   protected void customizeConf(Configuration conf) {
-    conf.set(HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY, "COMPOSITE_CRC");
+    conf.set(
+        HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY, "COMPOSITE_CRC");
   }
 
   @Override

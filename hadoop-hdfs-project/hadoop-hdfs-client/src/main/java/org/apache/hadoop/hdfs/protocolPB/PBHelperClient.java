@@ -252,26 +252,27 @@ public class PBHelperClient {
   public static HdfsProtos.BlockChecksumTypeProto convert(
       BlockChecksumType type) {
     switch(type) {
-      case MD5CRC:
-        return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
-      case COMPOSITE_CRC:
-        return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
-      default:
-        throw new IllegalStateException(
-            "BUG: BlockChecksumType not found, type=" + type);
+    case MD5CRC:
+      return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
+    case COMPOSITE_CRC:
+      return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumType not found, type=" + type);
     }
   }
 
   public static BlockChecksumType convert(
       HdfsProtos.BlockChecksumTypeProto blockChecksumTypeProto) {
     switch(blockChecksumTypeProto) {
-      case MD5CRC:
-        return BlockChecksumType.MD5CRC;
-      case COMPOSITE_CRC:
-        return BlockChecksumType.COMPOSITE_CRC;
-      default:
-        throw new IllegalStateException(
-            "BUG: BlockChecksumTypeProto not found, type=" + blockChecksumTypeProto);
+    case MD5CRC:
+      return BlockChecksumType.MD5CRC;
+    case COMPOSITE_CRC:
+      return BlockChecksumType.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumTypeProto not found, type="
+          + blockChecksumTypeProto);
     }
   }
 

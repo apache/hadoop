@@ -19,12 +19,10 @@ package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.MessageDigest;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.MD5Hash;
 
 /**
  * StripedBlockChecksumReconstructor reconstruct one or more missed striped
@@ -33,7 +31,8 @@ import org.apache.hadoop.io.MD5Hash;
  * using the newly reconstructed block.
  */
 @InterfaceAudience.Private
-public abstract class StripedBlockChecksumReconstructor extends StripedReconstructor {
+public abstract class StripedBlockChecksumReconstructor
+    extends StripedReconstructor {
   private ByteBuffer targetBuffer;
   private final byte[] targetIndices;
 
@@ -117,9 +116,9 @@ public abstract class StripedBlockChecksumReconstructor extends StripedReconstru
    * over reconstructed data.
    *
    * @param dataBytesPerChecksum the number of underlying data bytes
-   *     corresponding to each checksum inside {@code checksumBuf}.
+   *     corresponding to each checksum inside {@code checksumBytes}.
    */
-  abstract void updateDigester(byte[] checksumBuf, int dataBytesPerChecksum)
+  abstract void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum)
       throws IOException;
 
   /**

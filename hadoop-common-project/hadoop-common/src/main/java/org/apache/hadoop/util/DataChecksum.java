@@ -112,13 +112,13 @@ public class DataChecksum implements Checksum {
    */
   public static int getCrcPolynomialForType(Type type) throws IOException {
     switch (type) {
-      case CRC32:
-        return CrcUtil.GZIP_POLYNOMIAL;
-      case CRC32C:
-        return CrcUtil.CASTAGNOLI_POLYNOMIAL;
-      default:
-        throw new IOException(
-            "No CRC polynomial could be associated with type: " + type);
+    case CRC32:
+      return CrcUtil.GZIP_POLYNOMIAL;
+    case CRC32C:
+      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+    default:
+      throw new IOException(
+          "No CRC polynomial could be associated with type: " + type);
     }
   }
 

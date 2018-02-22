@@ -688,7 +688,8 @@ public class TestPBHelper {
     assertEquals(BlockChecksumType.MD5CRC,
         PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.MD5CRC));
     assertEquals(BlockChecksumType.COMPOSITE_CRC,
-        PBHelperClient.convert(HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC));
+        PBHelperClient.convert(
+            HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC));
     assertEquals(PBHelperClient.convert(BlockChecksumType.MD5CRC),
         HdfsProtos.BlockChecksumTypeProto.MD5CRC);
     assertEquals(PBHelperClient.convert(BlockChecksumType.COMPOSITE_CRC),

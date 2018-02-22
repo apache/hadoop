@@ -21,7 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Encapsulates various options 
+ * Encapsulates various options related to how fine-grained data checksums are
+ * combined into block-level checksums.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -29,7 +30,8 @@ public class BlockChecksumOptions {
   private final BlockChecksumType blockChecksumType;
   private final long stripeLength;
 
-  public BlockChecksumOptions(BlockChecksumType blockChecksumType, long stripeLength) {
+  public BlockChecksumOptions(
+      BlockChecksumType blockChecksumType, long stripeLength) {
     this.blockChecksumType = blockChecksumType;
     this.stripeLength = stripeLength;
   }

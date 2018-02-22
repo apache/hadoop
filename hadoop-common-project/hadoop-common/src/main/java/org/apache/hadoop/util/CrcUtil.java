@@ -29,10 +29,16 @@ import java.util.Arrays;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class CrcUtil {
+public final class CrcUtil {
   public static final int MULTIPLICATIVE_IDENTITY = 0x80000000;
   public static final int GZIP_POLYNOMIAL = 0xEDB88320;
   public static final int CASTAGNOLI_POLYNOMIAL = 0x82F63B78;
+
+  /**
+   * Hide default constructor for a static utils class.
+   */
+  private CrcUtil() {
+  }
 
   /**
    * Compute x^({@code lengthBytes} * 8) mod {@code mod}, where {@code mod} is
@@ -109,11 +115,11 @@ public class CrcUtil {
    * {@code offset}. buf.length must be greater than or equal to offset + 4.
    */
   public static int readInt(byte[] buf, int offset) {
-     int value = ((buf[offset + 0] & 0xff) << 24) |
-                 ((buf[offset + 1] & 0xff) << 16) |
-                 ((buf[offset + 2] & 0xff) << 8)  |
-                 ((buf[offset + 3] & 0xff));
-     return value;
+    int value = ((buf[offset + 0] & 0xff) << 24) |
+                ((buf[offset + 1] & 0xff) << 16) |
+                ((buf[offset + 2] & 0xff) << 8)  |
+                ((buf[offset + 3] & 0xff));
+    return value;
   }
 
   /**

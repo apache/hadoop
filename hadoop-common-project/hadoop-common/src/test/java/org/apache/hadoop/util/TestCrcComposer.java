@@ -29,6 +29,9 @@ import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.*;
 
+/**
+ * Unittests for CrcComposer.
+ */
 public class TestCrcComposer {
   private Random rand = new Random(1234);
 
@@ -224,7 +227,8 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testUpdateByteArrayLengthUnalignedWithCrcSize() throws IOException {
+  public void testUpdateByteArrayLengthUnalignedWithCrcSize()
+      throws IOException {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
 
     exception.expect(IOException.class);

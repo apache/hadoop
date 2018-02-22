@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
-import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -63,7 +62,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
@@ -991,8 +989,8 @@ class DataXceiver extends Receiver implements Runnable {
         getOutputStream());
     checkAccess(out, true, block, blockToken, Op.BLOCK_CHECKSUM,
         BlockTokenIdentifier.AccessMode.READ);
-    BlockChecksumComputer maker =
-        new ReplicatedBlockChecksumComputer(datanode, block, blockChecksumOptions);
+    BlockChecksumComputer maker = new ReplicatedBlockChecksumComputer(
+        datanode, block, blockChecksumOptions);
 
     try {
       maker.compute();
@@ -1005,7 +1003,8 @@ class DataXceiver extends Receiver implements Runnable {
               .setCrcPerBlock(maker.getCrcPerBlock())
               .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
               .setCrcType(PBHelperClient.convert(maker.getCrcType()))
-              .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
+              .setBlockChecksumOptions(
+                  PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);
       out.flush();
@@ -1049,7 +1048,8 @@ class DataXceiver extends Receiver implements Runnable {
               .setCrcPerBlock(maker.getCrcPerBlock())
               .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
               .setCrcType(PBHelperClient.convert(maker.getCrcType()))
-              .setBlockChecksumOptions(PBHelperClient.convert(blockChecksumOptions)))
+              .setBlockChecksumOptions(
+                  PBHelperClient.convert(blockChecksumOptions)))
           .build()
           .writeDelimitedTo(out);
       out.flush();

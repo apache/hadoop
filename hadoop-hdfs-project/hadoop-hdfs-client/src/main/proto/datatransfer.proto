@@ -148,7 +148,7 @@ message OpCopyBlockProto {
   required BaseHeaderProto header = 1;
 }
 
-message OpBlockChecksumProto { 
+message OpBlockChecksumProto {
   required BaseHeaderProto header = 1;
   optional BlockChecksumOptionsProto blockChecksumOptions = 2;
 }

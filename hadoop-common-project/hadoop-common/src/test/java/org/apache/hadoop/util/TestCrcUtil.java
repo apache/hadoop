@@ -26,6 +26,9 @@ import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.*;
 
+/**
+ * Unittests for CrcUtil.
+ */
 public class TestCrcUtil {
   private Random rand = new Random(1234);
 

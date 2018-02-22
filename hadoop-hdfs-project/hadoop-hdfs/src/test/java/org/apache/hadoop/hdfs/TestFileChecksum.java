@@ -111,7 +111,7 @@ public class TestFileChecksum {
    * Subclasses may customize the conf to run the full set of tests under
    * different conditions.
    */
-  protected void customizeConf(Configuration conf) {
+  protected void customizeConf(Configuration preparedConf) {
   }
 
   /**

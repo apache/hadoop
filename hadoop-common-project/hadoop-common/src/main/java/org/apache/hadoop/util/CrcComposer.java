@@ -79,7 +79,7 @@ public class CrcComposer {
         stripeLength);
   }
 
-  private CrcComposer(
+  CrcComposer(
       int crcPolynomial,
       int precomputedMonomialForHint,
       long bytesPerCrcHint,

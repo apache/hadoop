@@ -511,7 +511,7 @@ public final class Options {
    * stored metadata, which is why this is not part of ChecksumOpt, which
    * deals with properties of files at rest.
    */
-  public static enum ChecksumCombineMode {
+  public enum ChecksumCombineMode {
     MD5MD5CRC,  // MD5 of block checksums, which are MD5 over chunk CRCs
     COMPOSITE_CRC  // Block/chunk-independent composite CRC
   }

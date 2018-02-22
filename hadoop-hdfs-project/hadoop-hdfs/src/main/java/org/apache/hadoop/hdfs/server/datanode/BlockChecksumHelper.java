@@ -298,15 +298,15 @@ final class BlockChecksumHelper {
         BlockChecksumType type =
             getBlockChecksumOptions().getBlockChecksumType();
         switch (type) {
-          case MD5CRC:
-            computeMd5Crc();
-            break;
-          case COMPOSITE_CRC:
-            computeCompositeCrc(getBlockChecksumOptions().getStripeLength());
-            break;
-          default:
-            throw new IOException(String.format(
-                "Unrecognized BlockChecksumType: %s", type));
+        case MD5CRC:
+          computeMd5Crc();
+          break;
+        case COMPOSITE_CRC:
+          computeCompositeCrc(getBlockChecksumOptions().getStripeLength());
+          break;
+        default:
+          throw new IOException(String.format(
+              "Unrecognized BlockChecksumType: %s", type));
         }
       } finally {
         IOUtils.closeStream(getChecksumIn());
@@ -425,10 +425,11 @@ final class BlockChecksumHelper {
     // before each block checksum is populated into the buffer.
     private final int[] blockChecksumPositions;
 
-    BlockGroupNonStripedChecksumComputer(DataNode datanode,
-                                         StripedBlockInfo stripedBlockInfo,
-                                         long requestedNumBytes,
-                                         BlockChecksumOptions blockChecksumOptions)
+    BlockGroupNonStripedChecksumComputer(
+        DataNode datanode,
+        StripedBlockInfo stripedBlockInfo,
+        long requestedNumBytes,
+        BlockChecksumOptions blockChecksumOptions)
         throws IOException {
       super(datanode, blockChecksumOptions);
       this.blockGroup = stripedBlockInfo.getBlock();
@@ -504,59 +505,59 @@ final class BlockChecksumHelper {
 
       BlockChecksumType type = getBlockChecksumOptions().getBlockChecksumType();
       switch (type) {
-        case MD5CRC:
-          MD5Hash md5out = MD5Hash.digest(blockChecksumBuf.getData());
-          setOutBytes(md5out.getDigest());
-          break;
-        case COMPOSITE_CRC:
-          CrcComposer crcComposer = CrcComposer.newCrcComposer(
-              getCrcType(), ecPolicy.getCellSize());
+      case MD5CRC:
+        MD5Hash md5out = MD5Hash.digest(blockChecksumBuf.getData());
+        setOutBytes(md5out.getDigest());
+        break;
+      case COMPOSITE_CRC:
+        CrcComposer crcComposer = CrcComposer.newCrcComposer(
+            getCrcType(), ecPolicy.getCellSize());
 
-          // This should hold all the cell-granularity checksums of blk0
-          // followed by all cell checksums of blk1, etc. We must unstripe the
-          // cell checksums in order of logical file bytes. Also, note that the
-          // length of this array may not equal the the number of actually valid
-          // bytes in the buffer (blockChecksumBuf.getLength()).
-          byte[] flatBlockChecksumData = blockChecksumBuf.getData();
+        // This should hold all the cell-granularity checksums of blk0
+        // followed by all cell checksums of blk1, etc. We must unstripe the
+        // cell checksums in order of logical file bytes. Also, note that the
+        // length of this array may not equal the the number of actually valid
+        // bytes in the buffer (blockChecksumBuf.getLength()).
+        byte[] flatBlockChecksumData = blockChecksumBuf.getData();
 
-          // Initialize byte-level cursors to where each block's checksum begins
-          // inside the combined flattened buffer.
-          int[] blockChecksumCursors = new int[numDataUnits];
-          for (int idx = 0; idx < numDataUnits; ++idx) {
-            blockChecksumCursors[idx] = blockChecksumPositions[idx];
-          }
+        // Initialize byte-level cursors to where each block's checksum begins
+        // inside the combined flattened buffer.
+        int[] blockChecksumCursors = new int[numDataUnits];
+        for (int idx = 0; idx < numDataUnits; ++idx) {
+          blockChecksumCursors[idx] = blockChecksumPositions[idx];
+        }
 
-          // Reassemble cell-level CRCs in the right order.
-          long numFullCells = checksumLen / ecPolicy.getCellSize();
-          for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
-            int blockIndex = (int) (cellIndex % numDataUnits);
-            int checksumCursor = blockChecksumCursors[blockIndex];
-            int cellCrc = CrcUtil.readInt(
-                flatBlockChecksumData, checksumCursor);
-            blockChecksumCursors[blockIndex] += 4;
-            crcComposer.update(cellCrc, ecPolicy.getCellSize());
-          }
-          if (checksumLen % ecPolicy.getCellSize() != 0) {
-            // Final partial cell.
-            int blockIndex = (int) (numFullCells % numDataUnits);
-            int checksumCursor = blockChecksumCursors[blockIndex];
-            int cellCrc = CrcUtil.readInt(
-                flatBlockChecksumData, checksumCursor);
-            blockChecksumCursors[blockIndex] += 4;
-            crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
-          }
-          byte[] digest = crcComposer.digest();
-          LOG.debug("flatBlockChecksumData.length={}, numDataUnits={}, "
-              + "checksumLen={}, digest={}",
-              flatBlockChecksumData.length,
-              numDataUnits,
-              checksumLen,
-              CrcUtil.newSingleCrcWrapperFromByteArray(digest));
-          setOutBytes(digest);
-          break;
-        default:
-          throw new IOException(String.format(
-              "Unrecognized BlockChecksumType: %s", type));
+        // Reassemble cell-level CRCs in the right order.
+        long numFullCells = checksumLen / ecPolicy.getCellSize();
+        for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
+          int blockIndex = (int) (cellIndex % numDataUnits);
+          int checksumCursor = blockChecksumCursors[blockIndex];
+          int cellCrc = CrcUtil.readInt(
+              flatBlockChecksumData, checksumCursor);
+          blockChecksumCursors[blockIndex] += 4;
+          crcComposer.update(cellCrc, ecPolicy.getCellSize());
+        }
+        if (checksumLen % ecPolicy.getCellSize() != 0) {
+          // Final partial cell.
+          int blockIndex = (int) (numFullCells % numDataUnits);
+          int checksumCursor = blockChecksumCursors[blockIndex];
+          int cellCrc = CrcUtil.readInt(
+              flatBlockChecksumData, checksumCursor);
+          blockChecksumCursors[blockIndex] += 4;
+          crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
+        }
+        byte[] digest = crcComposer.digest();
+        LOG.debug("flatBlockChecksumData.length={}, numDataUnits={}, "
+            + "checksumLen={}, digest={}",
+            flatBlockChecksumData.length,
+            numDataUnits,
+            checksumLen,
+            CrcUtil.newSingleCrcWrapperFromByteArray(digest));
+        setOutBytes(digest);
+        break;
+      default:
+        throw new IOException(String.format(
+            "Unrecognized BlockChecksumType: %s", type));
       }
     }
 
@@ -592,16 +593,16 @@ final class BlockChecksumHelper {
         BlockChecksumType groupChecksumType =
             getBlockChecksumOptions().getBlockChecksumType();
         switch (groupChecksumType) {
-          case MD5CRC:
-            childOptions = getBlockChecksumOptions();
-            break;
-          case COMPOSITE_CRC:
-            childOptions = new BlockChecksumOptions(
-                BlockChecksumType.COMPOSITE_CRC, ecPolicy.getCellSize());
-            break;
-          default:
-            throw new IOException(
-                "Unknown BlockChecksumType: " + groupChecksumType);
+        case MD5CRC:
+          childOptions = getBlockChecksumOptions();
+          break;
+        case COMPOSITE_CRC:
+          childOptions = new BlockChecksumOptions(
+              BlockChecksumType.COMPOSITE_CRC, ecPolicy.getCellSize());
+          break;
+        default:
+          throw new IOException(
+              "Unknown BlockChecksumType: " + groupChecksumType);
         }
         createSender(pair).blockChecksum(block, blockToken, childOptions);
 
@@ -630,32 +631,32 @@ final class BlockChecksumHelper {
             checksumData.getCrcPerBlock(), ct);
 
         switch (groupChecksumType) {
-          case MD5CRC:
-            //read md5
-            final MD5Hash md5 =
-                new MD5Hash(checksumData.getBlockChecksum().toByteArray());
-            md5.write(blockChecksumBuf);
-            LOG.debug("got reply from datanode:{}, md5={}",
-                targetDatanode, md5);
-            break;
-          case COMPOSITE_CRC:
-            BlockChecksumType returnedType = PBHelperClient.convert(
-                checksumData.getBlockChecksumOptions().getBlockChecksumType());
-            if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
-              throw new IOException(String.format(
-                  "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
-                  returnedType));
-            }
-            byte[] checksumBytes =
-                checksumData.getBlockChecksum().toByteArray();
-            blockChecksumBuf.write(checksumBytes, 0, checksumBytes.length);
-            LOG.debug("got reply from datanode:{} for blockIdx:{}, checksum:{}",
-                targetDatanode, blockIdx,
-                CrcUtil.newMultiCrcWrapperFromByteArray(checksumBytes));
-            break;
-          default:
-            throw new IOException(
-                "Unknown BlockChecksumType: " + groupChecksumType);
+        case MD5CRC:
+          //read md5
+          final MD5Hash md5 =
+              new MD5Hash(checksumData.getBlockChecksum().toByteArray());
+          md5.write(blockChecksumBuf);
+          LOG.debug("got reply from datanode:{}, md5={}",
+              targetDatanode, md5);
+          break;
+        case COMPOSITE_CRC:
+          BlockChecksumType returnedType = PBHelperClient.convert(
+              checksumData.getBlockChecksumOptions().getBlockChecksumType());
+          if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+            throw new IOException(String.format(
+                "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+                returnedType));
+          }
+          byte[] checksumBytes =
+              checksumData.getBlockChecksum().toByteArray();
+          blockChecksumBuf.write(checksumBytes, 0, checksumBytes.length);
+          LOG.debug("got reply from datanode:{} for blockIdx:{}, checksum:{}",
+              targetDatanode, blockIdx,
+              CrcUtil.newMultiCrcWrapperFromByteArray(checksumBytes));
+          break;
+        default:
+          throw new IOException(
+              "Unknown BlockChecksumType: " + groupChecksumType);
         }
       }
     }
@@ -724,8 +725,8 @@ final class BlockChecksumHelper {
             getBlockChecksumOptions().getBlockChecksumType();
         if (groupChecksumType == BlockChecksumType.COMPOSITE_CRC) {
           throw new IOException(String.format(
-              "BlockChecksumType COMPOSITE_CRC doesn't support MIXED underlying "
-              + "types; previous block was %s, next block is %s",
+              "BlockChecksumType COMPOSITE_CRC doesn't support MIXED "
+              + "underlying types; previous block was %s, next block is %s",
               getCrcType(), ct));
         } else {
           setCrcType(DataChecksum.Type.MIXED);
