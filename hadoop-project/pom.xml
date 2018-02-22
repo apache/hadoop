@@ -1148,6 +1148,15 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <!-- HACK.  Transitive dependency for nimbus-jose-jwt.  Needed for
+      packaging.  Please re-check this version when updating
+      nimbus-jose-jwt.  Please read HADOOP-14903 for more details.
+      -->
+      <dependency>
+        <groupId>net.minidev</groupId>
+        <artifactId>json-smart</artifactId>
+        <version>1.3.1</version>
+      </dependency>
 
         <dependency>
             <groupId>org.skyscreamer</groupId>
