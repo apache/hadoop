@@ -148,7 +148,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix for the UAM
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
-   * @see ApplicationSubmissionContext
+   * @see org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return uamId for the UAM
    * @throws YarnException if registerApplicationMaster fails
@@ -201,7 +201,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * @param appNameSuffix application name suffix for the UAM
    * @param keepContainersAcrossApplicationAttempts keep container flag for UAM
    *          recovery.
-   * @see ApplicationSubmissionContext
+   * @see org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext
    *          #setKeepContainersAcrossApplicationAttempts(boolean)
    * @return UAM token
    * @throws YarnException if fails
