@@ -40,8 +40,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -76,6 +74,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides a way to interact with history files in a thread safe
@@ -84,8 +84,10 @@ import org.apache.hadoop.yarn.util.SystemClock;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class HistoryFileManager extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(HistoryFileManager.class);
-  private static final Log SUMMARY_LOG = LogFactory.getLog(JobSummary.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HistoryFileManager.class);
+  private static final Logger SUMMARY_LOG =
+      LoggerFactory.getLogger(JobSummary.class);
 
   private enum HistoryInfoState {
     IN_INTERMEDIATE, IN_DONE, DELETED, MOVE_FAILED
@@ -450,6 +452,8 @@ public class HistoryFileManager extends AbstractService {
       } catch (Throwable t) {
         LOG.error("Error while trying to move a job to done", t);
         this.state = HistoryInfoState.MOVE_FAILED;
+      } finally {
+        notifyAll();
       }
     }
 
@@ -483,12 +487,16 @@ public class HistoryFileManager extends AbstractService {
     }
     
     protected synchronized void delete() throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("deleting " + historyFile + " and " + confFile);
+      try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("deleting " + historyFile + " and " + confFile);
+        }
+        state = HistoryInfoState.DELETED;
+        doneDirFc.delete(doneDirFc.makeQualified(historyFile), false);
+        doneDirFc.delete(doneDirFc.makeQualified(confFile), false);
+      } finally {
+        notifyAll();
       }
-      state = HistoryInfoState.DELETED;
-      doneDirFc.delete(doneDirFc.makeQualified(historyFile), false);
-      doneDirFc.delete(doneDirFc.makeQualified(confFile), false);
     }
 
     public JobIndexInfo getJobIndexInfo() {
@@ -506,7 +514,7 @@ public class HistoryFileManager extends AbstractService {
     public synchronized Configuration loadConfFile() throws IOException {
       FileContext fc = FileContext.getFileContext(confFile.toUri(), conf);
       Configuration jobConf = new Configuration(false);
-      jobConf.addResource(fc.open(confFile), confFile.toString());
+      jobConf.addResource(fc.open(confFile), confFile.toString(), true);
       return jobConf;
     }
 
@@ -514,6 +522,17 @@ public class HistoryFileManager extends AbstractService {
       final int totalTasks = jobIndexInfo.getNumReduces() +
           jobIndexInfo.getNumMaps();
       return (maxTasksForLoadedJob > 0) && (totalTasks > maxTasksForLoadedJob);
+    }
+
+    public synchronized void waitUntilMoved() {
+      while (isMovePending() && !didMoveFail()) {
+        try {
+          wait();
+        } catch (InterruptedException e) {
+          LOG.warn("Waiting has been interrupted");
+          throw new RuntimeException(e);
+        }
+      }
     }
   }
 
@@ -954,6 +973,7 @@ public class HistoryFileManager extends AbstractService {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Scheduling move to done of " +found);
           }
+
           moveToDoneExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -1191,5 +1211,5 @@ public class HistoryFileManager extends AbstractService {
   @VisibleForTesting
   void setMaxHistoryAge(long newValue){
     maxHistoryAge=newValue;
-  } 
+  }
 }

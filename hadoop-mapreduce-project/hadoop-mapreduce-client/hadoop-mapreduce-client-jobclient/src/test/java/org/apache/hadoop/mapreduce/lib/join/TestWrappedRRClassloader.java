@@ -50,8 +50,8 @@ public class TestWrappedRRClassloader {
     assertTrue(conf.getClassLoader() instanceof Fake_ClassLoader);
 
     FileSystem fs = FileSystem.get(conf);
-    Path testdir = new Path(System.getProperty("test.build.data", "/tmp"))
-        .makeQualified(fs);
+    Path testdir = fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp")));
 
     Path base = new Path(testdir, "/empty");
     Path[] src = { new Path(base, "i0"), new Path("i1"), new Path("i2") };

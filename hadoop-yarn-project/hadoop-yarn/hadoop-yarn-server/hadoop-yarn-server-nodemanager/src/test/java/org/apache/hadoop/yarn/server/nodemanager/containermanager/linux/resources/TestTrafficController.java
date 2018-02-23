@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,6 +31,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +49,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestTrafficController {
-  private static final Log LOG = LogFactory.getLog(TestTrafficController.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestTrafficController.class);
   private static final int ROOT_BANDWIDTH_MBIT = 100;
   private static final int YARN_BANDWIDTH_MBIT = 70;
   private static final int CONTAINER_BANDWIDTH_MBIT = 10;

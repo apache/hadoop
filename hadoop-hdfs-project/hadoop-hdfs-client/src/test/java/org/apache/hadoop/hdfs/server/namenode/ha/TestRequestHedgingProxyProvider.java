@@ -70,10 +70,10 @@ public class TestRequestHedgingProxyProvider {
         HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns, "nn1,nn2");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn1",
-        "machine1.foo.bar:9820");
+        "machine1.foo.bar:8020");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn2",
-        "machine2.foo.bar:9820");
+        "machine2.foo.bar:8020");
   }
 
   @Test
@@ -232,11 +232,69 @@ public class TestRequestHedgingProxyProvider {
   }
 
   @Test
+  public void testFileNotFoundExceptionWithSingleProxy() throws Exception {
+    ClientProtocol active = Mockito.mock(ClientProtocol.class);
+    Mockito
+        .when(active.getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong()))
+        .thenThrow(new RemoteException("java.io.FileNotFoundException",
+            "File does not exist!"));
+
+    ClientProtocol standby = Mockito.mock(ClientProtocol.class);
+    Mockito
+        .when(standby.getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong()))
+        .thenThrow(
+            new RemoteException("org.apache.hadoop.ipc.StandbyException",
+                "Standby NameNode"));
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri,
+            ClientProtocol.class, createFactory(standby, active));
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (MultiException me) {
+      for (Exception ex : me.getExceptions().values()) {
+        Exception rEx = ((RemoteException) ex).unwrapRemoteException();
+        if (rEx instanceof StandbyException) {
+          continue;
+        }
+        Assert.assertTrue(rEx instanceof FileNotFoundException);
+      }
+    }
+    //Perform failover now, there will only be one active proxy now
+    provider.performFailover(active);
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (RemoteException ex) {
+      Exception rEx = ex.unwrapRemoteException();
+      if (rEx instanceof StandbyException) {
+        Mockito.verify(active).getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong());
+        Mockito.verify(standby, Mockito.times(2))
+            .getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong());
+      } else {
+        Assert.assertTrue(rEx instanceof FileNotFoundException);
+        Mockito.verify(active, Mockito.times(2))
+            .getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong());
+        Mockito.verify(standby).getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong());
+      }
+    }
+  }
+
+  @Test
   public void testPerformFailoverWith3Proxies() throws Exception {
     conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
             "nn1,nn2,nn3");
     conf.set(HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn3",
-            "machine3.foo.bar:9820");
+            "machine3.foo.bar:8020");
 
     final AtomicInteger counter = new AtomicInteger(0);
     final int[] isGood = {1};

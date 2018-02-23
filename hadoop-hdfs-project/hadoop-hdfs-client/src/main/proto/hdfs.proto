@@ -45,6 +45,20 @@ message ExtendedBlockProto {
                                                // here for historical reasons
 }
 
+
+/**
+* ProvidedStorageLocation will contain the exact location in the provided
+  storage. The path, offset and length will result in ranged read. The nonce
+  is there to verify that you receive what you expect.
+*/
+
+message ProvidedStorageLocationProto {
+  required string path = 1;
+  required int64 offset = 2;
+  required int64 length = 3;
+  required bytes nonce = 4;
+}
+
 /**
  * Identifies a Datanode
  */
@@ -205,6 +219,7 @@ enum StorageTypeProto {
   SSD = 2;
   ARCHIVE = 3;
   RAM_DISK = 4;
+  PROVIDED = 5;
 }
 
 /**
@@ -313,6 +328,20 @@ message ZoneEncryptionInfoProto {
   required CipherSuiteProto suite = 1;
   required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
   required string keyName = 3;
+  optional ReencryptionInfoProto reencryptionProto = 4;
+}
+
+/**
+ * Re-encryption information for an encryption zone
+ */
+message ReencryptionInfoProto {
+  required string ezKeyVersionName = 1;
+  required uint64 submissionTime = 2;
+  required bool canceled = 3;
+  required int64 numReencrypted = 4;
+  required int64 numFailures = 5;
+  optional uint64 completionTime = 6;
+  optional string lastFile = 7;
 }
 
 /**
@@ -359,17 +388,36 @@ message ECSchemaProto {
   repeated ECSchemaOptionEntryProto options = 4;
 }
 
+/**
+ * EC policy state.
+ */
+enum ErasureCodingPolicyState {
+  DISABLED = 1;
+  ENABLED = 2;
+  REMOVED = 3;
+}
+
 message ErasureCodingPolicyProto {
   optional string name = 1;
   optional ECSchemaProto schema = 2;
   optional uint32 cellSize = 3;
   required uint32 id = 4; // Actually a byte - only 8 bits used
+  optional ErasureCodingPolicyState state = 5 [default = ENABLED];
 }
 
-message AddECPolicyResponseProto {
+message AddErasureCodingPolicyResponseProto {
   required ErasureCodingPolicyProto policy = 1;
   required bool succeed = 2;
   optional string errorMsg = 3;
+}
+
+/**
+ * Placeholder type for consistent HDFS operations.
+ */
+message HdfsPathHandleProto {
+  optional uint64 inodeId = 1;
+  optional uint64 mtime = 2;
+  optional string path = 3;
 }
 
 /**
@@ -386,6 +434,7 @@ message HdfsFileStatusProto {
     HAS_ACL   = 0x01; // has ACLs
     HAS_CRYPT = 0x02; // encrypted
     HAS_EC    = 0x04; // erasure coded
+    SNAPSHOT_ENABLED    = 0x08; // SNAPSHOT ENABLED
   }
   required FileType fileType = 1;
   required bytes path = 2;          // local name of inode encoded java UTF8
@@ -496,6 +545,32 @@ message SnapshotDiffReportProto {
   repeated SnapshotDiffReportEntryProto diffReportEntries = 4;
 }
 
+/**
+ * Snapshot diff report listing entry
+ */
+message SnapshotDiffReportListingEntryProto {
+  required bytes fullpath = 1;
+  required uint64 dirId = 2;
+  required bool isReference = 3;
+  optional bytes targetPath = 4;
+  optional uint64 fileId = 5;
+}
+
+message SnapshotDiffReportCursorProto {
+  required bytes startPath = 1;
+  required int32 index = 2 [default = -1];
+}
+/**
+ * Snapshot diff report listing
+ */
+message SnapshotDiffReportListingProto {
+  // full path of the directory where snapshots were taken
+  repeated SnapshotDiffReportListingEntryProto modifiedEntries = 1;
+  repeated SnapshotDiffReportListingEntryProto createdEntries = 2;
+  repeated SnapshotDiffReportListingEntryProto deletedEntries = 3;
+  required bool isFromEarlier = 4;
+  optional SnapshotDiffReportCursorProto cursor = 5;
+}
 /**
  * Block information
  *

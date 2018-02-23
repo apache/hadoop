@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.sls.appmaster;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -42,8 +44,10 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.sls.ReservationClientUtil;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.SLSRunner;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,51 +55,54 @@ import org.slf4j.LoggerFactory;
 @Unstable
 public class MRAMSimulator extends AMSimulator {
   /*
-  Vocabulary Used: 
+  Vocabulary Used:
   pending -> requests which are NOT yet sent to RM
   scheduled -> requests which are sent to RM but not yet assigned
   assigned -> requests which are assigned to a container
   completed -> request corresponding to which container has completed
-  
+
   Maps are scheduled as soon as their requests are received. Reduces are
   scheduled when all maps have finished (not support slow-start currently).
   */
-  
+
+  public static final String MAP_TYPE = "map";
+  public static final String REDUCE_TYPE = "reduce";
+
   private static final int PRIORITY_REDUCE = 10;
   private static final int PRIORITY_MAP = 20;
 
   // pending maps
   private LinkedList<ContainerSimulator> pendingMaps =
           new LinkedList<>();
-  
+
   // pending failed maps
   private LinkedList<ContainerSimulator> pendingFailedMaps =
           new LinkedList<ContainerSimulator>();
-  
+
   // scheduled maps
   private LinkedList<ContainerSimulator> scheduledMaps =
           new LinkedList<ContainerSimulator>();
-  
+
   // assigned maps
   private Map<ContainerId, ContainerSimulator> assignedMaps =
           new HashMap<ContainerId, ContainerSimulator>();
-  
+
   // reduces which are not yet scheduled
   private LinkedList<ContainerSimulator> pendingReduces =
           new LinkedList<ContainerSimulator>();
-  
+
   // pending failed reduces
   private LinkedList<ContainerSimulator> pendingFailedReduces =
           new LinkedList<ContainerSimulator>();
- 
+
   // scheduled reduces
   private LinkedList<ContainerSimulator> scheduledReduces =
           new LinkedList<ContainerSimulator>();
-  
+
   // assigned reduces
   private Map<ContainerId, ContainerSimulator> assignedReduces =
           new HashMap<ContainerId, ContainerSimulator>();
-  
+
   // all maps & reduces
   private LinkedList<ContainerSimulator> allMaps =
           new LinkedList<ContainerSimulator>();
@@ -117,14 +124,14 @@ public class MRAMSimulator extends AMSimulator {
   @SuppressWarnings("checkstyle:parameternumber")
   public void init(int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
-      long traceStartTime, long traceFinishTime, String user, String queue, 
-      boolean isTracked, String oldAppId, ReservationSubmissionRequest rr,
-      long baselineStartTimeMS, Resource amContainerResource) {
+      long traceStartTime, long traceFinishTime, String user, String queue,
+      boolean isTracked, String oldAppId, long baselineStartTimeMS,
+      Resource amContainerResource, Map<String, String> params) {
     super.init(heartbeatInterval, containerList, rm, se,
         traceStartTime, traceFinishTime, user, queue, isTracked, oldAppId,
-        rr, baselineStartTimeMS, amContainerResource);
+        baselineStartTimeMS, amContainerResource, params);
     amtype = "mapreduce";
-    
+
     // get map/reduce tasks
     for (ContainerSimulator cs : containerList) {
       if (cs.getType().equals("map")) {
@@ -202,7 +209,7 @@ public class MRAMSimulator extends AMSimulator {
           }
         }
       }
-      
+
       // check finished
       if (isAMContainerRunning &&
               (mapFinished >= mapTotal) &&
@@ -234,7 +241,7 @@ public class MRAMSimulator extends AMSimulator {
       }
     }
   }
-  
+
   /**
    * restart running because of the am container killed
    */
@@ -322,7 +329,7 @@ public class MRAMSimulator extends AMSimulator {
     if (ask == null) {
       ask = new ArrayList<>();
     }
-    
+
     final AllocateRequest request = createAllocateRequest(ask);
     if (totalContainers == 0) {
       request.setProgress(1.0f);
@@ -346,6 +353,38 @@ public class MRAMSimulator extends AMSimulator {
     if (response != null) {
       responseQueue.put(response);
     }
+  }
+
+  @Override
+  public void initReservation(ReservationId reservationId, long deadline,
+      long now) {
+
+    Resource mapRes = getMaxResource(allMaps);
+    long mapDur = getMaxDuration(allMaps);
+    Resource redRes = getMaxResource(allReduces);
+    long redDur = getMaxDuration(allReduces);
+
+    ReservationSubmissionRequest rr = ReservationClientUtil.
+        createMRReservation(reservationId,
+            "reservation_" + reservationId.getId(), mapRes, allMaps.size(),
+            mapDur, redRes, allReduces.size(), redDur, now + traceStartTimeMS,
+            now + deadline, queue);
+
+    setReservationRequest(rr);
+  }
+
+  // Helper to compute the component-wise maximum resource used by any container
+  private Resource getMaxResource(Collection<ContainerSimulator> containers) {
+    return containers.parallelStream()
+        .map(ContainerSimulator::getResource)
+        .reduce(Resource.newInstance(0, 0), Resources::componentwiseMax);
+  }
+
+  // Helper to compute the maximum resource used by any map container
+  private long getMaxDuration(Collection<ContainerSimulator> containers) {
+    return containers.parallelStream()
+        .mapToLong(ContainerSimulator::getLifeTime)
+        .reduce(0L, Long::max);
   }
 
   @Override

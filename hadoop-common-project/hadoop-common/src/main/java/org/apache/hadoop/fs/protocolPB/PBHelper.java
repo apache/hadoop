@@ -94,11 +94,14 @@ public final class PBHelper {
     owner = proto.getOwner();
     group = proto.getGroup();
     int flags = proto.getFlags();
-    return new FileStatus(length, isdir, blockReplication, blocksize,
-        mtime, atime, permission, owner, group, symlink, path,
-        (flags & FileStatusProto.Flags.HAS_ACL_VALUE)   != 0,
-        (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
-        (flags & FileStatusProto.Flags.HAS_EC_VALUE)    != 0);
+    FileStatus fileStatus = new FileStatus(length, isdir, blockReplication,
+        blocksize, mtime, atime, permission, owner, group, symlink, path,
+        FileStatus.attributes(
+          (flags & FileStatusProto.Flags.HAS_ACL_VALUE) != 0,
+          (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
+          (flags & FileStatusProto.Flags.HAS_EC_VALUE) != 0,
+          (flags & FileStatusProto.Flags.SNAPSHOT_ENABLED_VALUE) != 0));
+    return fileStatus;
   }
 
   public static FileStatusProto convert(FileStatus stat) throws IOException {
@@ -124,6 +127,8 @@ public final class PBHelper {
     flags |= stat.hasAcl()         ? FileStatusProto.Flags.HAS_ACL_VALUE   : 0;
     flags |= stat.isEncrypted()    ? FileStatusProto.Flags.HAS_CRYPT_VALUE : 0;
     flags |= stat.isErasureCoded() ? FileStatusProto.Flags.HAS_EC_VALUE    : 0;
+    flags |= stat.isSnapshotEnabled() ? FileStatusProto.Flags
+        .SNAPSHOT_ENABLED_VALUE : 0;
     bld.setFlags(flags);
     return bld.build();
   }

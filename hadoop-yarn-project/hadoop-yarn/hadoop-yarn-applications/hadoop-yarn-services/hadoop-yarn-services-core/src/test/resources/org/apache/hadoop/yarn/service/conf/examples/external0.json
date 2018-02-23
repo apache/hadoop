@@ -1,0 +1,15 @@
+{
+  "name": "external-0",
+  "lifetime": "3600",
+
+  "components" : [
+    {
+      "name" : "comp1",
+      "artifact": {
+        "type": "SERVICE",
+        "id": "app-1"
+      }
+    }
+  ]
+
+}

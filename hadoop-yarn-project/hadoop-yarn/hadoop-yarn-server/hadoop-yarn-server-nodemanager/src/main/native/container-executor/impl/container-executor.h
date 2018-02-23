@@ -35,48 +35,6 @@ enum command {
   LIST_AS_USER = 5
 };
 
-enum errorcodes {
-  INVALID_ARGUMENT_NUMBER = 1,
-  //INVALID_USER_NAME 2
-  INVALID_COMMAND_PROVIDED = 3,
-  // SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS (NOT USED) 4
-  INVALID_NM_ROOT_DIRS = 5,
-  SETUID_OPER_FAILED, //6
-  UNABLE_TO_EXECUTE_CONTAINER_SCRIPT, //7
-  UNABLE_TO_SIGNAL_CONTAINER, //8
-  INVALID_CONTAINER_PID, //9
-  // ERROR_RESOLVING_FILE_PATH (NOT_USED) 10
-  // RELATIVE_PATH_COMPONENTS_IN_FILE_PATH (NOT USED) 11
-  // UNABLE_TO_STAT_FILE (NOT USED) 12
-  // FILE_NOT_OWNED_BY_ROOT (NOT USED) 13
-  // PREPARE_CONTAINER_DIRECTORIES_FAILED (NOT USED) 14
-  // INITIALIZE_CONTAINER_FAILED (NOT USED) 15
-  // PREPARE_CONTAINER_LOGS_FAILED (NOT USED) 16
-  // INVALID_LOG_DIR (NOT USED) 17
-  OUT_OF_MEMORY = 18,
-  // INITIALIZE_DISTCACHEFILE_FAILED (NOT USED) 19
-  INITIALIZE_USER_FAILED = 20,
-  PATH_TO_DELETE_IS_NULL, //21
-  INVALID_CONTAINER_EXEC_PERMISSIONS, //22
-  // PREPARE_JOB_LOGS_FAILED (NOT USED) 23
-  INVALID_CONFIG_FILE = 24,
-  SETSID_OPER_FAILED = 25,
-  WRITE_PIDFILE_FAILED = 26,
-  WRITE_CGROUP_FAILED = 27,
-  TRAFFIC_CONTROL_EXECUTION_FAILED = 28,
-  DOCKER_RUN_FAILED = 29,
-  ERROR_OPENING_DOCKER_FILE = 30,
-  ERROR_READING_DOCKER_FILE = 31,
-  FEATURE_DISABLED = 32,
-  COULD_NOT_CREATE_SCRIPT_COPY = 33,
-  COULD_NOT_CREATE_CREDENTIALS_FILE = 34,
-  COULD_NOT_CREATE_WORK_DIRECTORIES = 35,
-  COULD_NOT_CREATE_APP_LOG_DIRECTORIES = 36,
-  COULD_NOT_CREATE_TMP_DIRECTORIES = 37,
-  ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS = 38,
-  ERROR_SANITIZING_DOCKER_COMMAND = 39
-};
-
 enum operations {
   CHECK_SETUP = 1,
   MOUNT_CGROUPS = 2,
@@ -101,20 +59,11 @@ enum operations {
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
-#define DOCKER_BINARY_KEY "docker.binary"
 #define DOCKER_SUPPORT_ENABLED_KEY "feature.docker.enabled"
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define TMP_DIR "tmp"
 
 extern struct passwd *user_detail;
-
-// the log file for messages
-extern FILE *LOGFILE;
-// the log file for error messages
-extern FILE *ERRORFILE;
-
-// get the executable's filename
-char* get_executable(char *argv0);
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -142,6 +91,7 @@ void free_executor_configurations();
 
 // initialize the application directory
 int initialize_app(const char *user, const char *app_id,
+                   const char *container_id,
                    const char *credentials, char* const* local_dirs,
                    char* const* log_dirs, char* const* args);
 
@@ -229,6 +179,11 @@ char *get_user_directory(const char *nm_root, const char *user);
 char *get_app_directory(const char * nm_root, const char *user,
                         const char *app_id);
 
+/**
+ * Check node manager local dir permission.
+ */
+int check_nm_local_dir(uid_t caller_uid, const char *nm_root);
+
 char *get_container_work_directory(const char *nm_root, const char *user,
 				 const char *app_id, const char *container_id);
 
@@ -241,6 +196,8 @@ char *get_container_credentials_file(const char* work_dir);
  */
 char* get_app_log_directory(const char* log_root, const char* appid);
 
+char* get_container_log_directory(const char *log_root, const char* app_id,
+                                  const char *container_id);
 /**
  * Ensure that the given path and all of the parent directories are created
  * with the desired permissions.
@@ -273,7 +230,7 @@ int create_validate_dir(const char* npath, mode_t perm, const char* path,
 
 /** Check if a feature is enabled in the specified configuration. */
 int is_feature_enabled(const char* feature_key, int default_value,
-                              struct configuration *cfg);
+                              struct section *cfg);
 
 /** Check if tc (traffic control) support is enabled in configuration. */
 int is_tc_support_enabled();
@@ -305,7 +262,16 @@ int is_docker_support_enabled();
  */
 int run_docker(const char *command_file);
 
+/*
+ * Compile the regex_str and determine if the input string matches.
+ * Return 0 on match, 1 of non-match.
+ */
+int execute_regex_match(const char *regex_str, const char *input);
+
 /**
- * Sanitize docker commands. Returns NULL if there was any failure.
-*/
-char* sanitize_docker_command(const char *line);
+ * Validate the docker image name matches the expected input.
+ * Return 0 on success.
+ */
+int validate_docker_image_name(const char *image_name);
+
+struct configuration* get_cfg();

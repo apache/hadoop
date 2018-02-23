@@ -29,9 +29,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
 
-class CSQueueUtils {
+public class CSQueueUtils {
 
-  final static float EPSILON = 0.0001f;
+  public final static float EPSILON = 0.0001f;
   
   /*
    * Used only by tests
@@ -66,19 +66,9 @@ class CSQueueUtils {
   private static void capacitiesSanityCheck(String queueName,
       QueueCapacities queueCapacities) {
     for (String label : queueCapacities.getExistingNodeLabels()) {
-      float capacity = queueCapacities.getCapacity(label);
-      float maximumCapacity = queueCapacities.getMaximumCapacity(label);
-      if (capacity > maximumCapacity) {
-        throw new IllegalArgumentException("Illegal queue capacity setting, "
-            + "(capacity=" + capacity + ") > (maximum-capacity="
-            + maximumCapacity + "). When label=[" + label + "]");
-      }
-     
-      // Actually, this may not needed since we have verified capacity <=
-      // maximumCapacity. And the way we compute absolute capacity (abs(x) =
-      // cap(x) * cap(x.parent) * ...) is a monotone increasing function. But
-      // just keep it here to make sure our compute abs capacity method works
-      // correctly. 
+      // The only thing we should care about is absolute capacity <=
+      // absolute max capacity otherwise the absolute max capacity is
+      // no longer an absolute maximum.
       float absCapacity = queueCapacities.getAbsoluteCapacity(label);
       float absMaxCapacity = queueCapacities.getAbsoluteMaximumCapacity(label);
       if (absCapacity > absMaxCapacity) {
@@ -133,12 +123,12 @@ class CSQueueUtils {
 
     for (String label : configuredNodelabels) {
       if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
-        queueCapacities.setCapacity(CommonNodeLabelsManager.NO_LABEL,
+        queueCapacities.setCapacity(label,
             csConf.getNonLabeledQueueCapacity(queuePath) / 100);
-        queueCapacities.setMaximumCapacity(CommonNodeLabelsManager.NO_LABEL,
+        queueCapacities.setMaximumCapacity(label,
             csConf.getNonLabeledQueueMaximumCapacity(queuePath) / 100);
         queueCapacities.setMaxAMResourcePercentage(
-            CommonNodeLabelsManager.NO_LABEL,
+            label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
       } else {
         queueCapacities.setCapacity(label,
@@ -150,7 +140,7 @@ class CSQueueUtils {
       }
     }
   }
-  
+
   // Set absolute capacities for {capacity, maximum-capacity}
   private static void updateAbsoluteCapacitiesByNodeLabels(
       QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
@@ -193,11 +183,31 @@ class CSQueueUtils {
 
     if (Resources.greaterThan(rc, totalPartitionResource,
         totalPartitionResource, Resources.none())) {
-      // queueGuaranteed = totalPartitionedResource *
-      // absolute_capacity(partition)
-      Resource queueGuranteedResource =
-          Resources.multiply(totalPartitionResource,
-              queueCapacities.getAbsoluteCapacity(nodePartition));
+
+      Resource queueGuranteedResource = childQueue
+          .getEffectiveCapacity(nodePartition);
+
+      //TODO : Modify below code to support Absolute Resource configurations
+      // (YARN-5881) for AutoCreatedLeafQueue
+      if (Float.compare(queueCapacities.getAbsoluteCapacity
+              (nodePartition), 0f) == 0
+          && childQueue instanceof AutoCreatedLeafQueue) {
+
+        //If absolute capacity is 0 for a leaf queue (could be a managed leaf
+        // queue, then use the leaf queue's template capacity to compute
+        // guaranteed resource for used capacity)
+
+        // queueGuaranteed = totalPartitionedResource *
+        // absolute_capacity(partition)
+        ManagedParentQueue parentQueue = (ManagedParentQueue)
+            childQueue.getParent();
+        QueueCapacities leafQueueTemplateCapacities = parentQueue
+            .getLeafQueueTemplate()
+            .getQueueCapacities();
+        queueGuranteedResource = Resources.multiply(totalPartitionResource,
+            leafQueueTemplateCapacities.getAbsoluteCapacity
+                (nodePartition));
+      }
 
       // make queueGuranteed >= minimum_allocation to avoid divided by 0.
       queueGuranteedResource =
@@ -248,9 +258,7 @@ class CSQueueUtils {
     for (String partition : nodeLabels) {
       // Calculate guaranteed resource for a label in a queue by below logic.
       // (total label resource) * (absolute capacity of label in that queue)
-      Resource queueGuranteedResource = Resources.multiply(nlm
-          .getResourceByLabel(partition, cluster), queue.getQueueCapacities()
-          .getAbsoluteCapacity(partition));
+      Resource queueGuranteedResource = queue.getEffectiveCapacity(partition);
 
       // Available resource in queue for a specific label will be calculated as
       // {(guaranteed resource for a label in a queue) -
@@ -271,10 +279,12 @@ class CSQueueUtils {
    * <p>
    * Update Queue Statistics:
    * </p>
-   *  
-   * <li>used-capacity/absolute-used-capacity by partition</li> 
-   * <li>non-partitioned max-avail-resource to queue</li>
-   * 
+   *
+   * <ul>
+   *   <li>used-capacity/absolute-used-capacity by partition</li>
+   *   <li>non-partitioned max-avail-resource to queue</li>
+   * </ul>
+   *
    * <p>
    * When nodePartition is null, all partition of
    * used-capacity/absolute-used-capacity will be updated.
@@ -289,8 +299,7 @@ class CSQueueUtils {
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
 
     if (nodePartition == null) {
-      for (String partition : Sets.union(
-          queueCapacities.getNodePartitionsSet(),
+      for (String partition : Sets.union(queueCapacities.getNodePartitionsSet(),
           queueResourceUsage.getNodePartitionsSet())) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
             partition, childQueue);

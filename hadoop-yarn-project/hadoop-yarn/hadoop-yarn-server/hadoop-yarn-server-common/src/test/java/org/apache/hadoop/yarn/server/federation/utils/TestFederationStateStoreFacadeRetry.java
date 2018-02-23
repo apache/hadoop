@@ -28,7 +28,10 @@ import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateS
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
 
 /**
  * Test class to validate FederationStateStoreFacade retry policy.
@@ -38,14 +41,18 @@ public class TestFederationStateStoreFacadeRetry {
   private int maxRetries = 4;
   private Configuration conf;
 
+  @Before
+  public void setup() {
+    conf = new Configuration();
+    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
+  }
+
   /*
    * Test to validate that FederationStateStoreRetriableException is a retriable
    * exception.
    */
   @Test
   public void testFacadeRetriableException() throws Exception {
-    conf = new Configuration();
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy.shouldRetry(
         new FederationStateStoreRetriableException(""), 0, 0, false);
@@ -64,9 +71,6 @@ public class TestFederationStateStoreFacadeRetry {
    */
   @Test
   public void testFacadeYarnException() throws Exception {
-
-    conf = new Configuration();
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy.shouldRetry(new YarnException(), 0, 0, false);
     Assert.assertEquals(RetryAction.FAIL.action, action.action);
@@ -78,8 +82,6 @@ public class TestFederationStateStoreFacadeRetry {
    */
   @Test
   public void testFacadeStateStoreException() throws Exception {
-    conf = new Configuration();
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy
         .shouldRetry(new FederationStateStoreException("Error"), 0, 0, false);
@@ -92,8 +94,6 @@ public class TestFederationStateStoreFacadeRetry {
    */
   @Test
   public void testFacadeInvalidInputException() throws Exception {
-    conf = new Configuration();
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action = policy.shouldRetry(
         new FederationStateStoreInvalidInputException(""), 0, 0, false);
@@ -105,8 +105,6 @@ public class TestFederationStateStoreFacadeRetry {
    */
   @Test
   public void testFacadeCacheRetriableException() throws Exception {
-    conf = new Configuration();
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, maxRetries);
     RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
     RetryAction action =
         policy.shouldRetry(new CacheLoaderException(""), 0, 0, false);
@@ -117,6 +115,26 @@ public class TestFederationStateStoreFacadeRetry {
     // After maxRetries we stop to retry
     action =
         policy.shouldRetry(new CacheLoaderException(""), maxRetries, 0, false);
+    Assert.assertEquals(RetryAction.FAIL.action, action.action);
+  }
+
+  /*
+   * Test to validate that PoolInitializationException is a retriable exception.
+   */
+  @Test
+  public void testFacadePoolInitRetriableException() throws Exception {
+    // PoolInitializationException is a retriable exception
+    RetryPolicy policy = FederationStateStoreFacade.createRetryPolicy(conf);
+    RetryAction action = policy.shouldRetry(
+        new PoolInitializationException(new YarnException()), 0, 0, false);
+    // We compare only the action, delay and the reason are random value
+    // during this test
+    Assert.assertEquals(RetryAction.RETRY.action, action.action);
+
+    // After maxRetries we stop to retry
+    action =
+        policy.shouldRetry(new PoolInitializationException(new YarnException()),
+            maxRetries, 0, false);
     Assert.assertEquals(RetryAction.FAIL.action, action.action);
   }
 }

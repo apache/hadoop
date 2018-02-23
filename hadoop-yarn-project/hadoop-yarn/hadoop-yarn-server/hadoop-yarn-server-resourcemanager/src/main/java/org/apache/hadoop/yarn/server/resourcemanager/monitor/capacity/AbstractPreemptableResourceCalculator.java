@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.Resources;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.PriorityQueue;
+
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
@@ -123,11 +126,18 @@ public class AbstractPreemptableResourceCalculator {
       TempQueuePerPartition q = i.next();
       Resource used = q.getUsed();
 
+      Resource initIdealAssigned;
       if (Resources.greaterThan(rc, totGuarant, used, q.getGuaranteed())) {
-        q.idealAssigned = Resources.add(q.getGuaranteed(), q.untouchableExtra);
+        initIdealAssigned =
+            Resources.add(q.getGuaranteed(), q.untouchableExtra);
       } else {
-        q.idealAssigned = Resources.clone(used);
+        initIdealAssigned = Resources.clone(used);
       }
+
+      // perform initial assignment
+      initIdealAssignment(totGuarant, q, initIdealAssigned);
+
+
       Resources.subtractFrom(unassigned, q.idealAssigned);
       // If idealAssigned < (allocated + used + pending), q needs more
       // resources, so
@@ -185,6 +195,21 @@ public class AbstractPreemptableResourceCalculator {
     }
   }
 
+
+  /**
+   * This method is visible to allow sub-classes to override the initialization
+   * behavior.
+   *
+   * @param totGuarant total resources (useful for {@code ResourceCalculator}
+   *          operations)
+   * @param q the {@code TempQueuePerPartition} being initialized
+   * @param initIdealAssigned the proposed initialization value.
+   */
+  protected void initIdealAssignment(Resource totGuarant,
+      TempQueuePerPartition q, Resource initIdealAssigned) {
+    q.idealAssigned = initIdealAssigned;
+  }
+
   /**
    * Computes a normalizedGuaranteed capacity based on active queues.
    *
@@ -198,18 +223,33 @@ public class AbstractPreemptableResourceCalculator {
   private void resetCapacity(Resource clusterResource,
       Collection<TempQueuePerPartition> queues, boolean ignoreGuar) {
     Resource activeCap = Resource.newInstance(0, 0);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
 
     if (ignoreGuar) {
       for (TempQueuePerPartition q : queues) {
-        q.normalizedGuarantee = 1.0f / queues.size();
+        for (int i = 0; i < maxLength; i++) {
+          q.normalizedGuarantee[i] = 1.0f / queues.size();
+        }
       }
     } else {
       for (TempQueuePerPartition q : queues) {
         Resources.addTo(activeCap, q.getGuaranteed());
       }
       for (TempQueuePerPartition q : queues) {
-        q.normalizedGuarantee = Resources.divide(rc, clusterResource,
-            q.getGuaranteed(), activeCap);
+        for (int i = 0; i < maxLength; i++) {
+          ResourceInformation nResourceInformation = q.getGuaranteed()
+              .getResourceInformation(i);
+          ResourceInformation dResourceInformation = activeCap
+              .getResourceInformation(i);
+
+          long nValue = nResourceInformation.getValue();
+          long dValue = UnitsConversionUtil.convert(
+              dResourceInformation.getUnits(), nResourceInformation.getUnits(),
+              dResourceInformation.getValue());
+          if (dValue != 0) {
+            q.normalizedGuarantee[i] = (float) nValue / dValue;
+          }
+        }
       }
     }
   }

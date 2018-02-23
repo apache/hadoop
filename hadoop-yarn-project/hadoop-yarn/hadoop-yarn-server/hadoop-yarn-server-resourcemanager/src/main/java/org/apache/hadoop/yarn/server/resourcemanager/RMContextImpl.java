@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeL
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
@@ -44,6 +49,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.QueueLimitCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -52,9 +59,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 /**
  * RMContextImpl class holds two services context.
@@ -70,6 +79,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RMContextImpl implements RMContext {
 
+  private static final Log LOG = LogFactory.getLog(RMContextImpl.class);
+  private static final String UNAVAILABLE = "N/A";
   /**
    * RM service contexts which runs through out RM life span. These are created
    * once during start of RM.
@@ -81,6 +92,10 @@ public class RMContextImpl implements RMContext {
    * ACTIVE->STANDBY.
    */
   private RMActiveServiceContext activeServiceContext;
+
+  private ResourceProfilesManager resourceProfilesManager;
+
+  private String proxyHostAndPort = null;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -115,7 +130,7 @@ public class RMContextImpl implements RMContext {
     ConfigurationProvider provider = new LocalConfigurationProvider();
     setConfigurationProvider(provider);
   }
-  
+
   @VisibleForTesting
   // helper constructor for tests
   public RMContextImpl(Dispatcher rmDispatcher,
@@ -491,6 +506,29 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public AllocationTagsManager getAllocationTagsManager() {
+    return activeServiceContext.getAllocationTagsManager();
+  }
+
+  @Override
+  public void setAllocationTagsManager(
+      AllocationTagsManager allocationTagsManager) {
+    activeServiceContext.setAllocationTagsManager(allocationTagsManager);
+  }
+
+  @Override
+  public PlacementConstraintManager getPlacementConstraintManager() {
+    return activeServiceContext.getPlacementConstraintManager();
+  }
+
+  @Override
+  public void setPlacementConstraintManager(
+      PlacementConstraintManager placementConstraintManager) {
+    activeServiceContext
+        .setPlacementConstraintManager(placementConstraintManager);
+  }
+
+  @Override
   public RMDelegatedNodeLabelsUpdater getRMDelegatedNodeLabelsUpdater() {
     return activeServiceContext.getRMDelegatedNodeLabelsUpdater();
   }
@@ -524,7 +562,7 @@ public class RMContextImpl implements RMContext {
   public PlacementManager getQueuePlacementManager() {
     return this.activeServiceContext.getQueuePlacementManager();
   }
-  
+
   @Override
   public void setQueuePlacementManager(PlacementManager placementMgr) {
     this.activeServiceContext.setQueuePlacementManager(placementMgr);
@@ -551,5 +589,37 @@ public class RMContextImpl implements RMContext {
     return this.activeServiceContext.getRMAppLifetimeMonitor();
   }
 
+  @Override
+  public ResourceProfilesManager getResourceProfilesManager() {
+    return this.resourceProfilesManager;
+  }
+
+  String getProxyHostAndPort(Configuration conf) {
+    if (proxyHostAndPort == null) {
+      proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
+    }
+    return proxyHostAndPort;
+  }
+
+  @Override
+  public String getAppProxyUrl(Configuration conf, ApplicationId applicationId)
+  {
+    try {
+      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme,
+          getProxyHostAndPort(conf));
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, applicationId);
+      return result.toASCIIString();
+    } catch(URISyntaxException e) {
+      LOG.warn("Could not generate default proxy tracking URL for " +
+          applicationId);
+      return UNAVAILABLE;
+    }
+  }
+
+  @Override
+  public void setResourceProfilesManager(ResourceProfilesManager mgr) {
+    this.resourceProfilesManager = mgr;
+  }
   // Note: Read java doc before adding any services over here.
 }

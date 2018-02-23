@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop"  3.0.0-alpha4 Release Notes
+# Apache Hadoop  3.0.0-alpha4 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
@@ -247,7 +247,7 @@ See also HADOOP-14238 as related problem.
 
 * [HADOOP-14038](https://issues.apache.org/jira/browse/HADOOP-14038) | *Minor* | **Rename ADLS credential properties**
 
-<!-- markdown --> 
+<!-- markdown -->
 
 * Properties {{dfs.adls.*}} are renamed {{fs.adl.*}}
 * Property {{adl.dfs.enable.client.latency.tracker}} is renamed {{adl.enable.client.latency.tracker}}
@@ -458,7 +458,7 @@ If -p option of distcp command is unspecified, block size is preserved.
 
 * [HADOOP-14502](https://issues.apache.org/jira/browse/HADOOP-14502) | *Minor* | **Confusion/name conflict between NameNodeActivity#BlockReportNumOps and RpcDetailedActivity#BlockReportNumOps**
 
-**WARNING: No release note provided for this change.**
+Remove the BlockReport(NumOps,AvgTime) metrics emitted under the NameNodeActivity context in favor of StorageBlockReport(NumOps,AvgTime) which more accurately represent the metric. Same for the corresponding quantile metrics.
 
 
 ---
@@ -466,6 +466,15 @@ If -p option of distcp command is unspecified, block size is preserved.
 * [HDFS-11067](https://issues.apache.org/jira/browse/HDFS-11067) | *Major* | **DFS#listStatusIterator(..) should throw FileNotFoundException if the directory deleted before fetching next batch of entries**
 
 DistributedFileSystem#listStatusIterator(..) throws FileNotFoundException if directory got deleted during iterating over large list beyond ls limit.
+
+
+---
+
+* [YARN-6127](https://issues.apache.org/jira/browse/YARN-6127) | *Major* | **Add support for work preserving NM restart when AMRMProxy is enabled**
+
+This breaks rolling upgrades because it changes the major version of the NM state store schema. Therefore when a new NM comes up on an old state store it crashes.
+
+The state store versions for this change have been updated in YARN-6798.
 
 
 ---
@@ -489,4 +498,9 @@ The WASB FileSystem now uses version 5.3.0 of the Azure Storage SDK.
 Fix to wasb:// (Azure) file system that allows the concurrent I/O feature to be used with the secure mode feature.
 
 
+---
+
+* [YARN-6959](https://issues.apache.org/jira/browse/YARN-6959) | *Major* | **RM may allocate wrong AM Container for new attempt**
+
+ResourceManager will now record ResourceRequests from different attempts into different objects.
 

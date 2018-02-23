@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -56,13 +57,15 @@ public class HHXORErasureEncodingStep extends HHErasureCodingStep {
   }
 
   @Override
-  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks) {
+  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks)
+      throws IOException {
     ByteBuffer[] inputBuffers = ECChunk.toBuffers(inputChunks);
     ByteBuffer[] outputBuffers = ECChunk.toBuffers(outputChunks);
     performCoding(inputBuffers, outputBuffers);
   }
 
-  private void performCoding(ByteBuffer[] inputs, ByteBuffer[] outputs) {
+  private void performCoding(ByteBuffer[] inputs, ByteBuffer[] outputs)
+      throws IOException {
     final int numDataUnits = this.rsRawEncoder.getNumDataUnits();
     final int numParityUnits = this.rsRawEncoder.getNumParityUnits();
     final int subSPacketSize = getSubPacketSize();
@@ -95,7 +98,8 @@ public class HHXORErasureEncodingStep extends HHErasureCodingStep {
     doEncode(hhInputs, hhOutputs);
   }
 
-  private void doEncode(ByteBuffer[][] inputs, ByteBuffer[][] outputs) {
+  private void doEncode(ByteBuffer[][] inputs, ByteBuffer[][] outputs)
+      throws IOException {
     final int numParityUnits = this.rsRawEncoder.getNumParityUnits();
 
     // calc piggyBacks using first sub-packet

@@ -180,7 +180,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       new DecompressorStream(in, decompressor,
                              conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
                                  IO_FILE_BUFFER_SIZE_DEFAULT)) :
-      new BZip2CompressionInputStream(in);
+      new BZip2CompressionInputStream(
+              in, 0L, Long.MAX_VALUE, READ_MODE.BYBLOCK);
   }
 
   /**
@@ -204,43 +205,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
           Seekable.class.getName());
     }
 
-    //find the position of first BZip2 start up marker
-    ((Seekable)seekableIn).seek(0);
-
-    // BZip2 start of block markers are of 6 bytes.  But the very first block
-    // also has "BZh9", making it 10 bytes.  This is the common case.  But at
-    // time stream might start without a leading BZ.
-    final long FIRST_BZIP2_BLOCK_MARKER_POSITION =
-      CBZip2InputStream.numberOfBytesTillNextMarker(seekableIn);
-    long adjStart = 0L;
-    if (start != 0) {
-      // Other than the first of file, the marker size is 6 bytes.
-      adjStart = Math.max(0L, start - (FIRST_BZIP2_BLOCK_MARKER_POSITION
-          - (HEADER_LEN + SUB_HEADER_LEN)));
-    }
-
-    ((Seekable)seekableIn).seek(adjStart);
-    SplitCompressionInputStream in =
-      new BZip2CompressionInputStream(seekableIn, adjStart, end, readMode);
-
-
-    // The following if clause handles the following case:
-    // Assume the following scenario in BZip2 compressed stream where
-    // . represent compressed data.
-    // .....[48 bit Block].....[48 bit   Block].....[48 bit Block]...
-    // ........................[47 bits][1 bit].....[48 bit Block]...
-    // ................................^[Assume a Byte alignment here]
-    // ........................................^^[current position of stream]
-    // .....................^^[We go back 10 Bytes in stream and find a Block marker]
-    // ........................................^^[We align at wrong position!]
-    // ...........................................................^^[While this pos is correct]
-
-    if (in.getPos() < start) {
-      ((Seekable)seekableIn).seek(start);
-      in = new BZip2CompressionInputStream(seekableIn, start, end, readMode);
-    }
-
-    return in;
+    ((Seekable)seekableIn).seek(start);
+    return new BZip2CompressionInputStream(seekableIn, start, end, readMode);
   }
 
   /**
@@ -397,9 +363,29 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       bufferedIn = new BufferedInputStream(super.in);
       this.startingPos = super.getPos();
       this.readMode = readMode;
+      long numSkipped = 0;
       if (this.startingPos == 0) {
         // We only strip header if it is start of file
         bufferedIn = readStreamHeader();
+      } else if (this.readMode == READ_MODE.BYBLOCK  &&
+          this.startingPos <= HEADER_LEN + SUB_HEADER_LEN) {
+        // When we're in BYBLOCK mode and the start position is >=0
+        // and < HEADER_LEN + SUB_HEADER_LEN, we should skip to after
+        // start of the first bz2 block to avoid duplicated records
+        numSkipped = HEADER_LEN + SUB_HEADER_LEN + 1 - this.startingPos;
+        long skipBytes = numSkipped;
+        while (skipBytes > 0) {
+          long s = bufferedIn.skip(skipBytes);
+          if (s > 0) {
+            skipBytes -= s;
+          } else {
+            if (bufferedIn.read() == -1) {
+              break; // end of the split
+            } else {
+              skipBytes--;
+            }
+          }
+        }
       }
       input = new CBZip2InputStream(bufferedIn, readMode);
       if (this.isHeaderStripped) {
@@ -410,7 +396,15 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         input.updateReportedByteCount(SUB_HEADER_LEN);
       }
 
-      this.updatePos(false);
+      if (numSkipped > 0) {
+        input.updateReportedByteCount((int) numSkipped);
+      }
+
+      // To avoid dropped records, not advertising a new byte position
+      // when we are in BYBLOCK mode and the start position is 0
+      if (!(this.readMode == READ_MODE.BYBLOCK && this.startingPos == 0)) {
+        this.updatePos(false);
+      }
     }
 
     private BufferedInputStream readStreamHeader() throws IOException {

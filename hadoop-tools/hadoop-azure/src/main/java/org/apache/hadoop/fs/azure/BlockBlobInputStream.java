@@ -43,11 +43,16 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
   private InputStream blobInputStream = null;
   private int minimumReadSizeInBytes = 0;
   private long streamPositionAfterLastRead = -1;
+  // position of next network read within stream
   private long streamPosition = 0;
+  // length of stream
   private long streamLength = 0;
   private boolean closed = false;
+  // internal buffer, re-used for performance optimization
   private byte[] streamBuffer;
+  // zero-based offset within streamBuffer of current read position
   private int streamBufferPosition;
+  // length of data written to streamBuffer, streamBuffer may be larger
   private int streamBufferLength;
 
   /**
@@ -82,6 +87,16 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
   }
 
   /**
+   * Reset the internal stream buffer but do not release the memory.
+   * The buffer can be reused to avoid frequent memory allocations of
+   * a large buffer.
+   */
+  private void resetStreamBuffer() {
+    streamBufferPosition = 0;
+    streamBufferLength = 0;
+  }
+
+  /**
    * Gets the read position of the stream.
    * @return the zero-based byte offset of the read position.
    * @throws IOException IO failure
@@ -89,7 +104,9 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
   @Override
   public synchronized long getPos() throws IOException {
     checkState();
-    return streamPosition;
+    return (streamBuffer != null)
+        ? streamPosition - streamBufferLength + streamBufferPosition
+        : streamPosition;
   }
 
   /**
@@ -107,21 +124,39 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
       throw new EOFException(
           FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
     }
-    if (pos == getPos()) {
+
+    // calculate offset between the target and current position in the stream
+    long offset = pos - getPos();
+
+    if (offset == 0) {
       // no=op, no state change
       return;
     }
 
-    if (streamBuffer != null) {
-      long offset = streamPosition - pos;
-      if (offset > 0 && offset < streamBufferLength) {
-        streamBufferPosition = streamBufferLength - (int) offset;
-      } else {
-        streamBufferPosition = streamBufferLength;
+    if (offset > 0) {
+      // forward seek, data can be skipped as an optimization
+      if (skip(offset) != offset) {
+        throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
       }
+      return;
     }
 
-    streamPosition = pos;
+    // reverse seek, offset is negative
+    if (streamBuffer != null) {
+      if (streamBufferPosition + offset >= 0) {
+        // target position is inside the stream buffer,
+        // only need to move backwards within the stream buffer
+        streamBufferPosition += offset;
+      } else {
+        // target position is outside the stream buffer,
+        // need to reset stream buffer and move position for next network read
+        resetStreamBuffer();
+        streamPosition = pos;
+      }
+    } else {
+      streamPosition = pos;
+    }
+
     // close BlobInputStream after seek is invoked because BlobInputStream
     // does not support seek
     closeBlobInputStream();
@@ -189,8 +224,7 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
         streamBuffer = new byte[(int) Math.min(minimumReadSizeInBytes,
             streamLength)];
       }
-      streamBufferPosition = 0;
-      streamBufferLength = 0;
+      resetStreamBuffer();
       outputStream = new MemoryOutputStream(streamBuffer, streamBufferPosition,
           streamBuffer.length);
       needToCopy = true;
@@ -295,27 +329,44 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
    * @param n the number of bytes to be skipped.
    * @return the actual number of bytes skipped.
    * @throws IOException IO failure
+   * @throws IndexOutOfBoundsException if n is negative or if the sum of n
+   * and the current value of getPos() is greater than the length of the stream.
    */
   @Override
   public synchronized long skip(long n) throws IOException {
     checkState();
 
     if (blobInputStream != null) {
-      return blobInputStream.skip(n);
-    } else {
-      if (n < 0 || streamPosition + n > streamLength) {
-        throw new IndexOutOfBoundsException("skip range");
-      }
-
-      if (streamBuffer != null) {
-        streamBufferPosition = (n < streamBufferLength - streamBufferPosition)
-            ? streamBufferPosition + (int) n
-            : streamBufferLength;
-      }
-
-      streamPosition += n;
-      return n;
+      // blobInput stream is open; delegate the work to it
+      long skipped = blobInputStream.skip(n);
+      // update position to the actual skip value
+      streamPosition += skipped;
+      return skipped;
     }
+
+    // no blob stream; implement the skip logic directly
+    if (n < 0 || n > streamLength - getPos()) {
+      throw new IndexOutOfBoundsException("skip range");
+    }
+
+    if (streamBuffer != null) {
+      // there's a buffer, so seek with it
+      if (n < streamBufferLength - streamBufferPosition) {
+        // new range is in the buffer, so just update the buffer position
+        // skip within the buffer.
+        streamBufferPosition += (int) n;
+      } else {
+        // skip is out of range, so move position to ne value and reset
+        // the buffer ready for the next read()
+        streamPosition = getPos() + n;
+        resetStreamBuffer();
+      }
+    } else {
+      // no stream buffer; increment the stream position ready for
+      // the next triggered connection & read
+      streamPosition += n;
+    }
+    return n;
   }
 
   /**

@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -63,16 +63,16 @@ public final class AMRMClientUtils {
   /**
    * Handle ApplicationNotRegistered exception and re-register.
    *
-   * @param attemptId app attemptId
+   * @param appId application Id
    * @param rmProxy RM proxy instance
    * @param registerRequest the AM re-register request
    * @throws YarnException if re-register fails
    */
   public static void handleNotRegisteredExceptionAndReRegister(
-      ApplicationAttemptId attemptId, ApplicationMasterProtocol rmProxy,
+      ApplicationId appId, ApplicationMasterProtocol rmProxy,
       RegisterApplicationMasterRequest registerRequest) throws YarnException {
     LOG.info("App attempt {} not registered, most likely due to RM failover. "
-        + " Trying to re-register.", attemptId);
+        + " Trying to re-register.", appId);
     try {
       rmProxy.registerApplicationMaster(registerRequest);
     } catch (Exception e) {
@@ -93,25 +93,24 @@ public final class AMRMClientUtils {
    * @param request allocate request
    * @param rmProxy RM proxy
    * @param registerRequest the register request for re-register
-   * @param attemptId application attempt id
+   * @param appId application id
    * @return allocate response
    * @throws YarnException if RM call fails
    * @throws IOException if RM call fails
    */
   public static AllocateResponse allocateWithReRegister(AllocateRequest request,
       ApplicationMasterProtocol rmProxy,
-      RegisterApplicationMasterRequest registerRequest,
-      ApplicationAttemptId attemptId) throws YarnException, IOException {
+      RegisterApplicationMasterRequest registerRequest, ApplicationId appId)
+      throws YarnException, IOException {
     try {
       return rmProxy.allocate(request);
     } catch (ApplicationMasterNotRegisteredException e) {
-      handleNotRegisteredExceptionAndReRegister(attemptId, rmProxy,
+      handleNotRegisteredExceptionAndReRegister(appId, rmProxy,
           registerRequest);
       // reset responseId after re-register
       request.setResponseId(0);
       // retry allocate
-      return allocateWithReRegister(request, rmProxy, registerRequest,
-          attemptId);
+      return allocateWithReRegister(request, rmProxy, registerRequest, appId);
     }
   }
 
@@ -123,23 +122,22 @@ public final class AMRMClientUtils {
    * @param request finishApplicationMaster request
    * @param rmProxy RM proxy
    * @param registerRequest the register request for re-register
-   * @param attemptId application attempt id
+   * @param appId application id
    * @return finishApplicationMaster response
    * @throws YarnException if RM call fails
    * @throws IOException if RM call fails
    */
   public static FinishApplicationMasterResponse finishAMWithReRegister(
       FinishApplicationMasterRequest request, ApplicationMasterProtocol rmProxy,
-      RegisterApplicationMasterRequest registerRequest,
-      ApplicationAttemptId attemptId) throws YarnException, IOException {
+      RegisterApplicationMasterRequest registerRequest, ApplicationId appId)
+      throws YarnException, IOException {
     try {
       return rmProxy.finishApplicationMaster(request);
     } catch (ApplicationMasterNotRegisteredException ex) {
-      handleNotRegisteredExceptionAndReRegister(attemptId, rmProxy,
+      handleNotRegisteredExceptionAndReRegister(appId, rmProxy,
           registerRequest);
       // retry finishAM after re-register
-      return finishAMWithReRegister(request, rmProxy, registerRequest,
-          attemptId);
+      return finishAMWithReRegister(request, rmProxy, registerRequest, appId);
     }
   }
 
@@ -165,8 +163,12 @@ public final class AMRMClientUtils {
       LOG.info("Creating RMProxy to RM {} for protocol {} for user {}",
           rmClusterId, protocol.getSimpleName(), user);
       if (token != null) {
-        token.setService(ClientRMProxy.getAMRMTokenService(configuration));
+        // preserve the token service sent by the RM when adding the token
+        // to ensure we replace the previous token setup by the RM.
+        // Afterwards we can update the service address for the RPC layer.
+        // Same as YarnServerSecurityUtils.updateAMRMToken()
         user.addToken(token);
+        token.setService(ClientRMProxy.getAMRMTokenService(configuration));
         setAuthModeInConf(configuration);
       }
       final T proxyConnection = user.doAs(new PrivilegedExceptionAction<T>() {

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.fs;
 
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.BiFunction;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -325,4 +329,179 @@ public final class Options {
       return processChecksumOpt(defaultOpt, userOpt, -1);
     }
   }
+
+  /**
+   * Options for creating {@link PathHandle} references.
+   */
+  public static class HandleOpt {
+    protected HandleOpt() {
+    }
+
+    /**
+     * Utility function for mapping {@link FileSystem#getPathHandle} to a
+     * fixed set of handle options.
+     * @param fs Target filesystem
+     * @param opt Options to bind in partially evaluated function
+     * @return Function reference with options fixed
+     */
+    public static Function<FileStatus, PathHandle> resolve(
+        FileSystem fs, HandleOpt... opt) {
+      return resolve(fs::getPathHandle, opt);
+    }
+
+    /**
+     * Utility function for partial evaluation of {@link FileStatus}
+     * instances to a fixed set of handle options.
+     * @param fsr Function reference
+     * @param opt Options to associate with {@link FileStatus} instances to
+     *            produce {@link PathHandle} instances.
+     * @return Function reference with options fixed
+     */
+    public static Function<FileStatus, PathHandle> resolve(
+        BiFunction<FileStatus, HandleOpt[], PathHandle> fsr,
+        HandleOpt... opt) {
+      return (stat) -> fsr.apply(stat, opt);
+    }
+
+    /**
+     * Handle is valid iff the referent is neither moved nor changed.
+     * Equivalent to changed(false), moved(false).
+     * @return Options requiring that the content and location of the entity
+     * be unchanged between calls.
+     */
+    public static HandleOpt[] exact() {
+      return new HandleOpt[] {changed(false), moved(false) };
+    }
+
+    /**
+     * Handle is valid iff the content of the referent is the same.
+     * Equivalent to changed(false), moved(true).
+     * @return Options requiring that the content of the entity is unchanged,
+     * but it may be at a different location.
+     */
+    public static HandleOpt[] content() {
+      return new HandleOpt[] {changed(false), moved(true)  };
+    }
+
+    /**
+     * Handle is valid iff the referent is unmoved in the namespace.
+     * Equivalent to changed(true), moved(false).
+     * @return Options requiring that the referent exist in the same location,
+     * but its content may have changed.
+     */
+    public static HandleOpt[] path() {
+      return new HandleOpt[] {changed(true),  moved(false) };
+    }
+
+    /**
+     * Handle is valid iff the referent exists in the namespace.
+     * Equivalent to changed(true), moved(true).
+     * @return Options requiring that the implementation resolve a reference
+     * to this entity regardless of changes to content or location.
+     */
+    public static HandleOpt[] reference() {
+      return new HandleOpt[] {changed(true),  moved(true)  };
+    }
+
+    /**
+     * @param allow If true, resolve references to this entity even if it has
+     *             been modified.
+     * @return Handle option encoding parameter.
+     */
+    public static Data changed(boolean allow) {
+      return new Data(allow);
+    }
+
+    /**
+     * @param allow If true, resolve references to this entity anywhere in
+     *              the namespace.
+     * @return Handle option encoding parameter.
+     */
+    public static Location moved(boolean allow) {
+      return new Location(allow);
+    }
+
+    /**
+     * Utility method to extract a HandleOpt from the set provided.
+     * @param c Target class
+     * @param opt List of options
+     * @param <T> Type constraint for exact match
+     * @throws IllegalArgumentException If more than one matching type is found.
+     * @return An option assignable from the specified type or null if either
+     * opt is null or a suitable match is not found.
+     */
+    public static <T extends HandleOpt> Optional<T> getOpt(
+        Class<T> c, HandleOpt... opt) {
+      if (null == opt) {
+        return Optional.empty();
+      }
+      T ret = null;
+      for (HandleOpt o : opt) {
+        if (c.isAssignableFrom(o.getClass())) {
+          if (ret != null) {
+            throw new IllegalArgumentException("Duplicate option "
+                + c.getSimpleName());
+          }
+
+          @SuppressWarnings("unchecked")
+          T tmp = (T) o;
+          ret = tmp;
+        }
+      }
+      return Optional.ofNullable(ret);
+    }
+
+    /**
+     * Option storing standard constraints on data.
+     */
+    public static class Data extends HandleOpt {
+      private final boolean allowChanged;
+      Data(boolean allowChanged) {
+        this.allowChanged = allowChanged;
+      }
+
+      /**
+       * Tracks whether any changes to file content are permitted.
+       * @return True if content changes are allowed, false otherwise.
+       */
+      public boolean allowChange() {
+        return allowChanged;
+      }
+      @Override
+      public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("data(allowChange=")
+          .append(allowChanged).append(")");
+        return sb.toString();
+      }
+    }
+
+    /**
+     * Option storing standard constraints on location.
+     */
+    public static class Location extends HandleOpt {
+      private final boolean allowChanged;
+      Location(boolean allowChanged) {
+        this.allowChanged = allowChanged;
+      }
+
+      /**
+       * Tracks whether any changes to file location are permitted.
+       * @return True if relocation in the namespace is allowed, false
+       * otherwise.
+       */
+      public boolean allowChange() {
+        return allowChanged;
+      }
+      @Override
+      public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("loc(allowChange=")
+            .append(allowChanged).append(")");
+        return sb.toString();
+      }
+    }
+
+  }
+
 }

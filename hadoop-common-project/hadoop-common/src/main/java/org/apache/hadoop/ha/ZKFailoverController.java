@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -184,40 +183,45 @@ public abstract class ZKFailoverController {
         }
       });
     } catch (RuntimeException rte) {
-      LOG.error("The failover controller encounters runtime error: " + rte);
       throw (Exception)rte.getCause();
     }
   }
   
 
   private int doRun(String[] args)
-      throws HadoopIllegalArgumentException, IOException, InterruptedException {
+      throws Exception {
     try {
       initZK();
     } catch (KeeperException ke) {
       LOG.error("Unable to start failover controller. Unable to connect "
           + "to ZooKeeper quorum at " + zkQuorum + ". Please check the "
           + "configured value for " + ZK_QUORUM_KEY + " and ensure that "
-          + "ZooKeeper is running.");
+          + "ZooKeeper is running.", ke);
       return ERR_CODE_NO_ZK;
     }
-    if (args.length > 0) {
-      if ("-formatZK".equals(args[0])) {
-        boolean force = false;
-        boolean interactive = true;
-        for (int i = 1; i < args.length; i++) {
-          if ("-force".equals(args[i])) {
-            force = true;
-          } else if ("-nonInteractive".equals(args[i])) {
-            interactive = false;
-          } else {
-            badArg(args[i]);
+    try {
+      if (args.length > 0) {
+        if ("-formatZK".equals(args[0])) {
+          boolean force = false;
+          boolean interactive = true;
+          for (int i = 1; i < args.length; i++) {
+            if ("-force".equals(args[i])) {
+              force = true;
+            } else if ("-nonInteractive".equals(args[i])) {
+              interactive = false;
+            } else {
+              badArg(args[i]);
+            }
           }
+          return formatZK(force, interactive);
         }
-        return formatZK(force, interactive);
-      } else {
-        badArg(args[0]);
+        else {
+          badArg(args[0]);
+        }
       }
+    } catch (Exception e){
+      LOG.error("The failover controller encounters runtime error", e);
+      throw e;
     }
 
     if (!elector.parentZNodeExists()) {
@@ -236,11 +240,14 @@ public abstract class ZKFailoverController {
       return ERR_CODE_NO_FENCER;
     }
 
-    initRPC();
-    initHM();
-    startRPC();
     try {
+      initRPC();
+      initHM();
+      startRPC();
       mainLoop();
+    } catch (Exception e) {
+      LOG.error("The failover controller encounters runtime error: ", e);
+      throw e;
     } finally {
       rpcServer.stopAndJoin();
       
@@ -333,14 +340,7 @@ public abstract class ZKFailoverController {
     }
     
     // Parse authentication from configuration.
-    String zkAuthConf = conf.get(ZK_AUTH_KEY);
-    zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
-    List<ZKAuthInfo> zkAuths;
-    if (zkAuthConf != null) {
-      zkAuths = ZKUtil.parseAuth(zkAuthConf);
-    } else {
-      zkAuths = Collections.emptyList();
-    }
+    List<ZKAuthInfo> zkAuths = SecurityUtil.getZKAuthInfos(conf, ZK_AUTH_KEY);
 
     // Sanity check configuration.
     Preconditions.checkArgument(zkQuorum != null,

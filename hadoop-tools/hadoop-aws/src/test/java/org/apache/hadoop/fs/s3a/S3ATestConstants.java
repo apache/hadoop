@@ -135,6 +135,18 @@ public interface S3ATestConstants {
   String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
 
   /**
+   * Various S3Guard tests.
+   */
+  String TEST_S3GUARD_PREFIX = "fs.s3a.s3guard.test";
+  String TEST_S3GUARD_ENABLED = TEST_S3GUARD_PREFIX + ".enabled";
+  String TEST_S3GUARD_AUTHORITATIVE = TEST_S3GUARD_PREFIX + ".authoritative";
+  String TEST_S3GUARD_IMPLEMENTATION = TEST_S3GUARD_PREFIX + ".implementation";
+  String TEST_S3GUARD_IMPLEMENTATION_LOCAL = "local";
+  String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
+  String TEST_S3GUARD_IMPLEMENTATION_DYNAMODBLOCAL = "dynamodblocal";
+  String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
+
+  /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
   int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
@@ -151,4 +163,10 @@ public interface S3ATestConstants {
    */
   String CONFIGURATION_TEST_ENDPOINT =
       "test.fs.s3a.endpoint";
+
+  /**
+   * Property to set to disable caching.
+   */
+  String FS_S3A_IMPL_DISABLE_CACHE
+      = "fs.s3a.impl.disable.cache";
 }

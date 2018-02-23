@@ -19,6 +19,8 @@
       <Class name="org.apache.hadoop.hdfs.DFSPacket"/>
       <Class name="org.apache.hadoop.hdfs.protocol.LocatedStripedBlock"/>
       <Class name="org.apache.hadoop.hdfs.util.StripedBlockUtil$ChunkByteArray"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing$DiffReportListingEntry"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing"/>
     </Or>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
   </Match>
@@ -60,4 +62,34 @@
     <Field name="cachingStrategy" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+
+  <!-- BlockLocations are user-facing, but LocatedBlocks are not. -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
+    <Field name="hdfsloc" />
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
+  </Match>
+
+  <!-- Hdfs*FileStatus are internal types. This "internal" state is not sensitive. -->
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocol.HdfsNamedFileStatus" />
+    <Method name="getLocalNameInBytes" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocol.HdfsNamedFileStatus" />
+    <Method name="getSymlinkInBytes" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
+    <Method name="getLocalNameInBytes" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
+    <Method name="getSymlinkInBytes" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+
 </FindBugsFilter>

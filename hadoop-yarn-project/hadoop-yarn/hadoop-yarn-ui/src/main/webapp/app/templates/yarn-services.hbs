@@ -17,69 +17,11 @@
 --}}
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
-
-
-<div class="col-md-12 container-fluid">
-  <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Services
-        </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-            <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-services' tagName="li"}}
-                {{#link-to 'yarn-services'}}Long Running Services{{/link-to}}
-              {{/link-to}}
-            </ul>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-10 container-fluid">
-      <div class="row">
-        <div class="col-lg-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Finished Services
-            </div>
-            <div class="container-fluid" id="finishedapps-donut-chart">
-              {{donut-chart data=getFinishedServicesDataForDonutChart
-              showLabels=true
-              parentId="finishedapps-donut-chart"
-              ratio=0.6
-              maxHeight=350
-              colorTargets="good warn error"
-              }}
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-4 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Running Services
-            </div>
-            <div class="container-fluid" id="runningapps-donut-chart">
-              {{donut-chart data=getRunningServicesDataForDonutChart
-              showLabels=true
-              parentId="runningapps-donut-chart"
-              ratio=0.6
-              maxHeight=350
-              colorTargets="warn good"
-              }}
-            </div>
-          </div>
-        </div>
-      </div>
-      {{#if model.apps}}
-        {{em-table columns=serviceColumns rows=model.apps definition=tableDefinition}}
-      {{else}}
-        <h4 align="center">Could not find any services from this cluster</h4>
-      {{/if}}
-    </div>
-  </div>
+<a class="btn btn-primary pull-right" href="#/yarn-deploy-service">New Service</a>
+<div class="col-md-12 container-fluid yarn-applications-container">
+  {{#if model.apps}}
+    {{em-table columns=serviceColumns rows=model.apps definition=tableDefinition}}
+  {{else}}
+    <h4 align="center">Could not find any services from this cluster</h4>
+  {{/if}}
 </div>

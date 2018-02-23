@@ -50,8 +50,9 @@ interface NativeFileSystemStore {
 
   InputStream retrieve(String key, long byteRangeStart) throws IOException;
 
-  DataOutputStream storefile(String key, PermissionStatus permissionStatus)
-      throws AzureException;
+  DataOutputStream storefile(String keyEncoded,
+      PermissionStatus permissionStatus,
+      String key) throws AzureException;
 
   boolean isPageBlobKey(String key);
 
@@ -88,6 +89,10 @@ interface NativeFileSystemStore {
   void rename(String srcKey, String dstKey) throws IOException;
 
   void rename(String srcKey, String dstKey, boolean acquireLease, SelfRenewingLease existingLease)
+      throws IOException;
+
+  void rename(String srcKey, String dstKey, boolean acquireLease,
+              SelfRenewingLease existingLease, boolean overwriteDestination)
       throws IOException;
 
   /**

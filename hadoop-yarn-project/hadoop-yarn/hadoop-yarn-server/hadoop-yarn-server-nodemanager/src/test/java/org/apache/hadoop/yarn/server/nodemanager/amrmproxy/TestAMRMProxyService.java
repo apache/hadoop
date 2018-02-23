@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -50,8 +50,8 @@ import org.junit.Test;
 
 public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestAMRMProxyService.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestAMRMProxyService.class);
 
   private static MockResourceManagerFacade mockRM;
 
@@ -444,7 +444,7 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
 
     applicationAttemptId = ApplicationAttemptId.newInstance(appId, 2);
     getAMRMProxyService().initializePipeline(applicationAttemptId, user,
-        new Token<AMRMTokenIdentifier>(), null, null, false);
+        new Token<AMRMTokenIdentifier>(), null, null, false, null);
 
     RequestInterceptorChainWrapper chain2 =
         getAMRMProxyService().getPipelines().get(appId);
@@ -531,16 +531,14 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
         "new AMRMToken from RM should have been nulled by AMRMProxyService",
         allocateResponse.getAMRMToken());
 
-    // The way the mock resource manager is setup, it will return the containers
-    // that were released in the response. This is done because the UAMs run
-    // asynchronously and we need to if all the resource managers received the
-    // release it. The containers sent by the mock resource managers will be
+    // We need to make sure all the resource managers received the
+    // release list. The containers sent by the mock resource managers will be
     // aggregated and returned back to us and we can assert if all the release
     // lists reached the sub-clusters
-    List<Container> containersForReleasedContainerIds =
-        new ArrayList<Container>();
-    containersForReleasedContainerIds.addAll(allocateResponse
-        .getAllocatedContainers());
+    List<ContainerId> containersForReleasedContainerIds = new ArrayList<>();
+    List<ContainerId> newlyFinished = getCompletedContainerIds(
+        allocateResponse.getCompletedContainersStatuses());
+    containersForReleasedContainerIds.addAll(newlyFinished);
 
     // Send max 10 heart beats to receive all the containers. If not, we will
     // fail the test
@@ -554,8 +552,9 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
           "new AMRMToken from RM should have been nulled by AMRMProxyService",
           allocateResponse.getAMRMToken());
 
-      containersForReleasedContainerIds.addAll(allocateResponse
-          .getAllocatedContainers());
+      newlyFinished = getCompletedContainerIds(
+          allocateResponse.getCompletedContainersStatuses());
+      containersForReleasedContainerIds.addAll(newlyFinished);
 
       LOG.info("Number of containers received in this request: "
           + Integer.toString(allocateResponse.getAllocatedContainers()

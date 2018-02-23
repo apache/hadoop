@@ -17,6 +17,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,7 +44,11 @@ public class TestDockerRmCommand {
 
   @Test
   public void testGetCommandWithArguments() {
-    assertEquals("rm foo", dockerRmCommand.getCommandWithArguments());
+    assertEquals("rm", StringUtils.join(",",
+        dockerRmCommand.getDockerCommandWithArguments().get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerRmCommand.getDockerCommandWithArguments().get("name")));
+    assertEquals(2, dockerRmCommand.getDockerCommandWithArguments().size());
   }
 
 }

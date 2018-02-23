@@ -82,7 +82,7 @@ class AMSProcessingChain implements ApplicationMasterServiceProcessor {
   public void registerApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
       RegisterApplicationMasterRequest request,
-      RegisterApplicationMasterResponse resp) throws IOException {
+      RegisterApplicationMasterResponse resp) throws IOException, YarnException {
     this.head.registerApplicationMaster(applicationAttemptId, request, resp);
   }
 

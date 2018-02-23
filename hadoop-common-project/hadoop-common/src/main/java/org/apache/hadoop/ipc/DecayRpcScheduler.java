@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.management.ObjectName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -127,6 +128,8 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
+
+  private static final ObjectWriter WRITER = new ObjectMapper().writer();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call count and
@@ -233,8 +236,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     DecayTask task = new DecayTask(this, timer);
     timer.scheduleAtFixedRate(task, decayPeriodMillis, decayPeriodMillis);
 
-    metricsProxy = MetricsProxy.getInstance(ns, numLevels);
-    metricsProxy.setDelegate(this);
+    metricsProxy = MetricsProxy.getInstance(ns, numLevels, this);
+    recomputeScheduleCache();
   }
 
   // Load configs
@@ -677,21 +680,26 @@ public class DecayRpcScheduler implements RpcScheduler,
     private long[] callCountInLastWindowDefault;
     private ObjectName decayRpcSchedulerInfoBeanName;
 
-    private MetricsProxy(String namespace, int numLevels) {
+    private MetricsProxy(String namespace, int numLevels,
+        DecayRpcScheduler drs) {
       averageResponseTimeDefault = new double[numLevels];
       callCountInLastWindowDefault = new long[numLevels];
+      setDelegate(drs);
       decayRpcSchedulerInfoBeanName =
           MBeans.register(namespace, "DecayRpcScheduler", this);
       this.registerMetrics2Source(namespace);
     }
 
     public static synchronized MetricsProxy getInstance(String namespace,
-        int numLevels) {
+        int numLevels, DecayRpcScheduler drs) {
       MetricsProxy mp = INSTANCES.get(namespace);
       if (mp == null) {
         // We must create one
-        mp = new MetricsProxy(namespace, numLevels);
+        mp = new MetricsProxy(namespace, numLevels, drs);
         INSTANCES.put(namespace, mp);
+      } else  if (drs != mp.delegate.get()){
+        // in case of delegate is reclaimed, we should set it again
+        mp.setDelegate(drs);
       }
       return mp;
     }
@@ -909,8 +917,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       return "{}";
     } else {
       try {
-        ObjectMapper om = new ObjectMapper();
-        return om.writeValueAsString(decisions);
+        return WRITER.writeValueAsString(decisions);
       } catch (Exception e) {
         return "Error: " + e.getMessage();
       }
@@ -919,8 +926,7 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public String getCallVolumeSummary() {
     try {
-      ObjectMapper om = new ObjectMapper();
-      return om.writeValueAsString(getDecayedCallCounts());
+      return WRITER.writeValueAsString(getDecayedCallCounts());
     } catch (Exception e) {
       return "Error: " + e.getMessage();
     }

@@ -32,20 +32,21 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 
 /**
- * Writer support for JSON based datanode configuration, an alternative
+ * Writer support for JSON-based datanode configuration, an alternative format
  * to the exclude/include files configuration.
- * The JSON file format is the array of elements where each element
+ * The JSON file format defines the array of elements where each element
  * in the array describes the properties of a datanode. The properties of
- * a datanode is defined in {@link DatanodeAdminProperties}. For example,
+ * a datanode is defined by {@link DatanodeAdminProperties}. For example,
  *
- * {"hostName": "host1"}
- * {"hostName": "host2", "port": 50, "upgradeDomain": "ud0"}
- * {"hostName": "host3", "port": 0, "adminState": "DECOMMISSIONED"}
+ * [
+ *   {"hostName": "host1"},
+ *   {"hostName": "host2", "port": 50, "upgradeDomain": "ud0"},
+ *   {"hostName": "host3", "port": 0, "adminState": "DECOMMISSIONED"}
+ * ]
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public final class CombinedHostsFileWriter {
-  private static final ObjectMapper MAPPER = new ObjectMapper();
   private CombinedHostsFileWriter() {
   }
 
@@ -57,13 +58,11 @@ public final class CombinedHostsFileWriter {
    */
   public static void writeFile(final String hostsFile,
       final Set<DatanodeAdminProperties> allDNs) throws IOException {
-    StringBuilder configs = new StringBuilder();
+    final ObjectMapper objectMapper = new ObjectMapper();
+
     try (Writer output =
        new OutputStreamWriter(new FileOutputStream(hostsFile), "UTF-8")) {
-      for (DatanodeAdminProperties datanodeAdminProperties: allDNs) {
-        configs.append(MAPPER.writeValueAsString(datanodeAdminProperties));
-      }
-      output.write(configs.toString());
+      objectMapper.writeValue(output, allDNs);
     }
   }
 }

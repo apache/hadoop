@@ -435,17 +435,12 @@ or a specific principal in a named keytab.
 The output of the command can be used for local diagnostics, or forwarded to
 whoever supports the cluster.
 
-The `KDiag` command has its own entry point; it is currently not hooked up
-to the end-user CLI.
-
-It is invoked simply by passing its full classname to one of the `bin/hadoop`,
-`bin/hdfs` or `bin/yarn` commands. Accordingly, it will display the kerberos client
-state of the command used to invoke it.
+The `KDiag` command has its own entry point; It is invoked by passing `kdiag` to
+`bin/hadoop` command. Accordingly, it will display the kerberos client state
+of the command used to invoke it.
 
 ```
-hadoop org.apache.hadoop.security.KDiag
-hdfs org.apache.hadoop.security.KDiag
-yarn org.apache.hadoop.security.KDiag
+hadoop kdiag
 ```
 
 The command returns a status code of 0 for a successful diagnostics run.
@@ -525,7 +520,7 @@ some basic Kerberos preconditions.
 #### `--out outfile`: Write output to file.
 
 ```
-hadoop org.apache.hadoop.security.KDiag --out out.txt
+hadoop kdiag --out out.txt
 ```
 
 Much of the diagnostics information comes from the JRE (to `stderr`) and
@@ -534,7 +529,7 @@ To get all the output, it is best to redirect both these output streams
 to the same file, and omit the `--out` option.
 
 ```
-hadoop org.apache.hadoop.security.KDiag --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM > out.txt 2>&1
+hadoop kdiag --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM > out.txt 2>&1
 ```
 
 Even there, the output of the two streams, emitted across multiple threads, can
@@ -543,15 +538,12 @@ name in the Log4j output to distinguish background threads from the main thread
 helps at the hadoop level, but doesn't assist in JVM-level logging.
 
 #### `--resource <resource>` : XML configuration resource to load.
-
-When using the `hdfs` and `yarn` commands, it is often useful to force
-load the `hdfs-site.xml` and `yarn-site.xml` resource files, to pick up any Kerberos-related
-configuration options therein.
-The `core-default` and `core-site` XML resources are always loaded.
+To load XML configuration files, this option can be used. As by default, the
+`core-default` and `core-site` XML resources are only loaded. This will help,
+when additional configuration files has any Kerberos related configurations.
 
 ```
-hdfs org.apache.hadoop.security.KDiag --resource hbase-default.xml --resource hbase-site.xml
-yarn org.apache.hadoop.security.KDiag --resource yarn-default.xml --resource yarn-site.xml
+hadoop kdiag --resource hbase-default.xml --resource hbase-site.xml
 ```
 
 For extra logging during the operation, set the logging and `HADOOP_JAAS_DEBUG`
@@ -572,7 +564,7 @@ or implicitly set to "simple":
 
 Needless to say, an application so configured cannot talk to a secure Hadoop cluster.
 
-#### `--verifyshortname &lt;principal>`: validate the short name of a principal
+#### `--verifyshortname <principal>`: validate the short name of a principal
 
 This verifies that the short name of a principal contains neither the `"@"`
 nor `"/"` characters.
@@ -580,9 +572,9 @@ nor `"/"` characters.
 ### Example
 
 ```
-hdfs org.apache.hadoop.security.KDiag \
+hadoop kdiag \
   --nofail \
-  --resource hbase-default.xml --resource hbase-site.xml \
+  --resource hdfs-site.xml --resource yarn-site.xml \
   --keylen 1024 \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```

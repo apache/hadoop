@@ -27,13 +27,39 @@
     <name>hadoop.tmp.dir</name>
     <value>target/build/test</value>
     <description>A base for other temporary directories.</description>
-    <final>true</final>
+    <final>false</final>
   </property>
 
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint</name>
     <value>${central.endpoint}</value>
     <description>The endpoint for s3a://landsat-pds URLs</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.multipart.purge</name>
+    <value>false</value>
+    <description>Don't try to purge uploads in the read-only bucket, as
+    it will only create log noise.</description>
+  </property>
+
+  <!-- Make sure S3Guard is disabled for read-only bucket tests. -->
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
+    <value>${s3guard.null}</value>
+    <description>The read-only landsat-pds repository isn't
+        managed by s3guard</description>
+  </property>
+
+  <!-- Convenience definitions. -->
+  <property>
+    <name>s3guard.null</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+  </property>
+
+  <property>
+    <name>s3guard.dynamo</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
   </property>
 
   <!--
@@ -110,6 +136,13 @@
     <value>${central.endpoint}</value>
   </property>
 
+  <!-- Scale integration tests may time out on slower connections
+       you can reduce the operation count like so to mitigate this.
+  <property>
+      <name>scale.test.operation.count</name>
+      <value>500</value>
+  </property>
+  -->
 
   <!-- Turn security off for tests by default -->
   <property>

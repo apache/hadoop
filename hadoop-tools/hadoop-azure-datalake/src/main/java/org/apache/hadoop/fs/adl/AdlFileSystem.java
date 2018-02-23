@@ -24,18 +24,23 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.ADLStoreOptions;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
 import com.microsoft.azure.datalake.store.IfExists;
 import com.microsoft.azure.datalake.store.LatencyTracker;
 import com.microsoft.azure.datalake.store.UserGroupRepresentation;
 import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -73,6 +78,8 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AdlFileSystem extends FileSystem {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AdlFileSystem.class);
   public static final String SCHEME = "adl";
   static final int DEFAULT_PORT = 443;
   private URI uri;
@@ -114,12 +121,19 @@ public class AdlFileSystem extends FileSystem {
   /**
    * Called after a new FileSystem instance is constructed.
    *
-   * @param storeUri a uri whose authority section names the host, port, etc.
-   *                 for this FileSystem
-   * @param conf     the configuration
+   * @param storeUri      a uri whose authority section names the host, port,
+   *                      etc. for this FileSystem
+   * @param originalConf  the configuration to use for the FS. The account-
+   *                      specific options are patched over the base ones
+   *                      before any use is made of the config.
    */
   @Override
-  public void initialize(URI storeUri, Configuration conf) throws IOException {
+  public void initialize(URI storeUri, Configuration originalConf)
+      throws IOException {
+    String hostname = storeUri.getHost();
+    String accountName = getAccountNameFromFQDN(hostname);
+    Configuration conf = propagateAccountOptions(originalConf, accountName);
+
     super.initialize(storeUri, conf);
     this.setConf(conf);
     this.uri = URI
@@ -143,7 +157,6 @@ public class AdlFileSystem extends FileSystem {
 
     String accountFQDN = null;
     String mountPoint = null;
-    String hostname = storeUri.getHost();
     if (!hostname.contains(".") && !hostname.equalsIgnoreCase(
         "localhost")) {  // this is a symbolic name. Resolve it.
       String hostNameProperty = "dfs.adls." + hostname + ".hostname";
@@ -255,6 +268,12 @@ public class AdlFileSystem extends FileSystem {
     case ClientCredential:
       tokenProvider = getConfCredentialBasedTokenProvider(conf);
       break;
+    case MSI:
+      tokenProvider = getMsiBasedTokenProvider(conf);
+      break;
+    case DeviceCode:
+      tokenProvider = getDeviceCodeTokenProvider(conf);
+      break;
     case Custom:
     default:
       AzureADTokenProvider azureADTokenProvider = getCustomAccessTokenProvider(
@@ -279,6 +298,17 @@ public class AdlFileSystem extends FileSystem {
     String clientId = getPasswordString(conf, AZURE_AD_CLIENT_ID_KEY);
     String refreshToken = getPasswordString(conf, AZURE_AD_REFRESH_TOKEN_KEY);
     return new RefreshTokenBasedTokenProvider(clientId, refreshToken);
+  }
+
+  private AccessTokenProvider getMsiBasedTokenProvider(
+          Configuration conf) throws IOException {
+    return new MsiTokenProvider(conf.getInt(MSI_PORT, -1));
+  }
+
+  private AccessTokenProvider getDeviceCodeTokenProvider(
+          Configuration conf) throws IOException {
+    String clientAppId = getNonEmptyVal(conf, DEVICE_CODE_CLIENT_APP_ID);
+    return new DeviceCodeTokenProvider(clientAppId);
   }
 
   @VisibleForTesting
@@ -606,30 +636,12 @@ public class AdlFileSystem extends FileSystem {
   }
 
   private FileStatus toFileStatus(final DirectoryEntry entry, final Path f) {
-    boolean isDirectory = entry.type == DirectoryEntryType.DIRECTORY;
-    long lastModificationData = entry.lastModifiedTime.getTime();
-    long lastAccessTime = entry.lastAccessTime.getTime();
-    // set aclBit from ADLS backend response if
-    // ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION is true.
-    final boolean aclBit = aclBitStatus ? entry.aclBit : false;
-
-    FsPermission permission = new AdlPermission(aclBit,
-        Short.valueOf(entry.permission, 8));
-    String user = entry.user;
-    String group = entry.group;
-
-    FileStatus status;
+    Path p = makeQualified(f);
+    boolean aclBit = aclBitStatus ? entry.aclBit : false;
     if (overrideOwner) {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          userName, "hdfs", this.makeQualified(f));
-    } else {
-      status = new FileStatus(entry.length, isDirectory, ADL_REPLICATION_FACTOR,
-          ADL_BLOCK_SIZE, lastModificationData, lastAccessTime, permission,
-          user, group, this.makeQualified(f));
+      return new AdlFileStatus(entry, p, userName, "hdfs", aclBit);
     }
-
-    return status;
+    return new AdlFileStatus(entry, p, aclBit);
   }
 
   /**
@@ -984,5 +996,64 @@ public class AdlFileSystem extends FileSystem {
   public void setUserGroupRepresentationAsUPN(boolean enableUPN) {
     oidOrUpn = enableUPN ? UserGroupRepresentation.UPN :
         UserGroupRepresentation.OID;
+  }
+
+  /**
+   * Gets ADL account name from ADL FQDN.
+   * @param accountFQDN ADL account fqdn
+   * @return ADL account name
+   */
+  public static String getAccountNameFromFQDN(String accountFQDN) {
+    return accountFQDN.contains(".")
+            ? accountFQDN.substring(0, accountFQDN.indexOf("."))
+            : accountFQDN;
+  }
+
+  /**
+   * Propagates account-specific settings into generic ADL configuration keys.
+   * This is done by propagating the values of the form
+   * {@code fs.adl.account.${account_name}.key} to
+   * {@code fs.adl.key}, for all values of "key"
+   *
+   * The source of the updated property is set to the key name of the account
+   * property, to aid in diagnostics of where things came from.
+   *
+   * Returns a new configuration. Why the clone?
+   * You can use the same conf for different filesystems, and the original
+   * values are not updated.
+   *
+   *
+   * @param source Source Configuration object
+   * @param accountName account name. Must not be empty
+   * @return a (potentially) patched clone of the original
+   */
+  public static Configuration propagateAccountOptions(Configuration source,
+      String accountName) {
+
+    Preconditions.checkArgument(StringUtils.isNotEmpty(accountName),
+        "accountName");
+    final String accountPrefix = AZURE_AD_ACCOUNT_PREFIX + accountName +'.';
+    LOG.debug("Propagating entries under {}", accountPrefix);
+    final Configuration dest = new Configuration(source);
+    for (Map.Entry<String, String> entry : source) {
+      final String key = entry.getKey();
+      // get the (unexpanded) value.
+      final String value = entry.getValue();
+      if (!key.startsWith(accountPrefix) || accountPrefix.equals(key)) {
+        continue;
+      }
+      // there's a account prefix, so strip it
+      final String stripped = key.substring(accountPrefix.length());
+
+      // propagate the value, building a new origin field.
+      // to track overwrites, the generic key is overwritten even if
+      // already matches the new one.
+      String origin = "[" + StringUtils.join(
+              source.getPropertySources(key), ", ") +"]";
+      final String generic = AZURE_AD_PREFIX + stripped;
+      LOG.debug("Updating {} from {}", generic, origin);
+      dest.set(generic, value, key + " via " + origin);
+    }
+    return dest;
   }
 }

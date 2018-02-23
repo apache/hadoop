@@ -20,10 +20,14 @@ package org.apache.hadoop.hdfs;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,12 +45,14 @@ import com.google.common.collect.Lists;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
 import org.apache.hadoop.fs.FileContext;
@@ -80,9 +86,12 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ToolRunner;
@@ -149,6 +158,9 @@ public class TestEncryptionZones {
   private File testRootDir;
   protected final String TEST_KEY = "test_key";
   private static final String NS_METRICS = "FSNamesystem";
+  private static final String  AUTHORIZATION_EXCEPTION_MESSAGE =
+      "User [root] is not authorized to perform [READ] on key " +
+          "with ACL name [key2]!!";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -447,7 +459,6 @@ public class TestEncryptionZones {
     dfsAdmin.createEncryptionZone(zone2, myKeyName, NO_TRASH);
     assertNumZones(++numZones);
     assertZonePresent(myKeyName, zone2.toString());
-
     /* Test failure of create encryption zones as a non super user. */
     final UserGroupInformation user = UserGroupInformation.
         createUserForTesting("user", new String[] { "mygroup" });
@@ -889,20 +900,25 @@ public class TestEncryptionZones {
   @SuppressWarnings("unchecked")
   private static void mockCreate(ClientProtocol mcp,
       CipherSuite suite, CryptoProtocolVersion version) throws Exception {
-    Mockito.doReturn(
-        new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
-            (short) 777), EnumSet.noneOf(HdfsFileStatus.Flags.class),
-            "owner", "group", new byte[0], new byte[0],
-            1010, 0, new FileEncryptionInfo(suite,
-            version, new byte[suite.getAlgorithmBlockSize()],
-            new byte[suite.getAlgorithmBlockSize()],
-            "fakeKey", "fakeVersion"),
-            (byte) 0, null))
+    Mockito.doReturn(new HdfsFileStatus.Builder()
+          .replication(1)
+          .blocksize(1024)
+          .perm(new FsPermission((short) 777))
+          .owner("owner")
+          .group("group")
+          .symlink(new byte[0])
+          .path(new byte[0])
+          .fileId(1010)
+          .feInfo(new FileEncryptionInfo(suite, version,
+              new byte[suite.getAlgorithmBlockSize()],
+              new byte[suite.getAlgorithmBlockSize()],
+              "fakeKey", "fakeVersion"))
+          .build())
         .when(mcp)
         .create(anyString(), (FsPermission) anyObject(), anyString(),
-            (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-            anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
-            anyObject());
+          (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
+          anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
+          anyObject());
   }
 
   // This test only uses mocks. Called from the end of an existing test to
@@ -1049,6 +1065,31 @@ public class TestEncryptionZones {
       assertFalse(
           "Expected isEncrypted to return false for non ez stat " + baseFile,
           s.isEncrypted());
+    }
+  }
+
+  private class AuthorizationExceptionInjector extends EncryptionFaultInjector {
+    @Override
+    public void ensureKeyIsInitialized() throws IOException {
+      throw new AuthorizationException(AUTHORIZATION_EXCEPTION_MESSAGE);
+    }
+  }
+
+  @Test
+  public void testExceptionInformationReturn() {
+    /* Test exception information can be returned when
+    creating transparent encryption zone.*/
+    final Path zone1 = new Path("/zone1");
+    EncryptionFaultInjector.instance = new AuthorizationExceptionInjector();
+    try {
+      dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
+      fail("exception information can be returned when creating " +
+          "transparent encryption zone");
+    } catch (IOException e) {
+      assertTrue(e instanceof RemoteException);
+      assertTrue(((RemoteException) e).unwrapRemoteException()
+          instanceof AuthorizationException);
+      assertExceptionContains(AUTHORIZATION_EXCEPTION_MESSAGE, e);
     }
   }
 
@@ -1248,6 +1289,7 @@ public class TestEncryptionZones {
     Mockito.when(keyProvider.getConf()).thenReturn(conf);
     byte[] testIdentifier = "Test identifier for delegation token".getBytes();
 
+    @SuppressWarnings("rawtypes")
     Token<?> testToken = new Token(testIdentifier, new byte[0],
         new Text(), new Text());
     Mockito.when(((DelegationTokenExtension)keyProvider).
@@ -1699,7 +1741,8 @@ public class TestEncryptionZones {
     Credentials credentials = new Credentials();
     // Key provider uri should be in the secret map of credentials object with
     // namenode uri as key
-    Text lookUpKey = client.getKeyProviderMapKey();
+    Text lookUpKey = HdfsKMSUtil.getKeyProviderMapKey(
+        cluster.getFileSystem().getUri());
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(dummyKeyProvider));
     client.ugi.addCredentials(credentials);
@@ -1850,7 +1893,8 @@ public class TestEncryptionZones {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     DFSClient client = cluster.getFileSystem().getClient();
     Credentials credentials = new Credentials();
-    Text lookUpKey = client.getKeyProviderMapKey();
+    Text lookUpKey = HdfsKMSUtil.
+        getKeyProviderMapKey(cluster.getFileSystem().getUri());
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(getKeyProviderURI()));
     client.ugi.addCredentials(credentials);
@@ -1866,5 +1910,267 @@ public class TestEncryptionZones {
     DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
     // Read them back in and compare byte-by-byte
     verifyFilesEqual(fs, baseFile, encFile1, len);
+  }
+
+  /**
+   * Test listing encryption zones after zones had been deleted,
+   * but still exist under snapshots. This test first moves EZs
+   * to trash folder, so that an inodereference is created for the EZ,
+   * then it removes the EZ from trash folder to emulate condition where
+   * the EZ inode will not be complete.
+   */
+  @Test
+  public void testListEncryptionZonesWithSnapshots() throws Exception {
+    final Path snapshottable = new Path("/zones");
+    final Path zoneDirectChild = new Path(snapshottable, "zone1");
+    final Path snapshottableChild = new Path(snapshottable, "child");
+    final Path zoneSubChild = new Path(snapshottableChild, "zone2");
+    fsWrapper.mkdir(zoneDirectChild, FsPermission.getDirDefault(),
+        true);
+    fsWrapper.mkdir(zoneSubChild, FsPermission.getDirDefault(),
+        true);
+    dfsAdmin.allowSnapshot(snapshottable);
+    dfsAdmin.createEncryptionZone(zoneDirectChild, TEST_KEY, NO_TRASH);
+    dfsAdmin.createEncryptionZone(zoneSubChild, TEST_KEY, NO_TRASH);
+    final Path snap1 = fs.createSnapshot(snapshottable, "snap1");
+    Configuration clientConf = new Configuration(conf);
+    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    FsShell shell = new FsShell(clientConf);
+    //will "trash" the zone under subfolder of snapshottable directory
+    verifyShellDeleteWithTrash(shell, snapshottableChild);
+    //permanently remove zone under subfolder of snapshottable directory
+    fsWrapper.delete(shell.getCurrentTrashDir(snapshottableChild),
+        true);
+    final RemoteIterator<EncryptionZone> it = dfsAdmin.listEncryptionZones();
+    boolean match = false;
+    while (it.hasNext()) {
+      EncryptionZone ez = it.next();
+      assertNotEquals("EncryptionZone " + zoneSubChild.toString() +
+          " should not be listed.",
+          ez.getPath(), zoneSubChild.toString());
+    }
+    //will "trash" the zone direct child of snapshottable directory
+    verifyShellDeleteWithTrash(shell, zoneDirectChild);
+    //permanently remove zone direct child of snapshottable directory
+    fsWrapper.delete(shell.getCurrentTrashDir(zoneDirectChild), true);
+    assertFalse("listEncryptionZones should not return anything, " +
+            "since both EZs were deleted.",
+        dfsAdmin.listEncryptionZones().hasNext());
+  }
+
+  /**
+  * This test returns mocked kms token when
+  * {@link WebHdfsFileSystem#addDelegationTokens(String, Credentials)} method
+  * is called.
+  * @throws Exception
+  */
+  @Test
+  public void addMockKmsToken() throws Exception {
+    UserGroupInformation.createRemoteUser("JobTracker");
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    KeyProvider keyProvider = Mockito.mock(KeyProvider.class, withSettings()
+        .extraInterfaces(DelegationTokenExtension.class,
+         CryptoExtension.class));
+    Mockito.when(keyProvider.getConf()).thenReturn(conf);
+    byte[] testIdentifier = "Test identifier for delegation token".getBytes();
+
+    Token<?> testToken = new Token(testIdentifier, new byte[0],
+        new Text("kms-dt"), new Text());
+    Mockito.when(((DelegationTokenExtension) keyProvider)
+        .addDelegationTokens(anyString(), (Credentials) any()))
+        .thenReturn(new Token<?>[] {testToken});
+
+    WebHdfsFileSystem webfsSpy = Mockito.spy(webfs);
+    Mockito.doReturn(keyProvider).when(webfsSpy).getKeyProvider();
+
+    Credentials creds = new Credentials();
+    final Token<?>[] tokens =
+        webfsSpy.addDelegationTokens("JobTracker", creds);
+
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(tokens[1], testToken);
+    Assert.assertEquals(1, creds.numberOfTokens());
+  }
+
+  /**
+   * Creates a file with stable {@link DistributedFileSystem}.
+   * Tests the following 2 scenarios.
+   * 1. The decrypted data using {@link WebHdfsFileSystem} should be same as
+   * input data.
+   * 2. Gets the underlying raw encrypted stream and verifies that the
+   * encrypted data is different than input data.
+   * @throws Exception
+   */
+  @Test
+  public void testWebhdfsRead() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/encryptedFile.txt");
+    final Path rawPath = 
+        new Path("/.reserved/raw/TestEncryptionZone/encryptedFile.txt");
+    final String content = "hello world";
+
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+    final FileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    // Verify whether decrypted input stream data is same as content.
+    InputStream decryptedIputStream  = webhdfs.open(encryptedFilePath);
+    verifyStreamsSame(content, decryptedIputStream);
+
+    // Get the underlying stream from CryptoInputStream which should be
+    // raw encrypted bytes.
+    InputStream cryptoStream =
+        webhdfs.open(encryptedFilePath).getWrappedStream();
+    Assert.assertTrue("cryptoStream should be an instance of "
+        + "CryptoInputStream", (cryptoStream instanceof CryptoInputStream));
+    InputStream encryptedStream =
+        ((CryptoInputStream)cryptoStream).getWrappedStream();
+    // Verify that the data read from the raw input stream is different
+    // from the original content. Also check it is identical to the raw
+    // encrypted data from dfs.
+    verifyRaw(content, encryptedStream, fs.open(rawPath));
+  }
+
+  private void verifyStreamsSame(String content, InputStream is)
+      throws IOException {
+    byte[] streamBytes;
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(is, os, 1024, true);
+      streamBytes = os.toByteArray();
+    }
+    Assert.assertArrayEquals(content.getBytes(), streamBytes);
+  }
+
+  private void verifyRaw(String content, InputStream is, InputStream rawIs)
+      throws IOException {
+    byte[] streamBytes, rawBytes;
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(is, os, 1024, true);
+      streamBytes = os.toByteArray();
+    }
+    Assert.assertFalse(Arrays.equals(content.getBytes(), streamBytes));
+
+    // webhdfs raw bytes should match the raw bytes from dfs.
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      IOUtils.copyBytes(rawIs, os, 1024, true);
+      rawBytes = os.toByteArray();
+    }
+    Assert.assertArrayEquals(rawBytes, streamBytes);
+  }
+
+  /* Tests that if client is old and namenode is new then the
+   * data will be decrypted by datanode.
+   * @throws Exception
+   */
+  @Test
+  public void testWebhdfsReadOldBehavior() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath = new Path("/TestEncryptionZone/foo");
+    final String content = "hello world";
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+
+    InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+    URL url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client not supporting EZ.
+    HttpURLConnection namenodeConnection = returnConnection(url, "GET", false);
+    String location = namenodeConnection.getHeaderField("Location");
+    URL datanodeURL = new URL(location);
+    String path = datanodeURL.getPath();
+    Assert.assertEquals(
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
+    HttpURLConnection datanodeConnection = returnConnection(datanodeURL,
+        "GET", false);
+    InputStream in = datanodeConnection.getInputStream();
+    // Comparing with the original contents
+    // and making sure they are decrypted.
+    verifyStreamsSame(content, in);
+  }
+
+  /* Tests namenode returns path starting with /.reserved/raw if client
+   * supports EZ and not if otherwise
+   * @throws Exception
+   */
+  @Test
+  public void testWebhfsEZRedirectLocation()
+      throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/foo");
+    final String content = "hello world";
+    // Create a file using DistributedFileSystem.
+    DFSTestUtil.writeFile(fs, encryptedFilePath, content);
+
+    InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+    URL url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client not supporting EZ.
+    HttpURLConnection namenodeConnection =
+        returnConnection(url, "GET", false);
+    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    URL datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
+    Assert.assertNotNull(datanodeUrl);
+    String path = datanodeUrl.getPath();
+    Assert.assertEquals(
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString(), path);
+
+    url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + encryptedFilePath.toString()
+        + "?op=OPEN");
+    // Return a connection with client supporting EZ.
+    namenodeConnection = returnConnection(url, "GET", true);
+    Assert.assertNotNull(namenodeConnection.getHeaderField("Location"));
+    datanodeUrl = new URL(namenodeConnection.getHeaderField("Location"));
+    Assert.assertNotNull(datanodeUrl);
+    path = datanodeUrl.getPath();
+    Assert.assertEquals(WebHdfsFileSystem.PATH_PREFIX
+        + "/.reserved/raw" + encryptedFilePath.toString(), path);
+  }
+
+  private static HttpURLConnection returnConnection(URL url,
+      String httpRequestType, boolean supportEZ) throws Exception {
+    HttpURLConnection conn = null;
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(httpRequestType);
+    conn.setDoOutput(true);
+    conn.setInstanceFollowRedirects(false);
+    if (supportEZ) {
+      conn.setRequestProperty(WebHdfsFileSystem.EZ_HEADER, "true");
+    }
+    return conn;
+  }
+
+  /*
+   * Test seek behavior of the webhdfs input stream which reads data from
+   * encryption zone.
+   */
+  @Test
+  public void testPread() throws Exception {
+    Path zonePath = new Path("/TestEncryptionZone");
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final Path encryptedFilePath =
+        new Path("/TestEncryptionZone/foo");
+    // Create a file using DistributedFileSystem.
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    DFSTestUtil.createFile(webfs, encryptedFilePath, 1024, (short)1, 0xFEED);
+    byte[] data = DFSTestUtil.readFileAsBytes(fs, encryptedFilePath);
+    FSDataInputStream in = webfs.open(encryptedFilePath);
+    for (int i = 0; i < 1024; i++) {
+      in.seek(i);
+      Assert.assertEquals((data[i] & 0XFF), in.read());
+    }
   }
 }

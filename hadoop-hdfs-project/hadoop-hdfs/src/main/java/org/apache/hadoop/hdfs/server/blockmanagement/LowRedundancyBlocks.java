@@ -144,33 +144,33 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   /** Return the number of corrupt blocks with replication factor 1 */
   long getCorruptReplicationOneBlockSize() {
-    return getCorruptReplicationOneBlocksStat();
+    return getCorruptReplicationOneBlocks();
   }
 
   /**
    * Return under replicated block count excluding corrupt replicas.
    */
-  long getLowRedundancyBlocksStat() {
-    return lowRedundancyBlocks.longValue() - getCorruptBlocksStat();
+  long getLowRedundancyBlocks() {
+    return lowRedundancyBlocks.longValue() - getCorruptBlocks();
   }
 
-  long getCorruptBlocksStat() {
+  long getCorruptBlocks() {
     return corruptBlocks.longValue();
   }
 
-  long getCorruptReplicationOneBlocksStat() {
+  long getCorruptReplicationOneBlocks() {
     return corruptReplicationOneBlocks.longValue();
   }
 
   /**
    *  Return low redundancy striped blocks excluding corrupt blocks.
    */
-  long getLowRedundancyECBlockGroupsStat() {
+  long getLowRedundancyECBlockGroups() {
     return lowRedundancyECBlockGroups.longValue() -
-        getCorruptECBlockGroupsStat();
+        getCorruptECBlockGroups();
   }
 
-  long getCorruptECBlockGroupsStat() {
+  long getCorruptECBlockGroups() {
     return corruptECBlockGroups.longValue();
   }
 
@@ -365,7 +365,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
           NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
-          decrementBlockStat(block, priLevel, oldExpectedReplicas);
+          decrementBlockStat(block, i, oldExpectedReplicas);
           return true;
         }
       }

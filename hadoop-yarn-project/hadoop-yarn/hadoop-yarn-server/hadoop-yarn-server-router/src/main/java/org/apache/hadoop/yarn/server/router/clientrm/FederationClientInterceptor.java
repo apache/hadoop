@@ -32,6 +32,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -64,6 +68,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
@@ -98,7 +104,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,6 +139,8 @@ public class FederationClientInterceptor
   private FederationStateStoreFacade federationFacade;
   private Random rand;
   private RouterPolicyFacade policyFacade;
+  private RouterMetrics routerMetrics;
+  private final Clock clock = new MonotonicClock();
 
   @Override
   public void init(String userName) {
@@ -153,7 +164,7 @@ public class FederationClientInterceptor
 
     clientRMProxies =
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
-
+    routerMetrics = RouterMetrics.getMetrics();
   }
 
   @Override
@@ -201,7 +212,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * Yarn Router forwards every getNewApplication requests to any RM. During
+   * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
    * Router will forward the requests to any SubCluster. The Router will retry
    * to submit the request on #numSubmitRetries different SubClusters. The
@@ -220,6 +231,9 @@ public class FederationClientInterceptor
   @Override
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request) throws YarnException, IOException {
+
+    long startTime = clock.getTime();
+
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
@@ -238,6 +252,9 @@ public class FederationClientInterceptor
       }
 
       if (response != null) {
+
+        long stopTime = clock.getTime();
+        routerMetrics.succeededAppsCreated(stopTime - startTime);
         return response;
       } else {
         // Empty response from the ResourceManager.
@@ -247,6 +264,7 @@ public class FederationClientInterceptor
 
     }
 
+    routerMetrics.incrAppsFailedCreated();
     String errMsg = "Fail to create a new application.";
     LOG.error(errMsg);
     throw new YarnException(errMsg);
@@ -320,9 +338,13 @@ public class FederationClientInterceptor
   @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnException, IOException {
+
+    long startTime = clock.getTime();
+
     if (request == null || request.getApplicationSubmissionContext() == null
         || request.getApplicationSubmissionContext()
             .getApplicationId() == null) {
+      routerMetrics.incrAppsFailedSubmitted();
       RouterServerUtil
           .logAndThrowException("Missing submitApplication request or "
               + "applicationSubmissionContex information.", null);
@@ -350,6 +372,7 @@ public class FederationClientInterceptor
           subClusterId =
               federationFacade.addApplicationHomeSubCluster(appHomeSubCluster);
         } catch (YarnException e) {
+          routerMetrics.incrAppsFailedSubmitted();
           String message = "Unable to insert the ApplicationId " + applicationId
               + " into the FederationStateStore";
           RouterServerUtil.logAndThrowException(message, e);
@@ -368,6 +391,7 @@ public class FederationClientInterceptor
             LOG.info("Application " + applicationId
                 + " already submitted on SubCluster " + subClusterId);
           } else {
+            routerMetrics.incrAppsFailedSubmitted();
             RouterServerUtil.logAndThrowException(message, e);
           }
         }
@@ -388,6 +412,8 @@ public class FederationClientInterceptor
         LOG.info("Application "
             + request.getApplicationSubmissionContext().getApplicationName()
             + " with appId " + applicationId + " submitted on " + subClusterId);
+        long stopTime = clock.getTime();
+        routerMetrics.succeededAppsSubmitted(stopTime - startTime);
         return response;
       } else {
         // Empty response from the ResourceManager.
@@ -396,6 +422,7 @@ public class FederationClientInterceptor
       }
     }
 
+    routerMetrics.incrAppsFailedSubmitted();
     String errMsg = "Application "
         + request.getApplicationSubmissionContext().getApplicationName()
         + " with appId " + applicationId + " failed to be submitted.";
@@ -404,7 +431,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failures and behaviors:
@@ -423,7 +450,10 @@ public class FederationClientInterceptor
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnException, IOException {
 
+    long startTime = clock.getTime();
+
     if (request == null || request.getApplicationId() == null) {
+      routerMetrics.incrAppsFailedKilled();
       RouterServerUtil.logAndThrowException(
           "Missing forceKillApplication request or ApplicationId.", null);
     }
@@ -434,6 +464,7 @@ public class FederationClientInterceptor
       subClusterId = federationFacade
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
+      routerMetrics.incrAppsFailedKilled();
       RouterServerUtil.logAndThrowException("Application " + applicationId
           + " does not exist in FederationStateStore", e);
     }
@@ -447,6 +478,7 @@ public class FederationClientInterceptor
           + subClusterId);
       response = clientRMProxy.forceKillApplication(request);
     } catch (Exception e) {
+      routerMetrics.incrAppsFailedKilled();
       LOG.error("Unable to kill the application report for "
           + request.getApplicationId() + "to SubCluster "
           + subClusterId.getId(), e);
@@ -458,11 +490,13 @@ public class FederationClientInterceptor
           + applicationId + " to SubCluster " + subClusterId.getId());
     }
 
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppsKilled(stopTime - startTime);
     return response;
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failure:
@@ -481,7 +515,10 @@ public class FederationClientInterceptor
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException, IOException {
 
+    long startTime = clock.getTime();
+
     if (request == null || request.getApplicationId() == null) {
+      routerMetrics.incrAppsFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing getApplicationReport request or applicationId information.",
           null);
@@ -493,6 +530,7 @@ public class FederationClientInterceptor
       subClusterId = federationFacade
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
+      routerMetrics.incrAppsFailedRetrieved();
       RouterServerUtil
           .logAndThrowException("Application " + request.getApplicationId()
               + " does not exist in FederationStateStore", e);
@@ -505,6 +543,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getApplicationReport(request);
     } catch (Exception e) {
+      routerMetrics.incrAppsFailedRetrieved();
       LOG.error("Unable to get the application report for "
           + request.getApplicationId() + "to SubCluster "
           + subClusterId.getId(), e);
@@ -517,6 +556,8 @@ public class FederationClientInterceptor
           + subClusterId.getId());
     }
 
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppsRetrieved(stopTime - startTime);
     return response;
   }
 
@@ -674,4 +715,21 @@ public class FederationClientInterceptor
     throw new NotImplementedException();
   }
 
+  @Override
+  public GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
 }

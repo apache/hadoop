@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys
@@ -76,6 +77,8 @@ public class TestSlowDiskTracker {
   private FakeTimer timer;
   private long reportValidityMs;
   private static final long OUTLIERS_REPORT_INTERVAL = 1000;
+  private static final ObjectReader READER = new ObjectMapper().readerFor(
+          new TypeReference<ArrayList<DiskLatency>>() {});
 
   static {
     conf = new HdfsConfiguration();
@@ -416,8 +419,7 @@ public class TestSlowDiskTracker {
 
   private ArrayList<DiskLatency> getAndDeserializeJson(
       final String json) throws IOException {
-    return (new ObjectMapper()).readValue(json,
-        new TypeReference<ArrayList<DiskLatency>>() {});
+    return READER.readValue(json);
   }
 
   private void addSlowDiskForTesting(String dnID, String disk,

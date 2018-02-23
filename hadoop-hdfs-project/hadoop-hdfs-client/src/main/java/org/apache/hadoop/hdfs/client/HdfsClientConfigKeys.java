@@ -73,7 +73,7 @@ public interface HdfsClientConfigKeys {
   int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 9871;
   String  DFS_NAMENODE_HTTPS_ADDRESS_KEY = "dfs.namenode.https-address";
   String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
-  int DFS_NAMENODE_RPC_PORT_DEFAULT = 9820;
+  int DFS_NAMENODE_RPC_PORT_DEFAULT = 8020;
   String DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.namenode.kerberos.principal";
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
@@ -112,6 +112,10 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY =
       "dfs.client.max.block.acquire.failures";
   int     DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT = 3;
+  String  DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY =
+      "dfs.client.server-defaults.validity.period.ms";
+  long    DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT =
+      TimeUnit.HOURS.toMillis(1);
   String  DFS_CHECKSUM_TYPE_KEY = "dfs.checksum.type";
   String  DFS_CHECKSUM_TYPE_DEFAULT = "CRC32C";
   String  DFS_BYTES_PER_CHECKSUM_KEY = "dfs.bytes-per-checksum";
@@ -123,6 +127,9 @@ public interface HdfsClientConfigKeys {
   boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT = false;
   String  DFS_DOMAIN_SOCKET_PATH_KEY = "dfs.domain.socket.path";
   String  DFS_DOMAIN_SOCKET_PATH_DEFAULT = "";
+  String DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY =
+      "dfs.domain.socket.disable.interval.seconds";
+  long DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT = 600;
   String  DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS =
       "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
   int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
@@ -320,6 +327,8 @@ public interface HdfsClientConfigKeys {
       String  POLICY_DEFAULT = "DEFAULT";
       String  BEST_EFFORT_KEY = PREFIX + "best-effort";
       boolean BEST_EFFORT_DEFAULT = false;
+      String MIN_REPLICATION = PREFIX + "min-replication";
+      short MIN_REPLICATION_DEFAULT = 0;
     }
   }
 
@@ -389,7 +398,7 @@ public interface HdfsClientConfigKeys {
 
     String  THREADPOOL_SIZE_KEY = PREFIX + "threadpool.size";
     /**
-     * With default RS-6-3-64k erasure coding policy, each normal read could
+     * With default RS-6-3-1024k erasure coding policy, each normal read could
      * span 6 DNs, so this default value accommodates 3 read streams
      */
     int     THREADPOOL_SIZE_DEFAULT = 18;

@@ -231,7 +231,7 @@ public class WritableRpcEngine implements RpcEngine {
       throws Throwable {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = Time.monotonicNow();
       }
 
       // if Tracing is on then start a new span for this rpc.
@@ -251,7 +251,7 @@ public class WritableRpcEngine implements RpcEngine {
         if (traceScope != null) traceScope.close();
       }
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
+        long callTime = Time.monotonicNow() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
       }
       return value.get();

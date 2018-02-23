@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.log.metrics.EventCounter;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -39,6 +41,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.Interns;
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
 import static org.apache.hadoop.metrics2.impl.MsInfo.*;
+
+import org.apache.hadoop.util.GcTimeMonitor;
 import org.apache.hadoop.util.JvmPauseMonitor;
 
 /**
@@ -57,6 +61,11 @@ public class JvmMetrics implements MetricsSource {
         impl = create(processName, sessionId, DefaultMetricsSystem.instance());
       }
       return impl;
+    }
+
+    synchronized void shutdown() {
+      DefaultMetricsSystem.instance().unregisterSource(JvmMetrics.name());
+      impl = null;
     }
   }
 
@@ -80,7 +89,9 @@ public class JvmMetrics implements MetricsSource {
   private JvmPauseMonitor pauseMonitor = null;
   final ConcurrentHashMap<String, MetricsInfo[]> gcInfoCache =
       new ConcurrentHashMap<String, MetricsInfo[]>();
+  private GcTimeMonitor gcTimeMonitor = null;
 
+  @VisibleForTesting
   JvmMetrics(String processName, String sessionId) {
     this.processName = processName;
     this.sessionId = sessionId;
@@ -88,6 +99,11 @@ public class JvmMetrics implements MetricsSource {
 
   public void setPauseMonitor(final JvmPauseMonitor pauseMonitor) {
     this.pauseMonitor = pauseMonitor;
+  }
+
+  public void setGcTimeMonitor(GcTimeMonitor gcTimeMonitor) {
+    Preconditions.checkNotNull(gcTimeMonitor);
+    this.gcTimeMonitor = gcTimeMonitor;
   }
 
   public static JvmMetrics create(String processName, String sessionId,
@@ -102,6 +118,16 @@ public class JvmMetrics implements MetricsSource {
 
   public static JvmMetrics initSingleton(String processName, String sessionId) {
     return Singleton.INSTANCE.init(processName, sessionId);
+  }
+
+  /**
+   * Shutdown the JvmMetrics singleton. This is not necessary if the JVM itself
+   * is shutdown, but may be necessary for scenarios where JvmMetrics instance
+   * needs to be re-created while the JVM is still around. One such scenario
+   * is unit-testing.
+   */
+  public static void shutdownSingleton() {
+    Singleton.INSTANCE.shutdown();
   }
 
   @Override
@@ -159,6 +185,11 @@ public class JvmMetrics implements MetricsSource {
           pauseMonitor.getNumGcInfoThresholdExceeded());
       rb.addCounter(GcTotalExtraSleepTime,
           pauseMonitor.getTotalGcExtraSleepTime());
+    }
+
+    if (gcTimeMonitor != null) {
+      rb.addGauge(GcTimePercentage,
+          gcTimeMonitor.getLatestGcData().getGcTimePercentage());
     }
   }
 

@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Deprecated
 public class DefaultLCEResourcesHandler implements LCEResourcesHandler {
 
-  final static Log LOG = LogFactory
-      .getLog(DefaultLCEResourcesHandler.class);
+  final static Logger LOG =
+       LoggerFactory.getLogger(DefaultLCEResourcesHandler.class);
 
   private Configuration conf;
   

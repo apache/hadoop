@@ -19,8 +19,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.CookieHandler;
+import java.net.HttpCookie;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,14 +75,99 @@ public class AuthenticatedURL {
    */
   public static final String AUTH_COOKIE = "hadoop.auth";
 
-  private static final String AUTH_COOKIE_EQ = AUTH_COOKIE + "=";
+  // a lightweight cookie handler that will be attached to url connections.
+  // client code is not required to extract or inject auth cookies.
+  private static class AuthCookieHandler extends CookieHandler {
+    private HttpCookie authCookie;
+    private Map<String, List<String>> cookieHeaders = Collections.emptyMap();
+
+    @Override
+    public synchronized Map<String, List<String>> get(URI uri,
+        Map<String, List<String>> requestHeaders) throws IOException {
+      // call getter so it will reset headers if token is expiring.
+      getAuthCookie();
+      return cookieHeaders;
+    }
+
+    @Override
+    public void put(URI uri, Map<String, List<String>> responseHeaders) {
+      List<String> headers = responseHeaders.get("Set-Cookie");
+      if (headers != null) {
+        for (String header : headers) {
+          List<HttpCookie> cookies;
+          try {
+            cookies = HttpCookie.parse(header);
+          } catch (IllegalArgumentException iae) {
+            // don't care. just skip malformed cookie headers.
+            LOG.debug("Cannot parse cookie header: " + header, iae);
+            continue;
+          }
+          for (HttpCookie cookie : cookies) {
+            if (AUTH_COOKIE.equals(cookie.getName())) {
+              setAuthCookie(cookie);
+            }
+          }
+        }
+      }
+    }
+
+    // return the auth cookie if still valid.
+    private synchronized HttpCookie getAuthCookie() {
+      if (authCookie != null && authCookie.hasExpired()) {
+        setAuthCookie(null);
+      }
+      return authCookie;
+    }
+
+    private synchronized void setAuthCookie(HttpCookie cookie) {
+      final HttpCookie oldCookie = authCookie;
+      // will redefine if new cookie is valid.
+      authCookie = null;
+      cookieHeaders = Collections.emptyMap();
+      boolean valid = cookie != null && !cookie.getValue().isEmpty() &&
+          !cookie.hasExpired();
+      if (valid) {
+        // decrease lifetime to avoid using a cookie soon to expire.
+        // allows authenticators to pre-emptively reauthenticate to
+        // prevent clients unnecessarily receiving a 401.
+        long maxAge = cookie.getMaxAge();
+        if (maxAge != -1) {
+          cookie.setMaxAge(maxAge * 9/10);
+          valid = !cookie.hasExpired();
+        }
+      }
+      if (valid) {
+        // v0 cookies value aren't quoted by default but tomcat demands
+        // quoting.
+        if (cookie.getVersion() == 0) {
+          String value = cookie.getValue();
+          if (!value.startsWith("\"")) {
+            value = "\"" + value + "\"";
+            cookie.setValue(value);
+          }
+        }
+        authCookie = cookie;
+        cookieHeaders = new HashMap<>();
+        cookieHeaders.put("Cookie", Arrays.asList(cookie.toString()));
+      }
+      LOG.trace("Setting token value to {} ({})", authCookie, oldCookie);
+    }
+
+    private void setAuthCookieValue(String value) {
+      HttpCookie c = null;
+      if (value != null) {
+        c = new HttpCookie(AUTH_COOKIE, value);
+      }
+      setAuthCookie(c);
+    }
+  }
 
   /**
    * Client side authentication token.
    */
   public static class Token {
 
-    private String token;
+    private final AuthCookieHandler cookieHandler = new AuthCookieHandler();
 
     /**
      * Creates a token.
@@ -102,7 +193,7 @@ public class AuthenticatedURL {
      * @return if a token from the server has been set.
      */
     public boolean isSet() {
-      return token != null;
+      return cookieHandler.getAuthCookie() != null;
     }
 
     /**
@@ -111,7 +202,36 @@ public class AuthenticatedURL {
      * @param tokenStr string representation of the tokenStr.
      */
     void set(String tokenStr) {
-      token = tokenStr;
+      cookieHandler.setAuthCookieValue(tokenStr);
+    }
+
+    /**
+     * Installs a cookie handler for the http request to manage session
+     * cookies.
+     * @param url
+     * @return HttpUrlConnection
+     * @throws IOException
+     */
+    HttpURLConnection openConnection(URL url,
+        ConnectionConfigurator connConfigurator) throws IOException {
+      // the cookie handler is unfortunately a global static.  it's a
+      // synchronized class method so we can safely swap the handler while
+      // instantiating the connection object to prevent it leaking into
+      // other connections.
+      final HttpURLConnection conn;
+      synchronized(CookieHandler.class) {
+        CookieHandler current = CookieHandler.getDefault();
+        CookieHandler.setDefault(cookieHandler);
+        try {
+          conn = (HttpURLConnection)url.openConnection();
+        } finally {
+          CookieHandler.setDefault(current);
+        }
+      }
+      if (connConfigurator != null) {
+        connConfigurator.configure(conn);
+      }
+      return conn;
     }
 
     /**
@@ -121,7 +241,15 @@ public class AuthenticatedURL {
      */
     @Override
     public String toString() {
-      return token;
+      String value = "";
+      HttpCookie authCookie = cookieHandler.getAuthCookie();
+      if (authCookie != null) {
+        value = authCookie.getValue();
+        if (value.startsWith("\"")) { // tests don't want the quotes.
+          value = value.substring(1, value.length()-1);
+        }
+      }
+      return value;
     }
 
   }
@@ -218,27 +346,25 @@ public class AuthenticatedURL {
       throw new IllegalArgumentException("token cannot be NULL");
     }
     authenticator.authenticate(url, token);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    if (connConfigurator != null) {
-      conn = connConfigurator.configure(conn);
-    }
-    injectToken(conn, token);
-    return conn;
+
+    // allow the token to create the connection with a cookie handler for
+    // managing session cookies.
+    return token.openConnection(url, connConfigurator);
   }
 
   /**
-   * Helper method that injects an authentication token to send with a connection.
+   * Helper method that injects an authentication token to send with a
+   * connection. Callers should prefer using
+   * {@link Token#openConnection(URL, ConnectionConfigurator)} which
+   * automatically manages authentication tokens.
    *
    * @param conn connection to inject the authentication token into.
    * @param token authentication token to inject.
    */
   public static void injectToken(HttpURLConnection conn, Token token) {
-    String t = token.token;
-    if (t != null) {
-      if (!t.startsWith("\"")) {
-        t = "\"" + t + "\"";
-      }
-      conn.addRequestProperty("Cookie", AUTH_COOKIE_EQ + t);
+    HttpCookie authCookie = token.cookieHandler.getAuthCookie();
+    if (authCookie != null) {
+      conn.addRequestProperty("Cookie", authCookie.toString());
     }
   }
 
@@ -258,24 +384,10 @@ public class AuthenticatedURL {
     if (respCode == HttpURLConnection.HTTP_OK
         || respCode == HttpURLConnection.HTTP_CREATED
         || respCode == HttpURLConnection.HTTP_ACCEPTED) {
-      Map<String, List<String>> headers = conn.getHeaderFields();
-      List<String> cookies = headers.get("Set-Cookie");
-      if (cookies != null) {
-        for (String cookie : cookies) {
-          if (cookie.startsWith(AUTH_COOKIE_EQ)) {
-            String value = cookie.substring(AUTH_COOKIE_EQ.length());
-            int separator = value.indexOf(";");
-            if (separator > -1) {
-              value = value.substring(0, separator);
-            }
-            if (value.length() > 0) {
-              LOG.trace("Setting token value to {} ({}), resp={}", value,
-                  token, respCode);
-              token.set(value);
-            }
-          }
-        }
-      }
+      // cookie handler should have already extracted the token.  try again
+      // for backwards compatibility if this method is called on a connection
+      // not opened via this instance.
+      token.cookieHandler.put(null, conn.getHeaderFields());
     } else if (respCode == HttpURLConnection.HTTP_NOT_FOUND) {
       LOG.trace("Setting token value to null ({}), resp={}", token, respCode);
       token.set(null);

@@ -18,92 +18,483 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
+import java.io.ObjectInputValidation;
+import java.io.Serializable;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileStatus.AttrFlags;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.io.Writable;
 
-/** Interface that represents the over the wire information for a file.
+/**
+ * HDFS metadata for an entity in the filesystem.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HdfsFileStatus extends FileStatus {
+public interface HdfsFileStatus
+    extends Writable, Comparable<Object>, Serializable, ObjectInputValidation {
 
-  private static final long serialVersionUID = 0x126eb82a;
+  byte[] EMPTY_NAME = new byte[0];
 
-  // local name of the inode that's encoded in java UTF8
-  private byte[] uPath;
-  private byte[] uSymlink; // symlink target encoded in java UTF8/null
-  private final long fileId;
-  private final FileEncryptionInfo feInfo;
-  private final ErasureCodingPolicy ecPolicy;
-
-  // Used by dir, not including dot and dotdot. Always zero for a regular file.
-  private final int childrenNum;
-  private final byte storagePolicy;
-
-  public static final byte[] EMPTY_NAME = new byte[0];
-
-  /**
-   * Set of features potentially active on an instance.
-   */
-  public enum Flags {
+  /** Set of features potentially active on an instance. */
+  enum Flags {
     HAS_ACL,
     HAS_CRYPT,
-    HAS_EC;
+    HAS_EC,
+    SNAPSHOT_ENABLED
   }
-  private final EnumSet<Flags> flags;
 
   /**
-   * Constructor.
-   * @param length            the number of bytes the file has
-   * @param isdir             if the path is a directory
-   * @param block_replication the replication factor
-   * @param blocksize         the block size
-   * @param modification_time modification time
-   * @param access_time access time
-   * @param permission permission
-   * @param owner the owner of the path
-   * @param group the group of the path
-   * @param symlink symlink target encoded in java UTF8 or null
-   * @param path the local name in java UTF8 encoding the same as that in-memory
-   * @param fileId the file id
-   * @param childrenNum the number of children. Used by directory.
-   * @param feInfo the file's encryption info
-   * @param storagePolicy ID which specifies storage policy
-   * @param ecPolicy the erasure coding policy
+   * Builder class for HdfsFileStatus instances. Note default values for
+   * parameters.
    */
-  public HdfsFileStatus(long length, boolean isdir, int block_replication,
-                        long blocksize, long modification_time,
-                        long access_time, FsPermission permission,
-                        EnumSet<Flags> flags, String owner, String group,
-                        byte[] symlink, byte[] path, long fileId,
-                        int childrenNum, FileEncryptionInfo feInfo,
-                        byte storagePolicy, ErasureCodingPolicy ecPolicy) {
-    super(length, isdir, block_replication, blocksize, modification_time,
-        access_time, convert(isdir, symlink != null, permission, flags),
-        owner, group, null, null);
-    this.flags = flags;
-    this.uSymlink = symlink;
-    this.uPath = path;
-    this.fileId = fileId;
-    this.childrenNum = childrenNum;
-    this.feInfo = feInfo;
-    this.storagePolicy = storagePolicy;
-    this.ecPolicy = ecPolicy;
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  class Builder {
+    // Changing default values will affect cases where values are not
+    // specified. Be careful!
+    private long length                    = 0L;
+    private boolean isdir                  = false;
+    private int replication                = 0;
+    private long blocksize                 = 0L;
+    private long mtime                     = 0L;
+    private long atime                     = 0L;
+    private FsPermission permission        = null;
+    private EnumSet<Flags> flags           = EnumSet.noneOf(Flags.class);
+    private String owner                   = null;
+    private String group                   = null;
+    private byte[] symlink                 = null;
+    private byte[] path                    = EMPTY_NAME;
+    private long fileId                    = -1L;
+    private int childrenNum                = 0;
+    private FileEncryptionInfo feInfo      = null;
+    private byte storagePolicy             =
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+    private ErasureCodingPolicy ecPolicy   = null;
+    private LocatedBlocks locations        = null;
+
+    /**
+     * Set the length of the entity (default = 0).
+     * @param length Entity length
+     * @return This Builder instance
+     */
+    public Builder length(long length) {
+      this.length = length;
+      return this;
+    }
+
+    /**
+     * Set the isDir flag for the entity (default = false).
+     * @param isdir True if the referent is a directory.
+     * @return This Builder instance
+     */
+    public Builder isdir(boolean isdir) {
+      this.isdir = isdir;
+      return this;
+    }
+
+    /**
+     * Set the replication of this entity (default = 0).
+     * @param replication Number of replicas
+     * @return This Builder instance
+     */
+    public Builder replication(int replication) {
+      this.replication = replication;
+      return this;
+    }
+
+    /**
+     * Set the blocksize of this entity (default = 0).
+     * @param blocksize Target, default blocksize
+     * @return This Builder instance
+     */
+    public Builder blocksize(long blocksize) {
+      this.blocksize = blocksize;
+      return this;
+    }
+
+    /**
+     * Set the modification time of this entity (default = 0).
+     * @param mtime Last modified time
+     * @return This Builder instance
+     */
+    public Builder mtime(long mtime) {
+      this.mtime = mtime;
+      return this;
+    }
+
+    /**
+     * Set the access time of this entity (default = 0).
+     * @param atime Last accessed time
+     * @return This Builder instance
+     */
+    public Builder atime(long atime) {
+      this.atime = atime;
+      return this;
+    }
+
+    /**
+     * Set the permission mask of this entity (default = null).
+     * @param permission Permission bitmask
+     * @return This Builder instance
+     */
+    public Builder perm(FsPermission permission) {
+      this.permission = permission;
+      return this;
+    }
+
+    /**
+     * Set {@link Flags} for this entity
+     * (default = {@link EnumSet#noneOf(Class)}).
+     * @param flags Flags
+     * @return This builder instance
+     */
+    public Builder flags(EnumSet<Flags> flags) {
+      this.flags = flags;
+      return this;
+    }
+
+    /**
+     * Set the owner for this entity (default = null).
+     * @param owner Owner
+     * @return This Builder instance
+     */
+    public Builder owner(String owner) {
+      this.owner = owner;
+      return this;
+    }
+
+    /**
+     * Set the group for this entity (default = null).
+     * @param group Group
+     * @return This Builder instance
+     */
+    public Builder group(String group) {
+      this.group = group;
+      return this;
+    }
+
+    /**
+     * Set symlink bytes for this entity (default = null).
+     * @param symlink Symlink bytes (see
+     *                {@link DFSUtilClient#bytes2String(byte[])})
+     * @return This Builder instance
+     */
+    public Builder symlink(byte[] symlink) {
+      this.symlink = null == symlink
+          ? null
+          : Arrays.copyOf(symlink, symlink.length);
+      return this;
+    }
+
+    /**
+     * Set path bytes for this entity (default = {@link #EMPTY_NAME}).
+     * @param path Path bytes (see {@link #makeQualified(URI, Path)}).
+     * @return This Builder instance
+     */
+    public Builder path(byte[] path) {
+      this.path = null == path
+          ? null
+          : Arrays.copyOf(path, path.length);
+      return this;
+    }
+
+    /**
+     * Set the fileId for this entity (default = -1).
+     * @param fileId FileId
+     * @return This Builder instance
+     */
+    public Builder fileId(long fileId) {
+      this.fileId = fileId;
+      return this;
+    }
+
+    /**
+     * Set the number of children for this entity (default = 0).
+     * @param childrenNum Number of children
+     * @return This Builder instance
+     */
+    public Builder children(int childrenNum) {
+      this.childrenNum = childrenNum;
+      return this;
+    }
+
+    /**
+     * Set the encryption info for this entity (default = null).
+     * @param feInfo Encryption info
+     * @return This Builder instance
+     */
+    public Builder feInfo(FileEncryptionInfo feInfo) {
+      this.feInfo = feInfo;
+      return this;
+    }
+
+    /**
+     * Set the storage policy for this entity
+     * (default = {@link HdfsConstants#BLOCK_STORAGE_POLICY_ID_UNSPECIFIED}).
+     * @param storagePolicy Storage policy
+     * @return This Builder instance
+     */
+    public Builder storagePolicy(byte storagePolicy) {
+      this.storagePolicy = storagePolicy;
+      return this;
+    }
+
+    /**
+     * Set the erasure coding policy for this entity (default = null).
+     * @param ecPolicy Erasure coding policy
+     * @return This Builder instance
+     */
+    public Builder ecPolicy(ErasureCodingPolicy ecPolicy) {
+      this.ecPolicy = ecPolicy;
+      return this;
+    }
+
+    /**
+     * Set the block locations for this entity (default = null).
+     * @param locations HDFS locations
+     *       (see {@link HdfsLocatedFileStatus#makeQualifiedLocated(URI, Path)})
+     * @return This Builder instance
+     */
+    public Builder locations(LocatedBlocks locations) {
+      this.locations = locations;
+      return this;
+    }
+
+    /**
+     * @return An {@link HdfsFileStatus} instance from these parameters.
+     */
+    public HdfsFileStatus build() {
+      if (null == locations && !isdir && null == symlink) {
+        return new HdfsNamedFileStatus(length, isdir, replication, blocksize,
+            mtime, atime, permission, flags, owner, group, symlink, path,
+            fileId, childrenNum, feInfo, storagePolicy, ecPolicy);
+      }
+      return new HdfsLocatedFileStatus(length, isdir, replication, blocksize,
+          mtime, atime, permission, flags, owner, group, symlink, path,
+          fileId, childrenNum, feInfo, storagePolicy, ecPolicy, locations);
+    }
+
   }
+
+  ///////////////////
+  // HDFS-specific //
+  ///////////////////
+
+  /**
+   * Inode ID for this entity, if a file.
+   * @return inode ID.
+   */
+  long getFileId();
+
+  /**
+   * Get metadata for encryption, if present.
+   * @return the {@link FileEncryptionInfo} for this stream, or null if not
+   *         encrypted.
+   */
+  FileEncryptionInfo getFileEncryptionInfo();
+
+  /**
+   * Check if the local name is empty.
+   * @return true if the name is empty
+   */
+  default boolean isEmptyLocalName() {
+    return getLocalNameInBytes().length == 0;
+  }
+
+  /**
+   * Get the string representation of the local name.
+   * @return the local name in string
+   */
+  default String getLocalName() {
+    return DFSUtilClient.bytes2String(getLocalNameInBytes());
+  }
+
+  /**
+   * Get the Java UTF8 representation of the local name.
+   * @return the local name in java UTF8
+   */
+  byte[] getLocalNameInBytes();
+
+  /**
+   * Get the string representation of the full path name.
+   * @param parent the parent path
+   * @return the full path in string
+   */
+  default String getFullName(String parent) {
+    if (isEmptyLocalName()) {
+      return parent;
+    }
+
+    StringBuilder fullName = new StringBuilder(parent);
+    if (!parent.endsWith(Path.SEPARATOR)) {
+      fullName.append(Path.SEPARATOR);
+    }
+    fullName.append(getLocalName());
+    return fullName.toString();
+  }
+
+  /**
+   * Get the full path.
+   * @param parent the parent path
+   * @return the full path
+   */
+  default Path getFullPath(Path parent) {
+    if (isEmptyLocalName()) {
+      return parent;
+    }
+
+    return new Path(parent, getLocalName());
+  }
+
+  /**
+   * Opaque referant for the symlink, to be resolved at the client.
+   */
+  byte[] getSymlinkInBytes();
+
+  /**
+   * @return number of children for this inode.
+   */
+  int getChildrenNum();
+
+  /**
+   * Get the erasure coding policy if it's set.
+   * @return the erasure coding policy
+   */
+  ErasureCodingPolicy getErasureCodingPolicy();
+
+  /** @return the storage policy id */
+  byte getStoragePolicy();
+
+  /**
+   * Resolve the short name of the Path given the URI, parent provided. This
+   * FileStatus reference will not contain a valid Path until it is resolved
+   * by this method.
+   * @param defaultUri FileSystem to fully qualify HDFS path.
+   * @param parent Parent path of this element.
+   * @return Reference to this instance.
+   */
+  default FileStatus makeQualified(URI defaultUri, Path parent) {
+    // fully-qualify path
+    setPath(getFullPath(parent).makeQualified(defaultUri, null));
+    return (FileStatus) this; // API compatibility
+  }
+
+  ////////////////////////////
+  // FileStatus "overrides" //
+  ////////////////////////////
+
+  /**
+   * See {@link FileStatus#getPath()}.
+   */
+  Path getPath();
+  /**
+   * See {@link FileStatus#setPath(Path)}.
+   */
+  void setPath(Path p);
+  /**
+   * See {@link FileStatus#getLen()}.
+   */
+  long getLen();
+  /**
+   * See {@link FileStatus#isFile()}.
+   */
+  boolean isFile();
+  /**
+   * See {@link FileStatus#isDirectory()}.
+   */
+  boolean isDirectory();
+  /**
+   * See {@link FileStatus#isDir()}.
+   */
+  boolean isDir();
+  /**
+   * See {@link FileStatus#isSymlink()}.
+   */
+  boolean isSymlink();
+  /**
+   * See {@link FileStatus#getBlockSize()}.
+   */
+  long getBlockSize();
+  /**
+   * See {@link FileStatus#getReplication()}.
+   */
+  short getReplication();
+  /**
+   * See {@link FileStatus#getModificationTime()}.
+   */
+  long getModificationTime();
+  /**
+   * See {@link FileStatus#getAccessTime()}.
+   */
+  long getAccessTime();
+  /**
+   * See {@link FileStatus#getPermission()}.
+   */
+  FsPermission getPermission();
+  /**
+   * See {@link FileStatus#setPermission(FsPermission)}.
+   */
+  void setPermission(FsPermission permission);
+  /**
+   * See {@link FileStatus#getOwner()}.
+   */
+  String getOwner();
+  /**
+   * See {@link FileStatus#setOwner(String)}.
+   */
+  void setOwner(String owner);
+  /**
+   * See {@link FileStatus#getGroup()}.
+   */
+  String getGroup();
+  /**
+   * See {@link FileStatus#setGroup(String)}.
+   */
+  void setGroup(String group);
+  /**
+   * See {@link FileStatus#hasAcl()}.
+   */
+  boolean hasAcl();
+  /**
+   * See {@link FileStatus#isEncrypted()}.
+   */
+  boolean isEncrypted();
+  /**
+   * See {@link FileStatus#isErasureCoded()}.
+   */
+  boolean isErasureCoded();
+  /**
+   * See {@link FileStatus#isSnapshotEnabled()}.
+   */
+  boolean isSnapshotEnabled();
+  /**
+   * See {@link FileStatus#getSymlink()}.
+   */
+  Path getSymlink() throws IOException;
+  /**
+   * See {@link FileStatus#setSymlink(Path sym)}.
+   */
+  void setSymlink(Path sym);
+  /**
+   * See {@link FileStatus#compareTo(FileStatus)}.
+   */
+  int compareTo(FileStatus stat);
 
   /**
    * Set redundant flags for compatibility with existing applications.
    */
-  protected static FsPermission convert(boolean isdir, boolean symlink,
-      FsPermission p, EnumSet<Flags> f) {
+  static FsPermission convert(boolean isdir, boolean symlink,
+                              FsPermission p, Set<Flags> f) {
     if (p instanceof FsPermissionExtension) {
       // verify flags are set consistently
       assert p.getAclBit() == f.contains(HdfsFileStatus.Flags.HAS_ACL);
@@ -124,150 +515,24 @@ public class HdfsFileStatus extends FileStatus {
         f.contains(Flags.HAS_CRYPT), f.contains(Flags.HAS_EC));
   }
 
-  @Override
-  public boolean isSymlink() {
-    return uSymlink != null;
-  }
-
-  @Override
-  public boolean hasAcl() {
-    return flags.contains(Flags.HAS_ACL);
-  }
-
-  @Override
-  public boolean isEncrypted() {
-    return flags.contains(Flags.HAS_CRYPT);
-  }
-
-  @Override
-  public boolean isErasureCoded() {
-    return flags.contains(Flags.HAS_EC);
-  }
-
-  /**
-   * Check if the local name is empty.
-   * @return true if the name is empty
-   */
-  public final boolean isEmptyLocalName() {
-    return uPath.length == 0;
-  }
-
-  /**
-   * Get the string representation of the local name.
-   * @return the local name in string
-   */
-  public final String getLocalName() {
-    return DFSUtilClient.bytes2String(uPath);
-  }
-
-  /**
-   * Get the Java UTF8 representation of the local name.
-   * @return the local name in java UTF8
-   */
-  public final byte[] getLocalNameInBytes() {
-    return uPath;
-  }
-
-  /**
-   * Get the string representation of the full path name.
-   * @param parent the parent path
-   * @return the full path in string
-   */
-  public final String getFullName(final String parent) {
-    if (isEmptyLocalName()) {
-      return parent;
+  static Set<AttrFlags> convert(Set<Flags> flags) {
+    if (flags.isEmpty()) {
+      return FileStatus.NONE;
     }
-
-    StringBuilder fullName = new StringBuilder(parent);
-    if (!parent.endsWith(Path.SEPARATOR)) {
-      fullName.append(Path.SEPARATOR);
+    EnumSet<AttrFlags> attr = EnumSet.noneOf(AttrFlags.class);
+    if (flags.contains(Flags.HAS_ACL)) {
+      attr.add(AttrFlags.HAS_ACL);
     }
-    fullName.append(getLocalName());
-    return fullName.toString();
-  }
-
-  /**
-   * Get the full path.
-   * @param parent the parent path
-   * @return the full path
-   */
-  public final Path getFullPath(final Path parent) {
-    if (isEmptyLocalName()) {
-      return parent;
+    if (flags.contains(Flags.HAS_EC)) {
+      attr.add(AttrFlags.HAS_EC);
     }
-
-    return new Path(parent, getLocalName());
-  }
-
-  @Override
-  public Path getSymlink() throws IOException {
-    if (isSymlink()) {
-      return new Path(DFSUtilClient.bytes2String(uSymlink));
+    if (flags.contains(Flags.HAS_CRYPT)) {
+      attr.add(AttrFlags.HAS_CRYPT);
     }
-    throw new IOException("Path " + getPath() + " is not a symbolic link");
-  }
-
-  @Override
-  public void setSymlink(Path sym) {
-    uSymlink = DFSUtilClient.string2Bytes(sym.toString());
-  }
-
-  /**
-   * Opaque referant for the symlink, to be resolved at the client.
-   */
-  public final byte[] getSymlinkInBytes() {
-    return uSymlink;
-  }
-
-  public final long getFileId() {
-    return fileId;
-  }
-
-  public final FileEncryptionInfo getFileEncryptionInfo() {
-    return feInfo;
-  }
-
-  /**
-   * Get the erasure coding policy if it's set.
-   * @return the erasure coding policy
-   */
-  public ErasureCodingPolicy getErasureCodingPolicy() {
-    return ecPolicy;
-  }
-
-  public final int getChildrenNum() {
-    return childrenNum;
-  }
-
-  /** @return the storage policy id */
-  public final byte getStoragePolicy() {
-    return storagePolicy;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    // satisfy findbugs
-    return super.equals(o);
-  }
-
-  @Override
-  public int hashCode() {
-    // satisfy findbugs
-    return super.hashCode();
-  }
-
-  /**
-   * Resolve the short name of the Path given the URI, parent provided. This
-   * FileStatus reference will not contain a valid Path until it is resolved
-   * by this method.
-   * @param defaultUri FileSystem to fully qualify HDFS path.
-   * @param parent Parent path of this element.
-   * @return Reference to this instance.
-   */
-  public final FileStatus makeQualified(URI defaultUri, Path parent) {
-    // fully-qualify path
-    setPath(getFullPath(parent).makeQualified(defaultUri, null));
-    return this; // API compatibility
+    if (flags.contains(Flags.SNAPSHOT_ENABLED)) {
+      attr.add(AttrFlags.SNAPSHOT_ENABLED);
+    }
+    return attr;
   }
 
 }

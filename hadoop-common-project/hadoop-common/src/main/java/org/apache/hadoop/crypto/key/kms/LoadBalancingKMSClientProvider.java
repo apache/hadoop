@@ -141,7 +141,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
           }
           throw new IOException(e);
         }
-        if (action.action == RetryAction.RetryDecision.FAIL) {
+        // make sure each provider is tried at least once, to keep behavior
+        // compatible with earlier versions of LBKMSCP
+        if (action.action == RetryAction.RetryDecision.FAIL
+            && numFailovers >= providers.length - 1) {
           LOG.warn("Aborting since the Request has failed with all KMS"
               + " providers(depending on {}={} setting and numProviders={})"
               + " in the group OR the exception is not recoverable",
@@ -292,7 +295,9 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     }
   }
 
-  public EncryptedKeyVersion reencryptEncryptedKey(EncryptedKeyVersion ekv)
+  @Override
+  public EncryptedKeyVersion reencryptEncryptedKey(
+      final EncryptedKeyVersion ekv)
       throws IOException, GeneralSecurityException {
     try {
       return doOp(new ProviderCallable<EncryptedKeyVersion>() {
@@ -300,6 +305,26 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         public EncryptedKeyVersion call(KMSClientProvider provider)
             throws IOException, GeneralSecurityException {
           return provider.reencryptEncryptedKey(ekv);
+        }
+      }, nextIdx());
+    } catch (WrapperException we) {
+      if (we.getCause() instanceof GeneralSecurityException) {
+        throw (GeneralSecurityException) we.getCause();
+      }
+      throw new IOException(we.getCause());
+    }
+  }
+
+  @Override
+  public void reencryptEncryptedKeys(final List<EncryptedKeyVersion> ekvs)
+      throws IOException, GeneralSecurityException {
+    try {
+      doOp(new ProviderCallable<Void>() {
+        @Override
+        public Void call(KMSClientProvider provider)
+            throws IOException, GeneralSecurityException {
+          provider.reencryptEncryptedKeys(ekvs);
+          return null;
         }
       }, nextIdx());
     } catch (WrapperException we) {

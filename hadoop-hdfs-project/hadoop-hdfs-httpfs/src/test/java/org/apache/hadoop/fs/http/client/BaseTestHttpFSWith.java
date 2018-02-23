@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -38,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -74,6 +74,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -857,6 +858,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileStatus expectedFileStatus = expected.getFileStatus(path);
     FileStatus actualFileStatus = actual.getFileStatus(path);
     assertEquals(actualFileStatus.hasAcl(), expectedFileStatus.hasAcl());
+    // backwards compat
     assertEquals(actualFileStatus.getPermission().getAclBit(),
         expectedFileStatus.getPermission().getAclBit());
   }
@@ -1034,11 +1036,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   }
 
   protected enum Operation {
-    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
+    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS,
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER,
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
-    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING, GETFILEBLOCKLOCATIONS
+    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
+    CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT
   }
 
   private void operation(Operation op) throws Exception {
@@ -1127,8 +1130,14 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case ERASURE_CODING:
       testErasureCoding();
       break;
-    case GETFILEBLOCKLOCATIONS:
-      testGetFileBlockLocations();
+    case CREATE_SNAPSHOT:
+      testCreateSnapshot();
+      break;
+    case RENAME_SNAPSHOT:
+      testRenameSnapshot();
+      break;
+    case DELETE_SNAPSHOT:
+      testDeleteSnapshot();
       break;
     }
   }
@@ -1176,85 +1185,96 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     });
   }
 
-  private void testGetFileBlockLocations() throws Exception {
-    BlockLocation[] locations1, locations2, locations11, locations21 = null;
-    Path testFile = null;
-
-    // Test single block file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
-      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 1);
-      Assert.assertNotNull(locations1);
+  private void testCreateSnapshot(String snapshotName) throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      if (snapshotName == null) {
+        fs.createSnapshot(snapshottablePath);
+      } else {
+        fs.createSnapshot(snapshottablePath, snapshotName);
+      }
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      String resultingSnapName = snapshotItems[0].getPath().getName();
+      if (snapshotName == null) {
+        assertTrue("Snapshot auto generated name not matching pattern",
+            Pattern.matches("(s)(\\d{8})(-)(\\d{6})(\\.)(\\d{3})",
+                resultingSnapName));
+      } else {
+        assertTrue("Snapshot name is not same as passed name.",
+            snapshotName.equals(resultingSnapName));
+      }
+      cleanSnapshotTests(snapshottablePath, resultingSnapName);
     }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 1);
-      Assert.assertNotNull(locations2);
-    }
-
-    verifyBlockLocations(locations1, locations2);
-
-    // Test multi-block single replica file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
-      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
-          (long) 512, (short) 1,  0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 1024);
-      locations11 = fs.getFileBlockLocations(testFile, 1024, 2048);
-      Assert.assertNotNull(locations1);
-      Assert.assertNotNull(locations11);
-    }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 1024);
-      locations21 = fs.getFileBlockLocations(testFile, 1024, 2048);
-      Assert.assertNotNull(locations2);
-      Assert.assertNotNull(locations21);
-    }
-
-    verifyBlockLocations(locations1, locations2);
-    verifyBlockLocations(locations11, locations21);
-
-    // Test multi-block multi-replica file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
-      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
-          (long) 512, (short) 3,  0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 2048);
-      Assert.assertNotNull(locations1);
-    }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 2048);
-      Assert.assertNotNull(locations2);
-    }
-
-    verifyBlockLocations(locations1, locations2);
   }
 
-  private void verifyBlockLocations(BlockLocation[] locations1,
-      BlockLocation[] locations2) throws IOException {
-    Assert.assertEquals(locations1.length, locations2.length);
-    for (int i = 0; i < locations1.length; i++) {
-      BlockLocation location1 = locations1[i];
-      BlockLocation location2 = locations2[i];
+  private void testCreateSnapshot() throws Exception {
+    testCreateSnapshot(null);
+    testCreateSnapshot("snap-with-name");
+  }
 
-      Assert.assertEquals(location1.isCorrupt(), location2.isCorrupt());
-      Assert.assertEquals(location1.getOffset(), location2.getOffset());
-      Assert.assertEquals(location1.getLength(), location2.getLength());
+  private void createSnapshotTestsPreconditions(Path snapshottablePath)
+      throws Exception {
+    //Needed to get a DistributedFileSystem instance, in order to
+    //call allowSnapshot on the newly created directory
+    DistributedFileSystem distributedFs = (DistributedFileSystem)
+        FileSystem.get(snapshottablePath.toUri(), this.getProxiedFSConf());
+    distributedFs.mkdirs(snapshottablePath);
+    distributedFs.allowSnapshot(snapshottablePath);
+    Path subdirPath = new Path("/tmp/tmp-snap-test/subdir");
+    distributedFs.mkdirs(subdirPath);
 
-      Arrays.sort(location1.getHosts());
-      Arrays.sort(location2.getHosts());
-      Arrays.sort(location1.getNames());
-      Arrays.sort(location2.getNames());
-      Arrays.sort(location1.getTopologyPaths());
-      Arrays.sort(location2.getTopologyPaths());
+  }
 
-      Assert.assertArrayEquals(location1.getHosts(), location2.getHosts());
-      Assert.assertArrayEquals(location1.getNames(), location2.getNames());
-      Assert.assertArrayEquals(location1.getTopologyPaths(),
-          location2.getTopologyPaths());
+  private void cleanSnapshotTests(Path snapshottablePath,
+                                  String resultingSnapName) throws Exception {
+    DistributedFileSystem distributedFs = (DistributedFileSystem)
+        FileSystem.get(snapshottablePath.toUri(), this.getProxiedFSConf());
+    distributedFs.deleteSnapshot(snapshottablePath, resultingSnapName);
+    distributedFs.delete(snapshottablePath, true);
+  }
+
+  private void testRenameSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      fs.createSnapshot(snapshottablePath, "snap-to-rename");
+      fs.renameSnapshot(snapshottablePath, "snap-to-rename",
+          "snap-new-name");
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      String resultingSnapName = snapshotItems[0].getPath().getName();
+      assertTrue("Snapshot name is not same as passed name.",
+          "snap-new-name".equals(resultingSnapName));
+      cleanSnapshotTests(snapshottablePath, resultingSnapName);
+    }
+  }
+
+  private void testDeleteSnapshot() throws Exception {
+    if (!this.isLocalFS()) {
+      Path snapshottablePath = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(snapshottablePath);
+      //Now get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      fs.createSnapshot(snapshottablePath, "snap-to-delete");
+      Path snapshotsDir = new Path("/tmp/tmp-snap-test/.snapshot");
+      FileStatus[] snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("Should have exactly one snapshot.",
+          snapshotItems.length == 1);
+      fs.deleteSnapshot(snapshottablePath, "snap-to-delete");
+      snapshotItems = fs.listStatus(snapshotsDir);
+      assertTrue("There should be no snapshot anymore.",
+          snapshotItems.length == 0);
+      fs.delete(snapshottablePath, true);
     }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.HardLink;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -221,6 +222,8 @@ public class NativeIO {
     public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
     /** Wrapper around fstat(2) */
     private static native Stat fstat(FileDescriptor fd) throws IOException;
+    /** Wrapper around stat(2). */
+    private static native Stat stat(String path) throws IOException;
 
     /** Native chmod implementation. On UNIX, it is a wrapper around chmod(2) */
     private static native void chmodImpl(String path, int mode) throws IOException;
@@ -424,6 +427,37 @@ public class NativeIO {
             throw new NativeIOException("Unknown error", Errno.UNKNOWN);
           }
         }
+      }
+      return stat;
+    }
+
+    /**
+     * Return the file stat for a file path.
+     *
+     * @param path  file path
+     * @return  the file stat
+     * @throws IOException  thrown if there is an IO error while obtaining the
+     * file stat
+     */
+    public static Stat getStat(String path) throws IOException {
+      if (path == null) {
+        String errMessage = "Path is null";
+        LOG.warn(errMessage);
+        throw new IOException(errMessage);
+      }
+      Stat stat = null;
+      try {
+        if (!Shell.WINDOWS) {
+          stat = stat(path);
+          stat.owner = getName(IdCache.USER, stat.ownerId);
+          stat.group = getName(IdCache.GROUP, stat.groupId);
+        } else {
+          stat = stat(path);
+        }
+      } catch (NativeIOException nioe) {
+        LOG.warn("NativeIO.getStat error ({}): {} -- file path: {}",
+            nioe.getErrorCode(), nioe.getMessage(), path);
+        throw new PathIOException(path, nioe);
       }
       return stat;
     }
@@ -922,28 +956,23 @@ public class NativeIO {
     if (nativeLoaded && Shell.WINDOWS) {
       copyFileUnbuffered0(src.getAbsolutePath(), dst.getAbsolutePath());
     } else {
-      FileInputStream fis = null;
-      FileOutputStream fos = null;
+      FileInputStream fis = new FileInputStream(src);
       FileChannel input = null;
-      FileChannel output = null;
       try {
-        fis = new FileInputStream(src);
-        fos = new FileOutputStream(dst);
         input = fis.getChannel();
-        output = fos.getChannel();
-        long remaining = input.size();
-        long position = 0;
-        long transferred = 0;
-        while (remaining > 0) {
-          transferred = input.transferTo(position, remaining, output);
-          remaining -= transferred;
-          position += transferred;
+        try (FileOutputStream fos = new FileOutputStream(dst);
+             FileChannel output = fos.getChannel()) {
+          long remaining = input.size();
+          long position = 0;
+          long transferred = 0;
+          while (remaining > 0) {
+            transferred = input.transferTo(position, remaining, output);
+            remaining -= transferred;
+            position += transferred;
+          }
         }
       } finally {
-        IOUtils.cleanupWithLogger(LOG, output);
-        IOUtils.cleanupWithLogger(LOG, fos);
-        IOUtils.cleanupWithLogger(LOG, input);
-        IOUtils.cleanupWithLogger(LOG, fis);
+        IOUtils.cleanupWithLogger(LOG, input, fis);
       }
     }
   }

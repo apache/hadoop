@@ -18,9 +18,16 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
+import java.net.URI;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 
 /**
@@ -39,15 +46,30 @@ public class ReplicaBuilder {
   private Thread writer;
   private long recoveryId;
   private Block block;
+  private byte[] lastPartialChunkChecksum;
 
   private ReplicaInfo fromReplica;
+
+  private URI uri;
+  private long offset;
+  private Configuration conf;
+  private FileRegion fileRegion;
+  private FileSystem remoteFS;
+  private PathHandle pathHandle;
+  private String pathSuffix;
+  private Path pathPrefix;
 
   public ReplicaBuilder(ReplicaState state) {
     volume = null;
     writer = null;
     block = null;
     length = -1;
+    fileRegion = null;
+    conf = null;
+    fromReplica = null;
+    uri = null;
     this.state = state;
+    pathHandle = null;
   }
 
   public ReplicaBuilder setState(ReplicaState state) {
@@ -102,6 +124,63 @@ public class ReplicaBuilder {
 
   public ReplicaBuilder setBlock(Block block) {
     this.block = block;
+    return this;
+  }
+
+  public ReplicaBuilder setURI(URI uri) {
+    this.uri = uri;
+    return this;
+  }
+
+  public ReplicaBuilder setConf(Configuration conf) {
+    this.conf = conf;
+    return this;
+  }
+
+  public ReplicaBuilder setOffset(long offset) {
+    this.offset = offset;
+    return this;
+  }
+
+  public ReplicaBuilder setFileRegion(FileRegion fileRegion) {
+    this.fileRegion = fileRegion;
+    return this;
+  }
+
+  public ReplicaBuilder setRemoteFS(FileSystem remoteFS) {
+    this.remoteFS = remoteFS;
+    return this;
+  }
+
+  /**
+   * Set the suffix of the {@link Path} associated with the replica.
+   * Intended to be use only for {@link ProvidedReplica}s.
+   * @param suffix the path suffix.
+   * @return the builder with the path suffix set.
+   */
+  public ReplicaBuilder setPathSuffix(String suffix) {
+    this.pathSuffix = suffix;
+    return this;
+  }
+
+  /**
+   * Set the prefix of the {@link Path} associated with the replica.
+   * Intended to be use only for {@link ProvidedReplica}s.
+   * @param prefix the path prefix.
+   * @return the builder with the path prefix set.
+   */
+  public ReplicaBuilder setPathPrefix(Path prefix) {
+    this.pathPrefix = prefix;
+    return this;
+  }
+
+  public ReplicaBuilder setPathHandle(PathHandle pathHandle) {
+    this.pathHandle = pathHandle;
+    return this;
+  }
+
+  public ReplicaBuilder setLastPartialChunkChecksum(byte[] checksum) {
+    this.lastPartialChunkChecksum = checksum;
     return this;
   }
 
@@ -176,7 +255,7 @@ public class ReplicaBuilder {
     }
   }
 
-  private ReplicaInfo buildFinalizedReplica() throws IllegalArgumentException {
+  private LocalReplica buildFinalizedReplica() throws IllegalArgumentException {
     if (null != fromReplica &&
         fromReplica.getState() == ReplicaState.FINALIZED) {
       return new FinalizedReplica((FinalizedReplica)fromReplica);
@@ -185,15 +264,16 @@ public class ReplicaBuilder {
           + "state: " + fromReplica.getState());
     } else {
       if (null != block) {
-        return new FinalizedReplica(block, volume, directoryUsed);
+        return new FinalizedReplica(block, volume, directoryUsed,
+            lastPartialChunkChecksum);
       } else {
         return new FinalizedReplica(blockId, length, genStamp, volume,
-            directoryUsed);
+            directoryUsed, lastPartialChunkChecksum);
       }
     }
   }
 
-  private ReplicaInfo buildRWR() throws IllegalArgumentException {
+  private LocalReplica buildRWR() throws IllegalArgumentException {
 
     if (null != fromReplica && fromReplica.getState() == ReplicaState.RWR) {
       return new ReplicaWaitingToBeRecovered(
@@ -211,7 +291,7 @@ public class ReplicaBuilder {
     }
   }
 
-  private ReplicaInfo buildRUR() throws IllegalArgumentException {
+  private LocalReplica buildRUR() throws IllegalArgumentException {
     if (null == fromReplica) {
       throw new IllegalArgumentException(
           "Missing a valid replica to recover from");
@@ -228,8 +308,54 @@ public class ReplicaBuilder {
     }
   }
 
-  public ReplicaInfo build() throws IllegalArgumentException {
-    ReplicaInfo info = null;
+  private ProvidedReplica buildProvidedFinalizedReplica()
+      throws IllegalArgumentException {
+    ProvidedReplica info = null;
+    if (fromReplica != null) {
+      throw new IllegalArgumentException("Finalized PROVIDED replica " +
+          "cannot be constructed from another replica");
+    }
+    if (fileRegion == null && uri == null &&
+        (pathPrefix == null || pathSuffix == null)) {
+      throw new IllegalArgumentException(
+          "Trying to construct a provided replica on " + volume +
+          " without enough information");
+    }
+    if (fileRegion == null) {
+      if (uri != null) {
+        info = new FinalizedProvidedReplica(blockId, uri, offset,
+            length, genStamp, pathHandle, volume, conf, remoteFS);
+      } else {
+        info = new FinalizedProvidedReplica(blockId, pathPrefix, pathSuffix,
+            offset, length, genStamp, pathHandle, volume, conf, remoteFS);
+      }
+    } else {
+      info = new FinalizedProvidedReplica(fileRegion, volume, conf, remoteFS);
+    }
+    return info;
+  }
+
+  private ProvidedReplica buildProvidedReplica()
+      throws IllegalArgumentException {
+    ProvidedReplica info = null;
+    switch(this.state) {
+    case FINALIZED:
+      info = buildProvidedFinalizedReplica();
+      break;
+    case RWR:
+    case RUR:
+    case RBW:
+    case TEMPORARY:
+    default:
+      throw new IllegalArgumentException("Unknown replica state " +
+          state + " for PROVIDED replica");
+    }
+    return info;
+  }
+
+  private LocalReplica buildLocalReplica()
+      throws IllegalArgumentException {
+    LocalReplica info = null;
     switch(this.state) {
     case FINALIZED:
       info = buildFinalizedReplica();
@@ -247,6 +373,18 @@ public class ReplicaBuilder {
     default:
       throw new IllegalArgumentException("Unknown replica state " + state);
     }
+    return info;
+  }
+
+  public ReplicaInfo build() throws IllegalArgumentException {
+
+    ReplicaInfo info = null;
+    if(volume != null && volume.getStorageType() == StorageType.PROVIDED) {
+      info = buildProvidedReplica();
+    } else {
+      info = buildLocalReplica();
+    }
+
     return info;
   }
 }

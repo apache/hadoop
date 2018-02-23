@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.recovery.DeletionTaskRecoveryInfo;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTaskType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.junit.Test;
 
@@ -74,6 +75,29 @@ public class TestNMProtoUtils {
     assertEquals(subdir, ((FileDeletionTask) deletionTask).getSubDir());
     assertEquals(basedir,
         ((FileDeletionTask) deletionTask).getBaseDirs().get(0));
+  }
+
+  @Test
+  public void testConvertProtoToDockerContainerDeletionTask() throws Exception {
+    DeletionService deletionService = mock(DeletionService.class);
+    int id = 0;
+    String user = "user";
+    String dockerContainerId = "container_e123_12321231_00001";
+    DeletionServiceDeleteTaskProto.Builder protoBuilder =
+        DeletionServiceDeleteTaskProto.newBuilder();
+    protoBuilder
+        .setId(id)
+        .setUser(user)
+        .setDockerContainerId(dockerContainerId);
+    DeletionServiceDeleteTaskProto proto = protoBuilder.build();
+    DeletionTask deletionTask =
+        NMProtoUtils.convertProtoToDockerContainerDeletionTask(proto,
+            deletionService, id);
+    assertEquals(DeletionTaskType.DOCKER_CONTAINER.name(),
+        deletionTask.getDeletionTaskType().name());
+    assertEquals(id, deletionTask.getTaskId());
+    assertEquals(dockerContainerId,
+        ((DockerContainerDeletionTask) deletionTask).getContainerId());
   }
 
   @Test

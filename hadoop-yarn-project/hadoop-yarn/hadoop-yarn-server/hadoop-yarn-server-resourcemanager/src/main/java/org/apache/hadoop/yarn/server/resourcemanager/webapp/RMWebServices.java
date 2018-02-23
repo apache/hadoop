@@ -55,7 +55,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
+import com.google.common.base.Joiner;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +73,12 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -95,10 +101,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -127,6 +135,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
@@ -189,6 +200,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -223,7 +235,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
   @Inject
   public RMWebServices(final ResourceManager rm, Configuration conf) {
-    super(rm.getClientRMService());
+    // don't inject, always take appBaseRoot from RM.
+    super(null);
     this.rm = rm;
     this.conf = conf;
     isCentralizedNodeLabelConfiguration =
@@ -568,7 +581,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     List<ApplicationReport> appReports = null;
     try {
-      appReports = rm.getClientRMService().getApplications(request, false)
+      appReports = rm.getClientRMService().getApplications(request)
           .getApplicationList();
     } catch (YarnException e) {
       LOG.error("Unable to retrieve apps from ClientRMService", e);
@@ -2005,9 +2018,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       list.add(rr);
     }
     ReservationRequests reqs = ReservationRequests.newInstance(list, resInt);
-    ReservationDefinition rDef =
-        ReservationDefinition.newInstance(resInfo.getArrival(),
-            resInfo.getDeadline(), reqs, resInfo.getReservationName());
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
 
     ReservationId reservationId =
         ReservationId.parseReservationId(resContext.getReservationId());
@@ -2106,9 +2120,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       list.add(rr);
     }
     ReservationRequests reqs = ReservationRequests.newInstance(list, resInt);
-    ReservationDefinition rDef =
-        ReservationDefinition.newInstance(resInfo.getArrival(),
-            resInfo.getDeadline(), reqs, resInfo.getReservationName());
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
     ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
         rDef, ReservationId.parseReservationId(resContext.getReservationId()));
 
@@ -2403,5 +2418,106 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     AppTimeoutInfo timeout = constructAppTimeoutDao(appTimeout.getTimeoutType(),
         app.getApplicationTimeouts().get(appTimeout.getTimeoutType()));
     return Response.status(Status.OK).entity(timeout).build();
+  }
+
+  @Override
+  protected ApplicationReport getApplicationReport(
+      GetApplicationReportRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationReport(request)
+        .getApplicationReport();
+  }
+
+  @Override
+  protected List<ApplicationReport> getApplicationsReport(
+      final GetApplicationsRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplications(request)
+        .getApplicationList();
+  }
+
+  @Override
+  protected ApplicationAttemptReport getApplicationAttemptReport(
+      GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttemptReport(request)
+        .getApplicationAttemptReport();
+  }
+
+  @Override
+  protected List<ApplicationAttemptReport> getApplicationAttemptsReport(
+      GetApplicationAttemptsRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttempts(request)
+        .getApplicationAttemptList();
+  }
+
+  @Override
+  protected ContainerReport getContainerReport(
+      GetContainerReportRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getContainerReport(request)
+        .getContainerReport();
+  }
+
+  @Override
+  protected List<ContainerReport> getContainersReport(
+      GetContainersRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getContainers(request).getContainerList();
+  }
+
+  @PUT
+  @Path("/scheduler-conf")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public synchronized Response updateSchedulerConfiguration(SchedConfUpdateInfo
+      mutationInfo, @Context HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    init();
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+    if (aclsManager.areACLsEnabled()) {
+      if (callerUGI == null || !aclsManager.isAdmin(callerUGI)) {
+        String msg = "Only admins can carry out this operation.";
+        throw new ForbiddenException(msg);
+      }
+    }
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+        scheduler).isConfigurationMutable()) {
+      try {
+        callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            MutableConfigurationProvider provider = ((MutableConfScheduler)
+                scheduler).getMutableConfProvider();
+            if (!provider.getAclMutationPolicy().isMutationAllowed(callerUGI,
+                mutationInfo)) {
+              throw new org.apache.hadoop.security.AccessControlException("User"
+                  + " is not admin of all modified queues.");
+            }
+            provider.logAndApplyMutation(callerUGI, mutationInfo);
+            try {
+              rm.getRMContext().getRMAdminService().refreshQueues();
+            } catch (IOException | YarnException e) {
+              provider.confirmPendingMutation(false);
+              throw e;
+            }
+            provider.confirmPendingMutation(true);
+            return null;
+          }
+        });
+      } catch (IOException e) {
+        LOG.error("Exception thrown when modifying configuration.", e);
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+            .build();
+      }
+      return Response.status(Status.OK).entity("Configuration change " +
+          "successfully applied.").build();
+    } else {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by " +
+              "MutableConfScheduler.")
+          .build();
+    }
   }
 }

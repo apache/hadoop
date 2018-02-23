@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,13 +39,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
 @RunWith(Parameterized.class)
 public class KVTest {
-  private static final Log LOG = LogFactory.getLog(KVTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(KVTest.class);
 
   private static Configuration nativekvtestconf = ScenarioConfiguration.getNativeConfiguration();
   private static Configuration hadoopkvtestconf = ScenarioConfiguration.getNormalConfiguration();

@@ -40,8 +40,8 @@ public class TestUserResolve {
   public static void createRootDir() throws IOException {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf);
-    rootDir = new Path(new Path(System.getProperty("test.build.data", "/tmp"))
-                 .makeQualified(fs), "gridmixUserResolve");
+    rootDir = new Path(fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp"))), "gridmixUserResolve");
   }
 
   /**

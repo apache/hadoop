@@ -760,12 +760,12 @@ public class TestSchedulerUtils {
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler, rmContext);
-      Assert.assertTrue(resReq.getNodeLabelExpression().equals("x"));
+      Assert.assertEquals("x", resReq.getNodeLabelExpression());
       
       resReq.setNodeLabelExpression(" y ");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler, rmContext);
-      Assert.assertTrue(resReq.getNodeLabelExpression().equals("y"));
+      Assert.assertEquals("y", resReq.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when request labels is a subset of queue labels");
@@ -803,6 +803,7 @@ public class TestSchedulerUtils {
           Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
           EventHandler<SchedulerEvent> handler, String queueName)
           throws Exception {
+
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =

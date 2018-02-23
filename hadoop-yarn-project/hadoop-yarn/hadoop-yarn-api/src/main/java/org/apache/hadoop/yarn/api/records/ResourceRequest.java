@@ -98,7 +98,8 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         .resourceName(hostName).capability(capability)
         .numContainers(numContainers).relaxLocality(relaxLocality)
         .nodeLabelExpression(labelExpression)
-        .executionTypeRequest(executionTypeRequest).build();
+        .executionTypeRequest(executionTypeRequest)
+        .build();
   }
 
   @Public
@@ -219,6 +220,22 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     public ResourceRequestBuilder executionTypeRequest(
         ExecutionTypeRequest executionTypeRequest) {
       resourceRequest.setExecutionTypeRequest(executionTypeRequest);
+      return this;
+    }
+
+    /**
+     * Set the <code>executionTypeRequest</code> of the request with 'ensure
+     * execution type' flag set to true.
+     * @see ResourceRequest#setExecutionTypeRequest(
+     * ExecutionTypeRequest)
+     * @param executionType <code>executionType</code> of the request.
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder executionType(ExecutionType executionType) {
+      resourceRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance(executionType, true));
       return this;
     }
 
@@ -572,8 +589,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (!execTypeRequest.getExecutionType()
-        .equals(other.getExecutionTypeRequest().getExecutionType())) {
+    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
       return false;
     }
 

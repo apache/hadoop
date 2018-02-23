@@ -140,10 +140,10 @@ public class FifoCandidatesSelector
         // Can try preempting AMContainers (still saving atmost
         // maxAMCapacityForThisQueue AMResource's) if more resources are
         // required to be preemptionCandidates from this Queue.
-        Resource maxAMCapacityForThisQueue = Resources.multiply(
-            Resources.multiply(clusterResource,
-                leafQueue.getAbsoluteCapacity()),
-            leafQueue.getMaxAMResourcePerQueuePercent());
+        Resource maxAMCapacityForThisQueue = Resources
+            .multiply(
+                leafQueue.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL),
+                leafQueue.getMaxAMResourcePerQueuePercent());
 
         preemptAMContainers(clusterResource, selectedCandidates, skippedAMContainerlist,
             resToObtainByPartition, skippedAMSize, maxAMCapacityForThisQueue,
@@ -199,7 +199,6 @@ public class FifoCandidatesSelector
    * Given a target preemption for a specific application, select containers
    * to preempt (after unreserving all reservation for that app).
    */
-  @SuppressWarnings("unchecked")
   private void preemptFrom(FiCaSchedulerApp app,
       Resource clusterResource, Map<String, Resource> resToObtainByPartition,
       List<RMContainer> skippedAMContainerlist, Resource skippedAMSize,

@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
+import java.io.IOException;
+
 /**
  * Erasure coding step that's involved in encoding/decoding of a block group.
  */
@@ -47,7 +49,8 @@ public interface ErasureCodingStep {
    * @param inputChunks
    * @param outputChunks
    */
-  void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks);
+  void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks)
+      throws IOException;
 
   /**
    * Notify erasure coder that all the chunks of input blocks are processed so

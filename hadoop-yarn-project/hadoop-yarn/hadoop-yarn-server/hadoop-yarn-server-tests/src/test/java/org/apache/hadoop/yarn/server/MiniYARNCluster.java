@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
@@ -95,18 +94,23 @@ import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
 
 /**
  * <p>
- * Embedded Yarn minicluster for testcases that need to interact with a cluster.
+ * Embedded YARN minicluster for testcases that need to interact with a cluster.
  * </p>
  * <p>
  * In a real cluster, resource request matching is done using the hostname, and
- * by default Yarn minicluster works in the exact same way as a real cluster.
+ * by default YARN minicluster works in the exact same way as a real cluster.
  * </p>
  * <p>
  * If a testcase needs to use multiple nodes and exercise resource request
@@ -123,7 +127,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class MiniYARNCluster extends CompositeService {
 
-  private static final Log LOG = LogFactory.getLog(MiniYARNCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniYARNCluster.class);
 
   // temp fix until metrics system can auto-detect itself running in unit test:
   static {
@@ -246,10 +251,23 @@ public class MiniYARNCluster extends CompositeService {
     useFixedPorts = conf.getBoolean(
         YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS);
+
+    if (!useFixedPorts) {
+      String hostname = MiniYARNCluster.getHostname();
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
+
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          hostname + ":" + ServerSocketUtil.getPort(9188, 10));
+    }
+
     useRpc = conf.getBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC,
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
     failoverTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+
+    if (conf.getBoolean(TEST_CONF_RESET_RESOURCE_TYPES, true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
 
     if (useRpc && !useFixedPorts) {
       throw new YarnRuntimeException("Invalid configuration!" +
@@ -635,9 +653,8 @@ public class MiniYARNCluster extends CompositeService {
       if(nodeStatus == null) {
         return currentStatus;
       } else {
-        // Increment response ID, the RMNodeStatusEvent will not get recorded
-        // for a duplicate heartbeat
-        nodeStatus.setResponseId(nodeStatus.getResponseId() + 1);
+        // Use the same responseId for the custom node status
+        nodeStatus.setResponseId(currentStatus.getResponseId());
         return nodeStatus;
       }
     }
@@ -799,12 +816,6 @@ public class MiniYARNCluster extends CompositeService {
       }
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
           MemoryTimelineStateStore.class, TimelineStateStore.class);
-      if (!useFixedPorts) {
-        String hostname = MiniYARNCluster.getHostname();
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-            hostname + ":" + ServerSocketUtil.getPort(9188, 10));
-      }
       appHistoryServer.init(conf);
       super.serviceInit(conf);
     }
@@ -951,9 +962,10 @@ public class MiniYARNCluster extends CompositeService {
     protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
         String user, Token<AMRMTokenIdentifier> amrmToken,
         Token<AMRMTokenIdentifier> localToken,
-        Map<String, byte[]> recoveredDataMap, boolean isRecovery) {
+        Map<String, byte[]> recoveredDataMap, boolean isRecovery,
+        Credentials credentials) {
       super.initializePipeline(applicationAttemptId, user, amrmToken,
-          localToken, recoveredDataMap, isRecovery);
+          localToken, recoveredDataMap, isRecovery, credentials);
       RequestInterceptor rt = getPipelines()
           .get(applicationAttemptId.getApplicationId()).getRootInterceptor();
       // The DefaultRequestInterceptor will generally be the last

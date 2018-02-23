@@ -415,10 +415,10 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
   private void snapshotMetrics(MetricsSourceAdapter sa,
                                MetricsBufferBuilder bufferBuilder) {
-    long startTime = Time.now();
+    long startTime = Time.monotonicNow();
     bufferBuilder.add(sa.name(), sa.getMetrics(collector, true));
     collector.clear();
-    snapshotStat.add(Time.now() - startTime);
+    snapshotStat.add(Time.monotonicNow() - startTime);
     LOG.debug("Snapshotted source "+ sa.name());
   }
 
@@ -431,7 +431,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   synchronized void publishMetrics(MetricsBuffer buffer, boolean immediate) {
     int dropped = 0;
     for (MetricsSinkAdapter sa : sinks.values()) {
-      long startTime = Time.now();
+      long startTime = Time.monotonicNow();
       boolean result;
       if (immediate) {
         result = sa.putMetricsImmediate(buffer); 
@@ -439,7 +439,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         result = sa.putMetrics(buffer, logicalTime);
       }
       dropped += result ? 0 : 1;
-      publishStat.add(Time.now() - startTime);
+      publishStat.add(Time.monotonicNow() - startTime);
     }
     droppedPubAll.incr(dropped);
   }
@@ -519,7 +519,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         conf.getFilter(SOURCE_FILTER_KEY),
         conf.getFilter(RECORD_FILTER_KEY),
         conf.getFilter(METRIC_FILTER_KEY),
-        conf.getInt(PERIOD_KEY, PERIOD_DEFAULT),
+        conf.getInt(PERIOD_KEY, PERIOD_DEFAULT) * 1000,
         conf.getInt(QUEUE_CAPACITY_KEY, QUEUE_CAPACITY_DEFAULT),
         conf.getInt(RETRY_DELAY_KEY, RETRY_DELAY_DEFAULT),
         conf.getFloat(RETRY_BACKOFF_KEY, RETRY_BACKOFF_DEFAULT),
@@ -616,6 +616,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   @VisibleForTesting
   MetricsSourceAdapter getSourceAdapter(String name) {
     return sources.get(name);
+  }
+
+  @VisibleForTesting
+  public MetricsSinkAdapter getSinkAdapter(String name) {
+    return sinks.get(name);
   }
 
   private InitMode initMode() {

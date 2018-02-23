@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -403,8 +402,7 @@ public class DistCpUtils {
     CopyListingFileStatus copyListingFileStatus =
         new CopyListingFileStatus(fileStatus, chunkOffset, chunkLength);
     if (preserveAcls) {
-      FsPermission perm = fileStatus.getPermission();
-      if (perm.getAclBit()) {
+      if (fileStatus.hasAcl()) {
         List<AclEntry> aclEntries = fileSystem.getAclStatus(
           fileStatus.getPath()).getEntries();
         copyListingFileStatus.setAclEntries(aclEntries);

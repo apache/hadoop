@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -153,7 +154,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws IOException if fails to initialize queues
    */
   public void initializeQueues(CapacitySchedulerConfiguration conf)
-      throws IOException {
+    throws IOException {
     root = parseQueue(this.csContext, conf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, NOOP);
     setQueueAcls(authorizer, appPriorityACLManager, queues);
@@ -170,8 +171,14 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue newRoot =  parseQueue(this.csContext, newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
-    // Ensure queue hiearchy in the new XML file is proper.
-    validateQueueHierarchy(queues, newQueues);
+    // When failing over, if using configuration store, don't validate queue
+    // hierarchy since queues can be removed without being STOPPED.
+    if (!csContext.isConfigurationMutable() ||
+        csContext.getRMContext().getHAServiceState()
+            != HAServiceProtocol.HAServiceState.STANDBY) {
+      // Ensure queue hierarchy in the new XML file is proper.
+      validateQueueHierarchy(queues, newQueues);
+    }
 
     // Add new queues and delete OldQeueus only after validation.
     updateQueues(queues, newQueues);
@@ -209,11 +216,13 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       Map<String, CSQueue> oldQueues,
       QueueHook hook) throws IOException {
     CSQueue queue;
-    String fullQueueName =
-        (parent == null) ? queueName
-            : (parent.getQueuePath() + "." + queueName);
+    String fullQueueName = (parent == null) ?
+        queueName :
+        (parent.getQueuePath() + "." + queueName);
     String[] childQueueNames = conf.getQueues(fullQueueName);
     boolean isReservableQueue = conf.isReservable(fullQueueName);
+    boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(
+        fullQueueName);
     if (childQueueNames == null || childQueueNames.length == 0) {
       if (null == parent) {
         throw new IllegalStateException(
@@ -222,9 +231,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       // Check if the queue will be dynamically managed by the Reservation
       // system
       if (isReservableQueue) {
-        queue =
-            new PlanQueue(csContext, queueName, parent,
-                oldQueues.get(queueName));
+        queue = new PlanQueue(csContext, queueName, parent,
+            oldQueues.get(queueName));
 
         //initializing the "internal" default queue, for SLS compatibility
         String defReservationId =
@@ -242,38 +250,46 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         ((PlanQueue) queue).setChildQueues(childQueues);
         queues.put(defReservationId, resQueue);
 
-      } else {
-        queue =
-            new LeafQueue(csContext, queueName, parent,
-                oldQueues.get(queueName));
+      } else if (isAutoCreateEnabled) {
+        queue = new ManagedParentQueue(csContext, queueName, parent,
+            oldQueues.get(queueName));
 
+      } else{
+        queue = new LeafQueue(csContext, queueName, parent,
+            oldQueues.get(queueName));
         // Used only for unit tests
         queue = hook.hook(queue);
       }
-    } else {
+    } else{
       if (isReservableQueue) {
         throw new IllegalStateException(
             "Only Leaf Queues can be reservable for " + queueName);
       }
-      ParentQueue parentQueue =
-          new ParentQueue(csContext, queueName, parent,
-              oldQueues.get(queueName));
+
+      ParentQueue parentQueue;
+      if (isAutoCreateEnabled) {
+        parentQueue = new ManagedParentQueue(csContext, queueName, parent,
+            oldQueues.get(queueName));
+      } else{
+        parentQueue = new ParentQueue(csContext, queueName, parent,
+            oldQueues.get(queueName));
+      }
 
       // Used only for unit tests
       queue = hook.hook(parentQueue);
 
       List<CSQueue> childQueues = new ArrayList<>();
       for (String childQueueName : childQueueNames) {
-        CSQueue childQueue =
-            parseQueue(csContext, conf, queue, childQueueName,
-              queues, oldQueues, hook);
+        CSQueue childQueue = parseQueue(csContext, conf, queue, childQueueName,
+            queues, oldQueues, hook);
         childQueues.add(childQueue);
       }
       parentQueue.setChildQueues(childQueues);
+
     }
 
-    if (queue instanceof LeafQueue && queues.containsKey(queueName)
-        && queues.get(queueName) instanceof LeafQueue) {
+    if (queue instanceof LeafQueue && queues.containsKey(queueName) && queues
+        .get(queueName) instanceof LeafQueue) {
       throw new IOException("Two leaf queues were named " + queueName
           + ". Leaf queue names must be distinct");
     }
@@ -296,7 +312,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       Map<String, CSQueue> newQueues) throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
-      if (!(e.getValue() instanceof ReservationQueue)) {
+      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
+          .getClass()))) {
         String queueName = e.getKey();
         CSQueue oldQueue = e.getValue();
         CSQueue newQueue = newQueues.get(queueName);
@@ -305,28 +322,51 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
           if (oldQueue.getState() == QueueState.STOPPED) {
             LOG.info("Deleting Queue " + queueName + ", as it is not"
                 + " present in the modified capacity configuration xml");
-          } else {
+          } else{
             throw new IOException(oldQueue.getQueuePath() + " is deleted from"
                 + " the new capacity scheduler configuration, but the"
-                + " queue is not yet in stopped state. "
-                + "Current State : " + oldQueue.getState());
+                + " queue is not yet in stopped state. " + "Current State : "
+                + oldQueue.getState());
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
           //Queue's cannot be moved from one hierarchy to other
-          throw new IOException(queueName + " is moved from:"
-              + oldQueue.getQueuePath() + " to:" + newQueue.getQueuePath()
-              + " after refresh, which is not allowed.");
-        } else  if (oldQueue instanceof LeafQueue
+          throw new IOException(
+              queueName + " is moved from:" + oldQueue.getQueuePath() + " to:"
+                  + newQueue.getQueuePath()
+                  + " after refresh, which is not allowed.");
+        } else if (oldQueue instanceof ParentQueue
+            && !(oldQueue instanceof ManagedParentQueue)
+            && newQueue instanceof ManagedParentQueue) {
+          throw new IOException(
+              "Can not convert parent queue: " + oldQueue.getQueuePath()
+                  + " to auto create enabled parent queue since "
+                  + "it could have other pre-configured queues which is not "
+                  + "supported");
+        } else if (oldQueue instanceof ManagedParentQueue
+            && !(newQueue instanceof ManagedParentQueue)) {
+          throw new IOException(
+              "Cannot convert auto create enabled parent queue: " + oldQueue
+                  .getQueuePath() + " to leaf queue. Please check "
+                  + " parent queue's configuration "
+                  + CapacitySchedulerConfiguration
+                  .AUTO_CREATE_CHILD_QUEUE_ENABLED
+                  + " is set to true");
+        } else if (oldQueue instanceof LeafQueue
             && newQueue instanceof ParentQueue) {
           if (oldQueue.getState() == QueueState.STOPPED) {
             LOG.info("Converting the leaf queue: " + oldQueue.getQueuePath()
                 + " to parent queue.");
-          } else {
-            throw new IOException("Can not convert the leaf queue: "
-                + oldQueue.getQueuePath() + " to parent queue since "
-                + "it is not yet in stopped state. Current State : "
-                + oldQueue.getState());
+          } else{
+            throw new IOException(
+                "Can not convert the leaf queue: " + oldQueue.getQueuePath()
+                    + " to parent queue since "
+                    + "it is not yet in stopped state. Current State : "
+                    + oldQueue.getState());
           }
+        } else if (oldQueue instanceof ParentQueue
+            && newQueue instanceof LeafQueue) {
+          LOG.info("Converting the parent queue: " + oldQueue.getQueuePath()
+              + " to leaf queue.");
         }
       }
     }
@@ -341,6 +381,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    */
   private void updateQueues(Map<String, CSQueue> existingQueues,
       Map<String, CSQueue> newQueues) {
+    CapacitySchedulerConfiguration conf = csContext.getConfiguration();
     for (Map.Entry<String, CSQueue> e : newQueues.entrySet()) {
       String queueName = e.getKey();
       CSQueue queue = e.getValue();
@@ -352,7 +393,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         .iterator(); itr.hasNext();) {
       Map.Entry<String, CSQueue> e = itr.next();
       String queueName = e.getKey();
-      if (!newQueues.containsKey(queueName)) {
+      CSQueue existingQueue = e.getValue();
+
+      if (!newQueues.containsKey(queueName) && !(
+          existingQueue instanceof AutoCreatedLeafQueue && conf
+              .isAutoCreateChildQueueEnabled(
+                  existingQueue.getParent().getQueuePath()))) {
         itr.remove();
       }
     }

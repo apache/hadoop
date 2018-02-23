@@ -34,12 +34,13 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -60,15 +61,19 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.scheduler.DistributedScheduler;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +87,7 @@ import com.google.common.base.Preconditions;
  * pipeline is a chain of interceptor instances that can inspect and modify the
  * request/response as needed.
  */
-public class AMRMProxyService extends AbstractService implements
+public class AMRMProxyService extends CompositeService implements
     ApplicationMasterProtocol {
   private static final Logger LOG = LoggerFactory
       .getLogger(AMRMProxyService.class);
@@ -96,6 +101,7 @@ public class AMRMProxyService extends AbstractService implements
   private InetSocketAddress listenerEndpoint;
   private AMRMProxyTokenSecretManager secretManager;
   private Map<ApplicationId, RequestInterceptorChainWrapper> applPipelineMap;
+  private RegistryOperations registry;
 
   /**
    * Creates an instance of the service.
@@ -118,10 +124,20 @@ public class AMRMProxyService extends AbstractService implements
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
     this.secretManager =
         new AMRMProxyTokenSecretManager(this.nmContext.getNMStateStore());
     this.secretManager.init(conf);
+
+    if (conf.getBoolean(YarnConfiguration.AMRM_PROXY_HA_ENABLED,
+        YarnConfiguration.DEFAULT_AMRM_PROXY_HA_ENABLED)) {
+      this.registry = FederationStateStoreFacade.createInstance(conf,
+          YarnConfiguration.YARN_REGISTRY_CLASS,
+          YarnConfiguration.DEFAULT_YARN_REGISTRY_CLASS,
+          RegistryOperations.class);
+      addService(this.registry);
+    }
+
+    super.serviceInit(conf);
   }
 
   @Override
@@ -203,6 +219,8 @@ public class AMRMProxyService extends AbstractService implements
             amrmToken = new Token<>();
             amrmToken.decodeFromUrlString(
                 new String(contextEntry.getValue(), "UTF-8"));
+            // Clear the service field, as if RM just issued the token
+            amrmToken.setService(new Text());
           }
         }
 
@@ -214,12 +232,36 @@ public class AMRMProxyService extends AbstractService implements
           throw new IOException("No user found for app attempt " + attemptId);
         }
 
+        // Regenerate the local AMRMToken for the AM
         Token<AMRMTokenIdentifier> localToken =
             this.secretManager.createAndGetAMRMToken(attemptId);
 
+        // Retrieve the AM container credentials from NM context
+        Credentials amCred = null;
+        for (Container container : this.nmContext.getContainers().values()) {
+          LOG.debug("From NM Context container " + container.getContainerId());
+          if (container.getContainerId().getApplicationAttemptId().equals(
+              attemptId) && container.getContainerTokenIdentifier() != null) {
+            LOG.debug("Container type "
+                + container.getContainerTokenIdentifier().getContainerType());
+            if (container.getContainerTokenIdentifier()
+                .getContainerType() == ContainerType.APPLICATION_MASTER) {
+              LOG.info("AM container {} found in context, has credentials: {}",
+                  container.getContainerId(),
+                  (container.getCredentials() != null));
+              amCred = container.getCredentials();
+            }
+          }
+        }
+        if (amCred == null) {
+          LOG.error("No credentials found for AM container of {}. "
+              + "Yarn registry access might not work", attemptId);
+        }
+
+        // Create the intercepter pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
-            entry.getValue(), true);
-      } catch (Exception e) {
+            entry.getValue(), true, amCred);
+      } catch (IOException e) {
         LOG.error("Exception when recovering " + attemptId
             + ", removing it from NMStateStore and move on", e);
         this.nmContext.getNMStateStore().removeAMRMProxyAppContext(attemptId);
@@ -326,7 +368,7 @@ public class AMRMProxyService extends AbstractService implements
 
     initializePipeline(appAttemptId,
         containerTokenIdentifierForKey.getApplicationSubmitter(), amrmToken,
-        localToken, null, false);
+        localToken, null, false, credentials);
   }
 
   /**
@@ -342,7 +384,8 @@ public class AMRMProxyService extends AbstractService implements
   protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
       String user, Token<AMRMTokenIdentifier> amrmToken,
       Token<AMRMTokenIdentifier> localToken,
-      Map<String, byte[]> recoveredDataMap, boolean isRecovery) {
+      Map<String, byte[]> recoveredDataMap, boolean isRecovery,
+      Credentials credentials) {
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (applPipelineMap) {
       if (applPipelineMap
@@ -404,8 +447,9 @@ public class AMRMProxyService extends AbstractService implements
     try {
       RequestInterceptor interceptorChain =
           this.createRequestInterceptorChain();
-      interceptorChain.init(createApplicationMasterContext(this.nmContext,
-          applicationAttemptId, user, amrmToken, localToken));
+      interceptorChain.init(
+          createApplicationMasterContext(this.nmContext, applicationAttemptId,
+              user, amrmToken, localToken, credentials, this.registry));
       if (isRecovery) {
         if (recoveredDataMap == null) {
           throw new YarnRuntimeException(
@@ -497,14 +541,12 @@ public class AMRMProxyService extends AbstractService implements
       allocateResponse.setAMRMToken(null);
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> newToken =
-          new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(
-              token.getIdentifier().array(), token.getPassword().array(),
-              new Text(token.getKind()), new Text(token.getService()));
+          ConverterUtils.convertFromYarn(token, (Text) null);
 
-      context.setAMRMToken(newToken);
-
-      // Update the AMRMToken in context map in NM state store
-      if (this.nmContext.getNMStateStore() != null) {
+      // Update the AMRMToken in context map, and in NM state store if it is
+      // different
+      if (context.setAMRMToken(newToken)
+          && this.nmContext.getNMStateStore() != null) {
         try {
           this.nmContext.getNMStateStore().storeAMRMProxyAppContextEntry(
               context.getApplicationAttemptId(), NMSS_AMRMTOKEN_KEY,
@@ -547,10 +589,12 @@ public class AMRMProxyService extends AbstractService implements
   private AMRMProxyApplicationContext createApplicationMasterContext(
       Context context, ApplicationAttemptId applicationAttemptId, String user,
       Token<AMRMTokenIdentifier> amrmToken,
-      Token<AMRMTokenIdentifier> localToken) {
+      Token<AMRMTokenIdentifier> localToken, Credentials credentials,
+      RegistryOperations registryImpl) {
     AMRMProxyApplicationContextImpl appContext =
         new AMRMProxyApplicationContextImpl(context, getConfig(),
-            applicationAttemptId, user, amrmToken, localToken);
+            applicationAttemptId, user, amrmToken, localToken, credentials,
+            registryImpl);
     return appContext;
   }
 

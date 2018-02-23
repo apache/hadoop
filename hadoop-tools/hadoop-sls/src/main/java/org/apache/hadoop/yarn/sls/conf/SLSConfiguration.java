@@ -54,6 +54,7 @@ public class SLSConfiguration {
   public static final int NM_MEMORY_MB_DEFAULT = 10240;
   public static final String NM_VCORES = NM_PREFIX + "vcores";
   public static final int NM_VCORES_DEFAULT = 10;
+  public static final int NM_RESOURCE_DEFAULT = 0;
   public static final String NM_HEARTBEAT_INTERVAL_MS = NM_PREFIX
                                                   + "heartbeat.interval.ms";
   public static final int NM_HEARTBEAT_INTERVAL_MS_DEFAULT = 1000;
@@ -62,7 +63,8 @@ public class SLSConfiguration {
   public static final String AM_HEARTBEAT_INTERVAL_MS = AM_PREFIX
                                                   + "heartbeat.interval.ms";
   public static final int AM_HEARTBEAT_INTERVAL_MS_DEFAULT = 1000;
-  public static final String AM_TYPE = AM_PREFIX + "type.";
+  public static final String AM_TYPE = AM_PREFIX + "type";
+  public static final String AM_TYPE_PREFIX = AM_TYPE + ".";
 
   public static final String AM_CONTAINER_MEMORY = AM_PREFIX +
       "container.memory";
@@ -85,4 +87,34 @@ public class SLSConfiguration {
         conf.getLong(AM_CONTAINER_MEMORY, AM_CONTAINER_MEMORY_DEFAULT),
         conf.getInt(AM_CONTAINER_VCORES, AM_CONTAINER_VCORES_DEFAULT));
   }
+
+  // input file
+
+  // nodes
+  public static final String NUM_NODES = "num.nodes";
+  public static final String NUM_RACKS = "num.racks";
+
+  // job
+  public static final String JOB_PREFIX = "job.";
+  public static final String JOB_ID = JOB_PREFIX + "id";
+  public static final String JOB_START_MS = JOB_PREFIX + "start.ms";
+  public static final String JOB_END_MS = JOB_PREFIX + "end.ms";
+  public static final String JOB_QUEUE_NAME = JOB_PREFIX + "queue.name";
+  public static final String JOB_USER = JOB_PREFIX + "user";
+  public static final String JOB_COUNT = JOB_PREFIX + "count";
+  public static final String JOB_TASKS = JOB_PREFIX + "tasks";
+  public static final String JOB_AM_PREFIX = "am.";
+
+  // task
+  public static final String TASK_PREFIX = "container.";
+  public static final String COUNT = "count";
+  public static final String TASK_CONTAINER = "container.";
+  public static final String TASK_HOST = TASK_CONTAINER + "host";
+  public static final String TASK_START_MS = TASK_CONTAINER + "start.ms";
+  public static final String TASK_END_MS = TASK_CONTAINER + "end.ms";
+  public static final String DURATION_MS = "duration.ms";
+  public static final String TASK_DURATION_MS = TASK_CONTAINER + DURATION_MS;
+  public static final String TASK_PRIORITY = TASK_CONTAINER + "priority";
+  public static final String TASK_TYPE = TASK_CONTAINER + "type";
+
 }

@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
@@ -196,9 +198,30 @@ public interface ContainerManagementProtocol {
    */
   @Public
   @Unstable
+  @Deprecated
   IncreaseContainersResourceResponse increaseContainersResource(
       IncreaseContainersResourceRequest request) throws YarnException,
       IOException;
+
+  /**
+   * <p>
+   * The API used by the <code>ApplicationMaster</code> to request for
+   * resource update of running containers on the <code>NodeManager</code>.
+   * </p>
+   *
+   * @param request
+   *         request to update resource of a list of containers
+   * @return response which includes a list of containerIds of containers
+   *         whose resource has been successfully updated and a
+   *         containerId-to-exception map for failed requests.
+   *
+   * @throws YarnException Exception specific to YARN
+   * @throws IOException IOException thrown from NodeManager
+   */
+  @Public
+  @Unstable
+  ContainerUpdateResponse updateContainer(ContainerUpdateRequest request)
+      throws YarnException, IOException;
 
   SignalContainerResponse signalToContainer(SignalContainerRequest request)
       throws YarnException, IOException;

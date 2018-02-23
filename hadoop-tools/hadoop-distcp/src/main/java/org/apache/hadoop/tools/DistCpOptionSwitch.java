@@ -73,7 +73,7 @@ public enum DistCpOptionSwitch {
    */
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
-          "files missing in source")),
+          "files missing in source. Delete is applicable only with update or overwrite options")),
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).
@@ -117,6 +117,13 @@ public enum DistCpOptionSwitch {
    */
   LOG_PATH(DistCpConstants.CONF_LABEL_LOG_PATH,
       new Option("log", true, "Folder on DFS where distcp execution logs are saved")),
+
+  /**
+   * Log additional info (path, size) in the SKIP/COPY log.
+   */
+  VERBOSE_LOG(DistCpConstants.CONF_LABEL_VERBOSE_LOG,
+      new Option("v", false,
+          "Log additional info (path, size) in the SKIP/COPY log")),
 
   /**
    * Copy strategy is use. This could be dynamic or uniform size etc.

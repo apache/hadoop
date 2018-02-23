@@ -240,7 +240,7 @@ public class CorruptReplicasMap{
    * method to get the set of corrupt blocks in corruptReplicasMap.
    * @return Set of Block objects
    */
-  Set<Block> getCorruptBlocks() {
+  Set<Block> getCorruptBlocksSet() {
     Set<Block> corruptBlocks = new HashSet<Block>();
     corruptBlocks.addAll(corruptReplicasMap.keySet());
     return corruptBlocks;
@@ -267,11 +267,11 @@ public class CorruptReplicasMap{
     }
   }
 
-  long getCorruptBlocksStat() {
+  long getCorruptBlocks() {
     return totalCorruptBlocks.longValue();
   }
 
-  long getCorruptECBlockGroupsStat() {
+  long getCorruptECBlockGroups() {
     return totalCorruptECBlockGroups.longValue();
   }
 }

@@ -17,6 +17,10 @@
  */
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
+#include "util.h"
+#include "get_executable.h"
+#include "test/test-container-executor-common.h"
 
 #include <inttypes.h>
 #include <errno.h>
@@ -29,29 +33,11 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#ifdef __APPLE__
-#include <CoreFoundation/CFString.h>
-#include <CoreFoundation/CFPreferences.h>
-
-#define TMPDIR "/private/tmp"
-#define RELTMPDIR "../.."
-#else
-#define RELTMPDIR ".."
-#define TMPDIR "/tmp"
-#endif
-
-#define TEST_ROOT TMPDIR "/test-container-executor"
-
-#define DONT_TOUCH_FILE "dont-touch-me"
-#define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
-               TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
-#define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
-#define ARRAY_SIZE 1000
-
 static char* username = NULL;
 static char* yarn_username = NULL;
 static char** local_dirs = NULL;
 static char** log_dirs = NULL;
+static uid_t nm_uid = -1;
 
 /**
  * Run the command using the effective user id.
@@ -167,8 +153,8 @@ void check_pid_file(const char* pid_file, pid_t mypid) {
 }
 
 void test_get_user_directory() {
-  char *user_dir = get_user_directory(TMPDIR, "user");
-  char *expected = TMPDIR "/usercache/user";
+  char *user_dir = get_user_directory(TEST_ROOT, "user");
+  char *expected = TEST_ROOT "/usercache/user";
   if (strcmp(user_dir, expected) != 0) {
     printf("test_get_user_directory expected %s got %s\n", expected, user_dir);
     exit(1);
@@ -176,9 +162,32 @@ void test_get_user_directory() {
   free(user_dir);
 }
 
+void test_check_nm_local_dir() {
+  // check filesystem is same as running user.
+  int expected = 0;
+  char *local_path = TEST_ROOT "target";
+  char *root_path = "/";
+  if (mkdirs(local_path, 0700) != 0) {
+    printf("FAIL: unble to create node manager local directory: %s\n", local_path);
+    exit(1);
+  }
+  int actual = check_nm_local_dir(nm_uid, local_path);
+  if (expected != actual) {
+    printf("test_nm_local_dir expected %d got %d\n", expected, actual);
+    exit(1);
+  }
+  // check filesystem is different from running user.
+  expected = 1;
+  actual = check_nm_local_dir(nm_uid, root_path);
+  if (expected != actual && nm_uid != 0) {
+    printf("test_nm_local_dir expected %d got %d\n", expected, actual);
+    exit(1);
+  }
+}
+
 void test_get_app_directory() {
-  char *expected = TMPDIR "/usercache/user/appcache/app_200906101234_0001";
-  char *app_dir = (char *) get_app_directory(TMPDIR, "user",
+  char *expected = TEST_ROOT "/usercache/user/appcache/app_200906101234_0001";
+  char *app_dir = (char *) get_app_directory(TEST_ROOT, "user",
       "app_200906101234_0001");
   if (strcmp(app_dir, expected) != 0) {
     printf("test_get_app_directory expected %s got %s\n", expected, app_dir);
@@ -188,9 +197,9 @@ void test_get_app_directory() {
 }
 
 void test_get_container_directory() {
-  char *container_dir = get_container_work_directory(TMPDIR, "owen", "app_1",
+  char *container_dir = get_container_work_directory(TEST_ROOT, "owen", "app_1",
 						 "container_1");
-  char *expected = TMPDIR"/usercache/owen/appcache/app_1/container_1";
+  char *expected = TEST_ROOT "/usercache/owen/appcache/app_1/container_1";
   if (strcmp(container_dir, expected) != 0) {
     printf("Fail get_container_work_directory got %s expected %s\n",
 	   container_dir, expected);
@@ -200,9 +209,9 @@ void test_get_container_directory() {
 }
 
 void test_get_container_launcher_file() {
-  char *expected_file = (TMPDIR"/usercache/user/appcache/app_200906101234_0001"
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/app_200906101234_0001"
 			 "/launch_container.sh");
-  char *app_dir = get_app_directory(TMPDIR, "user",
+  char *app_dir = get_app_directory(TEST_ROOT, "user",
                                     "app_200906101234_0001");
   char *container_file =  get_container_launcher_file(app_dir);
   if (strcmp(container_file, expected_file) != 0) {
@@ -285,6 +294,8 @@ void test_delete_container() {
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
   run(buffer);
+  sprintf(buffer, "mknod %s/who/let/the/dogs/out/who/who/p p", container_dir);
+  run(buffer);
   sprintf(buffer, "touch %s", dont_touch);
   run(buffer);
 
@@ -302,8 +313,14 @@ void test_delete_container() {
   run(buffer);
   sprintf(buffer, "chmod 000 %s/who/let/protect", container_dir);
   run(buffer);
+  // create a no execute permission directory
+  sprintf(buffer, "chmod 600 %s/who/let/the", container_dir);
+  run(buffer);
   // create a no permission directory
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
+  run(buffer);
+  // create a no write permission directory
+  sprintf(buffer, "chmod 500 %s/who", container_dir);
   run(buffer);
 
   // delete container directory
@@ -403,7 +420,7 @@ void test_delete_app() {
 }
 
 void validate_feature_enabled_value(int expected_value, const char* key,
-    int default_value, struct configuration *cfg) {
+    int default_value, struct section *cfg) {
   int value = is_feature_enabled(key, default_value, cfg);
 
   if (value != expected_value) {
@@ -418,7 +435,8 @@ void test_is_feature_enabled() {
   FILE *file = fopen(filename, "w");
   int disabled = 0;
   int enabled = 1;
-  struct configuration cfg = {.size=0, .confdetails=NULL};
+  struct configuration exec_cfg = {.size=0, .sections=NULL};
+  struct section cfg = {.size=0, .kv_pairs=NULL};
 
   if (file == NULL) {
     printf("FAIL: Could not open configuration file: %s\n", filename);
@@ -431,8 +449,11 @@ void test_is_feature_enabled() {
   fprintf(file, "feature.name4.enabled=asdkjfasdkljfklsdjf0\n");
   fprintf(file, "feature.name5.enabled=-1\n");
   fprintf(file, "feature.name6.enabled=2\n");
+  fprintf(file, "feature.name7.enabled=true\n");
+  fprintf(file, "feature.name8.enabled=True\n");
   fclose(file);
-  read_config(filename, &cfg);
+  read_config(filename, &exec_cfg);
+  cfg = *(get_configuration_section("", &exec_cfg));
 
   validate_feature_enabled_value(disabled, "feature.name1.enabled",
       disabled, &cfg);
@@ -446,9 +467,13 @@ void test_is_feature_enabled() {
           enabled, &cfg);
   validate_feature_enabled_value(disabled, "feature.name6.enabled",
           disabled, &cfg);
+  validate_feature_enabled_value(enabled, "feature.name7.enabled",
+          disabled, &cfg);
+  validate_feature_enabled_value(enabled, "feature.name8.enabled",
+          disabled, &cfg);
 
 
-  free_configurations(&cfg);
+  free_configuration(&exec_cfg);
 }
 
 void test_delete_user() {
@@ -779,7 +804,8 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(yarn_username, "app_4", TEST_ROOT "/creds.txt",
+    if (initialize_app(yarn_username, "app_4", "container_1",
+                       TEST_ROOT "/creds.txt",
                        local_dirs, log_dirs, final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
@@ -820,6 +846,14 @@ void test_init_app() {
     exit(1);
   }
   free(app_dir);
+
+  char *container_dir = get_container_log_directory(TEST_ROOT "/logs/userlogs",
+                  "app_4", "container_1");
+  if (container_dir != NULL && access(container_dir, R_OK) != 0) {
+    printf("FAIL: failed to create container log directory %s\n", container_dir);
+    exit(1);
+  }
+  free(container_dir);
 }
 
 void test_run_container() {
@@ -1169,37 +1203,6 @@ void test_trim_function() {
   free(trimmed);
 }
 
-void test_sanitize_docker_command() {
-
-  char *input[] = {
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=$CID --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu' || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run ''''''''"
-  };
-  char *expected_output[] = {
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='$CID' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu'\"'\"'' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run ''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"'' ",
-  };
-
-  int input_size = sizeof(input) / sizeof(char *);
-  int i = 0;
-  for(i = 0;  i < input_size; i++) {
-    char *command = (char *) calloc(strlen(input[i]), sizeof(char));
-    strncpy(command, input[i], strlen(input[i]));
-    char *op = sanitize_docker_command(command);
-    if(strncmp(expected_output[i], op, strlen(expected_output[i])) != 0) {
-      printf("FAIL: expected output %s does not match actual output '%s'\n", expected_output[i], op);
-      exit(1);
-    }
-    free(command);
-  }
-}
-
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1217,6 +1220,8 @@ int main(int argc, char **argv) {
   int ret;
   LOGFILE = stdout;
   ERRORFILE = stderr;
+
+  nm_uid = getuid();
 
   printf("Attempting to clean up from any previous runs\n");
   // clean up any junk from previous run
@@ -1236,8 +1241,8 @@ int main(int argc, char **argv) {
 
   read_executor_config(TEST_ROOT "/test.cfg");
 
-  local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
-  log_dirs = extract_values(strdup(NM_LOG_DIRS));
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
 
   create_nm_roots(local_dirs);
 
@@ -1268,6 +1273,9 @@ int main(int argc, char **argv) {
   printf("\nTesting get_user_directory()\n");
   test_get_user_directory();
 
+  printf("\nTesting check_nm_local_dir()\n");
+  test_check_nm_local_dir();
+
   printf("\nTesting get_app_directory()\n");
   test_get_app_directory();
 
@@ -1293,9 +1301,6 @@ int main(int argc, char **argv) {
 
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
-
-  printf("\nTesting sanitize docker commands()\n");
-  test_sanitize_docker_command();
 
   test_check_user(0);
 
@@ -1368,10 +1373,7 @@ int main(int argc, char **argv) {
   test_check_user(1);
 #endif
 
-  run("rm -fr " TEST_ROOT);
-
   test_trim_function();
-
   printf("\nFinished tests\n");
 
   free(current_username);

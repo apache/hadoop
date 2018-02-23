@@ -59,12 +59,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
+@SuppressWarnings("VisibilityModifier")
 public class TestGreedyReservationAgent {
+
+
+  @Parameterized.Parameter(value = 0)
+  public boolean allocateLeft;
+
+  @Parameterized.Parameter(value = 1)
+  public String recurrenceExpression;
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestGreedyReservationAgent.class);
@@ -76,16 +83,18 @@ public class TestGreedyReservationAgent {
   Resource maxAlloc = Resource.newInstance(1024 * 8, 8);
   Random rand = new Random();
   long step;
-  boolean allocateLeft;
 
-  public TestGreedyReservationAgent(Boolean b){
-    this.allocateLeft = b;
-  }
-
-  @Parameters
+  @Parameterized.Parameters(name = "Testing: allocateLeft {0}," +
+          " recurrenceExpression {1})")
   public static Collection<Object[]> data() {
       return Arrays.asList(new Object[][] {
-               {true}, {false}});
+              {true, "0"},
+              {false, "0"},
+              {true, "7200000"},
+              {false, "7200000"},
+              {true, "86400000"},
+              {false, "86400000"}
+      });
   }
 
   @Before
@@ -134,6 +143,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(5 * step);
     rr.setDeadline(20 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequest r = ReservationRequest.newInstance(
         Resource.newInstance(2048, 2), 10, 5, 10 * step);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
@@ -193,6 +203,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(5 * step);
     rr.setDeadline(100 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequest r =
         ReservationRequest.newInstance(Resource.newInstance(2048, 2), 20, 20,
             10 * step);
@@ -283,8 +294,9 @@ public class TestGreedyReservationAgent {
     int[] f = { 100, 100 };
 
     ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            30 * step, 30 * step + f.length * step, f.length * step);
+        ReservationSystemTestUtil.createSimpleReservationDefinition(30 * step,
+            30 * step + f.length * step, f.length * step, 1,
+            recurrenceExpression);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
@@ -296,6 +308,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(0 * step);
     rr.setDeadline(70 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ORDER);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -346,10 +359,11 @@ public class TestGreedyReservationAgent {
     prepareBasicPlan();
     // create a completely utilized segment at time 30
     int[] f = { 100, 100 };
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            30, 30 * step + f.length * step, f.length * step);
-    assertTrue(plan.toString(),
+    ReservationDefinition rDef = ReservationSystemTestUtil
+        .createSimpleReservationDefinition(30, 30 * step + f.length * step,
+            f.length * step, 1, recurrenceExpression);
+    assertTrue(
+        plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 30 * step, 30 * step + f.length * step,
@@ -406,6 +420,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(0 * step);
     rr.setDeadline(60 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ORDER_NO_GAP);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -453,6 +468,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(100 * step);
     rr.setDeadline(120 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ALL);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -494,6 +510,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(100 * step);
     rr.setDeadline(120 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ANY);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -542,6 +559,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(100L);
     rr.setDeadline(120L);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ANY);
 
@@ -587,6 +605,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(100 * step);
     rr.setDeadline(120 * step);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ALL);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -635,6 +654,7 @@ public class TestGreedyReservationAgent {
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
     rr.setArrival(100L);
     rr.setDeadline(120L);
+    rr.setRecurrenceExpression(recurrenceExpression);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setInterpreter(ReservationRequestInterpreter.R_ALL);
     ReservationRequest r = ReservationRequest.newInstance(
@@ -757,27 +777,6 @@ public class TestGreedyReservationAgent {
     long end = System.currentTimeMillis();
     System.out.println("Submitted " + numJobs + " jobs " + " accepted " + acc
         + " in " + (end - start) + "ms");
-  }
-
-  public static void main(String[] arg) {
-
-    boolean left = false;
-    // run a stress test with by default 1000 random jobs
-    int numJobs = 1000;
-    if (arg.length > 0) {
-      numJobs = Integer.parseInt(arg[0]);
-    }
-    if (arg.length > 1) {
-      left = Boolean.parseBoolean(arg[1]);
-    }
-
-    try {
-      TestGreedyReservationAgent test = new TestGreedyReservationAgent(left);
-      test.setup();
-      test.testStress(numJobs);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 
 }

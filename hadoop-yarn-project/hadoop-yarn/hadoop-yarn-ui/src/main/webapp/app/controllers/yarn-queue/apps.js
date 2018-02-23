@@ -21,8 +21,11 @@ import TableDefinition from 'em-table/utils/table-definition';
 import AppTableController from '../app-table-columns';
 
 export default AppTableController.extend({
-  // Your custom instance of table definition
-  tableDefinition: TableDefinition.create(),
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+    enableFaceting: true,
+    rowCount: 25
+  }),
 
   // Search text alias, any change in controller's searchText would affect the table's searchText, and vice-versa.
   _selectedObserver: Ember.on("init", Ember.observer("model.selected", function () {

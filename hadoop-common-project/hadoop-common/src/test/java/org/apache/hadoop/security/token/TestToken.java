@@ -25,11 +25,12 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
 
 /** Unit tests for Token */
-public class TestToken extends TestCase {
+public class TestToken {
 
   static boolean isEqual(Object a, Object b) {
     return a == null ? b == null : a.equals(b);
@@ -45,6 +46,7 @@ public class TestToken extends TestCase {
   /**
    * Test token serialization
    */
+  @Test
   public void testTokenSerialization() throws IOException {
     // Get a token
     Token<TokenIdentifier> sourceToken = new Token<TokenIdentifier>();
@@ -76,7 +78,8 @@ public class TestToken extends TestCase {
     }
   }
 
-  public static void testEncodeWritable() throws Exception {
+  @Test
+  public void testEncodeWritable() throws Exception {
     String[] values = new String[]{"", "a", "bb", "ccc", "dddd", "eeeee",
         "ffffff", "ggggggg", "hhhhhhhh", "iiiiiiiii",
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM" +
@@ -96,7 +99,8 @@ public class TestToken extends TestCase {
       checkUrlSafe(encode);
     }
   }
-  
+
+  @Test
   public void testDecodeIdentifier() throws IOException {
     TestDelegationTokenSecretManager secretManager =
       new TestDelegationTokenSecretManager(0, 0, 0, 0);

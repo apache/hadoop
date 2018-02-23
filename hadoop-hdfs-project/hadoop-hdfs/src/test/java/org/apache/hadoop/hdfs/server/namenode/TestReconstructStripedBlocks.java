@@ -110,13 +110,12 @@ public class TestReconstructStripedBlocks {
       throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 1)
         .build();
-
     try {
       cluster.waitActive();
+      cluster.getFileSystem().enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       final int numBlocks = 4;
       DFSTestUtil.createStripedFile(cluster, filePath,
           dirPath, numBlocks, 1, true);
@@ -203,14 +202,14 @@ public class TestReconstructStripedBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1000);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
+      fs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       fs.getClient().setErasureCodingPolicy("/",
           StripedFileTestUtil.getDefaultECPolicy().getName());
       int fileLen = dataBlocks * blockSize;
@@ -280,13 +279,12 @@ public class TestReconstructStripedBlocks {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
-
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     try {
       fs.mkdirs(dirPath);
       fs.setErasureCodingPolicy(dirPath,
@@ -383,8 +381,6 @@ public class TestReconstructStripedBlocks {
 
     ErasureCodingPolicy policy =  SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
-    conf.setStrings(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        policy.getName());
     Path ecDir = new Path("/ec");
     Path ecFilePath = new Path(ecDir, "ec-file");
     int blockGroups = 2;
@@ -396,6 +392,7 @@ public class TestReconstructStripedBlocks {
     try {
       // create an EC file with 2 block groups
       final DistributedFileSystem fs = dfsCluster.getFileSystem();
+      fs.enableErasureCodingPolicy(policy.getName());
       fs.mkdirs(ecDir);
       fs.setErasureCodingPolicy(ecDir, policy.getName());
       DFSTestUtil.createStripedFile(dfsCluster, ecFilePath, ecDir,

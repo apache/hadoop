@@ -125,8 +125,8 @@ public interface TimelineReader extends Service {
    *    <li><b>flowRunId</b> - Context flow run id.</li>
    *    <li><b>appId</b> - Context app id.</li>
    *    </ul>
-   *    Although entityId is also part of context, it has no meaning for
-   *    getEntities.<br>
+   *    Although entityIdPrefix and entityId are also part of context,
+   *    it has no meaning for getEntities.<br>
    *    Fields in context which are mandatory depends on entity type. Entity
    *    type is always mandatory. In addition to entity type, below is the list
    *    of context fields which are mandatory, based on entity type.<br>
@@ -161,8 +161,10 @@ public interface TimelineReader extends Service {
    *    {@link TimelineDataToRetrieve} for details.
    * @return A set of <cite>TimelineEntity</cite> instances of the given entity
    *    type in the given context scope which matches the given predicates
-   *    ordered by created time, descending. Each entity will only contain the
-   *    metadata(id, type and created time) plus the given fields to retrieve.
+   *    ordered by enitityIdPrefix(for generic entities only).
+   *    Each entity will only contain
+   *    the metadata(id, type , idPrefix and created time) plus the given
+   *    fields to retrieve.
    *    <br>
    *    If entityType is YARN_FLOW_ACTIVITY, entities returned are of type
    *    <cite>FlowActivityEntity</cite>.<br>
@@ -177,4 +179,17 @@ public interface TimelineReader extends Service {
       TimelineReaderContext context,
       TimelineEntityFilters filters,
       TimelineDataToRetrieve dataToRetrieve) throws IOException;
+
+  /**
+   * The API to list all available entity types of the given context.
+   *
+   * @param context A context defines the scope of this query. The incoming
+   * context should contain at least the cluster id and application id.
+   *
+   * @return A set of entity types available in the given context.
+   *
+   * @throws IOException if an exception occurred while listing from backend
+   * storage.
+   */
+  Set<String> getEntityTypes(TimelineReaderContext context) throws IOException;
 }

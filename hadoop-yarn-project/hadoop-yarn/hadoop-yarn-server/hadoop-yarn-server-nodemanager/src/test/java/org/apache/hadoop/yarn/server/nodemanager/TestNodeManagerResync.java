@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,8 +38,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -45,9 +45,9 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -113,8 +113,8 @@ public class TestNodeManagerResync {
       new NodeManagerEvent(NodeManagerEventType.RESYNC);
   private final long DUMMY_RM_IDENTIFIER = 1234;
 
-  protected static Log LOG = LogFactory
-      .getLog(TestNodeManagerResync.class);
+  protected static final Logger LOG =
+       LoggerFactory.getLogger(TestNodeManagerResync.class);
 
   @Before
   public void setup() throws UnsupportedFileSystemException {
@@ -224,7 +224,7 @@ public class TestNodeManagerResync {
     // Start a container and make sure it is in RUNNING state
     ((TestNodeManager4)nm).startContainer();
     // Simulate a container resource increase in a separate thread
-    ((TestNodeManager4)nm).increaseContainersResource();
+    ((TestNodeManager4)nm).updateContainerResource();
     // Simulate RM restart by sending a RESYNC event
     LOG.info("Sending out RESYNC event");
     nm.getNMDispatcher().getEventHandler().handle(
@@ -505,7 +505,7 @@ public class TestNodeManagerResync {
 
   class TestNodeManager4 extends NodeManager {
 
-    private Thread increaseContainerResourceThread = null;
+    private Thread containerUpdateResourceThread = null;
 
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
@@ -621,11 +621,11 @@ public class TestNodeManagerResync {
     }
 
     // Increase container resource in a thread
-    public void increaseContainersResource()
+    public void updateContainerResource()
         throws InterruptedException {
       LOG.info("Increase a container resource in a separate thread");
-      increaseContainerResourceThread = new IncreaseContainersResourceThread();
-      increaseContainerResourceThread.start();
+      containerUpdateResourceThread = new ContainerUpdateResourceThread();
+      containerUpdateResourceThread.start();
     }
 
     class TestNodeStatusUpdaterImpl4 extends MockNodeStatusUpdater {
@@ -652,7 +652,7 @@ public class TestNodeManagerResync {
             updateBarrier.await();
             // Call the actual rebootNodeStatusUpdaterAndRegisterWithRM().
             // This function should be synchronized with
-            // increaseContainersResource().
+            // updateContainer().
             updateBarrier.await();
             super.rebootNodeStatusUpdaterAndRegisterWithRM();
             // Check status after registerWithRM
@@ -672,7 +672,7 @@ public class TestNodeManagerResync {
       }
     }
 
-    class IncreaseContainersResourceThread extends Thread {
+    class ContainerUpdateResourceThread extends Thread {
       @Override
       public void run() {
         // Construct container resource increase request
@@ -682,16 +682,16 @@ public class TestNodeManagerResync {
         try{
           try {
             updateBarrier.await();
-            increaseTokens.add(getContainerToken(targetResource));
-            IncreaseContainersResourceRequest increaseRequest =
-                IncreaseContainersResourceRequest.newInstance(increaseTokens);
-            IncreaseContainersResourceResponse increaseResponse =
+            increaseTokens.add(getContainerToken(targetResource, 1));
+            ContainerUpdateRequest updateRequest =
+                ContainerUpdateRequest.newInstance(increaseTokens);
+            ContainerUpdateResponse updateResponse =
                 getContainerManager()
-                    .increaseContainersResource(increaseRequest);
+                    .updateContainer(updateRequest);
             Assert.assertEquals(
-                1, increaseResponse.getSuccessfullyIncreasedContainers()
+                1, updateResponse.getSuccessfullyUpdatedContainers()
                     .size());
-            Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+            Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
           } catch (Exception e) {
             e.printStackTrace();
           } finally {
@@ -707,6 +707,15 @@ public class TestNodeManagerResync {
       ContainerId cId = TestContainerManager.createContainerId(0);
       return TestContainerManager.createContainerToken(
           cId, DUMMY_RM_IDENTIFIER,
+          getNMContext().getNodeId(), user, resource,
+          getNMContext().getContainerTokenSecretManager(), null);
+    }
+
+    private Token getContainerToken(Resource resource, int version)
+        throws IOException {
+      ContainerId cId = TestContainerManager.createContainerId(0);
+      return TestContainerManager.createContainerToken(
+          cId, version, DUMMY_RM_IDENTIFIER,
           getNMContext().getNodeId(), user, resource,
           getNMContext().getContainerTokenSecretManager(), null);
     }

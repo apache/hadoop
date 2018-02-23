@@ -158,5 +158,11 @@ public class QueueCLI extends YarnCLI {
       writer.print("\tPreemption : ");
       writer.println(preemptStatus ? "disabled" : "enabled");
     }
+
+    Boolean intraQueuePreemption = queueInfo.getIntraQueuePreemptionDisabled();
+    if (intraQueuePreemption != null) {
+      writer.print("\tIntra-queue Preemption : ");
+      writer.println(intraQueuePreemption ? "disabled" : "enabled");
+    }
   }
 }

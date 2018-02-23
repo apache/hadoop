@@ -18,68 +18,8 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="col-md-12 container-fluid">
+<div class="col-md-12 container-fluid yarn-applications-container">
   <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Applications
-        </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-            <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-apps.apps' tagName="li"}}
-                {{#link-to 'yarn-apps.apps'}}All Applications{{/link-to}}
-              {{/link-to}}
-            </ul>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-10 container-fluid">
-      {{#if model.clusterMetrics}}
-        <div class="row">
-          <div class="col-lg-4 container-fluid">
-            <div class="panel panel-default">
-              <div class="panel-heading">
-                Finished Apps
-              </div>
-              <div class="container-fluid" id="finishedapps-donut-chart">
-                {{donut-chart data=model.clusterMetrics.firstObject.getFinishedAppsDataForDonutChart
-                showLabels=true
-                parentId="finishedapps-donut-chart"
-                ratio=0.6
-                maxHeight=350
-                colorTargets="good warn error"
-                }}
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 container-fluid">
-            <div class="panel panel-default">
-              <div class="panel-heading">
-                Running Apps
-              </div>
-              <div class="container-fluid" id="runningapps-donut-chart">
-                {{donut-chart data=model.clusterMetrics.firstObject.getRunningAppsDataForDonutChart
-                showLabels=true
-                parentId="runningapps-donut-chart"
-                ratio=0.6
-                maxHeight=350
-                colorTargets="warn good"
-                }}
-              </div>
-            </div>
-          </div>
-        </div>
-      {{/if}}
-
-      <div class="row">
-        {{outlet}}
-      </div>
-    </div>
+    {{outlet}}
   </div>
 </div>

@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -76,6 +77,9 @@ public abstract class SchedulerNode {
 
   private volatile Set<String> labels = null;
 
+  // Last updated time
+  private volatile long lastHeartbeatMonotonicTime;
+
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
@@ -87,6 +91,7 @@ public abstract class SchedulerNode {
       nodeName = rmNode.getHostName();
     }
     this.labels = ImmutableSet.copyOf(labels);
+    this.lastHeartbeatMonotonicTime = Time.monotonicNow();
   }
 
   public SchedulerNode(RMNode node, boolean usePortForNodeName) {
@@ -129,7 +134,7 @@ public abstract class SchedulerNode {
    * Typically this is the 'hostname' reported by the node, but it could be
    * configured to be 'hostname:port' reported by the node via the
    * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.
-   * The main usecase of this is Yarn minicluster to be able to differentiate
+   * The main usecase of this is YARN minicluster to be able to differentiate
    * node manager instances by their port number.
    * @return Name of the node for scheduling matching decisions.
    */
@@ -170,14 +175,6 @@ public abstract class SchedulerNode {
 
     launchedContainers.put(container.getId(),
         new ContainerInfo(rmContainer, launchedOnNode));
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Assigned container " + container.getId() + " of capacity "
-              + container.getResource() + " on host " + rmNode.getNodeAddress()
-              + ", which has " + numContainers + " containers, "
-              + getAllocatedResource() + " used and " + getUnallocatedResource()
-              + " available after allocation");
-    }
   }
 
   /**
@@ -461,6 +458,35 @@ public abstract class SchedulerNode {
     return this.nodeUtilization;
   }
 
+  public long getLastHeartbeatMonotonicTime() {
+    return lastHeartbeatMonotonicTime;
+  }
+
+  /**
+   * This will be called for each node heartbeat.
+   */
+  public void notifyNodeUpdate() {
+    this.lastHeartbeatMonotonicTime = Time.monotonicNow();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof SchedulerNode)) {
+      return false;
+    }
+
+    SchedulerNode that = (SchedulerNode) o;
+
+    return getNodeID().equals(that.getNodeID());
+  }
+
+  @Override
+  public int hashCode() {
+    return getNodeID().hashCode();
+  }
 
   private static class ContainerInfo {
     private final RMContainer container;

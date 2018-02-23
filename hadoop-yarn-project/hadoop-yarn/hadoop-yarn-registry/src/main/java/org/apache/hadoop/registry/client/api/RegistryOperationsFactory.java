@@ -67,6 +67,14 @@ public final class RegistryOperationsFactory {
     return operations;
   }
 
+  public static RegistryOperationsClient createClient(String name,
+      Configuration conf) {
+    Preconditions.checkArgument(conf != null, "Null configuration");
+    RegistryOperationsClient operations = new RegistryOperationsClient(name);
+    operations.init(conf);
+    return operations;
+  }
+
   /**
    * Create and initialize an anonymous read/write registry operations instance.
    * In a secure cluster, this instance will only have read access to the
@@ -101,6 +109,27 @@ public final class RegistryOperationsFactory {
     conf.set(KEY_REGISTRY_CLIENT_JAAS_CONTEXT, jaasContext);
     return createInstance("KerberosRegistryOperations", conf);
   }
+
+  /**
+   * Create a kerberos registry service client
+   * @param conf configuration
+   * @param jaasClientEntry the name of the login config entry
+   * @param principal principal of the client.
+   * @param keytab location to the keytab file
+   * @return a registry service client instance
+   */
+  public static RegistryOperations createKerberosInstance(Configuration conf,
+      String jaasClientEntry, String principal, String keytab) {
+    Preconditions.checkArgument(conf != null, "Null configuration");
+    conf.set(KEY_REGISTRY_CLIENT_AUTH, REGISTRY_CLIENT_AUTH_KERBEROS);
+    conf.set(KEY_REGISTRY_CLIENT_JAAS_CONTEXT, jaasClientEntry);
+    RegistryOperationsClient operations =
+        new RegistryOperationsClient("KerberosRegistryOperations");
+    operations.setKerberosPrincipalAndKeytab(principal, keytab);
+    operations.init(conf);
+    return operations;
+  }
+
 
   /**
    * Create and initialize an operations instance authenticated with write

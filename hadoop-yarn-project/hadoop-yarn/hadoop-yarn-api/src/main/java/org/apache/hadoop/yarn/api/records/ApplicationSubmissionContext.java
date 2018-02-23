@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   <li>
  *     maxAppAttempts. The maximum number of application attempts.
  *     It should be no larger than the global number of max attempts in the
- *     Yarn configuration.
+ *     YARN configuration.
  *   </li>
  *   <li>
  *     attemptFailuresValidityInterval. The default value is -1.
@@ -395,15 +395,18 @@ public abstract class ApplicationSubmissionContext {
    * Set the flag which indicates whether to keep containers across application
    * attempts.
    * <p>
-   * If the flag is true, running containers will not be killed when application
-   * attempt fails and these containers will be retrieved by the new application
-   * attempt on registration via
+   * For managed AM, if the flag is true, running containers will not be killed
+   * when application attempt fails and these containers will be retrieved by
+   * the new application attempt on registration via
    * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}.
    * </p>
-   * 
-   * @param keepContainers
-   *          the flag which indicates whether to keep containers across
-   *          application attempts.
+   * <p>
+   * For unmanaged AM, if the flag is true, RM allows re-register and returns
+   * the running containers in the same attempt back to the UAM for HA.
+   * </p>
+   *
+   * @param keepContainers the flag which indicates whether to keep containers
+   *          across application attempts.
    */
   @Public
   @Stable
@@ -595,4 +598,25 @@ public abstract class ApplicationSubmissionContext {
   @Unstable
   public abstract void setApplicationTimeouts(
       Map<ApplicationTimeoutType, Long> applicationTimeouts);
+
+  /**
+   * Get application scheduling environment variables stored as a key value
+   * pair map for application.
+   *
+   * @return placement envs for application.
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, String> getApplicationSchedulingPropertiesMap();
+
+  /**
+   * Set the scheduling envs for the application.
+   *
+   * @param schedulingEnvMap
+   *          A map of env's for the application scheduling preferences.
+   */
+  @Public
+  @Unstable
+  public abstract void setApplicationSchedulingPropertiesMap(
+      Map<String, String> schedulingEnvMap);
 }

@@ -505,7 +505,7 @@ public class FTPFileSystem extends FileSystem {
       long modTime = -1; // Modification time of root dir not known.
       Path root = new Path("/");
       return new FileStatus(length, isDir, blockReplication, blockSize,
-          modTime, root.makeQualified(this));
+          modTime, this.makeQualified(root));
     }
     String pathName = parentPath.toUri().getPath();
     FTPFile[] ftpFiles = client.listFiles(pathName);
@@ -546,7 +546,7 @@ public class FTPFileSystem extends FileSystem {
     String group = ftpFile.getGroup();
     Path filePath = new Path(parentPath, ftpFile.getName());
     return new FileStatus(length, isDir, blockReplication, blockSize, modTime,
-        accessTime, permission, user, group, filePath.makeQualified(this));
+        accessTime, permission, user, group, this.makeQualified(filePath));
   }
 
   @Override

@@ -26,12 +26,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,6 +37,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class that manages adding and removing collectors and their lifecycle. It
@@ -47,9 +47,9 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineCollectorManager extends AbstractService {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineCollectorManager.class);
+public class TimelineCollectorManager extends CompositeService {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineCollectorManager.class);
 
   private TimelineWriter writer;
   private ScheduledExecutorService writerFlusher;
@@ -57,7 +57,7 @@ public class TimelineCollectorManager extends AbstractService {
   private boolean writerFlusherRunning;
 
   @Override
-  public void serviceInit(Configuration conf) throws Exception {
+  protected void serviceInit(Configuration conf) throws Exception {
     writer = createTimelineWriter(conf);
     writer.init(conf);
     // create a single dedicated thread for flushing the writer on a periodic
@@ -184,9 +184,11 @@ public class TimelineCollectorManager extends AbstractService {
     if (collector == null) {
       LOG.error("the collector for " + appId + " does not exist!");
     } else {
-      postRemove(appId, collector);
-      // stop the service to do clean up
-      collector.stop();
+      synchronized (collector) {
+        postRemove(appId, collector);
+        // stop the service to do clean up
+        collector.stop();
+      }
       LOG.info("The collector service for " + appId + " was removed");
     }
     return collector != null;

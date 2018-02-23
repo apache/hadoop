@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.token.delegation.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.SecurityUtil;
@@ -54,6 +55,9 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   private static final String CONTENT_TYPE = "Content-Type";
   private static final String APPLICATION_JSON_MIME = "application/json";
 
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(Map.class);
+
   private static final String HTTP_GET = "GET";
   private static final String HTTP_PUT = "PUT";
 
@@ -66,6 +70,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   public static final String DELEGATION_PARAM = "delegation";
   public static final String TOKEN_PARAM = "token";
   public static final String RENEWER_PARAM = "renewer";
+  public static final String SERVICE_PARAM = "service";
   public static final String DELEGATION_TOKEN_JSON = "Token";
   public static final String DELEGATION_TOKEN_URL_STRING_JSON = "urlString";
   public static final String RENEW_DELEGATION_TOKEN_JSON = "long";
@@ -316,8 +321,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
         if (contentType != null &&
             contentType.contains(APPLICATION_JSON_MIME)) {
           try {
-            ObjectMapper mapper = new ObjectMapper();
-            ret = mapper.readValue(conn.getInputStream(), Map.class);
+            ret = READER.readValue(conn.getInputStream());
           } catch (Exception ex) {
             throw new AuthenticationException(String.format(
                 "'%s' did not handle the '%s' delegation token operation: %s",

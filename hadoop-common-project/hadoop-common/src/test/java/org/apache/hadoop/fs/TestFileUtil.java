@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,6 +38,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,6 +50,9 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -1173,4 +1179,84 @@ public class TestFileUtil {
     assertEquals(FileUtil.compareFs(fs3,fs4),true);
     assertEquals(FileUtil.compareFs(fs1,fs6),false);
   }
+
+  @Test(timeout = 8000)
+  public void testCreateSymbolicLinkUsingJava() throws IOException {
+    setupDirs();
+    final File simpleTar = new File(del, FILE);
+    OutputStream os = new FileOutputStream(simpleTar);
+    TarArchiveOutputStream tos = new TarArchiveOutputStream(os);
+    File untarFile = null;
+    try {
+      // Files to tar
+      final String tmpDir = "tmp/test";
+      File tmpDir1 = new File(tmpDir, "dir1/");
+      File tmpDir2 = new File(tmpDir, "dir2/");
+      // Delete the directories if they already exist
+      tmpDir1.mkdirs();
+      tmpDir2.mkdirs();
+
+      java.nio.file.Path symLink = FileSystems
+          .getDefault().getPath(tmpDir1.getPath() + "/sl");
+
+      // Create Symbolic Link
+      Files.createSymbolicLink(symLink,
+          FileSystems.getDefault().getPath(tmpDir2.getPath())).toString();
+      assertTrue(Files.isSymbolicLink(symLink.toAbsolutePath()));
+      // put entries in tar file
+      putEntriesInTar(tos, tmpDir1.getParentFile());
+      tos.close();
+
+      untarFile = new File(tmpDir, "2");
+      // Untar using java
+      FileUtil.unTarUsingJava(simpleTar, untarFile, false);
+
+      // Check symbolic link and other directories are there in untar file
+      assertTrue(Files.exists(untarFile.toPath()));
+      assertTrue(Files.exists(FileSystems.getDefault().getPath(untarFile
+          .getPath(), tmpDir)));
+      assertTrue(Files.isSymbolicLink(FileSystems.getDefault().getPath(untarFile
+          .getPath().toString(), symLink.toString())));
+
+    } finally {
+      FileUtils.deleteDirectory(new File("tmp"));
+      tos.close();
+    }
+
+  }
+
+  private void putEntriesInTar(TarArchiveOutputStream tos, File f)
+      throws IOException {
+    if (Files.isSymbolicLink(f.toPath())) {
+      TarArchiveEntry tarEntry = new TarArchiveEntry(f.getPath(),
+          TarArchiveEntry.LF_SYMLINK);
+      tarEntry.setLinkName(Files.readSymbolicLink(f.toPath()).toString());
+      tos.putArchiveEntry(tarEntry);
+      tos.closeArchiveEntry();
+      return;
+    }
+
+    if (f.isDirectory()) {
+      tos.putArchiveEntry(new TarArchiveEntry(f));
+      tos.closeArchiveEntry();
+      for (File child : f.listFiles()) {
+        putEntriesInTar(tos, child);
+      }
+    }
+
+    if (f.isFile()) {
+      tos.putArchiveEntry(new TarArchiveEntry(f));
+      BufferedInputStream origin = new BufferedInputStream(
+          new FileInputStream(f));
+      int count;
+      byte[] data = new byte[2048];
+      while ((count = origin.read(data)) != -1) {
+        tos.write(data, 0, count);
+      }
+      tos.flush();
+      tos.closeArchiveEntry();
+      origin.close();
+    }
+  }
+
 }

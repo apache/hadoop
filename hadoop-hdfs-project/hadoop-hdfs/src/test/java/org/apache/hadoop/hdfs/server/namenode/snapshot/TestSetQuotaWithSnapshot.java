@@ -149,7 +149,8 @@ public class TestSetQuotaWithSnapshot {
     hdfs.setQuota(dir, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
     INode subNode = fsdir.getINode4Write(subDir.toString());
     assertTrue(subNode.asDirectory().isWithSnapshot());
-    List<DirectoryDiff> diffList = subNode.asDirectory().getDiffs().asList();
+    DiffList<DirectoryDiff> diffList =
+        subNode.asDirectory().getDiffs().asList();
     assertEquals(1, diffList.size());
     Snapshot s2 = dirNode.getSnapshot(DFSUtil.string2Bytes("s2"));
     assertEquals(s2.getId(), diffList.get(0).getSnapshotId());

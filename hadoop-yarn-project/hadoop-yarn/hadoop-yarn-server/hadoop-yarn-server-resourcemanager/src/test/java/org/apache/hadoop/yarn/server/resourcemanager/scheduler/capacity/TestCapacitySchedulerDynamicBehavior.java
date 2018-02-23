@@ -222,7 +222,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     String queue =
         scheduler.getApplicationAttempt(appsInB1.get(0)).getQueue()
             .getQueueName();
-    Assert.assertTrue(queue.equals("b1"));
+    Assert.assertEquals("b1", queue);
 
     List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
     assertTrue(appsInRoot.contains(appAttemptId));

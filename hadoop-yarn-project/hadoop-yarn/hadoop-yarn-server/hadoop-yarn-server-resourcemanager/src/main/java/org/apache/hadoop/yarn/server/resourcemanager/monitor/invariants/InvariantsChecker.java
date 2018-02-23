@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,16 +39,16 @@ public abstract class InvariantsChecker implements SchedulingEditPolicy {
 
   private Configuration conf;
   private RMContext context;
-  private PreemptableResourceScheduler scheduler;
+  private ResourceScheduler scheduler;
   private boolean throwOnInvariantViolation;
   private long monitoringInterval;
 
   @Override
   public void init(Configuration config, RMContext rmContext,
-      PreemptableResourceScheduler preemptableResourceScheduler) {
+      ResourceScheduler scheduler) {
     this.conf = config;
     this.context = rmContext;
-    this.scheduler = preemptableResourceScheduler;
+    this.scheduler = scheduler;
     this.throwOnInvariantViolation =
         conf.getBoolean(InvariantsChecker.THROW_ON_VIOLATION, false);
     this.monitoringInterval =
@@ -89,7 +89,7 @@ public abstract class InvariantsChecker implements SchedulingEditPolicy {
     return context;
   }
 
-  public PreemptableResourceScheduler getScheduler() {
+  public ResourceScheduler getScheduler() {
     return scheduler;
   }
 

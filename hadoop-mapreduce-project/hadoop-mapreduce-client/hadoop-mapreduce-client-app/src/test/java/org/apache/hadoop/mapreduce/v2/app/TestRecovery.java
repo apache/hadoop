@@ -19,9 +19,11 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,15 +38,16 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.TimeoutException;
+
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobID;
@@ -103,11 +106,13 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRecovery {
 
-  private static final Log LOG = LogFactory.getLog(TestRecovery.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRecovery.class);
   private static Path outputDir = new Path(new File("target", 
       TestRecovery.class.getName()).getAbsolutePath() + 
       Path.SEPARATOR + "out");
@@ -164,9 +169,8 @@ public class TestRecovery {
     /////////// Play some games with the TaskAttempts of the first task //////
     //send the fail signal to the 1st map task attempt
     app.getContext().getEventHandler().handle(
-        new TaskAttemptEvent(
-            task1Attempt1.getID(),
-            TaskAttemptEventType.TA_FAILMSG));
+        new TaskAttemptFailEvent(
+            task1Attempt1.getID()));
     
     app.waitForState(task1Attempt1, TaskAttemptState.FAILED);
 
@@ -452,6 +456,8 @@ public class TestRecovery {
   public static class TestFileOutputCommitter extends
       org.apache.hadoop.mapred.FileOutputCommitter {
 
+    private boolean abortJobCalled;
+
     @Override
     public boolean isRecoverySupported(
         org.apache.hadoop.mapred.JobContext jobContext) {
@@ -461,6 +467,16 @@ public class TestRecovery {
             "want.am.recovery", false);
       }
       return isRecoverySupported;
+    }
+
+    @Override
+    public void abortJob(JobContext context, int runState) throws IOException {
+      super.abortJob(context, runState);
+      this.abortJobCalled = true;
+    }
+
+    private boolean isAbortJobCalled() {
+      return this.abortJobCalled;
     }
   }
 
@@ -1007,6 +1023,73 @@ public class TestRecovery {
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
     validateOutput();
+  }
+
+  @Test
+  public void testPreviousJobOutputCleanedWhenNoRecovery() throws Exception {
+    int runCount = 0;
+    MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
+        true, ++runCount);
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, false);
+    conf.setClass("mapred.output.committer.class",
+        TestFileOutputCommitter.class,
+        org.apache.hadoop.mapred.OutputCommitter.class);
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    //stop the app before the job completes.
+    app.stop();
+    app.close();
+
+    //rerun
+    app = new MRAppWithHistory(1, 2, false, this.getClass().getName(), false,
+        ++runCount);
+    job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    TestFileOutputCommitter committer = (
+        TestFileOutputCommitter) app.getCommitter();
+    assertTrue("commiter.abortJob() has not been called",
+        committer.isAbortJobCalled());
+    app.close();
+  }
+
+  @Test
+  public void testPreviousJobIsNotCleanedWhenRecovery()
+      throws Exception {
+    int runCount = 0;
+    MRApp app = new MRAppWithHistory(1, 2, false, this.getClass().getName(),
+        true, ++runCount);
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
+    conf.setClass("mapred.output.committer.class",
+        TestFileOutputCommitter.class,
+        org.apache.hadoop.mapred.OutputCommitter.class);
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    // TestFileOutputCommitter supports recovery if want.am.recovery=true
+    conf.setBoolean("want.am.recovery", true);
+    conf.set(FileOutputFormat.OUTDIR, outputDir.toString());
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    //stop the app before the job completes.
+    app.stop();
+    app.close();
+
+    //rerun
+    app = new MRAppWithHistory(1, 2, false, this.getClass().getName(), false,
+        ++runCount);
+    job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    TestFileOutputCommitter committer = (
+        TestFileOutputCommitter) app.getCommitter();
+    assertFalse("commiter.abortJob() has been called",
+        committer.isAbortJobCalled());
+    app.close();
   }
 
   @Test

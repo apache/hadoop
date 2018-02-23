@@ -47,14 +47,12 @@ import static org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooL
 class FSDirRenameOp {
   @Deprecated
   static RenameResult renameToInt(
-      FSDirectory fsd, final String src, final String dst,
-      boolean logRetryCache)
-      throws IOException {
+      FSDirectory fsd, FSPermissionChecker pc, final String src,
+      final String dst, boolean logRetryCache) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src +
           " to " + dst);
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
 
     // Rename does not operate on link targets
     // Do not resolveLink when checking permissions of src and dst
@@ -230,8 +228,8 @@ class FSDirRenameOp {
    * The new rename which has the POSIX semantic.
    */
   static RenameResult renameToInt(
-      FSDirectory fsd, final String srcArg, final String dstArg,
-      boolean logRetryCache, Options.Rename... options)
+      FSDirectory fsd, FSPermissionChecker pc, final String srcArg,
+      final String dstArg, boolean logRetryCache, Options.Rename... options)
       throws IOException {
     String src = srcArg;
     String dst = dstArg;
@@ -239,7 +237,6 @@ class FSDirRenameOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options -" +
           " " + src + " to " + dst);
     }
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
 
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     // returns resolved path

@@ -17,6 +17,10 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import static org.apache.hadoop.util.Shell.getAllShells;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +34,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.Callable;
@@ -41,8 +46,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -60,6 +63,7 @@ import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.SerializedException;
@@ -81,11 +85,10 @@ import org.apache.hadoop.yarn.util.FSDownload;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import static org.apache.hadoop.util.Shell.getAllShells;
-
 public class ContainerLocalizer {
 
-  static final Log LOG = LogFactory.getLog(ContainerLocalizer.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(ContainerLocalizer.class);
 
   public static final String FILECACHE = "filecache";
   public static final String APPCACHE = "appcache";
@@ -348,13 +351,13 @@ public class ContainerLocalizer {
     final List<LocalResourceStatus> currentResources =
       new ArrayList<LocalResourceStatus>();
     // TODO: Synchronization??
-    for (Iterator<LocalResource> i = pendingResources.keySet().iterator();
-         i.hasNext();) {
-      LocalResource rsrc = i.next();
+    for (Iterator<Entry<LocalResource, Future<Path>>> i =
+        pendingResources.entrySet().iterator(); i.hasNext();) {
+      Entry<LocalResource, Future<Path>> mapEntry = i.next();
       LocalResourceStatus stat =
         recordFactory.newRecordInstance(LocalResourceStatus.class);
-      stat.setResource(rsrc);
-      Future<Path> fPath = pendingResources.get(rsrc);
+      stat.setResource(mapEntry.getKey());
+      Future<Path> fPath = mapEntry.getValue();
       if (fPath.isDone()) {
         try {
           Path localPath = fPath.get();
@@ -406,8 +409,12 @@ public class ContainerLocalizer {
    */
   public static void buildMainArgs(List<String> command,
       String user, String appId, String locId,
-      InetSocketAddress nmAddr, List<String> localDirs) {
-    
+      InetSocketAddress nmAddr, List<String> localDirs, Configuration conf) {
+
+    String logLevel = conf.get(YarnConfiguration.
+            NM_CONTAINER_LOCALIZER_LOG_LEVEL,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_LOG_LEVEL_DEFAULT);
+    addLog4jSystemProperties(logLevel, command);
     command.add(ContainerLocalizer.class.getName());
     command.add(user);
     command.add(appId);
@@ -417,6 +424,16 @@ public class ContainerLocalizer {
     for(String dir : localDirs) {
       command.add(dir);
     }
+  }
+
+  private static void addLog4jSystemProperties(
+      String logLevel, List<String> command) {
+    command.add("-Dlog4j.configuration=container-log4j.properties");
+    command.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR + "=" +
+        ApplicationConstants.LOG_DIR_EXPANSION_VAR);
+    command.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_SIZE + "=0");
+    command.add("-Dhadoop.root.logger=" + logLevel + ",CLA");
+    command.add("-Dhadoop.root.logfile=container-localizer-syslog");
   }
 
   public static void main(String[] argv) throws Throwable {

@@ -38,16 +38,21 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ApplicationSchedulingConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalitySchedulingPlacementSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceRequestUpdateResult;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PendingAskUpdateResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SingleConstraintAppPlacementAllocator;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 /**
@@ -81,17 +86,20 @@ public class AppSchedulingInfo {
 
   private final ConcurrentSkipListSet<SchedulerRequestKey>
       schedulerKeys = new ConcurrentSkipListSet<>();
-  final Map<SchedulerRequestKey, SchedulingPlacementSet<SchedulerNode>>
-      schedulerKeyToPlacementSets = new ConcurrentHashMap<>();
+  private final Map<SchedulerRequestKey, AppPlacementAllocator<SchedulerNode>>
+      schedulerKeyToAppPlacementAllocator = new ConcurrentHashMap<>();
 
   private final ReentrantReadWriteLock.ReadLock readLock;
   private final ReentrantReadWriteLock.WriteLock writeLock;
 
   public final ContainerUpdateContext updateContext;
+  public final Map<String, String> applicationSchedulingEnvs = new HashMap<>();
+  private final RMContext rmContext;
 
-  public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      String user, Queue queue, AbstractUsersManager abstractUsersManager,
-      long epoch, ResourceUsage appResourceUsage) {
+  public AppSchedulingInfo(ApplicationAttemptId appAttemptId, String user,
+      Queue queue, AbstractUsersManager abstractUsersManager, long epoch,
+      ResourceUsage appResourceUsage,
+      Map<String, String> applicationSchedulingEnvs, RMContext rmContext) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
@@ -100,6 +108,8 @@ public class AppSchedulingInfo {
     this.containerIdCounter = new AtomicLong(
         epoch << ResourceManager.EPOCH_BIT_SHIFT);
     this.appResourceUsage = appResourceUsage;
+    this.applicationSchedulingEnvs.putAll(applicationSchedulingEnvs);
+    this.rmContext = rmContext;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     updateContext = new ContainerUpdateContext(this);
@@ -145,7 +155,7 @@ public class AppSchedulingInfo {
    */
   private void clearRequests() {
     schedulerKeys.clear();
-    schedulerKeyToPlacementSets.clear();
+    schedulerKeyToAppPlacementAllocator.clear();
     LOG.info("Application " + applicationId + " requests cleared");
   }
 
@@ -158,76 +168,157 @@ public class AppSchedulingInfo {
    * application, by asking for more resources and releasing resources acquired
    * by the application.
    *
-   * @param requests
-   *          resources to be acquired
+   * @param resourceRequests resource requests to be allocated
    * @param recoverPreemptedRequestForAContainer
-   *          recover ResourceRequest on preemption
+   *          recover ResourceRequest/SchedulingRequest on preemption
    * @return true if any resource was updated, false otherwise
    */
-  public boolean updateResourceRequests(List<ResourceRequest> requests,
+  public boolean updateResourceRequests(List<ResourceRequest> resourceRequests,
       boolean recoverPreemptedRequestForAContainer) {
-    if (null == requests || requests.isEmpty()) {
-      return false;
-    }
-
     // Flag to track if any incoming requests update "ANY" requests
-    boolean offswitchResourcesUpdated = false;
+    boolean offswitchResourcesUpdated;
 
+    writeLock.lock();
     try {
-      this.writeLock.lock();
-
-      // A map to group resource requests and dedup
-      Map<SchedulerRequestKey, Map<String, ResourceRequest>> dedupRequests =
-          new HashMap<>();
-
-      // Group resource request by schedulerRequestKey and resourceName
-      for (ResourceRequest request : requests) {
-        SchedulerRequestKey schedulerKey = SchedulerRequestKey.create(request);
-        if (!dedupRequests.containsKey(schedulerKey)) {
-          dedupRequests.put(schedulerKey, new HashMap<>());
-        }
-        dedupRequests.get(schedulerKey).put(request.getResourceName(), request);
-      }
-
-      // Update scheduling placement set
-      offswitchResourcesUpdated =
-          addToPlacementSets(
-              recoverPreemptedRequestForAContainer, dedupRequests);
-
-      return offswitchResourcesUpdated;
+      // Update AppPlacementAllocator by requests
+      offswitchResourcesUpdated = internalAddResourceRequests(
+          recoverPreemptedRequestForAContainer, resourceRequests);
     } finally {
-      this.writeLock.unlock();
+      writeLock.unlock();
     }
+
+    return offswitchResourcesUpdated;
   }
 
-  public void removePlacementSets(SchedulerRequestKey schedulerRequestKey) {
-    schedulerKeyToPlacementSets.remove(schedulerRequestKey);
+  /**
+   * The ApplicationMaster is updating resource requirements for the
+   * application, by asking for more resources and releasing resources acquired
+   * by the application.
+   *
+   * @param dedupRequests (dedup) resource requests to be allocated
+   * @param recoverPreemptedRequestForAContainer
+   *          recover ResourceRequest/SchedulingRequest on preemption
+   * @return true if any resource was updated, false otherwise
+   */
+  public boolean updateResourceRequests(
+      Map<SchedulerRequestKey, Map<String, ResourceRequest>> dedupRequests,
+      boolean recoverPreemptedRequestForAContainer) {
+    // Flag to track if any incoming requests update "ANY" requests
+    boolean offswitchResourcesUpdated;
+
+    writeLock.lock();
+    try {
+      // Update AppPlacementAllocator by requests
+      offswitchResourcesUpdated = internalAddResourceRequests(
+          recoverPreemptedRequestForAContainer, dedupRequests);
+    } finally {
+      writeLock.unlock();
+    }
+
+    return offswitchResourcesUpdated;
   }
 
-  boolean addToPlacementSets(
+  /**
+   * The ApplicationMaster is updating resource requirements for the
+   * application, by asking for more resources and releasing resources acquired
+   * by the application.
+   *
+   * @param schedulingRequests resource requests to be allocated
+   * @param recoverPreemptedRequestForAContainer
+   *          recover ResourceRequest/SchedulingRequest on preemption
+   * @return true if any resource was updated, false otherwise
+   */
+  public boolean updateSchedulingRequests(
+      List<SchedulingRequest> schedulingRequests,
+      boolean recoverPreemptedRequestForAContainer) {
+    // Flag to track if any incoming requests update "ANY" requests
+    boolean offswitchResourcesUpdated;
+
+    writeLock.lock();
+    try {
+      // Update AppPlacementAllocator by requests
+      offswitchResourcesUpdated = addSchedulingRequests(
+          recoverPreemptedRequestForAContainer, schedulingRequests);
+    } finally {
+      writeLock.unlock();
+    }
+
+    return offswitchResourcesUpdated;
+  }
+
+  public void removeAppPlacement(SchedulerRequestKey schedulerRequestKey) {
+    schedulerKeyToAppPlacementAllocator.remove(schedulerRequestKey);
+  }
+
+  private boolean addSchedulingRequests(
+      boolean recoverPreemptedRequestForAContainer,
+      List<SchedulingRequest> schedulingRequests) {
+    // Do we need to update pending resource for app/queue, etc.?
+    boolean requireUpdatePendingResource = false;
+
+    for (SchedulingRequest request : schedulingRequests) {
+      SchedulerRequestKey schedulerRequestKey = SchedulerRequestKey.create(
+          request);
+
+      AppPlacementAllocator appPlacementAllocator =
+          getAndAddAppPlacementAllocatorIfNotExist(schedulerRequestKey,
+              SingleConstraintAppPlacementAllocator.class.getCanonicalName());
+
+      // Update AppPlacementAllocator
+      PendingAskUpdateResult pendingAmountChanges =
+          appPlacementAllocator.updatePendingAsk(schedulerRequestKey,
+              request, recoverPreemptedRequestForAContainer);
+
+      if (null != pendingAmountChanges) {
+        updatePendingResources(pendingAmountChanges, schedulerRequestKey,
+            queue.getMetrics());
+        requireUpdatePendingResource = true;
+      }
+    }
+
+    return requireUpdatePendingResource;
+  }
+
+  /**
+   * Get and insert AppPlacementAllocator if it doesn't exist, this should be
+   * protected by write lock.
+   * @param schedulerRequestKey schedulerRequestKey
+   * @param placementTypeClass placementTypeClass
+   * @return AppPlacementAllocator
+   */
+  private AppPlacementAllocator<SchedulerNode> getAndAddAppPlacementAllocatorIfNotExist(
+      SchedulerRequestKey schedulerRequestKey, String placementTypeClass) {
+    AppPlacementAllocator<SchedulerNode> appPlacementAllocator;
+    if ((appPlacementAllocator = schedulerKeyToAppPlacementAllocator.get(
+        schedulerRequestKey)) == null) {
+      appPlacementAllocator =
+          ApplicationPlacementAllocatorFactory.getAppPlacementAllocator(
+              placementTypeClass, this, schedulerRequestKey, rmContext);
+      schedulerKeyToAppPlacementAllocator.put(schedulerRequestKey,
+          appPlacementAllocator);
+    }
+    return appPlacementAllocator;
+  }
+
+  private boolean internalAddResourceRequests(
       boolean recoverPreemptedRequestForAContainer,
       Map<SchedulerRequestKey, Map<String, ResourceRequest>> dedupRequests) {
     boolean offswitchResourcesUpdated = false;
     for (Map.Entry<SchedulerRequestKey, Map<String, ResourceRequest>> entry :
-        dedupRequests.entrySet()) {
+    dedupRequests.entrySet()) {
       SchedulerRequestKey schedulerRequestKey = entry.getKey();
+      AppPlacementAllocator<SchedulerNode> appPlacementAllocator =
+          getAndAddAppPlacementAllocatorIfNotExist(schedulerRequestKey,
+              applicationSchedulingEnvs.get(
+                  ApplicationSchedulingConfig.ENV_APPLICATION_PLACEMENT_TYPE_CLASS));
 
-      if (!schedulerKeyToPlacementSets.containsKey(schedulerRequestKey)) {
-        schedulerKeyToPlacementSets.put(schedulerRequestKey,
-            new LocalitySchedulingPlacementSet<>(this));
-      }
-
-      // Update placement set
-      ResourceRequestUpdateResult pendingAmountChanges =
-          schedulerKeyToPlacementSets.get(schedulerRequestKey)
-              .updateResourceRequests(
-                  entry.getValue().values(),
-                  recoverPreemptedRequestForAContainer);
+      // Update AppPlacementAllocator
+      PendingAskUpdateResult pendingAmountChanges =
+          appPlacementAllocator.updatePendingAsk(entry.getValue().values(),
+              recoverPreemptedRequestForAContainer);
 
       if (null != pendingAmountChanges) {
-        updatePendingResources(
-            pendingAmountChanges.getLastAnyResourceRequest(),
-            pendingAmountChanges.getNewResourceRequest(), schedulerRequestKey,
+        updatePendingResources(pendingAmountChanges, schedulerRequestKey,
             queue.getMetrics());
         offswitchResourcesUpdated = true;
       }
@@ -235,15 +326,43 @@ public class AppSchedulingInfo {
     return offswitchResourcesUpdated;
   }
 
-  private void updatePendingResources(ResourceRequest lastRequest,
-      ResourceRequest request, SchedulerRequestKey schedulerKey,
-      QueueMetrics metrics) {
+  private boolean internalAddResourceRequests(boolean recoverPreemptedRequestForAContainer,
+      List<ResourceRequest> resourceRequests) {
+    if (null == resourceRequests || resourceRequests.isEmpty()) {
+      return false;
+    }
+
+    // A map to group resource requests and dedup
+    Map<SchedulerRequestKey, Map<String, ResourceRequest>> dedupRequests =
+        new HashMap<>();
+
+    // Group resource request by schedulerRequestKey and resourceName
+    for (ResourceRequest request : resourceRequests) {
+      SchedulerRequestKey schedulerKey = SchedulerRequestKey.create(request);
+      if (!dedupRequests.containsKey(schedulerKey)) {
+        dedupRequests.put(schedulerKey, new HashMap<>());
+      }
+      dedupRequests.get(schedulerKey).put(request.getResourceName(), request);
+    }
+
+    return internalAddResourceRequests(recoverPreemptedRequestForAContainer,
+        dedupRequests);
+  }
+
+  private void updatePendingResources(PendingAskUpdateResult updateResult,
+      SchedulerRequestKey schedulerKey, QueueMetrics metrics) {
+
+    PendingAsk lastPendingAsk = updateResult.getLastPendingAsk();
+    PendingAsk newPendingAsk = updateResult.getNewPendingAsk();
+    String lastNodePartition = updateResult.getLastNodePartition();
+    String newNodePartition = updateResult.getNewNodePartition();
+
     int lastRequestContainers =
-        (lastRequest != null) ? lastRequest.getNumContainers() : 0;
-    if (request.getNumContainers() <= 0) {
+        (lastPendingAsk != null) ? lastPendingAsk.getCount() : 0;
+    if (newPendingAsk.getCount() <= 0) {
       if (lastRequestContainers >= 0) {
         schedulerKeys.remove(schedulerKey);
-        schedulerKeyToPlacementSets.remove(schedulerKey);
+        schedulerKeyToAppPlacementAllocator.remove(schedulerKey);
       }
       LOG.info("checking for deactivate of application :"
           + this.applicationId);
@@ -256,31 +375,23 @@ public class AppSchedulingInfo {
       }
     }
 
-    Resource lastRequestCapability =
-        lastRequest != null ? lastRequest.getCapability() : Resources.none();
-    metrics.incrPendingResources(request.getNodeLabelExpression(), user,
-        request.getNumContainers(), request.getCapability());
-
-    if(lastRequest != null) {
-      metrics.decrPendingResources(lastRequest.getNodeLabelExpression(), user,
-          lastRequestContainers, lastRequestCapability);
+    if (lastPendingAsk != null) {
+      // Deduct resources from metrics / pending resources of queue/app.
+      metrics.decrPendingResources(lastNodePartition, user,
+          lastPendingAsk.getCount(), lastPendingAsk.getPerAllocationResource());
+      Resource decreasedResource = Resources.multiply(
+          lastPendingAsk.getPerAllocationResource(), lastRequestContainers);
+      queue.decPendingResource(lastNodePartition, decreasedResource);
+      appResourceUsage.decPending(lastNodePartition, decreasedResource);
     }
 
-    // update queue:
-    Resource increasedResource =
-        Resources.multiply(request.getCapability(), request.getNumContainers());
-    queue.incPendingResource(request.getNodeLabelExpression(),
-        increasedResource);
-    appResourceUsage.incPending(request.getNodeLabelExpression(),
-        increasedResource);
-    if (lastRequest != null) {
-      Resource decreasedResource =
-          Resources.multiply(lastRequestCapability, lastRequestContainers);
-      queue.decPendingResource(lastRequest.getNodeLabelExpression(),
-          decreasedResource);
-      appResourceUsage.decPending(lastRequest.getNodeLabelExpression(),
-          decreasedResource);
-    }
+    // Increase resources to metrics / pending resources of queue/app.
+    metrics.incrPendingResources(newNodePartition, user,
+        newPendingAsk.getCount(), newPendingAsk.getPerAllocationResource());
+    Resource increasedResource = Resources.multiply(
+        newPendingAsk.getPerAllocationResource(), newPendingAsk.getCount());
+    queue.incPendingResource(newNodePartition, increasedResource);
+    appResourceUsage.incPending(newNodePartition, increasedResource);
   }
 
   public void addRequestedPartition(String partition) {
@@ -355,8 +466,9 @@ public class AppSchedulingInfo {
     List<ResourceRequest> ret = new ArrayList<>();
     try {
       this.readLock.lock();
-      for (SchedulingPlacementSet ps : schedulerKeyToPlacementSets.values()) {
-        ret.addAll(ps.getResourceRequests().values());
+      for (AppPlacementAllocator ap : schedulerKeyToAppPlacementAllocator
+          .values()) {
+        ret.addAll(ap.getResourceRequests().values());
       }
     } finally {
       this.readLock.unlock();
@@ -383,8 +495,9 @@ public class AppSchedulingInfo {
       String resourceName) {
     try {
       this.readLock.lock();
-      SchedulingPlacementSet ps = schedulerKeyToPlacementSets.get(schedulerKey);
-      return (ps == null) ? PendingAsk.ZERO : ps.getPendingAsk(resourceName);
+      AppPlacementAllocator ap = schedulerKeyToAppPlacementAllocator.get(
+          schedulerKey);
+      return (ap == null) ? PendingAsk.ZERO : ap.getPendingAsk(resourceName);
     } finally {
       this.readLock.unlock();
     }
@@ -413,7 +526,7 @@ public class AppSchedulingInfo {
     }
   }
 
-  public List<ResourceRequest> allocate(NodeType type,
+  public ContainerRequest allocate(NodeType type,
       SchedulerNode node, SchedulerRequestKey schedulerKey,
       Container containerAllocated) {
     try {
@@ -423,7 +536,7 @@ public class AppSchedulingInfo {
         updateMetricsForAllocatedContainer(type, node, containerAllocated);
       }
 
-      return schedulerKeyToPlacementSets.get(schedulerKey).allocate(
+      return schedulerKeyToAppPlacementAllocator.get(schedulerKey).allocate(
           schedulerKey, type, node);
     } finally {
       writeLock.unlock();
@@ -441,23 +554,24 @@ public class AppSchedulingInfo {
       this.writeLock.lock();
       QueueMetrics oldMetrics = queue.getMetrics();
       QueueMetrics newMetrics = newQueue.getMetrics();
-      for (SchedulingPlacementSet ps : schedulerKeyToPlacementSets.values()) {
-        PendingAsk ask = ps.getPendingAsk(ResourceRequest.ANY);
+      for (AppPlacementAllocator ap : schedulerKeyToAppPlacementAllocator
+          .values()) {
+        PendingAsk ask = ap.getPendingAsk(ResourceRequest.ANY);
         if (ask.getCount() > 0) {
           oldMetrics.decrPendingResources(
-              ps.getPrimaryRequestedNodePartition(),
+              ap.getPrimaryRequestedNodePartition(),
               user, ask.getCount(), ask.getPerAllocationResource());
           newMetrics.incrPendingResources(
-              ps.getPrimaryRequestedNodePartition(),
+              ap.getPrimaryRequestedNodePartition(),
               user, ask.getCount(), ask.getPerAllocationResource());
 
           Resource delta = Resources.multiply(ask.getPerAllocationResource(),
               ask.getCount());
           // Update Queue
           queue.decPendingResource(
-              ps.getPrimaryRequestedNodePartition(), delta);
+              ap.getPrimaryRequestedNodePartition(), delta);
           newQueue.incPendingResource(
-              ps.getPrimaryRequestedNodePartition(), delta);
+              ap.getPrimaryRequestedNodePartition(), delta);
         }
       }
       oldMetrics.moveAppFrom(this);
@@ -476,15 +590,16 @@ public class AppSchedulingInfo {
     try {
       this.writeLock.lock();
       QueueMetrics metrics = queue.getMetrics();
-      for (SchedulingPlacementSet ps : schedulerKeyToPlacementSets.values()) {
-        PendingAsk ask = ps.getPendingAsk(ResourceRequest.ANY);
+      for (AppPlacementAllocator ap : schedulerKeyToAppPlacementAllocator
+          .values()) {
+        PendingAsk ask = ap.getPendingAsk(ResourceRequest.ANY);
         if (ask.getCount() > 0) {
-          metrics.decrPendingResources(ps.getPrimaryRequestedNodePartition(),
+          metrics.decrPendingResources(ap.getPrimaryRequestedNodePartition(),
               user, ask.getCount(), ask.getPerAllocationResource());
 
           // Update Queue
           queue.decPendingResource(
-              ps.getPrimaryRequestedNodePartition(),
+              ap.getPrimaryRequestedNodePartition(),
               Resources.multiply(ask.getPerAllocationResource(),
                   ask.getCount()));
         }
@@ -525,6 +640,9 @@ public class AppSchedulingInfo {
   }
 
   public void recoverContainer(RMContainer rmContainer, String partition) {
+    if (rmContainer.getExecutionType() != ExecutionType.GUARANTEED) {
+      return;
+    }
     try {
       this.writeLock.lock();
       QueueMetrics metrics = queue.getMetrics();
@@ -555,11 +673,12 @@ public class AppSchedulingInfo {
       SchedulerRequestKey schedulerKey) {
     try {
       readLock.lock();
-      SchedulingPlacementSet ps = schedulerKeyToPlacementSets.get(schedulerKey);
-      if (null == ps) {
+      AppPlacementAllocator ap = schedulerKeyToAppPlacementAllocator.get(
+          schedulerKey);
+      if (null == ap) {
         return false;
       }
-      return ps.canAllocate(type, node);
+      return ap.canAllocate(type, node);
     } finally {
       readLock.unlock();
     }
@@ -575,6 +694,12 @@ public class AppSchedulingInfo {
       metrics.runAppAttempt(applicationId, user);
     }
 
+    updateMetrics(applicationId, type, node, containerAllocated, user, queue);
+  }
+
+  public static void updateMetrics(ApplicationId applicationId, NodeType type,
+      SchedulerNode node, Container containerAllocated, String user,
+      Queue queue) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationId=" + applicationId + " container="
           + containerAllocated.getId() + " host=" + containerAllocated
@@ -583,17 +708,16 @@ public class AppSchedulingInfo {
           + type);
     }
     if(node != null) {
-      metrics.allocateResources(node.getPartition(), user, 1,
+      queue.getMetrics().allocateResources(node.getPartition(), user, 1,
           containerAllocated.getResource(), true);
     }
-    metrics.incrNodeTypeAggregations(user, type);
+    queue.getMetrics().incrNodeTypeAggregations(user, type);
   }
 
-  // Get placement-set by specified schedulerKey
-  // Now simply return all node of the input clusterPlacementSet
-  public <N extends SchedulerNode> SchedulingPlacementSet<N> getSchedulingPlacementSet(
+  // Get AppPlacementAllocator by specified schedulerKey
+  public <N extends SchedulerNode> AppPlacementAllocator<N> getAppPlacementAllocator(
       SchedulerRequestKey schedulerkey) {
-    return (SchedulingPlacementSet<N>) schedulerKeyToPlacementSets.get(
+    return (AppPlacementAllocator<N>) schedulerKeyToAppPlacementAllocator.get(
         schedulerkey);
   }
 
@@ -610,21 +734,30 @@ public class AppSchedulingInfo {
       SchedulerRequestKey schedulerKey, String resourceName) {
     try {
       this.readLock.lock();
-      SchedulingPlacementSet ps =
-          schedulerKeyToPlacementSets.get(schedulerKey);
-      return (ps == null) || ps.canDelayTo(resourceName);
+      AppPlacementAllocator ap =
+          schedulerKeyToAppPlacementAllocator.get(schedulerKey);
+      return (ap == null) || ap.canDelayTo(resourceName);
     } finally {
       this.readLock.unlock();
     }
   }
 
-  public boolean acceptNodePartition(SchedulerRequestKey schedulerKey,
-      String nodePartition, SchedulingMode schedulingMode) {
+  /**
+   * Pre-check node to see if it satisfy the given schedulerKey and
+   * scheduler mode.
+   *
+   * @param schedulerKey schedulerKey
+   * @param schedulerNode schedulerNode
+   * @param schedulingMode schedulingMode
+   * @return can use the node or not.
+   */
+  public boolean precheckNode(SchedulerRequestKey schedulerKey,
+      SchedulerNode schedulerNode, SchedulingMode schedulingMode) {
     try {
       this.readLock.lock();
-      SchedulingPlacementSet ps =
-          schedulerKeyToPlacementSets.get(schedulerKey);
-      return (ps != null) && ps.acceptNodePartition(nodePartition,
+      AppPlacementAllocator ap =
+          schedulerKeyToAppPlacementAllocator.get(schedulerKey);
+      return (ap != null) && ap.precheckNode(schedulerNode,
           schedulingMode);
     } finally {
       this.readLock.unlock();

@@ -159,7 +159,7 @@ public class SwiftFileSystemBaseTest extends Assert implements
    * @return a qualified path instance
    */
   protected Path path(String pathString) {
-    return new Path(pathString).makeQualified(fs);
+    return fs.makeQualified(new Path(pathString));
   }
 
   /**

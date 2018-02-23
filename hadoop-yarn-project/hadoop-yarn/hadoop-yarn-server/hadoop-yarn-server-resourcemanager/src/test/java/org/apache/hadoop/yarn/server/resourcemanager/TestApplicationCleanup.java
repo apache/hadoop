@@ -293,6 +293,8 @@ public class TestApplicationCleanup {
     // start RM
     MockRM rm1 = new MockRM(conf);
     rm1.start();
+    MockMemoryRMStateStore memStore =
+        (MockMemoryRMStateStore) rm1.getRMStateStore();
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -304,7 +306,7 @@ public class TestApplicationCleanup {
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
 
     // start new RM
-    MockRM rm2 = new MockRM(conf, rm1.getRMStateStore());
+    MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
     
     // nm1 register to rm2, and do a heartbeat

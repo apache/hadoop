@@ -69,7 +69,7 @@ public class ConfServlet extends HttpServlet {
       return;
     }
 
-    String format = parseAccecptHeader(request);
+    String format = parseAcceptHeader(request);
     if (FORMAT_XML.equals(format)) {
       response.setContentType("text/xml; charset=utf-8");
     } else if (FORMAT_JSON.equals(format)) {
@@ -89,7 +89,7 @@ public class ConfServlet extends HttpServlet {
   }
 
   @VisibleForTesting
-  static String parseAccecptHeader(HttpServletRequest request) {
+  static String parseAcceptHeader(HttpServletRequest request) {
     String format = request.getHeader(HttpHeaders.ACCEPT);
     return format != null && format.contains(FORMAT_JSON) ?
         FORMAT_JSON : FORMAT_XML;

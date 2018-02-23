@@ -19,8 +19,6 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task.CombinerRunner;
@@ -36,10 +34,13 @@ import org.apache.hadoop.mapred.nativetask.serde.SerializationFramework;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class CombinerHandler<K, V> implements ICombineHandler, CommandDispatcher {
   public static final String NAME = "NativeTask.CombineHandler";
-  private static Log LOG = LogFactory.getLog(NativeCollectorOnlyHandler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeCollectorOnlyHandler.class);
   public static final Command LOAD = new Command(1, "Load");
   public static final Command COMBINE = new Command(4, "Combine");
   public final CombinerRunner<K, V> combinerRunner;

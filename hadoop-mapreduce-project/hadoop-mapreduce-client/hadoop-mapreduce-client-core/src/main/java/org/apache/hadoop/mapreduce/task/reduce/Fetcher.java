@@ -35,8 +35,6 @@ import java.util.Set;
 import javax.crypto.SecretKey;
 import javax.net.ssl.HttpsURLConnection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
@@ -49,12 +47,14 @@ import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
 class Fetcher<K,V> extends Thread {
   
-  private static final Log LOG = LogFactory.getLog(Fetcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Fetcher.class);
   
   /** Number of ms before timing out a copy */
   private static final int DEFAULT_STALLED_COPY_TIMEOUT = 3 * 60 * 1000;
@@ -278,9 +278,6 @@ class Fetcher<K,V> extends Thread {
       LOG.warn("Connection rejected by the host " + te.host +
           ". Will retry later.");
       scheduler.penalize(host, te.backoff);
-      for (TaskAttemptID left : remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
-      }
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
       ioErrs.increment(1);
@@ -292,11 +289,6 @@ class Fetcher<K,V> extends Thread {
       scheduler.hostFailed(host.getHostName());
       for(TaskAttemptID left: remaining) {
         scheduler.copyFailed(left, host, false, connectExcpt);
-      }
-
-      // Add back all the remaining maps, WITHOUT marking them as failed
-      for(TaskAttemptID left: remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
       }
     }
 
@@ -332,12 +324,14 @@ class Fetcher<K,V> extends Thread {
     
     // Construct the url and connect
     URL url = getMapOutputURL(host, maps);
-    DataInputStream input = openShuffleUrl(host, remaining, url);
-    if (input == null) {
-      return;
-    }
+    DataInputStream input = null;
     
     try {
+      input = openShuffleUrl(host, remaining, url);
+      if (input == null) {
+        return;
+      }
+
       // Loop through available map-outputs and fetch them
       // On any error, faildTasks is not null and we exit
       // after putting back the remaining maps to the 
@@ -347,7 +341,7 @@ class Fetcher<K,V> extends Thread {
         try {
           failedTasks = copyMapOutput(host, input, remaining, fetchRetryEnabled);
         } catch (IOException e) {
-          IOUtils.cleanup(LOG, input);
+          IOUtils.cleanupWithLogger(LOG, input);
           //
           // Setup connection again if disconnected by NM
           connection.disconnect();
@@ -377,7 +371,7 @@ class Fetcher<K,V> extends Thread {
       input = null;
     } finally {
       if (input != null) {
-        IOUtils.cleanup(LOG, input);
+        IOUtils.cleanupWithLogger(LOG, input);
         input = null;
       }
       for (TaskAttemptID left : remaining) {

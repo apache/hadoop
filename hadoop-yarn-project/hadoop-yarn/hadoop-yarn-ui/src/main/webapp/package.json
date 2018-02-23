@@ -40,6 +40,7 @@
     "ember-cli-numeral": "^0.2.0",
     "ember-cli-qunit": "1.2.1",
     "ember-cli-release": "0.2.8",
+    "ember-cli-sass": "=7.0.0",
     "ember-cli-sri": "1.2.1",
     "ember-cli-uglify": "1.2.0",
     "ember-d3": "0.1.0",
@@ -56,6 +57,6 @@
   },
   "dependencies": {
     "em-helpers": "^0.8.0",
-    "em-table": "^0.7.0"
+    "em-table": "0.12.0"
   }
 }

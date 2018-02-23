@@ -1,0 +1,243 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.hdfs.federation.protocol.proto";
+option java_outer_classname = "HdfsServerFederationProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
+
+import "hdfs.proto";
+
+/////////////////////////////////////////////////
+// Membership
+/////////////////////////////////////////////////
+
+message NamenodeMembershipStatsRecordProto {
+  optional uint64 totalSpace = 1;
+  optional uint64 availableSpace = 2;
+  optional uint64 providedSpace = 3;
+
+  optional uint64 numOfFiles = 10;
+  optional uint64 numOfBlocks = 11;
+  optional uint64 numOfBlocksMissing = 12;
+  optional uint64 numOfBlocksPendingReplication = 13;
+  optional uint64 numOfBlocksUnderReplicated = 14;
+  optional uint64 numOfBlocksPendingDeletion = 15;
+
+  optional uint32 numOfActiveDatanodes = 20;
+  optional uint32 numOfDeadDatanodes = 21;
+  optional uint32 numOfDecommissioningDatanodes = 22;
+  optional uint32 numOfDecomActiveDatanodes = 23;
+  optional uint32 numOfDecomDeadDatanodes = 24;
+}
+
+message NamenodeMembershipRecordProto {
+  optional uint64 dateCreated = 1;
+  optional uint64 dateModified = 2;
+  optional uint64 lastContact = 3;
+  optional string routerId = 4;
+  optional string nameserviceId = 5;
+  optional string namenodeId = 6;
+  optional string clusterId = 7;
+  optional string blockPoolId = 8;
+  optional string webAddress = 9;
+  optional string rpcAddress = 10;
+  optional string serviceAddress = 11;
+  optional string lifelineAddress = 12;
+  optional string state = 13;
+  optional bool isSafeMode = 14;
+
+  optional NamenodeMembershipStatsRecordProto stats = 15;
+}
+
+message FederationNamespaceInfoProto {
+  optional string blockPoolId = 1;
+  optional string clusterId = 2;
+  optional string nameserviceId = 3;
+}
+
+message GetNamenodeRegistrationsRequestProto {
+  optional NamenodeMembershipRecordProto membership = 1;
+}
+
+message GetNamenodeRegistrationsResponseProto {
+  repeated NamenodeMembershipRecordProto namenodeMemberships = 1;
+}
+
+message GetExpiredRegistrationsRequestProto {
+}
+
+message GetNamespaceInfoRequestProto {
+}
+
+message GetNamespaceInfoResponseProto {
+  repeated FederationNamespaceInfoProto namespaceInfos = 1;
+}
+
+message UpdateNamenodeRegistrationRequestProto {
+  optional string nameserviceId = 1;
+  optional string namenodeId = 2;
+  optional string state = 3;
+}
+
+message UpdateNamenodeRegistrationResponseProto {
+  optional bool status = 1;
+}
+
+message NamenodeHeartbeatRequestProto {
+  optional NamenodeMembershipRecordProto namenodeMembership = 1;
+}
+
+message NamenodeHeartbeatResponseProto {
+  optional bool status = 1;
+}
+
+
+/////////////////////////////////////////////////
+// Mount table
+/////////////////////////////////////////////////
+
+message RemoteLocationProto {
+  optional string nameserviceId = 1;
+  optional string path = 2;
+}
+
+message MountTableRecordProto {
+  optional string srcPath = 1;
+  repeated RemoteLocationProto destinations = 2;
+  optional uint64 dateCreated = 3;
+  optional uint64 dateModified = 4;
+  optional bool readOnly = 5 [default = false];
+
+  enum DestOrder {
+    HASH = 0;
+    LOCAL = 1;
+    RANDOM = 2;
+  }
+  optional DestOrder destOrder = 6 [default = HASH];
+
+  optional string ownerName = 10;
+  optional string groupName = 11;
+  optional int32 mode = 12;
+
+  optional QuotaUsageProto quota = 13;
+}
+
+message AddMountTableEntryRequestProto {
+  optional MountTableRecordProto entry = 1;
+}
+
+message AddMountTableEntryResponseProto {
+  optional bool status = 1;
+}
+
+message UpdateMountTableEntryRequestProto {
+  optional MountTableRecordProto entry = 1;
+}
+
+message UpdateMountTableEntryResponseProto {
+  optional bool status = 1;
+}
+
+message RemoveMountTableEntryRequestProto {
+  optional string srcPath = 1;
+}
+
+message RemoveMountTableEntryResponseProto{
+  optional bool status = 1;
+}
+
+message GetMountTableEntriesRequestProto {
+  optional string srcPath = 1;
+}
+
+message GetMountTableEntriesResponseProto {
+  repeated MountTableRecordProto entries = 1;
+  optional uint64 timestamp = 2;
+}
+
+
+/////////////////////////////////////////////////
+// Routers
+/////////////////////////////////////////////////
+
+message StateStoreVersionRecordProto {
+  optional uint64 membershipVersion = 1;
+  optional uint64 mountTableVersion = 2;
+}
+
+message RouterRecordProto {
+  optional uint64 dateCreated = 1;
+  optional uint64 dateModified = 2;
+  optional string address = 3;
+  optional string status = 4;
+  optional StateStoreVersionRecordProto stateStoreVersion = 5;
+  optional string version = 6;
+  optional string compileInfo = 7;
+  optional uint64 dateStarted = 8;
+}
+
+message GetRouterRegistrationRequestProto {
+  optional string routerId = 1;
+}
+
+message GetRouterRegistrationResponseProto {
+  optional RouterRecordProto router = 1;
+}
+
+message GetRouterRegistrationsRequestProto {
+}
+
+message GetRouterRegistrationsResponseProto {
+  optional uint64 timestamp = 1;
+  repeated RouterRecordProto routers = 2;
+}
+
+message RouterHeartbeatRequestProto {
+  optional RouterRecordProto router = 1;
+}
+
+message RouterHeartbeatResponseProto {
+  optional bool status = 1;
+}
+
+/////////////////////////////////////////////////
+// Route State
+/////////////////////////////////////////////////
+
+message EnterSafeModeRequestProto {
+}
+
+message EnterSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message LeaveSafeModeRequestProto {
+}
+
+message LeaveSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message GetSafeModeRequestProto {
+}
+
+message GetSafeModeResponseProto {
+  optional bool isInSafeMode = 1;
+}

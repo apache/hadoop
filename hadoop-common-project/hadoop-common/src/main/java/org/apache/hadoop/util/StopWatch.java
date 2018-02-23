@@ -25,11 +25,22 @@ import java.util.concurrent.TimeUnit;
  * A simplified StopWatch implementation which can measure times in nanoseconds.
  */
 public class StopWatch implements Closeable {
+  private final Timer timer;
   private boolean isStarted;
   private long startNanos;
   private long currentElapsedNanos;
 
   public StopWatch() {
+    this(new Timer());
+  }
+
+  /**
+   * Used for tests to be able to create a StopWatch which does not follow real
+   * time.
+   * @param timer The timer to base this StopWatch's timekeeping off of.
+   */
+  public StopWatch(Timer timer) {
+    this.timer = timer;
   }
 
   /**
@@ -49,7 +60,7 @@ public class StopWatch implements Closeable {
       throw new IllegalStateException("StopWatch is already running");
     }
     isStarted = true;
-    startNanos = System.nanoTime();
+    startNanos = timer.monotonicNowNanos();
     return this;
   }
 
@@ -61,7 +72,7 @@ public class StopWatch implements Closeable {
     if (!isStarted) {
       throw new IllegalStateException("StopWatch is already stopped");
     }
-    long now = System.nanoTime();
+    long now = timer.monotonicNowNanos();
     isStarted = false;
     currentElapsedNanos += now - startNanos;
     return this;
@@ -90,7 +101,7 @@ public class StopWatch implements Closeable {
    */
   public long now() {
     return isStarted ?
-        System.nanoTime() - startNanos + currentElapsedNanos :
+        timer.monotonicNowNanos() - startNanos + currentElapsedNanos :
         currentElapsedNanos;
   }
 

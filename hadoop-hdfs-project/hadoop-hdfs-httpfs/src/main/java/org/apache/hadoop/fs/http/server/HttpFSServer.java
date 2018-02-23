@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ModifiedTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NewLengthParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OffsetParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OldSnapshotNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
@@ -45,11 +46,11 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PolicyNameParam
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SnapshotNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
-import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
@@ -297,25 +298,7 @@ public class HttpFSServer {
       break;
     }
     case GETFILEBLOCKLOCATIONS: {
-      long offset = 0;
-      // In case length is not given, reset to max long
-      // in order to retrieve all file block locations
-      long len = Long.MAX_VALUE;
-      Long offsetParam = params.get(OffsetParam.NAME, OffsetParam.class);
-      Long lenParam = params.get(LenParam.NAME, LenParam.class);
-      AUDIT_LOG.info("[{}] offset [{}] len [{}]",
-          new Object[] {path, offsetParam, lenParam});
-      if (offsetParam != null && offsetParam.longValue() > 0) {
-        offset = offsetParam.longValue();
-      }
-      if (lenParam != null && lenParam.longValue() > 0) {
-        len = lenParam.longValue();
-      }
-      FSOperations.FSFileBlockLocations command =
-          new FSOperations.FSFileBlockLocations(path, offset, len);
-      @SuppressWarnings("rawtypes") Map locations = fsExecute(user, command);
-      final String json = JsonUtil.toJsonString("BlockLocations", locations);
-      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      response = Response.status(Response.Status.BAD_REQUEST).build();
       break;
     }
     case GETACLSTATUS: {
@@ -428,6 +411,16 @@ public class HttpFSServer {
           new FSOperations.FSDelete(path, recursive);
         JSONObject json = fsExecute(user, command);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        break;
+      }
+      case DELETESNAPSHOT: {
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSDeleteSnapshot command =
+                new FSOperations.FSDeleteSnapshot(path, snapshotName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] deleted snapshot [{}]", path, snapshotName);
+        response = Response.ok().build();
         break;
       }
       default: {
@@ -602,6 +595,16 @@ public class HttpFSServer {
         }
         break;
       }
+      case CREATESNAPSHOT: {
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSCreateSnapshot command =
+            new FSOperations.FSCreateSnapshot(path, snapshotName);
+        String json = fsExecute(user, command);
+        AUDIT_LOG.info("[{}] snapshot created as [{}]", path, snapshotName);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        break;
+      }
       case SETXATTR: {
         String xattrName = params.get(XAttrNameParam.NAME, 
             XAttrNameParam.class);
@@ -614,6 +617,20 @@ public class HttpFSServer {
             path, xattrName, xattrValue, flag);
         fsExecute(user, command);
         AUDIT_LOG.info("[{}] to xAttr [{}]", path, xattrName);
+        response = Response.ok().build();
+        break;
+      }
+      case RENAMESNAPSHOT: {
+        String oldSnapshotName = params.get(OldSnapshotNameParam.NAME,
+            OldSnapshotNameParam.class);
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSRenameSnapshot command =
+                new FSOperations.FSRenameSnapshot(path, oldSnapshotName,
+                    snapshotName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] renamed snapshot [{}] to [{}]", path,
+            oldSnapshotName, snapshotName);
         response = Response.ok().build();
         break;
       }

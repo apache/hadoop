@@ -54,16 +54,29 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  * options accordingly, for example:
  *
  * <code>
- * FSDataOutputStreamBuilder builder = fs.createFile(path);
- * builder.permission(perm)
+ *
+ * // Don't
+ * if (fs instanceof FooFileSystem) {
+ *   FooFileSystem fs = (FooFileSystem) fs;
+ *   OutputStream out = dfs.createFile(path)
+ *     .optionA()
+ *     .optionB("value")
+ *     .cache()
+ *   .build()
+ * } else if (fs instanceof BarFileSystem) {
+ *   ...
+ * }
+ *
+ * // Do
+ * OutputStream out = fs.createFile(path)
+ *   .permission(perm)
  *   .bufferSize(bufSize)
- *   .opt("dfs.outputstream.builder.lazy-persist", true)
- *   .opt("dfs.outputstream.builder.ec.policy-name", "rs-3-2-64k")
- *   .opt("fs.local.o-direct", true)
- *   .must("fs.s3a.fast-upload", true)
- *   .must("fs.azure.buffer-size", 256 * 1024 * 1024);
- * FSDataOutputStream out = builder.build();
- * ...
+ *   .opt("foofs:option.a", true)
+ *   .opt("foofs:option.b", "value")
+ *   .opt("barfs:cache", true)
+ *   .must("foofs:cache", true)
+ *   .must("barfs:cache-size", 256 * 1024 * 1024)
+ *   .build();
  * </code>
  *
  * If the option is not related to the file system, the option will be ignored.
@@ -263,6 +276,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set optional boolean parameter for the Builder.
+   *
+   * @see #opt(String, String)
    */
   public B opt(@Nonnull final String key, boolean value) {
     mandatoryKeys.remove(key);
@@ -272,6 +287,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set optional int parameter for the Builder.
+   *
+   * @see #opt(String, String)
    */
   public B opt(@Nonnull final String key, int value) {
     mandatoryKeys.remove(key);
@@ -281,6 +298,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set optional float parameter for the Builder.
+   *
+   * @see #opt(String, String)
    */
   public B opt(@Nonnull final String key, float value) {
     mandatoryKeys.remove(key);
@@ -290,6 +309,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
    */
   public B opt(@Nonnull final String key, double value) {
     mandatoryKeys.remove(key);
@@ -299,6 +320,8 @@ public abstract class FSDataOutputStreamBuilder
 
   /**
    * Set an array of string values as optional parameter for the Builder.
+   *
+   * @see #opt(String, String)
    */
   public B opt(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.remove(key);
@@ -310,8 +333,7 @@ public abstract class FSDataOutputStreamBuilder
    * Set mandatory option to the Builder.
    *
    * If the option is not supported or unavailable on the {@link FileSystem},
-   * the client should expect {@link #build()} throws
-   * {@link IllegalArgumentException}.
+   * the client should expect {@link #build()} throws IllegalArgumentException.
    */
   public B must(@Nonnull final String key, @Nonnull final String value) {
     mandatoryKeys.add(key);
@@ -319,35 +341,55 @@ public abstract class FSDataOutputStreamBuilder
     return getThisBuilder();
   }
 
-  /** Set mandatory boolean option. */
+  /**
+   * Set mandatory boolean option.
+   *
+   * @see #must(String, String)
+   */
   public B must(@Nonnull final String key, boolean value) {
     mandatoryKeys.add(key);
     options.setBoolean(key, value);
     return getThisBuilder();
   }
 
-  /** Set mandatory int option. */
+  /**
+   * Set mandatory int option.
+   *
+   * @see #must(String, String)
+   */
   public B must(@Nonnull final String key, int value) {
     mandatoryKeys.add(key);
     options.setInt(key, value);
     return getThisBuilder();
   }
 
-  /** Set mandatory float option. */
+  /**
+   * Set mandatory float option.
+   *
+   * @see #must(String, String)
+   */
   public B must(@Nonnull final String key, float value) {
     mandatoryKeys.add(key);
     options.setFloat(key, value);
     return getThisBuilder();
   }
 
-  /** Set mandatory double option. */
+  /**
+   * Set mandatory double option.
+   *
+   * @see #must(String, String)
+   */
   public B must(@Nonnull final String key, double value) {
     mandatoryKeys.add(key);
     options.setDouble(key, value);
     return getThisBuilder();
   }
 
-  /** Set a string array as mandatory option. */
+  /**
+   * Set a string array as mandatory option.
+   *
+   * @see #must(String, String)
+   */
   public B must(@Nonnull final String key, @Nonnull final String... values) {
     mandatoryKeys.add(key);
     options.setStrings(key, values);

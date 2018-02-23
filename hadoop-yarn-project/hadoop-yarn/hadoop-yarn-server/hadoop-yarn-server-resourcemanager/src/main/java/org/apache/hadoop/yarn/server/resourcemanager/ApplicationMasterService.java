@@ -45,10 +45,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-
-
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -61,13 +60,17 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security
-    .AMRMTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.AbstractPlacementProcessor;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.DisabledPlacementProcessor;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.PlacementConstraintProcessor;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.SchedulerPlacementProcessor;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.AMRMClientUtils;
@@ -81,6 +84,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ApplicationMasterService extends AbstractService implements
     ApplicationMasterProtocol {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
+  private static final int PRE_REGISTER_RESPONSE_ID = -1;
+
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
   protected InetSocketAddress masterServiceAddress;
@@ -113,11 +118,52 @@ public class ApplicationMasterService extends AbstractService implements
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+    initializeProcessingChain(conf);
+  }
+
+  private void addPlacementConstraintHandler(Configuration conf) {
+    String placementConstraintsHandler =
+        conf.get(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+            YarnConfiguration.DISABLED_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    if (placementConstraintsHandler
+        .equals(YarnConfiguration.DISABLED_RM_PLACEMENT_CONSTRAINTS_HANDLER)) {
+      LOG.info(YarnConfiguration.DISABLED_RM_PLACEMENT_CONSTRAINTS_HANDLER
+          + " placement handler will be used, all scheduling requests will "
+          + "be rejected.");
+      amsProcessingChain.addProcessor(new DisabledPlacementProcessor());
+    } else if (placementConstraintsHandler
+        .equals(YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER)) {
+      LOG.info(YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER
+          + " placement handler will be used. Scheduling requests will be "
+          + "handled by the placement constraint processor");
+      amsProcessingChain.addProcessor(new PlacementConstraintProcessor());
+    } else if (placementConstraintsHandler
+        .equals(YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER)) {
+      LOG.info(YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER
+          + " placement handler will be used. Scheduling requests will be "
+          + "handled by the main scheduler.");
+      amsProcessingChain.addProcessor(new SchedulerPlacementProcessor());
+    }
+  }
+
+  private void initializeProcessingChain(Configuration conf) {
     amsProcessingChain.init(rmContext, null);
+    addPlacementConstraintHandler(conf);
+
     List<ApplicationMasterServiceProcessor> processors = getProcessorList(conf);
     if (processors != null) {
       Collections.reverse(processors);
       for (ApplicationMasterServiceProcessor p : processors) {
+        // Ensure only single instance of PlacementProcessor is included
+        if (p instanceof AbstractPlacementProcessor) {
+          LOG.warn("Found PlacementProcessor=" + p.getClass().getCanonicalName()
+              + " defined in "
+              + YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS
+              + ", however PlacementProcessor handler should be configured "
+              + "by using " + YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER
+              + ", this processor will be ignored.");
+          continue;
+        }
         this.amsProcessingChain.addProcessor(p);
       }
     }
@@ -212,14 +258,20 @@ public class ApplicationMasterService extends AbstractService implements
     synchronized (lock) {
       AllocateResponse lastResponse = lock.getAllocateResponse();
       if (hasApplicationMasterRegistered(applicationAttemptId)) {
-        String message = AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + appID;
-        LOG.warn(message);
-        RMAuditLogger.logFailure(
-          this.rmContext.getRMApps()
-            .get(appID).getUser(),
-          AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
-          appID, applicationAttemptId);
-        throw new InvalidApplicationMasterRequestException(message);
+        // allow UAM re-register if work preservation is enabled
+        ApplicationSubmissionContext appContext =
+            rmContext.getRMApps().get(appID).getApplicationSubmissionContext();
+        if (!(appContext.getUnmanagedAM()
+            && appContext.getKeepContainersAcrossApplicationAttempts())) {
+          String message =
+              AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + appID;
+          LOG.warn(message);
+          RMAuditLogger.logFailure(
+              this.rmContext.getRMApps().get(appID).getUser(),
+              AuditConstants.REGISTER_AM, "", "ApplicationMasterService",
+              message, appID, applicationAttemptId);
+          throw new InvalidApplicationMasterRequestException(message);
+        }
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
@@ -252,7 +304,7 @@ public class ApplicationMasterService extends AbstractService implements
 
     // Remove collector address when app get finished.
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      rmApp.removeCollectorAddr();
+      ((RMAppImpl) rmApp).removeCollectorData();
     }
     // checking whether the app exits in RMStateStore at first not to throw
     // ApplicationDoesNotExistInCacheException before and after
@@ -325,6 +377,11 @@ public class ApplicationMasterService extends AbstractService implements
   protected static final Allocation EMPTY_ALLOCATION = new Allocation(
       EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
 
+  private int getNextResponseId(int responseId) {
+    // Loop between 0 to Integer.MAX_VALUE
+    return (responseId + 1) & Integer.MAX_VALUE;
+  }
+
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
@@ -357,14 +414,17 @@ public class ApplicationMasterService extends AbstractService implements
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
-      if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
-        /* old heartbeat */
+      // Normally request.getResponseId() == lastResponse.getResponseId()
+      if (getNextResponseId(request.getResponseId()) == lastResponse
+          .getResponseId()) {
+        // heartbeat one step old, simply return lastReponse
         return lastResponse;
-      } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
+      } else if (request.getResponseId() != lastResponse.getResponseId()) {
         String message =
             "Invalid responseId in AllocateRequest from application attempt: "
                 + appAttemptId + ", expect responseId to be "
-                + (lastResponse.getResponseId() + 1);
+                + lastResponse.getResponseId() + ", but get "
+                + request.getResponseId();
         throw new InvalidApplicationMasterRequestException(message);
       }
 
@@ -404,7 +464,7 @@ public class ApplicationMasterService extends AbstractService implements
        * need to worry about unregister call occurring in between (which
        * removes the lock object).
        */
-      response.setResponseId(lastResponse.getResponseId() + 1);
+      response.setResponseId(getNextResponseId(lastResponse.getResponseId()));
       lock.setAllocateResponse(response);
       return response;
     }
@@ -415,10 +475,21 @@ public class ApplicationMasterService extends AbstractService implements
         recordFactory.newRecordInstance(AllocateResponse.class);
     // set response id to -1 before application master for the following
     // attemptID get registered
-    response.setResponseId(-1);
+    response.setResponseId(PRE_REGISTER_RESPONSE_ID);
     LOG.info("Registering app attempt : " + attemptId);
     responseMap.put(attemptId, new AllocateResponseLock(response));
     rmContext.getNMTokenSecretManager().registerApplicationAttempt(attemptId);
+  }
+
+  @VisibleForTesting
+  protected boolean setAttemptLastResponseId(ApplicationAttemptId attemptId,
+      int lastResponseId) {
+    AllocateResponseLock lock = responseMap.get(attemptId);
+    if (lock == null || lock.getAllocateResponse() == null) {
+      return false;
+    }
+    lock.getAllocateResponse().setResponseId(lastResponseId);
+    return true;
   }
 
   public void unregisterAttempt(ApplicationAttemptId attemptId) {

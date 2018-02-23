@@ -70,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
 
 /**
  *
@@ -162,6 +163,7 @@ public final class FederationStateStoreFacade {
     exceptionToPolicyMap.put(FederationStateStoreRetriableException.class,
         basePolicy);
     exceptionToPolicyMap.put(CacheLoaderException.class, basePolicy);
+    exceptionToPolicyMap.put(PoolInitializationException.class, basePolicy);
 
     RetryPolicy retryPolicy = RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);

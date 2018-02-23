@@ -187,6 +187,12 @@ user name.
 
 Example: `hadoop kerbname user@EXAMPLE.COM`
 
+### `kdiag`
+
+Usage: `hadoop kdiag`
+
+Diagnose Kerberos Problems
+
 ### `key`
 
 Usage: `hadoop key <subcommand> [options]`

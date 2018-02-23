@@ -59,7 +59,7 @@
   </policy>
   <policy>
     <schema>RSk6m3</schema>
-    <cellsize>65536</cellsize>
+    <cellsize>1048576</cellsize>
   </policy>
 </policies>
 </configuration>

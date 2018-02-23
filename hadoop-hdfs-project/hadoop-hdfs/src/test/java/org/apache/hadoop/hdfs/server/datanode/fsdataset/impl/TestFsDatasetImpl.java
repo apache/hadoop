@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -119,11 +120,12 @@ public class TestFsDatasetImpl {
   
   private final static String BLOCKPOOL = "BP-TEST";
 
-  private static Storage.StorageDirectory createStorageDirectory(File root)
+  private static Storage.StorageDirectory createStorageDirectory(File root,
+      Configuration conf)
       throws SecurityException, IOException {
     Storage.StorageDirectory sd = new Storage.StorageDirectory(
         StorageLocation.parse(root.toURI().toString()));
-    DataStorage.createStorageID(sd, false);
+    DataStorage.createStorageID(sd, false, conf);
     return sd;
   }
 
@@ -137,7 +139,7 @@ public class TestFsDatasetImpl {
       File loc = new File(BASE_DIR + "/data" + i);
       dirStrings.add(new Path(loc.toString()).toUri().toString());
       loc.mkdirs();
-      dirs.add(createStorageDirectory(loc));
+      dirs.add(createStorageDirectory(loc, conf));
       when(storage.getStorageDir(i)).thenReturn(dirs.get(i));
     }
 
@@ -197,7 +199,8 @@ public class TestFsDatasetImpl {
       String pathUri = new Path(path).toUri().toString();
       expectedVolumes.add(new File(pathUri).getAbsolutePath());
       StorageLocation loc = StorageLocation.parse(pathUri);
-      Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+      Storage.StorageDirectory sd = createStorageDirectory(
+          new File(path), conf);
       DataStorage.VolumeBuilder builder =
           new DataStorage.VolumeBuilder(storage, sd);
       when(storage.prepareVolume(eq(datanode), eq(loc),
@@ -315,7 +318,8 @@ public class TestFsDatasetImpl {
     String newVolumePath = BASE_DIR + "/newVolumeToRemoveLater";
     StorageLocation loc = StorageLocation.parse(newVolumePath);
 
-    Storage.StorageDirectory sd = createStorageDirectory(new File(newVolumePath));
+    Storage.StorageDirectory sd = createStorageDirectory(
+        new File(newVolumePath), conf);
     DataStorage.VolumeBuilder builder =
         new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode), eq(loc),
@@ -348,7 +352,7 @@ public class TestFsDatasetImpl {
         any(ReplicaMap.class),
         any(RamDiskReplicaLruTracker.class));
 
-    Storage.StorageDirectory sd = createStorageDirectory(badDir);
+    Storage.StorageDirectory sd = createStorageDirectory(badDir, conf);
     sd.lock();
     DataStorage.VolumeBuilder builder = new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode),
@@ -492,7 +496,7 @@ public class TestFsDatasetImpl {
     String path = BASE_DIR + "/newData0";
     String pathUri = new Path(path).toUri().toString();
     StorageLocation loc = StorageLocation.parse(pathUri);
-    Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+    Storage.StorageDirectory sd = createStorageDirectory(new File(path), conf);
     DataStorage.VolumeBuilder builder =
         new DataStorage.VolumeBuilder(storage, sd);
     when(
@@ -744,4 +748,104 @@ public class TestFsDatasetImpl {
       cluster.shutdown();
     }
   }
+
+  @Test(timeout = 30000)
+  public void testMoveBlockFailure() {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      Path filePath = new Path("testData");
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+
+      // Append to file to update its GS
+      FSDataOutputStream out = fs.append(filePath, (short) 1);
+      out.write(100);
+      out.hflush();
+
+      // Call finalizeNewReplica
+      LOG.info("GenerationStamp of old replica: {}",
+          block.getGenerationStamp());
+      LOG.info("GenerationStamp of new replica: {}", fsDataSetImpl
+          .getReplicaInfo(block.getBlockPoolId(), newReplicaInfo.getBlockId())
+          .getGenerationStamp());
+      LambdaTestUtils.intercept(IOException.class, "Generation Stamp "
+              + "should be monotonically increased.",
+          () -> fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block));
+    } catch (Exception ex) {
+      LOG.info("Exception in testMoveBlockFailure ", ex);
+      fail("Exception while testing testMoveBlockFailure ");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testMoveBlockSuccess() {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      Path filePath = new Path("testData");
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+
+    } catch (Exception ex) {
+      LOG.info("Exception in testMoveBlockSuccess ", ex);
+      fail("MoveBlock operation should succeed");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Create a new temporary replica of replicaInfo object in another volume.
+   *
+   * @param block         - Extended Block
+   * @param fsDataSetImpl - FsDatasetImpl reference
+   * @throws IOException
+   */
+  private ReplicaInfo createNewReplicaObj(ExtendedBlock block, FsDatasetImpl
+      fsDataSetImpl) throws IOException {
+    ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
+    FsVolumeSpi destVolume = null;
+
+    final String srcStorageId = fsDataSetImpl.getVolume(block).getStorageID();
+    try (FsVolumeReferences volumeReferences =
+        fsDataSetImpl.getFsVolumeReferences()) {
+      for (int i = 0; i < volumeReferences.size(); i++) {
+        if (!volumeReferences.get(i).getStorageID().equals(srcStorageId)) {
+          destVolume = volumeReferences.get(i);
+          break;
+        }
+      }
+    }
+    return fsDataSetImpl.copyReplicaToVolume(block, replicaInfo,
+        destVolume.obtainReference());
+  }
+
 }

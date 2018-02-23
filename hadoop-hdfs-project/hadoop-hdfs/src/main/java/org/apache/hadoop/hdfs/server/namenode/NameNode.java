@@ -45,11 +45,14 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.MetricsLoggerTask;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -206,6 +209,8 @@ public class NameNode extends ReconfigurableBase implements
   static{
     HdfsConfiguration.init();
   }
+
+  private InMemoryLevelDBAliasMapServer levelDBAliasMapServer;
 
   /**
    * Categories of operations supported by the namenode.
@@ -724,6 +729,7 @@ public class NameNode extends ReconfigurableBase implements
     }
 
     loadNamesystem(conf);
+    startAliasMapServerIfNecessary(conf);
 
     rpcServer = createRpcServer(conf);
 
@@ -744,6 +750,19 @@ public class NameNode extends ReconfigurableBase implements
 
     startCommonServices(conf);
     startMetricsLogger(conf);
+  }
+
+  private void startAliasMapServerIfNecessary(Configuration conf)
+      throws IOException {
+    if (conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT)
+        && conf.getBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED,
+            DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT)) {
+      levelDBAliasMapServer = new InMemoryLevelDBAliasMapServer(
+          InMemoryAliasMap::init, namesystem.getBlockPoolId());
+      levelDBAliasMapServer.setConf(conf);
+      levelDBAliasMapServer.start();
+    }
   }
 
   private void initReconfigurableBackoffKey() {
@@ -1026,6 +1045,9 @@ public class NameNode extends ReconfigurableBase implements
         MBeans.unregister(nameNodeStatusBeanName);
         nameNodeStatusBeanName = null;
       }
+      if (levelDBAliasMapServer != null) {
+        levelDBAliasMapServer.close();
+      }
     }
     tracer.close();
   }
@@ -1145,6 +1167,21 @@ public class NameNode extends ReconfigurableBase implements
     try {
       FSNamesystem fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
+
+      // Abort NameNode format if reformat is disabled and if
+      // meta-dir already exists
+      if (conf.getBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED,
+          DFSConfigKeys.DFS_REFORMAT_DISABLED_DEFAULT)) {
+        force = false;
+        isInteractive = false;
+        for (StorageDirectory sd : fsImage.storage.dirIterable(null)) {
+          if (sd.hasSomeData()) {
+            throw new NameNodeFormatException(
+                "NameNode format aborted as reformat is disabled for "
+                    + "this cluster.");
+          }
+        }
+      }
 
       if (!fsImage.confirmFormat(force, isInteractive)) {
         return true; // aborted

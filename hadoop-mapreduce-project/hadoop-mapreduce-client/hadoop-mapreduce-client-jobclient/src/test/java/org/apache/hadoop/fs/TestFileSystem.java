@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -49,6 +48,8 @@ import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -57,7 +58,8 @@ import static org.junit.Assert.fail;
 
 
 public class TestFileSystem {
-  private static final Log LOG = FileSystem.LOG;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileSystem.class);
 
   private static Configuration conf = new Configuration();
   private static int BUFFER_SIZE = conf.getInt("io.file.buffer.size", 4096);

@@ -16,7 +16,7 @@
  * limitations under the License.
 }}
 
-<div class="col-md-12 container-fluid">
+<div class="col-md-12">
   <div class="panel panel-default">
     <div class="panel-heading">
       {{#if attemptModel}}
@@ -25,49 +25,41 @@
         Containers
       {{/if}}
     </div>
-    {{#if isDataEmpty}}
-      <ul class="nav nav-tabs" role="tablist">
-        <li class="active">
-          <a href="#graphViewTab" role="tab" data-toggle="tab">Graph View</a>
-        </li>
-        <li class="">
-          <a href="#gridViewTab" role="tab" data-toggle="tab">Grid View</a>
-        </li>
-      </ul>
-      <div class="panel-body">
-        <div class="tab-content">
-          <div role="tabpanel" class="tab-pane active" id="graphViewTab">
-            <br/><br/>
-            <div class="col-md-7 container-fluid" id={{parent-id}}></div>
-            <!-- diag info -->
-            <div class="col-md-5 container-fluid">
-              <div class="panel panel-default add-ellipsis attempt-info-panel">
-                <div class="panel-heading">
-                  {{#if selected.link}}
-                    {{#link-to selected.linkname selected.id (query-params service=serviceName)}}{{selected.id}}{{/link-to}}
-                  {{else}}
-                    {{selected.id}}
-                  {{/if}}
-                </div>
-                {{#if attemptModel}}
-                  {{app-attempt-table attempt=selected}}
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="active">
+        <a href="#graphViewTab" role="tab" data-toggle="tab">Graph View</a>
+      </li>
+      <li class="">
+        <a href="#gridViewTab" role="tab" data-toggle="tab">Grid View</a>
+      </li>
+    </ul>
+    <div class="panel-body">
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="graphViewTab">
+          <br/><br/>
+          <div class="col-md-7 container-fluid" id={{parent-id}}></div>
+          <!-- diag info -->
+          <div class="col-md-5 container-fluid">
+            <div class="panel panel-default add-ellipsis attempt-info-panel">
+              <div class="panel-heading">
+                {{#if selected.link}}
+                  {{#link-to selected.linkname selected.id (query-params service=serviceName)}}{{selected.id}}{{/link-to}}
                 {{else}}
-                  {{container-table container=selected}}
+                  {{selected.id}}
                 {{/if}}
               </div>
+              {{#if attemptModel}}
+                {{app-attempt-table attempt=selected}}
+              {{else}}
+                {{container-table container=selected}}
+              {{/if}}
             </div>
           </div>
-          <div role="tabpanel" class="tab-pane" id="gridViewTab">
-            {{em-table columns=gridColumns rows=gridRows}}
-          </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="gridViewTab">
+          {{em-table columns=gridColumns rows=gridRows definition=tableDefinition}}
         </div>
       </div>
-    {{else}}
-      <div class="panel-body">
-        <h4 class="text-center">No data available!</h4>
-      </div>
-    {{/if}}
+    </div>
   </div>
 </div>
-
-{{outlet}}

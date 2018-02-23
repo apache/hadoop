@@ -98,6 +98,12 @@ public class IterativePlanner extends PlanningAlgorithm {
     // Current stage
     ReservationRequest currentReservationStage;
 
+    // initialize periodicity
+    long period = 0;
+    if(reservation.getRecurrenceExpression() != null){
+      period = Long.parseLong(reservation.getRecurrenceExpression());
+    }
+
     // Iterate the stages in reverse order
     while (stageProvider.hasNext()) {
 
@@ -117,7 +123,7 @@ public class IterativePlanner extends PlanningAlgorithm {
       // Compute stage allocation
       Map<ReservationInterval, Resource> curAlloc =
           computeStageAllocation(plan, currentReservationStage, stageArrival,
-              stageDeadline, user, reservationId);
+              stageDeadline, period, user, reservationId);
 
       // If we did not find an allocation, return NULL
       // (unless it's an ANY job, then we simply continue).
@@ -216,11 +222,10 @@ public class IterativePlanner extends PlanningAlgorithm {
     planLoads = plan.getCumulativeLoadOverTime(jobArrival, jobDeadline);
     ReservationAllocation oldRes = plan.getReservationById(reservationId);
     if (oldRes != null) {
-      planLoads =
-          RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
-              plan.getTotalCapacity(), planLoads,
-              oldRes.getResourcesOverTime(), RLEOperator.subtract, jobArrival,
-              jobDeadline);
+      planLoads = RLESparseResourceAllocation.merge(
+          plan.getResourceCalculator(), plan.getTotalCapacity(), planLoads,
+          oldRes.getResourcesOverTime(jobArrival, jobDeadline),
+          RLEOperator.subtract, jobArrival, jobDeadline);
     }
   }
 
@@ -309,13 +314,13 @@ public class IterativePlanner extends PlanningAlgorithm {
   }
 
   // Call algStageAllocator
-  protected Map<ReservationInterval, Resource> computeStageAllocation(
-      Plan plan, ReservationRequest rr, long stageArrivalTime,
-      long stageDeadline, String user, ReservationId oldId)
-      throws PlanningException {
+  protected Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
+      ReservationRequest rr, long stageArrivalTime, long stageDeadline,
+      long period, String user, ReservationId oldId) throws PlanningException {
 
     return algStageAllocator.computeStageAllocation(plan, planLoads,
-        planModifications, rr, stageArrivalTime, stageDeadline, user, oldId);
+        planModifications, rr, stageArrivalTime, stageDeadline, period, user,
+        oldId);
 
   }
 

@@ -23,6 +23,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
@@ -31,6 +32,7 @@ import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
@@ -44,9 +46,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.*;
@@ -95,7 +99,7 @@ public class RegistrySecurity extends AbstractService {
    * Access policy options
    */
   private enum AccessPolicy {
-    anon, sasl, digest
+    anon, sasl, digest, simple
   }
 
   /**
@@ -170,12 +174,16 @@ public class RegistrySecurity extends AbstractService {
   /**
    * Client context
    */
-  private String jaasClientContext;
+  private String jaasClientEntry;
 
   /**
    * Client identity
    */
   private String jaasClientIdentity;
+
+  private String principal;
+
+  private String keytab;
 
   /**
    * Create an instance
@@ -205,6 +213,9 @@ public class RegistrySecurity extends AbstractService {
       break;
     case REGISTRY_CLIENT_AUTH_ANONYMOUS:
       access = AccessPolicy.anon;
+      break;
+    case REGISTRY_CLIENT_AUTH_SIMPLE:
+      access = AccessPolicy.simple;
       break;
     default:
       throw new ServiceStateException(E_UNKNOWN_AUTHENTICATION_MECHANISM
@@ -238,6 +249,8 @@ public class RegistrySecurity extends AbstractService {
 
       systemACLs.addAll(buildACLs(system, kerberosRealm, ZooDefs.Perms.ALL));
 
+      LOG.info("Registry default system acls: " + System.lineSeparator() +
+          systemACLs);
       // user accounts (may be empty, but for digest one user AC must
       // be built up
       String user = getConfig().get(KEY_REGISTRY_USER_ACCOUNTS,
@@ -252,6 +265,7 @@ public class RegistrySecurity extends AbstractService {
           userACLs.add(self);
         }
       }
+      LOG.info("Registry User ACLs " + System.lineSeparator()+ userACLs);
 
       // here check for UGI having secure on or digest + ID
       switch (access) {
@@ -262,13 +276,12 @@ public class RegistrySecurity extends AbstractService {
           }
           UserGroupInformation currentUser =
               UserGroupInformation.getCurrentUser();
-          jaasClientContext = getOrFail(KEY_REGISTRY_CLIENT_JAAS_CONTEXT,
+          jaasClientEntry = getOrFail(KEY_REGISTRY_CLIENT_JAAS_CONTEXT,
               DEFAULT_REGISTRY_CLIENT_JAAS_CONTEXT);
           jaasClientIdentity = currentUser.getShortUserName();
           if (LOG.isDebugEnabled()) {
             LOG.debug("Auth is SASL user=\"{}\" JAAS context=\"{}\"",
-                jaasClientIdentity,
-                jaasClientContext);
+                jaasClientIdentity, jaasClientEntry);
           }
           break;
 
@@ -292,6 +305,7 @@ public class RegistrySecurity extends AbstractService {
           break;
 
         case anon:
+        case simple:
           // nothing is needed; account is read only.
           if (LOG.isDebugEnabled()) {
             LOG.debug("Auth is anonymous");
@@ -722,8 +736,10 @@ public class RegistrySecurity extends AbstractService {
    * Apply the security environment to this curator instance. This
    * may include setting up the ZK system properties for SASL
    * @param builder curator builder
+   * @throws IOException if jaas configuration can't be generated or found
    */
-  public void applySecurityEnvironment(CuratorFrameworkFactory.Builder builder) {
+  public void applySecurityEnvironment(CuratorFrameworkFactory.Builder
+      builder) throws IOException {
 
     if (isSecureRegistry()) {
       switch (access) {
@@ -738,9 +754,106 @@ public class RegistrySecurity extends AbstractService {
           break;
 
         case sasl:
-          // bind to the current identity and context within the JAAS file
-          setZKSaslClientProperties(jaasClientIdentity, jaasClientContext);
+          String existingJaasConf = System.getProperty(
+              "java.security.auth.login.config");
+          if (existingJaasConf == null || existingJaasConf.isEmpty()) {
+            if (principal == null || keytab == null) {
+              throw new IOException("SASL is configured for registry, " +
+                  "but neither keytab/principal nor java.security.auth.login" +
+                  ".config system property are specified");
+            }
+            // in this case, keytab and principal are specified and no jaas
+            // config is specified, so we will create one
+            LOG.info(
+                "Enabling ZK sasl client: jaasClientEntry = " + jaasClientEntry
+                    + ", principal = " + principal + ", keytab = " + keytab);
+            JaasConfiguration jconf =
+                new JaasConfiguration(jaasClientEntry, principal, keytab);
+            javax.security.auth.login.Configuration.setConfiguration(jconf);
+            setSystemPropertyIfUnset(ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
+                "true");
+            setSystemPropertyIfUnset(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
+                jaasClientEntry);
+          } else {
+            // in this case, jaas config is specified so we will not change it
+            LOG.info("Using existing ZK sasl configuration: " +
+                "jaasClientEntry = " + System.getProperty(
+                    ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY, "Client") +
+                ", sasl client = " + System.getProperty(
+                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
+                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) +
+                ", jaas = " + existingJaasConf);
+          }
+          break;
+
+        default:
+          clearZKSaslClientProperties();
+          break;
       }
+    }
+  }
+
+  public void setKerberosPrincipalAndKeytab(String principal, String keytab) {
+    this.principal = principal;
+    this.keytab = keytab;
+  }
+
+  /**
+   * Creates a programmatic version of a jaas.conf file. This can be used
+   * instead of writing a jaas.conf file and setting the system property,
+   * "java.security.auth.login.config", to point to that file. It is meant to be
+   * used for connecting to ZooKeeper.
+   */
+  @InterfaceAudience.Private
+  public static class JaasConfiguration extends
+      javax.security.auth.login.Configuration {
+
+    private final javax.security.auth.login.Configuration baseConfig =
+        javax.security.auth.login.Configuration.getConfiguration();
+    private static AppConfigurationEntry[] entry;
+    private String entryName;
+
+    /**
+     * Add an entry to the jaas configuration with the passed in name,
+     * principal, and keytab. The other necessary options will be set for you.
+     *
+     * @param entryName The name of the entry (e.g. "Client")
+     * @param principal The principal of the user
+     * @param keytab The location of the keytab
+     */
+    public JaasConfiguration(String entryName, String principal, String keytab) {
+      this.entryName = entryName;
+      Map<String, String> options = new HashMap<String, String>();
+      options.put("keyTab", keytab);
+      options.put("principal", principal);
+      options.put("useKeyTab", "true");
+      options.put("storeKey", "true");
+      options.put("useTicketCache", "false");
+      options.put("refreshKrb5Config", "true");
+      String jaasEnvVar = System.getenv("HADOOP_JAAS_DEBUG");
+      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
+        options.put("debug", "true");
+      }
+      entry = new AppConfigurationEntry[]{
+          new AppConfigurationEntry(getKrb5LoginModuleName(),
+              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+              options)};
+    }
+
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      return (entryName.equals(name)) ? entry : ((baseConfig != null)
+          ? baseConfig.getAppConfigurationEntry(name) : null);
+    }
+
+    private String getKrb5LoginModuleName() {
+      String krb5LoginModuleName;
+      if (System.getProperty("java.vendor").contains("IBM")) {
+        krb5LoginModuleName = "com.ibm.security.auth.module.Krb5LoginModule";
+      } else {
+        krb5LoginModuleName = "com.sun.security.auth.module.Krb5LoginModule";
+      }
+      return krb5LoginModuleName;
     }
   }
 
@@ -899,7 +1012,7 @@ public class RegistrySecurity extends AbstractService {
              .append("; ");
       builder.append(KEY_REGISTRY_CLIENT_JAAS_CONTEXT)
              .append("=")
-             .append(jaasClientContext)
+             .append(jaasClientEntry)
              .append("; ");
       builder.append(describeProperty(PROP_ZK_SASL_CLIENT_USERNAME));
       builder.append(describeProperty(PROP_ZK_SASL_CLIENT_CONTEXT));

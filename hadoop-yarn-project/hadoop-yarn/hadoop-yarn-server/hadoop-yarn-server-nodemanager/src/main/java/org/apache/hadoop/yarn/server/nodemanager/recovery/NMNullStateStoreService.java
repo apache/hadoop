@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,13 +28,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
 // The state store to use when state isn't being stored
 public class NMNullStateStoreService extends NMStateStoreService {
@@ -71,11 +73,20 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int version,
-      StartContainerRequest startRequest) throws IOException {
+      long startTime, StartContainerRequest startRequest) throws IOException {
   }
 
   @Override
   public void storeContainerQueued(ContainerId containerId) throws IOException {
+  }
+
+  @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
   }
 
   @Override
@@ -89,8 +100,8 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeContainerResourceChanged(ContainerId containerId,
-      int version, Resource capability) throws IOException {
+  public void storeContainerUpdateToken(ContainerId containerId,
+      ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
   }
 
   @Override
@@ -254,6 +265,12 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+      throws IOException {
+  }
+
+  @Override
+  public void storeAssignedResources(Container container,
+      String resourceType, List<Serializable> assignedResources)
       throws IOException {
   }
 

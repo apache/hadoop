@@ -17,6 +17,16 @@ Launching Applications Using Docker Containers
 
 <!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
+Security Warning
+---------------
+**IMPORTANT** This feature is experimental and is not complete. **IMPORTANT**
+Enabling this feature and running Docker containers in your cluster has security
+implications. With this feature enabled, it may be possible to gain root access
+to the YARN NodeManager hosts. Given Docker's integration with many powerful
+kernel features, it is imperative that administrators understand
+[Docker security](https://docs.docker.com/engine/security/security/) before
+enabling this feature.
+
 Overview
 --------
 
@@ -71,68 +81,103 @@ request. For example:
 The following properties should be set in yarn-site.xml:
 
 ```xml
-<property>
-  <name>yarn.nodemanager.container-executor.class</name>
-  <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
-  <description>
-    This is the container executor setting that ensures that all applications
-    are started with the LinuxContainerExecutor.
-  </description>
-</property>
+<configuration>
+  <property>
+    <name>yarn.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+    <description>
+      This is the container executor setting that ensures that all applications
+      are started with the LinuxContainerExecutor.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.linux-container-executor.group</name>
-  <value>hadoop</value>
-  <description>
-    The POSIX group of the NodeManager. It should match the setting in
-    "container-executor.cfg". This configuration is required for validating
-    the secure access of the container-executor binary.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.group</name>
+    <value>hadoop</value>
+    <description>
+      The POSIX group of the NodeManager. It should match the setting in
+      "container-executor.cfg". This configuration is required for validating
+      the secure access of the container-executor binary.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
-  <value>false</value>
-  <description>
-    Whether all applications should be run as the NodeManager process' owner.
-    When false, applications are launched instead as the application owner.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users</name>
+    <value>false</value>
+    <description>
+      Whether all applications should be run as the NodeManager process' owner.
+      When false, applications are launched instead as the application owner.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
-  <value>host,none,bridge</value>
-  <description>
-    Optional. A comma-separated set of networks allowed when launching
-    containers. Valid values are determined by Docker networks available from
-    `docker network ls`
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
+    <value>default,docker</value>
+    <description>
+      Comma separated list of runtimes that are allowed when using
+      LinuxContainerExecutor. The allowed values are default, docker, and
+      javasandbox.
+    </description>
+  </property>
 
-<property>
-  <description>The network used when launching Docker containers when no
-    network is specified in the request. This network must be one of the
-    (configurable) set of allowed container networks.</description>
-  <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
-  <value>host</value>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+    <description>
+      Optional. A comma-separated set of networks allowed when launching
+      containers. Valid values are determined by Docker networks available from
+      `docker network ls`
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed</name>
-  <value>false</value>
-  <description>
-    Optional. Whether applications are allowed to run in privileged containers.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
+    <value>host</value>
+    <description>
+      The network used when launching Docker containers when no
+      network is specified in the request. This network must be one of the
+      (configurable) set of allowed container networks.
+    </description>
+  </property>
 
-<property>
-  <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.acl</name>
-  <value></value>
-  <description>
-    Optional. A comma-separated list of users who are allowed to request
-    privileged contains if privileged containers are allowed.
-  </description>
-</property>
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed</name>
+    <value>false</value>
+    <description>
+      Optional. Whether containers are allowed to use the host PID namespace.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed</name>
+    <value>false</value>
+    <description>
+      Optional. Whether applications are allowed to run in privileged
+      containers.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.privileged-containers.acl</name>
+    <value></value>
+    <description>
+      Optional. A comma-separated list of users who are allowed to request
+      privileged contains if privileged containers are allowed.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.capabilities</name>
+    <value>CHOWN,DAC_OVERRIDE,FSETID,FOWNER,MKNOD,NET_RAW,SETGID,SETUID,SETFCAP,SETPCAP,NET_BIND_SERVICE,SYS_CHROOT,KILL,AUDIT_WRITE</value>
+    <description>
+      Optional. This configuration setting determines the capabilities
+      assigned to docker containers when they are launched. While these may not
+      be case-sensitive from a docker perspective, it is best to keep these
+      uppercase. To run without any capabilites, set this value to
+      "none" or "NONE"
+    </description>
+  </property>
+</configuration>
 ```
 
 In addition, a container-executer.cfg file must exist and contain settings for
@@ -146,7 +191,26 @@ The following properties are required to enable Docker support:
 |Configuration Name | Description |
 |:---- |:---- |
 | `yarn.nodemanager.linux-container-executor.group` | The Unix group of the NodeManager. It should match the yarn.nodemanager.linux-container-executor.group in the yarn-site.xml file. |
-| `feature.docker.enabled` | Must be 0 or 1. 0 means launching Docker containers is disabled. 1 means launching Docker containers is allowed. |
+
+The container-executor.cfg must contain a section to determine the capabilities that containers
+are allowed. It contains the following properties:
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `module.enabled` | Must be "true" or "false" to enable or disable launching Docker containers respectively. Default value is 0. |
+| `docker.binary` | The binary used to launch Docker containers. /usr/bin/docker by default. |
+| `docker.allowed.capabilities` | Comma separated capabilities that containers are allowed to add. By default no capabilities are allowed to be added. |
+| `docker.allowed.devices` | Comma separated devices that containers are allowed to mount. By default no devices are allowed to be added. |
+| `docker.allowed.networks` | Comma separated networks that containers are allowed to use. If no network is specified when launching the container, the default Docker network will be used. |
+| `docker.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
+| `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
+| `docker.host-pid-namespace.enabled` | Set to "true" or "false" to enable or disable using the host's PID namespace. Default value is "false". |
+| `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
+| `docker.privileged-containers.registries` | Comma separated list of trusted docker registries for running trusted privileged docker containers.  By default, no registries are defined. |
+
+Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
+
+In addition, containers are not permitted to mount any parent of the container-executor.cfg directory in read-write mode.
 
 The following properties are optional:
 
@@ -155,8 +219,22 @@ The following properties are optional:
 | `min.user.id` | The minimum UID that is allowed to launch applications. The default is no minimum |
 | `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
 | `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
-| `docker.binary` | The path to the Docker binary. The default is "docker". |
-| `feature.tc.enabled` | Must be 0 or 1. 0 means traffic control commands are disabled. 1 means traffic control commands are allowed. |
+| `feature.tc.enabled` | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed. |
+
+Part of a container-executor.cfg which allows Docker containers to be launched is below:
+
+```
+yarn.nodemanager.linux-container-executor.group=yarn
+[docker]
+  module.enabled=true
+  docker.privileged-containers.enabled=true
+  docker.privileged-containers.registries=centos
+  docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
+  docker.allowed.networks=bridge,host,none
+  docker.allowed.ro-mounts=/sys/fs/cgroup
+  docker.allowed.rw-mounts=/var/hadoop/yarn/local-dir,/var/hadoop/yarn/log-dir
+
+```
 
 Docker Image Requirements
 -------------------------
@@ -222,8 +300,11 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_IMAGE` | Names which image will be used to launch the Docker container. Any image name that could be passed to the Docker client's run command may be used. The image name may include a repo prefix. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE` | Controls whether the Docker container's default command is overridden.  When set to true, the Docker container's command will be "bash _path\_to\_launch\_script_". When unset or set to false, the Docker container's default command is used. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK` | Sets the network type to be used by the Docker container. It must be a valid value as determined by the yarn.nodemanager.runtime.linux.docker.allowed-container-networks property. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_PID_NAMESPACE` | Controls which PID namespace will be used by the Docker container. By default, each Docker container has its own PID namespace. To share the namespace of the host, the yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed property must be set to true. If the host PID namespace is allowed and this environment variable is set to host, the Docker container will share the host's PID namespace. No other value is allowed. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER` | Controls whether the Docker container is a privileged container. In order to use privileged containers, the yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed property must be set to true, and the application owner must appear in the value of the yarn.nodemanager.runtime.linux.docker.privileged-containers.acl property. If this environment variable is set to true, a privileged Docker container will be used if allowed. No other value is allowed, so the environment variable should be left unset rather than setting it to false. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as "source:dest", where the source is an absolute path that is not a symlink and that points to a localized resource. Note that as of YARN-5298, localized directories are automatically mounted into the container as volumes. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as "source:dest:mode" and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for docker.allowed.ro-mounts and docker.allowed.rw-mounts. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -236,14 +317,77 @@ the application will behave exactly as any other YARN application. Logs will be
 aggregated and stored in the relevant history server. The application life cycle
 will be the same as for a non-Docker application.
 
+Using Docker Bind Mounted Volumes
+---------------------------------
+
+**WARNING** Care should be taken when enabling this feature. Enabling access to
+directories such as, but not limited to, /, /etc, /run, or /home is not
+advisable and can result in containers negatively impacting the host or leaking
+sensitive information. **WARNING**
+
+Files and directories from the host are commonly needed within the Docker
+containers, which Docker provides through
+[volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
+Examples include localized resources, Apache Hadoop binaries, and sockets. To
+facilitate this need, YARN-6623 added the ability for administrators to set a
+whitelist of host directories that are allowed to be bind mounted as volumes
+into containers. YARN-5534 added the ability for users to supply a list of
+mounts that will be mounted into the containers, if allowed by the
+administrative whitelist.
+
+In order to make use of this feature, the following must be configured.
+
+* The administrator must define the volume whitelist in container-executor.cfg by setting `docker.allowed.ro-mounts` and `docker.allowed.rw-mounts` to the list of parent directories that are allowed to be mounted.
+* The application submitter requests the required volumes at application submission time using the `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` environment variable.
+
+The administrator supplied whitelist is defined as a comma separated list of
+directories that are allowed to be mounted into containers. The source directory
+supplied by the user must either match or be a child of the specified
+directory.
+
+The user supplied mount list is defined as a comma separated list in the form
+*source*:*destination*:*mode*. The source is the file or directory on the host.
+The destination is the path within the contatiner where the source will be bind
+mounted. The mode defines the mode the user expects for the mount, which can be
+ro (read-only) or rw (read-write).
+
+The following example outlines how to use this feature to mount the commonly
+needed /sys/fs/cgroup directory into the container running on YARN.
+
+The administrator sets docker.allowed.ro-mounts in container-executor.cfg to
+"/sys/fs/cgroup". Applications can now request that "/sys/fs/cgroup" be mounted
+from the host into the container in read-only mode.
+
+At application submission time, the YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS
+environment variable can then be set to request this mount. In this example,
+the environment variable would be set to "/sys/fs/cgroup:/sys/fs/cgroup:ro".
+The destination path is not restricted, "/sys/fs/cgroup:/cgroup:ro" would also
+be valid given the example admin whitelist.
+
+Privileged Container Security Consideration
+-------------------------------------------
+
+Privileged docker container can interact with host system devices.  This can cause harm to host operating system without proper care.  In order to mitigate risk of allowing privileged container to run on Hadoop cluster, we implemented a controlled process to sandbox unauthorized privileged docker images.
+
+The default behavior is disallow any privileged docker containers.  When `docker.privileged-containers.enabled` is set to enabled, docker image can run with root privileges in the docker container, but access to host level devices are disabled.  This allows developer and tester to run docker images from internet without causing harm to host operating system.
+
+When docker images have been certified by developers and testers to be trustworthy.  The trusted image can be promoted to trusted docker registry.  System administrator can define `docker.privileged-containers.registries`, and setup private docker registry server to promote trusted images.
+
+Trusted images are allowed to mount external devices such as HDFS via NFS gateway, or host level Hadoop configuration.  If system administrators allow writing to external volumes using `docker.allow.rw-mounts directive`, privileged docker container can have full control of host level files in the predefined volumes.
+
+For [YARN Service HTTPD example](./yarn-service/Examples.html), container-executor.cfg must define centos docker registry to be trusted for the example to run.
+
 Connecting to a Secure Docker Repository
 ----------------------------------------
 
-Until YARN-5428 is complete, the Docker client command will draw its
-configuration from the default location, which is $HOME/.docker/config.json on
-the NodeManager host. The Docker configuration is where secure repository
-credentials are stored, so use of the LCE with secure Docker repos is
-discouraged until YARN-5428 is complete.
+The Docker client command will draw its configuration from the default location,
+which is $HOME/.docker/config.json on the NodeManager host. The Docker
+configuration is where secure repository credentials are stored, so use of the
+LCE with secure Docker repos is discouraged using this method.
+
+YARN-5428 added support to Distributed Shell for securely supplying the Docker
+client configuration. See the Distributed Shell help for usage. Support for
+additional frameworks is planned.
 
 As a work-around, you may manually log the Docker daemon on every NodeManager
 host into the secure repo using the Docker login command:

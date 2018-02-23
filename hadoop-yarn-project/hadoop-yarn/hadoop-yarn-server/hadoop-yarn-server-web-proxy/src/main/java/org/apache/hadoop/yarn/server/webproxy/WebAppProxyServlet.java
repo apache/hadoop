@@ -613,7 +613,7 @@ public class WebAppProxyServlet extends HttpServlet {
    * <p>
    *   <I>Do not remove</I>
    * <p>
-   * Yarn isn't currently serializing this class, but findbugs
+   * YARN isn't currently serializing this class, but findbugs
    * complains in its absence.
    * 
    * 

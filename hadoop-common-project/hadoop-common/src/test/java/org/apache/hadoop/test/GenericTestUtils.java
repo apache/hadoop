@@ -274,7 +274,6 @@ public abstract class GenericTestUtils {
    * Get a temp path. This may or may not be relative; it depends on what the
    * {@link #SYSPROP_TEST_DATA_DIR} is set to. If unset, it returns a path
    * under the relative path {@link #DEFAULT_TEST_DATA_PATH}
-   * @param subpath sub path, with no leading "/" character
    * @return a string to use in paths
    */
   public static String getRandomizedTempPath() {
@@ -317,20 +316,37 @@ public abstract class GenericTestUtils {
   /**
    * Assert that an exception's <code>toString()</code> value
    * contained the expected text.
-   * @param string expected string
+   * @param expectedText expected string
    * @param t thrown exception
    * @throws AssertionError if the expected string is not found
    */
-  public static void assertExceptionContains(String string, Throwable t) {
+  public static void assertExceptionContains(String expectedText, Throwable t) {
+    assertExceptionContains(expectedText, t, "");
+  }
+
+  /**
+   * Assert that an exception's <code>toString()</code> value
+   * contained the expected text.
+   * @param expectedText expected string
+   * @param t thrown exception
+   * @param message any extra text for the string
+   * @throws AssertionError if the expected string is not found
+   */
+  public static void assertExceptionContains(String expectedText,
+      Throwable t,
+      String message) {
     Assert.assertNotNull(E_NULL_THROWABLE, t);
     String msg = t.toString();
     if (msg == null) {
       throw new AssertionError(E_NULL_THROWABLE_STRING, t);
     }
-    if (!msg.contains(string)) {
-      throw new AssertionError("Expected to find '" + string + "' "
-          + E_UNEXPECTED_EXCEPTION + ":"
-          + StringUtils.stringifyException(t),
+    if (expectedText != null && !msg.contains(expectedText)) {
+      String prefix = org.apache.commons.lang.StringUtils.isEmpty(message)
+          ? "" : (message + ": ");
+      throw new AssertionError(
+          String.format("%s Expected to find '%s' %s: %s",
+              prefix, expectedText, E_UNEXPECTED_EXCEPTION,
+              StringUtils.stringifyException(t)),
           t);
     }
   }  
@@ -625,10 +641,16 @@ public abstract class GenericTestUtils {
    * conditions.
    */
   public static class SleepAnswer implements Answer<Object> {
+    private final int minSleepTime;
     private final int maxSleepTime;
     private static Random r = new Random();
-    
+
     public SleepAnswer(int maxSleepTime) {
+      this(0, maxSleepTime);
+    }
+
+    public SleepAnswer(int minSleepTime, int maxSleepTime) {
+      this.minSleepTime = minSleepTime;
       this.maxSleepTime = maxSleepTime;
     }
     
@@ -636,7 +658,7 @@ public abstract class GenericTestUtils {
     public Object answer(InvocationOnMock invocation) throws Throwable {
       boolean interrupted = false;
       try {
-        Thread.sleep(r.nextInt(maxSleepTime));
+        Thread.sleep(r.nextInt(maxSleepTime) + minSleepTime);
       } catch (InterruptedException ie) {
         interrupted = true;
       }

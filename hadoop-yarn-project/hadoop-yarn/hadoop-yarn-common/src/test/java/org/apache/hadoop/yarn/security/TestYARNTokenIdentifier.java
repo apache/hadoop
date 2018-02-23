@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -214,10 +215,20 @@ public class TestYARNTokenIdentifier {
     Assert.assertEquals(ExecutionType.GUARANTEED,
         anotherToken.getExecutionType());
   }
-  
+
   @Test
   public void testRMDelegationTokenIdentifier() throws IOException {
-    
+    testRMDelegationTokenIdentifier(false);
+  }
+
+  @Test
+  public void testRMDelegationTokenIdentifierOldFormat() throws IOException {
+    testRMDelegationTokenIdentifier(true);
+  }
+
+  public void testRMDelegationTokenIdentifier(boolean oldFormat)
+      throws IOException {
+
     Text owner = new Text("user1");
     Text renewer = new Text("user2");
     Text realUser = new Text("user3");
@@ -225,59 +236,63 @@ public class TestYARNTokenIdentifier {
     long maxDate = 2;
     int sequenceNumber = 3;
     int masterKeyId = 4;
-    
-    RMDelegationTokenIdentifier token = 
+
+    RMDelegationTokenIdentifier originalToken =
         new RMDelegationTokenIdentifier(owner, renewer, realUser);
-    token.setIssueDate(issueDate);
-    token.setMaxDate(maxDate);
-    token.setSequenceNumber(sequenceNumber);
-    token.setMasterKeyId(masterKeyId);
-    
-    RMDelegationTokenIdentifier anotherToken = new RMDelegationTokenIdentifier();
-    
-    byte[] tokenContent = token.getBytes();
-    DataInputBuffer dib = new DataInputBuffer();
-    dib.reset(tokenContent, tokenContent.length);
-    anotherToken.readFields(dib);
-    dib.close();
+    originalToken.setIssueDate(issueDate);
+    originalToken.setMaxDate(maxDate);
+    originalToken.setSequenceNumber(sequenceNumber);
+    originalToken.setMasterKeyId(masterKeyId);
+
+    RMDelegationTokenIdentifier anotherToken
+        = new RMDelegationTokenIdentifier();
+
+    if (oldFormat) {
+      DataInputBuffer inBuf = new DataInputBuffer();
+      DataOutputBuffer outBuf = new DataOutputBuffer();
+      originalToken.writeInOldFormat(outBuf);
+      inBuf.reset(outBuf.getData(), 0, outBuf.getLength());
+      anotherToken.readFieldsInOldFormat(inBuf);
+      inBuf.close();
+    } else {
+      byte[] tokenContent = originalToken.getBytes();
+      DataInputBuffer dib = new DataInputBuffer();
+      dib.reset(tokenContent, tokenContent.length);
+      anotherToken.readFields(dib);
+      dib.close();
+    }
     // verify the whole record equals with original record
-    Assert.assertEquals("Token is not the same after serialization " +
-        "and deserialization.", token, anotherToken);
-    
-    Assert.assertEquals("owner from proto is not the same with original token",
-        anotherToken.getOwner(), owner);
-    
-    Assert.assertEquals("renewer from proto is not the same with original token",
-        anotherToken.getRenewer(), renewer);
-    
-    Assert.assertEquals("realUser from proto is not the same with original token",
-        anotherToken.getRealUser(), realUser);
-    
-    Assert.assertEquals("issueDate from proto is not the same with original token",
-        anotherToken.getIssueDate(), issueDate);
-    
-    Assert.assertEquals("maxDate from proto is not the same with original token",
-        anotherToken.getMaxDate(), maxDate);
-    
-    Assert.assertEquals("sequenceNumber from proto is not the same with original token",
-        anotherToken.getSequenceNumber(), sequenceNumber);
-    
-    Assert.assertEquals("masterKeyId from proto is not the same with original token",
-        anotherToken.getMasterKeyId(), masterKeyId);
-    
-    // Test getProto    
-    RMDelegationTokenIdentifier token1 = 
-        new RMDelegationTokenIdentifier(owner, renewer, realUser);
-    token1.setIssueDate(issueDate);
-    token1.setMaxDate(maxDate);
-    token1.setSequenceNumber(sequenceNumber);
-    token1.setMasterKeyId(masterKeyId);
-    YARNDelegationTokenIdentifierProto tokenProto = token1.getProto();
+    Assert.assertEquals(
+        "Token is not the same after serialization and deserialization.",
+        originalToken, anotherToken);
+    Assert.assertEquals(
+        "owner from proto is not the same with original token",
+        owner, anotherToken.getOwner());
+    Assert.assertEquals(
+        "renewer from proto is not the same with original token",
+        renewer, anotherToken.getRenewer());
+    Assert.assertEquals(
+        "realUser from proto is not the same with original token",
+        realUser, anotherToken.getRealUser());
+    Assert.assertEquals(
+        "issueDate from proto is not the same with original token",
+        issueDate, anotherToken.getIssueDate());
+    Assert.assertEquals(
+        "maxDate from proto is not the same with original token",
+        maxDate, anotherToken.getMaxDate());
+    Assert.assertEquals(
+        "sequenceNumber from proto is not the same with original token",
+        sequenceNumber, anotherToken.getSequenceNumber());
+    Assert.assertEquals(
+        "masterKeyId from proto is not the same with original token",
+        masterKeyId, anotherToken.getMasterKeyId());
+
+    // Test getProto
+    YARNDelegationTokenIdentifierProto tokenProto = originalToken.getProto();
     // Write token proto to stream
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(baos);
     tokenProto.writeTo(out);
-
     // Read token
     byte[] tokenData = baos.toByteArray();
     RMDelegationTokenIdentifier readToken = new RMDelegationTokenIdentifier();
@@ -287,7 +302,7 @@ public class TestYARNTokenIdentifier {
 
     // Verify if read token equals with original token
     Assert.assertEquals("Token from getProto is not the same after " +
-        "serialization and deserialization.", token1, readToken);
+        "serialization and deserialization.", originalToken, readToken);
     db.close();
     out.close();
   }

@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -92,6 +93,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -384,6 +387,10 @@ public class AdminService extends CompositeService implements
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
+      if (isSchedulerMutable()) {
+        throw new IOException("Scheduler configuration is mutable. " +
+            operation + " is not allowed in this scenario.");
+      }
       refreshQueues();
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
           "AdminService");
@@ -393,14 +400,39 @@ public class AdminService extends CompositeService implements
     }
   }
 
-  private void refreshQueues() throws IOException, YarnException {
-    rm.getRMContext().getScheduler().reinitialize(getConfig(),
+  protected Configuration loadNewConfiguration()
+      throws IOException, YarnException {
+    // Retrieve yarn-site.xml in order to refresh scheduling monitor properties.
+    Configuration conf = getConfiguration(new Configuration(false),
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    // The reason we call Configuration#size() is because when getConfiguration
+    // been called, it invokes Configuration#addResouce, which invokes
+    // Configuration#reloadConfiguration which triggers the reload process in a
+    // lazy way, the properties will only be reload when it's needed rather than
+    // reload it right after getConfiguration been called. So here we call
+    // Configuration#size() to force the Configuration#getProps been called to
+    // reload all the properties.
+    conf.size();
+    return conf;
+  }
+
+  @Private
+  public void refreshQueues() throws IOException, YarnException {
+    Configuration conf = loadNewConfiguration();
+    rm.getRMContext().getScheduler().reinitialize(conf,
         this.rm.getRMContext());
     // refresh the reservation system
     ReservationSystem rSystem = rm.getRMContext().getReservationSystem();
     if (rSystem != null) {
-      rSystem.reinitialize(getConfig(), rm.getRMContext());
+      rSystem.reinitialize(conf, rm.getRMContext());
     }
+  }
+
+  private boolean isSchedulerMutable() {
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    return (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable());
   }
 
   @Override
@@ -711,6 +743,14 @@ public class AdminService extends CompositeService implements
   void refreshAll() throws ServiceFailedException {
     try {
       checkAcls("refreshAll");
+      if (isSchedulerMutable()) {
+        try {
+          ((MutableConfScheduler) rm.getRMContext().getScheduler())
+              .getMutableConfProvider().reloadConfigurationFromStore();
+        } catch (Exception e) {
+          throw new IOException("Failed to refresh configuration:", e);
+        }
+      }
       refreshQueues();
       refreshNodes();
       refreshSuperUserGroupsConfiguration();

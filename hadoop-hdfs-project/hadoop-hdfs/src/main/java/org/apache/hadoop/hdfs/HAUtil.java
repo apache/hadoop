@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
@@ -325,6 +326,7 @@ public class HAUtil {
    */
   public static boolean isAtLeastOneActive(List<ClientProtocol> namenodes)
       throws IOException {
+    List<IOException> exceptions = new ArrayList<>();
     for (ClientProtocol namenode : namenodes) {
       try {
         namenode.getFileInfo("/");
@@ -334,9 +336,14 @@ public class HAUtil {
         if (cause instanceof StandbyException) {
           // This is expected to happen for a standby NN.
         } else {
-          throw re;
+          exceptions.add(re);
         }
+      } catch (IOException ioe) {
+        exceptions.add(ioe);
       }
+    }
+    if(!exceptions.isEmpty()){
+      throw MultipleIOException.createIOException(exceptions);
     }
     return false;
   }

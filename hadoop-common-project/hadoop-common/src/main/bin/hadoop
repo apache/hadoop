@@ -15,8 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="hadoop"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
 ## @description  build up the hadoop command's usage text.
 ## @audience     public
@@ -44,6 +45,7 @@ function hadoop_usage
   hadoop_add_subcommand "key" client "manage keys via the KeyProvider"
   hadoop_add_subcommand "trace" client "view and modify Hadoop tracing settings"
   hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -124,6 +126,10 @@ function hadoopcmd_case
       echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
       echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
       echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      if [[ -n "${QATESTMODE}" ]]; then
+        echo "MYNAME=${MYNAME}"
+        echo "HADOOP_SHELL_EXECNAME=${HADOOP_SHELL_EXECNAME}"
+      fi
       exit 0
     ;;
     fs)
@@ -142,6 +148,9 @@ function hadoopcmd_case
     ;;
     kerbname)
       HADOOP_CLASSNAME=org.apache.hadoop.security.HadoopKerberosName
+    ;;
+    kdiag)
+      HADOOP_CLASSNAME=org.apache.hadoop.security.KDiag
     ;;
     key)
       HADOOP_CLASSNAME=org.apache.hadoop.crypto.key.KeyShell

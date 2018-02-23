@@ -118,8 +118,9 @@ public class QueuePriorityContainerCandidateSelector
   }
 
   private void intializePriorityDigraph() {
-    LOG.info("Initializing priority preemption directed graph:");
-
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Initializing priority preemption directed graph:");
+    }
     // Make sure we iterate all leaf queue combinations
     for (String q1 : preemptionContext.getLeafQueueNames()) {
       for (String q2 : preemptionContext.getLeafQueueNames()) {
@@ -148,12 +149,12 @@ public class QueuePriorityContainerCandidateSelector
           if (p1 < p2) {
             priorityDigraph.put(q2, q1, true);
             if (LOG.isDebugEnabled()) {
-              LOG.info("- Added priority ordering edge: " + q2 + " >> " + q1);
+              LOG.debug("- Added priority ordering edge: " + q2 + " >> " + q1);
             }
           } else if (p2 < p1) {
             priorityDigraph.put(q1, q2, true);
             if (LOG.isDebugEnabled()) {
-              LOG.info("- Added priority ordering edge: " + q1 + " >> " + q2);
+              LOG.debug("- Added priority ordering edge: " + q1 + " >> " + q2);
             }
           }
         }
@@ -229,8 +230,7 @@ public class QueuePriorityContainerCandidateSelector
 
     // If we already can allocate the reserved container after preemption,
     // skip following steps
-    if (Resources.fitsIn(rc, clusterResource, lacking,
-        Resources.none())) {
+    if (Resources.fitsIn(rc, lacking, Resources.none())) {
       return true;
     }
 
@@ -270,7 +270,7 @@ public class QueuePriorityContainerCandidateSelector
       }
 
       // Lacking <= 0 means we can allocate the reserved container
-      if (Resources.fitsIn(rc, clusterResource, lacking, Resources.none())) {
+      if (Resources.fitsIn(rc, lacking, Resources.none())) {
         return true;
       }
     }

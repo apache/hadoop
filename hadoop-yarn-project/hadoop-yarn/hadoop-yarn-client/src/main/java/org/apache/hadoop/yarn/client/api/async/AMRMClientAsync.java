@@ -21,10 +21,11 @@ package org.apache.hadoop.yarn.client.api.async;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -39,9 +40,12 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -52,7 +56,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>AMRMClientAsync</code> handles communication with the ResourceManager
@@ -107,7 +112,8 @@ import com.google.common.base.Supplier;
 @Stable
 public abstract class AMRMClientAsync<T extends ContainerRequest> 
 extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(AMRMClientAsync.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClientAsync.class);
   
   protected final AMRMClient<T> client;
   protected final CallbackHandler handler;
@@ -205,6 +211,19 @@ extends AbstractService {
                                                    Resource capability);
 
   /**
+   * Add a Collection of SchedulingRequests. The AMRMClient will ensure that
+   * all requests in the same batch are sent in the same allocate call.
+   * @param schedulingRequests Collection of Scheduling Requests.
+   */
+  @Public
+  @Unstable
+  public void addSchedulingRequests(
+      Collection<SchedulingRequest> schedulingRequests) {
+
+  }
+
+
+  /**
    * Returns all matching ContainerRequests that match the given Priority,
    * ResourceName, ExecutionType and Capability.
    *
@@ -247,6 +266,26 @@ extends AbstractService {
   public abstract RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
       throws YarnException, IOException;
+
+  /**
+   * Register the application master. This must be called before any
+   * other interaction
+   * @param appHostName Name of the host on which master is running
+   * @param appHostPort Port master is listening on
+   * @param appTrackingUrl URL at which the master info can be seen
+   * @param placementConstraints Placement Constraints mappings.
+   * @return <code>RegisterApplicationMasterResponse</code>
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public RegisterApplicationMasterResponse registerApplicationMaster(
+      String appHostName, int appHostPort, String appTrackingUrl,
+      Map<Set<String>, PlacementConstraint> placementConstraints)
+      throws YarnException, IOException {
+    throw new YarnException("Not supported");
+  }
 
   /**
    * Unregister the application master. This must be called in the end.
@@ -375,8 +414,8 @@ extends AbstractService {
 
   /**
    * Wait for <code>check</code> to return true for each 1000 ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int)}
-   * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int)}
+   * and {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
@@ -386,7 +425,7 @@ extends AbstractService {
   /**
    * Wait for <code>check</code> to return true for each
    * <code>checkEveryMillis</code> ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check user defined checker
    * @param checkEveryMillis interval to call <code>check</code>
    */
@@ -485,6 +524,24 @@ extends AbstractService {
      * stop() is the recommended action.
      */
     public abstract void onError(Throwable e);
+
+    /**
+     * Called when the ResourceManager responds to a heartbeat with containers
+     * from previous attempt.
+     */
+    public void onContainersReceivedFromPreviousAttempts(
+        List<Container> containers) {
+    }
+
+    /**
+     * Called when the RM has rejected Scheduling Requests.
+     * @param rejectedSchedulingRequests Rejected Scheduling Requests.
+     */
+    @Public
+    @Unstable
+    public void onRequestsRejected(
+        List<RejectedSchedulingRequest> rejectedSchedulingRequests) {
+    }
   }
 
   /**

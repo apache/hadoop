@@ -32,6 +32,7 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -87,6 +88,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * Utility methods to aid serving RM data through the REST and RPC APIs
  */
 public class RMServerUtils {
+
+  private static final Log LOG_HANDLE = LogFactory.getLog(RMServerUtils.class);
 
   public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
@@ -295,8 +298,7 @@ public class RMServerUtils {
     // Target resource of the increase request is more than NM can offer
     ResourceScheduler scheduler = rmContext.getScheduler();
     RMNode rmNode = request.getSchedulerNode().getRMNode();
-    if (!Resources.fitsIn(scheduler.getResourceCalculator(),
-        scheduler.getClusterResource(), targetResource,
+    if (!Resources.fitsIn(scheduler.getResourceCalculator(), targetResource,
         rmNode.getTotalCapability())) {
       String msg = "Target resource=" + targetResource + " of containerId="
           + containerId + " is more than node's total resource="
@@ -478,7 +480,7 @@ public class RMServerUtils {
       DUMMY_APPLICATION_RESOURCE_USAGE_REPORT =
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1, -1), Resources.createResource(-1, -1),
-          Resources.createResource(-1, -1), 0, 0, 0, 0);
+          Resources.createResource(-1, -1), new HashMap<>(), new HashMap<>());
 
 
   /**
@@ -621,5 +623,13 @@ public class RMServerUtils {
               Collections.singleton(label));
       return labelsToNodes.get(label);
     }
+  }
+
+  public static Long getOrDefault(Map<String, Long> map, String key,
+      Long defaultValue) {
+    if (map.containsKey(key)) {
+      return map.get(key);
+    }
+    return defaultValue;
   }
 }

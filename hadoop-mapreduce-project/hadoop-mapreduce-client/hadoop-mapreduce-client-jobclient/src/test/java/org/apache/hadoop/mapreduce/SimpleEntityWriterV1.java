@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -32,7 +30,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
-import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
    * Adds simple entities with random string payload, events, metrics, and
@@ -42,11 +41,12 @@ class SimpleEntityWriterV1
     extends org.apache.hadoop.mapreduce.Mapper
         <IntWritable, IntWritable, Writable, Writable>
     implements SimpleEntityWriterConstants {
-  private static final Log LOG = LogFactory.getLog(SimpleEntityWriterV1.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SimpleEntityWriterV1.class);
 
   public void map(IntWritable key, IntWritable val, Context context)
       throws IOException {
-    TimelineClient tlc = new TimelineClientImpl();
+    TimelineClient tlc = TimelineClient.createTimelineClient();
     Configuration conf = context.getConfiguration();
 
     final int kbs = conf.getInt(KBS_SENT, KBS_SENT_DEFAULT);

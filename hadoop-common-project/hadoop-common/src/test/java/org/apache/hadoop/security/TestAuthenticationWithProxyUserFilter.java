@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.security;
 
-
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
@@ -30,9 +30,10 @@ import java.util.Map;
  * This class is tested for {@link AuthenticationWithProxyUserFilter}
  * to verify configurations of this filter.
  */
-public class TestAuthenticationWithProxyUserFilter extends TestCase {
+public class TestAuthenticationWithProxyUserFilter {
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testConfiguration() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.http.authentication.foo", "bar");

@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -257,22 +258,32 @@ public class TestDFSClientRetries {
                          Matchers.<EnumSet<AddBlockFlag>>any()))
         .thenAnswer(answer);
     
-    Mockito.doReturn(
-            new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
-                (short) 777), EnumSet.noneOf(HdfsFileStatus.Flags.class),
-                "owner", "group", new byte[0], new byte[0],
-                1010, 0, null, (byte) 0, null)).when(mockNN).getFileInfo(anyString());
+    Mockito.doReturn(new HdfsFileStatus.Builder()
+          .replication(1)
+          .blocksize(1024)
+          .perm(new FsPermission((short) 777))
+          .owner("owner")
+          .group("group")
+          .symlink(new byte[0])
+          .fileId(1010)
+          .build())
+      .when(mockNN)
+      .getFileInfo(anyString());
     
-    Mockito.doReturn(
-            new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
-                (short) 777), EnumSet.noneOf(HdfsFileStatus.Flags.class),
-                "owner", "group", new byte[0], new byte[0],
-                1010, 0, null, (byte) 0, null))
+    Mockito.doReturn(new HdfsFileStatus.Builder()
+          .replication(1)
+          .blocksize(1024)
+          .perm(new FsPermission((short) 777))
+          .owner("owner")
+          .group("group")
+          .symlink(new byte[0])
+          .fileId(1010)
+          .build())
         .when(mockNN)
         .create(anyString(), (FsPermission) anyObject(), anyString(),
-            (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-            anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
-            anyObject());
+          (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
+          anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
+          anyObject());
 
     final DFSClient client = new DFSClient(null, mockNN, conf, null);
     OutputStream os = client.create("testfile", true);
@@ -1241,6 +1252,85 @@ public class TestDFSClientRetries {
           getBlockWriteLocateFollowingInitialDelayMs(), 1000);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=120000)
+  public void testLeaseRenewAndDFSOutputStreamDeadLock() throws Exception {
+    CountDownLatch testLatch = new CountDownLatch(1);
+    DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+      public void delayWhenRenewLeaseTimeout() {
+        try {
+          testLatch.await();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    String file1 = "/testFile1";
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      final NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
+
+      doAnswer(new SleepFixedTimeAnswer(1500, testLatch)).when(spyNN).complete(
+          anyString(), anyString(), any(ExtendedBlock.class), anyLong());
+      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      // Get hold of the lease renewer instance used by the client
+      LeaseRenewer leaseRenewer = client.getLeaseRenewer();
+      leaseRenewer.setRenewalTime(100);
+      final OutputStream out1 = client.create(file1, false);
+
+      out1.write(new byte[256]);
+
+      Thread closeThread = new Thread(new Runnable() {
+        @Override public void run() {
+          try {
+            //1. trigger get LeaseRenewer lock
+            Mockito.doThrow(new SocketTimeoutException()).when(spyNN)
+                .renewLease(Mockito.anyString());
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+      closeThread.start();
+
+      //2. trigger get DFSOutputStream lock
+      out1.close();
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static class SleepFixedTimeAnswer implements Answer<Object> {
+    private final int sleepTime;
+    private final CountDownLatch testLatch;
+
+    SleepFixedTimeAnswer(int sleepTime, CountDownLatch latch) {
+      this.sleepTime = sleepTime;
+      this.testLatch = latch;
+    }
+
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      boolean interrupted = false;
+      try {
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException ie) {
+        interrupted = true;
+      }
+      try {
+        return invocation.callRealMethod();
+      } finally {
+        testLatch.countDown();
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
   }
 }

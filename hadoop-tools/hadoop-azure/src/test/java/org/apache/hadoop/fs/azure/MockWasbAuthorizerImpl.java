@@ -34,154 +34,183 @@ import org.apache.hadoop.fs.Path;
 
 public class MockWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
-  private Map<AuthorizationComponent, Boolean> authRules;
-  private boolean performOwnerMatch;
-  private CachingAuthorizer<CachedAuthorizerEntry, Boolean> cache;
+    private Map<AuthorizationComponent, Boolean> authRules;
+    private CachingAuthorizer<CachedAuthorizerEntry, Boolean> cache;
 
- // The full qualified URL to the root directory
-  private String qualifiedPrefixUrl;
+    // The full qualified URL to the root directory
+    private String qualifiedPrefixUrl;
 
-  public MockWasbAuthorizerImpl(NativeAzureFileSystem fs) {
-    qualifiedPrefixUrl = new Path("/").makeQualified(fs.getUri(), fs.getWorkingDirectory())
-        .toString().replaceAll("/$", "");
-    cache = new CachingAuthorizer<>(TimeUnit.MINUTES.convert(5L, TimeUnit.MINUTES), "AUTHORIZATION");
-  }
+    public MockWasbAuthorizerImpl(NativeAzureFileSystem fs) {
+        qualifiedPrefixUrl = new Path("/").makeQualified(fs.getUri(),
+                fs.getWorkingDirectory())
+                .toString().replaceAll("/$", "");
+        cache = new CachingAuthorizer<>(TimeUnit.MINUTES.convert(5L, TimeUnit.MINUTES), "AUTHORIZATION");
+    }
 
-  @Override
-  public void init(Configuration conf) {
-    init(conf, false);
-  }
+    @Override
+    public void init(Configuration conf) {
+        cache.init(conf);
+        authRules = new HashMap<>();
+    }
 
-  /*
-  authorization matches owner with currentUserShortName while evaluating auth rules
-  if currentUserShortName is set to a string that is not empty
-  */
-  public void init(Configuration conf, boolean matchOwner) {
-    cache.init(conf);
-    authRules = new HashMap<>();
-    this.performOwnerMatch = matchOwner;
-  }
+    public void addAuthRuleForOwner(String wasbAbsolutePath,
+                                    String accessType, boolean access) {
+        addAuthRule(wasbAbsolutePath, accessType, "owner", access);
+    }
 
-  public void addAuthRule(String wasbAbsolutePath,
-      String accessType, boolean access) {
+    public void addAuthRule(String wasbAbsolutePath,
+                            String accessType, String user, boolean access) {
         wasbAbsolutePath = qualifiedPrefixUrl + wasbAbsolutePath;
         AuthorizationComponent component = wasbAbsolutePath.endsWith("*")
-        ? new AuthorizationComponent("^" + wasbAbsolutePath.replace("*", ".*"), accessType)
-        : new AuthorizationComponent(wasbAbsolutePath, accessType);
+                ? new AuthorizationComponent("^" + wasbAbsolutePath.replace("*", ".*"),
+                accessType, user)
+                : new AuthorizationComponent(wasbAbsolutePath, accessType, user);
 
-    this.authRules.put(component, access);
-  }
-
-  @Override
-  public boolean authorize(String wasbAbsolutePath, String accessType, String owner)
-      throws WasbAuthorizationException {
-
-    if (wasbAbsolutePath.endsWith(NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
-      return true;
+        this.authRules.put(component, access);
     }
 
-    CachedAuthorizerEntry cacheKey = new CachedAuthorizerEntry(wasbAbsolutePath, accessType, owner);
-    Boolean cacheresult = cache.get(cacheKey);
-    if (cacheresult != null) {
-      return cacheresult;
-    }
+    @Override
+    public boolean authorize(String wasbAbsolutePath,
+                             String accessType,
+                             String owner)
+            throws WasbAuthorizationException {
 
-    boolean authorizeresult = authorizeInternal(wasbAbsolutePath, accessType, owner);
-    cache.put(cacheKey, authorizeresult);
-
-    return authorizeresult;
-  }
-
-  private boolean authorizeInternal(String wasbAbsolutePath, String accessType, String owner)
-      throws WasbAuthorizationException {
-
-    String currentUserShortName = "";
-    if (this.performOwnerMatch) {
-      try {
-        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-        currentUserShortName = ugi.getShortUserName();
-      } catch (Exception e) {
-        //no op
-      }
-    }
-
-    // In case of root("/"), owner match does not happen because owner is returned as empty string.
-    // we try to force owner match just for purpose of tests to make sure all operations work seemlessly with owner.
-    if (this.performOwnerMatch
-      && StringUtils.equalsIgnoreCase(wasbAbsolutePath, qualifiedPrefixUrl + "/")) {
-      owner = currentUserShortName;
-    }
-
-    boolean shouldEvaluateOwnerAccess = owner != null && !owner.isEmpty()
-      && this.performOwnerMatch;
-
-    boolean isOwnerMatch =  StringUtils.equalsIgnoreCase(currentUserShortName, owner);
-
-    AuthorizationComponent component =
-        new AuthorizationComponent(wasbAbsolutePath, accessType);
-
-    if (authRules.containsKey(component)) {
-      return shouldEvaluateOwnerAccess ? isOwnerMatch && authRules.get(component) : authRules.get(component);
-    } else {
-      // Regex-pattern match if we don't have a straight match
-      for (Map.Entry<AuthorizationComponent, Boolean> entry : authRules.entrySet()) {
-        AuthorizationComponent key = entry.getKey();
-        String keyPath = key.getWasbAbsolutePath();
-        String keyAccess = key.getAccessType();
-
-        if (keyPath.endsWith("*") && Pattern.matches(keyPath, wasbAbsolutePath) && keyAccess.equals(accessType)) {
-          return shouldEvaluateOwnerAccess ? isOwnerMatch && entry.getValue() : entry.getValue();
+        if (wasbAbsolutePath.endsWith(
+                NativeAzureFileSystem.FolderRenamePending.SUFFIX)) {
+            return true;
         }
+
+        CachedAuthorizerEntry cacheKey = new CachedAuthorizerEntry(wasbAbsolutePath, accessType, owner);
+        Boolean cacheresult = cache.get(cacheKey);
+        if (cacheresult != null) {
+            return cacheresult;
+        }
+
+        boolean authorizeresult = authorizeInternal(wasbAbsolutePath, accessType, owner);
+        cache.put(cacheKey, authorizeresult);
+
+        return authorizeresult;
+    }
+
+    private boolean authorizeInternal(String wasbAbsolutePath, String accessType, String owner)
+            throws WasbAuthorizationException {
+
+        String currentUserShortName = "";
+        try {
+            UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+            currentUserShortName = ugi.getShortUserName();
+        } catch (Exception e) {
+            //no op
+        }
+
+        // In case of root("/"), owner match does not happen
+        // because owner is returned as empty string.
+        // we try to force owner match just for purpose of tests
+        // to make sure all operations work seemlessly with owner.
+        if (StringUtils.equalsIgnoreCase(wasbAbsolutePath, qualifiedPrefixUrl + "/")) {
+            owner = currentUserShortName;
+        }
+
+        AuthorizationComponent component = new AuthorizationComponent(wasbAbsolutePath,
+                accessType, currentUserShortName);
+
+        return processRules(authRules, component, owner);
+    }
+
+    private boolean processRules(Map<AuthorizationComponent, Boolean> authRules,
+                                 AuthorizationComponent component, String owner) {
+
+        // Direct match of rules and access request
+        if (authRules.containsKey(component)) {
+            return authRules.get(component);
+        } else {
+            // Regex-pattern match if we don't have a straight match for path
+            // Current user match if we don't have a owner match
+            for (Map.Entry<AuthorizationComponent, Boolean> entry : authRules.entrySet()) {
+                AuthorizationComponent key = entry.getKey();
+                String keyPath = key.getWasbAbsolutePath();
+                String keyAccess = key.getAccessType();
+                String keyUser = key.getUser();
+
+                boolean foundMatchingOwnerRule = keyPath.equals(component.getWasbAbsolutePath())
+                        && keyAccess.equals(component.getAccessType())
+                        && keyUser.equalsIgnoreCase("owner")
+                        && owner.equals(component.getUser());
+
+                boolean foundMatchingPatternRule = keyPath.endsWith("*")
+                        && Pattern.matches(keyPath, component.getWasbAbsolutePath())
+                        && keyAccess.equals(component.getAccessType())
+                        && keyUser.equalsIgnoreCase(component.getUser());
+
+                boolean foundMatchingPatternOwnerRule = keyPath.endsWith("*")
+                        && Pattern.matches(keyPath, component.getWasbAbsolutePath())
+                        && keyAccess.equals(component.getAccessType())
+                        && keyUser.equalsIgnoreCase("owner")
+                        && owner.equals(component.getUser());
+
+                if (foundMatchingOwnerRule
+                        || foundMatchingPatternRule
+                        || foundMatchingPatternOwnerRule) {
+                    return entry.getValue();
+                }
+            }
+            return false;
+        }
+    }
+
+    public void deleteAllAuthRules() {
+        authRules.clear();
+        cache.clear();
+    }
+
+    private static class AuthorizationComponent {
+
+      private final String wasbAbsolutePath;
+      private final String accessType;
+      private final String user;
+
+      AuthorizationComponent(String wasbAbsolutePath,
+          String accessType, String user) {
+        this.wasbAbsolutePath = wasbAbsolutePath;
+        this.accessType = accessType;
+        this.user = user;
       }
-      return false;
-    }
-  }
 
-  public void deleteAllAuthRules() {
-    authRules.clear();
-    cache.clear();
-  }
-}
+      @Override
+      public int hashCode() {
+        return this.wasbAbsolutePath.hashCode() ^ this.accessType.hashCode();
+      }
 
-class AuthorizationComponent {
+      @Override
+      public boolean equals(Object obj) {
 
-  private String wasbAbsolutePath;
-  private String accessType;
+        if (obj == this) {
+          return true;
+        }
 
-  public AuthorizationComponent(String wasbAbsolutePath,
-      String accessType) {
-    this.wasbAbsolutePath = wasbAbsolutePath;
-    this.accessType = accessType;
-  }
+        if (obj == null
+            || !(obj instanceof AuthorizationComponent)) {
+            return false;
+        }
 
-  @Override
-  public int hashCode() {
-    return this.wasbAbsolutePath.hashCode() ^ this.accessType.hashCode();
-  }
+        return ((AuthorizationComponent) obj).
+          getWasbAbsolutePath().equals(this.wasbAbsolutePath)
+          && ((AuthorizationComponent) obj).
+          getAccessType().equals(this.accessType)
+          && ((AuthorizationComponent) obj).
+          getUser().equals(this.user);
+      }
 
-  @Override
-  public boolean equals(Object obj) {
+      public String getWasbAbsolutePath() {
+        return this.wasbAbsolutePath;
+      }
 
-    if (obj == this) {
-      return true;
-    }
+      public String getAccessType() {
+        return accessType;
+      }
 
-    if (obj == null
-        || !(obj instanceof AuthorizationComponent)) {
-      return false;
-    }
-
-    return ((AuthorizationComponent)obj).
-              getWasbAbsolutePath().equals(this.wasbAbsolutePath)
-            && ((AuthorizationComponent)obj).
-              getAccessType().equals(this.accessType);
-  }
-
-  public String getWasbAbsolutePath() {
-    return this.wasbAbsolutePath;
-  }
-
-  public String getAccessType() {
-    return accessType;
-  }
+      public String getUser() {
+        return user;
+      }
+   }
 }

@@ -20,6 +20,10 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
+import java.io.IOException;
+
+import static org.junit.Assert.fail;
+
 
 /**
  * Erasure coder test base with utilities for hitchhiker.
@@ -53,7 +57,11 @@ public abstract class TestHHErasureCoderBase extends TestErasureCoderBase{
       }
 
       // Given the input chunks and output chunk buffers, just call it !
-      codingStep.performCoding(inputChunks, outputChunks);
+      try {
+        codingStep.performCoding(inputChunks, outputChunks);
+      } catch (IOException e) {
+        fail("Unexpected IOException: " + e.getMessage());
+      }
     }
 
     codingStep.finish();

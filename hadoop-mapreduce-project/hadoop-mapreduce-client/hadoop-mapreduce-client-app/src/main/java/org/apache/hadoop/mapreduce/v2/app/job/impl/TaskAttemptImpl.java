@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -33,13 +37,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -91,6 +94,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunched
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
@@ -98,6 +102,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptTooManyFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptKilledEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
@@ -123,6 +128,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -136,9 +142,13 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.RackResolver;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of TaskAttempt interface.
@@ -149,7 +159,8 @@ public abstract class TaskAttemptImpl implements
       EventHandler<TaskAttemptEvent> {
 
   static final Counters EMPTY_COUNTERS = new Counters();
-  private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
@@ -185,6 +196,7 @@ public abstract class TaskAttemptImpl implements
   private Locality locality;
   private Avataar avataar;
   private boolean rescheduleNextAttempt = false;
+  private boolean failFast = false;
 
   private static final CleanupContainerTransition
       CLEANUP_CONTAINER_TRANSITION = new CleanupContainerTransition();
@@ -664,12 +676,8 @@ public abstract class TaskAttemptImpl implements
     this.jobFile = jobFile;
     this.partition = partition;
 
-    //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemorySize(
-        getMemoryRequired(conf, taskId.getTaskType()));
-    this.resourceCapability.setVirtualCores(
-        getCpuRequired(conf, taskId.getTaskType()));
+    populateResourceCapability(taskId.getTaskType());
 
     this.dataLocalHosts = resolveHosts(dataLocalHosts);
     RackResolver.init(conf);
@@ -686,38 +694,171 @@ public abstract class TaskAttemptImpl implements
     stateMachine = stateMachineFactory.make(this);
   }
 
+  private void populateResourceCapability(TaskType taskType) {
+    String resourceTypePrefix =
+        getResourceTypePrefix(taskType);
+    boolean memorySet = false;
+    boolean cpuVcoresSet = false;
+    if (resourceTypePrefix != null) {
+      List<ResourceInformation> resourceRequests =
+          ResourceUtils.getRequestedResourcesFromConfig(conf,
+              resourceTypePrefix);
+      for (ResourceInformation resourceRequest : resourceRequests) {
+        String resourceName = resourceRequest.getName();
+        if (MRJobConfig.RESOURCE_TYPE_NAME_MEMORY.equals(resourceName) ||
+            MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY.equals(
+                resourceName)) {
+          if (memorySet) {
+            throw new IllegalArgumentException(
+                "Only one of the following keys " +
+                    "can be specified for a single job: " +
+                    MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY + ", " +
+                    MRJobConfig.RESOURCE_TYPE_NAME_MEMORY);
+          }
+          String units = isEmpty(resourceRequest.getUnits()) ?
+              ResourceUtils.getDefaultUnit(ResourceInformation.MEMORY_URI) :
+                resourceRequest.getUnits();
+          this.resourceCapability.setMemorySize(
+              UnitsConversionUtil.convert(units, "Mi",
+                  resourceRequest.getValue()));
+          memorySet = true;
+          String memoryKey = getMemoryKey(taskType);
+          if (memoryKey != null && conf.get(memoryKey) != null) {
+            LOG.warn("Configuration " + resourceTypePrefix + resourceName +
+                "=" + resourceRequest.getValue() + resourceRequest.getUnits() +
+                " is overriding the " + memoryKey + "=" + conf.get(memoryKey) +
+                " configuration");
+          }
+        } else if (MRJobConfig.RESOURCE_TYPE_NAME_VCORE.equals(
+            resourceName)) {
+          this.resourceCapability.setVirtualCores(
+              (int) UnitsConversionUtil.convert(resourceRequest.getUnits(), "",
+                  resourceRequest.getValue()));
+          cpuVcoresSet = true;
+          String cpuKey = getCpuVcoresKey(taskType);
+          if (cpuKey != null && conf.get(cpuKey) != null) {
+            LOG.warn("Configuration " + resourceTypePrefix +
+                MRJobConfig.RESOURCE_TYPE_NAME_VCORE + "=" +
+                resourceRequest.getValue() + resourceRequest.getUnits() +
+                " is overriding the " + cpuKey + "=" +
+                conf.get(cpuKey) + " configuration");
+          }
+        } else {
+          ResourceInformation resourceInformation =
+              this.resourceCapability.getResourceInformation(resourceName);
+          resourceInformation.setUnits(resourceRequest.getUnits());
+          resourceInformation.setValue(resourceRequest.getValue());
+          this.resourceCapability.setResourceInformation(resourceName,
+              resourceInformation);
+        }
+      }
+    }
+    if (!memorySet) {
+      this.resourceCapability.setMemorySize(getMemoryRequired(conf, taskType));
+    }
+    if (!cpuVcoresSet) {
+      this.resourceCapability.setVirtualCores(getCpuRequired(conf, taskType));
+    }
+  }
+
+  private String getCpuVcoresKey(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_CPU_VCORES;
+    case REDUCE:
+      return MRJobConfig.REDUCE_CPU_VCORES;
+    default:
+      return null;
+    }
+  }
+
+  private String getMemoryKey(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_MEMORY_MB;
+    case REDUCE:
+      return MRJobConfig.REDUCE_MEMORY_MB;
+    default:
+      return null;
+    }
+  }
+
+  private Integer getCpuVcoreDefault(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.DEFAULT_MAP_CPU_VCORES;
+    case REDUCE:
+      return MRJobConfig.DEFAULT_REDUCE_CPU_VCORES;
+    default:
+      return null;
+    }
+  }
+
   private int getMemoryRequired(JobConf conf, TaskType taskType) {
     return conf.getMemoryRequired(TypeConverter.fromYarn(taskType));
   }
 
   private int getCpuRequired(Configuration conf, TaskType taskType) {
     int vcores = 1;
-    if (taskType == TaskType.MAP)  {
-      vcores =
-          conf.getInt(MRJobConfig.MAP_CPU_VCORES,
-              MRJobConfig.DEFAULT_MAP_CPU_VCORES);
-    } else if (taskType == TaskType.REDUCE) {
-      vcores =
-          conf.getInt(MRJobConfig.REDUCE_CPU_VCORES,
-              MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    String cpuVcoreKey = getCpuVcoresKey(taskType);
+    if (cpuVcoreKey != null) {
+      Integer defaultCpuVcores = getCpuVcoreDefault(taskType);
+      if (null == defaultCpuVcores) {
+        defaultCpuVcores = vcores;
+      }
+      vcores = conf.getInt(cpuVcoreKey, defaultCpuVcores);
     }
-    
     return vcores;
+  }
+
+  private String getResourceTypePrefix(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_RESOURCE_TYPE_PREFIX;
+    case REDUCE:
+      return MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX;
+    default:
+      LOG.info("TaskType " + taskType +
+          " does not support custom resource types - this support can be " +
+          "added in " + getClass().getSimpleName());
+      return null;
+    }
   }
 
   /**
    * Create a {@link LocalResource} record with all the given parameters.
+   * The NM that hosts AM container will upload resources to shared cache.
+   * Thus there is no need to ask task container's NM to upload the
+   * resources to shared cache. Set the shared cache upload policy to
+   * false.
    */
   private static LocalResource createLocalResource(FileSystem fc, Path file,
-      LocalResourceType type, LocalResourceVisibility visibility)
-      throws IOException {
+      String fileSymlink, LocalResourceType type,
+      LocalResourceVisibility visibility) throws IOException {
     FileStatus fstat = fc.getFileStatus(file);
-    URL resourceURL = URL.fromPath(fc.resolvePath(fstat.getPath()));
+    // We need to be careful when converting from path to URL to add a fragment
+    // so that the symlink name when localized will be correct.
+    Path qualifiedPath = fc.resolvePath(fstat.getPath());
+    URI uriWithFragment = null;
+    boolean useFragment = fileSymlink != null && !fileSymlink.equals("");
+    try {
+      if (useFragment) {
+        uriWithFragment = new URI(qualifiedPath.toUri() + "#" + fileSymlink);
+      } else {
+        uriWithFragment = qualifiedPath.toUri();
+      }
+    } catch (URISyntaxException e) {
+      throw new IOException(
+          "Error parsing local resource path."
+              + " Path was not able to be converted to a URI: " + qualifiedPath,
+          e);
+    }
+    URL resourceURL = URL.fromURI(uriWithFragment);
     long resourceSize = fstat.getLen();
     long resourceModificationTime = fstat.getModificationTime();
 
     return LocalResource.newInstance(resourceURL, type, visibility,
-      resourceSize, resourceModificationTime);
+        resourceSize, resourceModificationTime, false);
   }
 
   /**
@@ -828,8 +969,18 @@ public abstract class TaskAttemptImpl implements
       final FileSystem jobJarFs = FileSystem.get(jobJarPath.toUri(), conf);
       Path remoteJobJar = jobJarPath.makeQualified(jobJarFs.getUri(),
           jobJarFs.getWorkingDirectory());
-      LocalResource rc = createLocalResource(jobJarFs, remoteJobJar,
-          LocalResourceType.PATTERN, LocalResourceVisibility.APPLICATION);
+      LocalResourceVisibility jobJarViz =
+          conf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
+                  ? LocalResourceVisibility.PUBLIC
+                  : LocalResourceVisibility.APPLICATION;
+      // We hard code the job.jar localized symlink in the container directory.
+      // This is because the mapreduce app expects the job.jar to be named
+      // accordingly. Additionally we set the shared cache upload policy to
+      // false. Resources are uploaded by the AM if necessary.
+      LocalResource rc =
+          createLocalResource(jobJarFs, remoteJobJar, MRJobConfig.JOB_JAR,
+              LocalResourceType.PATTERN, jobJarViz);
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN,
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);
@@ -854,9 +1005,12 @@ public abstract class TaskAttemptImpl implements
     Path remoteJobConfPath =
         new Path(remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
     FileSystem remoteFS = FileSystem.get(conf);
+    // There is no point to ask task container's NM to upload the resource
+    // to shared cache (job conf is not shared). Therefore, createLocalResource
+    // will set the shared cache upload policy to false
     localResources.put(MRJobConfig.JOB_CONF_FILE,
-        createLocalResource(remoteFS, remoteJobConfPath, LocalResourceType.FILE,
-            LocalResourceVisibility.APPLICATION));
+        createLocalResource(remoteFS, remoteJobConfPath, null,
+            LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
     LOG.info("The job-conf file on the remote FS is "
         + remoteJobConfPath.toUri().toASCIIString());
   }
@@ -1261,6 +1415,14 @@ public abstract class TaskAttemptImpl implements
   public void setAvataar(Avataar avataar) {
     this.avataar = avataar;
   }
+
+  public void setTaskFailFast(boolean failFast) {
+    this.failFast = failFast;
+  }
+
+  public boolean isTaskFailFast() {
+    return failFast;
+  }
   
   @SuppressWarnings("unchecked")
   public TaskAttemptStateInternal recover(TaskAttemptInfo taInfo,
@@ -1530,7 +1692,7 @@ public abstract class TaskAttemptImpl implements
             StringUtils.join(
                 LINE_SEPARATOR, taskAttempt.getDiagnostics()),
                 taskAttempt.getCounters(), taskAttempt
-                .getProgressSplitBlock().burst());
+                .getProgressSplitBlock().burst(), taskAttempt.launchTime);
     return tauce;
   }
 
@@ -1629,7 +1791,6 @@ public abstract class TaskAttemptImpl implements
     taskAttempt.reportedStatus.progress = 1.0f;
     taskAttempt.updateProgressSplits();
   }
-
 
   static class RequestContainerTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
@@ -1771,9 +1932,12 @@ public abstract class TaskAttemptImpl implements
 
       switch(finalState) {
         case FAILED:
-          taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-              taskAttempt.attemptId,
-              TaskEventType.T_ATTEMPT_FAILED));
+          boolean fastFail = false;
+          if (event instanceof TaskAttemptFailEvent) {
+            fastFail = ((TaskAttemptFailEvent) event).isFastFail();
+          }
+          taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+              taskAttempt.attemptId, fastFail));
           break;
         case KILLED:
           taskAttempt.eventHandler.handle(new TaskTAttemptKilledEvent(
@@ -1815,6 +1979,7 @@ public abstract class TaskAttemptImpl implements
       // register it to TaskAttemptListener so that it can start monitoring it.
       taskAttempt.taskAttemptListener
         .registerLaunchedTask(taskAttempt.attemptId, taskAttempt.jvmID);
+
       //TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr = // TODO: Costly to create sock-addr?
           NetUtils.createSocketAddr(taskAttempt.container.getNodeHttpAddress());
@@ -1890,13 +2055,16 @@ public abstract class TaskAttemptImpl implements
 
   private static class FailedTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+
+
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt,
         TaskAttemptEvent event) {
       // set the finish time
       taskAttempt.setFinishTime();
-      notifyTaskAttemptFailed(taskAttempt);
+
+      notifyTaskAttemptFailed(taskAttempt, taskAttempt.isTaskFailFast());
     }
   }
 
@@ -1943,35 +2111,35 @@ public abstract class TaskAttemptImpl implements
         this.container == null ? -1 : this.container.getNodeId().getPort();
     if (attemptId.getTaskId().getTaskType() == TaskType.MAP) {
       MapAttemptFinishedEvent mfe =
-         new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
-         TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
-         state.toString(),
-         this.reportedStatus.mapFinishTime,
-         finishTime,
-         containerHostName,
-         containerNodePort,
-         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
-         this.reportedStatus.stateString,
-         getCounters(),
-         getProgressSplitBlock().burst());
-         eventHandler.handle(
-           new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
+          new MapAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
+          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
+          state.toString(),
+          this.reportedStatus.mapFinishTime,
+          finishTime,
+          containerHostName,
+          containerNodePort,
+          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
+          this.reportedStatus.stateString,
+          getCounters(),
+          getProgressSplitBlock().burst(), launchTime);
+      eventHandler.handle(
+          new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
     } else {
-       ReduceAttemptFinishedEvent rfe =
-         new ReduceAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
-         TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
-         state.toString(),
-         this.reportedStatus.shuffleFinishTime,
-         this.reportedStatus.sortFinishTime,
-         finishTime,
-         containerHostName,
-         containerNodePort,
-         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
-         this.reportedStatus.stateString,
-         getCounters(),
-         getProgressSplitBlock().burst());
-         eventHandler.handle(
-           new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
+      ReduceAttemptFinishedEvent rfe =
+          new ReduceAttemptFinishedEvent(TypeConverter.fromYarn(attemptId),
+          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
+          state.toString(),
+          this.reportedStatus.shuffleFinishTime,
+          this.reportedStatus.sortFinishTime,
+          finishTime,
+          containerHostName,
+          containerNodePort,
+          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
+          this.reportedStatus.stateString,
+          getCounters(),
+          getProgressSplitBlock().burst(), launchTime);
+      eventHandler.handle(
+          new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
   }
 
@@ -2003,8 +2171,8 @@ public abstract class TaskAttemptImpl implements
         LOG.debug("Not generating HistoryFinish event since start event not " +
             "generated for taskAttempt: " + taskAttempt.getID());
       }
-      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
+      taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+          taskAttempt.attemptId));
     }
   }
   
@@ -2181,6 +2349,8 @@ public abstract class TaskAttemptImpl implements
       if (event instanceof TaskAttemptKillEvent) {
         taskAttempt.setRescheduleNextAttempt(
             ((TaskAttemptKillEvent)event).getRescheduleAttempt());
+      } else if (event instanceof TaskAttemptFailEvent) {
+        taskAttempt.setTaskFailFast(((TaskAttemptFailEvent)event).isFastFail());
       }
     }
   }
@@ -2249,12 +2419,13 @@ public abstract class TaskAttemptImpl implements
       // register it to finishing state
       taskAttempt.appContext.getTaskAttemptFinishingMonitor().register(
           taskAttempt.attemptId);
-      notifyTaskAttemptFailed(taskAttempt);
+      notifyTaskAttemptFailed(taskAttempt, false);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private static void notifyTaskAttemptFailed(TaskAttemptImpl taskAttempt) {
+  private static void notifyTaskAttemptFailed(TaskAttemptImpl taskAttempt,
+      boolean fastFail) {
     if (taskAttempt.getLaunchTime() == 0) {
       sendJHStartEventForAssignedFailTask(taskAttempt);
     }
@@ -2268,8 +2439,8 @@ public abstract class TaskAttemptImpl implements
     taskAttempt.eventHandler.handle(new JobHistoryEvent(
         taskAttempt.attemptId.getTaskId().getJobId(), tauce));
 
-    taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-        taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
+    taskAttempt.eventHandler.handle(new TaskTAttemptFailedEvent(
+        taskAttempt.attemptId, fastFail));
 
   }
 
@@ -2280,15 +2451,20 @@ public abstract class TaskAttemptImpl implements
   }
 
   private static class StatusUpdater 
-       implements SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+      implements SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
         TaskAttemptEvent event) {
-      // Status update calls don't really change the state of the attempt.
+      TaskAttemptStatusUpdateEvent statusEvent =
+          ((TaskAttemptStatusUpdateEvent)event);
+
+      AtomicReference<TaskAttemptStatus> taskAttemptStatusRef =
+          statusEvent.getTaskAttemptStatusRef();
+
       TaskAttemptStatus newReportedStatus =
-          ((TaskAttemptStatusUpdateEvent) event)
-              .getReportedTaskAttemptStatus();
+          taskAttemptStatusRef.getAndSet(null);
+
       // Now switch the information in the reportedStatus
       taskAttempt.reportedStatus = newReportedStatus;
       taskAttempt.reportedStatus.taskState = taskAttempt.getState();
@@ -2297,12 +2473,10 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.eventHandler.handle
           (new SpeculatorEvent
               (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
-      
       taskAttempt.updateProgressSplits();
-      
       //if fetch failures are present, send the fetch failure event to job
       //this only will happen in reduce attempt type
-      if (taskAttempt.reportedStatus.fetchFailedMaps != null && 
+      if (taskAttempt.reportedStatus.fetchFailedMaps != null &&
           taskAttempt.reportedStatus.fetchFailedMaps.size() > 0) {
         String hostname = taskAttempt.container == null ? "UNKNOWN"
             : taskAttempt.container.getNodeId().getHost();

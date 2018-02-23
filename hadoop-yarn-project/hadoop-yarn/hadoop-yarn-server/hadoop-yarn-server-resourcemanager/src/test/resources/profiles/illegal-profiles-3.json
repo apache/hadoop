@@ -1,0 +1,10 @@
+{
+    "default" : {
+        "memoryMB" : 2048,
+        "vcores" : 2
+    },
+    "maximum" : {
+        "memoryMB": 4096,
+        "vcores" : 4
+    }
+}

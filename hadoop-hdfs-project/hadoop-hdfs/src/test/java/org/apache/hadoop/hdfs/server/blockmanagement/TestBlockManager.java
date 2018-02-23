@@ -17,45 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
-import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -80,8 +45,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -115,10 +80,44 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Lists;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestBlockManager {
   private DatanodeStorageInfo[] storages;
@@ -1031,8 +1030,7 @@ public class TestBlockManager {
         		0x1BAD5EED);
       }
       catch (RemoteException re) {
-    	  GenericTestUtils.assertExceptionContains("nodes instead of "
-    	  		+ "minReplication", re);
+        GenericTestUtils.assertExceptionContains("of the 1 minReplication", re);
       }
     }
     finally {
@@ -1320,8 +1318,9 @@ public class TestBlockManager {
       assertTrue("Unexpected text in metasave," +
               "was expecting corrupt blocks section!", foundIt);
       corruptBlocksLine = reader.readLine();
-      String regex = "Block=[0-9]+\\tNode=.*\\tStorageID=.*StorageState.*" +
-          "TotalReplicas=.*Reason=GENSTAMP_MISMATCH";
+      String regex = "Block=blk_[0-9]+_[0-9]+\\tSize=.*\\tNode=.*" +
+          "\\tStorageID=.*\\tStorageState.*" +
+          "\\tTotalReplicas=.*\\tReason=GENSTAMP_MISMATCH";
       assertTrue("Unexpected corrupt block section in metasave!",
           corruptBlocksLine.matches(regex));
       corruptBlocksLine = reader.readLine();
@@ -1365,12 +1364,10 @@ public class TestBlockManager {
         .getNumDataUnits();
     final int numParityBlocks = StripedFileTestUtil.getDefaultECPolicy()
         .getNumParityUnits();
-    final long blockSize = 64 * 1024;
+    final long blockSize = 6 * 1024 * 1024;
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -1383,6 +1380,8 @@ public class TestBlockManager {
       final Path ecDir = new Path("/ec");
       final Path testFileUnsatisfied = new Path(ecDir, "test1");
       final Path testFileSatisfied = new Path(ecDir, "test2");
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       cluster.getFileSystem().getClient().mkdirs(ecDir.toString(), null, true);
       cluster.getFileSystem().getClient()
           .setErasureCodingPolicy(ecDir.toString(),
@@ -1456,6 +1455,171 @@ public class TestBlockManager {
       assertFalse("Block group of " + file + " should be placement" +
               " policy unsatisfied, currently!",
           blockManager.isPlacementPolicySatisfied(blockInfo));
+    }
+  }
+
+  @Test
+  public void testMetaSaveMissingReplicas() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo block = makeBlockReplicasMissing(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should have reported missing blocks.",
+          output.contains("Metasave: Blocks currently missing: 1"));
+      assertTrue("There should be 0 blocks waiting for reconstruction",
+          output.contains("Metasave: Blocks waiting for reconstruction: 0"));
+      String blockNameGS = block.getBlockName() + "_" +
+          block.getGenerationStamp();
+      assertTrue("Block " + blockNameGS + " should be MISSING.",
+          output.contains(blockNameGS + " MISSING"));
+    } finally {
+      reader.close();
+      file.delete();
+    }
+  }
+
+  private BlockInfo makeBlockReplicasMissing(long blockId,
+      List<DatanodeDescriptor> nodesList) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodesList);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    bm.markBlockReplicasAsCorrupt(blockInfo, blockInfo,
+        blockInfo.getGenerationStamp() + 1,
+        blockInfo.getNumBytes(),
+        new DatanodeStorageInfo[]{});
+    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
+    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    bm.checkRedundancy(mockedBc);
+    return blockInfo;
+  }
+
+  private BlockInfo makeBlockReplicasMaintenance(long blockId,
+      List<DatanodeDescriptor> nodesList) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodesList);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    nodesList.get(0).setInMaintenance();
+    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
+    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    bm.checkRedundancy(mockedBc);
+    return blockInfo;
+  }
+
+  @Test
+  public void testMetaSaveInMaintenanceReplicas() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo block = makeBlockReplicasMaintenance(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+        System.out.println(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have reported " +
+              "missing blocks.",
+          output.contains("Metasave: Blocks currently missing: 0"));
+      assertTrue("There should be 1 block waiting for reconstruction",
+          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      String blockNameGS = block.getBlockName() + "_" +
+          block.getGenerationStamp();
+      assertTrue("Block " + blockNameGS +
+              " should be list as maintenance.",
+          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
+              "and decommissioned: 0 corrupt: 0 in excess: " +
+              "0 maintenance mode: 1)"));
+    } finally {
+      reader.close();
+      file.delete();
+    }
+  }
+
+  private BlockInfo makeBlockReplicasDecommission(long blockId,
+      List<DatanodeDescriptor> nodesList) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodesList);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    nodesList.get(0).startDecommission();
+    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
+    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    bm.checkRedundancy(mockedBc);
+    return blockInfo;
+  }
+
+  @Test
+  public void testMetaSaveDecommissioningReplicas() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo block = makeBlockReplicasDecommission(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have reported " +
+              "missing blocks.",
+          output.contains("Metasave: Blocks currently missing: 0"));
+      assertTrue("There should be 1 block waiting for reconstruction",
+          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      String blockNameGS = block.getBlockName() + "_" +
+          block.getGenerationStamp();
+      assertTrue("Block " + blockNameGS +
+              " should be list as maintenance.",
+          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
+              "and decommissioned: 1 corrupt: 0 in excess: " +
+              "0 maintenance mode: 0)"));
+    } finally {
+      reader.close();
+      file.delete();
     }
   }
 

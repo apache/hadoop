@@ -22,7 +22,7 @@ export default Ember.Controller.extend({
   queryParams: ["service"],
   service: undefined,
 
-  breadcrumbs: Ember.computed("model.attempt.appId", function () {
+  breadcrumbs: Ember.computed("model.attempt.appId", "model.attempt.id", function () {
     var appId = this.get("model.attempt.appId");
     var attemptId = this.get("model.attempt.id");
     var serviceName = this.get('service');
@@ -50,7 +50,7 @@ export default Ember.Controller.extend({
         routeName: 'yarn-services'
       }, {
         text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}/info?service=${serviceName}`
+        href: `#/yarn-app/${appId}/components?service=${serviceName}`
       }, {
         text: "Attempts",
         href: `#/yarn-app/${appId}/attempts?service=${serviceName}`

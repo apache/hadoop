@@ -130,7 +130,7 @@ public class TestEditLog {
 
   /**
    * A garbage mkdir op which is used for testing
-   * {@link EditLogFileInputStream#scanEditLog(File)}
+   * {@link EditLogFileInputStream#scanEditLog(File, long, boolean)}
    */
   public static class GarbageMkdirOp extends FSEditLogOp {
     public GarbageMkdirOp() {
@@ -288,7 +288,8 @@ public class TestEditLog {
       long numEdits = testLoad(HADOOP20_SOME_EDITS, namesystem);
       assertEquals(3, numEdits);
       // Sanity check the edit
-      HdfsFileStatus fileInfo = namesystem.getFileInfo("/myfile", false);
+      HdfsFileStatus fileInfo =
+          namesystem.getFileInfo("/myfile", false, false, false);
       assertEquals("supergroup", fileInfo.getGroup());
       assertEquals(3, fileInfo.getReplication());
     } finally {
@@ -1141,7 +1142,7 @@ public class TestEditLog {
     /**
      * Construct the failure specification. 
      * @param roll number to fail after. e.g. 1 to fail after the first roll
-     * @param loginfo index of journal to fail. 
+     * @param logindex index of journal to fail.
      */
     AbortSpec(int roll, int logindex) {
       this.roll = roll;

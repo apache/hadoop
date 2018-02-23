@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 /**
@@ -88,4 +89,17 @@ public interface CapacitySchedulerContext {
    * @return Max Cluster level App priority.
    */
   Priority getMaxClusterLevelAppPriority();
+
+  /**
+   * Returns if configuration is mutable.
+   * @return if configuration is mutable
+   */
+  boolean isConfigurationMutable();
+
+  /**
+   * Get clock from scheduler
+   * @return Clock
+   */
+  Clock getClock();
+
 }

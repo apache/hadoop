@@ -177,6 +177,33 @@ Get encryption information from a file. This can be used to find out whether a f
 |:---- |:---- |
 | *path* | The path of the file to get encryption information. |
 
+### <a name="reencryptZone"></a>reencryptZone
+
+Usage: `[-reencryptZone <action> -path <zone>]`
+
+Re-encrypts an encryption zone, by iterating through the encryption zone, and calling the KeyProvider's reencryptEncryptedKeys interface to batch-re-encrypt all files' EDEKs with the latest version encryption zone key in the key provider. Requires superuser permissions.
+
+Note that re-encryption does not apply to snapshots, due to snapshots' immutable nature.
+
+| | |
+|:---- |:---- |
+| *action* | The re-encrypt action to perform. Must be either `-start` or `-cancel`. |
+| *path* | The path to the root of the encryption zone. |
+
+Re-encryption is a NameNode-only operation in HDFS, so could potentially put intensive load to the NameNode. The following configurations can be changed to control the stress on the NameNode, depending on the acceptable throughput impact to the cluster.
+
+| | |
+|:---- |:---- |
+| *dfs.namenode.reencrypt.batch.size* | The number of EDEKs in a batch to be sent to the KMS for re-encryption. Each batch is processed when holding the name system read/write lock, with throttling happening between batches. See configs below. |
+| *dfs.namenode.reencrypt.throttle.limit.handler.ratio* | Ratio of read locks to be held during re-encryption. 1.0 means no throttling. 0.5 means re-encryption can hold the readlock at most 50% of its total processing time. Negative value or 0 are invalid. |
+| *dfs.namenode.reencrypt.throttle.limit.updater.ratio* | Ratio of write locks to be held during re-encryption. 1.0 means no throttling. 0.5 means re-encryption can hold the writelock at most 50% of its total processing time. Negative value or 0 are invalid. |
+
+### <a name="listReencryptionStatus"></a>listReencryptionStatus
+
+Usage: `[-listReencryptionStatus]`
+
+List re-encryption information for all encryption zones. Requires superuser permissions.
+
 <a name="Example_usage"></a>Example usage
 -------------
 
@@ -282,4 +309,20 @@ These exploits assume that the attacker has compromised HDFS, but does not have 
 
 ### <a name="Rogue_user_exploits"></a>Rogue user exploits
 
-A rogue user can collect keys of files they have access to, and use them later to decrypt the encrypted data of those files. As the user had access to those files, they already had access to the file contents. This can be mitigated through periodic key rolling policies.
+A rogue user can collect keys of files they have access to, and use them later to decrypt the encrypted data of those files. As the user had access to those files, they already had access to the file contents. This can be mitigated through periodic key rolling policies. The [reencryptZone](#reencryptZone) command is usually required after key rolling, to make sure the EDEKs on existing files use the new version key.
+
+Manual steps to a complete key rolling and re-encryption are listed below. These instructions assume that you are running as the key admin or HDFS superuser as is appropriate.
+
+    # As the key admin, roll the key to a new version
+    hadoop key roll exposedKey
+
+    # As the super user, re-encrypt the encryption zone. Possibly list zones first.
+    hdfs crypto -listZones
+    hdfs crypto -reencryptZone -start -path /zone
+
+    # As the super user, periodically check the status of re-encryption
+    hdfs crypto -listReencryptionStatus
+
+    # As the super user, get encryption information from the file and double check it's encryption key version
+    hdfs crypto -getFileEncryptionInfo -path /zone/helloWorld
+    # console output: {cipherSuite: {name: AES/CTR/NoPadding, algorithmBlockSize: 16}, cryptoProtocolVersion: CryptoProtocolVersion{description='Encryption zones', version=2, unknownValue=null}, edek: 2010d301afbd43b58f10737ce4e93b39, iv: ade2293db2bab1a2e337f91361304cb3, keyName: exposedKey, ezKeyVersionName: exposedKey@1}

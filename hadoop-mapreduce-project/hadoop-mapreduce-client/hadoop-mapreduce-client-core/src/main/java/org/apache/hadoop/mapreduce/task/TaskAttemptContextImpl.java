@@ -118,4 +118,15 @@ public class TaskAttemptContextImpl extends JobContextImpl
   public float getProgress() {
     return reporter.getProgress();
   }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "TaskAttemptContextImpl{");
+    sb.append(super.toString());
+    sb.append("; taskId=").append(taskId);
+    sb.append(", status='").append(status).append('\'');
+    sb.append('}');
+    return sb.toString();
+  }
 }

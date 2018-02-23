@@ -22,11 +22,14 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 import com.google.protobuf.TextFormat;
+
+import java.util.Map;
 
 @Private
 @Unstable
@@ -41,6 +44,9 @@ extends ApplicationResourceUsageReport {
   Resource reservedResources;
   Resource neededResources;
 
+  private Map<String, Long> resourceSecondsMap;
+  private Map<String, Long> preemptedResourceSecondsMap;
+
   public ApplicationResourceUsageReportPBImpl() {
     builder = ApplicationResourceUsageReportProto.newBuilder();
   }
@@ -49,6 +55,8 @@ extends ApplicationResourceUsageReport {
       ApplicationResourceUsageReportProto proto) {
     this.proto = proto;
     viaProto = true;
+    getResourceSecondsMap();
+    getPreemptedResourceSecondsMap();
   }
 
   public synchronized ApplicationResourceUsageReportProto getProto() {
@@ -89,6 +97,23 @@ extends ApplicationResourceUsageReport {
     if (this.neededResources != null) {
       builder.setNeededResources(convertToProtoFormat(this.neededResources));
     }
+    builder.clearApplicationResourceUsageMap();
+    builder.clearApplicationPreemptedResourceUsageMap();
+
+    if (preemptedResourceSecondsMap != null && !preemptedResourceSecondsMap
+        .isEmpty()) {
+      builder.addAllApplicationPreemptedResourceUsageMap(ProtoUtils
+          .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
+    }
+    if (resourceSecondsMap != null && !resourceSecondsMap.isEmpty()) {
+      builder.addAllApplicationResourceUsageMap(
+          ProtoUtils.convertMapToStringLongMapProtoList(resourceSecondsMap));
+    }
+
+    builder.setMemorySeconds(this.getMemorySeconds());
+    builder.setVcoreSeconds(this.getVcoreSeconds());
+    builder.setPreemptedMemorySeconds(this.getPreemptedMemorySeconds());
+    builder.setPreemptedVcoreSeconds(this.getPreemptedVcoreSeconds());
   }
 
   private void mergeLocalToProto() {
@@ -196,54 +221,64 @@ extends ApplicationResourceUsageReport {
 
   @Override
   public synchronized void setMemorySeconds(long memory_seconds) {
-    maybeInitBuilder();
-    builder.setMemorySeconds(memory_seconds);
+    getResourceSecondsMap()
+        .put(ResourceInformation.MEMORY_MB.getName(), memory_seconds);
   }
-  
+
   @Override
   public synchronized long getMemorySeconds() {
-    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getMemorySeconds();
+    Map<String, Long> tmp = getResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      return tmp.get(ResourceInformation.MEMORY_MB.getName());
+    }
+    return 0;
   }
 
   @Override
   public synchronized void setVcoreSeconds(long vcore_seconds) {
-    maybeInitBuilder();
-    builder.setVcoreSeconds(vcore_seconds);
+    getResourceSecondsMap()
+        .put(ResourceInformation.VCORES.getName(), vcore_seconds);
   }
 
   @Override
   public synchronized long getVcoreSeconds() {
-    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getVcoreSeconds());
+    Map<String, Long> tmp = getResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.VCORES.getName())) {
+      return tmp.get(ResourceInformation.VCORES.getName());
+    }
+    return 0;
   }
   
   @Override
   public synchronized void setPreemptedMemorySeconds(
       long preemptedMemorySeconds) {
-    maybeInitBuilder();
-    builder.setPreemptedMemorySeconds(preemptedMemorySeconds);
+    getPreemptedResourceSecondsMap()
+        .put(ResourceInformation.MEMORY_MB.getName(), preemptedMemorySeconds);
   }
 
   @Override
   public synchronized long getPreemptedMemorySeconds() {
-    ApplicationResourceUsageReportProtoOrBuilder p =
-        viaProto ? proto : builder;
-    return p.getPreemptedMemorySeconds();
+    Map<String, Long> tmp = getPreemptedResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      return tmp.get(ResourceInformation.MEMORY_MB.getName());
+    }
+    return 0;
   }
 
   @Override
   public synchronized void setPreemptedVcoreSeconds(
       long vcoreSeconds) {
-    maybeInitBuilder();
-    builder.setPreemptedVcoreSeconds(vcoreSeconds);
+    getPreemptedResourceSecondsMap()
+        .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
   }
 
   @Override
   public synchronized long getPreemptedVcoreSeconds() {
-    ApplicationResourceUsageReportProtoOrBuilder p =
-        viaProto ? proto : builder;
-    return (p.getPreemptedVcoreSeconds());
+    Map<String, Long> tmp = getPreemptedResourceSecondsMap();
+    if (tmp.containsKey(ResourceInformation.VCORES.getName())) {
+      return tmp.get(ResourceInformation.VCORES.getName());
+    }
+    return 0;
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
@@ -276,5 +311,82 @@ extends ApplicationResourceUsageReport {
   public synchronized void setClusterUsagePercentage(float clusterUsagePerc) {
     maybeInitBuilder();
     builder.setClusterUsagePercentage((clusterUsagePerc));
+  }
+
+  @Override
+  public synchronized void setResourceSecondsMap(
+      Map<String, Long> resourceSecondsMap) {
+    this.resourceSecondsMap = resourceSecondsMap;
+    if (resourceSecondsMap == null) {
+      return;
+    }
+    if (!resourceSecondsMap
+        .containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      this.setMemorySeconds(0L);
+    }
+    if (!resourceSecondsMap.containsKey(ResourceInformation.VCORES.getName())) {
+      this.setVcoreSeconds(0L);
+    }
+  }
+
+  @Override
+  public synchronized Map<String, Long> getResourceSecondsMap() {
+    if (this.resourceSecondsMap != null) {
+      return this.resourceSecondsMap;
+    }
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.resourceSecondsMap = ProtoUtils
+        .convertStringLongMapProtoListToMap(
+            p.getApplicationResourceUsageMapList());
+    if (!this.resourceSecondsMap
+        .containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      this.setMemorySeconds(p.getMemorySeconds());
+    }
+    if (!this.resourceSecondsMap
+        .containsKey(ResourceInformation.VCORES.getName())) {
+      this.setVcoreSeconds(p.getVcoreSeconds());
+    }
+    this.setMemorySeconds(p.getMemorySeconds());
+    this.setVcoreSeconds(p.getVcoreSeconds());
+    return this.resourceSecondsMap;
+  }
+
+  @Override
+  public synchronized void setPreemptedResourceSecondsMap(
+      Map<String, Long> preemptedResourceSecondsMap) {
+    this.preemptedResourceSecondsMap = preemptedResourceSecondsMap;
+    if (preemptedResourceSecondsMap == null) {
+      return;
+    }
+    if (!preemptedResourceSecondsMap
+        .containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      this.setPreemptedMemorySeconds(0L);
+    }
+    if (!preemptedResourceSecondsMap
+        .containsKey(ResourceInformation.VCORES.getName())) {
+      this.setPreemptedVcoreSeconds(0L);
+    }
+  }
+
+  @Override
+  public synchronized Map<String, Long> getPreemptedResourceSecondsMap() {
+    if (this.preemptedResourceSecondsMap != null) {
+      return this.preemptedResourceSecondsMap;
+    }
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.preemptedResourceSecondsMap = ProtoUtils
+        .convertStringLongMapProtoListToMap(
+            p.getApplicationPreemptedResourceUsageMapList());
+    if (!this.preemptedResourceSecondsMap
+        .containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      this.setPreemptedMemorySeconds(p.getPreemptedMemorySeconds());
+    }
+    if (!this.preemptedResourceSecondsMap
+        .containsKey(ResourceInformation.VCORES.getName())) {
+      this.setPreemptedVcoreSeconds(p.getPreemptedVcoreSeconds());
+    }
+    this.setPreemptedMemorySeconds(p.getPreemptedMemorySeconds());
+    this.setPreemptedVcoreSeconds(p.getPreemptedVcoreSeconds());
+    return this.preemptedResourceSecondsMap;
   }
 }

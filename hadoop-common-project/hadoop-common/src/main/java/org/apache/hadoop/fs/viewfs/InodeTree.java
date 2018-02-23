@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.base.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,8 +64,12 @@ abstract class InodeTree<T> {
   }
 
   static final Path SlashPath = new Path("/");
-  private final INodeDir<T> root;     // the root of the mount table
-  private final String homedirPrefix; // the homedir for this mount table
+  // the root of the mount table
+  private final INode<T> root;
+  // the fallback filesystem
+  private final INodeLink<T> rootFallbackLink;
+  // the homedir for this mount table
+  private final String homedirPrefix;
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
 
   static class MountPoint<T> {
@@ -85,7 +92,7 @@ abstract class InodeTree<T> {
   }
 
   /**
-   * Internal class for inode tree
+   * Internal class for INode tree.
    * @param <T>
    */
   abstract static class INode<T> {
@@ -94,19 +101,56 @@ abstract class InodeTree<T> {
     public INode(String pathToNode, UserGroupInformation aUgi) {
       fullPath = pathToNode;
     }
+
+    // INode forming the internal mount table directory tree
+    // for ViewFileSystem. This internal directory tree is
+    // constructed based on the mount table config entries
+    // and is read only.
+    abstract boolean isInternalDir();
+
+    // INode linking to another filesystem. Represented
+    // via mount table link config entries.
+    boolean isLink() {
+      return !isInternalDir();
+    }
   }
 
   /**
-   * Internal class to represent an internal dir of the mount table
+   * Internal class to represent an internal dir of the mount table.
    * @param <T>
    */
   static class INodeDir<T> extends INode<T> {
-    final Map<String,INode<T>> children = new HashMap<String,INode<T>>();
-    T InodeDirFs =  null; // file system of this internal directory of mountT
-    boolean isRoot = false;
+    private final Map<String, INode<T>> children = new HashMap<>();
+    private T internalDirFs =  null; //filesystem of this internal directory
+    private boolean isRoot = false;
 
     INodeDir(final String pathToNode, final UserGroupInformation aUgi) {
       super(pathToNode, aUgi);
+    }
+
+    @Override
+    boolean isInternalDir() {
+      return true;
+    }
+
+    T getInternalDirFs() {
+      return internalDirFs;
+    }
+
+    void setInternalDirFs(T internalDirFs) {
+      this.internalDirFs = internalDirFs;
+    }
+
+    void setRoot(boolean root) {
+      isRoot = root;
+    }
+
+    boolean isRoot() {
+      return isRoot;
+    }
+
+    Map<String, INode<T>> getChildren() {
+      return Collections.unmodifiableMap(children);
     }
 
     INode<T> resolveInternal(final String pathComponent) {
@@ -119,7 +163,7 @@ abstract class InodeTree<T> {
         throw new FileAlreadyExistsException();
       }
       final INodeDir<T> newDir = new INodeDir<T>(fullPath +
-          (isRoot ? "" : "/") + pathComponent, aUgi);
+          (isRoot() ? "" : "/") + pathComponent, aUgi);
       children.put(pathComponent, newDir);
       return newDir;
     }
@@ -131,6 +175,45 @@ abstract class InodeTree<T> {
       }
       children.put(pathComponent, link);
     }
+  }
+
+  /**
+   * Mount table link type.
+   */
+  enum LinkType {
+    /**
+     * Link entry pointing to a single filesystem uri.
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.link.<link_name>
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK}
+     */
+    SINGLE,
+    /**
+     * Fallback filesystem for the paths not mounted by
+     * any single link entries.
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkFallback
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK_FALLBACK}
+     */
+    SINGLE_FALLBACK,
+    /**
+     * Link entry pointing to an union of two or more filesystem uris.
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkMerge.<link_name>
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK_MERGE}
+     */
+    MERGE,
+    /**
+     * Link entry for merging mount table's root with the
+     * root of another filesystem.
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkMergeSlash
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK_MERGE_SLASH}
+     */
+    MERGE_SLASH,
+    /**
+     * Link entry to write to multiple filesystems and read
+     * from the closest filesystem.
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkNfly
+     * Refer: {@link Constants#CONFIG_VIEWFS_LINK_NFLY}
+     */
+    NFLY;
   }
 
   /**
@@ -146,19 +229,17 @@ abstract class InodeTree<T> {
    * is changed later it is then ignored (a dir with null entries)
    */
   static class INodeLink<T> extends INode<T> {
-    final boolean isMergeLink; // true if MergeLink
     final URI[] targetDirLinkList;
     final T targetFileSystem;   // file system object created from the link.
 
     /**
-     * Construct a mergeLink.
+     * Construct a mergeLink or nfly.
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
         final T targetMergeFs, final URI[] aTargetDirLinkList) {
       super(pathToNode, aUgi);
       targetFileSystem = targetMergeFs;
       targetDirLinkList = aTargetDirLinkList;
-      isMergeLink = true;
     }
 
     /**
@@ -170,7 +251,6 @@ abstract class InodeTree<T> {
       targetFileSystem = targetFs;
       targetDirLinkList = new URI[1];
       targetDirLinkList[0] = aTargetDirLink;
-      isMergeLink = false;
     }
 
     /**
@@ -185,10 +265,21 @@ abstract class InodeTree<T> {
       }
       return new Path(result.toString());
     }
+
+    @Override
+    boolean isInternalDir() {
+      return false;
+    }
+
+    public T getTargetFileSystem() {
+      return targetFileSystem;
+    }
   }
 
   private void createLink(final String src, final String target,
-      final boolean isLinkMerge, final UserGroupInformation aUgi)
+      final LinkType linkType, final String settings,
+      final UserGroupInformation aUgi,
+      final Configuration config)
       throws URISyntaxException, IOException,
       FileAlreadyExistsException, UnsupportedFileSystemException {
     // Validate that src is valid absolute path
@@ -198,7 +289,10 @@ abstract class InodeTree<T> {
     }
 
     final String[] srcPaths = breakIntoPathComponents(src);
-    INodeDir<T> curInode = root;
+    // Make sure root is of INodeDir type before
+    // adding any regular links to it.
+    Preconditions.checkState(root.isInternalDir());
+    INodeDir<T> curInode = getRootDir();
     int i;
     // Ignore first initial slash, process all except last component
     for (i = 1; i < srcPaths.length - 1; i++) {
@@ -206,15 +300,15 @@ abstract class InodeTree<T> {
       INode<T> nextInode = curInode.resolveInternal(iPath);
       if (nextInode == null) {
         INodeDir<T> newDir = curInode.addDir(iPath, aUgi);
-        newDir.InodeDirFs = getTargetFileSystem(newDir);
+        newDir.setInternalDirFs(getTargetFileSystem(newDir));
         nextInode = newDir;
       }
-      if (nextInode instanceof INodeLink) {
+      if (nextInode.isLink()) {
         // Error - expected a dir but got a link
         throw new FileAlreadyExistsException("Path " + nextInode.fullPath +
             " already exists as link");
       } else {
-        assert (nextInode instanceof INodeDir);
+        assert(nextInode.isInternalDir());
         curInode = (INodeDir<T>) nextInode;
       }
     }
@@ -235,18 +329,25 @@ abstract class InodeTree<T> {
     final INodeLink<T> newLink;
     final String fullPath = curInode.fullPath + (curInode == root ? "" : "/")
         + iPath;
-    if (isLinkMerge) { // Target is list of URIs
-      String[] targetsList = StringUtils.getStrings(target);
-      URI[] targetsListURI = new URI[targetsList.length];
-      int k = 0;
-      for (String itarget : targetsList) {
-        targetsListURI[k++] = new URI(itarget);
-      }
-      newLink = new INodeLink<T>(fullPath, aUgi,
-          getTargetFileSystem(targetsListURI), targetsListURI);
-    } else {
+    switch (linkType) {
+    case SINGLE:
       newLink = new INodeLink<T>(fullPath, aUgi,
           getTargetFileSystem(new URI(target)), new URI(target));
+      break;
+    case SINGLE_FALLBACK:
+    case MERGE_SLASH:
+      // Link fallback and link merge slash configuration
+      // are handled specially at InodeTree.
+      throw new IllegalArgumentException("Unexpected linkType: " + linkType);
+    case MERGE:
+    case NFLY:
+      final URI[] targetUris = StringUtils.stringToURI(
+          StringUtils.getStrings(target));
+      newLink = new INodeLink<T>(fullPath, aUgi,
+            getTargetFileSystem(settings, targetUris), targetUris);
+      break;
+    default:
+      throw new IllegalArgumentException(linkType + ": Infeasible linkType");
     }
     curInode.addLink(iPath, newLink);
     mountPoints.add(new MountPoint<T>(src, newLink));
@@ -257,14 +358,85 @@ abstract class InodeTree<T> {
    * 3 abstract methods.
    * @throws IOException
    */
-  protected abstract T getTargetFileSystem(final URI uri)
+  protected abstract T getTargetFileSystem(URI uri)
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
 
-  protected abstract T getTargetFileSystem(final INodeDir<T> dir)
+  protected abstract T getTargetFileSystem(INodeDir<T> dir)
       throws URISyntaxException;
 
-  protected abstract T getTargetFileSystem(final URI[] mergeFsURIList)
-      throws UnsupportedFileSystemException, URISyntaxException;
+  protected abstract T getTargetFileSystem(String settings, URI[] mergeFsURIs)
+      throws UnsupportedFileSystemException, URISyntaxException, IOException;
+
+  private INodeDir<T> getRootDir() {
+    Preconditions.checkState(root.isInternalDir());
+    return (INodeDir<T>)root;
+  }
+
+  private INodeLink<T> getRootLink() {
+    Preconditions.checkState(root.isLink());
+    return (INodeLink<T>)root;
+  }
+
+  private boolean hasFallbackLink() {
+    return rootFallbackLink != null;
+  }
+
+  private INodeLink<T> getRootFallbackLink() {
+    Preconditions.checkState(root.isInternalDir());
+    return rootFallbackLink;
+  }
+
+  /**
+   * An internal class representing the ViewFileSystem mount table
+   * link entries and their attributes.
+   * @see LinkType
+   */
+  private static class LinkEntry {
+    private final String src;
+    private final String target;
+    private final LinkType linkType;
+    private final String settings;
+    private final UserGroupInformation ugi;
+    private final Configuration config;
+
+    LinkEntry(String src, String target, LinkType linkType, String settings,
+        UserGroupInformation ugi, Configuration config) {
+      this.src = src;
+      this.target = target;
+      this.linkType = linkType;
+      this.settings = settings;
+      this.ugi = ugi;
+      this.config = config;
+    }
+
+    String getSrc() {
+      return src;
+    }
+
+    String getTarget() {
+      return target;
+    }
+
+    LinkType getLinkType() {
+      return linkType;
+    }
+
+    boolean isLinkType(LinkType type) {
+      return this.linkType == type;
+    }
+
+    String getSettings() {
+      return settings;
+    }
+
+    UserGroupInformation getUgi() {
+      return ugi;
+    }
+
+    Configuration getConfig() {
+      return config;
+    }
+  }
 
   /**
    * Create Inode Tree from the specified mount-table specified in Config
@@ -279,38 +451,71 @@ abstract class InodeTree<T> {
   protected InodeTree(final Configuration config, final String viewName)
       throws UnsupportedFileSystemException, URISyntaxException,
       FileAlreadyExistsException, IOException {
-    String vName = viewName;
-    if (vName == null) {
-      vName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+    String mountTableName = viewName;
+    if (mountTableName == null) {
+      mountTableName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
     }
-    homedirPrefix = ConfigUtil.getHomeDirValue(config, vName);
-    root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
-    root.InodeDirFs = getTargetFileSystem(root);
-    root.isRoot = true;
+    homedirPrefix = ConfigUtil.getHomeDirValue(config, mountTableName);
 
-    final String mtPrefix = Constants.CONFIG_VIEWFS_PREFIX + "." +
-        vName + ".";
+    boolean isMergeSlashConfigured = false;
+    String mergeSlashTarget = null;
+    List<LinkEntry> linkEntries = new LinkedList<>();
+
+    final String mountTablePrefix =
+        Constants.CONFIG_VIEWFS_PREFIX + "." + mountTableName + ".";
     final String linkPrefix = Constants.CONFIG_VIEWFS_LINK + ".";
+    final String linkFallbackPrefix = Constants.CONFIG_VIEWFS_LINK_FALLBACK;
     final String linkMergePrefix = Constants.CONFIG_VIEWFS_LINK_MERGE + ".";
+    final String linkMergeSlashPrefix =
+        Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH;
     boolean gotMountTableEntry = false;
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     for (Entry<String, String> si : config) {
       final String key = si.getKey();
-      if (key.startsWith(mtPrefix)) {
+      if (key.startsWith(mountTablePrefix)) {
         gotMountTableEntry = true;
-        boolean isMergeLink = false;
-        String src = key.substring(mtPrefix.length());
+        LinkType linkType;
+        String src = key.substring(mountTablePrefix.length());
+        String settings = null;
         if (src.startsWith(linkPrefix)) {
           src = src.substring(linkPrefix.length());
           if (src.equals(SlashPath.toString())) {
             throw new UnsupportedFileSystemException("Unexpected mount table "
-                + "link entry '" + key + "'. "
-                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " is not "
-                + "supported yet.");
+                + "link entry '" + key + "'. Use "
+                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " instead!");
           }
+          linkType = LinkType.SINGLE;
+        } else if (src.startsWith(linkFallbackPrefix)) {
+          if (src.length() != linkFallbackPrefix.length()) {
+            throw new IOException("ViewFs: Mount points initialization error." +
+                " Invalid " + Constants.CONFIG_VIEWFS_LINK_FALLBACK +
+                " entry in config: " + src);
+          }
+          linkType = LinkType.SINGLE_FALLBACK;
         } else if (src.startsWith(linkMergePrefix)) { // A merge link
-          isMergeLink = true;
           src = src.substring(linkMergePrefix.length());
+          linkType = LinkType.MERGE;
+        } else if (src.startsWith(linkMergeSlashPrefix)) {
+          // This is a LinkMergeSlash entry. This entry should
+          // not have any additional source path.
+          if (src.length() != linkMergeSlashPrefix.length()) {
+            throw new IOException("ViewFs: Mount points initialization error." +
+                " Invalid " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
+                " entry in config: " + src);
+          }
+          linkType = LinkType.MERGE_SLASH;
+        } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY)) {
+          // prefix.settings.src
+          src = src.substring(Constants.CONFIG_VIEWFS_LINK_NFLY.length() + 1);
+          // settings.src
+          settings = src.substring(0, src.indexOf('.'));
+          // settings
+
+          // settings.src
+          src = src.substring(settings.length() + 1);
+          // src
+
+          linkType = LinkType.NFLY;
         } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
           // ignore - we set home dir from config
           continue;
@@ -318,14 +523,69 @@ abstract class InodeTree<T> {
           throw new IOException("ViewFs: Cannot initialize: Invalid entry in " +
               "Mount table in config: " + src);
         }
-        final String target = si.getValue(); // link or merge link
-        createLink(src, target, isMergeLink, ugi);
+
+        final String target = si.getValue();
+        if (linkType != LinkType.MERGE_SLASH) {
+          if (isMergeSlashConfigured) {
+            throw new IOException("Mount table " + mountTableName
+                + " has already been configured with a merge slash link. "
+                + "A regular link should not be added.");
+          }
+          linkEntries.add(
+              new LinkEntry(src, target, linkType, settings, ugi, config));
+        } else {
+          if (!linkEntries.isEmpty()) {
+            throw new IOException("Mount table " + mountTableName
+                + " has already been configured with regular links. "
+                + "A merge slash link should not be configured.");
+          }
+          if (isMergeSlashConfigured) {
+            throw new IOException("Mount table " + mountTableName
+                + " has already been configured with a merge slash link. "
+                + "Multiple merge slash links for the same mount table is "
+                + "not allowed.");
+          }
+          isMergeSlashConfigured = true;
+          mergeSlashTarget = target;
+        }
       }
     }
+
+    if (isMergeSlashConfigured) {
+      Preconditions.checkNotNull(mergeSlashTarget);
+      root = new INodeLink<T>(mountTableName, ugi,
+          getTargetFileSystem(new URI(mergeSlashTarget)),
+          new URI(mergeSlashTarget));
+      mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
+      rootFallbackLink = null;
+    } else {
+      root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
+      getRootDir().setInternalDirFs(getTargetFileSystem(getRootDir()));
+      getRootDir().setRoot(true);
+      INodeLink<T> fallbackLink = null;
+      for (LinkEntry le : linkEntries) {
+        if (le.isLinkType(LinkType.SINGLE_FALLBACK)) {
+          if (fallbackLink != null) {
+            throw new IOException("Mount table " + mountTableName
+                + " has already been configured with a link fallback. "
+                + "Multiple fallback links for the same mount table is "
+                + "not allowed.");
+          }
+          fallbackLink = new INodeLink<T>(mountTableName, ugi,
+              getTargetFileSystem(new URI(le.getTarget())),
+              new URI(le.getTarget()));
+        } else {
+          createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
+              le.getSettings(), le.getUgi(), le.getConfig());
+        }
+      }
+      rootFallbackLink = fallbackLink;
+    }
+
     if (!gotMountTableEntry) {
       throw new IOException(
           "ViewFs: Cannot initialize: Empty Mount table in config for " +
-              "viewfs://" + vName + "/");
+              "viewfs://" + mountTableName + "/");
     }
   }
 
@@ -362,7 +622,7 @@ abstract class InodeTree<T> {
 
   /**
    * Resolve the pathname p relative to root InodeDir
-   * @param p - inout path
+   * @param p - input path
    * @param resolveLastComponent
    * @return ResolveResult which allows further resolution of the remaining path
    * @throws FileNotFoundException
@@ -371,26 +631,53 @@ abstract class InodeTree<T> {
       throws FileNotFoundException {
     String[] path = breakIntoPathComponents(p);
     if (path.length <= 1) { // special case for when path is "/"
-      ResolveResult<T> res =
-          new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-              root.InodeDirFs, root.fullPath, SlashPath);
+      T targetFs = root.isInternalDir() ?
+          getRootDir().getInternalDirFs() : getRootLink().getTargetFileSystem();
+      ResolveResult<T> res = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+          targetFs, root.fullPath, SlashPath);
       return res;
     }
 
-    INodeDir<T> curInode = root;
+    /**
+     * linkMergeSlash has been configured. The root of this mount table has
+     * been linked to the root directory of a file system.
+     * The first non-slash path component should be name of the mount table.
+     */
+    if (root.isLink()) {
+      Path remainingPath;
+      StringBuilder remainingPathStr = new StringBuilder();
+      // ignore first slash
+      for (int i = 1; i < path.length; i++) {
+        remainingPathStr.append("/").append(path[i]);
+      }
+      remainingPath = new Path(remainingPathStr.toString());
+      ResolveResult<T> res = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+          getRootLink().getTargetFileSystem(), root.fullPath, remainingPath);
+      return res;
+    }
+    Preconditions.checkState(root.isInternalDir());
+    INodeDir<T> curInode = getRootDir();
+
     int i;
     // ignore first slash
     for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
       INode<T> nextInode = curInode.resolveInternal(path[i]);
       if (nextInode == null) {
-        StringBuilder failedAt = new StringBuilder(path[0]);
-        for (int j = 1; j <= i; ++j) {
-          failedAt.append('/').append(path[j]);
+        if (hasFallbackLink()) {
+          return new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+              getRootFallbackLink().getTargetFileSystem(),
+              root.fullPath, new Path(p));
+        } else {
+          StringBuilder failedAt = new StringBuilder(path[0]);
+          for (int j = 1; j <= i; ++j) {
+            failedAt.append('/').append(path[j]);
+          }
+          throw (new FileNotFoundException(
+              "File/Directory does not exist: " + failedAt.toString()));
         }
-        throw (new FileNotFoundException(failedAt.toString()));
       }
 
-      if (nextInode instanceof INodeLink) {
+      if (nextInode.isLink()) {
         final INodeLink<T> link = (INodeLink<T>) nextInode;
         final Path remainingPath;
         if (i >= path.length - 1) {
@@ -404,9 +691,9 @@ abstract class InodeTree<T> {
         }
         final ResolveResult<T> res =
             new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-                link.targetFileSystem, nextInode.fullPath, remainingPath);
+                link.getTargetFileSystem(), nextInode.fullPath, remainingPath);
         return res;
-      } else if (nextInode instanceof INodeDir) {
+      } else if (nextInode.isInternalDir()) {
         curInode = (INodeDir<T>) nextInode;
       }
     }
@@ -428,7 +715,7 @@ abstract class InodeTree<T> {
     }
     final ResolveResult<T> res =
         new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-            curInode.InodeDirFs, curInode.fullPath, remainingPath);
+            curInode.getInternalDirFs(), curInode.fullPath, remainingPath);
     return res;
   }
 

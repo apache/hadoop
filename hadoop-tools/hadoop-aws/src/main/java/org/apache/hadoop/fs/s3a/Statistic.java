@@ -49,6 +49,12 @@ public enum Statistic {
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored"),
   INVOCATION_COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()"),
+  INVOCATION_CREATE(CommonStatisticNames.OP_CREATE,
+      "Calls of create()"),
+  INVOCATION_CREATE_NON_RECURSIVE(CommonStatisticNames.OP_CREATE_NON_RECURSIVE,
+      "Calls of createNonRecursive()"),
+  INVOCATION_DELETE(CommonStatisticNames.OP_DELETE,
+      "Calls of delete()"),
   INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
       "Calls of exists()"),
   INVOCATION_GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS,
@@ -67,6 +73,8 @@ public enum Statistic {
       "Calls of listStatus()"),
   INVOCATION_MKDIRS(CommonStatisticNames.OP_MKDIRS,
       "Calls of mkdirs()"),
+  INVOCATION_OPEN(CommonStatisticNames.OP_OPEN,
+      "Calls of open()"),
   INVOCATION_RENAME(CommonStatisticNames.OP_RENAME,
       "Calls of rename()"),
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests"),
@@ -77,6 +85,8 @@ public enum Statistic {
       "Number of continued object listings made"),
   OBJECT_METADATA_REQUESTS("object_metadata_requests",
       "Number of requests for object metadata"),
+  OBJECT_MULTIPART_UPLOAD_INITIATED("object_multipart_initiated",
+      "Object multipart upload initiated"),
   OBJECT_MULTIPART_UPLOAD_ABORTED("object_multipart_aborted",
       "Object multipart upload aborted"),
   OBJECT_PUT_REQUESTS("object_put_requests",
@@ -140,7 +150,64 @@ public enum Statistic {
   STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
       "Count of total data uploaded in block output"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
-      "Total queue duration of all block uploads");
+      "Total queue duration of all block uploads"),
+
+  // S3guard committer stats
+  COMMITTER_COMMITS_CREATED(
+      "committer_commits_created",
+      "Number of files to commit created"),
+  COMMITTER_COMMITS_COMPLETED(
+      "committer_commits_completed",
+      "Number of files committed"),
+  COMMITTER_JOBS_SUCCEEDED(
+      "committer_jobs_completed",
+      "Number of successful jobs"),
+  COMMITTER_JOBS_FAILED(
+      "committer_jobs_failed",
+      "Number of failed jobs"),
+  COMMITTER_TASKS_SUCCEEDED(
+      "committer_tasks_completed",
+      "Number of successful tasks"),
+  COMMITTER_TASKS_FAILED(
+      "committer_tasks_failed",
+      "Number of failed tasks"),
+  COMMITTER_BYTES_COMMITTED(
+      "committer_bytes_committed",
+      "Amount of data committed"),
+  COMMITTER_BYTES_UPLOADED(
+      "committer_bytes_uploaded",
+      "Number of bytes uploaded duing commit operations"),
+  COMMITTER_COMMITS_FAILED(
+      "committer_commits_failed",
+      "Number of commits failed"),
+  COMMITTER_COMMITS_ABORTED(
+      "committer_commits_aborted",
+      "Number of commits aborted"),
+  COMMITTER_COMMITS_REVERTED(
+      "committer_commits_reverted",
+      "Number of commits reverted"),
+  COMMITTER_MAGIC_FILES_CREATED(
+      "committer_magic_files_created",
+      "Number of files created under 'magic' paths"),
+
+  // S3guard stats
+  S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
+      "s3guard_metadatastore_put_path_request",
+      "S3Guard metadata store put one metadata path request"),
+  S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
+      "s3guard_metadatastore_put_path_latency",
+      "S3Guard metadata store put one metadata path latency"),
+  S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
+      "S3Guard metadata store initialization times"),
+  S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
+      "S3Guard metadata store retry events"),
+  S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
+      "S3Guard metadata store throttled events"),
+  S3GUARD_METADATASTORE_THROTTLE_RATE(
+      "s3guard_metadatastore_throttle_rate",
+      "S3Guard metadata store throttle rate"),
+
+  STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

@@ -25,8 +25,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -35,32 +37,71 @@ import java.util.List;
  * e.g 'run', 'load', 'inspect' etc.,
  */
 
-public abstract class DockerCommand  {
+public abstract class DockerCommand {
   private final String command;
-  private final List<String> commandWithArguments;
+  private final Map<String, List<String>> commandArguments;
 
   protected DockerCommand(String command) {
+    String dockerCommandKey = "docker-command";
     this.command = command;
-    this.commandWithArguments = new ArrayList<>();
-    commandWithArguments.add(command);
+    this.commandArguments = new TreeMap<>();
+    commandArguments.put(dockerCommandKey, new ArrayList<>());
+    commandArguments.get(dockerCommandKey).add(command);
   }
 
-  /** Returns the docker sub-command string being used
-   * e.g 'run'
+  /**
+   * Returns the docker sub-command string being used
+   * e.g 'run'.
    */
   public final String getCommandOption() {
     return this.command;
   }
 
-  /** Add command commandWithArguments - this method is only meant for use by
-   * sub-classes
-   * @param arguments to be added
+  /**
+   * Add command commandWithArguments - this method is only meant for use by
+   * sub-classes.
+   *
+   * @param key   name of the key to be added
+   * @param value value of the key
    */
-  protected final void addCommandArguments(String... arguments) {
-    this.commandWithArguments.addAll(Arrays.asList(arguments));
+  protected final void addCommandArguments(String key, String value) {
+    List<String> list = commandArguments.get(key);
+    if (list != null) {
+      list.add(value);
+      return;
+    }
+    list = new ArrayList<>();
+    list.add(value);
+    this.commandArguments.put(key, list);
   }
 
-  public String getCommandWithArguments() {
-    return StringUtils.join(" ", commandWithArguments);
+  public Map<String, List<String>> getDockerCommandWithArguments() {
+    return Collections.unmodifiableMap(commandArguments);
+  }
+
+  @Override
+  public String toString() {
+    StringBuffer ret = new StringBuffer(this.command);
+    for (Map.Entry<String, List<String>> entry : commandArguments.entrySet()) {
+      ret.append(" ").append(entry.getKey());
+      ret.append("=").append(StringUtils.join(",", entry.getValue()));
+    }
+    return ret.toString();
+  }
+
+  /**
+   * Add the client configuration directory to the docker command.
+   *
+   * The client configuration option proceeds any of the docker subcommands
+   * (such as run, load, pull, etc). Ordering will be handled by
+   * container-executor. Docker expects the value to be a directory containing
+   * the file config.json. This file is typically generated via docker login.
+   *
+   * @param clientConfigDir - directory containing the docker client config.
+   */
+  public void setClientConfigDir(String clientConfigDir) {
+    if (clientConfigDir != null) {
+      addCommandArguments("docker-config", clientConfigDir);
+    }
   }
 }

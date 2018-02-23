@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -34,10 +32,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDistributedShellWithNodeLabels {
-  private static final Log LOG =
-      LogFactory.getLog(TestDistributedShellWithNodeLabels.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDistributedShellWithNodeLabels.class);
   
   static final int NUM_NMS = 2;
   TestDistributedShell distShellTest;

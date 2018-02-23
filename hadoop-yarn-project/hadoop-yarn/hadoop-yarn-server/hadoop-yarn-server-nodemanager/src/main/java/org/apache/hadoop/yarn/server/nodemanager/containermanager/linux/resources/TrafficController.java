@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -29,6 +27,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -46,7 +46,8 @@ import java.util.regex.Pattern;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable class TrafficController {
-  private static final Log LOG = LogFactory.getLog(TrafficController.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TrafficController.class);
   private static final int ROOT_QDISC_HANDLE = 42;
   private static final int ZERO_CLASS_ID = 0;
   private static final int ROOT_CLASS_ID = 1;

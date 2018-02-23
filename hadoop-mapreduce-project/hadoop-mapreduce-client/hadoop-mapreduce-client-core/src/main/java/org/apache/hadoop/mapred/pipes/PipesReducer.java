@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapred.pipes;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
@@ -28,6 +26,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -38,7 +38,8 @@ import java.util.Iterator;
 class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
     K3 extends WritableComparable, V3 extends Writable>
     implements Reducer<K2, V2, K3, V3> {
-  private static final Log LOG= LogFactory.getLog(PipesReducer.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PipesReducer.class.getName());
   private JobConf job;
   private Application<K2, V2, K3, V3> application = null;
   private DownwardProtocol<K2, V2> downlink = null;

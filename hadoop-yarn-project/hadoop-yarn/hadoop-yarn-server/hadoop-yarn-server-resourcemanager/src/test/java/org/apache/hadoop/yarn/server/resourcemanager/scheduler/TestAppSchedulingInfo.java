@@ -21,10 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -47,8 +44,9 @@ public class TestAppSchedulingInfo {
 
     FSLeafQueue queue = mock(FSLeafQueue.class);
     doReturn("test").when(queue).getQueueName();
-    AppSchedulingInfo  appSchedulingInfo = new AppSchedulingInfo(
-        appAttemptId, "test", queue, null, 0, new ResourceUsage());
+    AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(appAttemptId,
+        "test", queue, null, 0, new ResourceUsage(),
+        new HashMap<String, String>(), null);
 
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
@@ -120,7 +118,7 @@ public class TestAppSchedulingInfo {
     doReturn(mock(QueueMetrics.class)).when(queue).getMetrics();
     AppSchedulingInfo  info = new AppSchedulingInfo(
         appAttemptId, "test", queue, mock(ActiveUsersManager.class), 0,
-        new ResourceUsage());
+        new ResourceUsage(), new HashMap<>(), null);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     Priority pri1 = Priority.newInstance(1);

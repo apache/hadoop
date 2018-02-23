@@ -36,8 +36,6 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.IntWritable;
@@ -51,6 +49,8 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.reduce.MapHost.State;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -62,7 +62,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
   };
 
-  private static final Log LOG = LogFactory.getLog(ShuffleSchedulerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShuffleSchedulerImpl.class);
   private static final int MAX_MAPS_AT_ONCE = 20;
   private static final long INITIAL_PENALTY = 10000;
   private static final float PENALTY_GROWTH_RATE = 1.3f;
@@ -217,6 +218,9 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       reduceShuffleBytes.increment(bytes);
       lastProgressTime = Time.monotonicNow();
       LOG.debug("map " + mapId + " done " + status.getStateString());
+    } else {
+      LOG.warn("Aborting already-finished MapOutput for " + mapId);
+      output.abort();
     }
   }
 
@@ -386,7 +390,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         failureCounts.size() == (totalMaps - doneMaps))
         && !reducerHealthy
         && (!reducerProgressedEnough || reducerStalled)) {
-      LOG.fatal("Shuffle failed with too many fetch failures " +
+      LOG.error("Shuffle failed with too many fetch failures " +
       "and insufficient progress!");
       String errorMsg = "Exceeded MAX_FAILED_UNIQUE_FETCHES; bailing-out.";
       reporter.reportException(new IOException(errorMsg));

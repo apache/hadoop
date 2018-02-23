@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -647,8 +646,8 @@ public class TestRMWebServices extends JerseyTestBase {
     when(mockAppsResponse.getApplicationList())
       .thenReturn(Arrays.asList(new ApplicationReport[] { mockReport }));
     ClientRMService mockClientSvc = mock(ClientRMService.class);
-    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class),
-        anyBoolean())).thenReturn(mockAppsResponse);
+    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class)))
+        .thenReturn(mockAppsResponse);
     ResourceManager mockRM = mock(ResourceManager.class);
     RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null,
         null, null, null, null, null);

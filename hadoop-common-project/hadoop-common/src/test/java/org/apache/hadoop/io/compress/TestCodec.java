@@ -362,11 +362,10 @@ public class TestCodec {
     final Path file = new Path(wd, "test" + codec.getDefaultExtension());
     final byte[] b = new byte[REC_SIZE];
     final Base64 b64 = new Base64(0, null);
-    DataOutputStream fout = null;
     Compressor cmp = CodecPool.getCompressor(codec);
-    try {
-      fout = new DataOutputStream(codec.createOutputStream(
-            fs.create(file, true), cmp));
+    try (DataOutputStream fout =
+             new DataOutputStream(codec.createOutputStream(fs.create(file,
+                 true), cmp))) {
       final DataOutputBuffer dob = new DataOutputBuffer(REC_SIZE * 4 / 3 + 4);
       int seq = 0;
       while (infLen > 0) {
@@ -382,7 +381,6 @@ public class TestCodec {
       }
       LOG.info("Wrote " + seq + " records to " + file);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, fout);
       CodecPool.returnCompressor(cmp);
     }
     return file;

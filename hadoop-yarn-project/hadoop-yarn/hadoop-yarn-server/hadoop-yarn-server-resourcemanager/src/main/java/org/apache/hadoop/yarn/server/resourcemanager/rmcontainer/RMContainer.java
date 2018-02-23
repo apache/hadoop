@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -30,7 +31,9 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 
@@ -86,8 +89,8 @@ public interface RMContainer extends EventHandler<RMContainerEvent>,
   ContainerReport createContainerReport();
   
   boolean isAMContainer();
-  
-  List<ResourceRequest> getResourceRequests();
+
+  ContainerRequest getContainerRequest();
 
   String getNodeHttpAddress();
   
@@ -114,4 +117,10 @@ public interface RMContainer extends EventHandler<RMContainerEvent>,
   boolean completed();
 
   NodeId getNodeId();
+
+  /**
+   * Return {@link SchedulingRequest#getAllocationTags()} specified by AM.
+   * @return allocation tags, could be null/empty
+   */
+  Set<String> getAllocationTags();
 }

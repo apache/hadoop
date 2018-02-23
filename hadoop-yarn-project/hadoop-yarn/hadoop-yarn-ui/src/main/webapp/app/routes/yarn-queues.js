@@ -30,17 +30,23 @@ export default AbstractRoute.extend({
     }
     return Ember.RSVP.hash({
       selected : queueName,
-      queues: this.store.query('yarn-queue', {}),
+      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
+        let type = model.get('firstObject').get('type');
+        return this.store.query("yarn-queue." + type + "-queue", {});
+      }),
       selectedQueue : undefined
     });
   },
 
   afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
+    var type = model.queues.get('firstObject').constructor.modelName;
+    model.selectedQueue = this.store.peekRecord(type, model.selected);
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-queue.capacity-queue');
+    this.store.unloadAll('yarn-queue.fair-queue');
+    this.store.unloadAll('yarn-queue.fifo-queue');
     this.store.unloadAll('yarn-app');
   },
 

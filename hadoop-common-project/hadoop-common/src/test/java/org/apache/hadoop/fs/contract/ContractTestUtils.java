@@ -403,6 +403,21 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Rename operation. Safety check for attempts to rename the root directory.
+   * Verifies that src no longer exists after rename.
+   * @param fileSystem filesystem to work with
+   * @param src source path
+   * @param dst destination path
+   * @throws IOException If rename fails or src is the root directory.
+   */
+  public static void rename(FileSystem fileSystem, Path src, Path dst)
+      throws IOException {
+    rejectRootOperation(src, false);
+    assertTrue(fileSystem.rename(src, dst));
+    assertPathDoesNotExist(fileSystem, "renamed", src);
+  }
+
+  /**
    * Block any operation on the root path. This is a safety check
    * @param path path in the filesystem
    * @param allowRootOperation can the root directory be manipulated?
@@ -623,6 +638,23 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Append to an existing file.
+   * @param fs filesystem
+   * @param path path to file
+   * @param data data to append. Can be null
+   * @throws IOException On any error
+   */
+  public static void appendFile(FileSystem fs,
+                                Path path,
+                                byte[] data) throws IOException {
+    try (FSDataOutputStream stream = fs.appendFile(path).build()) {
+      if (data != null && data.length > 0) {
+        stream.write(data);
+      }
+    }
+  }
+
+  /**
    * Touch a file.
    * @param fs filesystem
    * @param path path
@@ -671,7 +703,30 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Execute a {@link FileSystem#rename(Path, Path)}, and verify that the
+   * outcome was as expected. There is no preflight checking of arguments;
+   * everything is left to the rename() command.
+   * @param fs filesystem
+   * @param source source path
+   * @param dest destination path
+   * @param expectedResult expected return code
+   * @throws IOException on any IO failure.
+   */
+  public static void assertRenameOutcome(FileSystem fs,
+      Path source,
+      Path dest,
+      boolean expectedResult) throws IOException {
+    boolean result = fs.rename(source, dest);
+    if (expectedResult != result) {
+      fail(String.format("Expected rename(%s, %s) to return %b,"
+              + " but result was %b", source, dest, expectedResult, result));
+    }
+  }
+
+  /**
    * Read in "length" bytes, convert to an ascii string.
+   * This uses {@link #toChar(byte)} to escape bytes, so cannot be used
+   * for round trip operations.
    * @param fs filesystem
    * @param path path to read
    * @param length #of bytes to read.
@@ -685,6 +740,28 @@ public class ContractTestUtils extends Assert {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
       return toChar(buf);
+    }
+  }
+
+  /**
+   * Read in "length" bytes, convert to UTF8 string.
+   * @param fs filesystem
+   * @param path path to read
+   * @param length #of bytes to read. If -1: use file length.
+   * @return the bytes read and converted to a string
+   * @throws IOException IO problems
+   */
+  public static String readUTF8(FileSystem fs,
+                                  Path path,
+                                  int length) throws IOException {
+    if (length < 0) {
+      FileStatus status = fs.getFileStatus(path);
+      length = (int) status.getLen();
+    }
+    try (FSDataInputStream in = fs.open(path)) {
+      byte[] buf = new byte[length];
+      in.readFully(0, buf);
+      return new String(buf, "UTF-8");
     }
   }
 
@@ -804,11 +881,30 @@ public class ContractTestUtils extends Assert {
    */
   public static void assertPathExists(FileSystem fileSystem, String message,
                                Path path) throws IOException {
-    if (!fileSystem.exists(path)) {
+    verifyPathExists(fileSystem, message, path);
+  }
+
+  /**
+   * Verify that a path exists, returning the file status of the path.
+   *
+   * @param fileSystem filesystem to examine
+   * @param message message to include in the assertion failure message
+   * @param path path in the filesystem
+   * @throws FileNotFoundException raised if the path is missing
+   * @throws IOException IO problems
+   */
+  public static FileStatus verifyPathExists(FileSystem fileSystem,
+      String message,
+      Path path) throws IOException {
+    try {
+      return fileSystem.getFileStatus(path);
+    } catch (FileNotFoundException e) {
       //failure, report it
-      ls(fileSystem, path.getParent());
-      throw new FileNotFoundException(message + ": not found " + path
-                                      + " in " + path.getParent());
+      LOG.error("{}: not found {}; parent listing is:\n{}",
+          message, path, ls(fileSystem, path.getParent()));
+      throw (IOException)new FileNotFoundException(
+          message + ": not found " + path + " in " + path.getParent())
+          .initCause(e);
     }
   }
 

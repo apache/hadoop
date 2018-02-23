@@ -117,19 +117,24 @@ macro(hadoop_set_find_shared_library_without_version)
     endif()
 endmacro()
 
-#
-# Configuration.
-#
 
-# Initialise the shared gcc/g++ flags if they aren't already defined.
-if(NOT DEFINED GCC_SHARED_FLAGS)
-    set(GCC_SHARED_FLAGS "-g -O2 -Wall -pthread -D_FILE_OFFSET_BITS=64")
+# set the shared compiler flags
+# support for GNU C/C++, add other compilers as necessary
+
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
+    CMAKE_C_COMPILER_ID STREQUAL "Clang" OR
+    CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+  if(NOT DEFINED GCC_SHARED_FLAGS)
+    find_package(Threads REQUIRED)
+    if(CMAKE_USE_PTHREADS_INIT)
+      set(GCC_SHARED_FLAGS "-g -O2 -Wall -pthread -D_FILE_OFFSET_BITS=64")
+    else()
+      set(GCC_SHARED_FLAGS "-g -O2 -Wall -D_FILE_OFFSET_BITS=64")
+    endif()
+  endif()
 endif()
 
-# Add in support other compilers here, if necessary,
-# the assumption is that GCC or a GCC-compatible compiler is being used.
-
-# Set the shared GCC-compatible compiler and linker flags.
+# Set the shared linker flags.
 hadoop_add_compiler_flags("${GCC_SHARED_FLAGS}")
 hadoop_add_linker_flags("${LINKER_SHARED_FLAGS}")
 

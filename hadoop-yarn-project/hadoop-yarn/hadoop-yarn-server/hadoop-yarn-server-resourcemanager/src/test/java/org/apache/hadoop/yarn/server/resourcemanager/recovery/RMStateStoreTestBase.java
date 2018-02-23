@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -162,6 +163,7 @@ public class RMStateStoreTestBase {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
+    context.setAMContainerSpec(new ContainerLaunchContextPBImpl());
 
     RMApp mockApp = mock(RMApp.class);
     when(mockApp.getApplicationId()).thenReturn(appId);
@@ -194,7 +196,7 @@ public class RMStateStoreTestBase {
     when(mockAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0, 0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     dispatcher.attemptId = attemptId;
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
@@ -292,7 +294,7 @@ public class RMStateStoreTestBase {
     when(mockRemovedAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0,0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     attempts.put(attemptIdRemoved, mockRemovedAttempt);
     store.removeApplication(mockRemovedApp);
 
@@ -369,7 +371,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 100,
-            oldAttemptState.getFinishTime(), 0, 0, 0, 0);
+            oldAttemptState.getFinishTime(), new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(newAttemptState);
 
     // test updating the state of an app/attempt whose initial state was not
@@ -378,6 +380,7 @@ public class RMStateStoreTestBase {
     ApplicationSubmissionContext dummyContext =
         new ApplicationSubmissionContextPBImpl();
     dummyContext.setApplicationId(dummyAppId);
+    dummyContext.setAMContainerSpec(new ContainerLaunchContextPBImpl());
     ApplicationStateData dummyApp =
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(), dummyContext,
@@ -393,7 +396,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 111,
-            oldAttemptState.getFinishTime(), 0, 0, 0, 0);
+            oldAttemptState.getFinishTime(), new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(dummyAttempt);
 
     // let things settle down

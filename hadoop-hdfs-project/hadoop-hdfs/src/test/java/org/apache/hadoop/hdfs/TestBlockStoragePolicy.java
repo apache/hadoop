@@ -84,6 +84,7 @@ public class TestBlockStoragePolicy {
   static final byte ONESSD  = HdfsConstants.ONESSD_STORAGE_POLICY_ID;
   static final byte ALLSSD  = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
   static final byte LAZY_PERSIST  = HdfsConstants.MEMORY_STORAGE_POLICY_ID;
+  static final byte PROVIDED  = HdfsConstants.PROVIDED_STORAGE_POLICY_ID;
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
@@ -143,6 +144,11 @@ public class TestBlockStoragePolicy {
     expectedPolicyStrings.put(ALLSSD, "BlockStoragePolicy{ALL_SSD:" + ALLSSD +
         ", storageTypes=[SSD], creationFallbacks=[DISK], " +
         "replicationFallbacks=[DISK]}");
+    expectedPolicyStrings.put(PROVIDED,
+        "BlockStoragePolicy{PROVIDED:" + PROVIDED
+            + ", storageTypes=[PROVIDED, DISK], "
+            + "creationFallbacks=[PROVIDED, DISK], "
+            + "replicationFallbacks=[PROVIDED, DISK]}");
 
     for(byte i = 1; i < 16; i++) {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
@@ -1096,7 +1102,7 @@ public class TestBlockStoragePolicy {
                                   int replicaNum, StorageType... types) {
     List<StorageType> typeList = Lists.newArrayList();
     Collections.addAll(typeList, types);
-    LocatedBlocks lbs = status.getBlockLocations();
+    LocatedBlocks lbs = status.getLocatedBlocks();
     Assert.assertEquals(blockNum, lbs.getLocatedBlocks().size());
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
       Assert.assertEquals(replicaNum, lb.getStorageTypes().length);

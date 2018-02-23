@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
@@ -29,6 +26,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
+
+import static org.apache.hadoop.util.GenericsUtil.isLog4jLogger;
 
 public class NavBlock extends HtmlBlock implements YarnWebParams {
 
@@ -43,8 +42,7 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
   protected void render(Block html) {
 
     boolean addErrorsAndWarningsLink = false;
-    Log log = LogFactory.getLog(NMErrorsAndWarningsPage.class);
-    if (log instanceof Log4JLogger) {
+    if (isLog4jLogger(NMErrorsAndWarningsPage.class)) {
       Log4jWarningErrorMetricsAppender appender = Log4jWarningErrorMetricsAppender.findAppender();
       if (appender != null) {
         addErrorsAndWarningsLink = true;

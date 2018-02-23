@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,6 +64,8 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -76,11 +76,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
 public class ResourceMgrDelegate extends YarnClient {
-  private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceMgrDelegate.class);
       
   private YarnConfiguration conf;
   private ApplicationSubmissionContext application;
@@ -516,5 +519,23 @@ public class ResourceMgrDelegate extends YarnClient {
   public void killApplication(ApplicationId appId, String diagnostics)
       throws YarnException, IOException {
     client.killApplication(appId, diagnostics);
+  }
+
+  @Override
+  public Map<String, Resource> getResourceProfiles()
+      throws YarnException, IOException {
+    return client.getResourceProfiles();
+  }
+
+  @Override
+  public Resource getResourceProfile(String profile)
+      throws YarnException, IOException {
+    return client.getResourceProfile(profile);
+  }
+
+  @Override
+  public List<ResourceTypeInfo> getResourceTypeInfo()
+      throws YarnException, IOException {
+    return client.getResourceTypeInfo();
   }
 }

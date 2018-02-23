@@ -36,20 +36,25 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Test class for dynamic auto created leaf queues.
+ * @see ReservationQueue
+ */
 public class TestReservationQueue {
 
-  CapacitySchedulerConfiguration csConf;
-  CapacitySchedulerContext csContext;
+  private CapacitySchedulerConfiguration csConf;
+  private CapacitySchedulerContext csContext;
   final static int DEF_MAX_APPS = 10000;
   final static int GB = 1024;
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
-  ReservationQueue reservationQueue;
+  private ReservationQueue autoCreatedLeafQueue;
 
   @Before
   public void setup() throws IOException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
+
     YarnConfiguration conf = new YarnConfiguration();
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
@@ -61,49 +66,48 @@ public class TestReservationQueue {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 32));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
-    
     RMContext mockRMContext = TestUtils.getMockRMContext();
     when(csContext.getRMContext()).thenReturn(mockRMContext);
 
     // create a queue
     PlanQueue pq = new PlanQueue(csContext, "root", null, null);
-    reservationQueue = new ReservationQueue(csContext, "a", pq);
+    autoCreatedLeafQueue = new ReservationQueue(csContext, "a", pq);
   }
 
-  private void validateReservationQueue(double capacity) {
-    assertTrue(" actual capacity: " + reservationQueue.getCapacity(),
-        reservationQueue.getCapacity() - capacity < CSQueueUtils.EPSILON);
-    assertEquals(reservationQueue.maxApplications, DEF_MAX_APPS);
-    assertEquals(reservationQueue.maxApplicationsPerUser, DEF_MAX_APPS);
+  private void validateAutoCreatedLeafQueue(double capacity) {
+    assertTrue(" actual capacity: " + autoCreatedLeafQueue.getCapacity(),
+        autoCreatedLeafQueue.getCapacity() - capacity < CSQueueUtils.EPSILON);
+    assertEquals(autoCreatedLeafQueue.maxApplications, DEF_MAX_APPS);
+    assertEquals(autoCreatedLeafQueue.maxApplicationsPerUser, DEF_MAX_APPS);
   }
 
   @Test
   public void testAddSubtractCapacity() throws Exception {
 
     // verify that setting, adding, subtracting capacity works
-    reservationQueue.setCapacity(1.0F);
-    validateReservationQueue(1);
-    reservationQueue.setEntitlement(new QueueEntitlement(0.9f, 1f));
-    validateReservationQueue(0.9);
-    reservationQueue.setEntitlement(new QueueEntitlement(1f, 1f));
-    validateReservationQueue(1);
-    reservationQueue.setEntitlement(new QueueEntitlement(0f, 1f));
-    validateReservationQueue(0);
+    autoCreatedLeafQueue.setCapacity(1.0F);
+    validateAutoCreatedLeafQueue(1);
+    autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(0.9f, 1f));
+    validateAutoCreatedLeafQueue(0.9);
+    autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(1f, 1f));
+    validateAutoCreatedLeafQueue(1);
+    autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(0f, 1f));
+    validateAutoCreatedLeafQueue(0);
 
     try {
-      reservationQueue.setEntitlement(new QueueEntitlement(1.1f, 1f));
+      autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(1.1f, 1f));
       fail();
     } catch (SchedulerDynamicEditException iae) {
       // expected
-      validateReservationQueue(1);
+      validateAutoCreatedLeafQueue(1);
     }
 
     try {
-      reservationQueue.setEntitlement(new QueueEntitlement(-0.1f, 1f));
+      autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(-0.1f, 1f));
       fail();
     } catch (SchedulerDynamicEditException iae) {
       // expected
-      validateReservationQueue(1);
+      validateAutoCreatedLeafQueue(1);
     }
 
   }

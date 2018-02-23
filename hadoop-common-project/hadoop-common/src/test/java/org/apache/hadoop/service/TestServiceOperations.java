@@ -57,8 +57,7 @@ public class TestServiceOperations {
     ServiceOperations.stopQuietly(logger, service);
 
     assertThat(logCapturer.getOutput(),
-        containsString("When stopping the service " + service.getName()
-            + " : " + e));
+        containsString("When stopping the service " + service.getName()));
     verify(e, times(1)).printStackTrace(Mockito.any(PrintWriter.class));
   }
 

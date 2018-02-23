@@ -153,6 +153,40 @@ line argument:
 
 ```
 
+### Block Blob with Compaction Support and Configuration
+
+Block blobs are the default kind of blob and are good for most big-data use
+cases. However, block blobs have strict limit of 50,000 blocks per blob.
+To prevent reaching the limit WASB, by default, does not upload new block to
+the service after every `hflush()` or `hsync()`.
+
+For most of the cases, combining data from multiple `write()` calls in
+blocks of 4Mb is a good optimization. But, in others cases, like HBase log files,
+every call to `hflush()` or `hsync()` must upload the data to the service.
+
+Block blobs with compaction upload the data to the cloud service after every
+`hflush()`/`hsync()`. To mitigate the limit of 50000 blocks, `hflush()
+`/`hsync()` runs once compaction process, if number of blocks in the blob
+is above 32,000.
+
+Block compaction search and replaces a sequence of small blocks with one big
+block. That means there is associated cost with block compaction: reading
+small blocks back to the client and writing it again as one big block.
+
+In order to have the files you create be block blobs with block compaction
+enabled, the client must set the configuration variable
+`fs.azure.block.blob.with.compaction.dir` to a comma-separated list of
+folder names.
+
+For example:
+
+```xml
+<property>
+  <name>fs.azure.block.blob.with.compaction.dir</name>
+  <value>/hbase/WALs,/data/myblobfiles</value>
+</property>
+```
+
 ### Page Blob Support and Configuration
 
 The Azure Blob Storage interface for Hadoop supports two kinds of blobs,
@@ -429,12 +463,28 @@ The service is expected to return a response in JSON format for GETDELEGATIONTOK
 
 When authorization is enabled, only the users listed in the following configuration
 are allowed to change the owning user of files/folders in WASB. The configuration
-value takes a comma seperated list of user names who are allowed to perform chown.
+value takes a comma separated list of user names who are allowed to perform chown.
 
 ```xml
 <property>
   <name>fs.azure.chown.allowed.userlist</name>
   <value>user1,user2</value>
+</property>
+```
+### chmod behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the owner and the users listed in the
+following configurations are allowed to change the permissions of files/folders in WASB.
+The configuration value takes a comma separated list of user names who are allowed to perform chmod.
+
+```xml
+<property>
+  <name>fs.azure.daemon.userlist</name>
+  <value>user1,user2</value>
+</property>
+<property>
+  <name>fs.azure.chmod.allowed.userlist</name>
+  <value>userA,userB</value>
 </property>
 ```
 
@@ -476,96 +526,17 @@ The maximum number of entries that that cache can hold can be customized using t
     </property>
 ```
 
-## Testing the hadoop-azure Module
-
-The hadoop-azure module includes a full suite of unit tests.  Most of the tests
-will run without additional configuration by running `mvn test`.  This includes
-tests against mocked storage, which is an in-memory emulation of Azure Storage.
-
-A selection of tests can run against the
-[Azure Storage Emulator](http://msdn.microsoft.com/en-us/library/azure/hh403989.aspx)
-which is a high-fidelity emulation of live Azure Storage.  The emulator is
-sufficient for high-confidence testing.  The emulator is a Windows executable
-that runs on a local machine.
-
-To use the emulator, install Azure SDK 2.3 and start the storage emulator.  Then,
-edit `src/test/resources/azure-test.xml` and add the following property:
-
-```xml
-<property>
-  <name>fs.azure.test.emulator</name>
-  <value>true</value>
-</property>
+ Use container saskey for access to all blobs within the container.
+ Blob-specific saskeys are not used when this setting is enabled.
+ This setting provides better performance compared to blob-specific saskeys.
+ ```
+    <property>
+      <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+      <value>true</value>
+    </property>
 ```
 
-There is a known issue when running tests with the emulator.  You may see the
-following failure message:
+## Further Reading
 
-    com.microsoft.windowsazure.storage.StorageException: The value for one of the HTTP headers is not in the correct format.
-
-To resolve this, restart the Azure Emulator.  Ensure it v3.2 or later.
-
-It's also possible to run tests against a live Azure Storage account by saving a
-file to `src/test/resources/azure-auth-keys.xml` and setting
-the name of the storage account and its access key.
-
-For example:
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.azure.test.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-</configuration>
-```
-
-To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
-and the account access key. For example:
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
-    <description>The name of the azure file system for testing.</description>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-</configuration>
-```
-
-Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` is like following:
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.azure.test.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-  <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-</configuration>
-```
-
-DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
-Storage account are a secret and must not be shared.
-
+* [Testing the Azure WASB client](testing_azure.html).
+* MSDN article, [Understanding Block Blobs, Append Blobs, and Page Blobs](https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)

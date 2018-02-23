@@ -13,7 +13,7 @@
 -->
 
 
-Graceful Decommission of Yarn Nodes
+Graceful Decommission of YARN Nodes
 ===============
 
 * [Overview](#overview)
@@ -29,19 +29,19 @@ Graceful Decommission of Yarn Nodes
 Overview
 --------
 
-Yarn is scalable very easily: any new NodeManager could join to the configured ResourceManager and start to execute jobs. But to achieve full elasticity we need a decommissioning process which helps to remove existing nodes and down-scale the cluster.
+YARN is scalable very easily: any new NodeManager could join to the configured ResourceManager and start to execute jobs. But to achieve full elasticity we need a decommissioning process which helps to remove existing nodes and down-scale the cluster.
 
-Yarn Nodes could be decommissioned NORMAL or GRACEFUL.
+YARN Nodes could be decommissioned NORMAL or GRACEFUL.
 
-Normal Decommission of Yarn Nodes means an immediate shutdown.
+Normal Decommission of YARN Nodes means an immediate shutdown.
 
-Graceful Decommission of Yarn Nodes is the mechanism to decommission NMs while minimize the impact to running applications. Once a node is in DECOMMISSIONING state, RM won't schedule new containers on it and will wait for running containers and applications to complete (or until decommissioning timeout exceeded) before transition the node into DECOMMISSIONED.
+Graceful Decommission of YARN Nodes is the mechanism to decommission NMs while minimize the impact to running applications. Once a node is in DECOMMISSIONING state, RM won't schedule new containers on it and will wait for running containers and applications to complete (or until decommissioning timeout exceeded) before transition the node into DECOMMISSIONED.
 
 ## Quick start
 
 To do a normal decommissioning:
 
-1. Start a Yarn cluster (with NodeManageres and ResourceManager)
+1. Start a YARN cluster (with NodeManageres and ResourceManager)
 2. Start a yarn job (for example with `yarn jar...` )
 3. Add `yarn.resourcemanager.nodes.exclude-path` property to your `yarn-site.xml` (Note: you don't need to restart the ResourceManager)
 4. Create a text file (the location is defined in the previous step) with one line which contains the name of a selected NodeManager 

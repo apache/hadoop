@@ -24,8 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.Cluster;
@@ -72,6 +70,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -104,6 +106,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
@@ -138,6 +142,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestClientRedirect {
 
@@ -145,7 +151,8 @@ public class TestClientRedirect {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  private static final Log LOG = LogFactory.getLog(TestClientRedirect.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClientRedirect.class);
   private static final String RMADDRESS = "0.0.0.0:8054";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
@@ -491,6 +498,26 @@ public class TestClientRedirect {
     @Override
     public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
         UpdateApplicationTimeoutsRequest request)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetAllResourceProfilesResponse getResourceProfiles(
+        GetAllResourceProfilesRequest request)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetResourceProfileResponse getResourceProfile(
+        GetResourceProfileRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetAllResourceTypeInfoResponse getResourceTypeInfo(
+        GetAllResourceTypeInfoRequest request)
         throws YarnException, IOException {
       return null;
     }

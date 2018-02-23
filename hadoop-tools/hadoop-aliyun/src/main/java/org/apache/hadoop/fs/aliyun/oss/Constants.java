@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
+import com.aliyun.oss.common.utils.VersionInfoUtils;
+
 /**
  * ALL configuration constants for OSS filesystem.
  */
@@ -25,6 +27,11 @@ public final class Constants {
 
   private Constants() {
   }
+
+  // User agent
+  public static final String USER_AGENT_PREFIX = "fs.oss.user.agent.prefix";
+  public static final String USER_AGENT_PREFIX_DEFAULT =
+          VersionInfoUtils.getDefaultUserAgent();
 
   // Class of credential provider
   public static final String ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY =
@@ -59,7 +66,7 @@ public final class Constants {
 
   // Number of times we should retry errors
   public static final String MAX_ERROR_RETRIES_KEY = "fs.oss.attempts.maximum";
-  public static final int MAX_ERROR_RETRIES_DEFAULT = 20;
+  public static final int MAX_ERROR_RETRIES_DEFAULT = 10;
 
   // Time until we give up trying to establish a connection to oss
   public static final String ESTABLISH_TIMEOUT_KEY =
@@ -90,7 +97,18 @@ public final class Constants {
   public static final String MULTIPART_DOWNLOAD_SIZE_KEY =
       "fs.oss.multipart.download.size";
 
-  public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 100 * 1024;
+  public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 512 * 1024;
+
+  public static final String MULTIPART_DOWNLOAD_THREAD_NUMBER_KEY =
+      "fs.oss.multipart.download.threads";
+  public static final int MULTIPART_DOWNLOAD_THREAD_NUMBER_DEFAULT = 10;
+
+  public static final String MAX_TOTAL_TASKS_KEY = "fs.oss.max.total.tasks";
+  public static final int MAX_TOTAL_TASKS_DEFAULT = 128;
+
+  public static final String MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_KEY =
+      "fs.oss.multipart.download.ahead.part.max.number";
+  public static final int MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT = 4;
 
   // Comma separated list of directories
   public static final String BUFFER_DIR_KEY = "fs.oss.buffer.dir";

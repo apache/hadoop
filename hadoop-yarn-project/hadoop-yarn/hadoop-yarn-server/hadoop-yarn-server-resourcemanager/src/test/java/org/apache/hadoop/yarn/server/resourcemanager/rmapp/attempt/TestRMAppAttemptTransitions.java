@@ -35,8 +35,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -113,7 +111,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
@@ -330,7 +327,15 @@ public class TestRMAppAttemptTransitions {
             masterService, submissionContext, new Configuration(),
             Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1)), application);
+                submissionContext.getResource(), 1)), application) {
+        @Override
+        protected void onInvalidTranstion(
+                RMAppAttemptEventType rmAppAttemptEventType,
+                RMAppAttemptState state) {
+            Assert.assertTrue("RMAppAttemptImpl can't handle "
+                + rmAppAttemptEventType + " at state " + state, false);
+        }
+    };
 
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
@@ -344,19 +349,10 @@ public class TestRMAppAttemptTransitions {
     ((AsyncDispatcher)this.spyRMContext.getDispatcher()).stop();
   }
   
-
   private String getProxyUrl(RMAppAttempt appAttempt) {
-    String url = null;
-    final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-    try {
-      String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, appAttempt
-          .getAppAttemptId().getApplicationId());
-      url = result.toASCIIString();
-    } catch (URISyntaxException ex) {
-      Assert.fail();
-    }
+    String url = rmContext.getAppProxyUrl(conf,
+        appAttempt.getAppAttemptId().getApplicationId());
+    Assert.assertNotEquals("N/A", url);
     return url;
   }
 
@@ -478,7 +474,7 @@ public class TestRMAppAttemptTransitions {
 
     assertEquals(expectedState, applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).allocate(
-        any(ApplicationAttemptId.class), any(List.class), any(List.class),
+        any(ApplicationAttemptId.class), any(List.class), eq(null), any(List.class),
         any(List.class), any(List.class), any(ContainerUpdates.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
@@ -499,7 +495,7 @@ public class TestRMAppAttemptTransitions {
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).allocate(any(ApplicationAttemptId.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class));
     verify(nmTokenManager).clearNodeSetForAttempt(
       applicationAttempt.getAppAttemptId());
@@ -526,12 +522,9 @@ public class TestRMAppAttemptTransitions {
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
-  /**
-   * {@link RMAppAttemptState#LAUNCHED}
-   */
-  private void testAppAttemptLaunchedState(Container container) {
-    assertEquals(RMAppAttemptState.LAUNCHED, 
-        applicationAttempt.getAppAttemptState());
+  private void testAppAttemptLaunchedState(Container container,
+                                                RMAppAttemptState state) {
+    assertEquals(state, applicationAttempt.getAppAttemptState());
     assertEquals(container, applicationAttempt.getMasterContainer());
     if (UserGroupInformation.isSecurityEnabled()) {
       // ClientTokenMasterKey has been registered in SecretManager, it's able to
@@ -555,7 +548,7 @@ public class TestRMAppAttemptTransitions {
     if (unmanagedAM) {
       verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl());
     } else {
-      assertEquals(getProxyUrl(applicationAttempt), 
+      assertEquals(getProxyUrl(applicationAttempt),
           applicationAttempt.getTrackingUrl());
     }
     // TODO - need to add more checks relevant to this state
@@ -650,7 +643,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class))).
     thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -686,13 +679,18 @@ public class TestRMAppAttemptTransitions {
   }
   
   private void launchApplicationAttempt(Container container) {
+    launchApplicationAttempt(container, RMAppAttemptState.LAUNCHED);
+  }
+
+  private void launchApplicationAttempt(Container container,
+                                        RMAppAttemptState state) {
     applicationAttempt.handle(
-        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(),
             RMAppAttemptEventType.LAUNCHED));
 
-    testAppAttemptLaunchedState(container);    
+    testAppAttemptLaunchedState(container, state);
   }
-  
+
   private void runApplicationAttempt(Container container,
       String host, 
       int rpcPort, 
@@ -723,7 +721,7 @@ public class TestRMAppAttemptTransitions {
     when(submissionContext.getUnmanagedAM()).thenReturn(true);
     // submit AM and check it goes to LAUNCHED state
     scheduleApplicationAttempt();
-    testAppAttemptLaunchedState(null);
+    testAppAttemptLaunchedState(null, RMAppAttemptState.LAUNCHED);
     verify(amLivelinessMonitor, times(1)).register(
         applicationAttempt.getAppAttemptId());
 
@@ -930,7 +928,15 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.createApplicationAttemptState());
     testAppAttemptFailedState(amContainer, diagnostics);
   }
-  
+
+  @Test(timeout = 10000)
+  public void testAllocatedToRunning() {
+    Container amContainer = allocateApplicationAttempt();
+    // Register attempt event arrives before launched attempt event
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
+    launchApplicationAttempt(amContainer, RMAppAttemptState.RUNNING);
+  }
+
   @Test(timeout = 10000)
   public void testCreateAppAttemptReport() {
     RMAppAttemptState[] attemptStates = RMAppAttemptState.values();
@@ -974,6 +980,23 @@ public class TestRMAppAttemptTransitions {
             RMAppAttemptEventType.LAUNCH_FAILED, "Launch Failed"));
     assertEquals(RMAppAttemptState.KILLED,
         applicationAttempt.getAppAttemptState());
+  }
+
+  @Test(timeout = 10000)
+  public void testAttemptAddedAtFinalSaving() {
+    submitApplicationAttempt();
+
+    // SUBNITED->FINAL_SAVING
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+                   .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+                   applicationAttempt.getAppAttemptState());
+
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+                   .getAppAttemptId(), RMAppAttemptEventType.ATTEMPT_ADDED));
+
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+                   applicationAttempt.getAppAttemptState());
   }
 
   @Test
@@ -1138,7 +1161,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(amContainer));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class)))
         .thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -1613,7 +1636,7 @@ public class TestRMAppAttemptTransitions {
   public void testScheduleTransitionReplaceAMContainerRequestWithDefaults() {
     YarnScheduler mockScheduler = mock(YarnScheduler.class);
     when(mockScheduler.allocate(any(ApplicationAttemptId.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class)))
         .thenAnswer(new Answer<Allocation>() {
 

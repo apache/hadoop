@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-beta1-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN NodeManager</name>
 
   <properties>
@@ -213,6 +213,44 @@
                   <binary>${project.build.directory}/native/target/usr/local/bin/test-container-executor</binary>
                   <timeout>300</timeout>
                   <results>${project.build.directory}/native-results</results>
+                </configuration>
+              </execution>
+              <execution>
+                <id>cetest</id>
+                <goals><goal>cmake-test</goal></goals>
+                <phase>test</phase>
+                <configuration>
+                  <!-- this should match the xml name without the TEST-part down below -->
+                  <testName>cetest</testName>
+                  <workingDirectory>${project.build.directory}/native/test</workingDirectory>
+                  <source>${basedir}/src</source>
+                  <binary>${project.build.directory}/native/test/cetest</binary>
+                  <args>
+                    <arg>--gtest_filter=-Perf.</arg>
+                    <arg>--gtest_output=xml:${project.build.directory}/surefire-reports/TEST-cetest.xml</arg>
+                  </args>
+                  <results>${project.build.directory}/surefire-reports</results>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>make</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${project.build.directory}/native/test/"
+                      overwrite="true">
+                      <fileset dir="${basedir}/src/main/native/container-executor/resources/test" />
+                    </copy>
+                  </target>
                 </configuration>
               </execution>
             </executions>

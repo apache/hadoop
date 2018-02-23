@@ -16,11 +16,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-beta1-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-yarn</artifactId>
-  <version>3.0.0-beta1-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN</name>
 
@@ -75,7 +75,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <excludePackageNames>org.apache.hadoop.yarn.proto:org.apache.hadoop.yarn.federation.proto</excludePackageNames>
+          <excludePackageNames>org.apache.hadoop.yarn.proto:org.apache.hadoop.yarn.federation.proto:org.apache.hadoop.yarn.service</excludePackageNames>
         </configuration>
       </plugin>
     </plugins>
@@ -113,6 +113,13 @@
         <jdiff.compatibility></jdiff.compatibility>
         <jdiff.javadoc.maxmemory>512m</jdiff.javadoc.maxmemory>
       </properties>
+      <dependencies>
+        <dependency>
+          <groupId>xerces</groupId>
+          <artifactId>xercesImpl</artifactId>
+          <version>${xerces.jdiff.version}</version>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>

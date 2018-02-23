@@ -22,14 +22,15 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.WEB_UI_TYPE;
 
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -63,13 +65,17 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AppBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(AppBlock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AppBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
   protected Configuration conf;
   protected ApplicationId appID = null;
+  private boolean unsecuredUI = true;
+
 
   @Inject
   protected AppBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx,
@@ -77,6 +83,9 @@ public class AppBlock extends HtmlBlock {
     super(ctx);
     this.appBaseProt = appBaseProt;
     this.conf = conf;
+    // check if UI is unsecured.
+    String httpAuth = conf.get(CommonConfigurationKeys.HADOOP_HTTP_AUTHENTICATION_TYPE);
+    this.unsecuredUI = (httpAuth != null) && httpAuth.equals("simple");
   }
 
   @Override
@@ -108,8 +117,7 @@ public class AppBlock extends HtmlBlock {
             new PrivilegedExceptionAction<ApplicationReport> () {
           @Override
           public ApplicationReport run() throws Exception {
-            return appBaseProt.getApplicationReport(request)
-                .getApplicationReport();
+            return getApplicationReport(request);
           }
         });
       }
@@ -129,10 +137,41 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
+    //Validate if able to read application attempts
+    // which should also validate if kill is allowed for the user based on ACLs
+
+    Collection<ApplicationAttemptReport> attempts;
+    try {
+      final GetApplicationAttemptsRequest request =
+          GetApplicationAttemptsRequest.newInstance(appID);
+      attempts = callerUGI.doAs(
+          new PrivilegedExceptionAction<Collection<
+              ApplicationAttemptReport>>() {
+            @Override
+            public Collection<ApplicationAttemptReport> run() throws Exception {
+              return getApplicationAttemptsReport(request);
+            }
+          });
+    } catch (Exception e) {
+      String message =
+          "Failed to read the attempts of the application " + appID + ".";
+      LOG.error(message, e);
+      html.p().__(message).__();
+      return;
+    }
+
+
+    // YARN-6890. for secured cluster allow anonymous UI access, application kill
+    // shouldn't be there.
+    boolean unsecuredUIForSecuredCluster = UserGroupInformation.isSecurityEnabled()
+        && this.unsecuredUI;
+
     if (webUiType != null
         && webUiType.equals(YarnWebParams.RM_WEB_UI)
         && conf.getBoolean(YarnConfiguration.RM_WEBAPP_UI_ACTIONS_ENABLED,
-          YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED)) {
+          YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED)
+            && !unsecuredUIForSecuredCluster
+            && !isAppInFinalState(app)) {
       // Application Kill
       html.div()
         .button()
@@ -167,27 +206,6 @@ public class AppBlock extends HtmlBlock {
         "/cluster/scheduler?openQueues=" + app.getQueue();
 
     generateOverviewTable(app, schedulerPath, webUiType, appReport);
-
-    Collection<ApplicationAttemptReport> attempts;
-    try {
-      final GetApplicationAttemptsRequest request =
-          GetApplicationAttemptsRequest.newInstance(appID);
-      attempts = callerUGI.doAs(
-          new PrivilegedExceptionAction<Collection<
-              ApplicationAttemptReport>>() {
-            @Override
-            public Collection<ApplicationAttemptReport> run() throws Exception {
-              return appBaseProt.getApplicationAttempts(request)
-                  .getApplicationAttemptList();
-            }
-          });
-    } catch (Exception e) {
-      String message =
-          "Failed to read the attempts of the application " + appID + ".";
-      LOG.error(message, e);
-      html.p().__(message).__();
-      return;
-    }
 
     createApplicationMetricsTable(html);
 
@@ -288,7 +306,7 @@ public class AppBlock extends HtmlBlock {
                       appAttemptReport.getAMContainerId());
         if (callerUGI == null) {
           containerReport =
-              appBaseProt.getContainerReport(request).getContainerReport();
+              getContainerReport(request);
         } else {
           containerReport = callerUGI.doAs(
               new PrivilegedExceptionAction<ContainerReport>() {
@@ -297,8 +315,7 @@ public class AppBlock extends HtmlBlock {
               ContainerReport report = null;
               if (request.getContainerId() != null) {
                   try {
-                    report = appBaseProt.getContainerReport(request)
-                        .getContainerReport();
+                    report = getContainerReport(request);
                   } catch (ContainerNotFoundException ex) {
                     LOG.warn(ex.getMessage());
                   }
@@ -350,6 +367,26 @@ public class AppBlock extends HtmlBlock {
 
     tbody.__().__();
   }
+
+  protected ContainerReport getContainerReport(
+      final GetContainerReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getContainerReport(request).getContainerReport();
+  }
+
+  protected List<ApplicationAttemptReport> getApplicationAttemptsReport(
+      final GetApplicationAttemptsRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationAttempts(request)
+        .getApplicationAttemptList();
+  }
+
+  protected ApplicationReport getApplicationReport(
+      final GetApplicationReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getApplicationReport(request).getApplicationReport();
+  }
+
 
   private String clarifyAppState(YarnApplicationState state) {
     String ret = state.toString();
@@ -406,5 +443,11 @@ public class AppBlock extends HtmlBlock {
       ret += "' : 'null' },";
     }
     return ret;
+  }
+
+  private boolean isAppInFinalState(AppInfo app) {
+    return app.getAppState() == YarnApplicationState.FINISHED
+        || app.getAppState() == YarnApplicationState.FAILED
+        || app.getAppState() == YarnApplicationState.KILLED;
   }
 }

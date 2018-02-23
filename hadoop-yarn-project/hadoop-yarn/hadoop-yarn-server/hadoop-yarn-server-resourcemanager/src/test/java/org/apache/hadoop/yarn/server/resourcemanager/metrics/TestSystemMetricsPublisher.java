@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -506,9 +508,16 @@ public class TestSystemMetricsPublisher {
     when(app.getCurrentAppAttempt()).thenReturn(appAttempt);
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
-    when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
-            Integer.MAX_VALUE, Long.MAX_VALUE));
+    Map<String, Long> resourceMap = new HashMap<>();
+    resourceMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
+    resourceMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
+    Map<String, Long> preemptedMap = new HashMap<>();
+    preemptedMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
+    preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
+    when(app.getRMAppMetrics())
+        .thenReturn(new RMAppMetrics(null, 0, 0, resourceMap, preemptedMap));
     Set<String> appTags = new HashSet<String>();
     appTags.add("test");
     appTags.add("tags");

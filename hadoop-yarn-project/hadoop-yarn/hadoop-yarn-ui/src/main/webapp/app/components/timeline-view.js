@@ -19,8 +19,13 @@
 import Ember from 'ember';
 import Converter from 'yarn-ui/utils/converter';
 import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Component.extend({
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
+
   canvas: {
     svg: undefined,
     h: 0,
@@ -30,6 +35,7 @@ export default Ember.Component.extend({
 
   clusterMetrics: undefined,
   modelArr: [],
+  containerIdArr: [],
   colors: d3.scale.category10().range(),
   _selected: undefined,
   gridColumns: [],
@@ -232,19 +238,21 @@ export default Ember.Component.extend({
     // init tooltip
     this.initTooltip();
     this.modelArr = [];
+    this.containerIdArr = [];
 
     // init model
     if (this.get("rmModel")) {
       this.get("rmModel").forEach(function(o) {
         if(!this.modelArr.contains(o)) {
           this.modelArr.push(o);
+          this.containerIdArr.push(o.id);
         }
       }.bind(this));
     }
 
     if (this.get("tsModel")) {
       this.get("tsModel").forEach(function(o) {
-        if(!this.modelArr.contains(o)) {
+        if(!this.containerIdArr.contains(o.id)) {
           this.modelArr.push(o);
         }
       }.bind(this));
@@ -472,9 +480,5 @@ export default Ember.Component.extend({
       prop = 'http://' + prop;
     }
     return prop;
-  },
-
-  isDataEmpty: Ember.computed(function() {
-    return this.modelArr.length === 0;
-  })
+  }
 });

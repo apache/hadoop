@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -44,22 +43,32 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   private AtomicInteger runningIndex = new AtomicInteger(0);
   private MockResourceManagerFacade mockRm;
 
+  public TestableFederationInterceptor() {
+  }
+
+  public TestableFederationInterceptor(MockResourceManagerFacade homeRM,
+      ConcurrentHashMap<String, MockResourceManagerFacade> secondaries) {
+    mockRm = homeRM;
+    secondaryResourceManagers = secondaries;
+  }
+
   @Override
   protected UnmanagedAMPoolManager createUnmanagedAMPoolManager(
       ExecutorService threadPool) {
     return new TestableUnmanagedAMPoolManager(threadPool);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  protected ApplicationMasterProtocol createHomeRMProxy(
-      AMRMProxyApplicationContext appContext) {
+  protected <T> T createHomeRMProxy(AMRMProxyApplicationContext appContext,
+      Class<T> protocol, UserGroupInformation user) {
     synchronized (this) {
       if (mockRm == null) {
         mockRm = new MockResourceManagerFacade(
             new YarnConfiguration(super.getConf()), 0);
       }
     }
-    return mockRm;
+    return (T) mockRm;
   }
 
   @SuppressWarnings("unchecked")
@@ -68,7 +77,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     // We create one instance of the mock resource manager per sub cluster. Keep
     // track of the instances of the RMs in the map keyed by the sub cluster id
     synchronized (this.secondaryResourceManagers) {
-      if (this.secondaryResourceManagers.contains(subClusterId)) {
+      if (this.secondaryResourceManagers.containsKey(subClusterId)) {
         return (T) this.secondaryResourceManagers.get(subClusterId);
       } else {
         // The running index here is used to simulate different RM_EPOCH to
@@ -91,6 +100,15 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     }
   }
 
+  protected MockResourceManagerFacade getHomeRM() {
+    return mockRm;
+  }
+
+  protected ConcurrentHashMap<String, MockResourceManagerFacade>
+      getSecondaryRMs() {
+    return secondaryResourceManagers;
+  }
+
   /**
    * Extends the UnmanagedAMPoolManager and overrides methods to provide a
    * testable implementation of UnmanagedAMPoolManager.
@@ -104,9 +122,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     @Override
     public UnmanagedApplicationManager createUAM(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix) {
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
       return new TestableUnmanagedApplicationManager(conf, appId, queueName,
-          submitter, appNameSuffix);
+          submitter, appNameSuffix, keepContainersAcrossApplicationAttempts);
     }
   }
 
@@ -119,8 +137,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
 
     public TestableUnmanagedApplicationManager(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix) {
-      super(conf, appId, queueName, submitter, appNameSuffix);
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+      super(conf, appId, queueName, submitter, appNameSuffix,
+          keepContainersAcrossApplicationAttempts);
     }
 
     /**

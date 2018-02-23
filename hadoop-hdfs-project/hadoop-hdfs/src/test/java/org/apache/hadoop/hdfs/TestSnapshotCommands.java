@@ -45,6 +45,7 @@ public class TestSnapshotCommands {
   @BeforeClass
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 3);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -85,10 +86,12 @@ public class TestSnapshotCommands {
   @Test
   public void testAllowSnapshot() throws Exception {
     // Idempotent test
-    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub1", 0, "Allowing snaphot on /sub1 succeeded", conf);
-    // allow normal dir success 
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub1", 0,
+        "Allowing snapshot " + "on /sub1 succeeded", conf);
+    // allow normal dir success
     DFSTestUtil.FsShellRun("-mkdir /sub2", conf);
-    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub2", 0, "Allowing snaphot on /sub2 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub2", 0,
+        "Allowing snapshot " + "on /sub2 succeeded", conf);
     // allow non-exists dir failed
     DFSTestUtil.DFSAdminRun("-allowSnapshot /sub3", -1, null, conf);
   }
@@ -110,6 +113,23 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn0", 0, "/sub1/.snapshot/sn0/sub1sub2", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub1", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub3", conf);
+  }
+
+  @Test
+  public void testMaxSnapshotLimit() throws Exception {
+    DFSTestUtil.FsShellRun("-mkdir /sub3", conf);
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub3", 0,
+        "Allowing snapshot " + "on /sub3 succeeded", conf);
+    // test createSnapshot
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn0", 0,
+        "Created snapshot /sub3/.snapshot/sn0", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn1", 0,
+        "Created snapshot /sub3/.snapshot/sn1", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn2", 0,
+        "Created snapshot /sub3/.snapshot/sn2", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn3", 1,
+        "Failed to add snapshot: there are already 3 snapshot(s) and "
+            + "the max snapshot limit is 3", conf);
   }
 
   @Test
@@ -159,9 +179,11 @@ public class TestSnapshotCommands {
     DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", -1,
         "disallowSnapshot: The directory /sub1 has snapshot(s). Please redo the operation after removing all the snapshots.", conf);
     DFSTestUtil.FsShellRun("-deleteSnapshot /sub1 sn1", conf);
-    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0, "Disallowing snaphot on /sub1 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0,
+        "Disallowing snapshot on /sub1 succeeded", conf);
     // Idempotent test
-    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0, "Disallowing snaphot on /sub1 succeeded", conf);
+    DFSTestUtil.DFSAdminRun("-disallowSnapshot /sub1", 0,
+        "Disallowing snapshot on /sub1 succeeded", conf);
     // now it can be deleted
     DFSTestUtil.FsShellRun("-rmr /sub1", conf);
   }
@@ -173,7 +195,7 @@ public class TestSnapshotCommands {
     config.set("fs.defaultFS", "hdfs://127.0.0.1:1024");
     String path = fs.getUri() + "/Fully/QPath";
     DFSTestUtil.DFSAdminRun("-allowSnapshot " + path, 0,
-        "Allowing snaphot on " + path + " succeeded", config);
+        "Allowing snapshot on " + path + " succeeded", config);
     DFSTestUtil.FsShellRun("-createSnapshot " + path + " sn1", config);
     // create file1
     DFSTestUtil
@@ -193,7 +215,7 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn1", config);
     DFSTestUtil.FsShellRun("-deleteSnapshot " + path + " sn3", config);
     DFSTestUtil.DFSAdminRun("-disallowSnapshot " + path, 0,
-        "Disallowing snaphot on " + path + " succeeded", config);
+        "Disallowing snapshot on " + path + " succeeded", config);
     fs.delete(new Path("/Fully/QPath"), true);
   }
 
@@ -205,7 +227,7 @@ public class TestSnapshotCommands {
     fs.mkdirs(snapDirPath);
 
     DFSTestUtil.DFSAdminRun("-allowSnapshot " + snapDirPath, 0,
-        "Allowing snaphot on " + snapDirPath + " succeeded", config);
+        "Allowing snapshot on " + snapDirPath + " succeeded", config);
     DFSTestUtil.createFile(fs, new Path(snapDirPath, "file1"),
         1024, (short) 1, 100);
     DFSTestUtil.FsShellRun("-createSnapshot " + snapDirPath + " sn1", config);
@@ -242,7 +264,7 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-deleteSnapshot " + snapDir + " sn3", config);
     DFSTestUtil.FsShellRun("-deleteSnapshot " + snapDir + " sn4", config);
     DFSTestUtil.DFSAdminRun("-disallowSnapshot " + snapDir, 0,
-        "Disallowing snaphot on " + snapDirPath + " succeeded", config);
+        "Disallowing snapshot on " + snapDirPath + " succeeded", config);
     fs.delete(new Path("/Fully/QPath"), true);
   }
 }

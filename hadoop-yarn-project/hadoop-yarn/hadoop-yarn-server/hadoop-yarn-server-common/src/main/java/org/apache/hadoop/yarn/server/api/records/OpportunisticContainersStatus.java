@@ -149,4 +149,23 @@ public abstract class OpportunisticContainersStatus {
   @Unstable
   public abstract void setEstimatedQueueWaitTime(int queueWaitTime);
 
+
+  /**
+   * Gets the capacity of the opportunistic containers queue on the node.
+   *
+   * @return queue capacity.
+   */
+  @Private
+  @Unstable
+  public abstract int getOpportQueueCapacity();
+
+
+  /**
+   * Sets the capacity of the opportunistic containers queue on the node.
+   *
+   * @param queueCapacity queue capacity.
+   */
+  @Private
+  @Unstable
+  public abstract void setOpportQueueCapacity(int queueCapacity);
 }

@@ -18,12 +18,19 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
+import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import com.google.common.base.Preconditions;
@@ -32,26 +39,37 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -63,8 +81,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 @InterfaceStability.Evolving
 public final class S3AUtils {
 
-  /** Reuse the S3AFileSystem log. */
-  private static final Logger LOG = S3AFileSystem.LOG;
+  private static final Logger LOG = LoggerFactory.getLogger(S3AUtils.class);
   static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
   static final String INSTANTIATION_EXCEPTION
       = "instantiation exception";
@@ -73,6 +90,9 @@ public final class S3AUtils {
   static final String ABSTRACT_PROVIDER =
       "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
+
+  /** Filesystem is closed; kept here to keep the errors close. */
+  static final String E_FS_CLOSED = "FileSystem is closed!";
 
   /**
    * Core property for provider path. Duplicated here for consistent
@@ -95,6 +115,10 @@ public final class S3AUtils {
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
           + SERVER_SIDE_ENCRYPTION_KEY;
+  private static final String EOF_MESSAGE_IN_XML_PARSER
+      = "Failed to sanitize XML document destined for handler class";
+
+  private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
 
 
   private S3AUtils() {
@@ -106,6 +130,10 @@ public final class S3AUtils {
    * {@link AmazonClientException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
+   *
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+   * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
    * @param operation operation
    * @param path path operated on (must not be null)
    * @param exception amazon exception raised
@@ -129,21 +157,30 @@ public final class S3AUtils {
    * @return an IOE which wraps the caught exception.
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
-  public static IOException translateException(String operation,
+  public static IOException translateException(@Nullable String operation,
       String path,
-      AmazonClientException exception) {
+      SdkBaseException exception) {
     String message = String.format("%s%s: %s",
         operation,
         path != null ? (" on " + path) : "",
         exception);
     if (!(exception instanceof AmazonServiceException)) {
-      if (containsInterruptedException(exception)) {
-        return (IOException)new InterruptedIOException(message)
-            .initCause(exception);
+      Exception innerCause = containsInterruptedException(exception);
+      if (innerCause != null) {
+        // interrupted IO, or a socket exception underneath that class
+        return translateInterruptedException(exception, innerCause, message);
+      }
+      if (signifiesConnectionBroken(exception)) {
+        // call considered an sign of connectivity failure
+        return (EOFException)new EOFException(message).initCause(exception);
       }
       return new AWSClientIOException(message, exception);
     } else {
-
+      if (exception instanceof AmazonDynamoDBException) {
+        // special handling for dynamo DB exceptions
+        return translateDynamoDBException(message,
+            (AmazonDynamoDBException)exception);
+      }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -151,9 +188,11 @@ public final class S3AUtils {
           ? (AmazonS3Exception) ase
           : null;
       int status = ase.getStatusCode();
+      message = message + ":" + ase.getErrorCode();
       switch (status) {
 
       case 301:
+      case 307:
         if (s3Exception != null) {
           if (s3Exception.getAdditionalDetails() != null &&
               s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
@@ -163,11 +202,16 @@ public final class S3AUtils {
                 + "the bucket.",
                 s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
           }
-          ioe = new AWSS3IOException(message, s3Exception);
+          ioe = new AWSRedirectException(message, s3Exception);
         } else {
-          ioe = new AWSServiceIOException(message, ase);
+          ioe = new AWSRedirectException(message, ase);
         }
         break;
+
+      case 400:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // permissions
       case 401:
       case 403:
@@ -186,7 +230,34 @@ public final class S3AUtils {
       // a shorter one while it is being read.
       case 416:
         ioe = new EOFException(message);
+        ioe.initCause(ase);
         break;
+
+      // this has surfaced as a "no response from server" message.
+      // so rare we haven't replicated it.
+      // Treating as an idempotent proxy error.
+      case 443:
+      case 444:
+        ioe = new AWSNoResponseException(message, ase);
+        break;
+
+      // throttling
+      case 503:
+        ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // internal error
+      case 500:
+        ioe = new AWSStatus500Exception(message, ase);
+        break;
+
+      case 200:
+        if (exception instanceof MultiObjectDeleteException) {
+          // failure during a bulk delete
+          return translateMultiObjectDeleteException(message,
+              (MultiObjectDeleteException) exception);
+        }
+        // other 200: FALL THROUGH
 
       default:
         // no specific exit code. Choose an IOE subclass based on the class
@@ -226,18 +297,130 @@ public final class S3AUtils {
    * Recurse down the exception loop looking for any inner details about
    * an interrupted exception.
    * @param thrown exception thrown
-   * @return true if down the execution chain the operation was an interrupt
+   * @return the actual exception if the operation was an interrupt
    */
-  static boolean containsInterruptedException(Throwable thrown) {
+  static Exception containsInterruptedException(Throwable thrown) {
     if (thrown == null) {
-      return false;
+      return null;
     }
     if (thrown instanceof InterruptedException ||
-        thrown instanceof InterruptedIOException) {
-      return true;
+        thrown instanceof InterruptedIOException ||
+        thrown instanceof AbortedException) {
+      return (Exception)thrown;
     }
     // tail recurse
     return containsInterruptedException(thrown.getCause());
+  }
+
+  /**
+   * Handles translation of interrupted exception. This includes
+   * preserving the class of the fault for better retry logic
+   * @param exception outer exception
+   * @param innerCause inner cause (which is guaranteed to be some form
+   * of interrupted exception
+   * @param message message for the new exception.
+   * @return an IOE which can be rethrown
+   */
+  private static InterruptedIOException translateInterruptedException(
+      SdkBaseException exception,
+      final Exception innerCause,
+      String message) {
+    InterruptedIOException ioe;
+    if (innerCause instanceof SocketTimeoutException) {
+      ioe = new SocketTimeoutException(message);
+    } else {
+      String name = innerCause.getClass().getName();
+      if (name.endsWith(".ConnectTimeoutException")
+          || name.endsWith("$ConnectTimeoutException")) {
+        // TCP connection http timeout from the shaded or unshaded filenames
+        // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
+        ioe = new ConnectTimeoutException(message);
+      } else {
+        // any other exception
+        ioe = new InterruptedIOException(message);
+      }
+    }
+    ioe.initCause(exception);
+    return ioe;
+  }
+
+  /**
+   * Is the exception an instance of a throttling exception. That
+   * is an AmazonServiceException with a 503 response, any
+   * exception from DynamoDB for limits exceeded, or an
+   * {@link AWSServiceThrottledException}.
+   * @param ex exception to examine
+   * @return true if it is considered a throttling exception
+   */
+  public static boolean isThrottleException(Exception ex) {
+    return ex instanceof AWSServiceThrottledException
+        || ex instanceof ProvisionedThroughputExceededException
+        || ex instanceof LimitExceededException
+        || (ex instanceof AmazonServiceException
+            && 503  == ((AmazonServiceException)ex).getStatusCode());
+  }
+
+  /**
+   * Cue that an AWS exception is likely to be an EOF Exception based
+   * on the message coming back from an XML/JSON parser. This is likely
+   * to be brittle, so only a hint.
+   * @param ex exception
+   * @return true if this is believed to be a sign the connection was broken.
+   */
+  public static boolean signifiesConnectionBroken(SdkBaseException ex) {
+    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER);
+  }
+
+  /**
+   * Translate a DynamoDB exception into an IOException.
+   * @param message preformatted message for the exception
+   * @param ex exception
+   * @return an exception to throw.
+   */
+  public static IOException translateDynamoDBException(String message,
+      AmazonDynamoDBException ex) {
+    if (isThrottleException(ex)) {
+      return new AWSServiceThrottledException(message, ex);
+    }
+    if (ex instanceof ResourceNotFoundException) {
+      return (FileNotFoundException) new FileNotFoundException(message)
+          .initCause(ex);
+    }
+    return new AWSServiceIOException(message, ex);
+  }
+
+  /**
+   * A MultiObjectDeleteException is raised if one or more delete objects
+   * listed in a bulk DELETE operation failed.
+   * The top-level exception is therefore just "something wasn't deleted",
+   * but doesn't include the what or the why.
+   * This translation will extract an AccessDeniedException if that's one of
+   * the causes, otherwise grabs the status code and uses it in the
+   * returned exception.
+   * @param message text for the exception
+   * @param ex exception to translate
+   * @return an IOE with more detail.
+   */
+  public static IOException translateMultiObjectDeleteException(String message,
+      MultiObjectDeleteException ex) {
+    List<String> keys;
+    StringBuffer result = new StringBuffer(ex.getErrors().size() * 100);
+    result.append(message).append(": ");
+    String exitCode = "";
+    for (MultiObjectDeleteException.DeleteError error : ex.getErrors()) {
+      String code = error.getCode();
+      result.append(String.format("%s: %s: %s%n", code, error.getKey(),
+          error.getMessage()));
+      if (exitCode.isEmpty() ||  "AccessDenied".equals(code)) {
+        exitCode = code;
+      }
+    }
+    if ("AccessDenied".equals(exitCode)) {
+      return (IOException) new AccessDeniedException(result.toString())
+          .initCause(ex);
+    } else {
+      return new AWSS3IOException(result.toString(), ex);
+    }
   }
 
   /**
@@ -294,12 +477,38 @@ public final class S3AUtils {
       S3ObjectSummary summary,
       long blockSize,
       String owner) {
-    if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-      return new S3AFileStatus(true, keyPath, owner);
+    long size = summary.getSize();
+    return createFileStatus(keyPath,
+        objectRepresentsDirectory(summary.getKey(), size),
+        size, summary.getLastModified(), blockSize, owner);
+  }
+
+  /**
+   * Create a file status for object we just uploaded.  For files, we use
+   * current time as modification time, since s3a uses S3's service-based
+   * modification time, which will not be available until we do a
+   * getFileStatus() later on.
+   * @param keyPath path for created object
+   * @param isDir true iff directory
+   * @param size file length
+   * @param blockSize block size for file status
+   * @param owner Hadoop username
+   * @return a status entry
+   */
+  public static S3AFileStatus createUploadFileStatus(Path keyPath,
+      boolean isDir, long size, long blockSize, String owner) {
+    Date date = isDir ? null : new Date();
+    return createFileStatus(keyPath, isDir, size, date, blockSize, owner);
+  }
+
+  /* Date 'modified' is ignored when isDir is true. */
+  private static S3AFileStatus createFileStatus(Path keyPath, boolean isDir,
+      long size, Date modified, long blockSize, String owner) {
+    if (isDir) {
+      return new S3AFileStatus(Tristate.UNKNOWN, keyPath, owner);
     } else {
-      return new S3AFileStatus(summary.getSize(),
-          dateToLong(summary.getLastModified()), keyPath,
-          blockSize, owner);
+      return new S3AFileStatus(size, dateToLong(modified), keyPath, blockSize,
+          owner);
     }
   }
 
@@ -331,8 +540,10 @@ public final class S3AUtils {
   }
 
   /**
-   * Create the AWS credentials from the providers and the URI.
-   * @param binding Binding URI, may contain user:pass login details
+   * Create the AWS credentials from the providers, the URI and
+   * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
+   * @param binding Binding URI, may contain user:pass login details;
+   * may be null
    * @param conf filesystem configuration
    * @return a credentials provider list
    * @throws IOException Problems loading the providers (including reading
@@ -342,14 +553,8 @@ public final class S3AUtils {
       URI binding, Configuration conf) throws IOException {
     AWSCredentialProviderList credentials = new AWSCredentialProviderList();
 
-    Class<?>[] awsClasses;
-    try {
-      awsClasses = conf.getClasses(AWS_CREDENTIALS_PROVIDER);
-    } catch (RuntimeException e) {
-      Throwable c = e.getCause() != null ? e.getCause() : e;
-      throw new IOException("From option " + AWS_CREDENTIALS_PROVIDER +
-          ' ' + c, c);
-    }
+    Class<?>[] awsClasses = loadAWSProviderClasses(conf,
+        AWS_CREDENTIALS_PROVIDER);
     if (awsClasses.length == 0) {
       S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
       credentials.add(new BasicAWSCredentialsProvider(
@@ -358,7 +563,9 @@ public final class S3AUtils {
       credentials.add(InstanceProfileCredentialsProvider.getInstance());
     } else {
       for (Class<?> aClass : awsClasses) {
-        credentials.add(createAWSCredentialProvider(conf, aClass));
+        credentials.add(createAWSCredentialProvider(conf,
+            aClass,
+            binding));
       }
     }
     // make sure the logging message strips out any auth details
@@ -368,13 +575,32 @@ public final class S3AUtils {
   }
 
   /**
+   * Load list of AWS credential provider/credential provider factory classes.
+   * @param conf configuration
+   * @param key key
+   * @param defaultValue list of default values
+   * @return the list of classes, possibly empty
+   * @throws IOException on a failure to load the list.
+   */
+  public static Class<?>[] loadAWSProviderClasses(Configuration conf,
+      String key,
+      Class<?>... defaultValue) throws IOException {
+    try {
+      return conf.getClasses(key, defaultValue);
+    } catch (RuntimeException e) {
+      Throwable c = e.getCause() != null ? e.getCause() : e;
+      throw new IOException("From option " + key + ' ' + c, c);
+    }
+  }
+
+  /**
    * Create an AWS credential provider from its class by using reflection.  The
    * class must implement one of the following means of construction, which are
    * attempted in order:
    *
    * <ol>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
    * <li>a public static method named getInstance that accepts no
    *    arguments and returns an instance of
    *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
@@ -383,12 +609,15 @@ public final class S3AUtils {
    *
    * @param conf configuration
    * @param credClass credential class
+   * @param uri URI of the FS
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
-  static AWSCredentialsProvider createAWSCredentialProvider(
-      Configuration conf, Class<?> credClass) throws IOException {
-    AWSCredentialsProvider credentials = null;
+  public static AWSCredentialsProvider createAWSCredentialProvider(
+      Configuration conf,
+      Class<?> credClass,
+      URI uri) throws IOException {
+    AWSCredentialsProvider credentials;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
       throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
@@ -399,8 +628,15 @@ public final class S3AUtils {
     LOG.debug("Credential provider class is {}", className);
 
     try {
+      // new X(uri, conf)
+      Constructor cons = getConstructor(credClass, URI.class,
+          Configuration.class);
+      if (cons != null) {
+        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
+        return credentials;
+      }
       // new X(conf)
-      Constructor cons = getConstructor(credClass, Configuration.class);
+      cons = getConstructor(credClass, Configuration.class);
       if (cons != null) {
         credentials = (AWSCredentialsProvider)cons.newInstance(conf);
         return credentials;
@@ -427,9 +663,27 @@ public final class S3AUtils {
           + "accepting Configuration, or a public factory method named "
           + "getInstance that accepts no arguments, or a public default "
           + "constructor.", className, AWS_CREDENTIALS_PROVIDER));
+    } catch (InvocationTargetException e) {
+      Throwable targetException = e.getTargetException();
+      if (targetException == null) {
+        targetException =  e;
+      }
+      if (targetException instanceof IOException) {
+        throw (IOException) targetException;
+      } else if (targetException instanceof SdkBaseException) {
+        throw translateException("Instantiate " + className, "",
+            (SdkBaseException) targetException);
+      } else {
+        // supported constructor or factory method found, but the call failed
+        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+            + ": " + targetException,
+            targetException);
+      }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+          + ": " + e,
+          e);
     }
   }
 
@@ -437,7 +691,7 @@ public final class S3AUtils {
    * Return the access key and secret for S3 API use.
    * Credentials may exist in configuration, within credential providers
    * or indicated in the UserInfo of the name URI param.
-   * @param name the URI for which we need the access keys.
+   * @param name the URI for which we need the access keys; may be null
    * @param conf the Configuration object to interrogate for keys.
    * @return AWSAccessKeys
    * @throws IOException problems retrieving passwords from KMS.
@@ -448,9 +702,62 @@ public final class S3AUtils {
         S3xLoginHelper.extractLoginDetailsWithWarnings(name);
     Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
         conf, S3AFileSystem.class);
-    String accessKey = getPassword(c, ACCESS_KEY, login.getUser());
-    String secretKey = getPassword(c, SECRET_KEY, login.getPassword());
+    String bucket = name != null ? name.getHost() : "";
+
+    // build the secrets. as getPassword() uses the last arg as
+    // the return value if non-null, the ordering of
+    // login -> bucket -> base is critical
+
+    // get the bucket values
+    String accessKey = lookupPassword(bucket, c, ACCESS_KEY,
+        login.getUser());
+
+    // finally the base
+    String secretKey = lookupPassword(bucket, c, SECRET_KEY,
+        login.getPassword());
+
+    // and override with any per bucket values
     return new S3xLoginHelper.Login(accessKey, secretKey);
+  }
+
+  /**
+   * Get a password from a configuration, including JCEKS files, handling both
+   * the absolute key and bucket override.
+   * @param bucket bucket or "" if none known
+   * @param conf configuration
+   * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
+   * @param overrideVal override value: if non empty this is used instead of
+   * querying the configuration.
+   * @return a password or "".
+   * @throws IOException on any IO problem
+   * @throws IllegalArgumentException bad arguments
+   */
+  public static String lookupPassword(
+      String bucket,
+      Configuration conf,
+      String baseKey,
+      String overrideVal)
+      throws IOException {
+    String initialVal;
+    Preconditions.checkArgument(baseKey.startsWith(FS_S3A_PREFIX),
+        "%s does not start with $%s", baseKey, FS_S3A_PREFIX);
+    // if there's a bucket, work with it
+    if (StringUtils.isNotEmpty(bucket)) {
+      String subkey = baseKey.substring(FS_S3A_PREFIX.length());
+      String shortBucketKey = String.format(
+          BUCKET_PATTERN, bucket, subkey);
+      String longBucketKey = String.format(
+          BUCKET_PATTERN, bucket, baseKey);
+
+      // set from the long key unless overidden.
+      initialVal = getPassword(conf, longBucketKey, overrideVal);
+      // then override from the short one if it is set
+      initialVal = getPassword(conf, shortBucketKey, initialVal);
+    } else {
+      // no bucket, make the initial value the override value
+      initialVal = overrideVal;
+    }
+    return getPassword(conf, baseKey, initialVal);
   }
 
   /**
@@ -463,10 +770,9 @@ public final class S3AUtils {
    * @return a password or "".
    * @throws IOException on any problem
    */
-  static String getPassword(Configuration conf, String key, String val)
+  private static String getPassword(Configuration conf, String key, String val)
       throws IOException {
-    String defVal = "";
-    return getPassword(conf, key, val, defVal);
+    return getPassword(conf, key, val, "");
   }
 
   /**
@@ -561,7 +867,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get a long option >= the minimum allowed value, supporting memory
+   * Get a long option &gt;= the minimum allowed value, supporting memory
    * prefixes K,M,G,T,P.
    * @param conf configuration
    * @param key key to look up
@@ -570,7 +876,7 @@ public final class S3AUtils {
    * @return the value
    * @throws IllegalArgumentException if the value is below the minimum
    */
-  static long longBytesOption(Configuration conf,
+  public static long longBytesOption(Configuration conf,
                              String key,
                              long defVal,
                              long min) {
@@ -710,12 +1016,149 @@ public final class S3AUtils {
         // propagate the value, building a new origin field.
         // to track overwrites, the generic key is overwritten even if
         // already matches the new one.
+        String origin = "[" + StringUtils.join(
+            source.getPropertySources(key), ", ") +"]";
         final String generic = FS_S3A_PREFIX + stripped;
-        LOG.debug("Updating {}", generic);
-        dest.set(generic, value, key);
+        LOG.debug("Updating {} from {}", generic, origin);
+        dest.set(generic, value, key + " via " + origin);
       }
     }
     return dest;
+  }
+
+
+  /**
+   * Delete a path quietly: failures are logged at DEBUG.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteQuietly(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.debug("Failed to delete {}", path, e);
+    }
+  }
+
+  /**
+   * Delete a path: failures are logged at WARN.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteWithWarning(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.warn("Failed to delete {}", path, e);
+    }
+  }
+
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface CallOnLocatedFileStatus {
+    void call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface LocatedFileStatusMap<T> {
+    T call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * Apply an operation to every {@link LocatedFileStatus} in a remote
+   * iterator.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @return the number of files processed
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static long applyLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      CallOnLocatedFileStatus eval) throws IOException {
+    long count = 0;
+    while (iterator.hasNext()) {
+      count++;
+      eval.call(iterator.next());
+    }
+    return count;
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the results.
+   * @param <T> return type of map
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @return the list of mapped results.
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> mapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<T> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> results.add(eval.call(s)));
+    return results;
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the all results which were not empty.
+   * @param <T> return type of map
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @return the flattened list of mapped results.
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> flatmapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<Optional<T>> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> eval.call(s).map(r -> results.add(r)));
+    return results;
+  }
+
+  /**
+   * List located files and filter them as a classic listFiles(path, filter)
+   * would do.
+   * @param fileSystem filesystem
+   * @param path path to list
+   * @param recursive recursive listing?
+   * @param filter filter for the filename
+   * @return the filtered list of entries
+   * @throws IOException IO failure.
+   */
+  public static List<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
+      Path path, boolean recursive, PathFilter filter) throws IOException {
+    return flatmapLocatedFiles(fileSystem.listFiles(path, recursive),
+        status -> maybe(filter.accept(status.getPath()), status));
+  }
+
+  /**
+   * Convert a value into a non-empty Optional instance if
+   * the value of {@code include} is true.
+   * @param include flag to indicate the value is to be included.
+   * @param value value to return
+   * @param <T> type of option.
+   * @return if include is false, Optional.empty. Otherwise, the value.
+   */
+  public static <T> Optional<T> maybe(boolean include, T value) {
+    return include ? Optional.of(value) : Optional.empty();
   }
 
   /**
@@ -748,16 +1191,21 @@ public final class S3AUtils {
    * This operation handles the case where the option has been
    * set in the provider or configuration to the option
    * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
+   * IOExceptions raised during retrieval are swallowed.
+   * @param bucket bucket to query for
    * @param conf configuration to examine
-   * @return the encryption key or null
+   * @return the encryption key or ""
+   * @throws IllegalArgumentException bad arguments.
    */
-  static String getServerSideEncryptionKey(Configuration conf) {
+  static String getServerSideEncryptionKey(String bucket,
+      Configuration conf) {
     try {
-      return lookupPassword(conf, SERVER_SIDE_ENCRYPTION_KEY,
+      return lookupPassword(bucket, conf,
+          SERVER_SIDE_ENCRYPTION_KEY,
           getPassword(conf, OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
               null, null));
     } catch (IOException e) {
-      LOG.error("Cannot retrieve SERVER_SIDE_ENCRYPTION_KEY", e);
+      LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
       return "";
     }
   }
@@ -766,16 +1214,19 @@ public final class S3AUtils {
    * Get the server-side encryption algorithm.
    * This includes validation of the configuration, checking the state of
    * the encryption key given the chosen algorithm.
+   *
+   * @param bucket bucket to query for
    * @param conf configuration to scan
    * @return the encryption mechanism (which will be {@code NONE} unless
    * one is set.
    * @throws IOException on any validation problem.
    */
-  static S3AEncryptionMethods getEncryptionAlgorithm(Configuration conf)
-      throws IOException {
+  static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
+      Configuration conf) throws IOException {
     S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
-        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    String sseKey = getServerSideEncryptionKey(conf);
+        lookupPassword(bucket, conf,
+            SERVER_SIDE_ENCRYPTION_ALGORITHM, null));
+    String sseKey = getServerSideEncryptionKey(bucket, conf);
     int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
     String diagnostics = passwordDiagnostics(sseKey, "key");
     switch (sse) {
@@ -854,5 +1305,91 @@ public final class S3AUtils {
       }
     }
   }
+
+  /**
+   * Set a bucket-specific property to a particular value.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off, so that when the the bucket properties are propagated
+   * down to the generic values, that value gets copied down.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   * @param value value to set
+   */
+  public static void setBucketOption(Configuration conf, String bucket,
+      String genericKey, String value) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    conf.set(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey, value, "S3AUtils");
+  }
+
+  /**
+   * Clear a bucket-specific property.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off, so that when the the bucket properties are propagated
+   * down to the generic values, that value gets copied down.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   */
+  public static void clearBucketOption(Configuration conf, String bucket,
+      String genericKey) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    String k = FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey;
+    LOG.debug("Unset {}", k);
+    conf.unset(k);
+  }
+
+  /**
+   * Get a bucket-specific property.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   * @return the bucket option, null if there is none
+   */
+  public static String getBucketOption(Configuration conf, String bucket,
+      String genericKey) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    return conf.get(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey);
+  }
+
+
+  /**
+   * Path filter which ignores any file which starts with . or _.
+   */
+  public static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path path) {
+      String name = path.getName();
+      return !name.startsWith("_") && !name.startsWith(".");
+    }
+
+    @Override
+    public String toString() {
+      return "HIDDEN_FILE_FILTER";
+    }
+  };
+
+  /**
+   * A Path filter which accepts all filenames.
+   */
+  public static final PathFilter ACCEPT_ALL = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return "ACCEPT_ALL";
+    }
+  };
 
 }

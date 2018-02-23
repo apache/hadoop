@@ -21,15 +21,12 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
@@ -41,6 +38,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This service handles all SCMAdminProtocol rpc calls from administrators
@@ -51,7 +50,8 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 public class SCMAdminProtocolService extends AbstractService implements
     SCMAdminProtocol {
 
-  private static final Log LOG = LogFactory.getLog(SCMAdminProtocolService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SCMAdminProtocolService.class);
 
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);

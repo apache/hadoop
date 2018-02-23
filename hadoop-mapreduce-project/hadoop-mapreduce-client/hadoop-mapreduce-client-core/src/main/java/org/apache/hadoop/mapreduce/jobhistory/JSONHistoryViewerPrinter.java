@@ -145,7 +145,7 @@ class JSONHistoryViewerPrinter implements HistoryViewerPrinter {
     jSums.put("setup", jSumSetup);
     JSONObject jSumMap = new JSONObject();
     jSumMap.put("total", ts.totalMaps);
-    jSumMap.put("successful", job.getFinishedMaps());
+    jSumMap.put("successful", job.getSucceededMaps());
     jSumMap.put("failed", ts.numFailedMaps);
     jSumMap.put("killed", ts.numKilledMaps);
     jSumMap.put("startTime", ts.mapStarted);
@@ -153,7 +153,7 @@ class JSONHistoryViewerPrinter implements HistoryViewerPrinter {
     jSums.put("map", jSumMap);
     JSONObject jSumReduce = new JSONObject();
     jSumReduce.put("total", ts.totalReduces);
-    jSumReduce.put("successful", job.getFinishedReduces());
+    jSumReduce.put("successful", job.getSucceededReduces());
     jSumReduce.put("failed", ts.numFailedReduces);
     jSumReduce.put("killed", ts.numKilledReduces);
     jSumReduce.put("startTime", ts.reduceStarted);

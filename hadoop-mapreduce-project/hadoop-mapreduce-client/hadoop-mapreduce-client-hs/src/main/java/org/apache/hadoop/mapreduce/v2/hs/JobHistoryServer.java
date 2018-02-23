@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -47,6 +45,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /******************************************************************
  * {@link JobHistoryServer} is responsible for servicing all job history
@@ -62,7 +62,8 @@ public class JobHistoryServer extends CompositeService {
 
   public static final long historyServerTimeStamp = System.currentTimeMillis();
 
-  private static final Log LOG = LogFactory.getLog(JobHistoryServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryServer.class);
   protected HistoryContext historyContext;
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
@@ -225,7 +226,7 @@ public class JobHistoryServer extends CompositeService {
       jobHistoryServer.init(conf);
       jobHistoryServer.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting JobHistoryServer", t);
+      LOG.error("Error starting JobHistoryServer", t);
       ExitUtil.terminate(-1, "Error starting JobHistoryServer");
     }
     return jobHistoryServer;

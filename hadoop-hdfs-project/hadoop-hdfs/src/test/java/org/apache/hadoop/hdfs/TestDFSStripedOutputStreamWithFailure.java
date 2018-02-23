@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -38,14 +39,15 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,6 +63,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test striped file write operation with data node failures.
@@ -76,30 +79,29 @@ public class TestDFSStripedOutputStreamWithFailure {
         .getLogger().setLevel(Level.ALL);
   }
 
+  private final int cellSize = 64 * 1024; //64k
+  private final int stripesPerBlock = 4;
   private ErasureCodingPolicy ecPolicy;
   private int dataBlocks;
   private int parityBlocks;
-  private int cellSize;
-  private final int stripesPerBlock = 4;
   private int blockSize;
   private int blockGroupSize;
 
   private static final int FLUSH_POS =
       9 * DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT + 1;
 
-  public ErasureCodingPolicy getEcPolicy() {
-    return StripedFileTestUtil.getDefaultECPolicy();
+  public ECSchema getEcSchema() {
+    return StripedFileTestUtil.getDefaultECPolicy().getSchema();
   }
 
   /*
    * Initialize erasure coding policy.
    */
   @Before
-  public void init(){
-    ecPolicy = getEcPolicy();
+  public void init() {
+    ecPolicy = new ErasureCodingPolicy(getEcSchema(), cellSize);
     dataBlocks = ecPolicy.getNumDataUnits();
     parityBlocks = ecPolicy.getNumParityUnits();
-    cellSize = ecPolicy.getCellSize();
     blockSize = cellSize * stripesPerBlock;
     blockGroupSize = blockSize * dataBlocks;
     dnIndexSuite = getDnIndexSuite();
@@ -188,7 +190,7 @@ public class TestDFSStripedOutputStreamWithFailure {
   private List<Integer> lengths;
 
   Integer getLength(int i) {
-    return i >= 0 && i < lengths.size()? lengths.get(i): null;
+    return i >= 0 && i < lengths.size() ? lengths.get(i): null;
   }
 
   private static final Random RANDOM = new Random();
@@ -216,10 +218,14 @@ public class TestDFSStripedOutputStreamWithFailure {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
+    AddErasureCodingPolicyResponse[] res =
+        dfs.addErasureCodingPolicies(new ErasureCodingPolicy[]{ecPolicy});
+    ecPolicy = res[0].getPolicy();
+    dfs.enableErasureCodingPolicy(ecPolicy.getName());
+    DFSTestUtil.enableAllECPolicies(dfs);
     dfs.mkdirs(dir);
     dfs.setErasureCodingPolicy(dir, ecPolicy.getName());
   }
@@ -240,7 +246,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     return conf;
   }
 
-  @Test(timeout=240000)
+  @Test(timeout=300000)
   public void testMultipleDatanodeFailure56() throws Exception {
     runTestWithMultipleFailure(getLength(56));
   }
@@ -259,7 +265,8 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   @Test(timeout=240000)
   public void testBlockTokenExpired() throws Exception {
-    final int length = dataBlocks * (blockSize - cellSize);
+    // Make sure killPos is greater than the length of one stripe
+    final int length = dataBlocks * cellSize * 3;
     final HdfsConfiguration conf = newHdfsConfiguration();
 
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
@@ -282,7 +289,7 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   @Test(timeout = 90000)
   public void testAddBlockWhenNoSufficientDataBlockNumOfNodes()
-      throws IOException {
+      throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
@@ -299,22 +306,96 @@ public class TestDFSStripedOutputStreamWithFailure {
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns ", numDatanodes, info.length);
+      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
       final Path dirFile = new Path(dir, "ecfile");
-      FSDataOutputStream out;
-      try {
-        out = dfs.create(dirFile, true);
-        out.write("something".getBytes());
-        out.flush();
-        out.close();
-        Assert.fail("Failed to validate available dns against blkGroupSize");
-      } catch (IOException ioe) {
-        // expected
-        GenericTestUtils.assertExceptionContains("Failed to get " +
-            dataBlocks + " nodes from namenode: blockGroupSize= " +
-            (dataBlocks + parityBlocks) + ", blocks.length= " +
-            numDatanodes, ioe);
+      LambdaTestUtils.intercept(
+          IOException.class,
+          "File " + dirFile + " could only be written to " +
+              numDatanodes + " of the " + dataBlocks + " required nodes for " +
+              ecPolicy.getName(),
+          () -> {
+            try (FSDataOutputStream out = dfs.create(dirFile, true)) {
+              out.write("something".getBytes());
+              out.flush();
+            }
+            return 0;
+          });
+    } finally {
+      tearDown();
+    }
+  }
+
+  private void testCloseWithExceptionsInStreamer(
+      int numFailures, boolean shouldFail) throws Exception {
+    assertTrue(numFailures <=
+        ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
+    final Path dirFile = new Path(dir, "ecfile-" + numFailures);
+    try (FSDataOutputStream out = dfs.create(dirFile, true)) {
+      out.write("idempotent close".getBytes());
+
+      // Expect to raise IOE on the first close call, but any following
+      // close() should be no-op.
+      LambdaTestUtils.intercept(IOException.class,
+          out::close);
+
+      assertTrue(out.getWrappedStream() instanceof DFSStripedOutputStream);
+      DFSStripedOutputStream stripedOut =
+          (DFSStripedOutputStream) out.getWrappedStream();
+      for (int i = 0; i < numFailures; i++) {
+        // Only inject 1 stream failure.
+        stripedOut.getStripedDataStreamer(i).getLastException().set(
+            new IOException("injected failure")
+        );
       }
+      if (shouldFail) {
+        LambdaTestUtils.intercept(IOException.class, out::close);
+      }
+
+      // Close multiple times. All the following close() should have no
+      // side-effect.
+      out.close();
+    }
+  }
+
+  // HDFS-12612
+  @Test
+  public void testIdempotentCloseWithFailedStreams() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try {
+      setup(conf);
+      // shutdown few datanodes to avoid getting sufficient data blocks number
+      // of datanodes.
+      while (cluster.getDataNodes().size() >= dataBlocks) {
+        cluster.stopDataNode(0);
+      }
+      cluster.restartNameNodes();
+      cluster.triggerHeartbeats();
+
+      testCloseWithExceptionsInStreamer(1, false);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits(), false);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits() + 1, true);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumDataUnits(), true);
+    } finally {
+      tearDown();
+    }
+  }
+
+  @Test
+  public void testCloseAfterAbort() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try {
+      setup(conf);
+
+      final Path dirFile = new Path(dir, "ecfile");
+      FSDataOutputStream out = dfs.create(dirFile, true);
+      assertTrue(out.getWrappedStream() instanceof DFSStripedOutputStream);
+      DFSStripedOutputStream stripedOut =
+          (DFSStripedOutputStream) out.getWrappedStream();
+      stripedOut.abort();
+      LambdaTestUtils.intercept(IOException.class,
+          "Lease timeout", stripedOut::close);
     } finally {
       tearDown();
     }
@@ -338,7 +419,7 @@ public class TestDFSStripedOutputStreamWithFailure {
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns ", numDatanodes, info.length);
+      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
       Path srcPath = new Path(dir, "testAddBlockWhenNoSufficientParityNodes");
       int fileLength = cellSize - 1000;
       final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);
@@ -357,7 +438,7 @@ public class TestDFSStripedOutputStreamWithFailure {
       try {
         LOG.info("runTest: dn=" + dn + ", length=" + length);
         setup(conf);
-        runTest(length, new int[]{length/2}, new int[]{dn}, false);
+        runTest(length, new int[]{length / 2}, new int[]{dn}, false);
       } catch (Throwable e) {
         final String err = "failed, dn=" + dn + ", length=" + length
             + StringUtils.stringifyException(e);
@@ -391,6 +472,79 @@ public class TestDFSStripedOutputStreamWithFailure {
   }
 
   /**
+   * When the two DataNodes with partial data blocks fail.
+   */
+  @Test
+  public void runTestWithDifferentLengths() throws Exception {
+    assumeTrue("Skip this test case in the subclasses. Once is enough.",
+        this.getClass().equals(TestDFSStripedOutputStreamWithFailure.class));
+
+    final HdfsConfiguration conf = newHdfsConfiguration();
+
+    final int[] fileLengths = {
+        // Full stripe then partial on cell boundary
+        cellSize * (dataBlocks * 2 - 2),
+        // Full stripe and a partial on non-cell boundary
+        (cellSize * dataBlocks) + 123,
+    };
+    try {
+      for (int length: fileLengths) {
+        // select the two DNs with partial block to kill
+        final int[] dnIndex = {dataBlocks - 2, dataBlocks - 1};
+        final int[] killPos = getKillPositions(length, dnIndex.length);
+        try {
+          LOG.info("runTestWithMultipleFailure2: length==" + length
+              + ", killPos=" + Arrays.toString(killPos)
+              + ", dnIndex=" + Arrays.toString(dnIndex));
+          setup(conf);
+          runTest(length, killPos, dnIndex, false);
+        } catch (Throwable e) {
+          final String err = "failed, killPos=" + Arrays.toString(killPos)
+              + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+          LOG.error(err);
+          throw e;
+        }
+      }
+    } finally {
+      tearDown();
+    }
+  }
+
+  /**
+   * Test writing very short EC files with many failures.
+   */
+  @Test
+  public void runTestWithShortStripe() throws Exception {
+    assumeTrue("Skip this test case in the subclasses. Once is enough.",
+        this.getClass().equals(TestDFSStripedOutputStreamWithFailure.class));
+
+    final HdfsConfiguration conf = newHdfsConfiguration();
+    // Write a file with a 1 cell partial stripe
+    final int length = cellSize - 123;
+    // Kill all but one DN
+    final int[] dnIndex = new int[dataBlocks + parityBlocks - 1];
+    for (int i = 0; i < dnIndex.length; i++) {
+      dnIndex[i] = i;
+    }
+    final int[] killPos = getKillPositions(length, dnIndex.length);
+
+    try {
+      LOG.info("runTestWithShortStripe: length==" + length + ", killPos="
+          + Arrays.toString(killPos) + ", dnIndex="
+          + Arrays.toString(dnIndex));
+      setup(conf);
+      runTest(length, killPos, dnIndex, false);
+    } catch (Throwable e) {
+      final String err = "failed, killPos=" + Arrays.toString(killPos)
+          + ", dnIndex=" + Arrays.toString(dnIndex) + ", length=" + length;
+      LOG.error(err);
+      throw e;
+    } finally {
+      tearDown();
+    }
+  }
+
+  /**
    * runTest implementation.
    * @param length file length
    * @param killPos killing positions in ascending order
@@ -420,8 +574,8 @@ public class TestDFSStripedOutputStreamWithFailure {
       final BlockManager bm = nn.getNamesystem().getBlockManager();
       final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
 
-      // set a short token lifetime (1 second)
-      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      // set a short token lifetime (6 second)
+      SecurityTestUtil.setBlockTokenLifetime(sm, 6000L);
     }
 
     final AtomicInteger pos = new AtomicInteger();
@@ -434,10 +588,10 @@ public class TestDFSStripedOutputStreamWithFailure {
     long oldGS = -1; // the old GS before bumping
     List<Long> gsList = new ArrayList<>();
     final List<DatanodeInfo> killedDN = new ArrayList<>();
-    int numKilled=0;
+    int numKilled = 0;
     for(; pos.get() < length;) {
       final int i = pos.getAndIncrement();
-      if (numKilled < killPos.length &&  i == killPos[numKilled]) {
+      if (numKilled < killPos.length && i == killPos[numKilled]) {
         assertTrue(firstGS != -1);
         final long gs = getGenerationStamp(stripedOut);
         if (numKilled == 0) {
@@ -558,7 +712,7 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   private void run(int offset) {
     int base = getBase();
-    Assume.assumeTrue(base >= 0);
+    assumeTrue(base >= 0);
     final int i = offset + base;
     final Integer length = getLength(i);
     if (length == null) {

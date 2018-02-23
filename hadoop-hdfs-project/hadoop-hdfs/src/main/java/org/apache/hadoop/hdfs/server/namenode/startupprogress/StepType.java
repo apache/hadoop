@@ -52,7 +52,12 @@ public enum StepType {
   /**
    * The namenode is performing an operation related to cache entries.
    */
-  CACHE_ENTRIES("CacheEntries", "cache entries");
+  CACHE_ENTRIES("CacheEntries", "cache entries"),
+
+  /**
+   * The namenode is performing an operation related to erasure coding policies.
+   */
+  ERASURE_CODING_POLICIES("ErasureCodingPolicies", "erasure coding policies");
 
   private final String name, description;
 

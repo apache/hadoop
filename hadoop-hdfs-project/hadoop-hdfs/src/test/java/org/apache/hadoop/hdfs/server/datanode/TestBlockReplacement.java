@@ -252,7 +252,7 @@ public class TestBlockReplacement {
       for (int i = 0; i < cluster.getDataNodes().size(); i++) {
         DataNode dn = cluster.getDataNodes().get(i);
         LOG.info("Simulate block pinning in datanode " + dn);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       }
 
       // Block movement to a different datanode should fail as the block is

@@ -124,20 +124,20 @@ public class TestJobEndNotifier extends JobEndNotifier {
       proxyToUse.type() == Proxy.Type.DIRECT);
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost:1000");
     setConf(conf);
-    Assert.assertTrue("Proxy should have been set but wasn't ",
-      proxyToUse.toString().equals("HTTP @ somehost:1000"));
+    Assert.assertEquals("Proxy should have been set but wasn't ",
+      "HTTP @ somehost:1000", proxyToUse.toString());
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "socks@somehost:1000");
     setConf(conf);
-    Assert.assertTrue("Proxy should have been socks but wasn't ",
-      proxyToUse.toString().equals("SOCKS @ somehost:1000"));
+    Assert.assertEquals("Proxy should have been socks but wasn't ",
+      "SOCKS @ somehost:1000", proxyToUse.toString());
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "SOCKS@somehost:1000");
     setConf(conf);
-    Assert.assertTrue("Proxy should have been socks but wasn't ",
-      proxyToUse.toString().equals("SOCKS @ somehost:1000"));
+    Assert.assertEquals("Proxy should have been socks but wasn't ",
+      "SOCKS @ somehost:1000", proxyToUse.toString());
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "sfafn@somehost:1000");
     setConf(conf);
-    Assert.assertTrue("Proxy should have been http but wasn't ",
-      proxyToUse.toString().equals("HTTP @ somehost:1000"));
+    Assert.assertEquals("Proxy should have been http but wasn't ",
+      "HTTP @ somehost:1000", proxyToUse.toString());
     
   }
 

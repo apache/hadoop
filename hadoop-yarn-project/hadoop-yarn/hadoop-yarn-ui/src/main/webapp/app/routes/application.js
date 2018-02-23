@@ -17,8 +17,13 @@
  */
 
 import Ember from 'ember';
+import AbstractRoute from './abstract';
 
-export default Ember.Route.extend({
+export default AbstractRoute.extend({
+  model() {
+    return this.store.findAll('ClusterInfo', {reload: true});
+  },
+
   actions: {
     /**
      * Base error handler for the application.
@@ -31,9 +36,15 @@ export default Ember.Route.extend({
 
       if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
         this.intermediateTransitionTo('/notfound');
+      } else if (error && error.errors[0] && parseInt(error.errors[0].status) === 401) {
+        this.intermediateTransitionTo('/notauth');
       } else {
         this.intermediateTransitionTo('/error');
       }
     }
-  }
+  },
+
+  unloadAll: function() {
+    this.store.unloadAll('ClusterInfo');
+  },
 });

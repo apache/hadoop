@@ -147,7 +147,7 @@
 
 <p>
   {#fs}
-  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks = {ObjectsTotal|fmt_number} total filesystem object(s).
+  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks ({#replicastat}{TotalReplicatedBlocks|fmt_number}{/replicastat} replicated blocks, {#ecstat}{TotalECBlockGroups|fmt_number}{/ecstat} erasure coded block groups) = {ObjectsTotal|fmt_number} total filesystem object(s).
   {#helper_fs_max_objects/}
   {/fs}
 </p>
@@ -162,6 +162,7 @@
 {#nn}
 <table class="table table-bordered table-striped">
   <tr><th> Configured Capacity:</th><td>{Total|fmt_bytes}</td></tr>
+  <tr><th> Configured Remote Capacity:</th><td>{ProvidedCapacity|fmt_bytes}</td></tr>
   <tr><th> DFS Used:</th><td>{Used|fmt_bytes} ({PercentUsed|fmt_percentage})</td></tr>
   <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
   <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes} ({PercentRemaining|fmt_percentage})</td></tr>

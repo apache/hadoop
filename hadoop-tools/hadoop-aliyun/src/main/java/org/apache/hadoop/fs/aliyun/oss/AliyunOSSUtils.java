@@ -40,6 +40,18 @@ final public class AliyunOSSUtils {
   private AliyunOSSUtils() {
   }
 
+  public static int intPositiveOption(
+      Configuration conf, String key, int defVal) {
+    int v = conf.getInt(key, defVal);
+    if (v <= 0) {
+      LOG.warn(key + " is configured to " + v
+          + ", will use default value: " + defVal);
+      v = defVal;
+    }
+
+    return v;
+  }
+
   /**
    * Used to get password from configuration.
    *
@@ -163,5 +175,17 @@ final public class AliyunOSSUtils {
     } else {
       return key;
     }
+  }
+
+  /**
+   * Check if OSS object represents a directory.
+   *
+   * @param name object key
+   * @param size object content length
+   * @return true if object represents a directory
+   */
+  public static boolean objectRepresentsDirectory(final String name,
+      final long size) {
+    return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
   }
 }

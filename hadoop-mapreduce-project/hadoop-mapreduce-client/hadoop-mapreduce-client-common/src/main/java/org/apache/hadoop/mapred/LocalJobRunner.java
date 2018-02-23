@@ -38,8 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.KeyGenerator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -74,13 +72,15 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class LocalJobRunner implements ClientProtocol {
-  public static final Log LOG =
-    LogFactory.getLog(LocalJobRunner.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LocalJobRunner.class);
 
   /** The maximum number of map tasks to run in parallel in LocalJobRunner */
   public static final String LOCAL_MAX_MAPS =
@@ -587,7 +587,7 @@ public class LocalJobRunner implements ClientProtocol {
         } else {
           this.status.setRunState(JobStatus.FAILED);
         }
-        LOG.warn(id, t);
+        LOG.warn(id.toString(), t);
 
         JobEndNotifier.localRunnerNotification(job, status);
 
@@ -721,17 +721,17 @@ public class LocalJobRunner implements ClientProtocol {
     @Override
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
-      LOG.fatal("FSError: "+ message + "from task: " + taskId);
+      LOG.error("FSError: "+ message + "from task: " + taskId);
     }
 
     @Override
     public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
-      LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
+      LOG.error("shuffleError: "+ message + "from task: " + taskId);
     }
     
-    public synchronized void fatalError(TaskAttemptID taskId, String msg) 
+    public synchronized void fatalError(TaskAttemptID taskId, String msg, boolean fastFail)
     throws IOException {
-      LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
+      LOG.error("Fatal: "+ msg + " from task: " + taskId + " fast fail: " + fastFail);
     }
     
     @Override

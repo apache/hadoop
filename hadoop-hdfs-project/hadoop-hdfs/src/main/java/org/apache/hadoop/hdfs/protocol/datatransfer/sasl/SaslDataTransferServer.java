@@ -97,7 +97,7 @@ public class SaslDataTransferServer {
    * @param peer connection peer
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
-   * @param int xferPort data transfer port of DataNode accepting connection
+   * @param xferPort data transfer port of DataNode accepting connection
    * @param datanodeId ID of DataNode accepting connection
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error

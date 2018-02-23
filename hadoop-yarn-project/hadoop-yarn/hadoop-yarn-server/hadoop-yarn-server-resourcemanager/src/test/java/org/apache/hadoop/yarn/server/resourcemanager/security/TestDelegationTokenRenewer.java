@@ -1262,9 +1262,27 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(Renewer.cancelled);
 
     finishAMAndWaitForComplete(app3, rm, nm1, am3, dttr);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return !renewer.getAllTokens().containsKey(token1);
+      }
+    }, 10, 5000);
     Assert.assertFalse(renewer.getAllTokens().containsKey(token1));
     Assert.assertTrue(dttr.referringAppIds.isEmpty());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return dttr.isTimerCancelled();
+      }
+    }, 10, 5000);
     Assert.assertTrue(dttr.isTimerCancelled());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return Renewer.cancelled;
+      }
+    }, 10, 5000);
     Assert.assertTrue(Renewer.cancelled);
 
     // make sure the token also has been removed from appTokens

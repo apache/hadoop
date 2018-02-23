@@ -21,14 +21,14 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.IOException;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService.HistoryServerState;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A MapReduce specific delegation token secret manager.
@@ -40,7 +40,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 public class JHSDelegationTokenSecretManager
     extends AbstractDelegationTokenSecretManager<MRDelegationTokenIdentifier> {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       JHSDelegationTokenSecretManager.class);
 
   private HistoryServerStateStoreService store;

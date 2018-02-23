@@ -48,8 +48,8 @@ public class TestFilePool {
     try {
       final Configuration conf = new Configuration();
       final FileSystem fs = FileSystem.getLocal(conf).getRaw();
-      return new Path(System.getProperty("test.build.data", "/tmp"),
-          "testFilePool").makeQualified(fs);
+      return fs.makeQualified(new Path(
+          System.getProperty("test.build.data", "/tmp"), "testFilePool"));
     } catch (IOException e) {
       fail();
     }

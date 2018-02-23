@@ -23,16 +23,105 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-11801](https://issues.apache.org/jira/browse/HADOOP-11801) | *Minor* | **Update BUILDING.txt for Ubuntu**
+* [HDFS-6252](https://issues.apache.org/jira/browse/HDFS-6252) | *Minor* | **Phase out the old web UI in HDFS**
 
-ProtocolBuffer is packaged in Ubuntu
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HDFS-1362](https://issues.apache.org/jira/browse/HDFS-1362) | *Major* | **Provide volume management functionality for DataNode**
+
+Based on the reconfiguration framework provided by HADOOP-7001, enable reconfigure the dfs.datanode.data.dir and add new volumes into service.
+
+
+---
+
+* [HADOOP-8989](https://issues.apache.org/jira/browse/HADOOP-8989) | *Major* | **hadoop fs -find feature**
+
+New fs -find command
+
+
+---
+
+* [HADOOP-11311](https://issues.apache.org/jira/browse/HADOOP-11311) | *Major* | **Restrict uppercase key names from being created with JCEKS**
+
+Keys with uppercase names can no longer be created when using the JavaKeyStoreProvider to resolve ambiguity about case-sensitivity in the KeyStore spec.
+
+
+---
+
+* [HDFS-7210](https://issues.apache.org/jira/browse/HDFS-7210) | *Major* | **Avoid two separate RPC's namenode.append() and namenode.getFileInfo() for an append call from DFSClient**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-10530](https://issues.apache.org/jira/browse/HADOOP-10530) | *Blocker* | **Make hadoop trunk build on Java7+ only**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-9629](https://issues.apache.org/jira/browse/HADOOP-9629) | *Major* | **Support Windows Azure Storage - Blob as a file system in Hadoop**
+
+Hadoop now supports integration with Azure Storage as an alternative Hadoop Compatible File System.
+
+
+---
+
+* [HADOOP-11385](https://issues.apache.org/jira/browse/HADOOP-11385) | *Critical* | **Prevent cross site scripting attack on JMXJSONServlet**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-11446](https://issues.apache.org/jira/browse/HADOOP-11446) | *Major* | **S3AOutputStream should use shared thread pool to avoid OutOfMemoryError**
+
+The following parameters are introduced in this JIRA:
+fs.s3a.threads.max:    the maximum number of threads to allow in the pool used by TransferManager
+fs.s3a.threads.core:    the number of threads to keep in the pool used by TransferManager
+fs.s3a.threads.keepalivetime:  when the number of threads is greater than the core, this is the maximum time that excess idle threads will wait for new tasks before terminating
+fs.s3a.max.total.tasks:    the maximum number of tasks that the LinkedBlockingQueue can hold
+
+
+---
+
+* [HADOOP-11464](https://issues.apache.org/jira/browse/HADOOP-11464) | *Major* | **Reinstate support for launching Hadoop processes on Windows using Cygwin.**
+
+We have reinstated support for launching Hadoop processes on Windows by using Cygwin to run the shell scripts.  All processes still must have access to the native components: hadoop.dll and winutils.exe.
+
+
+---
+
+* [HDFS-3689](https://issues.apache.org/jira/browse/HDFS-3689) | *Major* | **Add support for variable length block**
+
+1. HDFS now can choose to append data to a new block instead of end of the last partial block. Users can pass {{CreateFlag.APPEND}} and  {{CreateFlag.NEW\_BLOCK}} to the {{append}} API to indicate this requirement.
+2. HDFS now allows users to pass {{SyncFlag.END\_BLOCK}} to the {{hsync}} API to finish the current block and write remaining data to a new block.
 
 
 ---
 
 * [HADOOP-11498](https://issues.apache.org/jira/browse/HADOOP-11498) | *Major* | **Bump the version of HTrace to 3.1.0-incubating**
 
-**WARNING: No release note provided for this incompatible change.**
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-10181](https://issues.apache.org/jira/browse/HADOOP-10181) | *Minor* | **GangliaContext does not work with multicast ganglia setup**
+
+Hadoop metrics sent to Ganglia over multicast now support optional configuration of socket TTL.  The default TTL is 1, which preserves the behavior of prior Hadoop versions.  Clusters that span multiple subnets/VLANs will likely want to increase this.
+
+
+---
+
+* [HDFS-6651](https://issues.apache.org/jira/browse/HDFS-6651) | *Critical* | **Deletion failure can leak inodes permanently**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -51,94 +140,16 @@ Downstream users are reminded that while the Hadoop community will attempt to av
 
 ---
 
-* [HADOOP-11464](https://issues.apache.org/jira/browse/HADOOP-11464) | *Major* | **Reinstate support for launching Hadoop processes on Windows using Cygwin.**
+* [HDFS-7270](https://issues.apache.org/jira/browse/HDFS-7270) | *Major* | **Add congestion signaling capability to DataNode write protocol**
 
-We have reinstated support for launching Hadoop processes on Windows by using Cygwin to run the shell scripts.  All processes still must have access to the native components: hadoop.dll and winutils.exe.
-
-
----
-
-* [HADOOP-11446](https://issues.apache.org/jira/browse/HADOOP-11446) | *Major* | **S3AOutputStream should use shared thread pool to avoid OutOfMemoryError**
-
-The following parameters are introduced in this JIRA:
-fs.s3a.threads.max:    the maximum number of threads to allow in the pool used by TransferManager
-fs.s3a.threads.core:    the number of threads to keep in the pool used by TransferManager
-fs.s3a.threads.keepalivetime:  when the number of threads is greater than the core, this is the maximum time that excess idle threads will wait for new tasks before terminating
-fs.s3a.max.total.tasks:    the maximum number of tasks that the LinkedBlockingQueue can hold
+Introduced a new configuration dfs.pipeline.ecn. When the configuration is turned on, DataNodes will signal in the writing pipelines when they are overloaded. The client can back off based on this congestion signal to avoid overloading the system.
 
 
 ---
 
-* [HADOOP-11385](https://issues.apache.org/jira/browse/HADOOP-11385) | *Critical* | **Prevent cross site scripting attack on JMXJSONServlet**
+* [HDFS-6133](https://issues.apache.org/jira/browse/HDFS-6133) | *Major* | **Add a feature for replica pinning so that a pinned replica will not be moved by Balancer/Mover.**
 
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HADOOP-11311](https://issues.apache.org/jira/browse/HADOOP-11311) | *Major* | **Restrict uppercase key names from being created with JCEKS**
-
-Keys with uppercase names can no longer be created when using the JavaKeyStoreProvider to resolve ambiguity about case-sensitivity in the KeyStore spec.
-
-
----
-
-* [HADOOP-10530](https://issues.apache.org/jira/browse/HADOOP-10530) | *Blocker* | **Make hadoop trunk build on Java7+ only**
-
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HADOOP-10181](https://issues.apache.org/jira/browse/HADOOP-10181) | *Minor* | **GangliaContext does not work with multicast ganglia setup**
-
-Hadoop metrics sent to Ganglia over multicast now support optional configuration of socket TTL.  The default TTL is 1, which preserves the behavior of prior Hadoop versions.  Clusters that span multiple subnets/VLANs will likely want to increase this.
-
-
----
-
-* [HADOOP-9922](https://issues.apache.org/jira/browse/HADOOP-9922) | *Major* | **hadoop windows native build will fail in 32 bit machine**
-
-The Hadoop Common native components now support 32-bit build targets on Windows.
-
-
----
-
-* [HADOOP-9629](https://issues.apache.org/jira/browse/HADOOP-9629) | *Major* | **Support Windows Azure Storage - Blob as a file system in Hadoop**
-
-Hadoop now supports integration with Azure Storage as an alternative Hadoop Compatible File System.
-
-
----
-
-* [HADOOP-9329](https://issues.apache.org/jira/browse/HADOOP-9329) | *Trivial* | **document native build dependencies in BUILDING.txt**
-
-Added a section to BUILDING.txt on how to install required / optional packages on a clean install of Ubuntu 14.04 LTS Desktop.
-
-Went through the CMakeLists.txt files in the repo and added the following optional library dependencies - Snappy, Bzip2, Linux FUSE and Jansson.
-
-Updated the required packages / version numbers from the trunk branch version of BUILDING.txt.
-
-
----
-
-* [HADOOP-8989](https://issues.apache.org/jira/browse/HADOOP-8989) | *Major* | **hadoop fs -find feature**
-
-New fs -find command
-
-
----
-
-* [HDFS-7806](https://issues.apache.org/jira/browse/HDFS-7806) | *Minor* | **Refactor: move StorageType from hadoop-hdfs to hadoop-common**
-
-This fix moves the public class StorageType from the package org.apache.hadoop.hdfs to org.apache.hadoop.fs.
-
-
----
-
-* [HDFS-7774](https://issues.apache.org/jira/browse/HDFS-7774) | *Critical* | **Unresolved symbols error while compiling HDFS on Windows 7/32 bit**
-
-LibHDFS now supports 32-bit build targets on Windows.
+Add a feature for replica pinning so that when a replica is pinned in a datanode, it will not be moved by Balancer/Mover. The replica pinning feature can be enabled/disabled by "dfs.datanode.block-pinning.enabled", where the default is false.
 
 
 ---
@@ -151,67 +162,30 @@ LibHDFS now supports 32-bit build targets on Windows.
 
 ---
 
-* [HDFS-7411](https://issues.apache.org/jira/browse/HDFS-7411) | *Major* | **Refactor and improve decommissioning logic into DecommissionManager**
+* [HDFS-7806](https://issues.apache.org/jira/browse/HDFS-7806) | *Minor* | **Refactor: move StorageType from hadoop-hdfs to hadoop-common**
 
-This change introduces a new configuration key used to throttle decommissioning work, "dfs.namenode.decommission.blocks.per.interval". This new key overrides and deprecates the previous related configuration key "dfs.namenode.decommission.nodes.per.interval". The new key is intended to result in more predictable pause times while scanning decommissioning nodes.
-
-
----
-
-* [HDFS-7270](https://issues.apache.org/jira/browse/HDFS-7270) | *Major* | **Add congestion signaling capability to DataNode write protocol**
-
-Introduced a new configuration dfs.pipeline.ecn. When the configuration is turned on, DataNodes will signal in the writing pipelines when they are overloaded. The client can back off based on this congestion signal to avoid overloading the system.
+This fix moves the public class StorageType from the package org.apache.hadoop.hdfs to org.apache.hadoop.fs.
 
 
 ---
 
-* [HDFS-7210](https://issues.apache.org/jira/browse/HDFS-7210) | *Major* | **Avoid two separate RPC's namenode.append() and namenode.getFileInfo() for an append call from DFSClient**
+* [YARN-3217](https://issues.apache.org/jira/browse/YARN-3217) | *Major* | **Remove httpclient dependency from hadoop-yarn-server-web-proxy**
 
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HDFS-6651](https://issues.apache.org/jira/browse/HDFS-6651) | *Critical* | **Deletion failure can leak inodes permanently**
-
-**WARNING: No release note provided for this incompatible change.**
+Removed commons-httpclient dependency from hadoop-yarn-server-web-proxy module.
 
 
 ---
 
-* [HDFS-6252](https://issues.apache.org/jira/browse/HDFS-6252) | *Minor* | **Phase out the old web UI in HDFS**
+* [HADOOP-9922](https://issues.apache.org/jira/browse/HADOOP-9922) | *Major* | **hadoop windows native build will fail in 32 bit machine**
 
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HDFS-6133](https://issues.apache.org/jira/browse/HDFS-6133) | *Major* | **Add a feature for replica pinning so that a pinned replica will not be moved by Balancer/Mover.**
-
-Add a feature for replica pinning so that when a replica is pinned in a datanode, it will not be moved by Balancer/Mover. The replica pinning feature can be enabled/disabled by "dfs.datanode.block-pinning.enabled", where the default is false.
+The Hadoop Common native components now support 32-bit build targets on Windows.
 
 
 ---
 
-* [HDFS-3689](https://issues.apache.org/jira/browse/HDFS-3689) | *Major* | **Add support for variable length block**
+* [HDFS-7774](https://issues.apache.org/jira/browse/HDFS-7774) | *Critical* | **Unresolved symbols error while compiling HDFS on Windows 7/32 bit**
 
-1. HDFS now can choose to append data to a new block instead of end of the last partial block. Users can pass {{CreateFlag.APPEND}} and  {{CreateFlag.NEW\_BLOCK}} to the {{append}} API to indicate this requirement.
-2. HDFS now allows users to pass {{SyncFlag.END\_BLOCK}} to the {{hsync}} API to finish the current block and write remaining data to a new block.
-
-
----
-
-* [HDFS-1522](https://issues.apache.org/jira/browse/HDFS-1522) | *Major* | **Merge Block.BLOCK\_FILE\_PREFIX and DataStorage.BLOCK\_FILE\_PREFIX into one constant**
-
-This merges Block.BLOCK\_FILE\_PREFIX and DataStorage.BLOCK\_FILE\_PREFIX into one constant. Hard-coded
-literals of "blk\_" in various files are also updated to use the same constant.
-
-
----
-
-* [HDFS-1362](https://issues.apache.org/jira/browse/HDFS-1362) | *Major* | **Provide volume management functionality for DataNode**
-
-Based on the reconfiguration framework provided by HADOOP-7001, enable reconfigure the dfs.datanode.data.dir and add new volumes into service.
+LibHDFS now supports 32-bit build targets on Windows.
 
 
 ---
@@ -229,9 +203,17 @@ This is controllable at a per-job level.
 
 ---
 
-* [YARN-3217](https://issues.apache.org/jira/browse/YARN-3217) | *Major* | **Remove httpclient dependency from hadoop-yarn-server-web-proxy**
+* [HDFS-1522](https://issues.apache.org/jira/browse/HDFS-1522) | *Major* | **Merge Block.BLOCK\_FILE\_PREFIX and DataStorage.BLOCK\_FILE\_PREFIX into one constant**
 
-Removed commons-httpclient dependency from hadoop-yarn-server-web-proxy module.
+This merges Block.BLOCK\_FILE\_PREFIX and DataStorage.BLOCK\_FILE\_PREFIX into one constant. Hard-coded
+literals of "blk\_" in various files are also updated to use the same constant.
+
+
+---
+
+* [HDFS-7411](https://issues.apache.org/jira/browse/HDFS-7411) | *Major* | **Refactor and improve decommissioning logic into DecommissionManager**
+
+This change introduces a new configuration key used to throttle decommissioning work, "dfs.namenode.decommission.blocks.per.interval". This new key overrides and deprecates the previous related configuration key "dfs.namenode.decommission.nodes.per.interval". The new key is intended to result in more predictable pause times while scanning decommissioning nodes.
 
 
 ---
@@ -239,6 +221,24 @@ Removed commons-httpclient dependency from hadoop-yarn-server-web-proxy module.
 * [YARN-3154](https://issues.apache.org/jira/browse/YARN-3154) | *Blocker* | **Should not upload partial logs for MR jobs or other "short-running' applications**
 
 Applications which made use of the LogAggregationContext in their application will need to revisit this code in order to make sure that their logs continue to get rolled out.
+
+
+---
+
+* [HADOOP-9329](https://issues.apache.org/jira/browse/HADOOP-9329) | *Trivial* | **document native build dependencies in BUILDING.txt**
+
+Added a section to BUILDING.txt on how to install required / optional packages on a clean install of Ubuntu 14.04 LTS Desktop.
+
+Went through the CMakeLists.txt files in the repo and added the following optional library dependencies - Snappy, Bzip2, Linux FUSE and Jansson.
+
+Updated the required packages / version numbers from the trunk branch version of BUILDING.txt.
+
+
+---
+
+* [HADOOP-11801](https://issues.apache.org/jira/browse/HADOOP-11801) | *Minor* | **Update BUILDING.txt for Ubuntu**
+
+ProtocolBuffer is packaged in Ubuntu
 
 
 

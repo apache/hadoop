@@ -16,13 +16,13 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -30,7 +30,8 @@ import java.util.Map;
  * Utility class for executing common docker operations.
  */
 public final class DockerCommandExecutor {
-  private static final Log LOG = LogFactory.getLog(DockerCommandExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DockerCommandExecutor.class);
 
   /**
    * Potential states that the docker status can return.
@@ -87,8 +88,7 @@ public final class DockerCommandExecutor {
       dockerOp.disableFailureLogging();
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Running docker command: "
-          + dockerCommand.getCommandWithArguments());
+      LOG.debug("Running docker command: " + dockerCommand);
     }
     try {
       String result = privilegedOperationExecutor
@@ -183,9 +183,46 @@ public final class DockerCommandExecutor {
         new DockerInspectCommand(containerId).getContainerStatus();
     try {
       return DockerCommandExecutor.executeDockerCommand(dockerInspectCommand,
-          containerId, null, conf, privilegedOperationExecutor, false);
+          containerId, null, conf, privilegedOperationExecutor, true);
     } catch (ContainerExecutionException e) {
       throw new ContainerExecutionException(e);
     }
+  }
+
+  /**
+   * Is the container in a stoppable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a stoppable state.
+   */
+  public static boolean isStoppable(DockerContainerStatus containerStatus) {
+    if (containerStatus.equals(DockerContainerStatus.RUNNING)
+        || containerStatus.equals(DockerContainerStatus.RESTARTING)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Is the container in a killable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a killable state.
+   */
+  public static boolean isKillable(DockerContainerStatus containerStatus) {
+    return isStoppable(containerStatus);
+  }
+
+  /**
+   * Is the container in a removable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a removable state.
+   */
+  public static boolean isRemovable(DockerContainerStatus containerStatus) {
+    return !containerStatus.equals(DockerContainerStatus.NONEXISTENT)
+        && !containerStatus.equals(DockerContainerStatus.UNKNOWN)
+        && !containerStatus.equals(DockerContainerStatus.REMOVING)
+        && !containerStatus.equals(DockerContainerStatus.RUNNING);
   }
 }

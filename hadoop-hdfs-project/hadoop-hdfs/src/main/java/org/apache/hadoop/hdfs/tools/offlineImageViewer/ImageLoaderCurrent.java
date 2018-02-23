@@ -722,9 +722,13 @@ class ImageLoaderCurrent implements ImageLoader {
       if (supportSnapshot && supportInodeId) {
         dirNodeMap.put(inodeId, pathName);
       }
-      v.visit(ImageElement.NS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
-      if (NameNodeLayoutVersion.supports(Feature.DISKSPACE_QUOTA, imageVersion))
-        v.visit(ImageElement.DS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
+
+      v.visit(ImageElement.NS_QUOTA, in.readLong());
+      if (NameNodeLayoutVersion.supports(Feature.DISKSPACE_QUOTA,
+          imageVersion)) {
+        v.visit(ImageElement.DS_QUOTA, in.readLong());
+      }
+
       if (supportSnapshot) {
         boolean snapshottable = in.readBoolean();
         if (!snapshottable) {

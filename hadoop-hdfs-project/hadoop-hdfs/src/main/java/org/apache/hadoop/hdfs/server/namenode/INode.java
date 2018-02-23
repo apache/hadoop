@@ -33,9 +33,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
@@ -724,8 +726,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, int latestSnapshotId) {
-    recordModification(latestSnapshotId);
+  public final INode setAccessTime(long accessTime, int latestSnapshotId,
+      boolean skipCaptureAccessTimeOnlyChangeInSnapshot) {
+    if (!skipCaptureAccessTimeOnlyChangeInSnapshot) {
+      recordModification(latestSnapshotId);
+    }
     setAccessTime(accessTime);
     return this;
   }
@@ -780,8 +785,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
+  /**
+   * Verifies if the path informed is a valid absolute path.
+   * @param path the absolute path to validate.
+   * @return true if the path is valid.
+   */
+  static boolean isValidAbsolutePath(final String path){
+    return path != null && path.startsWith(Path.SEPARATOR);
+  }
+
   private static void checkAbsolutePath(final String path) {
-    if (path == null || !path.startsWith(Path.SEPARATOR)) {
+    if (!isValidAbsolutePath(path)) {
       throw new AssertionError("Absolute path required, but got '"
           + path + "'");
     }
@@ -1046,6 +1060,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       assert toDelete != null : "toDelete is null";
       toDelete.delete();
       toDeleteList.add(toDelete);
+      // If the file is being truncated
+      // the copy-on-truncate block should also be collected for deletion
+      BlockUnderConstructionFeature uc = toDelete.getUnderConstructionFeature();
+      if(uc == null) {
+        return;
+      }
+      Block truncateBlock = uc.getTruncateBlock();
+      if(truncateBlock == null || truncateBlock.equals(toDelete)) {
+        return;
+      }
+      assert truncateBlock instanceof BlockInfo : "should be BlockInfo";
+      addDeleteBlock((BlockInfo) truncateBlock);
     }
 
     public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {

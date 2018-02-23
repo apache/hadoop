@@ -45,17 +45,18 @@ public interface StageAllocator {
    *          the stage by the two phase planning algorithm
    * @param stageDeadline the deadline of the stage set by the two phase
    *          planning algorithm
+   * @param period the periodicity with which this stage appears
    * @param user name of the user
    * @param oldId identifier of the old reservation
    *
    * @return The computed allocation (or null if the stage could not be
    *         allocated)
-   * @throws PlanningException
+   * @throws PlanningException if operation is unsuccessful
    */
   Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
       RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageArrival, long stageDeadline, String user,
+      long stageArrival, long stageDeadline, long period, String user,
       ReservationId oldId) throws PlanningException;
 
 }

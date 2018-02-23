@@ -37,7 +37,7 @@
     RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 9820.
+    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 8020.
   </description>
 </property>
 
@@ -142,6 +142,15 @@
   <value>0.0.0.0:9867</value>
   <description>
     The datanode ipc server address and port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.http.internal-proxy.port</name>
+  <value>0</value>
+  <description>
+    The datanode's internal web proxy port.
+    By default it selects a random port available in runtime.
   </description>
 </property>
 
@@ -459,7 +468,7 @@
 
   <property>
     <name>dfs.namenode.posix.acl.inheritance.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <description>
       Set to true to enable POSIX style ACL inheritance. When it is enabled
       and the create request comes from a compatible client, the NameNode
@@ -475,8 +484,8 @@
   <description>
     The NameNode periodically scans the namespace for LazyPersist files with
     missing blocks and unlinks them from the namespace. This configuration key
-    controls the interval between successive scans. Set it to a negative value
-    to disable this behavior.
+    controls the interval between successive scans. If this value is set to 0,
+    the file scrubber is disabled.
   </description>
 </property>
 <property>
@@ -657,6 +666,23 @@
     probability of data loss.
   </description>
 </property>
+
+  <property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.min-replication</name>
+    <value>0</value>
+    <description>
+      The minimum number of replications that are needed to not to fail
+      the write pipeline if new datanodes can not be found to replace
+      failed datanodes (could be due to network failure) in the write pipeline.
+      If the number of the remaining datanodes in the write pipeline is greater
+      than or equal to this property value, continue writing to the remaining nodes.
+      Otherwise throw exception.
+
+      If this is set to 0, an exception will be thrown, when a replacement
+      can not be found.
+      See also dfs.client.block.write.replace-datanode-on-failure.policy
+    </description>
+  </property>
 
 <property>
   <name>dfs.blockreport.intervalMsec</name>
@@ -960,17 +986,17 @@
 <property>
   <name>dfs.namenode.decommission.interval</name>
   <value>30s</value>
-  <description>Namenode periodicity in seconds to check if decommission is 
-  complete. Support multiple time unit suffix(case insensitive), as described
-  in dfs.heartbeat.interval.
+  <description>Namenode periodicity in seconds to check if
+    decommission or maintenance is complete. Support multiple time unit
+    suffix(case insensitive), as described in dfs.heartbeat.interval.
   </description>
 </property>
 
 <property>
   <name>dfs.namenode.decommission.blocks.per.interval</name>
   <value>500000</value>
-  <description>The approximate number of blocks to process per 
-      decommission interval, as defined in dfs.namenode.decommission.interval.
+  <description>The approximate number of blocks to process per decommission
+    or maintenance interval, as defined in dfs.namenode.decommission.interval.
   </description>
 </property>
 
@@ -978,11 +1004,12 @@
   <name>dfs.namenode.decommission.max.concurrent.tracked.nodes</name>
   <value>100</value>
   <description>
-    The maximum number of decommission-in-progress datanodes nodes that will be
-    tracked at one time by the namenode. Tracking a decommission-in-progress
-    datanode consumes additional NN memory proportional to the number of blocks
-    on the datnode. Having a conservative limit reduces the potential impact
-    of decomissioning a large number of nodes at once.
+    The maximum number of decommission-in-progress or
+    entering-maintenance datanodes nodes that will be tracked at one time by
+    the namenode. Tracking these datanode consumes additional NN memory
+    proportional to the number of blocks on the datnode. Having a conservative
+    limit reduces the potential impact of decommissioning or maintenance of
+    a large number of nodes at once.
       
     A value of 0 means no limit will be enforced.
   </description>
@@ -2265,6 +2292,16 @@
 </property>
 
 <property>
+  <name>dfs.client.server-defaults.validity.period.ms</name>
+  <value>3600000</value>
+  <description>
+    The amount of milliseconds after which cached server defaults are updated.
+
+    By default this parameter is set to 1 hour.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
@@ -2544,13 +2581,14 @@
 
 <property>
   <name>dfs.client.socket.send.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket send buffer size for a write pipeline in DFSClient side.
     This may affect TCP connection throughput.
     If it is set to zero or negative value,
     no buffer size will be set explicitly,
     thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 
@@ -2562,6 +2600,17 @@
     communication between the DataNode and local HDFS clients.
     If the string "_PORT" is present in this path, it will be replaced by the
     TCP port of the DataNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.domain.socket.disable.interval.seconds</name>
+  <value>600</value>
+  <description>
+    The interval that a DataNode is disabled for future Short-Circuit Reads,
+    after an error happens during a Short-Circuit Read. Setting this to 0 will
+    not disable Short-Circuit Reads at all after errors happen. Negative values
+    are invalid.
   </description>
 </property>
 
@@ -2798,6 +2847,15 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.list.reencryption.status.num.responses</name>
+  <value>100</value>
+  <description>When listing re-encryption status, the maximum number of zones
+    that will be returned in a batch. Fetching the list incrementally in
+    batches improves namenode performance.
+  </description>
+</property>
+
   <property>
     <name>dfs.namenode.list.openfiles.num.responses</name>
     <value>1000</value>
@@ -2823,6 +2881,49 @@
   <value>3000</value>
   <description>When KeyProvider is configured, the time delayed until the first
     attempt to warm up edek cache on NN start up / become active.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.sleep.interval</name>
+  <value>1m</value>
+  <description>Interval the re-encrypt EDEK thread sleeps in the main loop. The
+    interval accepts units. If none given, millisecond is assumed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.batch.size</name>
+  <value>1000</value>
+  <description>How many EDEKs should the re-encrypt thread process in one batch.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.throttle.limit.handler.ratio</name>
+  <value>1.0</value>
+  <description>Throttling ratio for the re-encryption, indicating what fraction
+    of time should the re-encrypt handler thread work under NN read lock.
+    Larger than 1.0 values are interpreted as 1.0. Negative value or 0 are
+    invalid values and will fail NN startup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.throttle.limit.updater.ratio</name>
+  <value>1.0</value>
+  <description>Throttling ratio for the re-encryption, indicating what fraction
+    of time should the re-encrypt updater thread work under NN write lock.
+    Larger than 1.0 values are interpreted as 1.0. Negative value or 0 are
+    invalid values and will fail NN startup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.reencrypt.edek.threads</name>
+  <value>10</value>
+  <description>Maximum number of re-encrypt threads to contact the KMS
+    and re-encrypt the edeks.
   </description>
 </property>
 
@@ -2964,12 +3065,10 @@
 </property>
 
 <property>
-  <name>dfs.namenode.ec.policies.enabled</name>
-  <value></value>
-  <description>Comma-delimited list of enabled erasure coding policies.
-    The NameNode will enforce this when setting an erasure coding policy
-    on a directory. By default, none of the built-in erasure coding
-    policies are enabled.
+  <name>dfs.namenode.ec.system.default.policy</name>
+  <value>RS-6-3-1024k</value>
+  <description>The default erasure coding policy name will be used
+    on the path if no policy name is passed.
   </description>
 </property>
 
@@ -2988,15 +3087,6 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedread.threads</name>
-  <value>20</value>
-  <description>
-    Number of threads used by the Datanode to read striped block
-    during background reconstruction work.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.buffer.size</name>
   <value>65536</value>
   <description>Datanode striped read buffer size.
@@ -3004,11 +3094,24 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedblock.threads.size</name>
+  <name>dfs.datanode.ec.reconstruction.threads</name>
   <value>8</value>
   <description>
     Number of threads used by the Datanode for background
     reconstruction work.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ec.reconstruction.xmits.weight</name>
+  <value>0.5</value>
+  <description>
+    Datanode uses xmits weight to calculate the relative cost of EC recovery
+    tasks comparing to replicated block recovery, of which xmits is always 1.
+    Namenode then uses xmits reported from datanode to throttle recovery tasks
+    for EC and replicated blocks.
+    The xmits of an erasure coding recovery task is calculated as the maximum
+    value between the number of read streams and the number of write streams.
   </description>
 </property>
 
@@ -3024,23 +3127,25 @@
 
 <property>
   <name>dfs.datanode.transfer.socket.send.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket send buffer size for DataXceiver (mirroring packets to downstream
     in pipeline). This may affect TCP connection throughput.
     If it is set to zero or negative value, no buffer size will be set
     explicitly, thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 
 <property>
   <name>dfs.datanode.transfer.socket.recv.buffer.size</name>
-  <value>131072</value>
+  <value>0</value>
   <description>
     Socket receive buffer size for DataXceiver (receiving packets from client
     during block writing). This may affect TCP connection throughput.
     If it is set to zero or negative value, no buffer size will be set
     explicitly, thus enable tcp auto-tuning on some system.
+    The default value is 0.
   </description>
 </property>
 
@@ -3869,7 +3974,7 @@
 
 <property>
   <name>dfs.journalnode.enable.sync</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If true, the journal nodes wil sync with each other. The journal nodes
     will periodically gossip with other journal nodes to compare edit log
@@ -4043,7 +4148,7 @@
 
 <property>
   <name>dfs.namenode.edits.asynclogging</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If set to true, enables asynchronous edit logs in the Namenode.  If set
     to false, the Namenode uses the traditional synchronous edit logs.
@@ -4092,6 +4197,18 @@
   <value></value>
   <description>
     Name of class to use for delegating HDFS authorization.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.inode.attributes.provider.bypass.users</name>
+  <value></value>
+  <description>
+    A list of user principals (in secure cluster) or user names (in insecure
+    cluster) for whom the external attributes provider will be bypassed for all
+    operations. This means file attributes stored in HDFS instead of the
+    external provider will be used for permission checking and be returned when
+    requested.
   </description>
 </property>
 
@@ -4195,22 +4312,66 @@
   </description>
 </property>
 
-  <property>
-    <name>dfs.namenode.snapshot.capture.openfiles</name>
-    <value>false</value>
-    <description>
-      If true, snapshots taken will have an immutable shared copy of
-      the open files that have valid leases. Even after the open files
-      grow or shrink in size, snapshot will always have the previous
-      point-in-time version of the open files, just like all other
-      closed files. Default is false.
-      Note: The file length captured for open files in snapshot is
-      whats recorded in NameNode at the time of snapshot and it may
-      be shorter than what the client has written till then. In order
-      to capture the latest length, the client can call hflush/hsync
-      with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
-    </description>
-  </property>
+<property>
+  <name>dfs.namenode.snapshot.capture.openfiles</name>
+  <value>false</value>
+  <description>
+    If true, snapshots taken will have an immutable shared copy of
+    the open files that have valid leases. Even after the open files
+    grow or shrink in size, snapshot will always have the previous
+    point-in-time version of the open files, just like all other
+    closed files. Default is false.
+    Note: The file length captured for open files in snapshot is
+    whats recorded in NameNode at the time of snapshot and it may
+    be shorter than what the client has written till then. In order
+    to capture the latest length, the client can call hflush/hsync
+    with the flag SyncFlag.UPDATE_LENGTH on the open files handles.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshot.skip.capture.accesstime-only-change</name>
+  <value>false</value>
+  <description>
+    If accessTime of a file/directory changed but there is no other
+    modification made to the file/directory, the changed accesstime will
+    not be captured in next snapshot. However, if there is other modification
+    made to the file/directory, the latest access time will be captured
+    together with the modification in next snapshot.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshotdiff.allow.snap-root-descendant</name>
+  <value>true</value>
+  <description>
+    If enabled, snapshotDiff command can be run for any descendant directory
+    under a snapshot root directory and the diff calculation will be scoped
+    to the given descendant directory. Otherwise, snapshot diff command can
+    only be run for a snapshot root directory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshotdiff.listing.limit</name>
+  <value>1000</value>
+  <description>
+    Limit the number of entries generated by getSnapshotDiffReportListing within
+    one rpc call to the namenode.If less or equal to zero, at most
+    DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT (= 1000) will be sent
+    across to the client within one rpc call.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshot.max.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed per snapshottable
+    directory.If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
 
 <property>
   <name>dfs.pipeline.ecn</name>
@@ -4472,10 +4633,10 @@
 
   <property>
     <name>dfs.disk.balancer.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <description>
         This enables the diskbalancer feature on a cluster. By default, disk
-      balancer is disabled.
+      balancer is enabled.
     </description>
   </property>
 
@@ -4487,6 +4648,125 @@
       If the absolute value of volume Data Density which is out of
       threshold value in a node, it means that the volumes corresponding to
       the disks should do the balancing in the plan. The default value is 10.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.provided.enabled</name>
+    <value>false</value>
+    <description>
+      Enables the Namenode to handle provided storages.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.storage.id</name>
+    <value>DS-PROVIDED</value>
+    <description>
+      The storage ID used for provided stores.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.class</name>
+    <value>org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap</value>
+    <description>
+      The class that is used to specify the input format of the blocks on
+      provided storages. The default is
+      org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap which uses
+      file regions to describe blocks. The file regions are specified as a
+      delimited text file. Each file region is a 6-tuple containing the
+      block id, remote file path, offset into file, length of block, the
+      block pool id containing the block, and the generation stamp of the
+      block.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.batch-size</name>
+    <value>500</value>
+    <description>
+      The batch size when iterating over the database backing the aliasmap
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.dnrpc-address</name>
+    <value>0.0.0.0:50200</value>
+    <description>
+      The address where the aliasmap server will be running
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.leveldb.dir</name>
+    <value>/tmp</value>
+    <description>
+      The directory where the leveldb files will be kept
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.enabled</name>
+    <value>false</value>
+    <description>
+      Don't use the aliasmap by default. Some tests will fail
+      because they try to start the namenode twice with the
+      same parameters if you turn it on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.text.delimiter</name>
+    <value>,</value>
+    <description>
+        The delimiter used when the provided block map is specified as
+        a text file.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.text.read.file</name>
+    <value></value>
+    <description>
+        The path specifying the provided block map as a text file, specified as
+        a URI.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.text.codec</name>
+    <value></value>
+    <description>
+        The codec used to de-compress the provided block map.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.text.write.dir</name>
+    <value></value>
+    <description>
+        The path to which the provided block map should be written as a text
+        file, specified as a URI.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.leveldb.path</name>
+    <value></value>
+    <description>
+      The read/write path for the leveldb-based alias map
+      (org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap).
+      The path has to be explicitly configured when this alias map is used.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.load.retries</name>
+    <value>0</value>
+    <description>
+      The number of retries on the Datanode to load the provided aliasmap;
+      defaults to 0.
     </description>
   </property>
 
@@ -4543,4 +4823,432 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.qjm.operations.timeout</name>
+    <value>60s</value>
+    <description>
+      Common key to set timeout for related operations in
+      QuorumJournalManager. This setting supports multiple time unit suffixes
+      as described in dfs.heartbeat.interval.
+      If no suffix is specified then milliseconds is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.reformat.disabled</name>
+    <value>false</value>
+    <description>
+      Disable reformat of NameNode. If it's value is set to "true"
+      and metadata directories already exist then attempt to format NameNode
+      will throw NameNodeFormatException.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.default.nameserviceId</name>
+    <value></value>
+    <description>
+      Nameservice identifier of the default subcluster to monitor.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc.enable</name>
+    <value>true</value>
+    <description>
+      If true, the RPC service to handle client requests in the router is
+      enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc-address</name>
+    <value>0.0.0.0:8888</value>
+    <description>
+      RPC address that handles all clients requests.
+      The value of this property will take the form of router-host1:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the RPC server will bind to. If this optional address is
+      set, it overrides only the hostname portion of
+      dfs.federation.router.rpc-address. This is useful for making the name node
+      listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.handler.count</name>
+    <value>10</value>
+    <description>
+      The number of server threads for the router to handle RPC requests from
+      clients.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.handler.queue.size</name>
+    <value>100</value>
+    <description>
+      The size of the queue for the number of handlers to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.reader.count</name>
+    <value>1</value>
+    <description>
+      The number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.reader.queue.size</name>
+    <value>100</value>
+    <description>
+      The size of the queue for the number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.pool-size</name>
+    <value>1</value>
+    <description>
+      Size of the pool of connections from the router to namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.clean.ms</name>
+    <value>10000</value>
+    <description>
+      Time interval, in milliseconds, to check if the connection pool should
+      remove unused connections.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.pool.clean.ms</name>
+    <value>60000</value>
+    <description>
+      Time interval, in milliseconds, to check if the connection manager should
+      remove unused connection pools.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics in the router are enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>
+    <description>
+      Class to monitor the RPC system in the router. It must implement the
+      RouterRpcMonitor interface.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin.enable</name>
+    <value>true</value>
+    <description>
+      If true, the RPC admin service to handle client requests in the router is
+      enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-address</name>
+    <value>0.0.0.0:8111</value>
+    <description>
+      RPC address that handles the admin requests.
+      The value of this property will take the form of router-host1:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the RPC admin server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.admin-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin.handler.count</name>
+    <value>1</value>
+    <description>
+      The number of server threads for the router to handle RPC requests from
+      admin.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http-address</name>
+    <value>0.0.0.0:50071</value>
+    <description>
+      HTTP address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:http-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.http-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-address</name>
+    <value>0.0.0.0:50072</value>
+    <description>
+      HTTPS address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:https-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTPS server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.https-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http.enable</name>
+    <value>true</value>
+    <description>
+      If the HTTP service to handle client requests in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics service in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.file.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
+    <description>
+      Class to resolve files to subclusters.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.namenode.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver</value>
+    <description>
+      Class to resolve the namenode for a subcluster.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router connects to the State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.serializer</name>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl</value>
+    <description>
+      Class to serialize State Store records.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl</value>
+    <description>
+      Class to implement the State Store. There are three implementation classes currently
+      being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
+      By default it uses the ZooKeeper as the default State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.connection.test</name>
+    <value>60000</value>
+    <description>
+      How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.cache.ttl</name>
+    <value>1m</value>
+    <description>
+      How often to refresh the State Store caches in milliseconds. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.membership.expiration</name>
+    <value>300000</value>
+    <description>
+      Expiration time in milliseconds for a membership record.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router heartbeats into the State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat.interval</name>
+    <value>5000</value>
+    <description>
+      How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat-state.interval</name>
+    <value>5s</value>
+    <description>
+      How often the Router should heartbeat its state into the State Store in
+      milliseconds. This setting supports multiple time unit suffixes as
+      described in dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration</name>
+    <value>5m</value>
+    <description>
+      Expiration time in milliseconds for a router state record. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.enable</name>
+    <value>true</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.extension</name>
+    <value>30s</value>
+    <description>
+      Time after startup that the Router is in safe mode. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.expiration</name>
+    <value>3m</value>
+    <description>
+      Time without being able to reach the State Store to enter safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode</name>
+    <value></value>
+    <description>
+      The identifier of the namenodes to monitor and heartbeat.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.localnamenode.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router should monitor the namenode in the local machine.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.max-cache-size</name>
+    <value>10000</value>
+    <description>
+      Maximum number of mount table cache entries to have.
+      By default, remove cache entries if we have more than 10k.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota.enable</name>
+    <value>false</value>
+    <description>
+      Set to true to enable quota system in Router.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota-cache.update.interval</name>
+    <value>60s</value>
+    <description>
+      Interval time for updating quota usage cache in Router.
+      This property is used only if the value of
+      dfs.federation.router.quota.enable is true.
+      This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.thread-size</name>
+    <value>32</value>
+    <description>
+      Max threads size for the RouterClient to execute concurrent
+      requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.retry.max.attempts</name>
+    <value>3</value>
+    <description>
+      Max retry attempts for the RouterClient talking to the Router.
+    </description>
+  </property>
 </configuration>

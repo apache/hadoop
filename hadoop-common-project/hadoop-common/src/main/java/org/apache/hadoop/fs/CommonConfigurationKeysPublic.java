@@ -608,6 +608,8 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_TOKEN_FILES =
       "hadoop.token.files";
+  public static final String HADOOP_HTTP_AUTHENTICATION_TYPE =
+    "hadoop.http.authentication.type";
 
   /**
    * @see
@@ -718,6 +720,15 @@ public class CommonConfigurationKeysPublic {
       "hadoop.security.kms.client.encrypted.key.cache.expiry";
   /** Default value for KMS_CLIENT_ENC_KEY_CACHE_EXPIRY (12 hrs)*/
   public static final int KMS_CLIENT_ENC_KEY_CACHE_EXPIRY_DEFAULT = 43200000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_TIMEOUT_SECONDS =
+      "hadoop.security.kms.client.timeout";
+  public static final int KMS_CLIENT_TIMEOUT_DEFAULT = 60;
 
   /**
    * @see
@@ -849,5 +860,7 @@ public class CommonConfigurationKeysPublic {
           "credential$",
           "oauth.*token$",
           HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
+  public static final String HADOOP_SYSTEM_TAGS = "hadoop.system.tags";
+  public static final String HADOOP_CUSTOM_TAGS = "hadoop.custom.tags";
 }
 

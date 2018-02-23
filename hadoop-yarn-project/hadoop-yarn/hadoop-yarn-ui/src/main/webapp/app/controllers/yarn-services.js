@@ -23,8 +23,12 @@ import TableDefinition from 'em-table/utils/table-definition';
 export default AppTableController.extend({
   queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
   tableDefinition: TableDefinition.create({
+    searchType: 'manual',
     sortColumnId: 'stTime',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    rowCount: 25,
+    minValuesToDisplay: 1,
+    enableFaceting: true
   }),
   searchText: Ember.computed.alias('tableDefinition.searchText'),
   sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),

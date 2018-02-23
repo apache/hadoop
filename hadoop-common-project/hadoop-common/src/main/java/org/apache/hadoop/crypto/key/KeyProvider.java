@@ -71,8 +71,8 @@ public abstract class KeyProvider {
 
     protected KeyVersion(String name, String versionName,
                          byte[] material) {
-      this.name = name;
-      this.versionName = versionName;
+      this.name = name == null ? null : name.intern();
+      this.versionName = versionName == null ? null : versionName.intern();
       this.material = material;
     }
     
@@ -199,9 +199,8 @@ public abstract class KeyProvider {
       return cipher;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     /**
@@ -370,9 +369,8 @@ public abstract class KeyProvider {
       return description;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     @Override

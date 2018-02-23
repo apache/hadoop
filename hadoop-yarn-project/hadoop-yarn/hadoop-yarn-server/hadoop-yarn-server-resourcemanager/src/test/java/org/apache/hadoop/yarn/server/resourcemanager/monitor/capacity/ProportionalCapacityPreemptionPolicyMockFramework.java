@@ -28,12 +28,14 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
@@ -55,6 +57,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
@@ -358,6 +361,9 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       queue = (LeafQueue) nameToCSQueues.get(queueName);
       queue.getApplications().add(app);
       queue.getAllApplications().add(app);
+      when(queue.getMinimumAllocation())
+      .thenReturn(Resource.newInstance(1,1));
+      when(app.getCSLeafQueue()).thenReturn(queue);
 
       HashSet<String> users = userMap.get(queueName);
       if (null == users) {
@@ -529,6 +535,18 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
     } else {
       res = Resources.createResource(Integer.valueOf(resource[0]),
           Integer.valueOf(resource[1]));
+      if (resource.length > 2) {
+        // Using the same order of resources from ResourceUtils, set resource
+        // informations.
+        ResourceInformation[] storedResourceInfo = ResourceUtils
+            .getResourceTypesArray();
+        for (int i = 2; i < resource.length; i++) {
+          res.setResourceInformation(storedResourceInfo[i].getName(),
+              ResourceInformation.newInstance(storedResourceInfo[i].getName(),
+                  storedResourceInfo[i].getUnits(),
+                  Integer.valueOf(resource[i])));
+        }
+      }
     }
     return res;
   }
@@ -641,9 +659,11 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
 
     QueueCapacities qc = new QueueCapacities(0 == myLevel);
     ResourceUsage ru = new ResourceUsage();
+    QueueResourceQuotas qr  = new QueueResourceQuotas();
 
     when(queue.getQueueCapacities()).thenReturn(qc);
     when(queue.getQueueResourceUsage()).thenReturn(ru);
+    when(queue.getQueueResourceQuotas()).thenReturn(qr);
 
     LOG.debug("Setup queue, name=" + queue.getQueueName() + " path="
         + queue.getQueuePath());
@@ -676,7 +696,17 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       qc.setAbsoluteMaximumCapacity(partitionName, absMax);
       qc.setAbsoluteUsedCapacity(partitionName, absUsed);
       qc.setUsedCapacity(partitionName, used);
+      qr.setEffectiveMaxResource(parseResourceFromString(values[1].trim()));
+      qr.setEffectiveMinResource(parseResourceFromString(values[0].trim()));
+      qr.setEffectiveMaxResource(partitionName,
+          parseResourceFromString(values[1].trim()));
+      qr.setEffectiveMinResource(partitionName,
+          parseResourceFromString(values[0].trim()));
       when(queue.getUsedCapacity()).thenReturn(used);
+      when(queue.getEffectiveCapacity(partitionName))
+          .thenReturn(parseResourceFromString(values[0].trim()));
+      when(queue.getEffectiveMaxCapacity(partitionName))
+          .thenReturn(parseResourceFromString(values[1].trim()));
       ru.setPending(partitionName, pending);
       // Setup reserved resource if it contained by input config
       Resource reserved = Resources.none();
@@ -751,7 +781,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       }
     }
 
-    return Collections.EMPTY_MAP;
+    return Collections.emptyMap();
   }
 
   /**

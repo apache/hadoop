@@ -21,5 +21,7 @@ package org.apache.hadoop.fs.adl;
 enum TokenProviderType {
   RefreshToken,
   ClientCredential,
+  MSI,
+  DeviceCode,
   Custom
 }

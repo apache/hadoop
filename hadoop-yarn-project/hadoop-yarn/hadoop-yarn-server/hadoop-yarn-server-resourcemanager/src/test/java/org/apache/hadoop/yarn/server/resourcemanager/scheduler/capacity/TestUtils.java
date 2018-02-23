@@ -18,16 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -53,21 +45,29 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.Sets;
-import org.apache.hadoop.yarn.event.Event;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestUtils {
   private static final Log LOG = LogFactory.getLog(TestUtils.class);
@@ -135,6 +135,9 @@ public class TestUtils {
     when(mockScheduler.getResourceCalculator()).thenReturn(
         new DefaultResourceCalculator());
     rmContext.setScheduler(mockScheduler);
+
+    AllocationTagsManager ptm = mock(AllocationTagsManager.class);
+    rmContext.setAllocationTagsManager(ptm);
 
     return rmContext;
   }
@@ -235,6 +238,11 @@ public class TestUtils {
     doReturn(id).when(containerId).getContainerId();
     return containerId;
   }
+
+  public static ContainerId getMockContainerId(int appId, int containerId) {
+    ApplicationAttemptId attemptId = getMockApplicationAttemptId(appId, 1);
+    return ContainerId.newContainerId(attemptId, containerId);
+  }
   
   public static Container getMockContainer(
       ContainerId containerId, NodeId nodeId, 
@@ -267,7 +275,7 @@ public class TestUtils {
   public static Configuration getConfigurationWithQueueLabels(Configuration config) {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
-    
+
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
@@ -310,7 +318,7 @@ public class TestUtils {
     
     return conf;
   }
-  
+
   public static Configuration getComplexConfigurationWithQueueLabels(
       Configuration config) {
     CapacitySchedulerConfiguration conf =
@@ -456,5 +464,24 @@ public class TestUtils {
 
     cs.submitResourceCommitRequest(clusterResource,
         csAssignment);
+  }
+
+  /**
+   * An easy way to create resources other than memory and vcores for tests.
+   * @param memory memory
+   * @param vcores vcores
+   * @param nameToValues resource types other than memory and vcores.
+   * @return created resource
+   */
+  public static Resource createResource(long memory, int vcores,
+      Map<String, Integer> nameToValues) {
+    Resource res = Resource.newInstance(memory, vcores);
+    if (nameToValues != null) {
+      for (Map.Entry<String, Integer> entry : nameToValues.entrySet()) {
+        res.setResourceInformation(entry.getKey(), ResourceInformation
+            .newInstance(entry.getKey(), "", entry.getValue()));
+      }
+    }
+    return res;
   }
 }

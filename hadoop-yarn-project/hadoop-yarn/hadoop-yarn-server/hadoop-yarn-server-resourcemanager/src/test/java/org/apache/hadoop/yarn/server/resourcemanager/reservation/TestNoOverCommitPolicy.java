@@ -6,9 +6,9 @@
  *   to you under the Apache License, Version 2.0 (the
  *   "License"); you may not use this file except in compliance
  *   with the License.  You may obtain a copy of the License at
- *  
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,145 +17,70 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
-import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.Before;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public class TestNoOverCommitPolicy {
+/**
+ * This clas tests {@code NoOverCommitPolicy} sharing policy.
+ */
+@RunWith(value = Parameterized.class)
+@NotThreadSafe
+@SuppressWarnings("VisibilityModifier")
+public class TestNoOverCommitPolicy extends BaseSharingPolicyTest {
 
-  long step;
-  long initTime;
+  final static long ONEHOUR = 3600 * 1000;
+  final static String TWOHOURPERIOD = "7200000";
 
-  InMemoryPlan plan;
-  ReservationAgent mAgent;
-  Resource minAlloc;
-  ResourceCalculator res;
-  Resource maxAlloc;
+  @Parameterized.Parameters(name = "Duration {0}, height {1}," +
+          " submissions {2}, periodic {3})")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {
 
-  int totCont = 1000000;
+        // easy fit
+        {ONEHOUR, 0.25, 1, null, null },
+        {ONEHOUR, 0.25, 1, TWOHOURPERIOD, null },
 
-  @Before
-  public void setup() throws Exception {
+        // barely fit
+        {ONEHOUR, 1, 1, null, null },
+        {ONEHOUR, 1, 1, TWOHOURPERIOD, null },
 
-    // 1 sec step
-    step = 1000L;
+        // overcommit with single reservation
+        {ONEHOUR, 1.1, 1, null, ResourceOverCommitException.class },
+        {ONEHOUR, 1.1, 1, TWOHOURPERIOD, ResourceOverCommitException.class },
 
-    initTime = System.currentTimeMillis();
-    minAlloc = Resource.newInstance(1024, 1);
-    res = new DefaultResourceCalculator();
-    maxAlloc = Resource.newInstance(1024 * 8, 8);
+        // barely fit with multiple reservations
+        {ONEHOUR, 0.25, 4, null, null },
+        {ONEHOUR, 0.25, 4, TWOHOURPERIOD, null },
 
-    mAgent = mock(ReservationAgent.class);
+        // overcommit with multiple reservations
+        {ONEHOUR, 0.25, 5, null, ResourceOverCommitException.class },
+        {ONEHOUR, 0.25, 5, TWOHOURPERIOD, ResourceOverCommitException.class }
+
+    });
+  }
+
+  @Override
+  public SharingPolicy getInitializedPolicy() {
     String reservationQ =
         ReservationSystemTestUtil.getFullReservationQueueName();
-    QueueMetrics rootQueueMetrics = mock(QueueMetrics.class);
-    Resource clusterResource =
-        ReservationSystemTestUtil.calculateClusterResource(totCont);
-    ReservationSchedulerConfiguration conf = mock
-        (ReservationSchedulerConfiguration.class);
-    NoOverCommitPolicy policy = new NoOverCommitPolicy();
+    conf = new CapacitySchedulerConfiguration();
+    SharingPolicy policy = new NoOverCommitPolicy();
     policy.init(reservationQ, conf);
-    RMContext context = ReservationSystemTestUtil.createMockRMContext();
-
-    plan =
-        new InMemoryPlan(rootQueueMetrics, policy, mAgent,
-            clusterResource, step, res, minAlloc, maxAlloc,
-            "dedicated", null, true, context);
-  }
-
-  public int[] generateData(int length, int val) {
-    int[] data = new int[length];
-    for (int i = 0; i < length; i++) {
-      data[i] = val;
-    }
-    return data;
+    return policy;
   }
 
   @Test
-  public void testSingleUserEasyFitPass() throws IOException, PlanningException {
-    // generate allocation that easily fit within resource constraints
-    int[] f = generateData(3600, (int) Math.ceil(0.2 * totCont));
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            initTime, initTime + f.length + 1, f.length);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
-            "dedicated", initTime, initTime + f.length,
-            ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc), false));
+  public void testAllocation() throws IOException, PlanningException {
+    runTest();
   }
 
-  @Test
-  public void testSingleUserBarelyFitPass() throws IOException,
-      PlanningException {
-    // generate allocation from single tenant that barely fit
-    int[] f = generateData(3600, totCont);
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            initTime, initTime + f.length + 1, f.length);
-    assertTrue(plan.toString(),
-        plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
-            "dedicated", initTime, initTime + f.length,
-            ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc), false));
-  }
-
-  @Test(expected = ResourceOverCommitException.class)
-  public void testSingleFail() throws IOException, PlanningException {
-    // generate allocation from single tenant that exceed capacity
-    int[] f = generateData(3600, (int) (1.1 * totCont));
-    plan.addReservation(new InMemoryReservationAllocation(
-        ReservationSystemTestUtil.getNewReservationId(), null, "u1",
-        "dedicated", initTime, initTime + f.length, ReservationSystemTestUtil
-            .generateAllocation(initTime, step, f), res, minAlloc), false);
-  }
-
-  @Test
-  public void testMultiTenantPass() throws IOException, PlanningException {
-    // generate allocation from multiple tenants that barely fit in tot capacity
-    int[] f = generateData(3600, (int) Math.ceil(0.25 * totCont));
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            initTime, initTime + f.length + 1, f.length);
-    for (int i = 0; i < 4; i++) {
-      assertTrue(plan.toString(),
-          plan.addReservation(new InMemoryReservationAllocation(
-              ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
-              "dedicated", initTime, initTime + f.length,
-              ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc), false));
-    }
-  }
-
-  @Test(expected = ResourceOverCommitException.class)
-  public void testMultiTenantFail() throws IOException, PlanningException {
-    // generate allocation from multiple tenants that exceed tot capacity
-    int[] f = generateData(3600, (int) Math.ceil(0.25 * totCont));
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            initTime, initTime + f.length + 1, f.length);
-    for (int i = 0; i < 5; i++) {
-      assertTrue(plan.toString(),
-          plan.addReservation(new InMemoryReservationAllocation(
-              ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
-              "dedicated", initTime, initTime + f.length,
-              ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc), false));
-    }
-  }
 }

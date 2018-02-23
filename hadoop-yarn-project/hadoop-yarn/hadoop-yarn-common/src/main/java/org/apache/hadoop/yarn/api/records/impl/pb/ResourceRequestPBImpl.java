@@ -40,7 +40,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   private Priority priority = null;
   private Resource capability = null;
   private ExecutionTypeRequest executionTypeRequest = null;
-  
+
   
   public ResourceRequestPBImpl() {
     builder = ResourceRequestProto.newBuilder();
@@ -52,7 +52,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   }
   
   public ResourceRequestProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -229,7 +229,8 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
         + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality()
         + ", Execution Type Request: " + getExecutionTypeRequest()
-        + ", Node Label Expression: " + getNodeLabelExpression() + "}";
+        + ", Node Label Expression: " + getNodeLabelExpression()
+        + "}";
   }
 
   @Override

@@ -21,11 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +34,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequ
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -47,6 +44,8 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of the SharedCacheClient API.
@@ -54,8 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class SharedCacheClientImpl extends SharedCacheClient {
-  private static final Log LOG = LogFactory
-      .getLog(SharedCacheClientImpl.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(SharedCacheClientImpl.class);
 
   private ClientSCMProtocol scmClient;
   private InetSocketAddress scmAddress;
@@ -113,8 +112,8 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   }
 
   @Override
-  public Path use(ApplicationId applicationId, String resourceKey,
-      String resourceName) throws YarnException {
+  public URL use(ApplicationId applicationId, String resourceKey)
+      throws YarnException {
     Path resourcePath = null;
     UseSharedCacheResourceRequest request = Records.newRecord(
         UseSharedCacheResourceRequest.class);
@@ -132,31 +131,12 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       throw new YarnException(e);
     }
     if (resourcePath != null) {
-      if (resourcePath.getName().equals(resourceName)) {
-        // The preferred name is the same as the name of the item in the cache,
-        // so we skip generating the fragment to save space in the MRconfig.
-        return resourcePath;
-      } else {
-        // We are using the shared cache, and a preferred name has been
-        // specified that is different than the name of the resource in the
-        // shared cache. We need to set the fragment portion of the URI to
-        // preserve the desired name.
-        URI pathURI = resourcePath.toUri();
-        try {
-          // We assume that there is no existing fragment in the URI since the
-          // shared cache manager does not use fragments.
-          pathURI =
-              new URI(pathURI.getScheme(), pathURI.getSchemeSpecificPart(),
-                  resourceName);
-          resourcePath = new Path(pathURI);
-        } catch (URISyntaxException e) {
-          throw new YarnException(
-              "Could not create a new URI due to syntax errors: "
-                  + pathURI.toString(), e);
-        }
-      }
+      URL pathURL = URL.fromPath(resourcePath);
+      return pathURL;
+    } else {
+      // The resource was not in the cache.
+      return null;
     }
-    return resourcePath;
   }
 
   @Override

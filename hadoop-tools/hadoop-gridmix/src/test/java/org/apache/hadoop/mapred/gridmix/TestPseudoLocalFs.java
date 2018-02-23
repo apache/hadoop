@@ -224,7 +224,7 @@ public class TestPseudoLocalFs {
 
     // Validate operations on valid qualified path
     path = new Path("myPsedoFile.1237");
-    path = path.makeQualified(pfs);
+    path = pfs.makeQualified(path);
     validateGetFileStatus(pfs, path, true);
     validateCreate(pfs, path, true);
     validateOpen(pfs, path, true);

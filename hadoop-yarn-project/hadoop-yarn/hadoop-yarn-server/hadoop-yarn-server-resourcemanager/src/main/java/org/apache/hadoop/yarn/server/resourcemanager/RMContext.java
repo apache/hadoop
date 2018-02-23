@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeL
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
@@ -42,6 +43,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.QueueLimitCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -159,4 +162,19 @@ public interface RMContext extends ApplicationMasterServiceContext {
   String getHAZookeeperConnectionState();
 
   ResourceManager getResourceManager();
+
+  ResourceProfilesManager getResourceProfilesManager();
+
+  void setResourceProfilesManager(ResourceProfilesManager mgr);
+
+  String getAppProxyUrl(Configuration conf, ApplicationId applicationId);
+
+  AllocationTagsManager getAllocationTagsManager();
+
+  void setAllocationTagsManager(AllocationTagsManager allocationTagsManager);
+
+  PlacementConstraintManager getPlacementConstraintManager();
+
+  void setPlacementConstraintManager(
+      PlacementConstraintManager placementConstraintManager);
 }

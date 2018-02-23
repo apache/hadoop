@@ -63,8 +63,8 @@ $H3 Basic Usage
 
   The most common invocation of DistCp is an inter-cluster copy:
 
-    bash$ hadoop distcp hdfs://nn1:9820/foo/bar \
-    hdfs://nn2:9820/bar/foo
+    bash$ hadoop distcp hdfs://nn1:8020/foo/bar \
+    hdfs://nn2:8020/bar/foo
 
   This will expand the namespace under `/foo/bar` on nn1 into a temporary file,
   partition its contents among a set of map tasks, and start a copy on each
@@ -72,19 +72,19 @@ $H3 Basic Usage
 
   One can also specify multiple source directories on the command line:
 
-    bash$ hadoop distcp hdfs://nn1:9820/foo/a \
-    hdfs://nn1:9820/foo/b \
-    hdfs://nn2:9820/bar/foo
+    bash$ hadoop distcp hdfs://nn1:8020/foo/a \
+    hdfs://nn1:8020/foo/b \
+    hdfs://nn2:8020/bar/foo
 
   Or, equivalently, from a file using the -f option:
 
-    bash$ hadoop distcp -f hdfs://nn1:9820/srclist \
-    hdfs://nn2:9820/bar/foo
+    bash$ hadoop distcp -f hdfs://nn1:8020/srclist \
+    hdfs://nn2:8020/bar/foo
 
   Where `srclist` contains
 
-    hdfs://nn1:9820/foo/a
-    hdfs://nn1:9820/foo/b
+    hdfs://nn1:8020/foo/a
+    hdfs://nn1:8020/foo/b
 
   When copying from multiple sources, DistCp will abort the copy with an error
   message if two sources collide, but collisions at the destination are
@@ -126,35 +126,35 @@ $H3 Update and Overwrite
   Consider a copy from `/source/first/` and `/source/second/` to `/target/`,
   where the source paths have the following contents:
 
-    hdfs://nn1:9820/source/first/1
-    hdfs://nn1:9820/source/first/2
-    hdfs://nn1:9820/source/second/10
-    hdfs://nn1:9820/source/second/20
+    hdfs://nn1:8020/source/first/1
+    hdfs://nn1:8020/source/first/2
+    hdfs://nn1:8020/source/second/10
+    hdfs://nn1:8020/source/second/20
 
   When DistCp is invoked without `-update` or `-overwrite`, the DistCp defaults
   would create directories `first/` and `second/`, under `/target`. Thus:
 
-    distcp hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
+    distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
 
   would yield the following contents in `/target`:
 
-    hdfs://nn2:9820/target/first/1
-    hdfs://nn2:9820/target/first/2
-    hdfs://nn2:9820/target/second/10
-    hdfs://nn2:9820/target/second/20
+    hdfs://nn2:8020/target/first/1
+    hdfs://nn2:8020/target/first/2
+    hdfs://nn2:8020/target/second/10
+    hdfs://nn2:8020/target/second/20
 
   When either `-update` or `-overwrite` is specified, the **contents** of the
   source-directories are copied to target, and not the source directories
   themselves. Thus:
 
-    distcp -update hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
+    distcp -update hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
 
   would yield the following contents in `/target`:
 
-    hdfs://nn2:9820/target/1
-    hdfs://nn2:9820/target/2
-    hdfs://nn2:9820/target/10
-    hdfs://nn2:9820/target/20
+    hdfs://nn2:8020/target/1
+    hdfs://nn2:8020/target/2
+    hdfs://nn2:8020/target/10
+    hdfs://nn2:8020/target/20
 
   By extension, if both source folders contained a file with the same name
   (say, `0`), then both sources would map an entry to `/target/0` at the
@@ -162,27 +162,27 @@ $H3 Update and Overwrite
 
   Now, consider the following copy operation:
 
-    distcp hdfs://nn1:9820/source/first hdfs://nn1:9820/source/second hdfs://nn2:9820/target
+    distcp hdfs://nn1:8020/source/first hdfs://nn1:8020/source/second hdfs://nn2:8020/target
 
   With sources/sizes:
 
-    hdfs://nn1:9820/source/first/1 32
-    hdfs://nn1:9820/source/first/2 32
-    hdfs://nn1:9820/source/second/10 64
-    hdfs://nn1:9820/source/second/20 32
+    hdfs://nn1:8020/source/first/1 32
+    hdfs://nn1:8020/source/first/2 32
+    hdfs://nn1:8020/source/second/10 64
+    hdfs://nn1:8020/source/second/20 32
 
   And destination/sizes:
 
-    hdfs://nn2:9820/target/1 32
-    hdfs://nn2:9820/target/10 32
-    hdfs://nn2:9820/target/20 64
+    hdfs://nn2:8020/target/1 32
+    hdfs://nn2:8020/target/10 32
+    hdfs://nn2:8020/target/20 64
 
   Will effect:
 
-    hdfs://nn2:9820/target/1 32
-    hdfs://nn2:9820/target/2 32
-    hdfs://nn2:9820/target/10 64
-    hdfs://nn2:9820/target/20 32
+    hdfs://nn2:8020/target/1 32
+    hdfs://nn2:8020/target/2 32
+    hdfs://nn2:8020/target/10 64
+    hdfs://nn2:8020/target/20 32
 
   `1` is skipped because the file-length and contents match. `2` is copied
   because it doesn't exist at the target. `10` and `20` are overwritten since
@@ -220,6 +220,7 @@ Flag              | Description                          | Notes
 `-p[rbugpcaxt]` | Preserve r: replication number b: block size u: user g: group p: permission c: checksum-type a: ACL x: XAttr t: timestamp | When `-update` is specified, status updates will **not** be synchronized unless the file sizes also differ (i.e. unless the file is re-created). If -pa is specified, DistCp preserves the permissions also because ACLs are a super-set of permissions. The option -pr is only valid if both source and target directory are not erasure coded. **Note:** If -p option's are not specified, then by default block size is preserved.
 `-i` | Ignore failures | As explained in the Appendix, this option will keep more accurate statistics about the copy than the default case. It also preserves logs from failed copies, which can be valuable for debugging. Finally, a failing map will not cause the job to fail before all splits are attempted.
 `-log <logdir>` | Write logs to \<logdir\> | DistCp keeps logs of each file it attempts to copy as map output. If a map fails, the log output will not be retained if it is re-executed.
+`-v` | Log additional info (path, size) in the SKIP/COPY log | This option can only be used with -log option.
 `-m <num_maps>` | Maximum number of simultaneous copies | Specify the number of maps to copy data. Note that more maps may not necessarily improve throughput.
 `-overwrite` | Overwrite destination | If a map fails and `-i` is not specified, all the files in the split, not only those that failed, will be recopied. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
 `-update` | Overwrite if source and destination differ in size, blocksize, or checksum | As noted in the preceding, this is not a "sync" operation. The criteria examined are the source and destination file sizes, blocksizes, and checksums; if they differ, the source file replaces the destination file. As discussed in the Usage documentation, it also changes the semantics for generating destination paths, so users should use this carefully.
@@ -228,7 +229,7 @@ Flag              | Description                          | Notes
 `-filters` | The path to a file containing a list of pattern strings, one string per line, such that paths matching the pattern will be excluded from the copy. | Support regular expressions specified by java.util.regex.Pattern.
 `-filelimit <n>` | Limit the total number of files to be <= n | **Deprecated!** Ignored in the new DistCp.
 `-sizelimit <n>` | Limit the total size to be <= n bytes | **Deprecated!** Ignored in the new DistCp.
-`-delete` | Delete the files existing in the dst but not in src | The deletion is done by FS Shell. So the trash will be used, if it is enable.
+`-delete` | Delete the files existing in the dst but not in src | The deletion is done by FS Shell. So the trash will be used, if it is enable. Delete is applicable only with update or overwrite options.
 `-strategy {dynamic|uniformsize}` | Choose the copy-strategy to be used in DistCp. | By default, uniformsize is used. (i.e. Maps are balanced on the total size of files copied by each map. Similar to legacy.) If "dynamic" is specified, `DynamicInputFormat` is used instead. (This is described in the Architecture section, under InputFormats.)
 `-bandwidth` | Specify bandwidth per map, in MB/second. | Each map will be restricted to consume only the specified bandwidth. This is not always exact. The map throttles back its bandwidth consumption during a copy, such that the **net** bandwidth used tends towards the specified value.
 `-atomic {-tmp <tmp_dir>}` | Specify atomic commit, with optional tmp directory. | `-atomic` instructs DistCp to copy the source data to a temporary target location, and then move the temporary target to the final-location atomically. Data will either be available at final target in a complete and consistent form, or not at all. Optionally, `-tmp` may be used to specify the location of the tmp-target. If not specified, a default is chosen. **Note:** tmp_dir must be on the final target cluster.

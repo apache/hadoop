@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocat
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -34,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssign
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -176,13 +175,14 @@ public abstract class AbstractContainerAllocator {
    * </ul>
    *
    * @param clusterResource clusterResource
-   * @param ps PlacementSet
+   * @param candidates CandidateNodeSet
    * @param schedulingMode scheduling mode (exclusive or nonexclusive)
    * @param resourceLimits resourceLimits
    * @param reservedContainer reservedContainer
    * @return CSAssignemnt proposal
    */
   public abstract CSAssignment assignContainers(Resource clusterResource,
-      PlacementSet<FiCaSchedulerNode> ps, SchedulingMode schedulingMode,
-      ResourceLimits resourceLimits, RMContainer reservedContainer);
+      CandidateNodeSet<FiCaSchedulerNode> candidates,
+      SchedulingMode schedulingMode, ResourceLimits resourceLimits,
+      RMContainer reservedContainer);
 }

@@ -55,8 +55,6 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private Configuration getConf() {
     Configuration conf = super.getConf(numDNs);
     conf.setInt("io.bytes.per.checksum", cellSize);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     return conf;
   }
 
@@ -81,10 +79,12 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     }
 
     cluster = new MiniDFSCluster.Builder(conf)
-        .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+        .nameNodePort(ServerSocketUtil.getPort(18020, 100))
         .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
         .numDataNodes(numDNs)
         .build();
+    cluster.getFileSystem().enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
         StripedFileTestUtil.getDefaultECPolicy().getName());
     try {
@@ -116,8 +116,6 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   public void testEnd2End() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     new TestBalancer().integrationTestWithStripedFile(conf);
   }
 

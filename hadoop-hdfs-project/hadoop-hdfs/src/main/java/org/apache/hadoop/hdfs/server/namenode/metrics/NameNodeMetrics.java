@@ -115,6 +115,8 @@ public class NameNodeMetrics {
   final MutableQuantiles[] syncsQuantiles;
   @Metric("Journal transactions batched in sync")
   MutableCounterLong transactionsBatchedInSync;
+  @Metric("Journal transactions batched in sync")
+  final MutableQuantiles[] numTransactionsBatchedInSync;
   @Metric("Number of blockReports from individual storages")
   MutableRate storageBlockReport;
   final MutableQuantiles[] storageBlockReportQuantiles;
@@ -148,6 +150,7 @@ public class NameNodeMetrics {
     
     final int len = intervals.length;
     syncsQuantiles = new MutableQuantiles[len];
+    numTransactionsBatchedInSync = new MutableQuantiles[len];
     storageBlockReportQuantiles = new MutableQuantiles[len];
     cacheReportQuantiles = new MutableQuantiles[len];
     generateEDEKTimeQuantiles = new MutableQuantiles[len];
@@ -159,6 +162,10 @@ public class NameNodeMetrics {
       syncsQuantiles[i] = registry.newQuantiles(
           "syncs" + interval + "s",
           "Journal syncs", "ops", "latency", interval);
+      numTransactionsBatchedInSync[i] = registry.newQuantiles(
+          "numTransactionsBatchedInSync" + interval + "s",
+          "Number of Transactions batched in sync", "ops",
+          "count", interval);
       storageBlockReportQuantiles[i] = registry.newQuantiles(
           "storageBlockReport" + interval + "s",
           "Storage block report", "ops", "latency", interval);
@@ -304,6 +311,9 @@ public class NameNodeMetrics {
 
   public void incrTransactionsBatchedInSync(long count) {
     transactionsBatchedInSync.incr(count);
+    for (MutableQuantiles q : numTransactionsBatchedInSync) {
+      q.add(count);
+    }
   }
 
   public void incSuccessfulReReplications() {

@@ -19,11 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * reservations, but functionality wise is a sub-class of ParentQueue
  *
  */
-public class PlanQueue extends ParentQueue {
+public class PlanQueue extends AbstractManagedParentQueue {
 
   private static final Logger LOG = LoggerFactory.getLogger(PlanQueue.class);
 
@@ -56,7 +55,8 @@ public class PlanQueue extends ParentQueue {
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
     if (maxAppsForReservation < 0) {
       maxAppsForReservation =
-          (int) (CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * super
+          (int) (CapacitySchedulerConfiguration.
+              DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * super
               .getAbsoluteCapacity());
     }
     int userLimit = conf.getUserLimit(queuePath);
@@ -114,60 +114,6 @@ public class PlanQueue extends ParentQueue {
       }
       showReservationsAsQueues =
           newlyParsedParentQueue.showReservationsAsQueues;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  void addChildQueue(CSQueue newQueue)
-      throws SchedulerDynamicEditException {
-    try {
-      writeLock.lock();
-      if (newQueue.getCapacity() > 0) {
-        throw new SchedulerDynamicEditException(
-            "Queue " + newQueue + " being added has non zero capacity.");
-      }
-      boolean added = this.childQueues.add(newQueue);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("updateChildQueues (action: add queue): " + added + " "
-            + getChildQueuesToPrint());
-      }
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  void removeChildQueue(CSQueue remQueue)
-      throws SchedulerDynamicEditException {
-    try {
-      writeLock.lock();
-      if (remQueue.getCapacity() > 0) {
-        throw new SchedulerDynamicEditException(
-            "Queue " + remQueue + " being removed has non zero capacity.");
-      }
-      Iterator<CSQueue> qiter = childQueues.iterator();
-      while (qiter.hasNext()) {
-        CSQueue cs = qiter.next();
-        if (cs.equals(remQueue)) {
-          qiter.remove();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Removed child queue: {}", cs.getQueueName());
-          }
-        }
-      }
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  protected float sumOfChildCapacities() {
-    try {
-      writeLock.lock();
-      float ret = 0;
-      for (CSQueue l : childQueues) {
-        ret += l.getCapacity();
-      }
-      return ret;
     } finally {
       writeLock.unlock();
     }

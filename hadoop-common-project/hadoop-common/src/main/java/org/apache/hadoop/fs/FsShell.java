@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -99,6 +100,7 @@ public class FsShell extends Configured implements Tool {
   
   protected void init() throws IOException {
     getConf().setQuietMode(true);
+    UserGroupInformation.setConfiguration(getConf());
     if (commandFactory == null) {
       commandFactory = new CommandFactory(getConf());
       commandFactory.addObject(new Help(), "-help");

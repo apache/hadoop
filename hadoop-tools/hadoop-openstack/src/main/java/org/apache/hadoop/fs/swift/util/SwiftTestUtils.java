@@ -278,7 +278,7 @@ public class SwiftTestUtils extends org.junit.Assert {
     noteAction(action);
     try {
       if (fileSystem != null) {
-        fileSystem.delete(new Path(cleanupPath).makeQualified(fileSystem),
+        fileSystem.delete(fileSystem.makeQualified(new Path(cleanupPath)),
                           true);
       }
     } catch (Exception e) {

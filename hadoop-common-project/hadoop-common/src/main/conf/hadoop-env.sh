@@ -58,10 +58,13 @@
 # export HADOOP_HOME=
 
 # Location of Hadoop's configuration information.  i.e., where this
-# file is probably living. Many sites will also set this in the
-# same location where JAVA_HOME is defined.  If this is not defined
-# Hadoop will attempt to locate it based upon its execution
-# path.
+# file is living. If this is not defined, Hadoop will attempt to
+# locate it based upon its execution path.
+#
+# NOTE: It is recommend that this variable not be set here but in
+# /etc/profile.d or equivalent.  Some options (such as
+# --config) may react strangely otherwise.
+#
 # export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
 
 # The maximum amount of heap to use (Java -Xmx).  If no unit
@@ -391,6 +394,15 @@ esac
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # export HDFS_MOVER_OPTS=""
+
+###
+# Router-based HDFS Federation specific parameters
+# Specify the JVM options to be used when starting the RBF Routers.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_DFSROUTER_OPTS=""
+###
 
 ###
 # Advanced Users Only!

@@ -119,15 +119,15 @@ The order in which you set these configurations is unimportant, but the values y
 
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn1</name>
-          <value>machine1.example.com:9820</value>
+          <value>machine1.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn2</name>
-          <value>machine2.example.com:9820</value>
+          <value>machine2.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn3</name>
-          <value>machine3.example.com:9820</value>
+          <value>machine3.example.com:8020</value>
         </property>
 
     **Note:** You may similarly configure the "**servicerpc-address**" setting if
@@ -487,7 +487,7 @@ In order to secure the information in ZooKeeper, first add the following to your
        <value>@/path/to/zk-acl.txt</value>
      </property>
 
-Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk.
+Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk. The authentication info may also be read via a CredentialProvider (pls see the CredentialProviderAPI Guide in the hadoop-common project).
 
 The first configured file specifies a list of ZooKeeper authentications, in the same format as used by the ZK CLI. For example, you may specify something like:
 

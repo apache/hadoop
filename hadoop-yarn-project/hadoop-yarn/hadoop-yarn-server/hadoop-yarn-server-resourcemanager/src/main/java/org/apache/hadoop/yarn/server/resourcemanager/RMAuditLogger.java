@@ -39,7 +39,8 @@ public class RMAuditLogger {
 
   enum Keys {USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS,
                     DESCRIPTION, APPID, APPATTEMPTID, CONTAINERID, 
-                    CALLERCONTEXT, CALLERSIGNATURE, RESOURCE}
+                    CALLERCONTEXT, CALLERSIGNATURE, RESOURCE, QUEUENAME,
+                    INCLUDEAPPS, INCLUDECHILDQUEUES, RECURSIVE}
 
   public static class AuditConstants {
     static final String SUCCESS = "SUCCESS";
@@ -59,6 +60,10 @@ public class RMAuditLogger {
         = "Get Application Attempt Report";
     public static final String GET_CONTAINERS = "Get Containers";
     public static final String GET_CONTAINER_REPORT = "Get Container Report";
+    public static final String GET_QUEUE_INFO_REQUEST =
+        "Get Queue Info Request";
+    public static final String GET_APPLICATIONS_REQUEST =
+        "Get Applications Request";
     public static final String FINISH_SUCCESS_APP = "Application Finished - Succeeded";
     public static final String FINISH_FAILED_APP = "Application Finished - Failed";
     public static final String FINISH_KILLED_APP = "Application Finished - Killed";
@@ -97,12 +102,11 @@ public class RMAuditLogger {
   }
 
   /**
-   * A helper api for creating an audit log for a successful event.
+   * A helper function for creating the common portion of a successful
+   * log message.
    */
-  static String createSuccessLog(String user, String operation, String target,
-      ApplicationId appId, ApplicationAttemptId attemptId,
-      ContainerId containerId, Resource resource, CallerContext callerContext,
-      InetAddress ip) {
+  private static StringBuilder createStringBuilderForSuccessEvent(String user,
+      String operation, String target, InetAddress ip) {
     StringBuilder b = new StringBuilder();
     start(Keys.USER, user, b);
     if (ip != null) {
@@ -111,6 +115,18 @@ public class RMAuditLogger {
     add(Keys.OPERATION, operation, b);
     add(Keys.TARGET, target ,b);
     add(Keys.RESULT, AuditConstants.SUCCESS, b);
+    return b;
+  }
+
+  /**
+   * A helper api for creating an audit log for a successful event.
+   */
+  static String createSuccessLog(String user, String operation, String target,
+      ApplicationId appId, ApplicationAttemptId attemptId,
+      ContainerId containerId, Resource resource, CallerContext callerContext,
+      InetAddress ip) {
+    StringBuilder b =
+        createStringBuilderForSuccessEvent(user, operation, target, ip);
     if (appId != null) {
       add(Keys.APPID, appId.toString(), b);
     }
@@ -151,6 +167,20 @@ public class RMAuditLogger {
   }
 
   /**
+   * A general helper api for creating an audit log for a successful event.
+   */
+  @SuppressWarnings("rawtypes")
+  static String createSuccessLog(String user, String operation, String target,
+      InetAddress ip, ArgsBuilder args) {
+    StringBuilder b =
+        createStringBuilderForSuccessEvent(user, operation, target, ip);
+    if(args != null) {
+      add(args, b);
+    }
+    return b.toString();
+  }
+
+  /**
    * Create a readable and parseable audit log string for a successful event.
    *
    * @param user User who made the service request to the ResourceManager
@@ -173,11 +203,52 @@ public class RMAuditLogger {
   }
 
   /**
+   * Create a general readable and parseable audit log string for a successful
+   * event.
+   *
+   * @param user User who made the service request to the ResourceManager.
+   * @param operation Operation requested by the user.
+   * @param target The target on which the operation is being performed.
+   * @param args The ArgsBuilder arguments for the operation request.
+   *
+   * <br><br>
+   * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter
+   * and hence the value fields should not contains tabs ('\t').
+   * <br>
+   * This method will attempt to retrieve the remote IP
+   */
+  public static void logSuccess(String user, String operation, String target,
+      ArgsBuilder args) {
+    logSuccess(user, operation, target, Server.getRemoteIp(), args);
+  }
+
+  /**
+   * Create a general readable and parseable audit log string for a successful
+   * event.
+   *
+   * @param user User who made the service request to the ResourceManager.
+   * @param operation Operation requested by the user.
+   * @param target The target on which the operation is being performed.
+   * @param ip The ip address of the caller.
+   * @param args The ArgsBuilder arguments for the operation request.
+   *
+   * <br><br>
+   * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter
+   * and hence the value fields should not contains tabs ('\t').
+   */
+  public static void logSuccess(String user, String operation, String target,
+      InetAddress ip, ArgsBuilder args) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info(createSuccessLog(user, operation, target, ip, args));
+    }
+  }
+
+  /**
    * Create a readable and parseable audit log string for a successful event.
    *
    * @param user User who made the service request to the ResourceManager.
    * @param operation Operation requested by the user.
-   * @param target The target on which the operation is being performed. 
+   * @param target The target on which the operation is being performed.
    * @param appId Application Id in which operation was performed.
    * @param attemptId Application Attempt Id in which operation was performed.
    *
@@ -265,10 +336,8 @@ public class RMAuditLogger {
     }
   }
   
-  static String createFailureLog(String user, String operation, String perm,
-      String target, String description, ApplicationId appId,
-      ApplicationAttemptId attemptId, ContainerId containerId,
-      Resource resource, CallerContext callerContext) {
+  private static StringBuilder createStringBuilderForFailureLog(String user,
+      String operation, String target, String description, String perm) {
     StringBuilder b = new StringBuilder();
     start(Keys.USER, user, b);
     addRemoteIP(b);
@@ -277,6 +346,18 @@ public class RMAuditLogger {
     add(Keys.RESULT, AuditConstants.FAILURE, b);
     add(Keys.DESCRIPTION, description, b);
     add(Keys.PERMISSIONS, perm, b);
+    return b;
+  }
+
+  /**
+   * A helper api for creating an audit log for a failure event.
+   */
+  static String createFailureLog(String user, String operation, String perm,
+      String target, String description, ApplicationId appId,
+      ApplicationAttemptId attemptId, ContainerId containerId,
+      Resource resource, CallerContext callerContext) {
+    StringBuilder b = createStringBuilderForFailureLog(user,
+        operation, target, description, perm);
     if (appId != null) {
       add(Keys.APPID, appId.toString(), b);
     }
@@ -301,6 +382,20 @@ public class RMAuditLogger {
       ApplicationAttemptId attemptId, ContainerId containerId, Resource resource) {
     return createFailureLog(user, operation, perm, target, description, appId,
         attemptId, containerId, resource, null);
+  }
+
+  /**
+   * A helper api for creating an audit log for a failure event.
+   */
+  @SuppressWarnings("rawtypes")
+  static String createFailureLog(String user, String operation, String perm,
+      String target, String description, ArgsBuilder args) {
+    StringBuilder b = createStringBuilderForFailureLog(user,
+        operation, target, description, perm);
+    if(args != null) {
+      add(args, b);
+    }
+    return b.toString();
   }
 
   /**
@@ -408,7 +503,29 @@ public class RMAuditLogger {
   }
 
   /**
-   * A helper api to add remote IP address
+   * Create a readable and parseable audit log string for a failed event.
+   *
+   * @param user User who made the service request.
+   * @param operation Operation requested by the user.
+   * @param perm Target permissions.
+   * @param target The target on which the operation is being performed.
+   * @param description The failure description
+   * @param args The arguments for the operation request.
+   *
+   * <br><br>
+   * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter
+   * and hence the value fields should not contains tabs ('\t').
+   */
+  public static void logFailure(String user, String operation, String perm,
+      String target, String description, ArgsBuilder args) {
+    if (LOG.isWarnEnabled()) {
+      LOG.warn(createFailureLog(user, operation, perm, target, description,
+          args));
+    }
+  }
+
+  /**
+   * A helper api to add remote IP address.
    */
   static void addRemoteIP(StringBuilder b) {
     InetAddress ip = Server.getRemoteIp();
@@ -433,5 +550,36 @@ public class RMAuditLogger {
   static void add(Keys key, String value, StringBuilder b) {
     b.append(AuditConstants.PAIR_SEPARATOR).append(key.name())
      .append(AuditConstants.KEY_VAL_SEPARATOR).append(value);
+  }
+
+  /**
+   * Appends the key-val pair to the passed builder in the following format
+   * <pair-delim>key=value
+   */
+  static void add(ArgsBuilder args, StringBuilder b) {
+    b.append(AuditConstants.PAIR_SEPARATOR).append(args.getArgs());
+  }
+
+  /**
+   * Builder to create and pass a list of arbitrary key value pairs for logging.
+   */
+  public static class ArgsBuilder {
+    private StringBuilder b;
+
+    public ArgsBuilder() {
+      b = new StringBuilder();
+    }
+
+    public ArgsBuilder append(Keys key, String value) {
+      if (b.length() != 0) {
+        b.append(AuditConstants.PAIR_SEPARATOR);
+      }
+      b.append(key.name()).append(AuditConstants.KEY_VAL_SEPARATOR).append(value);
+      return this;
+    }
+
+    public StringBuilder getArgs() {
+      return b;
+    }
   }
 }

@@ -50,16 +50,16 @@ public class TestLowRedundancyBlockQueues {
       int corruptReplicationOneCount, int lowRedundancyStripedCount,
       int corruptStripedCount) {
     assertEquals("Low redundancy replica count incorrect!",
-        lowRedundancyReplicaCount, queues.getLowRedundancyBlocksStat());
+        lowRedundancyReplicaCount, queues.getLowRedundancyBlocks());
     assertEquals("Corrupt replica count incorrect!",
-        corruptReplicaCount, queues.getCorruptBlocksStat());
+        corruptReplicaCount, queues.getCorruptBlocks());
     assertEquals("Corrupt replica one count incorrect!",
         corruptReplicationOneCount,
-        queues.getCorruptReplicationOneBlocksStat());
+        queues.getCorruptReplicationOneBlocks());
     assertEquals("Low redundancy striped blocks count incorrect!",
-        lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroupsStat());
+        lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroups());
     assertEquals("Corrupt striped blocks count incorrect!",
-        corruptStripedCount, queues.getCorruptECBlockGroupsStat());
+        corruptStripedCount, queues.getCorruptECBlockGroups());
     assertEquals("Low Redundancy count incorrect!",
         lowRedundancyReplicaCount + lowRedundancyStripedCount,
         queues.getLowRedundancyBlockCount());
@@ -121,6 +121,21 @@ public class TestLowRedundancyBlockQueues {
     verifyBlockStats(queues, 3, 2, 1, 0, 0);
     queues.update(block_very_low_redundancy, 0, 0, 0, 1, -4, -24);
     verifyBlockStats(queues, 2, 3, 2, 0, 0);
+  }
+
+  @Test
+  public void testRemoveWithWrongPriority() {
+    final LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    final BlockInfo corruptBlock = genBlockInfo(1);
+    assertAdded(queues, corruptBlock, 0, 0, 3);
+    assertInLevel(queues, corruptBlock,
+        LowRedundancyBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+    verifyBlockStats(queues, 0, 1, 0, 0, 0);
+
+    // Remove with wrong priority
+    queues.remove(corruptBlock, LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY);
+    // Verify the number of corrupt block is decremented
+    verifyBlockStats(queues, 0, 0, 0, 0, 0);
   }
 
   @Test

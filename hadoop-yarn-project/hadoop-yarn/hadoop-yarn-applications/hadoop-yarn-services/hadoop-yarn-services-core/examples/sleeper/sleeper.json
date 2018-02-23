@@ -1,0 +1,15 @@
+{
+  "name": "sleeper-service",
+  "components" :
+  [
+    {
+      "name": "sleeper",
+      "number_of_containers": 2,
+      "launch_command": "sleep 900000",
+      "resource": {
+        "cpus": 1,
+        "memory": "256"
+      }
+    }
+  ]
+}

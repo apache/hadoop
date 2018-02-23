@@ -255,7 +255,7 @@ class Ls extends FsCommand {
       ContentSummary contentSummary = item.fs.getContentSummary(item.path);
       String line = String.format(lineFormat,
           (stat.isDirectory() ? "d" : "-"),
-          stat.getPermission() + (stat.getPermission().getAclBit() ? "+" : " "),
+          stat.getPermission() + (stat.hasAcl() ? "+" : " "),
           (stat.isFile() ? stat.getReplication() : "-"),
           stat.getOwner(),
           stat.getGroup(),
@@ -269,7 +269,7 @@ class Ls extends FsCommand {
     } else {
       String line = String.format(lineFormat,
           (stat.isDirectory() ? "d" : "-"),
-          stat.getPermission() + (stat.getPermission().getAclBit() ? "+" : " "),
+          stat.getPermission() + (stat.hasAcl() ? "+" : " "),
           (stat.isFile() ? stat.getReplication() : "-"),
           stat.getOwner(),
           stat.getGroup(),

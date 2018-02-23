@@ -17,9 +17,6 @@
  */
 
 package org.apache.hadoop.mapreduce;
-
-import junit.framework.TestCase;
-
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -28,24 +25,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class TestMapCollection {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestMapCollection.class.getName());
 
   public static abstract class FillWritable implements Writable, Configurable {

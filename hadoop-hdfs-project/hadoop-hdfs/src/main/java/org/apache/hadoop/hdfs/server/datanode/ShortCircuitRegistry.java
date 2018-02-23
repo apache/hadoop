@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
+import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -113,7 +114,7 @@ public class ShortCircuitRegistry {
 
   public synchronized void removeShm(ShortCircuitShm shm) {
     if (LOG.isTraceEnabled()) {
-      LOG.debug("removing shm " + shm);
+      LOG.trace("removing shm " + shm);
     }
     // Stop tracking the shmId.
     RegisteredShm removedShm = segments.remove(shm.getShmId());

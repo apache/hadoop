@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.google.common.base.Preconditions;
@@ -39,7 +39,6 @@ import java.io.EOFException;
 import java.io.IOException;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 
 /**
  * The input stream for an S3A object.
@@ -84,8 +83,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
-  private final S3AInputPolicy inputPolicy;
+  private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
+  private final Invoker invoker;
 
   /**
    * This is the actual position within the object, used by
@@ -104,14 +104,29 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private long contentRangeStart;
 
+  /**
+   * Create the stream.
+   * This does not attempt to open it; that is only done on the first
+   * actual read() operation.
+   * @param s3Attributes object attributes from a HEAD request
+   * @param contentLength length of content
+   * @param client S3 client to use
+   * @param stats statistics to update
+   * @param instrumentation instrumentation to update
+   * @param readahead readahead bytes
+   * @param inputPolicy IO policy
+   * @param invoker preconfigured invoker
+   */
   public S3AInputStream(S3ObjectAttributes s3Attributes,
       long contentLength,
       AmazonS3 client,
       FileSystem.Statistics stats,
       S3AInstrumentation instrumentation,
       long readahead,
-      S3AInputPolicy inputPolicy) {
-    Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()), "No Bucket");
+      S3AInputPolicy inputPolicy,
+      Invoker invoker) {
+    Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
+        "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
     this.bucket = s3Attributes.getBucket();
@@ -124,8 +139,19 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
-    this.inputPolicy = inputPolicy;
+    setInputPolicy(inputPolicy);
     setReadahead(readahead);
+    this.invoker = invoker;
+  }
+
+  /**
+   * Set/update the input policy of the stream.
+   * This updates the stream statistics.
+   * @param inputPolicy new input policy.
+   */
+  private void setInputPolicy(S3AInputPolicy inputPolicy) {
+    this.inputPolicy = inputPolicy;
+    streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
   /**
@@ -146,25 +172,26 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     contentRangeFinish = calculateRequestLimit(inputPolicy, targetPos,
         length, contentLength, readahead);
     LOG.debug("reopen({}) for {} range[{}-{}], length={}," +
-        " streamPosition={}, nextReadPosition={}",
-        uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos);
+        " streamPosition={}, nextReadPosition={}, policy={}",
+        uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos,
+        inputPolicy);
 
-    streamStatistics.streamOpened();
-    try {
-      GetObjectRequest request = new GetObjectRequest(bucket, key)
-          .withRange(targetPos, contentRangeFinish);
-      if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-          StringUtils.isNotBlank(serverSideEncryptionKey)){
-        request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
-      }
-      wrappedStream = client.getObject(request).getObjectContent();
-      contentRangeStart = targetPos;
-      if (wrappedStream == null) {
-        throw new IOException("Null IO stream from reopen of (" + reason +  ") "
-            + uri);
-      }
-    } catch (AmazonClientException e) {
-      throw translateException("Reopen at position " + targetPos, uri, e);
+    long opencount = streamStatistics.streamOpened();
+    GetObjectRequest request = new GetObjectRequest(bucket, key)
+        .withRange(targetPos, contentRangeFinish - 1);
+    if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+        StringUtils.isNotBlank(serverSideEncryptionKey)){
+      request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
+    }
+    String text = String.format("Failed to %s %s at %d",
+        (opencount == 0 ? "open" : "re-open"), uri, targetPos);
+    S3Object object = invoker.retry(text, uri, true,
+        () -> client.getObject(request));
+    wrappedStream = object.getObjectContent();
+    contentRangeStart = targetPos;
+    if (wrappedStream == null) {
+      throw new IOException("Null IO stream from reopen of (" + reason +  ") "
+          + uri);
     }
 
     this.pos = targetPos;
@@ -258,6 +285,12 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     } else if (diff < 0) {
       // backwards seek
       streamStatistics.seekBackwards(diff);
+      // if the stream is in "Normal" mode, switch to random IO at this
+      // point, as it is indicative of columnar format IO
+      if (inputPolicy.equals(S3AInputPolicy.Normal)) {
+        LOG.info("Switching to Random IO seek policy");
+        setInputPolicy(S3AInputPolicy.Random);
+      }
     } else {
       // targetPos == pos
       if (remainingInCurrentRequest() > 0) {
@@ -427,6 +460,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       try {
         // close or abort the stream
         closeStream("close() operation", this.contentRangeFinish, false);
+        LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // this is actually a no-op
         super.close();
       } finally {
@@ -697,6 +731,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       break;
 
     case Normal:
+      // normal is considered sequential until a backwards seek switches
+      // it to 'Random'
     default:
       rangeLimit = contentLength;
 

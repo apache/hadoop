@@ -24,13 +24,17 @@ import java.io.IOException;
  * Utility class to faciliate some fault injection tests for the checkpointing
  * process.
  */
-class CheckpointFaultInjector {
-  static CheckpointFaultInjector instance = new CheckpointFaultInjector();
-  
-  static CheckpointFaultInjector getInstance() {
+public class CheckpointFaultInjector {
+  public static CheckpointFaultInjector instance =
+      new CheckpointFaultInjector();
+
+  public static CheckpointFaultInjector getInstance() {
     return instance;
   }
-  
+
+  public static void set(CheckpointFaultInjector instance) {
+    CheckpointFaultInjector.instance = instance;
+  }
   public void beforeGetImageSetsHeaders() throws IOException {}
   public void afterSecondaryCallsRollEditLog() throws IOException {}
   public void duringMerge() throws IOException {}
@@ -46,4 +50,8 @@ class CheckpointFaultInjector {
   
   public void afterMD5Rename() throws IOException {}
   public void beforeEditsRename() throws IOException {}
+
+  public void duringUploadInProgess() throws InterruptedException, IOException {
+  }
+
 }

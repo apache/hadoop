@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -29,7 +29,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
@@ -46,6 +48,7 @@ class FSPreemptionThread extends Thread {
   private final Timer preemptionTimer;
   private final Lock schedulerReadLock;
 
+  @SuppressWarnings("deprecation")
   FSPreemptionThread(FairScheduler scheduler) {
     setDaemon(true);
     setName("FSPreemptionThread");
@@ -96,7 +99,10 @@ class FSPreemptionThread extends Thread {
    * starvation.
    * 2. For each {@link ResourceRequest}, iterate through matching
    * nodes and identify containers to preempt all on one node, also
-   * optimizing for least number of AM container preemptions.
+   * optimizing for least number of AM container preemptions. Only nodes
+   * that match the locality level specified in the {@link ResourceRequest}
+   * are considered. However, if this would lead to AM preemption, and locality
+   * relaxation is allowed, then the search space is expanded to all nodes.
    *
    * @param starvedApp starved application for which we are identifying
    *                   preemption targets
@@ -108,36 +114,64 @@ class FSPreemptionThread extends Thread {
 
     // Iterate through enough RRs to address app's starvation
     for (ResourceRequest rr : starvedApp.getStarvedResourceRequests()) {
+      List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
+              .getNodesByResourceName(rr.getResourceName());
       for (int i = 0; i < rr.getNumContainers(); i++) {
-        PreemptableContainers bestContainers = null;
-        List<FSSchedulerNode> potentialNodes = scheduler.getNodeTracker()
-            .getNodesByResourceName(rr.getResourceName());
-        int maxAMContainers = Integer.MAX_VALUE;
+        PreemptableContainers bestContainers =
+                identifyContainersToPreemptForOneContainer(potentialNodes, rr);
 
-        for (FSSchedulerNode node : potentialNodes) {
-          PreemptableContainers preemptableContainers =
-              identifyContainersToPreemptOnNode(
-                  rr.getCapability(), node, maxAMContainers);
+        // Don't preempt AM containers just to satisfy local requests if relax
+        // locality is enabled.
+        if (bestContainers != null
+                && bestContainers.numAMContainers > 0
+                && !ResourceRequest.isAnyLocation(rr.getResourceName())
+                && rr.getRelaxLocality()) {
+          bestContainers = identifyContainersToPreemptForOneContainer(
+                  scheduler.getNodeTracker().getAllNodes(), rr);
+        }
 
-          if (preemptableContainers != null) {
-            // This set is better than any previously identified set.
-            bestContainers = preemptableContainers;
-            maxAMContainers = bestContainers.numAMContainers;
-
-            if (maxAMContainers == 0) {
-              break;
+        if (bestContainers != null) {
+          List<RMContainer> containers = bestContainers.getAllContainers();
+          if (containers.size() > 0) {
+            containersToPreempt.addAll(containers);
+            // Reserve the containers for the starved app
+            trackPreemptionsAgainstNode(containers, starvedApp);
+            // Warn application about containers to be killed
+            for (RMContainer container : containers) {
+              FSAppAttempt app = scheduler.getSchedulerApp(
+                      container.getApplicationAttemptId());
+              LOG.info("Preempting container " + container +
+                      " from queue " + app.getQueueName());
+              app.trackContainerForPreemption(container);
             }
           }
-        } // End of iteration through nodes for one RR
-
-        if (bestContainers != null && bestContainers.containers.size() > 0) {
-          containersToPreempt.addAll(bestContainers.containers);
-          // Reserve the containers for the starved app
-          trackPreemptionsAgainstNode(bestContainers.containers, starvedApp);
         }
       }
     } // End of iteration over RRs
     return containersToPreempt;
+  }
+
+  private PreemptableContainers identifyContainersToPreemptForOneContainer(
+          List<FSSchedulerNode> potentialNodes, ResourceRequest rr) {
+    PreemptableContainers bestContainers = null;
+    int maxAMContainers = Integer.MAX_VALUE;
+
+    for (FSSchedulerNode node : potentialNodes) {
+      PreemptableContainers preemptableContainers =
+              identifyContainersToPreemptOnNode(
+                      rr.getCapability(), node, maxAMContainers);
+
+      if (preemptableContainers != null) {
+        // This set is better than any previously identified set.
+        bestContainers = preemptableContainers;
+        maxAMContainers = bestContainers.numAMContainers;
+
+        if (maxAMContainers == 0) {
+          break;
+        }
+      }
+    }
+    return bestContainers;
   }
 
   /**
@@ -170,10 +204,12 @@ class FSPreemptionThread extends Thread {
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
           scheduler.getSchedulerApp(container.getApplicationAttemptId());
+      ApplicationId appId = app.getApplicationId();
 
-      if (app.canContainerBePreempted(container)) {
+      if (app.canContainerBePreempted(container,
+              preemptableContainers.getResourcesToPreemptForApp(appId))) {
         // Flag container for preemption
-        if (!preemptableContainers.addContainer(container)) {
+        if (!preemptableContainers.addContainer(container, appId)) {
           return null;
         }
 
@@ -199,15 +235,6 @@ class FSPreemptionThread extends Thread {
   }
 
   private void preemptContainers(List<RMContainer> containers) {
-    // Warn application about containers to be killed
-    for (RMContainer container : containers) {
-      ApplicationAttemptId appAttemptId = container.getApplicationAttemptId();
-      FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
-      LOG.info("Preempting container " + container +
-          " from queue " + app.getQueueName());
-      app.trackContainerForPreemption(container);
-    }
-
     // Schedule timer task to kill containers
     preemptionTimer.schedule(
         new PreemptContainersTask(containers), warnTimeBeforeKill);
@@ -237,14 +264,14 @@ class FSPreemptionThread extends Thread {
    * A class to track preemptable containers.
    */
   private static class PreemptableContainers {
-    List<RMContainer> containers;
+    Map<ApplicationId, List<RMContainer>> containersByApp;
     int numAMContainers;
     int maxAMContainers;
 
     PreemptableContainers(int maxAMContainers) {
-      containers = new ArrayList<>();
       numAMContainers = 0;
       this.maxAMContainers = maxAMContainers;
+      this.containersByApp = new HashMap<>();
     }
 
     /**
@@ -254,7 +281,7 @@ class FSPreemptionThread extends Thread {
      * @param container the container to add
      * @return true if success; false otherwise
      */
-    private boolean addContainer(RMContainer container) {
+    private boolean addContainer(RMContainer container, ApplicationId appId) {
       if (container.isAMContainer()) {
         numAMContainers++;
         if (numAMContainers >= maxAMContainers) {
@@ -262,8 +289,30 @@ class FSPreemptionThread extends Thread {
         }
       }
 
-      containers.add(container);
+      if (!containersByApp.containsKey(appId)) {
+        containersByApp.put(appId, new ArrayList<>());
+      }
+
+      containersByApp.get(appId).add(container);
       return true;
+    }
+
+    private List<RMContainer> getAllContainers() {
+      List<RMContainer> allContainers = new ArrayList<>();
+      for (List<RMContainer> containersForApp : containersByApp.values()) {
+        allContainers.addAll(containersForApp);
+      }
+      return allContainers;
+    }
+
+    private Resource getResourcesToPreemptForApp(ApplicationId appId) {
+      Resource resourcesToPreempt = Resources.createResource(0, 0);
+      if (containersByApp.containsKey(appId)) {
+        for (RMContainer container : containersByApp.get(appId)) {
+          Resources.addTo(resourcesToPreempt, container.getAllocatedResource());
+        }
+      }
+      return resourcesToPreempt;
     }
   }
 }

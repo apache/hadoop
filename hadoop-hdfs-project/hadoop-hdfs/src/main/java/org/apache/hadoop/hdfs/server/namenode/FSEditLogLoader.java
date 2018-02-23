@@ -96,6 +96,14 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .AddErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .RemoveErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .EnableErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .DisableErasureCodingPolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -377,7 +385,7 @@ public class FSEditLogLoader {
             addCloseOp.xAttrs, replication, addCloseOp.mtime,
             addCloseOp.atime, addCloseOp.blockSize, true,
             addCloseOp.clientName, addCloseOp.clientMachine,
-            addCloseOp.storagePolicyId);
+            addCloseOp.storagePolicyId, addCloseOp.erasureCodingPolicyId);
         assert newFile != null;
         iip = INodesInPath.replace(iip, iip.length() - 1, newFile);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, newFile.getId());
@@ -413,7 +421,7 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       ErasureCodingPolicy ecPolicy =
           FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
@@ -436,7 +444,7 @@ public class FSEditLogLoader {
       final INodeFile file = INodeFile.valueOf(iip.getLastINode(), path);
 
       // Update the salient file attributes.
-      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID, false);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       ErasureCodingPolicy ecPolicy =
           FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
@@ -958,6 +966,41 @@ public class FSEditLogLoader {
           setStoragePolicyOp.policyId);
       break;
     }
+    case OP_ADD_ERASURE_CODING_POLICY:
+      AddErasureCodingPolicyOp addOp = (AddErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().addPolicy(
+          addOp.getEcPolicy());
+
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId,
+            addOp.getEcPolicy());
+      }
+      break;
+    case OP_ENABLE_ERASURE_CODING_POLICY:
+      EnableErasureCodingPolicyOp enableOp = (EnableErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().enablePolicy(
+          enableOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    case OP_DISABLE_ERASURE_CODING_POLICY:
+      DisableErasureCodingPolicyOp disableOp =
+          (DisableErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().disablePolicy(
+          disableOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    case OP_REMOVE_ERASURE_CODING_POLICY:
+      RemoveErasureCodingPolicyOp removeOp = (RemoveErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().removePolicy(
+          removeOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }

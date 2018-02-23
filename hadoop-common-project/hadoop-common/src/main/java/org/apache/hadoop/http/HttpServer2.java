@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -128,10 +129,14 @@ public final class HttpServer2 implements FilterContainer {
   public static final String HTTP_MAX_RESPONSE_HEADER_SIZE_KEY =
       "hadoop.http.max.response.header.size";
   public static final int HTTP_MAX_RESPONSE_HEADER_SIZE_DEFAULT = 65536;
+
+  public static final String HTTP_SOCKET_BACKLOG_SIZE_KEY =
+      "hadoop.http.socket.backlog.size";
+  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 128;
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
-  static final String FILTER_INITIALIZER_PROPERTY
+  public static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
   // The ServletContext attribute where the daemon Configuration
@@ -433,6 +438,9 @@ public final class HttpServer2 implements FilterContainer {
       httpConfig.setResponseHeaderSize(responseHeaderSize);
       httpConfig.setSendServerVersion(false);
 
+      int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
+          HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);
+
       for (URI ep : endpoints) {
         final ServerConnector connector;
         String scheme = ep.getScheme();
@@ -448,6 +456,7 @@ public final class HttpServer2 implements FilterContainer {
         }
         connector.setHost(ep.getHost());
         connector.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
+        connector.setAcceptQueueSize(backlogSize);
         server.addListener(connector);
       }
       server.loadListeners();
@@ -640,7 +649,6 @@ public final class HttpServer2 implements FilterContainer {
 
   private static void configureChannelConnector(ServerConnector c) {
     c.setIdleTimeout(10000);
-    c.setAcceptQueueSize(128);
     if(Shell.WINDOWS) {
       // result of setting the SO_REUSEADDR flag is different on Windows
       // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
@@ -857,6 +865,45 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
+   * Add an internal servlet in the server, with initialization parameters.
+   * Note: This method is to be used for adding servlets that facilitate
+   * internal communication and not for user facing functionality. For
+   * servlets added using this method, filters (except internal Kerberos
+   * filters) are not enabled.
+   *
+   * @param name The name of the servlet (can be passed as null)
+   * @param pathSpec The path spec for the servlet
+   * @param clazz The servlet class
+   * @param params init parameters
+   */
+  public void addInternalServlet(String name, String pathSpec,
+      Class<? extends HttpServlet> clazz, Map<String, String> params) {
+    // Jetty doesn't like the same path spec mapping to different servlets, so
+    // if there's already a mapping for this pathSpec, remove it and assume that
+    // the newest one is the one we want
+    final ServletHolder sh = new ServletHolder(clazz);
+    sh.setName(name);
+    sh.setInitParameters(params);
+    final ServletMapping[] servletMappings =
+        webAppContext.getServletHandler().getServletMappings();
+    for (int i = 0; i < servletMappings.length; i++) {
+      if (servletMappings[i].containsPathSpec(pathSpec)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Found existing " + servletMappings[i].getServletName() +
+              " servlet at path " + pathSpec + "; will replace mapping" +
+              " with " + sh.getName() + " servlet");
+        }
+        ServletMapping[] newServletMappings =
+            ArrayUtil.removeFromArray(servletMappings, servletMappings[i]);
+        webAppContext.getServletHandler()
+            .setServletMappings(newServletMappings);
+        break;
+      }
+    }
+    webAppContext.addServlet(sh, pathSpec);
+  }
+
+  /**
    * Add the given handler to the front of the list of handlers.
    *
    * @param handler The handler to add
@@ -986,14 +1033,31 @@ public final class HttpServer2 implements FilterContainer {
    * Get the pathname to the webapps files.
    * @param appName eg "secondary" or "datanode"
    * @return the pathname as a URL
-   * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
+   * @throws FileNotFoundException if 'webapps' directory cannot be found
+   *   on CLASSPATH or in the development location.
    */
   protected String getWebAppsPath(String appName) throws FileNotFoundException {
-    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
-    if (url == null)
-      throw new FileNotFoundException("webapps/" + appName
-          + " not found in CLASSPATH");
-    String urlString = url.toString();
+    URL resourceUrl = null;
+    File webResourceDevLocation = new File("src/main/webapps", appName);
+    if (webResourceDevLocation.exists()) {
+      LOG.info("Web server is in development mode. Resources "
+          + "will be read from the source tree.");
+      try {
+        resourceUrl = webResourceDevLocation.getParentFile().toURI().toURL();
+      } catch (MalformedURLException e) {
+        throw new FileNotFoundException("Mailformed URL while finding the "
+            + "web resource dir:" + e.getMessage());
+      }
+    } else {
+      resourceUrl =
+          getClass().getClassLoader().getResource("webapps/" + appName);
+
+      if (resourceUrl == null) {
+        throw new FileNotFoundException("webapps/" + appName +
+            " not found in CLASSPATH");
+      }
+    }
+    String urlString = resourceUrl.toString();
     return urlString.substring(0, urlString.lastIndexOf('/'));
   }
 
@@ -1193,6 +1257,7 @@ public final class HttpServer2 implements FilterContainer {
    * @throws Exception
    */
   void openListeners() throws Exception {
+    LOG.debug("opening listeners: {}", listeners);
     for (ServerConnector listener : listeners) {
       if (listener.getLocalPort() != -1 && listener.getLocalPort() != -2) {
         // This listener is either started externally or has been bound or was

@@ -54,7 +54,9 @@
           {"name": "failedReduces", "type": "int"},
           {"name": "totalCounters", "type": "JhCounters"},
           {"name": "mapCounters", "type": "JhCounters"},
-          {"name": "reduceCounters", "type": "JhCounters"}
+          {"name": "reduceCounters", "type": "JhCounters"},
+          {"name": "killedMaps", "type": "int", "default": -1},
+          {"name": "killedReduces", "type": "int", "default": -1}
       ]
      },
 
@@ -136,7 +138,11 @@
           {"name": "finishedMaps", "type": "int"},
           {"name": "finishedReduces", "type": "int"},
           {"name": "jobStatus", "type": "string"},
-          {"name": "diagnostics", "type": ["null","string"], "default": null}
+          {"name": "diagnostics", "type": ["null","string"], "default": null},
+          {"name": "failedMaps", "type": "int", "default": -1},
+          {"name": "failedReduces", "type": "int",  "default": -1},
+          {"name": "killedMaps", "type": "int",  "default": -1},
+          {"name": "killedReduces", "type": "int",  "default": -1}
       ]
      },
 

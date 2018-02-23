@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -46,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.util.ZKUtil;
+import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -69,8 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPub
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -80,6 +80,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactor
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.AbstractReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -92,9 +94,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
@@ -114,8 +118,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -127,7 +129,9 @@ import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -192,7 +196,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ResourceTrackerService resourceTracker;
   private JvmMetrics jvmMetrics;
   private boolean curatorEnabled = false;
-  private CuratorFramework curator;
+  private ZKCuratorManager zkManager;
   private final String zkRootNodePassword =
       Long.toString(new SecureRandom().nextLong());
   private boolean recoveryEnabled;
@@ -228,11 +232,25 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return rmDispatcher;
   }
 
+  @VisibleForTesting
+  protected ResourceProfilesManager createResourceProfileManager() {
+    ResourceProfilesManager resourceProfilesManager =
+        new ResourceProfilesManagerImpl();
+    return resourceProfilesManager;
+  }
+
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
+
+
+    // add resource profiles here because it's used by AbstractYarnScheduler
+    ResourceProfilesManager resourceProfilesManager =
+        createResourceProfileManager();
+    resourceProfilesManager.init(conf);
+    rmContext.setResourceProfilesManager(resourceProfilesManager);
 
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
@@ -345,7 +363,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
             YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
     if (curatorEnabled) {
-      this.curator = createAndStartCurator(conf);
+      this.zkManager = createAndStartZKManager(conf);
       elector = new CuratorBasedElectorService(this);
     } else {
       elector = new ActiveStandbyElectorBasedElectorService(this);
@@ -353,50 +371,45 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return elector;
   }
 
-  public CuratorFramework createAndStartCurator(Configuration conf)
-      throws IOException {
-    String zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new YarnRuntimeException(
-          YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
-    }
-    int numRetries = conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
-        YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
-    int zkSessionTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
-        YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
-    int zkRetryInterval = conf.getInt(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
+  /**
+   * Get ZooKeeper Curator manager, creating and starting if not exists.
+   * @param config Configuration for the ZooKeeper curator.
+   * @return ZooKeeper Curator manager.
+   * @throws IOException If it cannot create the manager.
+   */
+  public ZKCuratorManager createAndStartZKManager(Configuration
+      config) throws IOException {
+    ZKCuratorManager manager = new ZKCuratorManager(config);
 
-    // set up zk auths
-    List<ZKUtil.ZKAuthInfo> zkAuths = RMZKUtils.getZKAuths(conf);
+    // Get authentication
     List<AuthInfo> authInfos = new ArrayList<>();
-    for (ZKUtil.ZKAuthInfo zkAuth : zkAuths) {
-      authInfos.add(new AuthInfo(zkAuth.getScheme(), zkAuth.getAuth()));
+    if (HAUtil.isHAEnabled(config) && HAUtil.getConfValueForRMInstance(
+        YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, config) == null) {
+      String zkRootNodeUsername = HAUtil.getConfValueForRMInstance(
+          YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS, config);
+      String defaultFencingAuth =
+          zkRootNodeUsername + ":" + zkRootNodePassword;
+      byte[] defaultFencingAuthData =
+          defaultFencingAuth.getBytes(Charset.forName("UTF-8"));
+      String scheme = new DigestAuthenticationProvider().getScheme();
+      AuthInfo authInfo = new AuthInfo(scheme, defaultFencingAuthData);
+      authInfos.add(authInfo);
     }
 
-    if (HAUtil.isHAEnabled(conf) && HAUtil.getConfValueForRMInstance(
-        YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, conf) == null) {
-      String zkRootNodeUsername = HAUtil
-          .getConfValueForRMInstance(YarnConfiguration.RM_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
-      byte[] defaultFencingAuth =
-          (zkRootNodeUsername + ":" + zkRootNodePassword)
-              .getBytes(Charset.forName("UTF-8"));
-      authInfos.add(new AuthInfo(new DigestAuthenticationProvider().getScheme(),
-          defaultFencingAuth));
-    }
+    manager.start(authInfos);
+    return manager;
+  }
 
-    CuratorFramework client =  CuratorFrameworkFactory.builder()
-        .connectString(zkHostPort)
-        .sessionTimeoutMs(zkSessionTimeout)
-        .retryPolicy(new RetryNTimes(numRetries, zkRetryInterval))
-        .authorization(authInfos).build();
-    client.start();
-    return client;
+  public ZKCuratorManager getZKManager() {
+    return zkManager;
   }
 
   public CuratorFramework getCurator() {
-    return this.curator;
+    if (this.zkManager == null) {
+      return null;
+    }
+    return this.zkManager.getCurator();
   }
 
   public String getZkRootNodePassword() {
@@ -483,6 +496,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
       throws InstantiationException, IllegalAccessException {
     return new RMNodeLabelsManager();
   }
+
+  protected AllocationTagsManager createAllocationTagsManager() {
+    return new AllocationTagsManager(this.rmContext);
+  }
+
+  protected PlacementConstraintManagerService
+      createPlacementConstraintManager() {
+    // Use the in memory Placement Constraint Manager.
+    return new MemoryPlacementConstraintManager();
+  }
   
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
@@ -506,26 +529,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    SystemMetricsPublisher publisher;
-    if (YarnConfiguration.timelineServiceEnabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-        // we're dealing with the v.2.x publisher
-        LOG.info("system metrics publisher with the timeline service V2 is " +
-            "configured");
-        publisher = new TimelineServiceV2Publisher(
-            rmContext.getRMTimelineCollectorManager());
-      } else {
-        // we're dealing with the v.1.x publisher
-        LOG.info("system metrics publisher with the timeline service V1 is " +
-            "configured");
-        publisher = new TimelineServiceV1Publisher();
-      }
-    } else {
-      LOG.info("TimelineServicePublisher is not configured");
-      publisher = new NoOpSystemMetricPublisher();
+    List<SystemMetricsPublisher> publishers =
+        new ArrayList<SystemMetricsPublisher>();
+    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+      SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
+      publishers.add(publisherV1);
     }
-    return publisher;
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // we're dealing with the v.2.x publisher
+      LOG.info("system metrics publisher with the timeline service V2 is "
+          + "configured");
+      SystemMetricsPublisher publisherV2 = new TimelineServiceV2Publisher(
+          rmContext.getRMTimelineCollectorManager());
+      publishers.add(publisherV2);
+    }
+    if (publishers.isEmpty()) {
+      LOG.info("TimelineServicePublisher is not configured");
+      SystemMetricsPublisher noopPublisher = new NoOpSystemMetricPublisher();
+      publishers.add(noopPublisher);
+    }
+
+    for (SystemMetricsPublisher publisher : publishers) {
+      addIfService(publisher);
+    }
+
+    SystemMetricsPublisher combinedPublisher =
+        new CombinedSystemMetricsPublisher(publishers);
+    return combinedPublisher;
   }
 
   // sanity check for configurations
@@ -601,6 +631,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
       nlm.setRMContext(rmContext);
       addService(nlm);
       rmContext.setNodeLabelManager(nlm);
+
+      AllocationTagsManager allocationTagsManager =
+          createAllocationTagsManager();
+      rmContext.setAllocationTagsManager(allocationTagsManager);
+
+      PlacementConstraintManagerService placementConstraintManager =
+          createPlacementConstraintManager();
+      addService(placementConstraintManager);
+      rmContext.setPlacementConstraintManager(placementConstraintManager);
 
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();
@@ -701,9 +740,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         }
       }
 
-      // creating monitors that handle preemption
-      createPolicyMonitors();
-
       masterService = createApplicationMasterService();
       addService(masterService) ;
       rmContext.setApplicationMasterService(masterService);
@@ -801,31 +837,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         }
       }
 
-    }
-
-    protected void createPolicyMonitors() {
-      if (scheduler instanceof PreemptableResourceScheduler
-          && conf.getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS)) {
-        LOG.info("Loading policy monitors");
-        List<SchedulingEditPolicy> policies = conf.getInstances(
-            YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
-            SchedulingEditPolicy.class);
-        if (policies.size() > 0) {
-          for (SchedulingEditPolicy policy : policies) {
-            LOG.info("LOADING SchedulingEditPolicy:" + policy.getPolicyName());
-            // periodically check whether we need to take action to guarantee
-            // constraints
-            SchedulingMonitor mon = new SchedulingMonitor(rmContext, policy);
-            addService(mon);
-          }
-        } else {
-          LOG.warn("Policy monitors configured (" +
-              YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS +
-              ") but none specified (" +
-              YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES + ")");
-        }
-      }
     }
   }
 
@@ -958,11 +969,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     public void handle(RMAppAttemptEvent event) {
-      ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      ApplicationId appAttemptId = appAttemptID.getApplicationId();
-      RMApp rmApp = this.rmContext.getRMApps().get(appAttemptId);
+      ApplicationAttemptId appAttemptId = event.getApplicationAttemptId();
+      ApplicationId appId = appAttemptId.getApplicationId();
+      RMApp rmApp = this.rmContext.getRMApps().get(appId);
       if (rmApp != null) {
-        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptID);
+        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
         if (rmAppAttempt != null) {
           try {
             rmAppAttempt.handle(event);
@@ -1056,17 +1067,29 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-
+    Map<String, String> serviceConfig = null;
     Configuration conf = getConfig();
 
     RMWebAppUtil.setupSecurityAndFilters(conf,
         getClientRMService().rmDTSecretManager);
+
+    Map<String, String> params = new HashMap<String, String>();
+    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+        false)) {
+      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
+          "org.apache.hadoop.yarn.webapp";
+      params.put("com.sun.jersey.config.property.resourceConfigClass",
+          "com.sun.jersey.api.core.PackagesResourceConfig");
+      params.put("com.sun.jersey.config.property.packages", apiPackages);
+    }
 
     Builder<ApplicationMasterService> builder = 
         WebApps
             .$for("cluster", ApplicationMasterService.class, masterService,
                 "ws")
             .with(conf)
+            .withServlet("API-Service", "/app/*",
+                ServletContainer.class, params)
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
@@ -1074,7 +1097,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             .withCSRFProtection(YarnConfiguration.RM_CSRF_PREFIX)
             .withXFSProtection(YarnConfiguration.RM_XFS_PREFIX)
             .at(webAppAddress);
-    String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
+    String proxyHostAndPort = rmContext.getProxyHostAndPort(conf);
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       if (HAUtil.isHAEnabled(conf)) {
@@ -1264,8 +1287,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       configurationProvider.close();
     }
     super.serviceStop();
-    if (curator != null) {
-      curator.close();
+    if (zkManager != null) {
+      zkManager.close();
     }
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);

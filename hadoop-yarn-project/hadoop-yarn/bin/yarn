@@ -15,8 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="yarn"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
 ## @description  build up the yarn command's usage text.
 ## @audience     public
@@ -31,7 +32,7 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
-  hadoop_add_subcommand "application" client "prints application(s) report/kill application"
+  hadoop_add_subcommand "app|application" client "prints application(s) report/kill application/manage long running application"
   hadoop_add_subcommand "applicationattempt" client "prints applicationattempt(s) report"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "cluster" client "prints cluster information"
@@ -44,11 +45,13 @@ function hadoop_usage
   hadoop_add_subcommand "nodemanager" daemon "run a nodemanager on each worker"
   hadoop_add_subcommand "proxyserver" daemon "run the web app proxy server"
   hadoop_add_subcommand "queue" client "prints queue information"
+  hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
   hadoop_add_subcommand "resourcemanager" daemon "run the ResourceManager"
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
+  hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
-  hadoop_add_subcommand "sharedcachemanager" admin "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
   hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
   hadoop_add_subcommand "top" client "view cluster information"
@@ -67,10 +70,18 @@ function yarncmd_case
   shift
 
   case ${subcmd} in
-    application|applicationattempt|container)
+    app|application|applicationattempt|container)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.ApplicationCLI
       set -- "${subcmd}" "$@"
       HADOOP_SUBCMD_ARGS=("$@")
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -110,6 +121,8 @@ function yarncmd_case
     ;;
     nodemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
       # Backwards compatibility
       if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
@@ -127,13 +140,28 @@ function yarncmd_case
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
     ;;
+    registrydns)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
+      HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
+    ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
       # Backwards compatibility
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
       fi
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
@@ -141,6 +169,9 @@ function yarncmd_case
     router)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
+    ;;
+    schedulerconf)
+    HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
     ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
@@ -151,6 +182,8 @@ function yarncmd_case
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
     timelineserver)

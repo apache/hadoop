@@ -34,8 +34,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -46,6 +44,8 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class drives the creation of a mini-cluster on the local machine. By
@@ -60,8 +60,8 @@ import org.eclipse.jetty.util.ajax.JSON;
  * To shutdown the cluster, kill the process.
  */
 public class MiniHadoopClusterManager {
-  private static final Log LOG = LogFactory
-      .getLog(MiniHadoopClusterManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniHadoopClusterManager.class);
 
   private MiniMRClientCluster mr;
   private MiniDFSCluster dfs;

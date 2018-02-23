@@ -30,7 +30,7 @@ class S3ObjectAttributes {
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
 
-  public S3ObjectAttributes(
+  S3ObjectAttributes(
       String bucket,
       String key,
       S3AEncryptionMethods serverSideEncryptionAlgorithm,
@@ -41,19 +41,19 @@ class S3ObjectAttributes {
     this.serverSideEncryptionKey = serverSideEncryptionKey;
   }
 
-  public String getBucket() {
+  String getBucket() {
     return bucket;
   }
 
-  public String getKey() {
+  String getKey() {
     return key;
   }
 
-  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+  S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
     return serverSideEncryptionAlgorithm;
   }
 
-  public String getServerSideEncryptionKey() {
+  String getServerSideEncryptionKey() {
     return serverSideEncryptionKey;
   }
 }

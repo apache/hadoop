@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
@@ -87,4 +88,16 @@ public class FairReservationSystem extends AbstractReservationSystem {
         .getSteadyFairShare();
   }
 
+  @Override
+  public Plan getPlan(String planName) {
+    // make sure plan name is a full queue name in fair scheduler. For example,
+    // "root.default" is the full queue name for "default".
+    FSQueue queue = fairScheduler.getQueueManager().getQueue(planName);
+
+    if (queue != null) {
+      return super.getPlan(queue.getQueueName());
+    } else {
+      return null;
+    }
+  }
 }

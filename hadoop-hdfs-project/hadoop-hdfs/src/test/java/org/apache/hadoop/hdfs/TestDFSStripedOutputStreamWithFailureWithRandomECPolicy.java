@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * This tests write operation of DFS striped file with a random erasure code
@@ -28,18 +28,18 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 public class TestDFSStripedOutputStreamWithFailureWithRandomECPolicy extends
     TestDFSStripedOutputStreamWithFailure {
 
+  private final ECSchema schema;
+
   private static final Log LOG = LogFactory.getLog(
       TestDFSStripedOutputStreamWithRandomECPolicy.class.getName());
 
-  private ErasureCodingPolicy ecPolicy;
-
   public TestDFSStripedOutputStreamWithFailureWithRandomECPolicy() {
-    ecPolicy = StripedFileTestUtil.getRandomNonDefaultECPolicy();
-    LOG.info(ecPolicy);
+    schema = StripedFileTestUtil.getRandomNonDefaultECPolicy().getSchema();
+    LOG.info(schema);
   }
 
   @Override
-  public ErasureCodingPolicy getEcPolicy() {
-    return ecPolicy;
+  public ECSchema getEcSchema() {
+    return schema;
   }
 }

@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.mapred.nativetask.utils;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 import org.junit.Assert;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public class TestSizedWritable extends TestCase {
+public class TestSizedWritable {
 
+  @Test
   public void testSizedWritable() {
     final SizedWritable w = new SizedWritable(BytesWritable.class);
     Assert.assertTrue(w.length == SizedWritable.INVALID_LENGTH);

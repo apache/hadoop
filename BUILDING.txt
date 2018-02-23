@@ -4,10 +4,10 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8+
+* JDK 1.8
 * Maven 3.3 or later
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
+* CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
@@ -308,6 +308,8 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 
   $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
+Note that the site needs to be built in a second pass after other artifacts.
+
 ----------------------------------------------------------------------------------
 Installing Hadoop
 
@@ -329,10 +331,10 @@ If the build process fails with an out of memory error, you should be able to fi
 it by increasing the memory used by maven which can be done via the environment
 variable MAVEN_OPTS.
 
-Here is an example setting to allocate between 256 and 512 MB of heap space to
+Here is an example setting to allocate between 256 MB and 1 GB of heap space to
 Maven
 
-export MAVEN_OPTS="-Xms256m -Xmx512m"
+export MAVEN_OPTS="-Xms256m -Xmx1g"
 
 ----------------------------------------------------------------------------------
 
@@ -342,10 +344,10 @@ Building on Windows
 Requirements:
 
 * Windows System
-* JDK 1.8+
+* JDK 1.8
 * Maven 3.0 or later
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer
+* CMake 3.1 or newer
 * Windows SDK 7.1 or Visual Studio 2010 Professional
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)

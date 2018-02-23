@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +27,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
-public class TestNativeAzureFileSystemBlockLocations {
+/**
+ * Test block location logic.
+ */
+public class TestNativeAzureFileSystemBlockLocations
+    extends AbstractWasbTestWithTimeout {
   @Test
   public void testNumberOfBlocks() throws Exception {
     Configuration conf = new Configuration();

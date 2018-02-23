@@ -331,6 +331,15 @@ public class FileContext {
           return AbstractFileSystem.get(uri, conf);
         }
       });
+    } catch (RuntimeException ex) {
+      // RTEs can wrap other exceptions; if there is an IOException inner,
+      // throw it direct.
+      Throwable cause = ex.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else {
+        throw ex;
+      }
     } catch (InterruptedException ex) {
       LOG.error(ex.toString());
       throw new IOException("Failed to get the AbstractFileSystem for path: "
@@ -1284,7 +1293,36 @@ public class FileContext {
    *
    * This call is most helpful with DFS, where it returns 
    * hostnames of machines that contain the given file.
-   * 
+   *
+   * In HDFS, if file is three-replicated, the returned array contains
+   * elements like:
+   * <pre>
+   * BlockLocation(offset: 0, length: BLOCK_SIZE,
+   *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+   * BlockLocation(offset: BLOCK_SIZE, length: BLOCK_SIZE,
+   *   hosts: {"host2:9866", "host3:9866, host4:9866"})
+   * </pre>
+   *
+   * And if a file is erasure-coded, the returned BlockLocation are logical
+   * block groups.
+   *
+   * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+   * 1. If the file size is less than one stripe size, say 2 * CELL_SIZE, then
+   * there will be one BlockLocation returned, with 0 offset, actual file size
+   * and 4 hosts (2 data blocks and 2 parity blocks) hosting the actual blocks.
+   * 3. If the file size is less than one group size but greater than one
+   * stripe size, then there will be one BlockLocation returned, with 0 offset,
+   * actual file size with 5 hosts (3 data blocks and 2 parity blocks) hosting
+   * the actual blocks.
+   * 4. If the file size is greater than one group size, 3 * BLOCK_SIZE + 123
+   * for example, then the result will be like:
+   * <pre>
+   * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+   *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+   * BlockLocation(offset: 3 * BLOCK_SIZE, length: 123, hosts: {"host1:9866",
+   *   "host4:9866", "host5:9866"})
+   * </pre>
+   *
    * @param f - get blocklocations of this file
    * @param start position (byte offset)
    * @param len (in bytes)
@@ -1518,7 +1556,7 @@ public class FileContext {
    * Return the file's status and block locations If the path is a file.
    * 
    * If a returned status is a file, it contains the file's block locations.
-   * 
+   *
    * @param f is the path
    *
    * @return an iterator that traverses statuses of the files/directories 
@@ -1974,7 +2012,7 @@ public class FileContext {
      *  </dd>
      * </dl>
      *
-     * @param pathPattern a regular expression specifying a pth pattern
+     * @param pathPattern a glob specifying a path pattern
      *
      * @return an array of paths that match the path pattern
      *
@@ -2002,7 +2040,7 @@ public class FileContext {
      * Return null if pathPattern has no glob and the path does not exist.
      * Return an empty array if pathPattern has a glob and no path matches it. 
      * 
-     * @param pathPattern regular expression specifying the path pattern
+     * @param pathPattern glob specifying the path pattern
      * @param filter user-supplied path filter
      *
      * @return an array of FileStatus objects
@@ -2083,17 +2121,13 @@ public class FileContext {
               content.getPath().getName())), deleteSource, overwrite);
         }
       } else {
-        InputStream in=null;
-        OutputStream out = null;
-        try {
-          in = open(qSrc);
-          EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
-              CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
-                EnumSet.of(CreateFlag.CREATE);
-          out = create(qDst, createFlag);
+        EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
+            CreateFlag.CREATE, CreateFlag.OVERWRITE) :
+            EnumSet.of(CreateFlag.CREATE);
+        InputStream in = open(qSrc);
+        try (OutputStream out = create(qDst, createFlag)) {
           IOUtils.copyBytes(in, out, conf, true);
         } finally {
-          IOUtils.closeStream(out);
           IOUtils.closeStream(in);
         }
       }

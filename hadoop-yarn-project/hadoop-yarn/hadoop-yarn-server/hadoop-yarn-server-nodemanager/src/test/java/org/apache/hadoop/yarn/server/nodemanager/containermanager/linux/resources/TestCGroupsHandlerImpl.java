@@ -21,8 +21,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -58,8 +58,8 @@ import static org.mockito.Mockito.verifyZeroInteractions;
  * Tests for the CGroups handler implementation.
  */
 public class TestCGroupsHandlerImpl {
-  private static final Log LOG =
-      LogFactory.getLog(TestCGroupsHandlerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCGroupsHandlerImpl.class);
 
   private PrivilegedOperationExecutor privilegedOperationExecutorMock;
   private String tmpPath;
@@ -118,7 +118,7 @@ public class TestCGroupsHandlerImpl {
 
   /**
    * Create configuration where the cgroups are premounted.
-   * @param myHierarchy Yarn cgroup
+   * @param myHierarchy YARN cgroup
    * @return configuration object
    */
   private Configuration createNoMountConfiguration(String myHierarchy) {
@@ -396,7 +396,7 @@ public class TestCGroupsHandlerImpl {
     File mtab = createPremountedCgroups(parentDir, false);
     File mountPoint = new File(parentDir, "cpu");
 
-    // Initialize Yarn classes
+    // Initialize YARN classes
     Configuration confNoMount = createNoMountConfiguration(myHierarchy);
     CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(confNoMount,
         privilegedOperationExecutorMock, mtab.getAbsolutePath());
@@ -555,7 +555,7 @@ public class TestCGroupsHandlerImpl {
     assertTrue("Could not create dirs",
         new File(newMountPoint, "cpu").mkdirs());
 
-    // Initialize Yarn classes
+    // Initialize YARN classes
     Configuration confMount = createMountConfiguration();
     confMount.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH,
         parentDir.getAbsolutePath() + Path.SEPARATOR + newMountPointDir);
@@ -572,5 +572,30 @@ public class TestCGroupsHandlerImpl {
     File hierarchyFile =
         new File(new File(newMountPoint, "cpu"), this.hierarchy);
     assertTrue("Yarn cgroup should exist", hierarchyFile.exists());
+  }
+
+
+  @Test
+  public void testManualCgroupSetting() throws ResourceHandlerException {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "/hadoop-yarn");
+    File cpu = new File(new File(tmpPath, "cpuacct,cpu"), "/hadoop-yarn");
+
+    try {
+      Assert.assertTrue("temp dir should be created", cpu.mkdirs());
+
+      CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(conf, null);
+      cGroupsHandler.initializeCGroupController(
+              CGroupsHandler.CGroupController.CPU);
+
+      Assert.assertEquals("CPU CGRoup path was not set", cpu.getAbsolutePath(),
+              new File(cGroupsHandler.getPathForCGroup(
+                  CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
+
+    } finally {
+      FileUtils.deleteQuietly(cpu);
+    }
   }
 }

@@ -194,9 +194,7 @@ public abstract class AbstractService implements Service {
           serviceStart();
           if (isInState(STATE.STARTED)) {
             //if the service started (and isn't now in a later state), notify
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Service " + getName() + " is started");
-            }
+            LOG.debug("Service {} is started", getName());
             notifyListeners();
           }
         } catch (Exception e) {
@@ -235,9 +233,7 @@ public abstract class AbstractService implements Service {
         }
       } else {
         //already stopped: note it
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Ignoring re-entrant call to stop()");
-        }
+        LOG.debug("Ignoring re-entrant call to stop()");
       }
     }
   }
@@ -258,9 +254,7 @@ public abstract class AbstractService implements Service {
    * @param exception the exception
    */
   protected final void noteFailure(Exception exception) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("noteFailure " + exception, (Throwable) null);
-    }
+    LOG.debug("noteFailure {}" + exception);
     if (exception == null) {
       //make sure failure logic doesn't itself cause problems
       return;
@@ -270,10 +264,8 @@ public abstract class AbstractService implements Service {
       if (failureCause == null) {
         failureCause = exception;
         failureState = getServiceState();
-        LOG.info("Service " + getName()
-                 + " failed in state " + failureState
-                 + "; cause: " + exception,
-                 exception);
+        LOG.info("Service {} failed in state {}",
+            getName(), failureState, exception);
       }
     }
   }
@@ -418,8 +410,7 @@ public abstract class AbstractService implements Service {
       listeners.notifyListeners(this);
       globalListeners.notifyListeners(this);
     } catch (Throwable e) {
-      LOG.warn("Exception while notifying listeners of " + this + ": " + e,
-               e);
+      LOG.warn("Exception while notifying listeners of {}", this, e);
     }
   }
 
@@ -449,10 +440,8 @@ public abstract class AbstractService implements Service {
     assert stateModel != null : "null state in " + name + " " + this.getClass();
     STATE oldState = stateModel.enterState(newState);
     if (oldState != newState) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "Service: " + getName() + " entered state " + getServiceState());
-      }
+      LOG.debug("Service: {} entered state {}", getName(), getServiceState());
+
       recordLifecycleEvent();
     }
     return oldState;

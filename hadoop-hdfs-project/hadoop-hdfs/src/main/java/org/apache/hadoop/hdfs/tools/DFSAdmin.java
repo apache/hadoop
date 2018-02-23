@@ -29,15 +29,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +50,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FsStatus;
-import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.shell.Command;
@@ -66,11 +66,14 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -82,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
@@ -460,7 +464,7 @@ public class DFSAdmin extends FsShell {
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
     "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
-    "\t[-listOpenFiles]\n" +
+    "\t[-listOpenFiles [-blockingDecommission] [-path <path>]]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -532,16 +536,31 @@ public class DFSAdmin extends FsShell {
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    System.out.println("Under replicated blocks: " + 
-                       dfs.getLowRedundancyBlocksCount());
-    System.out.println("Blocks with corrupt replicas: " + 
-                       dfs.getCorruptBlocksCount());
-    System.out.println("Missing blocks: " + 
-                       dfs.getMissingBlocksCount());
-    System.out.println("Missing blocks (with replication factor 1): " +
-                      dfs.getMissingReplOneBlocksCount());
-    System.out.println("Pending deletion blocks: " +
-        dfs.getPendingDeletionBlocksCount());
+    ReplicatedBlockStats replicatedBlockStats =
+        dfs.getClient().getNamenode().getReplicatedBlockStats();
+    System.out.println("Replicated Blocks:");
+    System.out.println("\tUnder replicated blocks: " +
+        replicatedBlockStats.getLowRedundancyBlocks());
+    System.out.println("\tBlocks with corrupt replicas: " +
+        replicatedBlockStats.getCorruptBlocks());
+    System.out.println("\tMissing blocks: " +
+        replicatedBlockStats.getMissingReplicaBlocks());
+    System.out.println("\tMissing blocks (with replication factor 1): " +
+        replicatedBlockStats.getMissingReplicationOneBlocks());
+    System.out.println("\tPending deletion blocks: " +
+        replicatedBlockStats.getPendingDeletionBlocks());
+
+    ECBlockGroupStats ecBlockGroupStats =
+        dfs.getClient().getNamenode().getECBlockGroupStats();
+    System.out.println("Erasure Coded Block Groups: ");
+    System.out.println("\tLow redundancy block groups: " +
+        ecBlockGroupStats.getLowRedundancyBlockGroups());
+    System.out.println("\tBlock groups with corrupt internal blocks: " +
+        ecBlockGroupStats.getCorruptBlockGroups());
+    System.out.println("\tMissing block groups: " +
+        ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tPending deletion blocks: " +
+        ecBlockGroupStats.getPendingDeletionBlocks());
 
     System.out.println();
 
@@ -736,7 +755,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Allowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -753,7 +772,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -792,15 +811,25 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        boolean saved = proxy.getProxy().saveNamespace(timeWindow, txGap);
-        if (saved) {
-          System.out.println("Save namespace successful for " +
+        try{
+          boolean saved = proxy.getProxy().saveNamespace(timeWindow, txGap);
+          if (saved) {
+            System.out.println("Save namespace successful for " +
+                proxy.getAddress());
+          } else {
+            System.out.println("No extra checkpoint has been made for "
+                + proxy.getAddress());
+          }
+        }catch (IOException ioe){
+          System.out.println("Save namespace failed for " +
               proxy.getAddress());
-        } else {
-          System.out.println("No extra checkpoint has been made for "
-              + proxy.getAddress());
+          exceptions.add(ioe);
         }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       boolean saved = dfs.saveNamespace(timeWindow, txGap);
@@ -844,10 +873,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        Boolean res = proxy.getProxy().restoreFailedStorage(arg);
-        System.out.println("restoreFailedStorage is set to " + res + " for "
-            + proxy.getAddress());
+        try{
+          Boolean res = proxy.getProxy().restoreFailedStorage(arg);
+          System.out.println("restoreFailedStorage is set to " + res + " for "
+              + proxy.getAddress());
+        } catch (IOException ioe){
+          System.out.println("restoreFailedStorage failed for "
+              + proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       Boolean res = dfs.restoreFailedStorage(arg);
@@ -877,10 +916,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy: proxies) {
-        proxy.getProxy().refreshNodes();
-        System.out.println("Refresh nodes successful for " +
-            proxy.getAddress());
+        try{
+          proxy.getProxy().refreshNodes();
+          System.out.println("Refresh nodes successful for " +
+              proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh nodes failed for " +
+              proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       dfs.refreshNodes();
@@ -896,24 +945,43 @@ public class DFSAdmin extends FsShell {
    * Usage: hdfs dfsadmin -listOpenFiles
    *
    * @throws IOException
+   * @param argv
    */
-  public int listOpenFiles() throws IOException {
-    DistributedFileSystem dfs = getDFS();
-    Configuration dfsConf = dfs.getConf();
-    URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+  public int listOpenFiles(String[] argv) throws IOException {
+    String path = null;
+    List<OpenFilesType> types = new ArrayList<>();
+    if (argv != null) {
+      List<String> args = new ArrayList<>(Arrays.asList(argv));
+      if (StringUtils.popOption("-blockingDecommission", args)) {
+        types.add(OpenFilesType.BLOCKING_DECOMMISSION);
+      }
 
-    RemoteIterator<OpenFileEntry> openFilesRemoteIterator;
-    if (isHaEnabled) {
-      ProxyAndInfo<ClientProtocol> proxy = NameNodeProxies.createNonHAProxy(
-          dfsConf, HAUtil.getAddressOfActive(getDFS()), ClientProtocol.class,
-          UserGroupInformation.getCurrentUser(), false);
-      openFilesRemoteIterator = new OpenFilesIterator(proxy.getProxy(),
-          FsTracer.get(dfsConf));
-    } else {
-      openFilesRemoteIterator = dfs.listOpenFiles();
+      path = StringUtils.popOptionWithArgument("-path", args);
     }
-    printOpenFiles(openFilesRemoteIterator);
+    if (types.isEmpty()) {
+      types.add(OpenFilesType.ALL_OPEN_FILES);
+    }
+
+    if (path != null) {
+      path = path.trim();
+      if (path.length() == 0) {
+        path = OpenFilesIterator.FILTER_PATH_DEFAULT;
+      }
+    } else {
+      path = OpenFilesIterator.FILTER_PATH_DEFAULT;
+    }
+
+    EnumSet<OpenFilesType> openFilesTypes = EnumSet.copyOf(types);
+
+    DistributedFileSystem dfs = getDFS();
+    RemoteIterator<OpenFileEntry> openFilesRemoteIterator;
+    try{
+      openFilesRemoteIterator = dfs.listOpenFiles(openFilesTypes, path);
+      printOpenFiles(openFilesRemoteIterator);
+    } catch (IOException ioe){
+      System.out.println("List open files failed.");
+      throw ioe;
+    }
     return 0;
   }
 
@@ -931,8 +999,7 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
-   * Command to ask the namenode to set the balancer bandwidth for all of the
-   * datanodes.
+   * Command to ask the active namenode to set the balancer bandwidth.
    * Usage: hdfs dfsadmin -setBalancerBandwidth bandwidth
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
@@ -963,23 +1030,12 @@ public class DFSAdmin extends FsShell {
     }
 
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    Configuration dfsConf = dfs.getConf();
-    URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
-
-    if (isHaEnabled) {
-      String nsId = dfsUri.getHost();
-      List<ProxyAndInfo<ClientProtocol>> proxies =
-          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
-          nsId, ClientProtocol.class);
-      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        proxy.getProxy().setBalancerBandwidth(bandwidth);
-        System.out.println("Balancer bandwidth is set to " + bandwidth +
-            " for " + proxy.getAddress());
-      }
-    } else {
+    try{
       dfs.setBalancerBandwidth(bandwidth);
       System.out.println("Balancer bandwidth is set to " + bandwidth);
+    } catch (IOException ioe){
+      System.err.println("Balancer bandwidth is set failed.");
+      throw ioe;
     }
     exitCode = 0;
 
@@ -1197,9 +1253,11 @@ public class DFSAdmin extends FsShell {
         + "\tIf 'incremental' is specified, it will be an incremental\n"
         + "\tblock report; otherwise, it will be a full block report.\n";
 
-    String listOpenFiles = "-listOpenFiles\n"
+    String listOpenFiles = "-listOpenFiles [-blockingDecommission]\n"
         + "\tList all open files currently managed by the NameNode along\n"
-        + "\twith client name and client machine accessing them.\n";
+        + "\twith client name and client machine accessing them.\n"
+        + "\tIf 'blockingDecommission' option is specified, it will list the\n"
+        + "\topen files only that are blocking the ongoing Decommission.";
 
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1335,10 +1393,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        proxy.getProxy().finalizeUpgrade();
-        System.out.println("Finalize upgrade successful for " +
-            proxy.getAddress());
+        try{
+          proxy.getProxy().finalizeUpgrade();
+          System.out.println("Finalize upgrade successful for " +
+              proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Finalize upgrade failed for " +
+              proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       dfs.finalizeUpgrade();
@@ -1368,10 +1436,21 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        proxy.getProxy().metaSave(pathname);
-        System.out.println("Created metasave file " + pathname + " in the log "
-            + "directory of namenode " + proxy.getAddress());
+        try{
+          proxy.getProxy().metaSave(pathname);
+          System.out.println("Created metasave file " + pathname
+              + " in the log directory of namenode " + proxy.getAddress());
+        } catch (IOException ioe){
+          System.out.println("Created metasave file " + pathname
+              + " in the log directory of namenode " + proxy.getAddress()
+              + " failed");
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       dfs.metaSave(pathname);
@@ -1456,10 +1535,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<RefreshAuthorizationPolicyProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
               RefreshAuthorizationPolicyProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<RefreshAuthorizationPolicyProtocol> proxy : proxies) {
-        proxy.getProxy().refreshServiceAcl();
-        System.out.println("Refresh service acl successful for "
-            + proxy.getAddress());
+        try{
+          proxy.getProxy().refreshServiceAcl();
+          System.out.println("Refresh service acl successful for "
+              + proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh service acl failed for "
+              + proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()) {
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       // Create the client
@@ -1499,10 +1588,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<RefreshUserMappingsProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
               RefreshUserMappingsProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<RefreshUserMappingsProtocol> proxy : proxies) {
-        proxy.getProxy().refreshUserToGroupsMappings();
-        System.out.println("Refresh user to groups mapping successful for "
-            + proxy.getAddress());
+        try{
+          proxy.getProxy().refreshUserToGroupsMappings();
+          System.out.println("Refresh user to groups mapping successful for "
+              + proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh user to groups mapping failed for "
+              + proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       // Create the client
@@ -1544,10 +1643,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<RefreshUserMappingsProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
               RefreshUserMappingsProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<RefreshUserMappingsProtocol> proxy : proxies) {
-        proxy.getProxy().refreshSuperUserGroupsConfiguration();
-        System.out.println("Refresh super user groups configuration " +
-            "successful for " + proxy.getAddress());
+        try{
+          proxy.getProxy().refreshSuperUserGroupsConfiguration();
+          System.out.println("Refresh super user groups configuration " +
+              "successful for " + proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh super user groups configuration " +
+              "failed for " + proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       // Create the client
@@ -1583,10 +1692,20 @@ public class DFSAdmin extends FsShell {
       List<ProxyAndInfo<RefreshCallQueueProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
               RefreshCallQueueProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
       for (ProxyAndInfo<RefreshCallQueueProtocol> proxy : proxies) {
-        proxy.getProxy().refreshCallQueue();
-        System.out.println("Refresh call queue successful for "
-            + proxy.getAddress());
+        try{
+          proxy.getProxy().refreshCallQueue();
+          System.out.println("Refresh call queue successful for "
+              + proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh call queue failed for "
+              + proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
       }
     } else {
       // Create the client
@@ -1947,7 +2066,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
     } else if ("-listOpenFiles".equals(cmd)) {
-      System.err.println("Usage: hdfs dfsadmin [-listOpenFiles]");
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-listOpenFiles [-blockingDecommission] [-path <path>]]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -1992,7 +2112,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-report".equals(cmd)) {
-      if (argv.length < 1) {
+      if (argv.length > 6) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2022,7 +2142,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if (RollingUpgradeCommand.matches(cmd)) {
-      if (argv.length < 1 || argv.length > 2) {
+      if (argv.length > 2) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2097,12 +2217,12 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-triggerBlockReport".equals(cmd)) {
-      if (argv.length < 1) {
+      if ((argv.length != 2) && (argv.length != 3)) {
         printUsage(cmd);
         return exitCode;
       }
     } else if ("-listOpenFiles".equals(cmd)) {
-      if (argv.length != 1) {
+      if ((argv.length > 4)) {
         printUsage(cmd);
         return exitCode;
       }
@@ -2188,7 +2308,7 @@ public class DFSAdmin extends FsShell {
       } else if ("-triggerBlockReport".equals(cmd)) {
         exitCode = triggerBlockReport(argv);
       } else if ("-listOpenFiles".equals(cmd)) {
-        exitCode = listOpenFiles();
+        exitCode = listOpenFiles(argv);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -2227,7 +2347,7 @@ public class DFSAdmin extends FsShell {
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
     }
-    if (LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled() && debugException != null) {
       LOG.debug("Exception encountered:", debugException);
     }
     return exitCode;

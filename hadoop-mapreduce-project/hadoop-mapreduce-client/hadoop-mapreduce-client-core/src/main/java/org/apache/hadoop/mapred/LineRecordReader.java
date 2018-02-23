@@ -39,8 +39,8 @@ import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.lib.input.CompressedSplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.SplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.UncompressedSplitLineReader;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Treats keys as offset in file and value as line. 
@@ -48,8 +48,8 @@ import org.apache.commons.logging.Log;
 @InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
 @InterfaceStability.Unstable
 public class LineRecordReader implements RecordReader<LongWritable, Text> {
-  private static final Log LOG
-    = LogFactory.getLog(LineRecordReader.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LineRecordReader.class.getName());
 
   private CompressionCodecFactory compressionCodecs = null;
   private long start;

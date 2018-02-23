@@ -1883,7 +1883,7 @@ public class SequenceFile {
     @Deprecated
     public Reader(FileSystem fs, Path file, 
                   Configuration conf) throws IOException {
-      this(conf, file(file.makeQualified(fs)));
+      this(conf, file(fs.makeQualified(file)));
     }
 
     /**

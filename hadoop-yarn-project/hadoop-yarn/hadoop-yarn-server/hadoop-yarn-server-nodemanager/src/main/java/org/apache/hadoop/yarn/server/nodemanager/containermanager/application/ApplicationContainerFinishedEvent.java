@@ -23,12 +23,16 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 public class ApplicationContainerFinishedEvent extends ApplicationEvent {
   private ContainerStatus containerStatus;
+  // Required by NMTimelinePublisher.
+  private long containerStartTime;
 
-  public ApplicationContainerFinishedEvent(ContainerStatus containerStatus) {
+  public ApplicationContainerFinishedEvent(ContainerStatus containerStatus,
+      long containerStartTs) {
     super(containerStatus.getContainerId().getApplicationAttemptId().
         getApplicationId(),
         ApplicationEventType.APPLICATION_CONTAINER_FINISHED);
     this.containerStatus = containerStatus;
+    this.containerStartTime = containerStartTs;
   }
 
   public ContainerId getContainerID() {
@@ -39,4 +43,7 @@ public class ApplicationContainerFinishedEvent extends ApplicationEvent {
     return containerStatus;
   }
 
+  public long getContainerStartTime() {
+    return containerStartTime;
+  }
 }

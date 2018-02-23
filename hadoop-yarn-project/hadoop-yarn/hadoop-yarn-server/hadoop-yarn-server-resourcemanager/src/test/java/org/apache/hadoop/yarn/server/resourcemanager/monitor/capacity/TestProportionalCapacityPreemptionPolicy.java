@@ -33,8 +33,10 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -48,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
@@ -187,9 +188,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     appAlloc = 0;
   }
 
-  @Test
-  public void testIgnore() {
-    int[][] qData = new int[][]{
+  private static final int[][] Q_DATA_FOR_IGNORE = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
       { 100, 100, 100, 100 },  // maxCap
@@ -199,8 +198,12 @@ public class TestProportionalCapacityPreemptionPolicy {
       {   3,  1,  1,  1 },  // apps
       {  -1,  1,  1,  1 },  // req granularity
       {   3,  0,  0,  0 },  // subqueues
-    };
-    ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
+  };
+
+  @Test
+  public void testIgnore() {
+    ProportionalCapacityPreemptionPolicy policy =
+        buildPolicy(Q_DATA_FOR_IGNORE);
     policy.editSchedule();
     // don't correct imbalances without demand
     verify(mDisp, never()).handle(isA(ContainerPreemptEvent.class));
@@ -435,8 +438,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     policy.editSchedule();
     // queueF(appD) wants resources, Verify that resources come from queueE(appC)
     // because it's a sibling and queueB(appA) because queueA is over capacity.
-    verify(mDisp, times(28)).handle(argThat(new IsPreemptionRequestFor(appA)));
-    verify(mDisp, times(22)).handle(argThat(new IsPreemptionRequestFor(appC)));
+    verify(mDisp, times(27)).handle(argThat(new IsPreemptionRequestFor(appA)));
+    verify(mDisp, times(23)).handle(argThat(new IsPreemptionRequestFor(appC)));
 
     // Need to call setup() again to reset mDisp
     setup();
@@ -790,21 +793,23 @@ public class TestProportionalCapacityPreemptionPolicy {
     @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
     rm.init(conf);
-    
+
     // ProportionalCapacityPreemptionPolicy should be initialized after
     // CapacityScheduler initialized. We will 
     // 1) find SchedulingMonitor from RMActiveService's service list, 
     // 2) check if ResourceCalculator in policy is null or not. 
     // If it's not null, we can come to a conclusion that policy initialized
     // after scheduler got initialized
-    for (Service service : rm.getRMActiveService().getServices()) {
-      if (service instanceof SchedulingMonitor) {
-        ProportionalCapacityPreemptionPolicy policy =
-            (ProportionalCapacityPreemptionPolicy) ((SchedulingMonitor) service)
-                .getSchedulingEditPolicy();
-        assertNotNull(policy.getResourceCalculator());
-        return;
-      }
+    // Get SchedulingMonitor from SchedulingMonitorManager instead
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    SchedulingMonitorManager smm = cs.getSchedulingMonitorManager();
+    Service service = smm.getAvailableSchedulingMonitor();
+    if (service instanceof SchedulingMonitor) {
+      ProportionalCapacityPreemptionPolicy policy =
+          (ProportionalCapacityPreemptionPolicy) ((SchedulingMonitor) service)
+              .getSchedulingEditPolicy();
+      assertNotNull(policy.getResourceCalculator());
+      return;
     }
     
     fail("Failed to find SchedulingMonitor service, please check what happened");
@@ -1033,6 +1038,36 @@ public class TestProportionalCapacityPreemptionPolicy {
     verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
   }
 
+
+  @Test
+  public void testRefreshPreemptionProperties() throws Exception {
+    ProportionalCapacityPreemptionPolicy policy =
+        buildPolicy(Q_DATA_FOR_IGNORE);
+
+    assertEquals(
+        CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_MONITORING_INTERVAL,
+        policy.getMonitoringInterval());
+    assertEquals(
+        CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_OBSERVE_ONLY,
+        policy.isObserveOnly());
+
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    long newMonitoringInterval = 5000;
+    boolean newObserveOnly = true;
+    newConf.setLong(
+        CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL,
+        newMonitoringInterval);
+    newConf.setBoolean(CapacitySchedulerConfiguration.PREEMPTION_OBSERVE_ONLY,
+        newObserveOnly);
+    when(mCS.getConfiguration()).thenReturn(newConf);
+
+    policy.editSchedule();
+
+    assertEquals(newMonitoringInterval, policy.getMonitoringInterval());
+    assertEquals(newObserveOnly, policy.isObserveOnly());
+  }
+
   static class IsPreemptionRequestFor
       extends ArgumentMatcher<ContainerPreemptEvent> {
     private final ApplicationAttemptId appAttId;
@@ -1170,6 +1205,17 @@ public class TestProportionalCapacityPreemptionPolicy {
     when(root.getQueuePath()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     boolean preemptionDisabled = mockPreemptionStatus("root");
     when(root.getPreemptionDisabled()).thenReturn(preemptionDisabled);
+    QueueResourceQuotas rootQr = new QueueResourceQuotas();
+    rootQr.setEffectiveMaxResource(Resource.newInstance(maxCap[0], 0));
+    rootQr.setEffectiveMinResource(abs[0]);
+    rootQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(maxCap[0], 0));
+    rootQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[0]);
+    when(root.getQueueResourceQuotas()).thenReturn(rootQr);
+    when(root.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(abs[0]);
+    when(root.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(maxCap[0], 0));
 
     for (int i = 1; i < queues.length; ++i) {
       final CSQueue q;
@@ -1199,6 +1245,18 @@ public class TestProportionalCapacityPreemptionPolicy {
       qc.setAbsoluteCapacity(Resources.divide(rc, tot, abs[i], tot));
       qc.setAbsoluteMaximumCapacity(maxCap[i] / (float) tot.getMemorySize());
       when(q.getQueueCapacities()).thenReturn(qc);
+
+      QueueResourceQuotas qr = new QueueResourceQuotas();
+      qr.setEffectiveMaxResource(Resource.newInstance(maxCap[i], 0));
+      qr.setEffectiveMinResource(abs[i]);
+      qr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+          Resource.newInstance(maxCap[i], 0));
+      qr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL, abs[i]);
+      when(q.getQueueResourceQuotas()).thenReturn(qr);
+      when(q.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+          .thenReturn(abs[i]);
+      when(q.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+          .thenReturn(Resource.newInstance(maxCap[i], 0));
 
       String parentPathName = p.getQueuePath();
       parentPathName = (parentPathName == null) ? "root" : parentPathName;

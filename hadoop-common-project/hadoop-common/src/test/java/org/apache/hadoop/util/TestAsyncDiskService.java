@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.util;
 
-import junit.framework.TestCase;
-
-import org.apache.hadoop.util.AsyncDiskService;
 import org.junit.Test;
+import static org.junit.Assert.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A test for AsyncDiskService.
  */
-public class TestAsyncDiskService extends TestCase {
+public class TestAsyncDiskService {
   
   public static final Logger LOG =
       LoggerFactory.getLogger(TestAsyncDiskService.class);

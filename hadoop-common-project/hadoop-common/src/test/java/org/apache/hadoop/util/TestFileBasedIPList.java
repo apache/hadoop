@@ -22,14 +22,11 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.util.FileBasedIPList;
-import org.apache.hadoop.util.IPList;
 import org.junit.After;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
-import junit.framework.TestCase;
-
-public class TestFileBasedIPList extends TestCase {
+public class TestFileBasedIPList {
 
   @After
   public void tearDown() {
@@ -127,6 +124,7 @@ public class TestFileBasedIPList extends TestCase {
    * test for inclusion
    * should be true as if the feature is turned off
    */
+  @Test
   public void testFileNotSpecified() {
 
     IPList ipl = new FileBasedIPList(null);
@@ -140,6 +138,7 @@ public class TestFileBasedIPList extends TestCase {
    * test for inclusion
    * should be true as if the feature is turned off
    */
+  @Test
   public void testFileMissing() {
 
     IPList ipl = new FileBasedIPList("missingips.txt");
@@ -153,6 +152,7 @@ public class TestFileBasedIPList extends TestCase {
    * test for inclusion
    * should be true as if the feature is turned off
    */
+  @Test
   public void testWithEmptyList() throws IOException {
     String[] ips = {};
 
@@ -168,6 +168,7 @@ public class TestFileBasedIPList extends TestCase {
    * test for inclusion
    * should be true as if the feature is turned off
    */
+  @Test
   public void testForBadFIle() throws IOException {
     String[] ips = { "10.221.102/23"};
 
@@ -187,6 +188,7 @@ public class TestFileBasedIPList extends TestCase {
    * Check  for inclusion with good entries
    * Check for exclusion
    */
+  @Test
   public void testWithAWrongEntry() throws IOException {
 
     String[] ips = {"10.119.103.112", "10.221.102/23", "10.221.204.1/23"};

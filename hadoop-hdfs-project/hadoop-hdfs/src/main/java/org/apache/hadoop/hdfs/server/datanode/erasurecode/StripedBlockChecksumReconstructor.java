@@ -111,7 +111,7 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
     // case-1) length of data bytes which is fraction of bytesPerCRC
     // case-2) length of data bytes which is less than bytesPerCRC
     if (requestedLen <= toReconstructLen) {
-      int remainingLen = (int) requestedLen;
+      int remainingLen = Math.toIntExact(requestedLen);
       outputData = Arrays.copyOf(targetBuffer.array(), remainingLen);
 
       int partialLength = remainingLen % getChecksum().getBytesPerChecksum();
@@ -155,7 +155,7 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
     return checksumBuf.length;
   }
 
-  private void reconstructTargets(int toReconstructLen) {
+  private void reconstructTargets(int toReconstructLen) throws IOException {
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     ByteBuffer[] outputs = new ByteBuffer[1];

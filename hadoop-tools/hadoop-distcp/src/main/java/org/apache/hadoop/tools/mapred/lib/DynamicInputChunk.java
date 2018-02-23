@@ -68,7 +68,7 @@ class DynamicInputChunk<K, V> {
    * Method to write records into a chunk.
    * @param key Key from the listing file.
    * @param value Corresponding value from the listing file.
-   * @throws IOException Exception onf failure to write to the file.
+   * @throws IOException Exception on failure to write to the file.
    */
   public void write(Text key, CopyListingFileStatus value) throws IOException {
     writer.append(key, value);

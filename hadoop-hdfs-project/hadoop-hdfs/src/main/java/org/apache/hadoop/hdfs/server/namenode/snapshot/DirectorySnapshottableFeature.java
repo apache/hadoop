@@ -24,10 +24,12 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.Arrays;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -59,7 +61,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature {
   /** Limit the number of snapshot per snapshottable directory. */
-  static final int SNAPSHOT_LIMIT = 1 << 16;
+  static final int SNAPSHOT_QUOTA_DEFAULT = 1 << 16;
 
   /**
    * Snapshots of this directory in ascending order of snapshot names.
@@ -68,7 +70,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   private final List<Snapshot> snapshotsByNames = new ArrayList<Snapshot>();
   /** Number of snapshots allowed. */
-  private int snapshotQuota = SNAPSHOT_LIMIT;
+  private int snapshotQuota = SNAPSHOT_QUOTA_DEFAULT;
 
   public DirectorySnapshottableFeature(DirectoryWithSnapshotFeature feature) {
     super(feature == null ? null : feature.getDiffs());
@@ -168,7 +170,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   /** Add a snapshot. */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles)
+      final LeaseManager leaseManager, final boolean captureOpenFiles,
+      int maxSnapshotLimit)
       throws SnapshotException, QuotaExceededException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -176,6 +179,11 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       throw new SnapshotException("Failed to add snapshot: there are already "
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
+    } else if (n + 1 > maxSnapshotLimit) {
+      throw new SnapshotException(
+          "Failed to add snapshot: there are already " + n
+              + " snapshot(s) and the max snapshot limit is "
+              + maxSnapshotLimit);
     }
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
@@ -249,8 +257,12 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   /**
    * Compute the difference between two snapshots (or a snapshot and the current
-   * directory) of the directory.
+   * directory) of the directory. The diff calculation can be scoped to either
+   * the snapshot root or any descendant directory under the snapshot root.
    *
+   * @param snapshotRootDir the snapshot root directory
+   * @param snapshotDiffScopeDir the descendant directory under snapshot root
+   *          to scope the diff calculation to.
    * @param from The name of the start point of the comparison. Null indicating
    *          the current tree.
    * @param to The name of the end point. Null indicating the current tree.
@@ -259,18 +271,72 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *           point, or if endSnapshotName is not null but cannot be identified
    *           as a previous snapshot.
    */
-  SnapshotDiffInfo computeDiff(final INodeDirectory snapshotRoot,
-      final String from, final String to) throws SnapshotException {
-    Snapshot fromSnapshot = getSnapshotByName(snapshotRoot, from);
-    Snapshot toSnapshot = getSnapshotByName(snapshotRoot, to);
+  SnapshotDiffInfo computeDiff(final INodeDirectory snapshotRootDir,
+      final INodeDirectory snapshotDiffScopeDir, final String from,
+      final String to) throws SnapshotException {
+    Preconditions.checkArgument(snapshotDiffScopeDir
+        .isDescendantOfSnapshotRoot(snapshotRootDir));
+    Snapshot fromSnapshot = getSnapshotByName(snapshotRootDir, from);
+    Snapshot toSnapshot = getSnapshotByName(snapshotRootDir, to);
     // if the start point is equal to the end point, return null
     if (from.equals(to)) {
       return null;
     }
-    SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRoot, fromSnapshot,
-        toSnapshot);
-    computeDiffRecursively(snapshotRoot, snapshotRoot, new ArrayList<byte[]>(),
-        diffs);
+    SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRootDir,
+        snapshotDiffScopeDir, fromSnapshot, toSnapshot);
+    // The snapshot diff scope dir is passed in as the snapshot dir
+    // so that the file paths in the diff report are relative to the
+    // snapshot scope dir.
+    computeDiffRecursively(snapshotDiffScopeDir, snapshotDiffScopeDir,
+        new ArrayList<>(), diffs);
+    return diffs;
+  }
+
+  /**
+   * Compute the difference between two snapshots (or a snapshot and the current
+   * directory) of the directory. The diff calculation can be scoped to either
+   * the snapshot root or any descendant directory under the snapshot root.
+   *
+   * @param snapshotRootDir the snapshot root directory
+   * @param snapshotDiffScopeDir the descendant directory under snapshot root
+   *          to scope the diff calculation to.
+   * @param from The name of the start point of the comparison. Null indicating
+   *          the current tree.
+   * @param to The name of the end point. Null indicating the current tree.
+   * @param startPath
+   *           path relative to the snapshottable root directory from where the
+   *           snapshotdiff computation needs to start across multiple rpc calls
+   * @param index
+   *           index in the created or deleted list of the directory at which
+   *           the snapshotdiff computation stopped during the last rpc call
+   *           as the no of entries exceeded the snapshotdiffentry limit. -1
+   *           indicates, the snapshotdiff computation needs to start right
+   *           from the startPath provided.
+   *
+   * @return The difference between the start/end points.
+   * @throws SnapshotException If there is no snapshot matching the starting
+   *           point, or if endSnapshotName is not null but cannot be identified
+   *           as a previous snapshot.
+   */
+  SnapshotDiffListingInfo computeDiff(final INodeDirectory snapshotRootDir,
+      final INodeDirectory snapshotDiffScopeDir, final String from,
+      final String to, byte[] startPath, int index,
+      int snapshotDiffReportEntriesLimit) throws SnapshotException {
+    Preconditions.checkArgument(
+        snapshotDiffScopeDir.isDescendantOfSnapshotRoot(snapshotRootDir));
+    Snapshot fromSnapshot = getSnapshotByName(snapshotRootDir, from);
+    Snapshot toSnapshot = getSnapshotByName(snapshotRootDir, to);
+    boolean toProcess = Arrays.equals(startPath, DFSUtilClient.EMPTY_BYTES);
+    byte[][] resumePath = DFSUtilClient.bytes2byteArray(startPath);
+    if (from.equals(to)) {
+      return null;
+    }
+    SnapshotDiffListingInfo diffs =
+        new SnapshotDiffListingInfo(snapshotRootDir, snapshotDiffScopeDir,
+            fromSnapshot, toSnapshot, snapshotDiffReportEntriesLimit);
+    diffs.setLastIndex(index);
+    computeDiffRecursively(snapshotDiffScopeDir, snapshotDiffScopeDir,
+        new ArrayList<byte[]>(), diffs, resumePath, 0, toProcess);
     return diffs;
   }
 
@@ -300,13 +366,15 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   /**
    * Recursively compute the difference between snapshots under a given
    * directory/file.
-   * @param snapshotRoot The directory where snapshots were taken.
+   * @param snapshotDir The directory where snapshots were taken. Can be a
+   *                    snapshot root directory or any descendant directory
+   *                    under snapshot root directory.
    * @param node The directory/file under which the diff is computed.
    * @param parentPath Relative path (corresponding to the snapshot root) of
    *                   the node's parent.
    * @param diffReport data structure used to store the diff.
    */
-  private void computeDiffRecursively(final INodeDirectory snapshotRoot,
+  private void computeDiffRecursively(final INodeDirectory snapshotDir,
       INode node, List<byte[]> parentPath, SnapshotDiffInfo diffReport) {
     final Snapshot earlierSnapshot = diffReport.isFromEarlier() ?
         diffReport.getFrom() : diffReport.getTo();
@@ -331,7 +399,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(
-              snapshotRoot, (WithName) child,
+              snapshotDir, (WithName) child,
               laterSnapshot == null ? Snapshot.CURRENT_STATE_ID :
                 laterSnapshot.getId());
           if (renameTargetPath != null) {
@@ -341,7 +409,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         }
         if (toProcess) {
           parentPath.add(name);
-          computeDiffRecursively(snapshotRoot, child, parentPath, diffReport);
+          computeDiffRecursively(snapshotDir, child, parentPath, diffReport);
           parentPath.remove(parentPath.size() - 1);
         }
       }
@@ -356,11 +424,95 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   }
 
   /**
+   * Recursively compute the difference between snapshots under a given
+   * directory/file partially.
+   * @param snapshotDir The directory where snapshots were taken. Can be a
+   *                    snapshot root directory or any descendant directory
+   *                    under snapshot root directory.
+   * @param node The directory/file under which the diff is computed.
+   * @param parentPath Relative path (corresponding to the snapshot root) of
+   *                   the node's parent.
+   * @param diffReport data structure used to store the diff.
+   * @param resume  path from where to resume the snapshotdiff computation
+   *                    in one rpc call
+   * @param level       indicates the level of the directory tree rooted at
+   *                    snapshotRoot.
+   * @param processFlag indicates that the dir/file where the snapshotdiff
+   *                    computation has to start is processed or not.
+   */
+  private boolean computeDiffRecursively(final INodeDirectory snapshotDir,
+       INode node, List<byte[]> parentPath, SnapshotDiffListingInfo diffReport,
+       final byte[][] resume, int level, boolean processFlag) {
+    final Snapshot earlier = diffReport.getEarlier();
+    final Snapshot later = diffReport.getLater();
+    byte[][] relativePath = parentPath.toArray(new byte[parentPath.size()][]);
+    if (!processFlag && level == resume.length
+        && Arrays.equals(resume[resume.length - 1], node.getLocalNameBytes())) {
+      processFlag = true;
+    }
+
+    if (node.isDirectory()) {
+      final ChildrenDiff diff = new ChildrenDiff();
+      INodeDirectory dir = node.asDirectory();
+      if (processFlag) {
+        DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
+        if (sf != null) {
+          boolean change =
+              sf.computeDiffBetweenSnapshots(earlier, later, diff, dir);
+          if (change) {
+            if (!diffReport.addDirDiff(dir.getId(), relativePath, diff)) {
+              return false;
+            }
+          }
+        }
+      }
+
+      ReadOnlyList<INode> children = dir.getChildrenList(earlier.getId());
+      boolean iterate = false;
+      for (INode child : children) {
+        final byte[] name = child.getLocalNameBytes();
+        if (!processFlag && !iterate && !Arrays.equals(resume[level], name)) {
+          continue;
+        }
+        iterate = true;
+        level = level + 1;
+        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        if (!toProcess && child instanceof INodeReference.WithName) {
+          byte[][] renameTargetPath = findRenameTargetPath(snapshotDir,
+              (WithName) child, Snapshot.getSnapshotId(later));
+          if (renameTargetPath != null) {
+            toProcess = true;
+          }
+        }
+        if (toProcess) {
+          parentPath.add(name);
+          processFlag = computeDiffRecursively(snapshotDir, child, parentPath,
+              diffReport, resume, level, processFlag);
+          parentPath.remove(parentPath.size() - 1);
+          if (!processFlag) {
+            return false;
+          }
+        }
+      }
+    } else if (node.isFile() && node.asFile().isWithSnapshot() && processFlag) {
+      INodeFile file = node.asFile();
+      boolean change = file.getFileWithSnapshotFeature()
+          .changedBetweenSnapshots(file, earlier, later);
+      if (change) {
+        if (!diffReport.addFileDiff(file, relativePath)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * We just found a deleted WithName node as the source of a rename operation.
    * However, we should include it in our snapshot diff report as rename only
    * if the rename target is also under the same snapshottable directory.
    */
-  private byte[][] findRenameTargetPath(final INodeDirectory snapshotRoot,
+  public byte[][] findRenameTargetPath(final INodeDirectory snapshotRoot,
       INodeReference.WithName wn, final int snapshotId) {
     INode inode = wn.getReferredINode();
     final LinkedList<byte[]> ancestors = Lists.newLinkedList();

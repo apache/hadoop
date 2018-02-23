@@ -21,8 +21,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +53,6 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,12 +87,14 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 
+@InterfaceAudience.Private
 public class DFSUtilClient {
   public static final byte[] EMPTY_BYTES = {};
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -122,6 +123,56 @@ public class DFSUtilClient {
     return bytes2String(bytes, 0, bytes.length);
   }
 
+  /**
+   * Converts a byte array to array of arrays of bytes
+   * on byte separator.
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes) {
+    return bytes2byteArray(bytes, bytes.length, (byte)Path.SEPARATOR_CHAR);
+  }
+  /**
+   * Splits first len bytes in bytes to array of arrays of bytes
+   * on byte separator.
+   * @param bytes the byte array to split
+   * @param len the number of bytes to split
+   * @param separator the delimiting byte
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes, int len,
+      byte separator) {
+    Preconditions.checkPositionIndex(len, bytes.length);
+    if (len == 0) {
+      return new byte[][]{null};
+    }
+    // Count the splits. Omit multiple separators and the last one by
+    // peeking at prior byte.
+    int splits = 0;
+    for (int i = 1; i < len; i++) {
+      if (bytes[i-1] == separator && bytes[i] != separator) {
+        splits++;
+      }
+    }
+    if (splits == 0 && bytes[0] == separator) {
+      return new byte[][]{null};
+    }
+    splits++;
+    byte[][] result = new byte[splits][];
+    int nextIndex = 0;
+    // Build the splits.
+    for (int i = 0; i < splits; i++) {
+      int startIndex = nextIndex;
+      // find next separator in the bytes.
+      while (nextIndex < len && bytes[nextIndex] != separator) {
+        nextIndex++;
+      }
+      result[i] = (nextIndex > 0)
+          ? Arrays.copyOfRange(bytes, startIndex, nextIndex)
+          : DFSUtilClient.EMPTY_BYTES; // reuse empty bytes for root.
+      do { // skip over separators.
+        nextIndex++;
+      } while (nextIndex < len && bytes[nextIndex] == separator);
+    }
+    return result;
+  }
   /** Return used as percentage of capacity */
   public static float getPercentUsed(long used, long capacity) {
     return capacity <= 0 ? 100 : (used * 100.0f)/capacity;
@@ -275,11 +326,9 @@ public class DFSUtilClient {
    * Given a list of path components returns a byte array
    */
   public static byte[] byteArray2bytes(byte[][] pathComponents) {
-    if (pathComponents.length == 0) {
+    if (pathComponents.length == 0 ||  (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0))) {
       return EMPTY_BYTES;
-    } else if (pathComponents.length == 1
-        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
-      return new byte[]{(byte) Path.SEPARATOR_CHAR};
     }
     int length = 0;
     for (int i = 0; i < pathComponents.length; i++) {
@@ -406,7 +455,7 @@ public class DFSUtilClient {
    * @param keys list of keys in the order of preference
    * @return value of the key or default if a key was not found in configuration
    */
-  private static String getConfValue(String defaultValue, String keySuffix,
+  public static String getConfValue(String defaultValue, String keySuffix,
       Configuration conf, String... keys) {
     String value = null;
     for (String key : keys) {
@@ -501,7 +550,11 @@ public class DFSUtilClient {
   private static final Map<String, Boolean> localAddrMap = Collections
       .synchronizedMap(new HashMap<String, Boolean>());
 
-  public static boolean isLocalAddress(InetSocketAddress targetAddr) {
+  public static boolean isLocalAddress(InetSocketAddress targetAddr)
+      throws IOException {
+    if (targetAddr.isUnresolved()) {
+      throw new IOException("Unresolved host: " + targetAddr);
+    }
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {
@@ -543,30 +596,6 @@ public class DFSUtilClient {
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory) throws IOException {
     return new ReconfigurationProtocolTranslatorPB(addr, ticket, conf, factory);
-  }
-
-  private static String keyProviderUriKeyName =
-      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
-
-  /**
-   * Set the key provider uri configuration key name for creating key providers.
-   * @param keyName The configuration key name.
-   */
-  public static void setKeyProviderUriKeyName(final String keyName) {
-    keyProviderUriKeyName = keyName;
-  }
-
-  /**
-   * Creates a new KeyProvider from the given Configuration.
-   *
-   * @param conf Configuration
-   * @return new KeyProvider, or null if no provider was found.
-   * @throws IOException if the KeyProvider is improperly specified in
-   *                             the Configuration
-   */
-  public static KeyProvider createKeyProvider(
-      final Configuration conf) throws IOException {
-    return KMSUtil.createKeyProvider(conf, keyProviderUriKeyName);
   }
 
   public static Peer peerFromSocket(Socket socket)
@@ -860,4 +889,25 @@ public class DFSUtilClient {
     }
     return threadPoolExecutor;
   }
+
+  private static final int INODE_PATH_MAX_LENGTH = 3 * Path.SEPARATOR.length()
+      + HdfsConstants.DOT_RESERVED_STRING.length()
+      + HdfsConstants.DOT_INODES_STRING.length()
+      + (int)Math.ceil(Math.log10(Long.MAX_VALUE)) + 1;
+
+  /**
+   * Create the internal unique file path from HDFS file ID (inode ID). Unlike
+   * a regular file path, this one is guaranteed to refer to the same file at
+   * all times, across overwrites, etc.
+   * @param fileId File ID.
+   * @return The internal ID-based path.
+   */
+  public static Path makePathFromFileId(long fileId) {
+    StringBuilder sb = new StringBuilder(INODE_PATH_MAX_LENGTH);
+    sb.append(Path.SEPARATOR).append(HdfsConstants.DOT_RESERVED_STRING)
+      .append(Path.SEPARATOR).append(HdfsConstants.DOT_INODES_STRING)
+      .append(Path.SEPARATOR).append(fileId);
+    return new Path(sb.toString());
+  }
+
 }

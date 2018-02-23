@@ -39,8 +39,11 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -48,9 +51,20 @@ import com.google.common.collect.Sets;
 
 public class TestLoadBalancingKMSClientProvider {
 
+  @BeforeClass
+  public static void setup() throws IOException {
+    SecurityUtil.setTokenServiceUseIp(false);
+  }
+
+  @After
+  public void teardown() throws IOException {
+    KMSClientProvider.fallbackDefaultPortForTesting = false;
+  }
+
   @Test
   public void testCreation() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KeyProvider kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1/kms/foo"), conf);
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
@@ -131,7 +145,7 @@ public class TestLoadBalancingKMSClientProvider {
     // This should be retried
     KMSClientProvider p4 = mock(KMSClientProvider.class);
     when(p4.createKey(Mockito.anyString(), Mockito.any(Options.class)))
-        .thenThrow(new ConnectTimeoutException("p4"));
+        .thenThrow(new IOException("p4"));
     when(p4.getKMSUrl()).thenReturn("p4");
     KeyProvider kp = new LoadBalancingKMSClientProvider(
         new KMSClientProvider[] { p1, p2, p3, p4 }, 0, conf);
@@ -231,6 +245,7 @@ public class TestLoadBalancingKMSClientProvider {
   @Test
   public void testClassCastException() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KMSClientProvider p1 = new MyKMSClientProvider(
         new URI("kms://http@host1/kms/foo"), conf);
     LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
@@ -331,8 +346,8 @@ public class TestLoadBalancingKMSClientProvider {
   }
 
   /**
-   * Tests whether retryPolicy fails immediately on encountering IOException
-   * which is not SocketException.
+   * Tests whether retryPolicy fails immediately, after trying each provider
+   * once, on encountering IOException which is not SocketException.
    * @throws Exception
    */
   @Test
@@ -364,9 +379,9 @@ public class TestLoadBalancingKMSClientProvider {
     }
     verify(kp.getProviders()[0], Mockito.times(1))
         .getMetadata(Mockito.eq("test3"));
-    verify(kp.getProviders()[1], Mockito.never())
+    verify(kp.getProviders()[1], Mockito.times(1))
         .getMetadata(Mockito.eq("test3"));
-    verify(kp.getProviders()[2], Mockito.never())
+    verify(kp.getProviders()[2], Mockito.times(1))
         .getMetadata(Mockito.eq("test3"));
   }
 
@@ -590,8 +605,8 @@ public class TestLoadBalancingKMSClientProvider {
   }
 
   /**
-   * Tests that client doesn't retry once it encounters AuthenticationException
-   * wrapped in an IOException from first provider.
+   * Tests that client reties each provider once, when it encounters
+   * AuthenticationException wrapped in an IOException from first provider.
    * @throws Exception
    */
   @Test
@@ -605,7 +620,7 @@ public class TestLoadBalancingKMSClientProvider {
         .thenThrow(new IOException(new AuthenticationException("p1")));
     KMSClientProvider p2 = mock(KMSClientProvider.class);
     when(p2.createKey(Mockito.anyString(), Mockito.any(Options.class)))
-        .thenThrow(new ConnectTimeoutException("p2"));
+        .thenThrow(new IOException(new AuthenticationException("p1")));
 
     when(p1.getKMSUrl()).thenReturn("p1");
     when(p2.getKMSUrl()).thenReturn("p2");
@@ -620,7 +635,7 @@ public class TestLoadBalancingKMSClientProvider {
     }
     verify(p1, Mockito.times(1)).createKey(Mockito.eq("test3"),
             Mockito.any(Options.class));
-    verify(p2, Mockito.never()).createKey(Mockito.eq("test3"),
+    verify(p2, Mockito.times(1)).createKey(Mockito.eq("test3"),
             Mockito.any(Options.class));
   }
 }

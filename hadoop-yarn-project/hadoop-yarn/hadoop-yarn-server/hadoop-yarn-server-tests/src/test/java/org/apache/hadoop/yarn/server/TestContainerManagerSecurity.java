@@ -28,16 +28,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
@@ -83,12 +82,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @RunWith(Parameterized.class)
 public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
 
-  static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
+  static Logger LOG = LoggerFactory.getLogger(TestContainerManagerSecurity.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private static MiniYARNCluster yarnCluster;
@@ -404,27 +405,31 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       newContainerToken, attempt1NMToken, false).isEmpty());
   }
 
-  private void waitForContainerToFinishOnNM(ContainerId containerId) {
+  private void waitForContainerToFinishOnNM(ContainerId containerId)
+      throws InterruptedException {
     Context nmContext = yarnCluster.getNodeManager(0).getNMContext();
-    int interval = 4 * 60; // Max time for container token to expire.
+    // Max time for container token to expire.
+    final int timeout = 4 * 60 * 1000;
 
-    Assert.assertNotNull(nmContext.getContainers().containsKey(containerId));
-
-    // Get the container first, as it may be removed from the Context
-    // by asynchronous calls.
-    // This was leading to a flakey test as otherwise the container could
-    // be removed and end up null.
+    // If the container is null, then it has already completed and been removed
+    // from the Context by asynchronous calls.
     Container waitContainer = nmContext.getContainers().get(containerId);
-
-    while ((interval-- > 0)
-        && !waitContainer.cloneAndGetContainerStatus()
-        .getState().equals(ContainerState.COMPLETE)) {
+    if (waitContainer != null) {
       try {
-        LOG.info("Waiting for " + containerId + " to complete.");
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
+        LOG.info("Waiting for " + containerId + " to get to state " +
+            ContainerState.COMPLETE);
+        GenericTestUtils.waitFor(() -> ContainerState.COMPLETE.equals(
+            waitContainer.cloneAndGetContainerStatus().getState()),
+            500, timeout);
+      } catch (TimeoutException te) {
+        LOG.error("TimeoutException", te);
+        fail("Was waiting for " + containerId + " to get to state " +
+            ContainerState.COMPLETE + " but was in state " +
+            waitContainer.cloneAndGetContainerStatus().getState() +
+            " after the timeout");
       }
     }
+
     // Normally, Containers will be removed from NM context after they are
     // explicitly acked by RM. Now, manually remove it for testing.
     yarnCluster.getNodeManager(0).getNodeStatusUpdater()

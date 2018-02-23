@@ -36,6 +36,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Private
 @Unstable
 public class ContainerPBImpl extends Container {
@@ -49,6 +52,7 @@ public class ContainerPBImpl extends Container {
   private Resource resource = null;
   private Priority priority = null;
   private Token containerToken = null;
+  private Set<String> allocationTags = null;
 
   public ContainerPBImpl() {
     builder = ContainerProto.newBuilder();
@@ -105,6 +109,10 @@ public class ContainerPBImpl extends Container {
         && !((TokenPBImpl) this.containerToken).getProto().equals(
             builder.getContainerToken())) {
       builder.setContainerToken(convertToProtoFormat(this.containerToken));
+    }
+    if (this.allocationTags != null) {
+      builder.clearAllocationTags();
+      builder.addAllAllocationTags(this.allocationTags);
     }
   }
 
@@ -181,7 +189,7 @@ public class ContainerPBImpl extends Container {
       builder.clearNodeHttpAddress();
       return;
     }
-    builder.setNodeHttpAddress(nodeHttpAddress);
+    builder.setNodeHttpAddress(nodeHttpAddress.intern());
   }
 
   @Override
@@ -283,6 +291,29 @@ public class ContainerPBImpl extends Container {
     maybeInitBuilder();
     builder.setVersion(version);
   }
+
+  private void initAllocationTags() {
+    if (this.allocationTags != null) {
+      return;
+    }
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    this.allocationTags = new HashSet<>();
+    this.allocationTags.addAll(p.getAllocationTagsList());
+  }
+
+  @Override
+  public Set<String> getAllocationTags() {
+    initAllocationTags();
+    return this.allocationTags;
+  }
+
+  @Override
+  public void setAllocationTags(Set<String> allocationTags) {
+    maybeInitBuilder();
+    builder.clearAllocationTags();
+    this.allocationTags = allocationTags;
+  }
+
 
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);

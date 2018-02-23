@@ -20,6 +20,8 @@ package org.apache.hadoop.crypto.key.kms.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -30,6 +32,8 @@ import java.net.URL;
  */
 @InterfaceAudience.Private
 public class KMSConfiguration {
+
+  static final Logger LOG = LoggerFactory.getLogger(KMSConfiguration.class);
 
   public static final String KMS_CONFIG_DIR = "kms.config.dir";
   public static final String KMS_DEFAULT_XML = "kms-default.xml";
@@ -71,6 +75,15 @@ public class KMSConfiguration {
   // Delay for Audit logs that need aggregation
   public static final String KMS_AUDIT_AGGREGATION_WINDOW = CONFIG_PREFIX +
       "audit.aggregation.window.ms";
+
+  // Process name shown in metrics
+  public static final String METRICS_PROCESS_NAME_KEY =
+      CONFIG_PREFIX + "metrics.process.name";
+  public static final String METRICS_PROCESS_NAME_DEFAULT = "KMS";
+
+  // Session id for metrics
+  public static final String METRICS_SESSION_ID_KEY =
+      CONFIG_PREFIX + "metrics.session.id";
 
   // KMS Audit logger classes to use
   public static final String KMS_AUDIT_LOGGER_KEY = CONFIG_PREFIX +
@@ -138,6 +151,8 @@ public class KMSConfiguration {
             "' must be an absolute path: " + confDir);
       }
       File f = new File(confDir, KMS_ACLS_XML);
+      LOG.trace("Checking file {}, modification time is {}, last reload time is"
+          + " {}", f.getPath(), f.lastModified(), time);
       // at least 100ms newer than time, we do this to ensure the file
       // has been properly closed/flushed
       newer = f.lastModified() - time > 100;

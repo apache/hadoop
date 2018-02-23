@@ -23,9 +23,14 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
@@ -38,12 +43,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestOpenFilesWithSnapshot {
+  private static final Log LOG =
+      LogFactory.getLog(TestOpenFilesWithSnapshot.class.getName());
   private final Configuration conf = new Configuration();
   MiniDFSCluster cluster = null;
   DistributedFileSystem fs = null;
@@ -58,7 +66,8 @@ public class TestOpenFilesWithSnapshot {
   public void setup() throws IOException {
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES, true);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
     conf.set("dfs.blocksize", "1048576");
     fs = cluster.getFileSystem();
   }
@@ -244,8 +253,6 @@ public class TestOpenFilesWithSnapshot {
    */
   @Test (timeout = 120000)
   public void testPointInTimeSnapshotCopiesForOpenFiles() throws Exception {
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
-        true);
     // Construct the directory tree
     final Path level0A = new Path("/level_0_A");
     final Path level0B = new Path("/level_0_B");
@@ -620,6 +627,379 @@ public class TestOpenFilesWithSnapshot {
         fs.getFileStatus(hbaseFile).getLen());
 
     hbaseOutputStream.close();
+  }
+
+  /**
+   * Verify if the NameNode can restart properly after an OpenForWrite
+   * file and the only snapshot it was present in were deleted.
+   *
+   * @throws Exception
+   */
+  @Test (timeout = 600000)
+  public void testOpenFileDeletionAndNNRestart() throws Exception {
+    // Construct the directory tree
+    final Path snapRootDir = new Path("/level_0_A/test");
+    final String hbaseFileName = "hbase.log";
+    final String snap1Name = "snap_1";
+
+    // Create a file with few blocks. Get its output stream
+    // for append.
+    final Path hbaseFile = new Path(snapRootDir, hbaseFileName);
+    createFile(hbaseFile);
+    FSDataOutputStream hbaseOutputStream = fs.append(hbaseFile);
+
+    int newWriteLength = (int) (BLOCKSIZE * 1.5);
+    byte[] buf = new byte[newWriteLength];
+    Random random = new Random();
+    random.nextBytes(buf);
+
+    // Write more data to the file
+    writeToStream(hbaseOutputStream, buf);
+
+    // Take a snapshot while the file is open for write
+    final Path snap1Dir = SnapshotTestHelper.createSnapshot(
+        fs, snapRootDir, snap1Name);
+    LOG.info("Open file status in snap: " +
+        fs.getFileStatus(new Path(snap1Dir, hbaseFileName)));
+
+    // Delete the open file and the snapshot while
+    // its output stream is still open.
+    fs.delete(hbaseFile, true);
+    fs.deleteSnapshot(snapRootDir, snap1Name);
+    Assert.assertFalse(fs.exists(hbaseFile));
+
+    // Verify file existence after the NameNode restart
+    cluster.restartNameNode();
+    cluster.waitActive();
+    Assert.assertFalse(fs.exists(hbaseFile));
+  }
+
+  /**
+   * Test client writing to open files are not interrupted when snapshots
+   * that captured open files get deleted.
+   */
+  @Test (timeout = 240000)
+  public void testOpenFileWritingAcrossSnapDeletion() throws Exception {
+    final Path snapRootDir = new Path("/level_0_A");
+    final String flumeFileName = "flume.log";
+    final String hbaseFileName = "hbase.log";
+    final String snap1Name = "snap_1";
+    final String snap2Name = "snap_2";
+    final String snap3Name = "snap_3";
+
+    // Create files and open streams
+    final Path flumeFile = new Path(snapRootDir, flumeFileName);
+    FSDataOutputStream flumeOut = fs.create(flumeFile, false,
+        8000, (short)3, 1048576);
+    flumeOut.close();
+    final Path hbaseFile = new Path(snapRootDir, hbaseFileName);
+    FSDataOutputStream hbaseOut = fs.create(hbaseFile, false,
+        8000, (short)3, 1048576);
+    hbaseOut.close();
+
+    final AtomicBoolean writerError = new AtomicBoolean(false);
+    final CountDownLatch startLatch = new CountDownLatch(1);
+    final CountDownLatch deleteLatch = new CountDownLatch(1);
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          FSDataOutputStream flumeOutputStream = fs.append(flumeFile, 8000);
+          FSDataOutputStream hbaseOutputStream = fs.append(hbaseFile, 8000);
+          byte[] bytes = new byte[(int) (1024 * 0.2)];
+          Random r = new Random(Time.now());
+
+          for (int i = 0; i < 200000; i++) {
+            r.nextBytes(bytes);
+            flumeOutputStream.write(bytes);
+            if (hbaseOutputStream != null) {
+              hbaseOutputStream.write(bytes);
+            }
+            if (i == 50000) {
+              startLatch.countDown();
+            } else if (i == 100000) {
+              deleteLatch.countDown();
+            } else if (i == 150000) {
+              hbaseOutputStream.hsync();
+              fs.delete(hbaseFile, true);
+              try {
+                hbaseOutputStream.close();
+              } catch (Exception e) {
+                // since the file is deleted before the open stream close,
+                // it might throw FileNotFoundException. Ignore the
+                // expected exception.
+              }
+              hbaseOutputStream = null;
+            } else if (i % 5000 == 0) {
+              LOG.info("Write pos: " + flumeOutputStream.getPos()
+                  + ", size: " + fs.getFileStatus(flumeFile).getLen()
+                  + ", loop: " + (i + 1));
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn("Writer error: " + e);
+          writerError.set(true);
+        }
+      }
+    });
+    t.start();
+
+    startLatch.await();
+    final Path snap1Dir = SnapshotTestHelper.createSnapshot(
+        fs, snapRootDir, snap1Name);
+    final Path flumeS1Path = new Path(snap1Dir, flumeFileName);
+    LOG.info("Snap1 file status: " + fs.getFileStatus(flumeS1Path));
+    LOG.info("Current file status: " + fs.getFileStatus(flumeFile));
+
+    deleteLatch.await();
+    LOG.info("Snap1 file status: " + fs.getFileStatus(flumeS1Path));
+    LOG.info("Current file status: " + fs.getFileStatus(flumeFile));
+
+    // Verify deletion of snapshot which had the under construction file
+    // captured is not truncating the under construction file and the thread
+    // writing to the same file not crashing on newer block allocations.
+    LOG.info("Deleting " + snap1Name);
+    fs.deleteSnapshot(snapRootDir, snap1Name);
+
+    // Verify creation and deletion of snapshot newer than the oldest
+    // snapshot is not crashing the thread writing to under construction file.
+    SnapshotTestHelper.createSnapshot(fs, snapRootDir, snap2Name);
+    SnapshotTestHelper.createSnapshot(fs, snapRootDir, snap3Name);
+    fs.deleteSnapshot(snapRootDir, snap3Name);
+    fs.deleteSnapshot(snapRootDir, snap2Name);
+    SnapshotTestHelper.createSnapshot(fs, snapRootDir, "test");
+
+    t.join();
+    Assert.assertFalse("Client encountered writing error!", writerError.get());
+
+    restartNameNode();
+    cluster.waitActive();
+  }
+
+  /**
+   * Verify snapshots with open files captured are safe even when the
+   * 'current' version of the file is truncated and appended later.
+   */
+  @Test (timeout = 120000)
+  public void testOpenFilesSnapChecksumWithTrunkAndAppend() throws Exception {
+    // Construct the directory tree
+    final Path dir = new Path("/A/B/C");
+    fs.mkdirs(dir);
+
+    // String constants
+    final Path hbaseSnapRootDir = dir;
+    final String hbaseFileName = "hbase.wal";
+    final String hbaseSnap1Name = "hbase_snap_s1";
+    final String hbaseSnap2Name = "hbase_snap_s2";
+    final String hbaseSnap3Name = "hbase_snap_s3";
+    final String hbaseSnap4Name = "hbase_snap_s4";
+
+    // Create files and open a stream
+    final Path hbaseFile = new Path(dir, hbaseFileName);
+    createFile(hbaseFile);
+    final FileChecksum hbaseWALFileCksum0 =
+        fs.getFileChecksum(hbaseFile);
+    FSDataOutputStream hbaseOutputStream = fs.append(hbaseFile);
+
+    // Create Snapshot S1
+    final Path hbaseS1Dir = SnapshotTestHelper.createSnapshot(
+        fs, hbaseSnapRootDir, hbaseSnap1Name);
+    final Path hbaseS1Path = new Path(hbaseS1Dir, hbaseFileName);
+    final FileChecksum hbaseFileCksumS1 = fs.getFileChecksum(hbaseS1Path);
+
+    // Verify if Snap S1 checksum is same as the current version one
+    Assert.assertEquals("Live and snap1 file checksum doesn't match!",
+        hbaseWALFileCksum0, fs.getFileChecksum(hbaseS1Path));
+
+    int newWriteLength = (int) (BLOCKSIZE * 1.5);
+    byte[] buf = new byte[newWriteLength];
+    Random random = new Random();
+    random.nextBytes(buf);
+    writeToStream(hbaseOutputStream, buf);
+
+    // Create Snapshot S2
+    final Path hbaseS2Dir = SnapshotTestHelper.createSnapshot(
+        fs, hbaseSnapRootDir, hbaseSnap2Name);
+    final Path hbaseS2Path = new Path(hbaseS2Dir, hbaseFileName);
+    final FileChecksum hbaseFileCksumS2 = fs.getFileChecksum(hbaseS2Path);
+
+    // Verify if the s1 checksum is still the same
+    Assert.assertEquals("Snap file checksum has changed!",
+        hbaseFileCksumS1, fs.getFileChecksum(hbaseS1Path));
+    // Verify if the s2 checksum is different from the s1 checksum
+    Assert.assertNotEquals("Snap1 and snap2 file checksum should differ!",
+        hbaseFileCksumS1, hbaseFileCksumS2);
+
+    newWriteLength = (int) (BLOCKSIZE * 2.5);
+    buf = new byte[newWriteLength];
+    random.nextBytes(buf);
+    writeToStream(hbaseOutputStream, buf);
+
+    // Create Snapshot S3
+    final Path hbaseS3Dir = SnapshotTestHelper.createSnapshot(
+        fs, hbaseSnapRootDir, hbaseSnap3Name);
+    final Path hbaseS3Path = new Path(hbaseS3Dir, hbaseFileName);
+    FileChecksum hbaseFileCksumS3 = fs.getFileChecksum(hbaseS3Path);
+
+    // Record the checksum for the before truncate current file
+    hbaseOutputStream.close();
+    final FileChecksum hbaseFileCksumBeforeTruncate =
+        fs.getFileChecksum(hbaseFile);
+    Assert.assertEquals("Snap3 and before truncate file checksum should match!",
+        hbaseFileCksumBeforeTruncate, hbaseFileCksumS3);
+
+    // Truncate the current file and record the after truncate checksum
+    long currentFileLen = fs.getFileStatus(hbaseFile).getLen();
+    boolean fileTruncated = fs.truncate(hbaseFile, currentFileLen / 2);
+    Assert.assertTrue("File truncation failed!", fileTruncated);
+    final FileChecksum hbaseFileCksumAfterTruncate =
+        fs.getFileChecksum(hbaseFile);
+
+    Assert.assertNotEquals("Snap3 and after truncate checksum shouldn't match!",
+        hbaseFileCksumS3, hbaseFileCksumAfterTruncate);
+
+    // Append more data to the current file
+    hbaseOutputStream = fs.append(hbaseFile);
+    newWriteLength = (int) (BLOCKSIZE * 5.5);
+    buf = new byte[newWriteLength];
+    random.nextBytes(buf);
+    writeToStream(hbaseOutputStream, buf);
+
+    // Create Snapshot S4
+    final Path hbaseS4Dir = SnapshotTestHelper.createSnapshot(
+        fs, hbaseSnapRootDir, hbaseSnap4Name);
+    final Path hbaseS4Path = new Path(hbaseS4Dir, hbaseFileName);
+    final FileChecksum hbaseFileCksumS4 = fs.getFileChecksum(hbaseS4Path);
+
+    // Record the checksum for the current file after append
+    hbaseOutputStream.close();
+    final FileChecksum hbaseFileCksumAfterAppend =
+        fs.getFileChecksum(hbaseFile);
+
+    Assert.assertEquals("Snap4 and after append file checksum should match!",
+        hbaseFileCksumAfterAppend, hbaseFileCksumS4);
+
+    // Recompute checksum for S3 path and verify it has not changed
+    hbaseFileCksumS3 = fs.getFileChecksum(hbaseS3Path);
+    Assert.assertEquals("Snap3 and before truncate file checksum should match!",
+        hbaseFileCksumBeforeTruncate, hbaseFileCksumS3);
+  }
+
+  private Path createSnapshot(Path snapRootDir, String snapName,
+      String fileName) throws Exception {
+    final Path snap1Dir = SnapshotTestHelper.createSnapshot(
+        fs, snapRootDir, snapName);
+    return new Path(snap1Dir, fileName);
+  }
+
+  private void verifyFileSize(long fileSize, Path... filePaths) throws
+      IOException {
+    for (Path filePath : filePaths) {
+      Assert.assertEquals(fileSize, fs.getFileStatus(filePath).getLen());
+    }
+  }
+
+  /**
+   * Verify open files captured in the snapshots across config disable
+   * and enable.
+   */
+  @Test
+  public void testOpenFilesWithMixedConfig() throws Exception {
+    final Path snapRootDir = new Path("/level_0_A");
+    final String flumeFileName = "flume.log";
+    final String snap1Name = "s1";
+    final String snap2Name = "s2";
+    final String snap3Name = "s3";
+    final String snap4Name = "s4";
+    final String snap5Name = "s5";
+
+    // Create files and open streams
+    final Path flumeFile = new Path(snapRootDir, flumeFileName);
+    createFile(flumeFile);
+    FSDataOutputStream flumeOutputStream = fs.append(flumeFile);
+
+    // 1. Disable capture open files
+    cluster.getNameNode().getNamesystem()
+        .getSnapshotManager().setCaptureOpenFiles(false);
+
+    // Create Snapshot S1
+    final Path flumeS1Path = createSnapshot(snapRootDir,
+        snap1Name, flumeFileName);
+
+    // Verify if Snap S1 file length is same as the the current versions
+    verifyFileSize(FILELEN, flumeS1Path);
+
+    // Write more data to files
+    long flumeFileWrittenDataLength = FILELEN;
+    int newWriteLength = (int) (BLOCKSIZE * 1.5);
+    byte[] buf = new byte[newWriteLength];
+    Random random = new Random();
+    random.nextBytes(buf);
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+
+    // Create Snapshot S2
+    final Path flumeS2Path = createSnapshot(snapRootDir,
+        snap2Name, flumeFileName);
+
+    // Since capture open files was disabled, all snapshots paths
+    // and the current version should have same file lengths.
+    verifyFileSize(flumeFileWrittenDataLength,
+        flumeFile, flumeS2Path, flumeS1Path);
+
+    // 2. Enable capture open files
+    cluster.getNameNode().getNamesystem()
+        .getSnapshotManager() .setCaptureOpenFiles(true);
+
+    // Write more data to files
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+    long flumeFileLengthAfterS3 = flumeFileWrittenDataLength;
+
+    // Create Snapshot S3
+    final Path flumeS3Path = createSnapshot(snapRootDir,
+        snap3Name, flumeFileName);
+
+    // Since open files captured in the previous snapshots were with config
+    // disabled, their file lengths are now same as the current version.
+    // With the config turned on, any new data written to the open files
+    // will no more reflect in the current version or old snapshot paths.
+    verifyFileSize(flumeFileWrittenDataLength, flumeFile, flumeS3Path,
+        flumeS2Path, flumeS1Path);
+
+    // Write more data to files
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+
+    // Create Snapshot S4
+    final Path flumeS4Path = createSnapshot(snapRootDir,
+        snap4Name, flumeFileName);
+
+    // Verify S4 has the latest data
+    verifyFileSize(flumeFileWrittenDataLength, flumeFile, flumeS4Path);
+
+    // But, open files captured as of Snapshot S3 and before should
+    // have their old file lengths intact.
+    verifyFileSize(flumeFileLengthAfterS3, flumeS3Path,
+        flumeS2Path, flumeS1Path);
+
+    long flumeFileLengthAfterS4 =  flumeFileWrittenDataLength;
+
+    // 3. Disable capture open files
+    cluster.getNameNode().getNamesystem()
+        .getSnapshotManager() .setCaptureOpenFiles(false);
+
+    // Create Snapshot S5
+    final Path flumeS5Path = createSnapshot(snapRootDir,
+        snap5Name, flumeFileName);
+
+    flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
+
+    // Since capture open files was disabled, any snapshots taken after the
+    // config change and the current version should have same file lengths
+    // for the open files.
+    verifyFileSize(flumeFileWrittenDataLength, flumeFile, flumeS5Path);
+
+    // But, the old snapshots taken before the config disable should
+    // continue to be consistent.
+    verifyFileSize(flumeFileLengthAfterS4, flumeS4Path);
   }
 
   private void restartNameNode() throws Exception {

@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which selects a random file and attempts to delete that file (if it
@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 class DeleteOp extends Operation {
 
-  private static final Log LOG = LogFactory.getLog(DeleteOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeleteOp.class);
 
   DeleteOp(ConfigExtractor cfg, Random rnd) {
     super(DeleteOp.class.getSimpleName(), cfg, rnd);

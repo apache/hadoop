@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.AccessControlException;
@@ -50,22 +51,27 @@ class FSDirXAttrOp {
 
   /**
    * Set xattr for a file or directory.
-   *
+   * @param fsd
+   *          - FS directory
+   * @param pc
+   *          - FS permission checker
    * @param src
    *          - path on which it sets the xattr
    * @param xAttr
    *          - xAttr details to set
    * @param flag
    *          - xAttrs flags
+   * @param logRetryCache
+   *          - whether to record RPC ids in editlog for retry cache
+   *          rebuilding.
    * @throws IOException
    */
   static FileStatus setXAttr(
-      FSDirectory fsd, String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
-      boolean logRetryCache)
+      FSDirectory fsd, FSPermissionChecker pc, String src, XAttr xAttr,
+      EnumSet<XAttrSetFlag> flag, boolean logRetryCache)
       throws IOException {
     checkXAttrsConfigFlag(fsd);
     checkXAttrSize(fsd, xAttr);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(
         pc, xAttr, FSDirectory.isReservedRawName(src));
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
@@ -84,12 +90,10 @@ class FSDirXAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static List<XAttr> getXAttrs(FSDirectory fsd, final String srcArg,
-                               List<XAttr> xAttrs)
-      throws IOException {
+  static List<XAttr> getXAttrs(FSDirectory fsd, FSPermissionChecker pc,
+      final String srcArg, List<XAttr> xAttrs) throws IOException {
     String src = srcArg;
     checkXAttrsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
     boolean getAll = xAttrs == null || xAttrs.isEmpty();
     if (!getAll) {
@@ -130,14 +134,12 @@ class FSDirXAttrOp {
   }
 
   static List<XAttr> listXAttrs(
-      FSDirectory fsd, String src) throws IOException {
+      FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
     FSDirXAttrOp.checkXAttrsConfigFlag(fsd);
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
     if (fsd.isPermissionEnabled()) {
-      /* To access xattr names, you need EXECUTE in the owning directory. */
-      fsd.checkParentAccess(pc, iip, FsAction.EXECUTE);
+      fsd.checkPathAccess(pc, iip, FsAction.READ);
     }
     final List<XAttr> all = FSDirXAttrOp.getXAttrs(fsd, iip);
     return XAttrPermissionFilter.
@@ -146,18 +148,23 @@ class FSDirXAttrOp {
 
   /**
    * Remove an xattr for a file or directory.
-   *
+   * @param fsd
+   *          - FS direcotry
+   * @param pc
+   *          - FS permission checker
    * @param src
    *          - path to remove the xattr from
    * @param xAttr
    *          - xAttr to remove
+   * @param logRetryCache
+   *          - whether to record RPC ids in editlog for retry cache
+   *          rebuilding.
    * @throws IOException
    */
   static FileStatus removeXAttr(
-      FSDirectory fsd, String src, XAttr xAttr, boolean logRetryCache)
-      throws IOException {
+      FSDirectory fsd, FSPermissionChecker pc, String src, XAttr xAttr,
+      boolean logRetryCache) throws IOException {
     FSDirXAttrOp.checkXAttrsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(
         pc, xAttr, FSDirectory.isReservedRawName(src));
 
@@ -183,6 +190,10 @@ class FSDirXAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
+  /**
+   * Remove xattrs from the inode, and return the <em>removed</em> xattrs.
+   * @return the <em>removed</em> xattrs.
+   */
   static List<XAttr> unprotectedRemoveXAttrs(
       FSDirectory fsd, final INodesInPath iip, final List<XAttr> toRemove)
       throws IOException {
@@ -275,6 +286,12 @@ class FSDirXAttrOp {
             PBHelperClient.convert(ezProto.getSuite()),
             PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
             ezProto.getKeyName());
+
+        if (ezProto.hasReencryptionProto()) {
+          ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+          fsd.ezManager.getReencryptionStatus()
+              .updateZoneStatus(inode.getId(), iip.getPath(), reProto);
+        }
       }
 
       if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {

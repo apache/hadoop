@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -36,7 +38,9 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.file.AccessDeniedException;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
 
 /**
  * Tests that credentials can go into the URL. This includes a valid
@@ -63,6 +67,11 @@ public class ITestS3ACredentialsInURL extends Assert {
   public void testInstantiateFromURL() throws Throwable {
 
     Configuration conf = new Configuration();
+
+    // Skip in the case of S3Guard with DynamoDB because it cannot get
+    // credentials for its own use if they're only in S3 URLs
+    assumeS3GuardState(false, conf);
+
     String accessKey = conf.get(Constants.ACCESS_KEY);
     String secretKey = conf.get(Constants.SECRET_KEY);
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
@@ -84,6 +93,7 @@ public class ITestS3ACredentialsInURL extends Assert {
     conf.unset(Constants.ACCESS_KEY);
     conf.unset(Constants.SECRET_KEY);
     fs = S3ATestUtils.createTestFileSystem(conf);
+
     String fsURI = fs.getUri().toString();
     assertFalse("FS URI contains a @ symbol", fsURI.contains("@"));
     assertFalse("FS URI contains a % symbol", fsURI.contains("%"));
@@ -112,25 +122,24 @@ public class ITestS3ACredentialsInURL extends Assert {
 
   /**
    * Set up some invalid credentials, verify login is rejected.
-   * @throws Throwable
    */
   @Test
   public void testInvalidCredentialsFail() throws Throwable {
     Configuration conf = new Configuration();
+    // use the default credential provider chain
+    conf.unset(AWS_CREDENTIALS_PROVIDER);
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
     Assume.assumeNotNull(fsname);
+    assumeS3GuardState(false, conf);
     URI original = new URI(fsname);
     URI testURI = createUriWithEmbeddedSecrets(original, "user", "//");
 
     conf.set(TEST_FS_S3A_NAME, testURI.toString());
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    try {
-      S3AFileStatus status = fs.getFileStatus(new Path("/"));
-      fail("Expected an AccessDeniedException, got " + status);
-    } catch (AccessDeniedException e) {
-      // expected
-    }
-
+    LambdaTestUtils.intercept(AccessDeniedException.class,
+        () -> {
+          fs = S3ATestUtils.createTestFileSystem(conf);
+          return fs.getFileStatus(new Path("/"));
+        });
   }
 
   private URI createUriWithEmbeddedSecrets(URI original,

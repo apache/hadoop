@@ -20,42 +20,44 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.hadoop.util.StringUtils;
-
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DockerRunCommand extends DockerCommand {
   private static final String RUN_COMMAND = "run";
-  private final String image;
-  private List<String> overrrideCommandWithArgs;
 
   /** The following are mandatory: */
   public DockerRunCommand(String containerId, String user, String image) {
     super(RUN_COMMAND);
-    super.addCommandArguments("--name=" + containerId, "--user=" + user);
-    this.image = image;
+    super.addCommandArguments("name", containerId);
+    super.addCommandArguments("user", user);
+    super.addCommandArguments("image", image);
   }
 
   public DockerRunCommand removeContainerOnExit() {
-    super.addCommandArguments("--rm");
+    super.addCommandArguments("rm", "true");
     return this;
   }
 
   public DockerRunCommand detachOnRun() {
-    super.addCommandArguments("-d");
+    super.addCommandArguments("detach", "true");
     return this;
   }
 
   public DockerRunCommand setContainerWorkDir(String workdir) {
-    super.addCommandArguments("--workdir=" + workdir);
+    super.addCommandArguments("workdir", workdir);
     return this;
   }
 
   public DockerRunCommand setNetworkType(String type) {
-    super.addCommandArguments("--net=" + type);
+    super.addCommandArguments("net", type);
+    return this;
+  }
+
+  public DockerRunCommand setPidNamespace(String type) {
+    super.addCommandArguments("pid", type);
     return this;
   }
 
@@ -65,72 +67,111 @@ public class DockerRunCommand extends DockerCommand {
     if (!sourceExists && !createSource) {
       return this;
     }
-    super.addCommandArguments("-v", sourcePath + ":" + destinationPath);
+    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
+    return this;
+  }
+
+  public DockerRunCommand addReadWriteMountLocation(String sourcePath, String
+      destinationPath) {
+    super.addCommandArguments("rw-mounts", sourcePath + ":" + destinationPath);
+    return this;
+  }
+
+  public DockerRunCommand addAllReadWriteMountLocations(List<String> paths) {
+    for (String dir: paths) {
+      this.addReadWriteMountLocation(dir, dir);
+    }
+    return this;
+  }
+
+  public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
+      destinationPath, boolean createSource) {
+    boolean sourceExists = new File(sourcePath).exists();
+    if (!sourceExists && !createSource) {
+      return this;
+    }
+    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
+    return this;
+  }
+
+  public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
+      destinationPath) {
+    super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
+    return this;
+  }
+
+  public DockerRunCommand addAllReadOnlyMountLocations(List<String> paths) {
+    for (String dir: paths) {
+      this.addReadOnlyMountLocation(dir, dir);
+    }
+    return this;
+  }
+
+  public DockerRunCommand setVolumeDriver(String volumeDriver) {
+    super.addCommandArguments("volume-driver", volumeDriver);
     return this;
   }
 
   public DockerRunCommand setCGroupParent(String parentPath) {
-    super.addCommandArguments("--cgroup-parent=" + parentPath);
+    super.addCommandArguments("cgroup-parent", parentPath);
     return this;
   }
 
   /* Run a privileged container. Use with extreme care */
   public DockerRunCommand setPrivileged() {
-    super.addCommandArguments("--privileged");
+    super.addCommandArguments("privileged", "true");
     return this;
   }
 
   public DockerRunCommand setCapabilities(Set<String> capabilties) {
     //first, drop all capabilities
-    super.addCommandArguments("--cap-drop=ALL");
+    super.addCommandArguments("cap-drop", "ALL");
 
     //now, add the capabilities supplied
     for (String capability : capabilties) {
-      super.addCommandArguments("--cap-add=" + capability);
+      super.addCommandArguments("cap-add", capability);
     }
 
     return this;
   }
 
   public DockerRunCommand setHostname(String hostname) {
-    super.addCommandArguments("--hostname=" + hostname);
+    super.addCommandArguments("hostname", hostname);
     return this;
   }
 
   public DockerRunCommand addDevice(String sourceDevice, String
       destinationDevice) {
-    super.addCommandArguments("--device=" + sourceDevice + ":" +
+    super.addCommandArguments("devices", sourceDevice + ":" +
         destinationDevice);
     return this;
   }
 
   public DockerRunCommand enableDetach() {
-    super.addCommandArguments("--detach=true");
+    super.addCommandArguments("detach", "true");
     return this;
   }
 
   public DockerRunCommand disableDetach() {
-    super.addCommandArguments("--detach=false");
+    super.addCommandArguments("detach", "false");
+    return this;
+  }
+
+  public DockerRunCommand groupAdd(String[] groups) {
+    super.addCommandArguments("group-add", String.join(",", groups));
     return this;
   }
 
   public DockerRunCommand setOverrideCommandWithArgs(
       List<String> overrideCommandWithArgs) {
-    this.overrrideCommandWithArgs = overrideCommandWithArgs;
+    for(String override: overrideCommandWithArgs) {
+      super.addCommandArguments("launch-command", override);
+    }
     return this;
   }
 
   @Override
-  public String getCommandWithArguments() {
-    List<String> argList = new ArrayList<>();
-
-    argList.add(super.getCommandWithArguments());
-    argList.add(image);
-
-    if (overrrideCommandWithArgs != null) {
-      argList.addAll(overrrideCommandWithArgs);
-    }
-
-    return StringUtils.join(" ", argList);
+  public Map<String, List<String>> getDockerCommandWithArguments() {
+    return super.getDockerCommandWithArguments();
   }
 }

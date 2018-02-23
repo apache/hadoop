@@ -30,6 +30,7 @@ import javax.ws.rs.core.Response;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -66,10 +67,23 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
  * implementation that simply forwards the client requests to the resource
  * manager.
  */
-public final class DefaultRequestInterceptorREST
+public class DefaultRequestInterceptorREST
     extends AbstractRESTRequestInterceptor {
 
   private String webAppAddress;
+  private SubClusterId subClusterId = null;
+
+  public void setWebAppAddress(String webAppAddress) {
+    this.webAppAddress = webAppAddress;
+  }
+
+  protected void setSubClusterId(SubClusterId scId) {
+    this.subClusterId = scId;
+  }
+
+  protected SubClusterId getSubClusterId() {
+    return this.subClusterId;
+  }
 
   @Override
   public void init(String user) {
@@ -115,7 +129,9 @@ public final class DefaultRequestInterceptorREST
   public NodesInfo getNodes(String states) {
     // states will be part of additionalParam
     Map<String, String[]> additionalParam = new HashMap<String, String[]>();
-    additionalParam.put(RMWSConsts.STATES, new String[] {states});
+    if (states != null && !states.isEmpty()) {
+      additionalParam.put(RMWSConsts.STATES, new String[] {states});
+    }
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null,
@@ -212,9 +228,11 @@ public final class DefaultRequestInterceptorREST
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     // labels will be part of additionalParam
-    Map<String, String[]> additionalParam = new HashMap<String, String[]>();
-    additionalParam.put(RMWSConsts.LABELS,
-        labels.toArray(new String[labels.size()]));
+    Map<String, String[]> additionalParam = new HashMap<>();
+    if (labels != null && !labels.isEmpty()) {
+      additionalParam.put(RMWSConsts.LABELS,
+          labels.toArray(new String[labels.size()]));
+    }
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         LabelsToNodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.LABEL_MAPPINGS, null,

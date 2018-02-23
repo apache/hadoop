@@ -444,8 +444,8 @@ abstract class CommandWithDestination extends FsCommand {
           src.stat.getPermission());
     }
     if (shouldPreserve(FileAttribute.ACL)) {
-      FsPermission perm = src.stat.getPermission();
-      if (perm.getAclBit()) {
+      if (src.stat.hasAcl()) {
+        FsPermission perm = src.stat.getPermission();
         List<AclEntry> srcEntries =
             src.fs.getAclStatus(src.path).getEntries();
         List<AclEntry> srcFullEntries =

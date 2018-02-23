@@ -54,10 +54,7 @@ import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -80,10 +77,10 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -135,6 +132,7 @@ import org.jboss.netty.util.CharsetUtil;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -149,9 +147,10 @@ import com.google.protobuf.ByteString;
 
 public class ShuffleHandler extends AuxiliaryService {
 
-  private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
-  private static final Log AUDITLOG =
-      LogFactory.getLog(ShuffleHandler.class.getName()+".audit");
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(ShuffleHandler.class);
+  private static final org.slf4j.Logger AUDITLOG =
+      LoggerFactory.getLogger(ShuffleHandler.class.getName()+".audit");
   public static final String SHUFFLE_MANAGE_OS_CACHE = "mapreduce.shuffle.manage.os.cache";
   public static final boolean DEFAULT_SHUFFLE_MANAGE_OS_CACHE = true;
 
@@ -776,7 +775,8 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   private static class LevelDBLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LevelDBLogger.class);
+    private static final org.slf4j.Logger LOG =
+        LoggerFactory.getLogger(LevelDBLogger.class);
 
     @Override
     public void log(String message) {
@@ -854,8 +854,6 @@ public class ShuffleHandler extends AuxiliaryService {
     private static final int ALLOWED_CONCURRENCY = 16;
     private final Configuration conf;
     private final IndexCache indexCache;
-    private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     private int port;
     private final LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache =
       CacheBuilder.newBuilder().expireAfterAccess(EXPIRE_AFTER_ACCESS_MINUTES,
@@ -888,10 +886,10 @@ public class ShuffleHandler extends AuxiliaryService {
             Exception {
           String base = getBaseLocation(key.jobId, key.user);
           String attemptBase = base + key.attemptId;
-          Path indexFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + INDEX_FILE_NAME, conf);
-          Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + DATA_FILE_NAME, conf);
+          Path indexFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + INDEX_FILE_NAME);
+          Path mapOutputFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + DATA_FILE_NAME);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loaded : " + key + " via loader");
@@ -992,13 +990,6 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
 
-      // this audit log is disabled by default,
-      // to turn it on please enable this audit log
-      // on log4j.properties by uncommenting the setting
-      if (AUDITLOG.isDebugEnabled()) {
-        AUDITLOG.debug("shuffle for " + jobQ.get(0) + " mappers: " + mapIds +
-                         " reducer " + reduceQ.get(0));
-      }
       int reduceId;
       String jobId;
       try {
@@ -1095,7 +1086,11 @@ public class ShuffleHandler extends AuxiliaryService {
           }
           nextMap.addListener(new ReduceMapFileCount(reduceContext));
         } catch (IOException e) {
-          LOG.error("Shuffle error :", e);
+          if (e instanceof DiskChecker.DiskErrorException) {
+            LOG.error("Shuffle error :" + e);
+          } else {
+            LOG.error("Shuffle error :", e);
+          }
           String errorMessage = getErrorMessage(e);
           sendError(reduceContext.getCtx(), errorMessage,
               INTERNAL_SERVER_ERROR);
@@ -1183,6 +1178,17 @@ public class ShuffleHandler extends AuxiliaryService {
 
       // Now set the response headers.
       setResponseHeaders(response, keepAliveParam, contentLength);
+
+      // this audit log is disabled by default,
+      // to turn it on please enable this audit log
+      // on log4j.properties by uncommenting the setting
+      if (AUDITLOG.isDebugEnabled()) {
+        StringBuilder sb = new StringBuilder("shuffle for ");
+        sb.append(jobId).append(" reducer ").append(reduce);
+        sb.append(" length ").append(contentLength);
+        sb.append(" mappers: ").append(mapIds);
+        AUDITLOG.debug(sb.toString());
+      }
     }
 
     protected void setResponseHeaders(HttpResponse response,

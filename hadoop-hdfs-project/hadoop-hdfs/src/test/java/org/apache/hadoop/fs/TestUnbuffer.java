@@ -27,11 +27,17 @@ import org.apache.hadoop.hdfs.PeerCache;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 public class TestUnbuffer {
   private static final Log LOG =
       LogFactory.getLog(TestUnbuffer.class.getName());
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   /**
    * Test that calling Unbuffer closes sockets.
@@ -122,5 +128,30 @@ public class TestUnbuffer {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Test that a InputStream should throw an exception when not implementing
+   * CanUnbuffer
+   *
+   * This should throw an exception when the stream claims to have the
+   * unbuffer capability, but actually does not implement CanUnbuffer.
+   */
+  @Test
+  public void testUnbufferException() {
+    abstract class BuggyStream
+            extends FSInputStream
+            implements StreamCapabilities {
+    }
+
+    BuggyStream bs = Mockito.mock(BuggyStream.class);
+    Mockito.when(bs.hasCapability(Mockito.anyString())).thenReturn(true);
+
+    exception.expect(UnsupportedOperationException.class);
+    exception.expectMessage(
+            StreamCapabilitiesPolicy.CAN_UNBUFFER_NOT_IMPLEMENTED_MESSAGE);
+
+    FSDataInputStream fs = new FSDataInputStream(bs);
+    fs.unbuffer();
   }
 }

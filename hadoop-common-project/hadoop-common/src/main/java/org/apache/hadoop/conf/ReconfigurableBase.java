@@ -19,7 +19,6 @@
 package org.apache.hadoop.conf;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.util.Time;
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Utility base class for implementing the Reconfigurable interface.
@@ -148,7 +148,7 @@ public abstract class ReconfigurableBase
         } catch (ReconfigurationException e) {
           errorMessage = e.getCause().getMessage();
         }
-        results.put(change, Optional.fromNullable(errorMessage));
+        results.put(change, Optional.ofNullable(errorMessage));
       }
 
       synchronized (parent.reconfigLock) {
@@ -214,7 +214,7 @@ public abstract class ReconfigurableBase
    * This method makes the change to this objects {@link Configuration}
    * and calls reconfigurePropertyImpl to update internal data structures.
    * This method cannot be overridden, subclasses should instead override
-   * reconfigureProperty.
+   * reconfigurePropertyImpl.
    */
   @Override
   public final void reconfigureProperty(String property, String newVal)
@@ -262,7 +262,7 @@ public abstract class ReconfigurableBase
    * all internal data structures derived from the configuration property
    * that is being changed. If this object owns other Reconfigurable objects
    * reconfigureProperty should be called recursively to make sure that
-   * to make sure that the configuration of these objects is updated.
+   * the configuration of these objects are updated.
    *
    * @param property Name of the property that is being reconfigured.
    * @param newVal Proposed new value of the property.

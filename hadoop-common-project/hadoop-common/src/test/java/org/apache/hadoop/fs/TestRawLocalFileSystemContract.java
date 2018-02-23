@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.File;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.StatUtils;
 import org.apache.hadoop.util.Shell;
+
 import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,4 +86,81 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   protected boolean filesystemIsCaseSensitive() {
     return !(Shell.WINDOWS || Shell.MAC);
   }
+
+  // cross-check getPermission using both native/non-native
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testPermission() throws Exception {
+    Path testDir = getTestBaseDir();
+    String testFilename = "teststat2File";
+    Path path = new Path(testDir, testFilename);
+
+    RawLocalFileSystem rfs = new RawLocalFileSystem();
+    Configuration conf = new Configuration();
+    rfs.initialize(rfs.getUri(), conf);
+    rfs.createNewFile(path);
+
+    File file = rfs.pathToFile(path);
+    long defaultBlockSize = rfs.getDefaultBlockSize(path);
+
+    //
+    // test initial permission
+    //
+    RawLocalFileSystem.DeprecatedRawLocalFileStatus fsNIO =
+      new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
+          file, defaultBlockSize, rfs);
+    fsNIO.loadPermissionInfoByNativeIO();
+    RawLocalFileSystem.DeprecatedRawLocalFileStatus fsnonNIO =
+        new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
+            file, defaultBlockSize, rfs);
+    fsnonNIO.loadPermissionInfoByNonNativeIO();
+
+    assertEquals(fsNIO.getOwner(), fsnonNIO.getOwner());
+    assertEquals(fsNIO.getGroup(), fsnonNIO.getGroup());
+    assertEquals(fsNIO.getPermission(), fsnonNIO.getPermission());
+
+    LOG.info("owner: {}, group: {}, permission: {}, isSticky: {}",
+        fsNIO.getOwner(), fsNIO.getGroup(), fsNIO.getPermission(),
+        fsNIO.getPermission().getStickyBit());
+
+    //
+    // test normal chmod - no sticky bit
+    //
+    StatUtils.setPermissionFromProcess("644", file.getPath());
+    fsNIO.loadPermissionInfoByNativeIO();
+    fsnonNIO.loadPermissionInfoByNonNativeIO();
+    assertEquals(fsNIO.getPermission(), fsnonNIO.getPermission());
+    assertEquals(644, fsNIO.getPermission().toOctal());
+    assertFalse(fsNIO.getPermission().getStickyBit());
+    assertFalse(fsnonNIO.getPermission().getStickyBit());
+
+    //
+    // test sticky bit
+    // unfortunately, cannot be done in Windows environments
+    //
+    if (!Shell.WINDOWS) {
+      //
+      // add sticky bit
+      //
+      StatUtils.setPermissionFromProcess("1644", file.getPath());
+      fsNIO.loadPermissionInfoByNativeIO();
+      fsnonNIO.loadPermissionInfoByNonNativeIO();
+      assertEquals(fsNIO.getPermission(), fsnonNIO.getPermission());
+      assertEquals(1644, fsNIO.getPermission().toOctal());
+      assertEquals(true, fsNIO.getPermission().getStickyBit());
+      assertEquals(true, fsnonNIO.getPermission().getStickyBit());
+
+      //
+      // remove sticky bit
+      //
+      StatUtils.setPermissionFromProcess("-t", file.getPath());
+      fsNIO.loadPermissionInfoByNativeIO();
+      fsnonNIO.loadPermissionInfoByNonNativeIO();
+      assertEquals(fsNIO.getPermission(), fsnonNIO.getPermission());
+      assertEquals(644, fsNIO.getPermission().toOctal());
+      assertEquals(false, fsNIO.getPermission().getStickyBit());
+      assertEquals(false, fsnonNIO.getPermission().getStickyBit());
+    }
+  }
+
 }

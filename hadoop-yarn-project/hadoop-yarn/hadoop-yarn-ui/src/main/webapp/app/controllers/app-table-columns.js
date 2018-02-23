@@ -34,41 +34,47 @@ export default Ember.Controller.extend({
           headerTitle: 'Application ID',
           contentPath: 'id',
           cellComponentName: 'em-table-linked-cell',
-          minWidth: "250px",
+          minWidth: "280px",
+          facetType: null,
           getCellContent: function(row) {
             return {
               displayText: row.id,
-              href: `#/yarn-app/${row.id}/info`
+              href: `#/yarn-app/${row.id}/attempts`
             };
           }
       }, {
           id: 'appType',
           headerTitle: 'Application Type',
           contentPath: 'applicationType',
+          facetType: null,
       }, {
           id: 'appName',
           headerTitle: 'Application Name',
+          cellComponentName: 'em-table-tooltip-text',
           contentPath: 'appName',
+          facetType: null,
       }, {
           id: 'appUsr',
           headerTitle: 'User',
           contentPath: 'user',
           minWidth: "50px"
       }, {
+        id: 'state',
+        headerTitle: 'State',
+        contentPath: 'state',
+        cellComponentName: 'em-table-simple-status-cell',
+        minWidth: "50px"
+      }, {
           id: 'queue',
           headerTitle: 'Queue',
+          cellComponentName: 'em-table-tooltip-text',
           contentPath: 'queue',
-      }, {
-          id: 'state',
-          headerTitle: 'State',
-          contentPath: 'state',
-          cellComponentName: 'em-table-status-cell',
-          minWidth: "50px"
       }, {
           id: 'progress',
           headerTitle: 'Progress',
           contentPath: 'progress',
           cellComponentName: 'em-table-progress-cell',
+          facetType: null,
           cellDefinition: {
             valueMax: 100
           }
@@ -76,10 +82,12 @@ export default Ember.Controller.extend({
           id: 'stTime',
           headerTitle: 'Start Time',
           contentPath: 'startTime',
+          facetType: null,
       }, {
           id: 'elTime',
           headerTitle: 'Elapsed Time',
           contentPath: 'elapsedTime',
+          facetType: null,
           cellDefinition: {
             type: "duration"
           }
@@ -87,6 +95,7 @@ export default Ember.Controller.extend({
           id: 'finishTime',
           headerTitle: 'Finished Time',
           contentPath: 'validatedFinishedTs',
+          facetType: null,
           observePath: true
       }, {
           id: 'priority',
@@ -108,33 +117,38 @@ export default Ember.Controller.extend({
       headerTitle: 'Service Name',
       contentPath: 'appName',
       minWidth: "200px",
+      facetType: null,
       cellComponentName: 'em-table-linked-cell',
       getCellContent: function(row) {
         return {
           displayText: row.get('appName'),
-          href: `#/yarn-app/${row.id}/info?service=${row.get('appName')}`
+          href: `#/yarn-app/${row.id}/components?service=${row.get('appName')}`
         };
       }
     }, {
       id: 'appId',
       headerTitle: 'Application ID',
       contentPath: 'id',
+      facetType: null,
+      cellComponentName: 'em-table-tooltip-text',
       minWidth: "250px"
     }, {
       id: 'state',
       headerTitle: 'State',
       contentPath: 'state',
-      cellComponentName: 'em-table-status-cell',
+      cellComponentName: 'em-table-simple-status-cell',
       minWidth: "50px"
     }, {
       id: 'cluster',
       headerTitle: '%Cluster',
       contentPath: 'clusterUsagePercentage',
+      facetType: null,
       observePath: true
     }, {
       id: 'elTime',
       headerTitle: 'Elapsed Time',
       contentPath: 'elapsedTime',
+      facetType: null,
       cellDefinition: {
         type: "duration"
       },
@@ -143,19 +157,23 @@ export default Ember.Controller.extend({
         id: 'appUsr',
         headerTitle: 'User',
         contentPath: 'user',
+        facetType: null,
         minWidth: "50px"
     }, {
         id: 'queue',
         headerTitle: 'Queue',
         contentPath: 'queue',
+        cellComponentName: 'em-table-tooltip-text',
     }, {
       id: 'stTime',
       headerTitle: 'Started Time',
       contentPath: 'startTime',
+      facetType: null,
     }, {
       id: 'finishTime',
       headerTitle: 'Finished Time',
       contentPath: 'validatedFinishedTs',
+      facetType: null,
       observePath: true
     });
     return ColumnDef.make(colums);

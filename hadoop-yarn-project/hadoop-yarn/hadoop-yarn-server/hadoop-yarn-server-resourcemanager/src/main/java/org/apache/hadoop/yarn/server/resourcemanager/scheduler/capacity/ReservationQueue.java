@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * {@link ReservationSystem}
  *
  */
-public class ReservationQueue extends LeafQueue {
+public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(ReservationQueue.class);
@@ -75,37 +75,6 @@ public class ReservationQueue extends LeafQueue {
     }
   }
 
-  /**
-   * This methods to change capacity for a queue and adjusts its
-   * absoluteCapacity
-   * 
-   * @param entitlement the new entitlement for the queue (capacity,
-   *          maxCapacity, etc..)
-   * @throws SchedulerDynamicEditException
-   */
-  public void setEntitlement(QueueEntitlement entitlement)
-      throws SchedulerDynamicEditException {
-    try {
-      writeLock.lock();
-      float capacity = entitlement.getCapacity();
-      if (capacity < 0 || capacity > 1.0f) {
-        throw new SchedulerDynamicEditException(
-            "Capacity demand is not in the [0,1] range: " + capacity);
-      }
-      setCapacity(capacity);
-      setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
-      // note: we currently set maxCapacity to capacity
-      // this might be revised later
-      setMaxCapacity(entitlement.getMaxCapacity());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("successfully changed to " + capacity + " for queue " + this
-            .getQueueName());
-      }
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
   private void updateQuotas(int userLimit, float userLimitFactor,
       int maxAppsForReservation, int maxAppsPerUserForReservation) {
     setUserLimit(userLimit);
@@ -115,8 +84,8 @@ public class ReservationQueue extends LeafQueue {
   }
 
   @Override
-  protected void setupConfigurableCapacities() {
-    CSQueueUtils.updateAndCheckCapacitiesByLabel(getQueuePath(),
-        queueCapacities, parent == null ? null : parent.getQueueCapacities());
+  protected void setupConfigurableCapacities(CapacitySchedulerConfiguration
+      configuration) {
+    super.setupConfigurableCapacities(queueCapacities);
   }
 }

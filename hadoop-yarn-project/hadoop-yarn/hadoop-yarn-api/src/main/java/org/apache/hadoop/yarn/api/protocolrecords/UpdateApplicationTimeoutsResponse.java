@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -43,4 +44,22 @@ public abstract class UpdateApplicationTimeoutsResponse {
         Records.newRecord(UpdateApplicationTimeoutsResponse.class);
     return response;
   }
+
+  /**
+   * Get <code>ApplicationTimeouts</code> of the application. Timeout value is
+   * in ISO8601 standard with format <b>yyyy-MM-dd'T'HH:mm:ss.SSSZ</b>.
+   * @return all <code>ApplicationTimeouts</code> of the application.
+   */
+  public abstract Map<ApplicationTimeoutType, String> getApplicationTimeouts();
+
+  /**
+   * Set the <code>ApplicationTimeouts</code> for the application. Timeout value
+   * is absolute. Timeout value should meet ISO8601 format. Support ISO8601
+   * format is <b>yyyy-MM-dd'T'HH:mm:ss.SSSZ</b>. All pre-existing Map entries
+   * are cleared before adding the new Map.
+   * @param applicationTimeouts <code>ApplicationTimeouts</code>s for the
+   *          application
+   */
+  public abstract void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, String> applicationTimeouts);
 }
