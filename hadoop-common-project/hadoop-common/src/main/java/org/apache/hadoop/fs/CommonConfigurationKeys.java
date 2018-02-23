@@ -353,17 +353,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
     "hadoop.user.group.metrics.percentiles.intervals";
 
-  /* When creating UGI with UserGroupInformation(Subject), treat the passed
-   * subject external if set to true, and assume the owner of the subject
-   * should do the credential renewal.
-   *
-   * This is a temporary config to solve the compatibility issue with
-   * HADOOP-13558 and HADOOP-13805 fix, see the jiras for discussions.
-   */
-  public static final String HADOOP_TREAT_SUBJECT_EXTERNAL_KEY =
-      "hadoop.treat.subject.external";
-  public static final boolean HADOOP_TREAT_SUBJECT_EXTERNAL_DEFAULT = false;
-
   public static final String RPC_METRICS_QUANTILE_ENABLE =
       "rpc.metrics.quantile.enable";
   public static final boolean RPC_METRICS_QUANTILE_ENABLE_DEFAULT = false;
