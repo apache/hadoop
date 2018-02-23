@@ -3800,6 +3800,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.enable.replica.trash</name>
+  <value>false</value>
+  <description>
+    If true, datanode replica trash feature is enabled. This will move the
+    blocks invalidated to replica-trash folder under block pool directory,
+    which will help in the recovery of accidentally deleted data.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
   <value>50</value>
   <description>

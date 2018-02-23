@@ -1079,6 +1079,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_DEFAULT =
       false;
 
+  // Datanode Replica Trash
+  public static final String DFS_DATANODE_ENABLE_REPLICA_TRASH_KEY =
+      "dfs.datanode.enable.replica.trash";
+  public static final boolean DFS_DATANODE_ENABLE_REPLICA_TRASH_DEFAULT = false;
+
   // Slow io warning log threshold settings for dfsclient and datanode.
   public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
     "dfs.datanode.slow.io.warning.threshold.ms";

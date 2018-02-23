@@ -198,6 +198,7 @@ public class StorageLocation
 
   /**
    * Create physical directory for block pools on the data node.
+   * If replica trash is enabled, create replica-trash folder.
    *
    * @param blockPoolID
    *          the block pool id
@@ -223,8 +224,19 @@ public class StorageLocation
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
     File data = new File(getBpURI(blockPoolID, Storage.STORAGE_DIR_CURRENT));
+
+    boolean replicaTrashEnable = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_ENABLE_REPLICA_TRASH_KEY,
+        DFSConfigKeys.DFS_DATANODE_ENABLE_REPLICA_TRASH_DEFAULT);
+
     try {
       DiskChecker.checkDir(localFS, new Path(data.toURI()), permission);
+      if (replicaTrashEnable) {
+        File replicaTrash = new File(data,
+            DataStorage.STORAGE_DIR_REPLICA_TRASH);
+        DiskChecker.checkDir(localFS,
+            new Path(replicaTrash.toURI()), permission);
+      }
     } catch (IOException e) {
       DataStorage.LOG.warn("Invalid directory in: " + data.getCanonicalPath() +
           ": " + e.getMessage());

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -40,6 +41,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
 
 public class TestDataStorage {
   private final static String DEFAULT_BPID = "bp-0";
@@ -51,12 +53,13 @@ public class TestDataStorage {
   private final static StartupOption START_OPT = StartupOption.REGULAR;
 
   private DataNode mockDN = Mockito.mock(DataNode.class);
+  private Configuration conf;
   private NamespaceInfo nsInfo;
   private DataStorage storage;
 
   @Before
   public void setUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     storage = new DataStorage();
     nsInfo = new NamespaceInfo(0, CLUSTER_ID, DEFAULT_BPID, CTIME,
         BUILD_VERSION, SOFTWARE_VERSION);
@@ -129,6 +132,56 @@ public class TestDataStorage {
     assertTrue(bpSd.getCurrentDir().isDirectory());
     assertTrue(bpSd.getVersionFile().isFile());
   }
+
+
+  @Test
+  public void testReplicaTrashDirectory() throws IOException {
+    final int numLocations = 3;
+    final int numNamespace = 3;
+    List<StorageLocation> locations = createStorageLocations(numLocations);
+
+    // Add volumes for multiple namespaces.
+    List<NamespaceInfo> namespaceInfos = createNamespaceInfos(numNamespace);
+
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ENABLE_REPLICA_TRASH_KEY,
+        true);
+    mockDN.setConf(conf);
+
+    for (NamespaceInfo ni : namespaceInfos) {
+      storage.addStorageLocations(mockDN, ni, locations, START_OPT);
+      for (StorageLocation sl : locations) {
+        File currentDir = new File(new File(sl.getUri()),
+            Storage.STORAGE_DIR_CURRENT);
+        File bpDir = new File(currentDir, ni.getBlockPoolID());
+        File replicaTrashDir = new File(bpDir, DataStorage
+            .STORAGE_DIR_REPLICA_TRASH);
+        assertTrue(replicaTrashDir.isDirectory());
+      }
+    }
+  }
+
+  @Test
+  public void testNoReplicaTrashDirectory() throws IOException {
+    final int numLocations = 3;
+    final int numNamespace = 3;
+    List<StorageLocation> locations = createStorageLocations(numLocations);
+
+    // Add volumes for multiple namespaces.
+    List<NamespaceInfo> namespaceInfos = createNamespaceInfos(numNamespace);
+
+    for (NamespaceInfo ni : namespaceInfos) {
+      storage.addStorageLocations(mockDN, ni, locations, START_OPT);
+      for (StorageLocation sl : locations) {
+        File currentDir = new File(new File(sl.getUri()),
+            Storage.STORAGE_DIR_CURRENT);
+        File bpDir = new File(currentDir, ni.getBlockPoolID());
+        File replicaTrashDir = new File(bpDir, DataStorage
+            .STORAGE_DIR_REPLICA_TRASH);
+        assertFalse(replicaTrashDir.exists());
+      }
+    }
+  }
+
 
   @Test
   public void testAddStorageDirectories() throws IOException,

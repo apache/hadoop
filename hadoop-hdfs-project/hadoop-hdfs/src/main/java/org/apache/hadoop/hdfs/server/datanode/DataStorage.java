@@ -81,6 +81,7 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_LAZY_PERSIST = "lazypersist";
   public final static String STORAGE_DIR_TMP = "tmp";
+  public final static String STORAGE_DIR_REPLICA_TRASH = "replica-trash";
 
   /**
    * Set of bpids for which 'trash' is currently enabled.
@@ -333,7 +334,7 @@ public class DataStorage extends Storage {
     VolumeBuilder builder =
         new VolumeBuilder(this, sd);
     for (NamespaceInfo nsInfo : nsInfos) {
-      location.makeBlockPoolDir(nsInfo.getBlockPoolID(), null);
+      location.makeBlockPoolDir(nsInfo.getBlockPoolID(), datanode.getConf());
 
       final BlockPoolSliceStorage bpStorage = getBlockPoolSliceStorage(nsInfo);
       final List<StorageDirectory> dirs = bpStorage.loadBpStorageDirectories(
@@ -448,7 +449,7 @@ public class DataStorage extends Storage {
     final List<StorageDirectory> success = Lists.newArrayList();
     final List<UpgradeTask> tasks = Lists.newArrayList();
     for (StorageLocation dataDir : dataDirs) {
-      dataDir.makeBlockPoolDir(bpid, null);
+      dataDir.makeBlockPoolDir(bpid, datanode.getConf());
       try {
         final List<Callable<StorageDirectory>> callables = Lists.newArrayList();
         final List<StorageDirectory> dirs = bpStorage.recoverTransitionRead(
