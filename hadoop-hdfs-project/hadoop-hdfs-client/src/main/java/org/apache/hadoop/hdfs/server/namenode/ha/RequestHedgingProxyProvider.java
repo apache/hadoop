@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * per-se. It constructs a wrapper proxy that sends the request to ALL
  * underlying proxies simultaneously. It assumes the in an HA setup, there will
  * be only one Active, and the active should respond faster than any configured
- * standbys. Once it recieve a response from any one of the configred proxies,
+ * standbys. Once it receive a response from any one of the configured proxies,
  * outstanding requests to other proxies are immediately cancelled.
  */
 public class RequestHedgingProxyProvider<T> extends
