@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -25,11 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
@@ -70,7 +70,7 @@ public class PreemptableResourceCalculator
    * @param totalPreemptionAllowed total amount of preemption we allow
    * @param tot_guarant the amount of capacity assigned to this pool of queues
    */
-  private void computeIdealResourceDistribution(ResourceCalculator rc,
+  protected void computeIdealResourceDistribution(ResourceCalculator rc,
       List<TempQueuePerPartition> queues, Resource totalPreemptionAllowed,
       Resource tot_guarant) {
 
@@ -138,14 +138,13 @@ public class PreemptableResourceCalculator
   /**
    * This method recursively computes the ideal assignment of resources to each
    * level of the hierarchy. This ensures that leafs that are over-capacity but
-   * with parents within capacity will not be preemptionCandidates. Preemptions are allowed
-   * within each subtree according to local over/under capacity.
+   * with parents within capacity will not be preemptionCandidates. Preemptions
+   * are allowed within each subtree according to local over/under capacity.
    *
    * @param root the root of the cloned queue hierachy
    * @param totalPreemptionAllowed maximum amount of preemption allowed
-   * @return a list of leaf queues updated with preemption targets
    */
-  private void recursivelyComputeIdealAssignment(
+  protected void recursivelyComputeIdealAssignment(
       TempQueuePerPartition root, Resource totalPreemptionAllowed) {
     if (root.getChildren() != null &&
         root.getChildren().size() > 0) {
@@ -242,7 +241,7 @@ public class PreemptableResourceCalculator
 
       // compute the ideal distribution of resources among queues
       // updates cloned queues state accordingly
-      tRoot.idealAssigned = tRoot.getGuaranteed();
+      tRoot.initializeRootIdealWithGuarangeed();
       recursivelyComputeIdealAssignment(tRoot, totalPreemptionAllowed);
     }
 
