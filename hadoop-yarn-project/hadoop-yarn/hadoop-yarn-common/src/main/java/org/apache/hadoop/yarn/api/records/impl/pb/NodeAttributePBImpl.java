@@ -120,7 +120,13 @@ public class NodeAttributePBImpl extends NodeAttribute {
 
   @Override
   public int hashCode() {
-    return getProto().hashCode();
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((getAttributePrefix() == null) ? 0
+        : getAttributePrefix().hashCode());
+    result = prime * result
+        + ((getAttributeName() == null) ? 0 : getAttributeName().hashCode());
+    return result;
   }
 
   @Override
@@ -133,13 +139,10 @@ public class NodeAttributePBImpl extends NodeAttribute {
     }
     if (obj instanceof NodeAttribute) {
       NodeAttribute other = (NodeAttribute) obj;
+      if (!compare(getAttributePrefix(), other.getAttributePrefix())) {
+        return false;
+      }
       if (!compare(getAttributeName(), other.getAttributeName())) {
-        return false;
-      }
-      if (!compare(getAttributeValue(), other.getAttributeValue())) {
-        return false;
-      }
-      if (!compare(getAttributeType(), other.getAttributeType())) {
         return false;
       }
       return true;
