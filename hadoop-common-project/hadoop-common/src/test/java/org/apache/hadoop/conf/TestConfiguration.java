@@ -26,11 +26,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2339,22 +2342,29 @@ public class TestConfiguration {
   @Test
   public void testGetAllPropertiesByTags() throws Exception {
 
-    out = new BufferedWriter(new FileWriter(CONFIG_CORE));
-    startConfig();
-    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG");
-    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,REQUIRED");
-    appendPropertyByTag("dfs.namenode.logging.level", "INFO", "CLIENT,DEBUG");
-    endConfig();
+    try{
+      out = new BufferedWriter(new FileWriter(CONFIG_CORE));
+      startConfig();
+      appendProperty("hadoop.system.tags", "YARN,HDFS,NAMENODE");
+      appendProperty("hadoop.custom.tags", "MYCUSTOMTAG");
+      appendPropertyByTag("dfs.cblock.trace.io", "false", "YARN");
+      appendPropertyByTag("dfs.replication", "1", "HDFS");
+      appendPropertyByTag("dfs.namenode.logging.level", "INFO", "NAMENODE");
+      appendPropertyByTag("dfs.random.key", "XYZ", "MYCUSTOMTAG");
+      endConfig();
 
-    Path fileResource = new Path(CONFIG_CORE);
-    conf.addResource(fileResource);
-    conf.getProps();
+      Path fileResource = new Path(CONFIG_CORE);
+      conf.addResource(fileResource);
+      conf.getProps();
 
-    List<PropertyTag> tagList = new ArrayList<>();
-    tagList.add(CorePropertyTag.REQUIRED);
-    tagList.add(CorePropertyTag.PERFORMANCE);
-    tagList.add(CorePropertyTag.DEBUG);
-    tagList.add(CorePropertyTag.CLIENT);
+    } finally {
+      out.close();
+    }
+    System.out.println(Files.readAllLines(Paths.get(CONFIG_CORE)));
+    List<String> tagList = new ArrayList<>();
+    tagList.add("YARN");
+    tagList.add("HDFS");
+    tagList.add("NAMENODE");
 
     Properties properties = conf.getAllPropertiesByTags(tagList);
     String[] sources = conf.getPropertySources("dfs.replication");
@@ -2366,58 +2376,45 @@ public class TestConfiguration {
     assertEq(true, properties.containsKey("dfs.replication"));
     assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
     assertEq(false, properties.containsKey("namenode.host"));
+
+    properties = conf.getAllPropertiesByTag("DEBUG");
+    assertEq(0, properties.size());
+    assertEq(false, properties.containsKey("dfs.namenode.logging.level"));
+    assertEq(true, conf.isPropertyTag("YARN"));
+    assertEq(true, conf.isPropertyTag("HDFS"));
+    assertEq(true, conf.isPropertyTag("NAMENODE"));
+    assertEq(true, conf.isPropertyTag("MYCUSTOMTAG"));
+    assertEq(false, conf.isPropertyTag("CMYCUSTOMTAG2"));
   }
 
   @Test
-  public void testGetAllPropertiesWithSourceByTags() throws Exception {
+  public void testInvalidTags() throws Exception {
+    PrintStream output = System.out;
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
 
-    out = new BufferedWriter(new FileWriter(CONFIG));
-    startConfig();
-    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG",
-        "hdfs-default.xml", "core-site.xml");
-    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,HDFS",
-        "hdfs-default.xml");
-    appendPropertyByTag("yarn.resourcemanager.work-preserving-recovery"
-        + ".enabled", "INFO", "CLIENT,DEBUG", "yarn-default.xml", "yarn-site"
-        + ".xml");
-    endConfig();
+      out = new BufferedWriter(new FileWriter(CONFIG));
+      startConfig();
+      appendPropertyByTag("dfs.cblock.trace.io", "false", "MYOWNTAG,TAG2");
+      endConfig();
 
-    Path fileResource = new Path(CONFIG);
-    conf.addResource(fileResource);
-    conf.getProps();
+      Path fileResource = new Path(CONFIG);
+      conf.addResource(fileResource);
+      conf.getProps();
 
-    List<PropertyTag> tagList = new ArrayList<>();
-    tagList.add(CorePropertyTag.REQUIRED);
+      List<String> tagList = new ArrayList<>();
+      tagList.add("REQUIRED");
+      tagList.add("MYOWNTAG");
+      tagList.add("TAG2");
 
-    Properties properties;
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertNotEquals(3, properties.size());
-
-    tagList.add(HDFSPropertyTag.DEBUG);
-    tagList.add(YarnPropertyTag.CLIENT);
-    tagList.add(HDFSPropertyTag.PERFORMANCE);
-    tagList.add(HDFSPropertyTag.HDFS);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(3, properties.size());
-
-    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(true, properties.containsKey("dfs.replication"));
-    assertEq(true, properties
-        .containsKey("yarn.resourcemanager.work-preserving-recovery.enabled"));
-    assertEq(false, properties.containsKey("namenode.host"));
-
-    tagList.clear();
-    tagList.add(HDFSPropertyTag.DEBUG);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(false, properties.containsKey("yarn.resourcemanager"
-        + ".work-preserving-recovery"));
-
-    tagList.clear();
-    tagList.add(YarnPropertyTag.DEBUG);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(false, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(true, properties.containsKey("yarn.resourcemanager"
-        + ".work-preserving-recovery.enabled"));
+      Properties properties = conf.getAllPropertiesByTags(tagList);
+      assertEq(0, properties.size());
+      assertFalse(properties.containsKey("dfs.cblock.trace.io"));
+      assertFalse(bytes.toString().contains("Invalid tag "));
+      assertFalse(bytes.toString().contains("Tag"));
+    } finally {
+      System.setOut(output);
+    }
   }
 }
