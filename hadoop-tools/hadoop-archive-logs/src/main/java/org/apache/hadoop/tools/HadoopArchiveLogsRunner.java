@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -65,6 +66,9 @@ public class HadoopArchiveLogsRunner implements Tool {
 
   private JobConf conf;
 
+  @VisibleForTesting
+  HadoopArchives hadoopArchives;
+
   private static final FsPermission HAR_DIR_PERM =
       new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE, FsAction.NONE);
   private static final FsPermission HAR_INNER_FILES_PERM =
@@ -72,6 +76,7 @@ public class HadoopArchiveLogsRunner implements Tool {
 
   public HadoopArchiveLogsRunner(Configuration conf) {
     setConf(conf);
+    hadoopArchives = new HadoopArchives(conf);
   }
 
   public static void main(String[] args) {
@@ -132,10 +137,10 @@ public class HadoopArchiveLogsRunner implements Tool {
     conf.set("mapreduce.framework.name", "local");
     // Set the umask so we get 640 files and 750 dirs
     conf.set("fs.permissions.umask-mode", "027");
-    HadoopArchives ha = new HadoopArchives(conf);
+    String harName = appId + ".har";
     String[] haArgs = {
         "-archiveName",
-        appId + ".har",
+        harName,
         "-p",
         remoteAppLogDir,
         "*",
@@ -146,15 +151,26 @@ public class HadoopArchiveLogsRunner implements Tool {
       sb.append("\n\t").append(haArg);
     }
     LOG.info(sb.toString());
-    ha.run(haArgs);
+    int exitCode = hadoopArchives.run(haArgs);
+    if (exitCode != 0) {
+      LOG.warn("Failed to create archives for " + appId);
+      return -1;
+    }
 
     FileSystem fs = null;
     // Move har file to correct location and delete original logs
     try {
       fs = FileSystem.get(conf);
-      Path harDest = new Path(remoteAppLogDir, appId + ".har");
+      Path harPath = new Path(workingDir, harName);
+      if (!fs.exists(harPath) ||
+          fs.listStatus(harPath).length == 0) {
+        LOG.warn("The created archive \"" + harName +
+            "\" is missing or empty.");
+        return -1;
+      }
+      Path harDest = new Path(remoteAppLogDir, harName);
       LOG.info("Moving har to original location");
-      fs.rename(new Path(workingDir, appId + ".har"), harDest);
+      fs.rename(harPath, harDest);
       LOG.info("Deleting original logs");
       for (FileStatus original : fs.listStatus(new Path(remoteAppLogDir),
           new PathFilter() {
