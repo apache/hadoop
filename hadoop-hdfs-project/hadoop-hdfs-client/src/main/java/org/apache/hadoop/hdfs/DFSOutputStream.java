@@ -852,7 +852,19 @@ public class DFSOutputStream extends FSOutputSummer
 
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      getStreamer().getLastException().check(true);
+      LOG.debug("Closing an already closed stream. [Stream:{}, streamer:{}]",
+          closed, getStreamer().streamerClosed());
+      try {
+        getStreamer().getLastException().check(true);
+      } catch (IOException ioe) {
+        cleanupAndRethrowIOException(ioe);
+      } finally {
+        if (!closed) {
+          // If stream is not closed but streamer closed, clean up the stream.
+          // Most importantly, end the file lease.
+          closeThreads(true);
+        }
+      }
       return;
     }
 
@@ -867,14 +879,12 @@ public class DFSOutputStream extends FSOutputSummer
         setCurrentPacketToEmpty();
       }
 
-      flushInternal();             // flush all data to Datanodes
-      // get last block before destroying the streamer
-      ExtendedBlock lastBlock = getStreamer().getBlock();
-
-      try (TraceScope ignored =
-               dfsClient.getTracer().newScope("completeFile")) {
-        completeFile(lastBlock);
+      try {
+        flushInternal();             // flush all data to Datanodes
+      } catch (IOException ioe) {
+        cleanupAndRethrowIOException(ioe);
       }
+      completeFile();
     } catch (ClosedChannelException ignored) {
     } finally {
       // Failures may happen when flushing data.
@@ -884,6 +894,43 @@ public class DFSOutputStream extends FSOutputSummer
       // calls setClosed() in the finally block.
       closeThreads(true);
     }
+  }
+
+  private void completeFile() throws IOException {
+    // get last block before destroying the streamer
+    ExtendedBlock lastBlock = getStreamer().getBlock();
+    try (TraceScope ignored =
+        dfsClient.getTracer().newScope("completeFile")) {
+      completeFile(lastBlock);
+    }
+  }
+
+  /**
+   * Determines whether an IOException thrown needs extra cleanup on the stream.
+   * Space quota exceptions will be thrown when getting new blocks, so the
+   * open HDFS file need to be closed.
+   *
+   * @param ioe the IOException
+   * @return whether the stream needs cleanup for the given IOException
+   */
+  private boolean exceptionNeedsCleanup(IOException ioe) {
+    return ioe instanceof DSQuotaExceededException
+        || ioe instanceof QuotaByStorageTypeExceededException;
+  }
+
+  private void cleanupAndRethrowIOException(IOException ioe)
+      throws IOException {
+    if (exceptionNeedsCleanup(ioe)) {
+      final MultipleIOException.Builder b = new MultipleIOException.Builder();
+      b.add(ioe);
+      try {
+        completeFile();
+      } catch (IOException e) {
+        b.add(e);
+        throw b.build();
+      }
+    }
+    throw ioe;
   }
 
   // should be called holding (this) lock since setTestFilename() may
