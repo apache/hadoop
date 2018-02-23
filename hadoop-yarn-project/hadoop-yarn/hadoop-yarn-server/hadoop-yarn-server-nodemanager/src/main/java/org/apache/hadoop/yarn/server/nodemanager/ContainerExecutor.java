@@ -361,7 +361,8 @@ public abstract class ContainerExecutor implements Configurable {
 
     if (environment != null) {
       sb.echo("Setting up env variables");
-      for (Map.Entry<String, String> env : environment.entrySet()) {
+      for (Map.Entry<String, String> env :
+          sb.orderEnvByDependencies(environment).entrySet()) {
         sb.env(env.getKey(), env.getValue());
       }
     }
