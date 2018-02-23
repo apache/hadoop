@@ -276,6 +276,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.conversion.rule</name>
+  <value>none</value>
+  <description>
+    The rule is applied on the group names received from LDAP when
+    RuleBasedLdapGroupsMapping is configured.
+    Supported rules are "to_upper", "to_lower" and "none".
+    to_upper: This will convert all the group names to uppercase.
+    to_lower: This will convert all the group names to lowercase.
+    none: This will retain the source formatting, this is default value.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.credential.clear-text-fallback</name>
   <value>true</value>
   <description>
