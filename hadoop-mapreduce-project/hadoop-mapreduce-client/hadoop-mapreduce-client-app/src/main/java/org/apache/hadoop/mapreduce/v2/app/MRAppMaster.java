@@ -1255,7 +1255,7 @@ public class MRAppMaster extends CompositeService {
 
     boolean initFailed = false;
     if (!errorHappenedShutDown) {
-      // create a job event for job intialization
+      // create a job event for job initialization
       JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
       // Send init to the job (this does NOT trigger job execution)
       // This is a synchronous call, not an event through dispatcher. We want

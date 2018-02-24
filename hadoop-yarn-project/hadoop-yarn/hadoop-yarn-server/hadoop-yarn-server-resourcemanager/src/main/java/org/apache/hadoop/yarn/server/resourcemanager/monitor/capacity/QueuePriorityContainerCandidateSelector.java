@@ -117,7 +117,7 @@ public class QueuePriorityContainerCandidateSelector
     return list;
   }
 
-  private void intializePriorityDigraph() {
+  private void initializePriorityDigraph() {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initializing priority preemption directed graph:");
     }
@@ -383,7 +383,7 @@ public class QueuePriorityContainerCandidateSelector
     // Initialize digraph from queues
     // TODO (wangda): only do this when queue refreshed.
     priorityDigraph.clear();
-    intializePriorityDigraph();
+    initializePriorityDigraph();
 
     // When all queues are set to same priority, or priority is not respected,
     // direct return.
