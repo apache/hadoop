@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -87,6 +88,11 @@ public class RequestHedgingProxyProvider<T> extends
         // Optimization : if only 2 proxies are configured and one had failed
         // over, then we dont need to create a threadpool etc.
         targetProxies.remove(toIgnore);
+        if (targetProxies.size() == 0) {
+          LOG.trace("No valid proxies left");
+          throw new RemoteException(IOException.class.getName(),
+              "No valid proxies left. All NameNode proxies have failed over.");
+        }
         if (targetProxies.size() == 1) {
           ProxyInfo<T> proxyInfo = targetProxies.values().iterator().next();
           try {
