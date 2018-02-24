@@ -96,6 +96,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1315,6 +1316,20 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.RENAMESNAPSHOT;
     new FsPathRunner(op, path, new OldSnapshotNameParam(snapshotOldName),
         new SnapshotNameParam(snapshotNewName)).run();
+  }
+
+  public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+      final String fromSnapshot, final String toSnapshot) throws IOException {
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
+    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
+    return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
+        new OldSnapshotNameParam(fromSnapshot),
+        new SnapshotNameParam(toSnapshot)) {
+      @Override
+      SnapshotDiffReport decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toSnapshotDiffReport(json);
+      }
+    }.run();
   }
 
   @Override

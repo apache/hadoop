@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -922,6 +923,10 @@ public class NamenodeWebHdfsMethods {
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
           final FsActionParam fsAction,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -932,8 +937,9 @@ public class NamenodeWebHdfsMethods {
           final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
-        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService, noredirect, startAfter);
+        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
+        fsAction, snapshotName, oldSnapshotName, tokenKind, tokenService,
+        noredirect, startAfter);
   }
 
   /** Handle HTTP GET request. */
@@ -968,6 +974,10 @@ public class NamenodeWebHdfsMethods {
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
           final FsActionParam fsAction,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -980,15 +990,15 @@ public class NamenodeWebHdfsMethods {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService, startAfter);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-          return get(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
-              xattrNames, xattrEncoding, excludeDatanodes, fsAction, tokenKind,
-              tokenService, noredirect, startAfter);
+        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
+            op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
+            excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+            tokenKind, tokenService, noredirect, startAfter);
       }
     });
   }
@@ -1015,6 +1025,8 @@ public class NamenodeWebHdfsMethods {
       final XAttrEncodingParam xattrEncoding,
       final ExcludeDatanodesParam excludeDatanodes,
       final FsActionParam fsAction,
+      final SnapshotNameParam snapshotName,
+      final OldSnapshotNameParam oldSnapshotName,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
@@ -1184,6 +1196,13 @@ public class NamenodeWebHdfsMethods {
       }
       return Response.ok(serverDefaultsResponse)
           .type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTDIFF: {
+      SnapshotDiffReport diffReport =
+          cp.getSnapshotDiffReport(fullpath, oldSnapshotName.getValue(),
+              snapshotName.getValue());
+      final String js = JsonUtil.toJsonString(diffReport);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
