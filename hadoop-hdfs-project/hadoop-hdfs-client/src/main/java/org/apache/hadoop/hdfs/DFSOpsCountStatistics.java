@@ -87,6 +87,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     SET_STORAGE_POLICY("op_set_storagePolicy"),
     SET_TIMES(CommonStatisticNames.OP_SET_TIMES),
     SET_XATTR("op_set_xattr"),
+    GET_SNAPSHOT_DIFF("op_get_snapshot_diff"),
     TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
     UNSET_STORAGE_POLICY("op_unset_storage_policy");
 

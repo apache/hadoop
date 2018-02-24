@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -82,6 +83,9 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -579,7 +583,7 @@ public class TestWebHDFS {
   }
 
   /**
-   * Test snapshot creation through WebHdfs
+   * Test snapshot creation through WebHdfs.
    */
   @Test
   public void testWebHdfsCreateSnapshot() throws Exception {
@@ -658,6 +662,72 @@ public class TestWebHDFS {
       assertFalse(webHdfs.exists(s1path));
       webHdfs.deleteSnapshot(foo, spath.getName());
       assertFalse(webHdfs.exists(spath));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test snapshot diff through WebHdfs
+   */
+  @Test
+  public void testWebHdfsSnapshotDiff() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      final Path foo = new Path("/foo");
+      dfs.mkdirs(foo);
+      Path file0 = new Path(foo, "file0");
+      DFSTestUtil.createFile(dfs, file0, 100, (short) 1, 0);
+      Path file1 = new Path(foo, "file1");
+      DFSTestUtil.createFile(dfs, file1, 100, (short) 1, 0);
+      Path file2 = new Path(foo, "file2");
+      DFSTestUtil.createFile(dfs, file2, 100, (short) 1, 0);
+
+      dfs.allowSnapshot(foo);
+      webHdfs.createSnapshot(foo, "s1");
+      final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
+      Assert.assertTrue(webHdfs.exists(s1path));
+
+      Path file3 = new Path(foo, "file3");
+      DFSTestUtil.createFile(dfs, file3, 100, (short) 1, 0);
+      DFSTestUtil.appendFile(dfs, file0, 100);
+      dfs.delete(file1, false);
+      Path file4 = new Path(foo, "file4");
+      dfs.rename(file2, file4);
+
+      webHdfs.createSnapshot(foo, "s2");
+      SnapshotDiffReport diffReport =
+          webHdfs.getSnapshotDiffReport(foo, "s1", "s2");
+
+      Assert.assertEquals("/foo", diffReport.getSnapshotRoot());
+      Assert.assertEquals("s1", diffReport.getFromSnapshot());
+      Assert.assertEquals("s2", diffReport.getLaterSnapshotName());
+      DiffReportEntry entry0 =
+          new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes(""));
+      DiffReportEntry entry1 =
+          new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file0"));
+      DiffReportEntry entry2 =
+          new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file1"));
+      DiffReportEntry entry3 =
+          new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("file2"),
+              DFSUtil.string2Bytes("file4"));
+      DiffReportEntry entry4 =
+          new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file3"));
+      Assert.assertTrue(diffReport.getDiffList().contains(entry0));
+      Assert.assertTrue(diffReport.getDiffList().contains(entry1));
+      Assert.assertTrue(diffReport.getDiffList().contains(entry2));
+      Assert.assertTrue(diffReport.getDiffList().contains(entry3));
+      Assert.assertTrue(diffReport.getDiffList().contains(entry4));
+      Assert.assertEquals(diffReport.getDiffList().size(), 5);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -692,5 +694,52 @@ class JsonUtilClient {
         writePacketSize, replication, fileBufferSize,
         encryptDataTransfer, trashInterval, type, keyProviderUri,
         storagepolicyId);
+  }
+
+  public static SnapshotDiffReport toSnapshotDiffReport(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(SnapshotDiffReport.class.getSimpleName());
+    String snapshotRoot = (String) m.get("snapshotRoot");
+    String fromSnapshot = (String) m.get("fromSnapshot");
+    String toSnapshot = (String) m.get("toSnapshot");
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        toDiffList(getList(m, "diffList"));
+    return new SnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot,
+        diffList);
+  }
+
+  private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(
+      List<?> objs) {
+    if (objs == null) {
+      return null;
+    }
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        new ChunkedArrayList<>();
+    for (int i = 0; i < objs.size(); i++) {
+      diffList.add(toDiffReportEntry((Map<?, ?>) objs.get(i)));
+    }
+    return diffList;
+  }
+
+  private static SnapshotDiffReport.DiffReportEntry toDiffReportEntry(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    SnapshotDiffReport.DiffType type =
+        SnapshotDiffReport.DiffType.parseDiffType((String) json.get("type"));
+    byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
+    byte[] targetPath = toByteArray((String) json.get("targetPath"));
+    return new SnapshotDiffReport.DiffReportEntry(type, sourcePath, targetPath);
+  }
+
+  private static byte[] toByteArray(String str) {
+    if (str == null) {
+      return null;
+    }
+    return DFSUtilClient.string2Bytes(str);
   }
 }
