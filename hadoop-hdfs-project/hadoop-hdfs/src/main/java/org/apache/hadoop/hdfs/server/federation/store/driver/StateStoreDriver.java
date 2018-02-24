@@ -73,7 +73,7 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
     boolean success = initDriver();
     if (!success) {
-      LOG.error("Cannot intialize driver for {}", getDriverName());
+      LOG.error("Cannot initialize driver for {}", getDriverName());
       return false;
     }
 

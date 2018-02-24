@@ -243,7 +243,7 @@ public class TestWebHdfsDataLocality {
     NameNode nn = mock(NameNode.class);
     when(nn.getNamesystem()).thenReturn(null);
     exception.expect(IOException.class);
-    exception.expectMessage("Namesystem has not been intialized yet.");
+    exception.expectMessage("Namesystem has not been initialized yet.");
     NamenodeWebHdfsMethods.chooseDatanode(nn, "/path", PutOpParam.Op.CREATE, 0,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT, null, LOCALHOST, null);
   }
