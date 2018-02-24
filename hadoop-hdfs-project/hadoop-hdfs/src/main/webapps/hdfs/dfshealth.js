@@ -331,14 +331,14 @@
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
             'columns': [
-              { 'orderDataType': 'ng-value', 'searchable': true },
-              { 'orderDataType': 'ng-value', 'searchable': true },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num'},
-              { 'type': 'string' }
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": ""},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'type': 'string' , "defaultContent": ""}
             ]});
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
