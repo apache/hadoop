@@ -152,7 +152,7 @@ public class KMSWebApp implements ServletContextListener {
 
       kmsAudit = new KMSAudit(kmsConf);
 
-      // intializing the KeyProvider
+      // initializing the KeyProvider
       String providerString = kmsConf.get(KMSConfiguration.KEY_PROVIDER_URI);
       if (providerString == null) {
         throw new IllegalStateException("No KeyProvider has been defined");

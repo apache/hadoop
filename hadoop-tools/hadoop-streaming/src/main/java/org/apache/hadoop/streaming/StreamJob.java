@@ -154,7 +154,7 @@ public class StreamJob implements Tool {
 
   /**
    * This is the method that actually
-   * intializes the job conf and submits the job
+   * initializes the job conf and submits the job
    * to the jobtracker
    * @throws IOException
    * @deprecated use {@link #run(String[])} instead.
