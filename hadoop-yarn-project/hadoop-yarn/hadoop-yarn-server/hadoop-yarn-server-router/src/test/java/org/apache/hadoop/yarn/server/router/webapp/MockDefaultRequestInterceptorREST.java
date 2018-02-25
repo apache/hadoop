@@ -139,14 +139,14 @@ public class MockDefaultRequestInterceptorREST
     ApplicationId applicationId = ApplicationId.fromString(appId);
     if (!applicationMap.remove(applicationId)) {
       throw new ApplicationNotFoundException(
-          "Trying to kill an absent application: " + appId);
+          "Can not found Application: " + appId);
     }
 
     if (targetState == null) {
       return Response.status(Status.BAD_REQUEST).build();
     }
 
-    LOG.info("Force killing application: " + appId);
+    LOG.info("Update the status of application: " + appId);
     AppState ret = new AppState();
     ret.setState(targetState.toString());
     return Response.status(Status.OK).entity(ret).build();

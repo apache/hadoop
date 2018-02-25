@@ -184,7 +184,7 @@ public class TimelineV1DelegationTokenSecretManagerService extends
     protected void removeStoredToken(TimelineDelegationTokenIdentifier tokenId)
         throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Storing token " + tokenId.getSequenceNumber());
+        LOG.debug("removing token " + tokenId.getSequenceNumber());
       }
       try {
         if (stateStore != null) {

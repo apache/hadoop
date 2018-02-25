@@ -979,7 +979,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           RouterWebServiceUtil.mergeMetrics(metrics, metricsResponse);
         }
       } catch (Throwable e) {
-        LOG.warn("Failed to get nodes report ", e);
+        LOG.warn("Failed to get Cluster Metrics ", e);
       }
     }
 
