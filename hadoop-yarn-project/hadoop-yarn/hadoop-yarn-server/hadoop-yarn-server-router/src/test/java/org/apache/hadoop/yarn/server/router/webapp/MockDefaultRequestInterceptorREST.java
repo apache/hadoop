@@ -139,7 +139,7 @@ public class MockDefaultRequestInterceptorREST
     ApplicationId applicationId = ApplicationId.fromString(appId);
     if (!applicationMap.remove(applicationId)) {
       throw new ApplicationNotFoundException(
-          "Can not found Application: " + appId);
+          "Can not find Application: " + appId);
     }
 
     if (targetState == null) {
