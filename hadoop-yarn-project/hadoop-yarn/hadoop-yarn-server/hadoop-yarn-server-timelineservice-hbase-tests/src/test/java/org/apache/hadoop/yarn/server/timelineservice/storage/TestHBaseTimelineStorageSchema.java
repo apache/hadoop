@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -34,10 +37,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
-
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
 /**
  * Unit tests for checking different schema prefixes.
@@ -61,22 +60,24 @@ public class TestHBaseTimelineStorageSchema {
     conn = ConnectionFactory.createConnection(hbaseConf);
     Admin admin = conn.getAdmin();
 
-    TableName entityTableName = BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME);
+    TableName entityTableName = BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(entityTableName));
     assertTrue(entityTableName.getNameAsString().startsWith(
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX));
-    Table entityTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME));
+    Table entityTable = conn.getTable(BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(entityTable);
 
-    TableName flowRunTableName = BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME);
+    TableName flowRunTableName = BaseTableRW.getTableName(hbaseConf,
+        FlowRunTableRW.TABLE_NAME_CONF_NAME, FlowRunTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(flowRunTableName));
     assertTrue(flowRunTableName.getNameAsString().startsWith(
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX));
-    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table flowRunTable = conn.getTable(
+        BaseTableRW.getTableName(hbaseConf,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(flowRunTable);
   }
 
@@ -91,20 +92,22 @@ public class TestHBaseTimelineStorageSchema {
     conn = ConnectionFactory.createConnection(hbaseConf);
     Admin admin = conn.getAdmin();
 
-    TableName entityTableName = BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME);
+    TableName entityTableName = BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(entityTableName));
     assertTrue(entityTableName.getNameAsString().startsWith(prefix));
-    Table entityTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME));
+    Table entityTable = conn.getTable(BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(entityTable);
 
-    TableName flowRunTableName = BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME);
+    TableName flowRunTableName = BaseTableRW.getTableName(hbaseConf,
+        FlowRunTableRW.TABLE_NAME_CONF_NAME, FlowRunTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(flowRunTableName));
     assertTrue(flowRunTableName.getNameAsString().startsWith(prefix));
-    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table flowRunTable = conn.getTable(
+        BaseTableRW.getTableName(hbaseConf,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(flowRunTable);
 
     // create another set with a diff prefix
@@ -114,20 +117,22 @@ public class TestHBaseTimelineStorageSchema {
     hbaseConf.set(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME,
         prefix);
     DataGeneratorForTest.createSchema(hbaseConf);
-    entityTableName = BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME);
+    entityTableName = BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(entityTableName));
     assertTrue(entityTableName.getNameAsString().startsWith(prefix));
-    entityTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        EntityTable.TABLE_NAME_CONF_NAME, EntityTable.DEFAULT_TABLE_NAME));
+    entityTable = conn.getTable(BaseTableRW.getTableName(hbaseConf,
+        EntityTableRW.TABLE_NAME_CONF_NAME, EntityTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(entityTable);
 
-    flowRunTableName = BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME);
+    flowRunTableName = BaseTableRW.getTableName(hbaseConf,
+        FlowRunTableRW.TABLE_NAME_CONF_NAME, FlowRunTableRW.DEFAULT_TABLE_NAME);
     assertTrue(admin.tableExists(flowRunTableName));
     assertTrue(flowRunTableName.getNameAsString().startsWith(prefix));
-    flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    flowRunTable = conn.getTable(
+        BaseTableRW.getTableName(hbaseConf,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     assertNotNull(flowRunTable);
     hbaseConf
     .unset(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME);

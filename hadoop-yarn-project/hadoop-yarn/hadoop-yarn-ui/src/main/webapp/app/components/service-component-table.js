@@ -52,5 +52,5 @@ export default Ember.Component.extend({
     return !Ember.isNone(item);
   },
 
-  isValidCurrentComponent: Ember.computed.and('currentComponent', 'currentComponent.name', 'currentComponent.cpus', 'currentComponent.memory', 'currentComponent.numOfContainers', 'currentComponent.artifactId', 'currentComponent.launchCommand')
+  isValidCurrentComponent: Ember.computed.and('currentComponent', 'currentComponent.name', 'currentComponent.cpus', 'currentComponent.memory', 'currentComponent.numOfContainers', 'currentComponent.launchCommand')
 });

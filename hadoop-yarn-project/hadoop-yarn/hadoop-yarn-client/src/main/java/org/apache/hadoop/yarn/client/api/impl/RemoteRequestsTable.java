@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
+import org.apache.hadoop.yarn.api.records.Resource;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -33,7 +33,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ResourceRequestInfo;
-import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ProfileCapabilityComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,36 +41,34 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   private static final Logger LOG =
           LoggerFactory.getLogger(RemoteRequestsTable.class);
 
-  private ProfileCapabilityComparator resourceComparator;
-
   /**
    * Nested Iterator that iterates over just the ResourceRequestInfo
    * object.
    */
   class RequestInfoIterator implements Iterator<ResourceRequestInfo> {
-    private Iterator<Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+    private Iterator<Map<String, Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>>> iLocMap;
-    private Iterator<Map<ExecutionType, TreeMap<ProfileCapability,
+    private Iterator<Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>> iExecTypeMap;
-    private Iterator<TreeMap<ProfileCapability, ResourceRequestInfo>> iCapMap;
+    private Iterator<TreeMap<Resource, ResourceRequestInfo>> iCapMap;
     private Iterator<ResourceRequestInfo> iResReqInfo;
 
     public RequestInfoIterator(Iterator<Map<String,
-        Map<ExecutionType, TreeMap<ProfileCapability, ResourceRequestInfo>>>>
+        Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>>>
         iLocationMap) {
       this.iLocMap = iLocationMap;
       if (iLocMap.hasNext()) {
         iExecTypeMap = iLocMap.next().values().iterator();
       } else {
         iExecTypeMap =
-            new LinkedList<Map<ExecutionType, TreeMap<ProfileCapability,
+            new LinkedList<Map<ExecutionType, TreeMap<Resource,
                 ResourceRequestInfo>>>().iterator();
       }
       if (iExecTypeMap.hasNext()) {
         iCapMap = iExecTypeMap.next().values().iterator();
       } else {
         iCapMap =
-            new LinkedList<TreeMap<ProfileCapability, ResourceRequestInfo>>()
+            new LinkedList<TreeMap<Resource, ResourceRequestInfo>>()
                 .iterator();
       }
       if (iCapMap.hasNext()) {
@@ -113,7 +110,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   // Nest map with Primary key :
   // Priority -> ResourceName(String) -> ExecutionType -> Capability(Resource)
   // and value : ResourceRequestInfo
-  private Map<Priority, Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+  private Map<Priority, Map<String, Map<ExecutionType, TreeMap<Resource,
       ResourceRequestInfo>>>> remoteRequestsTable = new HashMap<>();
 
   @Override
@@ -122,8 +119,8 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   }
 
   ResourceRequestInfo get(Priority priority, String location,
-      ExecutionType execType, ProfileCapability capability) {
-    TreeMap<ProfileCapability, ResourceRequestInfo> capabilityMap =
+      ExecutionType execType, Resource capability) {
+    TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         getCapabilityMap(priority, location, execType);
     if (capabilityMap == null) {
       return null;
@@ -133,8 +130,8 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
   @SuppressWarnings("unchecked")
   void put(Priority priority, String resourceName, ExecutionType execType,
-      ProfileCapability capability, ResourceRequestInfo resReqInfo) {
-    Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+      Resource capability, ResourceRequestInfo resReqInfo) {
+    Map<String, Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>> locationMap =
         remoteRequestsTable.get(priority);
     if (locationMap == null) {
@@ -144,7 +141,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
         LOG.debug("Added priority=" + priority);
       }
     }
-    Map<ExecutionType, TreeMap<ProfileCapability, ResourceRequestInfo>>
+    Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
         execTypeMap = locationMap.get(resourceName);
     if (execTypeMap == null) {
       execTypeMap = new HashMap<>();
@@ -153,15 +150,10 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
         LOG.debug("Added resourceName=" + resourceName);
       }
     }
-    TreeMap<ProfileCapability, ResourceRequestInfo> capabilityMap =
+    TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         execTypeMap.get(execType);
     if (capabilityMap == null) {
-      // this can happen if the user doesn't register with the RM before
-      // calling addResourceRequest
-      if (resourceComparator == null) {
-        resourceComparator = new ProfileCapabilityComparator(new HashMap<>());
-      }
-      capabilityMap = new TreeMap<>(resourceComparator);
+      capabilityMap = new TreeMap<>(new AMRMClientImpl.ResourceReverseComparator());
       execTypeMap.put(execType, capabilityMap);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Added Execution Type=" + execType);
@@ -171,9 +163,9 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   }
 
   ResourceRequestInfo remove(Priority priority, String resourceName,
-      ExecutionType execType, ProfileCapability capability) {
+      ExecutionType execType, Resource capability) {
     ResourceRequestInfo retVal = null;
-    Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+    Map<String, Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>> locationMap = remoteRequestsTable.get(priority);
     if (locationMap == null) {
       if (LOG.isDebugEnabled()) {
@@ -181,7 +173,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
       }
       return null;
     }
-    Map<ExecutionType, TreeMap<ProfileCapability, ResourceRequestInfo>>
+    Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
         execTypeMap = locationMap.get(resourceName);
     if (execTypeMap == null) {
       if (LOG.isDebugEnabled()) {
@@ -189,7 +181,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
       }
       return null;
     }
-    TreeMap<ProfileCapability, ResourceRequestInfo> capabilityMap =
+    TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         execTypeMap.get(execType);
     if (capabilityMap == null) {
       if (LOG.isDebugEnabled()) {
@@ -210,14 +202,14 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     return retVal;
   }
 
-  Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+  Map<String, Map<ExecutionType, TreeMap<Resource,
       ResourceRequestInfo>>> getLocationMap(Priority priority) {
     return remoteRequestsTable.get(priority);
   }
 
-  Map<ExecutionType, TreeMap<ProfileCapability, ResourceRequestInfo>>
+  Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
       getExecutionTypeMap(Priority priority, String location) {
-    Map<String, Map<ExecutionType, TreeMap<ProfileCapability,
+    Map<String, Map<ExecutionType, TreeMap<Resource,
         ResourceRequestInfo>>> locationMap = getLocationMap(priority);
     if (locationMap == null) {
       return null;
@@ -225,10 +217,10 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     return locationMap.get(location);
   }
 
-  TreeMap<ProfileCapability, ResourceRequestInfo> getCapabilityMap(Priority
+  TreeMap<Resource, ResourceRequestInfo> getCapabilityMap(Priority
       priority, String location,
       ExecutionType execType) {
-    Map<ExecutionType, TreeMap<ProfileCapability, ResourceRequestInfo>>
+    Map<ExecutionType, TreeMap<Resource, ResourceRequestInfo>>
         executionTypeMap = getExecutionTypeMap(priority, location);
     if (executionTypeMap == null) {
       return null;
@@ -242,7 +234,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
     List retList = new LinkedList<>();
     for (String location : locations) {
       for (ExecutionType eType : ExecutionType.values()) {
-        TreeMap<ProfileCapability, ResourceRequestInfo> capabilityMap =
+        TreeMap<Resource, ResourceRequestInfo> capabilityMap =
             getCapabilityMap(priority, location, eType);
         if (capabilityMap != null) {
           retList.addAll(capabilityMap.values());
@@ -254,9 +246,9 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
   List<ResourceRequestInfo> getMatchingRequests(
       Priority priority, String resourceName, ExecutionType executionType,
-      ProfileCapability capability) {
+      Resource capability) {
     List<ResourceRequestInfo> list = new LinkedList<>();
-    TreeMap<ProfileCapability, ResourceRequestInfo> capabilityMap =
+    TreeMap<Resource, ResourceRequestInfo> capabilityMap =
         getCapabilityMap(priority, resourceName, executionType);
     if (capabilityMap != null) {
       ResourceRequestInfo resourceRequestInfo = capabilityMap.get(capability);
@@ -272,15 +264,14 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   @SuppressWarnings("unchecked")
   ResourceRequestInfo addResourceRequest(Long allocationRequestId,
       Priority priority, String resourceName, ExecutionTypeRequest execTypeReq,
-      ProfileCapability capability, T req, boolean relaxLocality,
+      Resource capability, T req, boolean relaxLocality,
       String labelExpression) {
     ResourceRequestInfo resourceRequestInfo =
         get(priority, resourceName, execTypeReq.getExecutionType(), capability);
     if (resourceRequestInfo == null) {
       resourceRequestInfo =
           new ResourceRequestInfo(allocationRequestId, priority, resourceName,
-              capability.getProfileCapabilityOverride(), relaxLocality,
-              capability.getProfileName());
+              capability, relaxLocality);
       put(priority, resourceName, execTypeReq.getExecutionType(), capability,
           resourceRequestInfo);
     }
@@ -302,7 +293,7 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   }
 
   ResourceRequestInfo decResourceRequest(Priority priority, String resourceName,
-      ExecutionTypeRequest execTypeReq, ProfileCapability capability, T req) {
+      ExecutionTypeRequest execTypeReq, Resource capability, T req) {
     ResourceRequestInfo resourceRequestInfo = get(priority, resourceName,
         execTypeReq.getExecutionType(), capability);
 
@@ -338,36 +329,5 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
   boolean isEmpty() {
     return remoteRequestsTable.isEmpty();
-  }
-
-  @SuppressWarnings("unchecked")
-  public void setResourceComparator(ProfileCapabilityComparator comparator) {
-    ProfileCapabilityComparator old = this.resourceComparator;
-    this.resourceComparator = comparator;
-    if (old != null) {
-      // we've already set a resource comparator - re-create the maps with the
-      // new one. this is needed in case someone adds container requests before
-      // registering with the RM. In such a case, the comparator won't have
-      // the resource profiles map. After registration, the map is available
-      // so re-create the capabilities maps
-
-      for (Map.Entry<Priority, Map<String, Map<ExecutionType,
-          TreeMap<ProfileCapability, ResourceRequestInfo>>>>
-          priEntry : remoteRequestsTable.entrySet()) {
-        for (Map.Entry<String, Map<ExecutionType, TreeMap<ProfileCapability,
-            ResourceRequestInfo>>> nameEntry : priEntry.getValue().entrySet()) {
-          for (Map.Entry<ExecutionType, TreeMap<ProfileCapability,
-              ResourceRequestInfo>> execEntry : nameEntry
-              .getValue().entrySet()) {
-            Map<ProfileCapability, ResourceRequestInfo> capabilityMap =
-                execEntry.getValue();
-            TreeMap<ProfileCapability, ResourceRequestInfo> newCapabiltyMap =
-                new TreeMap<>(resourceComparator);
-            newCapabiltyMap.putAll(capabilityMap);
-            execEntry.setValue(newCapabiltyMap);
-          }
-        }
-      }
-    }
   }
 }

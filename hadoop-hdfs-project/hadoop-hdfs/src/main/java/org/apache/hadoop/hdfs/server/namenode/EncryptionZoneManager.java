@@ -154,9 +154,10 @@ public class EncryptionZoneManager {
   public void pauseForTestingAfterNthCheckpoint(final String zone,
       final int count) throws IOException {
     INodesInPath iip;
+    final FSPermissionChecker pc = dir.getPermissionChecker();
     dir.readLock();
     try {
-      iip = dir.resolvePath(dir.getPermissionChecker(), zone, DirOp.READ);
+      iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
       dir.readUnlock();
     }

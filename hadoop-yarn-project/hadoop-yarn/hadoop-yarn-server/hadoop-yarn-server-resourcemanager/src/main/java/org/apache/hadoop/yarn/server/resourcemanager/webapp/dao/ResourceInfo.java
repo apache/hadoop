@@ -70,7 +70,7 @@ public class ResourceInfo {
 
   @Override
   public String toString() {
-    return resources.toString();
+    return getResource().toString();
   }
 
   public void setMemory(int memory) {
@@ -90,6 +90,9 @@ public class ResourceInfo {
   }
 
   public Resource getResource() {
+    if (resources == null) {
+      resources = Resource.newInstance(memory, vCores);
+    }
     return Resource.newInstance(resources);
   }
 

@@ -116,20 +116,15 @@ public class ConfServlet extends HttpServlet {
 
     config.get("ozone.enabled");
     switch (cmd) {
-    case "getOzoneTags":
-      LOG.debug(
-          "Sending json for tags:" + gson.toJson(OzonePropertyTag.values()));
-      out.write(gson.toJson(OzonePropertyTag.values()));
-      break;
     case "getPropertyByTag":
       String tags = request.getParameter("tags");
       String tagGroup = request.getParameter("group");
       LOG.debug("Getting all properties for tags:" + tags + " group:" +
           tagGroup);
-      List<PropertyTag> tagList = new ArrayList<>();
+      List<String> tagList = new ArrayList<>();
       for (String tag : tags.split(",")) {
-        if (config.getPropertyTag(tag, tagGroup) != null) {
-          tagList.add(config.getPropertyTag(tag, tagGroup));
+        if (config.isPropertyTag(tag)) {
+          tagList.add(tag);
         }
       }
 

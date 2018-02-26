@@ -540,7 +540,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -589,7 +589,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -642,7 +642,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -694,7 +694,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
     ResourceTrackerService resourceTrackerService =
@@ -723,13 +723,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private NodeStatus getNodeStatusObject(NodeId nodeId) {
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setNodeId(nodeId);
     status.setResponseId(0);
-    status.setContainersStatuses(Collections.EMPTY_LIST);
-    status.setKeepAliveApplications(Collections.EMPTY_LIST);
+    status.setContainersStatuses(Collections.emptyList());
+    status.setKeepAliveApplications(Collections.emptyList());
     return status;
   }
 
@@ -755,7 +754,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -840,7 +839,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 

@@ -118,6 +118,8 @@ public final class S3AUtils {
   private static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 
+  private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
+
 
   private S3AUtils() {
   }
@@ -540,7 +542,8 @@ public final class S3AUtils {
   /**
    * Create the AWS credentials from the providers, the URI and
    * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
-   * @param binding Binding URI, may contain user:pass login details
+   * @param binding Binding URI, may contain user:pass login details;
+   * may be null
    * @param conf filesystem configuration
    * @return a credentials provider list
    * @throws IOException Problems loading the providers (including reading
@@ -560,7 +563,9 @@ public final class S3AUtils {
       credentials.add(InstanceProfileCredentialsProvider.getInstance());
     } else {
       for (Class<?> aClass : awsClasses) {
-        credentials.add(createAWSCredentialProvider(conf, aClass));
+        credentials.add(createAWSCredentialProvider(conf,
+            aClass,
+            binding));
       }
     }
     // make sure the logging message strips out any auth details
@@ -594,8 +599,8 @@ public final class S3AUtils {
    * attempted in order:
    *
    * <ol>
-   * <li>a public constructor accepting
-   *    org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
    * <li>a public static method named getInstance that accepts no
    *    arguments and returns an instance of
    *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
@@ -604,11 +609,14 @@ public final class S3AUtils {
    *
    * @param conf configuration
    * @param credClass credential class
+   * @param uri URI of the FS
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
   public static AWSCredentialsProvider createAWSCredentialProvider(
-      Configuration conf, Class<?> credClass) throws IOException {
+      Configuration conf,
+      Class<?> credClass,
+      URI uri) throws IOException {
     AWSCredentialsProvider credentials;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
@@ -620,8 +628,15 @@ public final class S3AUtils {
     LOG.debug("Credential provider class is {}", className);
 
     try {
+      // new X(uri, conf)
+      Constructor cons = getConstructor(credClass, URI.class,
+          Configuration.class);
+      if (cons != null) {
+        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
+        return credentials;
+      }
       // new X(conf)
-      Constructor cons = getConstructor(credClass, Configuration.class);
+      cons = getConstructor(credClass, Configuration.class);
       if (cons != null) {
         credentials = (AWSCredentialsProvider)cons.newInstance(conf);
         return credentials;
@@ -676,7 +691,7 @@ public final class S3AUtils {
    * Return the access key and secret for S3 API use.
    * Credentials may exist in configuration, within credential providers
    * or indicated in the UserInfo of the name URI param.
-   * @param name the URI for which we need the access keys.
+   * @param name the URI for which we need the access keys; may be null
    * @param conf the Configuration object to interrogate for keys.
    * @return AWSAccessKeys
    * @throws IOException problems retrieving passwords from KMS.
@@ -687,9 +702,62 @@ public final class S3AUtils {
         S3xLoginHelper.extractLoginDetailsWithWarnings(name);
     Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
         conf, S3AFileSystem.class);
-    String accessKey = getPassword(c, ACCESS_KEY, login.getUser());
-    String secretKey = getPassword(c, SECRET_KEY, login.getPassword());
+    String bucket = name != null ? name.getHost() : "";
+
+    // build the secrets. as getPassword() uses the last arg as
+    // the return value if non-null, the ordering of
+    // login -> bucket -> base is critical
+
+    // get the bucket values
+    String accessKey = lookupPassword(bucket, c, ACCESS_KEY,
+        login.getUser());
+
+    // finally the base
+    String secretKey = lookupPassword(bucket, c, SECRET_KEY,
+        login.getPassword());
+
+    // and override with any per bucket values
     return new S3xLoginHelper.Login(accessKey, secretKey);
+  }
+
+  /**
+   * Get a password from a configuration, including JCEKS files, handling both
+   * the absolute key and bucket override.
+   * @param bucket bucket or "" if none known
+   * @param conf configuration
+   * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
+   * @param overrideVal override value: if non empty this is used instead of
+   * querying the configuration.
+   * @return a password or "".
+   * @throws IOException on any IO problem
+   * @throws IllegalArgumentException bad arguments
+   */
+  public static String lookupPassword(
+      String bucket,
+      Configuration conf,
+      String baseKey,
+      String overrideVal)
+      throws IOException {
+    String initialVal;
+    Preconditions.checkArgument(baseKey.startsWith(FS_S3A_PREFIX),
+        "%s does not start with $%s", baseKey, FS_S3A_PREFIX);
+    // if there's a bucket, work with it
+    if (StringUtils.isNotEmpty(bucket)) {
+      String subkey = baseKey.substring(FS_S3A_PREFIX.length());
+      String shortBucketKey = String.format(
+          BUCKET_PATTERN, bucket, subkey);
+      String longBucketKey = String.format(
+          BUCKET_PATTERN, bucket, baseKey);
+
+      // set from the long key unless overidden.
+      initialVal = getPassword(conf, longBucketKey, overrideVal);
+      // then override from the short one if it is set
+      initialVal = getPassword(conf, shortBucketKey, initialVal);
+    } else {
+      // no bucket, make the initial value the override value
+      initialVal = overrideVal;
+    }
+    return getPassword(conf, baseKey, initialVal);
   }
 
   /**
@@ -702,10 +770,9 @@ public final class S3AUtils {
    * @return a password or "".
    * @throws IOException on any problem
    */
-  static String getPassword(Configuration conf, String key, String val)
+  private static String getPassword(Configuration conf, String key, String val)
       throws IOException {
-    String defVal = "";
-    return getPassword(conf, key, val, defVal);
+    return getPassword(conf, key, val, "");
   }
 
   /**
@@ -1124,16 +1191,21 @@ public final class S3AUtils {
    * This operation handles the case where the option has been
    * set in the provider or configuration to the option
    * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
+   * IOExceptions raised during retrieval are swallowed.
+   * @param bucket bucket to query for
    * @param conf configuration to examine
-   * @return the encryption key or null
+   * @return the encryption key or ""
+   * @throws IllegalArgumentException bad arguments.
    */
-  static String getServerSideEncryptionKey(Configuration conf) {
+  static String getServerSideEncryptionKey(String bucket,
+      Configuration conf) {
     try {
-      return lookupPassword(conf, SERVER_SIDE_ENCRYPTION_KEY,
+      return lookupPassword(bucket, conf,
+          SERVER_SIDE_ENCRYPTION_KEY,
           getPassword(conf, OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY,
               null, null));
     } catch (IOException e) {
-      LOG.error("Cannot retrieve SERVER_SIDE_ENCRYPTION_KEY", e);
+      LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
       return "";
     }
   }
@@ -1142,16 +1214,19 @@ public final class S3AUtils {
    * Get the server-side encryption algorithm.
    * This includes validation of the configuration, checking the state of
    * the encryption key given the chosen algorithm.
+   *
+   * @param bucket bucket to query for
    * @param conf configuration to scan
    * @return the encryption mechanism (which will be {@code NONE} unless
    * one is set.
    * @throws IOException on any validation problem.
    */
-  static S3AEncryptionMethods getEncryptionAlgorithm(Configuration conf)
-      throws IOException {
+  static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
+      Configuration conf) throws IOException {
     S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
-        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    String sseKey = getServerSideEncryptionKey(conf);
+        lookupPassword(bucket, conf,
+            SERVER_SIDE_ENCRYPTION_ALGORITHM, null));
+    String sseKey = getServerSideEncryptionKey(bucket, conf);
     int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
     String diagnostics = passwordDiagnostics(sseKey, "key");
     switch (sse) {

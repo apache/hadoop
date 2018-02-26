@@ -276,6 +276,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.conversion.rule</name>
+  <value>none</value>
+  <description>
+    The rule is applied on the group names received from LDAP when
+    RuleBasedLdapGroupsMapping is configured.
+    Supported rules are "to_upper", "to_lower" and "none".
+    to_upper: This will convert all the group names to uppercase.
+    to_lower: This will convert all the group names to lowercase.
+    none: This will retain the source formatting, this is default value.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.credential.clear-text-fallback</name>
   <value>true</value>
   <description>
@@ -2960,16 +2973,11 @@
     </description>
   </property>
   <property>
-    <name>hadoop.treat.subject.external</name>
-    <value>false</value>
+    <name>hadoop.system.tags</name>
+    <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT
+      ,SERVER,DEBUG,DEPRICATED,COMMON,OPTIONAL</value>
     <description>
-      When creating UGI with UserGroupInformation(Subject), treat the passed
-      subject external if set to true, and assume the owner of the subject
-      should do the credential renewal.
-
-      When true this property will introduce an incompatible change which
-      may require changes in client code. For more details, see the jiras:
-      HADOOP-13805,HADOOP-13558.
+      System tags to group related properties together.
     </description>
   </property>
 </configuration>

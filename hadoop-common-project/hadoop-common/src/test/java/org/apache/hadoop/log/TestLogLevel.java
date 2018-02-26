@@ -356,7 +356,10 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      GenericTestUtils.assertExceptionContains("Error while authenticating "
+          + "with endpoint", e);
+      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e
+          .getCause());
     }
   }
 
@@ -374,7 +377,10 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      GenericTestUtils.assertExceptionContains("Error while authenticating "
+          + "with endpoint", e);
+      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e
+          .getCause());
     }
   }
 
@@ -393,8 +399,10 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     } catch (SocketException e) {
+      GenericTestUtils.assertExceptionContains("Error while authenticating "
+          + "with endpoint", e);
       GenericTestUtils.assertExceptionContains(
-          "Unexpected end of file from server", e);
+          "Unexpected end of file from server", e.getCause());
     }
   }
 
@@ -413,8 +421,10 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     }  catch (SocketException e) {
+      GenericTestUtils.assertExceptionContains("Error while authenticating "
+          + "with endpoint", e);
       GenericTestUtils.assertExceptionContains(
-          "Unexpected end of file from server", e);
+          "Unexpected end of file from server", e.getCause());
     }
   }
 }

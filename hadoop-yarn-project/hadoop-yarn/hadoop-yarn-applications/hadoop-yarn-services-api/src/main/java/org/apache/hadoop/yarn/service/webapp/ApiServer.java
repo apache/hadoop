@@ -280,14 +280,25 @@ public class ApiServer {
       @PathParam(COMPONENT_NAME) String componentName, Component component) {
 
     try {
-      UserGroupInformation ugi = getProxyUser(request);
+      if (component == null) {
+        throw new YarnException("No component data provided");
+      }
+      if (component.getName() != null
+          && !component.getName().equals(componentName)) {
+        String msg = "Component name in the request object ("
+            + component.getName() + ") does not match that in the URI path ("
+            + componentName + ")";
+        throw new YarnException(msg);
+      }
+      if (component.getNumberOfContainers() == null) {
+        throw new YarnException("No container count provided");
+      }
       if (component.getNumberOfContainers() < 0) {
-        String message =
-            "Service = " + appName + ", Component = " + component.getName()
-                + ": Invalid number of containers specified " + component
-                .getNumberOfContainers();
+        String message = "Invalid number of containers specified "
+            + component.getNumberOfContainers();
         throw new YarnException(message);
       }
+      UserGroupInformation ugi = getProxyUser(request);
       Map<String, Long> original = ugi
           .doAs(new PrivilegedExceptionAction<Map<String, Long>>() {
             @Override
@@ -296,7 +307,7 @@ public class ApiServer {
               sc.init(YARN_CONFIG);
               sc.start();
               Map<String, Long> original = sc.flexByRestService(appName,
-                  Collections.singletonMap(component.getName(),
+                  Collections.singletonMap(componentName,
                       component.getNumberOfContainers()));
               sc.close();
               return original;

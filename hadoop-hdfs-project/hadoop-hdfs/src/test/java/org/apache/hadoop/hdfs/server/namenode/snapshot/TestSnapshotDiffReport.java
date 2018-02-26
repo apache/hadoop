@@ -28,11 +28,15 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
 
+import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -40,14 +44,17 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.client.impl.SnapshotDiffReportGenerator;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
@@ -1385,6 +1392,129 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("dir4")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2"),
+            DFSUtil.string2Bytes("dir3/dir2")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file1"),
+            DFSUtil.string2Bytes("dir4/file1")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file2"),
+            DFSUtil.string2Bytes("dir4/file2")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file3"),
+            DFSUtil.string2Bytes("dir4/file3")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file1"),
+            DFSUtil.string2Bytes("dir3/file1")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file2"),
+            DFSUtil.string2Bytes("dir3/file2")),
+        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file3"),
+            DFSUtil.string2Bytes("dir3/file3")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir3")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir3/file1")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir3/file1")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir3/file3")));
+  }
+
+  private void verifyDiffReportForGivenReport(Path dirPath, String from,
+      String to, SnapshotDiffReport report, DiffReportEntry... entries)
+      throws IOException {
+    // reverse the order of from and to
+    SnapshotDiffReport inverseReport =
+        hdfs.getSnapshotDiffReport(dirPath, to, from);
+    LOG.info(report.toString());
+    LOG.info(inverseReport.toString() + "\n");
+
+    assertEquals(entries.length, report.getDiffList().size());
+    assertEquals(entries.length, inverseReport.getDiffList().size());
+
+    for (DiffReportEntry entry : entries) {
+      if (entry.getType() == DiffType.MODIFY) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(entry));
+      } else if (entry.getType() == DiffType.DELETE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
+      } else if (entry.getType() == DiffType.CREATE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
+      }
+    }
+  }
+
+  @Test
+  public void testSnapshotDiffReportRemoteIterator() throws Exception {
+    final Path root = new Path("/");
+    hdfs.mkdirs(root);
+    for (int i = 1; i <= 3; i++) {
+      final Path path = new Path(root, "dir" + i);
+      hdfs.mkdirs(path);
+    }
+    for (int i = 1; i <= 3; i++) {
+      final Path path = new Path(root, "dir" + i);
+      for (int j = 1; j < 4; j++) {
+        final Path file = new Path(path, "file" + j);
+        DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
+      }
+    }
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    Path targetDir = new Path(root, "dir4");
+    //create directory dir4
+    hdfs.mkdirs(targetDir);
+    //moves files from dir1 to dir4
+    Path path = new Path(root, "dir1");
+    for (int j = 1; j < 4; j++) {
+      final Path srcPath = new Path(path, "file" + j);
+      final Path targetPath = new Path(targetDir, "file" + j);
+      hdfs.rename(srcPath, targetPath);
+    }
+    targetDir = new Path(root, "dir3");
+    //overwrite existing files in dir3 from files in dir1
+    path = new Path(root, "dir2");
+    for (int j = 1; j < 4; j++) {
+      final Path srcPath = new Path(path, "file" + j);
+      final Path targetPath = new Path(targetDir, "file" + j);
+      hdfs.rename(srcPath, targetPath, Rename.OVERWRITE);
+    }
+    final Path pathToRename = new Path(root, "dir2");
+    //move dir2 inside dir3
+    hdfs.rename(pathToRename, targetDir);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    RemoteIterator<SnapshotDiffReportListing> iterator =
+        hdfs.snapshotDiffReportListingRemoteIterator(root, "s0", "s1");
+    SnapshotDiffReportGenerator snapshotDiffReport;
+    List<SnapshotDiffReportListing.DiffReportListingEntry> modifiedList =
+        new TreeList();
+    List<SnapshotDiffReportListing.DiffReportListingEntry> createdList =
+        new ChunkedArrayList<>();
+    List<SnapshotDiffReportListing.DiffReportListingEntry> deletedList =
+        new ChunkedArrayList<>();
+    SnapshotDiffReportListing report = null;
+    List<SnapshotDiffReportListing> reportList = new ArrayList<>();
+    while (iterator.hasNext()) {
+      report = iterator.next();
+      reportList.add(report);
+      modifiedList.addAll(report.getModifyList());
+      createdList.addAll(report.getCreateList());
+      deletedList.addAll(report.getDeleteList());
+    }
+    try {
+      iterator.next();
+    } catch (Exception e) {
+      Assert.assertTrue(
+          e.getMessage().contains("No more entry in SnapshotDiffReport for /"));
+    }
+    Assert.assertNotEquals(0, reportList.size());
+    // generate the snapshotDiffReport and Verify
+    snapshotDiffReport = new SnapshotDiffReportGenerator("/", "s0", "s1",
+        report.getIsFromEarlier(), modifiedList, createdList, deletedList);
+    verifyDiffReportForGivenReport(root, "s0", "s1",
+        snapshotDiffReport.generateReport(),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("dir4")),
         new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2"),
             DFSUtil.string2Bytes("dir3/dir2")),
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),

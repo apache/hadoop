@@ -23,10 +23,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
@@ -42,8 +40,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   private Priority priority = null;
   private Resource capability = null;
   private ExecutionTypeRequest executionTypeRequest = null;
-  private ProfileCapability profile = null;
-  
+
   
   public ResourceRequestPBImpl() {
     builder = ResourceRequestProto.newBuilder();
@@ -71,9 +68,6 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     if (this.executionTypeRequest != null) {
       builder.setExecutionTypeRequest(
           ProtoUtils.convertToProtoFormat(this.executionTypeRequest));
-    }
-    if (this.profile != null) {
-      builder.setProfile(converToProtoFormat(this.profile));
     }
   }
 
@@ -236,7 +230,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
         + ", Relax Locality: " + getRelaxLocality()
         + ", Execution Type Request: " + getExecutionTypeRequest()
         + ", Node Label Expression: " + getNodeLabelExpression()
-        + ", Resource Profile: " + getProfileCapability() + "}";
+        + "}";
   }
 
   @Override
@@ -256,35 +250,5 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
       return;
     }
     builder.setNodeLabelExpression(nodeLabelExpression);
-  }
-
-  @Override
-  public void setProfileCapability(ProfileCapability profileCapability) {
-    maybeInitBuilder();
-    if (profile == null) {
-      builder.clearProfile();
-    }
-    this.profile = profileCapability;
-  }
-
-  @Override
-  public ProfileCapability getProfileCapability() {
-    if (profile != null) {
-      return profile;
-    }
-    ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasProfile()) {
-      return null;
-    }
-    return new ProfileCapabilityPBImpl(p.getProfile());
-  }
-
-  private ProfileCapabilityProto converToProtoFormat(
-      ProfileCapability profileCapability) {
-    ProfileCapabilityPBImpl tmp = new ProfileCapabilityPBImpl();
-    tmp.setProfileName(profileCapability.getProfileName());
-    tmp.setProfileCapabilityOverride(
-        profileCapability.getProfileCapabilityOverride());
-    return tmp.getProto();
   }
 }

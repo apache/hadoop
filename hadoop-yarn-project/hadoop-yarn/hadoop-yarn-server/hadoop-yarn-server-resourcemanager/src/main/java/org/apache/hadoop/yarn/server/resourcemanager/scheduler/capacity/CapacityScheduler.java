@@ -63,7 +63,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -1096,18 +1095,6 @@ public class CapacityScheduler extends
       LOG.error("Calling allocate on removed or non existent application " +
           applicationAttemptId.getApplicationId());
       return EMPTY_ALLOCATION;
-    }
-
-    if ((!getConfiguration().getBoolean(
-        CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED,
-        CapacitySchedulerConfiguration.DEFAULT_SCHEDULING_REQUEST_ALLOWED))
-        && schedulingRequests != null && (!schedulingRequests.isEmpty())) {
-      throw new SchedulerInvalidResoureRequestException(
-          "Application attempt:" + applicationAttemptId
-              + " is using SchedulingRequest, which is disabled. Please update "
-              + CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED
-              + " to true in capacity-scheduler.xml in order to use this "
-              + "feature.");
     }
 
     // The allocate may be the leftover from previous attempt, and it will

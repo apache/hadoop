@@ -136,23 +136,21 @@ public class ProportionalCapacityPreemptionPolicy
   private Map<String, PreemptableQueue> preemptableQueues;
   private Set<ContainerId> killableContainers;
 
-  @SuppressWarnings("unchecked")
   public ProportionalCapacityPreemptionPolicy() {
     clock = SystemClock.getInstance();
-    allPartitions = Collections.EMPTY_SET;
-    leafQueueNames = Collections.EMPTY_SET;
-    preemptableQueues = Collections.EMPTY_MAP;
+    allPartitions = Collections.emptySet();
+    leafQueueNames = Collections.emptySet();
+    preemptableQueues = Collections.emptyMap();
   }
 
-  @SuppressWarnings("unchecked")
   @VisibleForTesting
   public ProportionalCapacityPreemptionPolicy(RMContext context,
       CapacityScheduler scheduler, Clock clock) {
     init(context.getYarnConfiguration(), context, scheduler);
     this.clock = clock;
-    allPartitions = Collections.EMPTY_SET;
-    leafQueueNames = Collections.EMPTY_SET;
-    preemptableQueues = Collections.EMPTY_MAP;
+    allPartitions = Collections.emptySet();
+    leafQueueNames = Collections.emptySet();
+    preemptableQueues = Collections.emptyMap();
   }
 
   public void init(Configuration config, RMContext context,

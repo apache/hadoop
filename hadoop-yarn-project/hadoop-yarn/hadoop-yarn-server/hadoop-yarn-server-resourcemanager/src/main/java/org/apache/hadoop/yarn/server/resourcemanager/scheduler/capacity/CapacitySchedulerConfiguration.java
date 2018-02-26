@@ -77,11 +77,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   @Private
   public static final String PREFIX = "yarn.scheduler.capacity.";
-
-  @Private
-  public static final String SCHEDULING_REQUEST_ALLOWED =
-      PREFIX + "scheduling-request.allowed";
-  public static final boolean DEFAULT_SCHEDULING_REQUEST_ALLOWED = false;
   
   @Private
   public static final String DOT = ".";
@@ -1213,6 +1208,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getBoolean(getQueuePrefix(queue) + QUEUE_PREEMPTION_DISABLED,
                    defaultVal);
     return preemptionDisabled;
+  }
+
+  /**
+   * Indicates whether intra-queue preemption is disabled on the specified queue
+   *
+   * @param queue queue path to query
+   * @param defaultVal used as default if the property is not set in the
+   * configuration
+   * @return true if preemption is disabled on queue, false otherwise
+   */
+  public boolean getIntraQueuePreemptionDisabled(String queue,
+      boolean defaultVal) {
+    return
+        getBoolean(getQueuePrefix(queue) + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX
+            + QUEUE_PREEMPTION_DISABLED, defaultVal);
   }
 
   /**

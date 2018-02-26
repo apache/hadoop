@@ -58,9 +58,11 @@ public class TestUGIWithMiniKdc {
 
   private void setupKdc() throws Exception {
     Properties kdcConf = MiniKdc.createConf();
-    // tgt expire time = 30 seconds
-    kdcConf.setProperty(MiniKdc.MAX_TICKET_LIFETIME, "30");
-    kdcConf.setProperty(MiniKdc.MIN_TICKET_LIFETIME, "30");
+    // tgt expire time = 2 seconds.  just testing that renewal thread retries
+    // for expiring tickets, so no need to waste time waiting for expiry to
+    // arrive.
+    kdcConf.setProperty(MiniKdc.MAX_TICKET_LIFETIME, "2");
+    kdcConf.setProperty(MiniKdc.MIN_TICKET_LIFETIME, "2");
     File kdcDir = new File(System.getProperty("test.dir", "target"));
     kdc = new MiniKdc(kdcConf, kdcDir);
     kdc.start();
@@ -70,12 +72,14 @@ public class TestUGIWithMiniKdc {
   public void testAutoRenewalThreadRetryWithKdc() throws Exception {
     GenericTestUtils.setLogLevel(UserGroupInformation.LOG, Level.DEBUG);
     final Configuration conf = new Configuration();
+    // can't rely on standard kinit, else test fails when user running
+    // the test is kinit'ed because the test renews _their TGT_.
+    conf.set("hadoop.kerberos.kinit.command", "bogus-kinit-cmd");
     // Relogin every 1 second
     conf.setLong(HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN, 1);
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
-    UserGroupInformation.setEnableRenewThreadCreationForTest(true);
 
     LoginContext loginContext = null;
     try {
@@ -87,44 +91,10 @@ public class TestUGIWithMiniKdc {
       setupKdc();
       kdc.createPrincipal(keytab, principal);
 
-      // client login
-      final Subject subject =
-          new Subject(false, principals, new HashSet<>(), new HashSet<>());
-
-      loginContext = new LoginContext("", subject, null,
-          new javax.security.auth.login.Configuration() {
-            @Override
-            public AppConfigurationEntry[] getAppConfigurationEntry(
-                String name) {
-              Map<String, String> options = new HashMap<>();
-              options.put("principal", principal);
-              options.put("refreshKrb5Config", "true");
-              if (PlatformName.IBM_JAVA) {
-                options.put("useKeytab", keytab.getPath());
-                options.put("credsType", "both");
-              } else {
-                options.put("keyTab", keytab.getPath());
-                options.put("useKeyTab", "true");
-                options.put("storeKey", "true");
-                options.put("doNotPrompt", "true");
-                options.put("useTicketCache", "true");
-                options.put("renewTGT", "true");
-                options.put("isInitiator", Boolean.toString(true));
-              }
-              String ticketCache = System.getenv("KRB5CCNAME");
-              if (ticketCache != null) {
-                options.put("ticketCache", ticketCache);
-              }
-              options.put("debug", "true");
-              return new AppConfigurationEntry[] {new AppConfigurationEntry(
-                  KerberosUtil.getKrb5LoginModuleName(),
-                  AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                  options)};
-            }
-          });
-      loginContext.login();
-      final Subject loginSubject = loginContext.getSubject();
-      UserGroupInformation.loginUserFromSubject(loginSubject);
+      UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
+      UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+      // no ticket cache, so force the thread to test for failures.
+      ugi.spawnAutoRenewalThreadForUserCreds(true);
 
       // Verify retry happens. Do not verify retry count to reduce flakiness.
       // Detailed back-off logic is tested separately in

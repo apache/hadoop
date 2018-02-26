@@ -131,7 +131,7 @@ public class BatchedRequests
    * @return Set of blacklisted Nodes.
    */
   public Set<NodeId> getBlacklist(String tag) {
-    return blacklist.getOrDefault(tag, Collections.EMPTY_SET);
+    return blacklist.getOrDefault(tag, Collections.emptySet());
   }
 
   /**

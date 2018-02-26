@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -100,7 +99,6 @@ public class TestOpportunisticContainerAllocationE2E {
   private static final long AM_EXPIRE_MS = 4000;
 
   private static Resource capability;
-  private static ProfileCapability profileCapability;
   private static Priority priority;
   private static Priority priority2;
   private static Priority priority3;
@@ -153,7 +151,6 @@ public class TestOpportunisticContainerAllocationE2E {
     priority3 = Priority.newInstance(3);
     priority4 = Priority.newInstance(4);
     capability = Resource.newInstance(512, 1);
-    profileCapability = ProfileCapability.newInstance(capability);
 
     node = nodeReports.get(0).getNodeId().getHost();
     rack = nodeReports.get(0).getRackName();
@@ -276,7 +273,7 @@ public class TestOpportunisticContainerAllocationE2E {
 
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -397,7 +394,7 @@ public class TestOpportunisticContainerAllocationE2E {
         new AMRMClient.ContainerRequest(capability, null, null, priority3));
 
     int guarContainersRequestedAny = amClient.getTable(0).get(priority3,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
 
     assertEquals(1, guarContainersRequestedAny);
@@ -536,17 +533,17 @@ public class TestOpportunisticContainerAllocationE2E {
                 ExecutionType.OPPORTUNISTIC, true)));
 
     int containersRequestedNode = amClient.getTable(0).get(priority,
-        node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        node, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedRack = amClient.getTable(0).get(priority,
-        rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        rack, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedAny = amClient.getTable(0).get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(4, containersRequestedNode);
@@ -568,17 +565,17 @@ public class TestOpportunisticContainerAllocationE2E {
                 ExecutionType.OPPORTUNISTIC, true)));
 
     containersRequestedNode = amClient.getTable(0).get(priority,
-        node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        node, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     containersRequestedRack = amClient.getTable(0).get(priority,
-        rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        rack, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     containersRequestedAny = amClient.getTable(0).get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
     oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(2, containersRequestedNode);
@@ -697,7 +694,7 @@ public class TestOpportunisticContainerAllocationE2E {
 
     int oppContainersRequestedAny = amClient.getTable(0)
         .get(priority3, ResourceRequest.ANY, ExecutionType.OPPORTUNISTIC,
-            profileCapability).remoteRequest.getNumContainers();
+            capability).remoteRequest.getNumContainers();
 
     assertEquals(2, oppContainersRequestedAny);
 

@@ -1477,7 +1477,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       writeLock.lock();
 
       if (nmReportedIncreasedContainers.isEmpty()) {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
       } else {
         List<Container> container =
             new ArrayList<Container>(nmReportedIncreasedContainers.values());

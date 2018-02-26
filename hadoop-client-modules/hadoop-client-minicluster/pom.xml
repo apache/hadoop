@@ -615,6 +615,7 @@
                       <excludes>
                         <exclude>testjar/*</exclude>
                         <exclude>testshell/*</exclude>
+                        <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->

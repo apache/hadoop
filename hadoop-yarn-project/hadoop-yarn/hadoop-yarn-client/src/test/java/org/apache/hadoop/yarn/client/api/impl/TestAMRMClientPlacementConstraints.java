@@ -65,7 +65,8 @@ public class TestAMRMClientPlacementConstraints extends BaseAMRMClientTest {
     // mismatches between client and server
     teardown();
     conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     createClusterAndStartApplication(conf);
 
     AMRMClient<AMRMClient.ContainerRequest> amClient =

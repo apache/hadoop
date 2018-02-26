@@ -54,9 +54,9 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineServerUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.junit.AfterClass;
@@ -107,8 +107,10 @@ public class TestHBaseStorageFlowRunCompaction {
     Configuration hbaseConf = util.getConfiguration();
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
-    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table flowRunTable = conn.getTable(
+        BaseTableRW.getTableName(hbaseConf,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     flowRunTable.put(p);
 
     Get g = new Get(rowKeyBytes);
@@ -156,8 +158,10 @@ public class TestHBaseStorageFlowRunCompaction {
     Configuration hbaseConf = util.getConfiguration();
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
-    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table flowRunTable = conn.getTable(
+        BaseTableRW.getTableName(hbaseConf,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     flowRunTable.put(p);
 
     String rowKey2 = "nonNumericRowKey2";
@@ -324,10 +328,12 @@ public class TestHBaseStorageFlowRunCompaction {
 
     // check in flow run table
     HRegionServer server = util.getRSForFirstRegionInTable(
-        BaseTable.getTableName(c1, FlowRunTable.TABLE_NAME_CONF_NAME,
-            FlowRunTable.DEFAULT_TABLE_NAME));
-    List<Region> regions = server.getOnlineRegions(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+        BaseTableRW.getTableName(c1, FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
+    List<Region> regions = server.getOnlineRegions(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     assertTrue("Didn't find any regions for primary table!",
         regions.size() > 0);
     // flush and compact all the regions of the primary table
@@ -352,8 +358,10 @@ public class TestHBaseStorageFlowRunCompaction {
         new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(BaseTable.getTableName(c1,
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTableRW.getTableName(c1,
+            FlowRunTableRW.TABLE_NAME_CONF_NAME,
+            FlowRunTableRW.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
 
     int rowCount = 0;
@@ -420,7 +428,7 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     byte[] tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp and attribute SUM_FINAL
-    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, cell1Ts, Bytes.toBytes(cellValue1), tagByteArray);
     currentColumnCells.add(c1);
 
@@ -430,7 +438,7 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a recent timestamp and attribute SUM_FINAL
-    Cell c2 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c2 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, cell2Ts, Bytes.toBytes(cellValue2), tagByteArray);
     currentColumnCells.add(c2);
 
@@ -440,7 +448,7 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c3 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c3 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, cell3Ts, Bytes.toBytes(cellValue3), tagByteArray);
     currentColumnCells.add(c3);
 
@@ -450,7 +458,7 @@ public class TestHBaseStorageFlowRunCompaction {
     tags.add(t);
     tagByteArray = Tag.fromList(tags);
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c4 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c4 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, cell4Ts, Bytes.toBytes(cellValue4), tagByteArray);
     currentColumnCells.add(c4);
 
@@ -520,7 +528,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinal, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinal++;
@@ -534,7 +542,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with attribute SUM
-      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsNotFinal, Bytes.toBytes(cellValueNotFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsNotFinal++;
@@ -611,7 +619,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinal, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinal++;
@@ -625,7 +633,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with a VERY old timestamp and attribute SUM_FINAL
-      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsFinalNotExpire, Bytes.toBytes(cellValueFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsFinalNotExpire++;
@@ -639,7 +647,7 @@ public class TestHBaseStorageFlowRunCompaction {
       tags.add(t);
       byte[] tagByteArray = Tag.fromList(tags);
       // create a cell with attribute SUM
-      c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily, aQualifier,
+      c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily, aQualifier,
           cellTsNotFinal, Bytes.toBytes(cellValueNotFinal), tagByteArray);
       currentColumnCells.add(c1);
       cellTsNotFinal++;
@@ -696,7 +704,7 @@ public class TestHBaseStorageFlowRunCompaction {
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
     // create a cell with a VERY old timestamp and attribute SUM_FINAL
-    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, 120L, Bytes.toBytes(cellValue1), tagByteArray);
     currentColumnCells.add(c1);
 
@@ -707,7 +715,7 @@ public class TestHBaseStorageFlowRunCompaction {
     tagByteArray = Tag.fromList(tags);
 
     // create a cell with a VERY old timestamp but has attribute SUM
-    Cell c2 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c2 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, 130L, Bytes.toBytes(cellValue2), tagByteArray);
     currentColumnCells.add(c2);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
@@ -754,7 +762,7 @@ public class TestHBaseStorageFlowRunCompaction {
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
     // create a cell with a VERY old timestamp
-    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, 120L, Bytes.toBytes(1110L), tagByteArray);
     currentColumnCells.add(c1);
 
@@ -792,7 +800,7 @@ public class TestHBaseStorageFlowRunCompaction {
 
     SortedSet<Cell> currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
 
-    Cell c1 = HBaseTimelineStorageUtils.createNewCell(aRowKey, aFamily,
+    Cell c1 = HBaseTimelineServerUtils.createNewCell(aRowKey, aFamily,
         aQualifier, currentTimestamp, Bytes.toBytes(1110L), tagByteArray);
     currentColumnCells.add(c1);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,

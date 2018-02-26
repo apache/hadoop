@@ -34,6 +34,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.CompositeGroupsMapping;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.LdapGroupsMapping;
+import org.apache.hadoop.security.RuleBasedLdapGroupsMapping;
 import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.apache.hadoop.security.ssl.SSLFactory;
 
@@ -74,7 +75,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         ZKFailoverController.class,
         SSLFactory.class,
         CompositeGroupsMapping.class,
-        CodecUtil.class
+        CodecUtil.class,
+        RuleBasedLdapGroupsMapping.class
         };
 
     // Initialize used variables

@@ -42,6 +42,8 @@ public interface FederationRPCMBean {
 
   long getProxyOpNotImplemented();
 
+  long getProxyOpRetries();
+
   long getRouterFailureStateStoreOps();
 
   long getRouterFailureReadOnlyOps();

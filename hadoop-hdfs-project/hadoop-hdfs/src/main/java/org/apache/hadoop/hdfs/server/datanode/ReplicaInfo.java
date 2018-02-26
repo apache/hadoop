@@ -53,7 +53,6 @@ abstract public class ReplicaInfo extends Block
    * Constructor.
    * @param block a block
    * @param vol volume where replica is located
-   * @param dir directory path where block and meta files are located
    */
   ReplicaInfo(Block block, FsVolumeSpi vol) {
     this(vol, block.getBlockId(), block.getNumBytes(),

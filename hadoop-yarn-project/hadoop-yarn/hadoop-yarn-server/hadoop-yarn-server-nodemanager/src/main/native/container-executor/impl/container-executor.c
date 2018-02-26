@@ -1435,20 +1435,16 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *exit_code_file = NULL;
   char *docker_command_with_binary = NULL;
   char *docker_wait_command = NULL;
-  char *docker_logs_command = NULL;
   char *docker_inspect_command = NULL;
   char *docker_rm_command = NULL;
   char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
-  int BUFFER_SIZE = 4096;
-  char buffer[BUFFER_SIZE];
 
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
   docker_command_with_binary = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_wait_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_logs_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_inspect_exitcode_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
@@ -1600,36 +1596,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
   fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
-  if(exit_code != 0) {
-    fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
-    exit_code);
-    snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
-      docker_binary, container_id);
-    FILE* logs = popen(docker_logs_command, "r");
-    if(logs != NULL) {
-      clearerr(logs);
-      res = fread(buffer, BUFFER_SIZE, 1, logs);
-      if(res < 1) {
-        fprintf(ERRORFILE, "%s %d %d\n",
-          "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
-        fflush(ERRORFILE);
-      }
-      else {
-        fprintf(ERRORFILE, "%s\n", buffer);
-        fflush(ERRORFILE);
-      }
-    }
-    else {
-      fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
-      fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
-      fprintf(ERRORFILE, "%s\n", strerror(errno));
-      fflush(ERRORFILE);
-    }
-    if(pclose(logs) != 0) {
-      fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
-      fflush(ERRORFILE);
-    }
-  }
 
 cleanup:
 
@@ -1662,7 +1628,6 @@ cleanup:
   free(cred_file_dest);
   free(docker_command_with_binary);
   free(docker_wait_command);
-  free(docker_logs_command);
   free(docker_inspect_command);
   free(docker_rm_command);
   return exit_code;

@@ -384,11 +384,6 @@ enum ExecutionTypeProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message ProfileCapabilityProto {
-  required string profile = 1;
-  required ResourceProto profileCapabilityOverride = 2;
-}
-
 message ResourceRequestProto {
   optional PriorityProto priority = 1;
   optional string resource_name = 2;
@@ -398,7 +393,6 @@ message ResourceRequestProto {
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
   optional int64 allocation_request_id = 8 [default = -1];
-  optional ProfileCapabilityProto profile = 9;
 }
 
 message ExecutionTypeRequestProto {
@@ -569,6 +563,7 @@ message QueueInfoProto {
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+  optional bool intraQueuePreemptionDisabled = 13;
 }
 
 message QueueConfigurationsProto {

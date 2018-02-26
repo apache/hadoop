@@ -28,7 +28,6 @@ import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 public class DummyGroupMapping implements GroupMappingServiceProvider {
 
   @Override
-  @SuppressWarnings("unchecked")
   public List<String> getGroups(String user) throws IOException {
     if (user.equals("root")) {
       return Arrays.asList("admin");
@@ -37,7 +36,7 @@ public class DummyGroupMapping implements GroupMappingServiceProvider {
       return Arrays.asList("nobody");
     } else {
       String[] groups = HadoopUsersConfTestHelper.getHadoopUserGroups(user);
-      return (groups != null) ? Arrays.asList(groups) : Collections.EMPTY_LIST;
+      return (groups != null) ? Arrays.asList(groups) : Collections.emptyList();
     }
   }
 
