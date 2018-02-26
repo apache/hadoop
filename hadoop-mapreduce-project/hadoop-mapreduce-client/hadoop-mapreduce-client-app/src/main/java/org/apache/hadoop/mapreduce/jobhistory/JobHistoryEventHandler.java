@@ -231,8 +231,8 @@ public class JobHistoryEventHandler extends AbstractService
     try {
       doneDirPrefixPath =
           FileContext.getFileContext(conf).makeQualified(new Path(userDoneDirStr));
-      mkdir(doneDirFS, doneDirPrefixPath, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_USER_DIR_PERMISSIONS));
+      mkdir(doneDirFS, doneDirPrefixPath, JobHistoryUtils.
+          getConfiguredHistoryIntermediateUserDoneDirPermissions(conf));
     } catch (IOException e) {
       LOG.error("Error creating user intermediate history done directory: [ "
           + doneDirPrefixPath + "]", e);
