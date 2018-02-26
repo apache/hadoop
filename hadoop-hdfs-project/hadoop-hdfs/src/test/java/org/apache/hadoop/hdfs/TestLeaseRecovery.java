@@ -228,6 +228,50 @@ public class TestLeaseRecovery {
   }
 
   /**
+   * Block/lease recovery should be retried with failed nodes from the second
+   * stage removed to avoid perpetual recovery failures.
+   */
+  @Test
+  public void testBlockRecoveryRetryAfterFailedRecovery() throws Exception {
+    Configuration conf = new Configuration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    Path file = new Path("/testBlockRecoveryRetryAfterFailedRecovery");
+    DistributedFileSystem dfs = cluster.getFileSystem();
+
+    // Create a file.
+    FSDataOutputStream out = dfs.create(file);
+    final int FILE_SIZE = 128 * 1024;
+    int count = 0;
+    while (count < FILE_SIZE) {
+      out.writeBytes("DE K9SUL");
+      count += 8;
+    }
+    out.hsync();
+
+    // Abort the original stream.
+    ((DFSOutputStream) out.getWrappedStream()).abort();
+
+    LocatedBlocks locations = cluster.getNameNodeRpc().getBlockLocations(
+        file.toString(), 0, count);
+    ExtendedBlock block = locations.get(0).getBlock();
+
+    // Finalize one replica to simulate a partial close failure.
+    cluster.getDataNodes().get(0).getFSDataset().finalizeBlock(block, false);
+    // Delete the meta file to simulate a rename/move failure.
+    cluster.deleteMeta(0, block);
+
+    // Try to recover the lease.
+    DistributedFileSystem newDfs = (DistributedFileSystem) FileSystem
+        .newInstance(cluster.getConfiguration(0));
+    count = 0;
+    while (count++ < 15 && !newDfs.recoverLease(file)) {
+      Thread.sleep(1000);
+    }
+    // The lease should have been recovered.
+    assertTrue("File should be closed", newDfs.recoverLease(file));
+  }
+
+  /**
    * Recover the lease on a file and append file from another client.
    */
   @Test
