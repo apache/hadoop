@@ -220,4 +220,31 @@ public class TestScriptBasedNodeAttributesProvider {
       }
     }, 500, 3000);
   }
+
+  @Test
+  public void testNodeAttributesValidation() throws Exception{
+    // Script output contains ambiguous node attributes
+    String scriptContent = "echo NODE_ATTRIBUTE:host,STRING,host1234\n "
+        + "echo NODE_ATTRIBUTE:host,STRING,host2345\n "
+        + "echo NODE_ATTRIBUTE:ip,STRING,10.0.0.1";
+
+    writeNodeAttributeScriptFile(scriptContent, true);
+
+    nodeAttributesProvider.init(getConfForNodeAttributeScript());
+    nodeAttributesProvider.start();
+
+    // There should be no attributes found, and we should
+    // see Malformed output warnings in the log
+    try {
+      GenericTestUtils
+          .waitFor(() -> nodeAttributesProvider
+                  .getDescriptors().size() == 3,
+              500, 3000);
+      Assert.fail("This test should timeout because the provide is unable"
+          + " to parse any attributes from the script output.");
+    } catch (TimeoutException e) {
+      Assert.assertEquals(0, nodeAttributesProvider
+          .getDescriptors().size());
+    }
+  }
 }

@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class NodeAttribute {
 
   public static final String DEFAULT_PREFIX = "";
+  public static final String PREFIX_DISTRIBUTED = "nm.yarn.io";
+  public static final String PREFIX_CENTRALIZED = "rm.yarn.io";
 
   public static NodeAttribute newInstance(String attributeName,
       NodeAttributeType attributeType, String attributeValue) {

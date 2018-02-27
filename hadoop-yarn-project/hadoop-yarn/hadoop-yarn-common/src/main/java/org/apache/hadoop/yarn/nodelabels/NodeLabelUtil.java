@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.yarn.nodelabels;
 
+import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+
 import java.io.IOException;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -92,6 +96,33 @@ public final class NodeLabelUtil {
       throw new IOException("attribute value should only contains "
           + "{0-9, a-z, A-Z, -, _,.} and should not started with {-,_}"
           + ", now it is= " + prefix);
+    }
+  }
+
+  /**
+   * Validate if a given set of attributes are valid. Attributes could be
+   * invalid if any of following conditions is met:
+   *
+   * <ul>
+   *   <li>Missing prefix: the attribute doesn't have prefix defined</li>
+   *   <li>Malformed attribute prefix: the prefix is not in valid format</li>
+   * </ul>
+   * @param attributeSet
+   * @throws IOException
+   */
+  public static void validateNodeAttributes(Set<NodeAttribute> attributeSet)
+      throws IOException {
+    if (attributeSet != null && !attributeSet.isEmpty()) {
+      for (NodeAttribute nodeAttribute : attributeSet) {
+        String prefix = nodeAttribute.getAttributePrefix();
+        if (Strings.isNullOrEmpty(prefix)) {
+          throw new IOException("Attribute prefix must be set");
+        }
+        // Verify attribute prefix format.
+        checkAndThrowAttributePrefix(prefix);
+        // Verify attribute name format.
+        checkAndThrowLabelName(nodeAttribute.getAttributeName());
+      }
     }
   }
 }

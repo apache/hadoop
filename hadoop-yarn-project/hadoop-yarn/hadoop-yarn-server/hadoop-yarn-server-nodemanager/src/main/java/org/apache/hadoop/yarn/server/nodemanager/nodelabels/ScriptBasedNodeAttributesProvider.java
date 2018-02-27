@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -116,12 +117,32 @@ public class ScriptBasedNodeAttributesProvider extends NodeAttributesProvider{
                 + NODE_ATTRIBUTE_DELIMITER + "ATTRIBUTE_VALUE; but get "
                 + nodeAttribute);
           }
+          // Automatically setup prefix for collected attributes
           NodeAttribute na = NodeAttribute
-              .newInstance(attributeStrs[0],
+              .newInstance(NodeAttribute.PREFIX_DISTRIBUTED,
+                  attributeStrs[0],
                   NodeAttributeType.valueOf(attributeStrs[1]),
                   attributeStrs[2]);
-          attributeSet.add(na);
+
+          // Since a NodeAttribute is identical with another one as long as
+          // their prefix and name are same, to avoid attributes getting
+          // overwritten by ambiguous attribute, make sure it fails in such
+          // case.
+          if (!attributeSet.add(na)) {
+            throw new IOException("Ambiguous node attribute is found: "
+                + na.toString() + ", a same attribute already exists");
+          }
         }
+      }
+
+      // Before updating the attributes to the provider,
+      // verify if they are valid
+      try {
+        NodeLabelUtil.validateNodeAttributes(attributeSet);
+      } catch (IOException e) {
+        throw new IOException("Node attributes collected by the script "
+            + "contains some invalidate entries. Detail message: "
+            + e.getMessage());
       }
       return attributeSet;
     }
