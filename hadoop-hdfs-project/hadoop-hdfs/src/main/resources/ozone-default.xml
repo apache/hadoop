@@ -1107,6 +1107,14 @@
     </description>
   </property>
   <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
+    <description>
+      Number of node pools to process in parallel.
+    </description>
+  </property>
+  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE</tag>
