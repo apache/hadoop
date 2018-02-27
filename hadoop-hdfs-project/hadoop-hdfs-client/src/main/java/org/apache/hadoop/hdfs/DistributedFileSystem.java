@@ -2020,8 +2020,13 @@ public class DistributedFileSystem extends FileSystem
       @Override
       public RemoteIterator<SnapshotDiffReportListing> doCall(final Path p)
           throws IOException {
-        return new SnapshotDiffReportListingIterator(
-            getPathName(p), fromSnapshot, toSnapshot);
+        if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(
+            toSnapshot)) {
+          throw new UnsupportedOperationException("Remote Iterator is"
+              + "supported for snapshotDiffReport between two snapshots");
+        }
+        return new SnapshotDiffReportListingIterator(getPathName(p),
+            fromSnapshot, toSnapshot);
       }
 
       @Override
@@ -2081,9 +2086,23 @@ public class DistributedFileSystem extends FileSystem
     }
   }
 
+  private boolean isValidSnapshotName(String snapshotName) {
+    // If any of the snapshots specified in the getSnapshotDiffReport call
+    // is null or empty, it points to the current tree.
+    return (snapshotName != null && !snapshotName.isEmpty());
+  }
+
   private SnapshotDiffReport getSnapshotDiffReportInternal(
       final String snapshotDir, final String fromSnapshot,
       final String toSnapshot) throws IOException {
+    // In case the diff needs to be computed between a snapshot and the current
+    // tree, we should not do iterative diffReport computation as the iterative
+    // approach might fail if in between the rpc calls the current tree
+    // changes in absence of the global fsn lock.
+    if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(
+        toSnapshot)) {
+      return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
+    }
     byte[] startPath = DFSUtilClient.EMPTY_BYTES;
     int index = -1;
     SnapshotDiffReportGenerator snapshotDiffReport;
