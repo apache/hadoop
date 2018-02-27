@@ -1157,6 +1157,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.disk.balancer.max.disk.errors";
   public static final int DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT = 5;
 
+  public static final String DFS_DISK_BALANCER_PLAN_VALID_INTERVAL =
+      "dfs.disk.balancer.plan.valid.interval";
+  public static final String DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT =
+      "1d";
+
 
   public static final String DFS_DISK_BALANCER_BLOCK_TOLERANCE =
       "dfs.disk.balancer.block.tolerance.percent";
