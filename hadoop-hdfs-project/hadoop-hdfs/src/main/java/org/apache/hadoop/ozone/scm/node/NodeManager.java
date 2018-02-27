@@ -148,5 +148,5 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param id
    * @param command
    */
-  default void addDatanodeCommand(DatanodeID id, SCMCommand command) {}
+  void addDatanodeCommand(DatanodeID id, SCMCommand command);
 }

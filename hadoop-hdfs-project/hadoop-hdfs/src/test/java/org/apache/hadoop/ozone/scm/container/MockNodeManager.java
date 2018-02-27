@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 import org.mockito.Mockito;
+import org.assertj.core.util.Preconditions;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -73,6 +74,7 @@ public class MockNodeManager implements NodeManager {
   private final Map<String, SCMNodeStat> nodeMetricMap;
   private final SCMNodeStat aggregateStat;
   private boolean chillmode;
+  private final Map<DatanodeID, List<SCMCommand>> commandMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
@@ -87,6 +89,7 @@ public class MockNodeManager implements NodeManager {
       }
     }
     chillmode = false;
+    this.commandMap = new HashMap<>();
   }
 
   /**
@@ -295,6 +298,31 @@ public class MockNodeManager implements NodeManager {
   @Override
   public OzoneProtos.NodeState getNodeState(DatanodeID id) {
     return null;
+  }
+
+  @Override
+  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
+    if(commandMap.containsKey(id)) {
+      List<SCMCommand> commandList = commandMap.get(id);
+      Preconditions.checkNotNull(commandList);
+      commandList.add(command);
+    } else {
+      List<SCMCommand> commandList = new LinkedList<>();
+      commandList.add(command);
+      commandMap.put(id, commandList);
+    }
+  }
+
+  // Returns the number of commands that is queued to this node manager.
+  public int getCommandCount(DatanodeID id) {
+    List<SCMCommand> list = commandMap.get(id);
+    return (list == null) ? 0 : list.size();
+  }
+
+  public void clearCommandQueue(DatanodeID id) {
+    if(commandMap.containsKey(id)) {
+      commandMap.put(id, new LinkedList<>());
+    }
   }
 
   /**

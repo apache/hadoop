@@ -27,9 +27,11 @@ import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.scm.container.closer.ContainerCloser;
 import org.apache.hadoop.ozone.scm.container.replication.ContainerSupervisor;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -57,6 +59,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes
     .FAILED_TO_CHANGE_CONTAINER_STATE;
+import static org.apache.hadoop.scm.ScmConfigKeys
+    .OZONE_SCM_CONTAINER_SIZE_DEFAULT;
+import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This
@@ -77,6 +82,8 @@ public class ContainerMapping implements Mapping {
   private final LeaseManager<ContainerInfo> containerLeaseManager;
   private final ContainerSupervisor containerSupervisor;
   private final float containerCloseThreshold;
+  private final ContainerCloser closer;
+  private final long size;
 
   /**
    * Constructs a mapping class that creates mapping between container names
@@ -98,6 +105,7 @@ public class ContainerMapping implements Mapping {
       cacheSizeMB) throws IOException {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
+    this.closer = new ContainerCloser(nodeManager, conf);
 
     File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
 
@@ -113,6 +121,10 @@ public class ContainerMapping implements Mapping {
     this.lock = new ReentrantLock();
 
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
+
+    // To be replaced with code getStorageSize once it is committed.
+    size = conf.getLong(OZONE_SCM_CONTAINER_SIZE_GB,
+        OZONE_SCM_CONTAINER_SIZE_DEFAULT) * 1024 * 1024 * 1024;
     this.containerStateManager =
         new ContainerStateManager(conf, this);
     this.containerSupervisor =
@@ -342,6 +354,7 @@ public class ContainerMapping implements Mapping {
 
   /**
    * Returns the container State Manager.
+   *
    * @return ContainerStateManager
    */
   @Override
@@ -351,6 +364,18 @@ public class ContainerMapping implements Mapping {
 
   /**
    * Process container report from Datanode.
+   * <p>
+   * Processing follows a very simple logic for time being.
+   * <p>
+   * 1. Datanodes report the current State -- denoted by the datanodeState
+   * <p>
+   * 2. We are the older SCM state from the Database -- denoted by
+   * the knownState.
+   * <p>
+   * 3. We copy the usage etc. from currentState to newState and log that
+   * newState to the DB. This allows us SCM to bootup again and read the
+   * state of the world from the DB, and then reconcile the state from
+   * container reports, when they arrive.
    *
    * @param reports Container report
    */
@@ -360,63 +385,37 @@ public class ContainerMapping implements Mapping {
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
         containerInfos = reports.getReportsList();
     containerSupervisor.handleContainerReport(reports);
-    for (StorageContainerDatanodeProtocolProtos.ContainerInfo containerInfo :
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
-      byte[] dbKey = containerInfo.getContainerNameBytes().toByteArray();
+      byte[] dbKey = datanodeState.getContainerNameBytes().toByteArray();
       lock.lock();
       try {
         byte[] containerBytes = containerStore.get(dbKey);
         if (containerBytes != null) {
-          OzoneProtos.SCMContainerInfo oldInfo =
+          OzoneProtos.SCMContainerInfo knownState =
               OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
 
-          OzoneProtos.SCMContainerInfo.Builder builder =
-              OzoneProtos.SCMContainerInfo.newBuilder();
-          builder.setContainerName(oldInfo.getContainerName());
-          builder.setPipeline(oldInfo.getPipeline());
-          // If used size is greater than allocated size, we will be updating
-          // allocated size with used size. This update is done as a fallback
-          // mechanism in case SCM crashes without properly updating allocated
-          // size. Correct allocated value will be updated by
-          // ContainerStateManager during SCM shutdown.
-          long usedSize = containerInfo.getUsed();
-          long allocated = oldInfo.getAllocatedBytes() > usedSize ?
-              oldInfo.getAllocatedBytes() : usedSize;
-          builder.setAllocatedBytes(allocated);
-          builder.setUsedBytes(containerInfo.getUsed());
-          builder.setNumberOfKeys(containerInfo.getKeyCount());
-          builder.setState(oldInfo.getState());
-          builder.setStateEnterTime(oldInfo.getStateEnterTime());
-          builder.setContainerID(oldInfo.getContainerID());
-          if (oldInfo.getOwner() != null) {
-            builder.setOwner(oldInfo.getOwner());
-          }
-          OzoneProtos.SCMContainerInfo newContainerInfo = builder.build();
-          containerStore.put(dbKey, newContainerInfo.toByteArray());
-          float containerUsedPercentage = 1.0f *
-              containerInfo.getUsed() / containerInfo.getSize();
-          // TODO: Handling of containers which are already in close queue.
-          if (containerUsedPercentage >= containerCloseThreshold) {
-            // TODO: The container has to be moved to close container queue.
-            // For now, we are just updating the container state to CLOSING.
-            // Close container implementation can decide on how to maintain
-            // list of containers to be closed, this is the place where we
-            // have to add the containers to that list.
-            OzoneProtos.LifeCycleState state = updateContainerState(
-                ContainerInfo.fromProtobuf(newContainerInfo).getContainerName(),
-                OzoneProtos.LifeCycleEvent.FINALIZE);
-            if (state != OzoneProtos.LifeCycleState.CLOSING) {
-              LOG.error("Failed to close container {}, reason : Not able to " +
-                  "update container state, current container state: {}.",
-                  containerInfo.getContainerName(), state);
-            }
+          OzoneProtos.SCMContainerInfo newState =
+              reconcileState(datanodeState, knownState);
+
+          // FIX ME: This can be optimized, we write twice to memory, where a
+          // single write would work well.
+          //
+          // We need to write this to DB again since the closed only write
+          // the updated State.
+          containerStore.put(dbKey, newState.toByteArray());
+
+          // If the container is closed, then state is already written to SCM
+          // DB.TODO: So can we can write only once to DB.
+          if (closeContainerIfNeeded(newState)) {
+            LOG.info("Closing the Container: {}", newState.getContainerName());
           }
         } else {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
-              " {}, for container: {}, reason: container doesn't exist in" +
-              "container database.", reports.getDatanodeID(),
-              containerInfo.getContainerName());
+                  " {}, for container: {}, reason: container doesn't exist in" +
+                  "container database.", reports.getDatanodeID(),
+              datanodeState.getContainerName());
         }
       } finally {
         lock.unlock();
@@ -425,10 +424,109 @@ public class ContainerMapping implements Mapping {
   }
 
   /**
+   * Reconciles the state from Datanode with the state in SCM.
+   *
+   * @param datanodeState - State from the Datanode.
+   * @param knownState - State inside SCM.
+   * @return new SCM State for this container.
+   */
+  private OzoneProtos.SCMContainerInfo reconcileState(
+      StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState,
+      OzoneProtos.SCMContainerInfo knownState) {
+    OzoneProtos.SCMContainerInfo.Builder builder =
+        OzoneProtos.SCMContainerInfo.newBuilder();
+    builder.setContainerName(knownState.getContainerName());
+    builder.setPipeline(knownState.getPipeline());
+    // If used size is greater than allocated size, we will be updating
+    // allocated size with used size. This update is done as a fallback
+    // mechanism in case SCM crashes without properly updating allocated
+    // size. Correct allocated value will be updated by
+    // ContainerStateManager during SCM shutdown.
+    long usedSize = datanodeState.getUsed();
+    long allocated = knownState.getAllocatedBytes() > usedSize ?
+        knownState.getAllocatedBytes() : usedSize;
+    builder.setAllocatedBytes(allocated);
+    builder.setUsedBytes(usedSize);
+    builder.setNumberOfKeys(datanodeState.getKeyCount());
+    builder.setState(knownState.getState());
+    builder.setStateEnterTime(knownState.getStateEnterTime());
+    builder.setContainerID(knownState.getContainerID());
+    if (knownState.getOwner() != null) {
+      builder.setOwner(knownState.getOwner());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Queues the close container command, to datanode and writes the new state
+   * to container DB.
+   * <p>
+   * TODO : Remove this 2 ContainerInfo definitions. It is brain dead to have
+   * one protobuf in one file and another definition in another file.
+   *
+   * @param newState - This is the state we maintain in SCM.
+   * @throws IOException
+   */
+  private boolean closeContainerIfNeeded(OzoneProtos.SCMContainerInfo newState)
+      throws IOException {
+    float containerUsedPercentage = 1.0f *
+        newState.getUsedBytes() / this.size;
+
+    ContainerInfo scmInfo = getContainer(newState.getContainerName());
+    if (containerUsedPercentage >= containerCloseThreshold
+        && !isClosed(scmInfo)) {
+      // We will call closer till get to the closed state.
+      // That is SCM will make this call repeatedly until we reach the closed
+      // state.
+      closer.close(newState);
+
+      if (shouldClose(scmInfo)) {
+        // This event moves the Container from Open to Closing State, this is
+        // a state inside SCM. This is the desired state that SCM wants this
+        // container to reach. We will know that a container has reached the
+        // closed state from container reports. This state change should be
+        // invoked once and only once.
+        OzoneProtos.LifeCycleState state = updateContainerState(
+            scmInfo.getContainerName(),
+            OzoneProtos.LifeCycleEvent.FINALIZE);
+        if (state != OzoneProtos.LifeCycleState.CLOSING) {
+          LOG.error("Failed to close container {}, reason : Not able " +
+                  "to " +
+                  "update container state, current container state: {}.",
+              newState.getContainerName(), state);
+          return false;
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * In Container is in closed state, if it is in closed, Deleting or Deleted
+   * State.
+   *
+   * @param info - ContainerInfo.
+   * @return true if is in open state, false otherwise
+   */
+  private boolean shouldClose(ContainerInfo info) {
+    return info.getState() == OzoneProtos.LifeCycleState.OPEN;
+  }
+
+  private boolean isClosed(ContainerInfo info) {
+    return info.getState() == OzoneProtos.LifeCycleState.CLOSED;
+  }
+
+  @VisibleForTesting
+  public ContainerCloser getCloser() {
+    return closer;
+  }
+
+  /**
    * Closes this stream and releases any system resources associated with it.
    * If the stream is
    * already closed then invoking this method has no effect.
-   *
+   * <p>
    * <p>As noted in {@link AutoCloseable#close()}, cases where the close may
    * fail require careful
    * attention. It is strongly advised to relinquish the underlying resources
@@ -457,7 +555,7 @@ public class ContainerMapping implements Mapping {
    * containerStateManager, when closing ContainerMapping, we need to update
    * this in the container store.
    *
-   * @throws IOException  on failure.
+   * @throws IOException on failure.
    */
   @VisibleForTesting
   public void flushContainerInfo() throws IOException {
