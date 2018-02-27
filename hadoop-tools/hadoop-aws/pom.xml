@@ -153,6 +153,7 @@
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
+                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed in parallel -->
                     <test.parallel.execution>true</test.parallel.execution>
@@ -209,6 +210,7 @@
                 </goals>
                 <configuration>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
+                  <trimStackTrace>false</trimStackTrace>
                   <systemPropertyVariables>
                     <!-- Tell tests that they are being executed sequentially -->
                     <test.parallel.execution>false</test.parallel.execution>
