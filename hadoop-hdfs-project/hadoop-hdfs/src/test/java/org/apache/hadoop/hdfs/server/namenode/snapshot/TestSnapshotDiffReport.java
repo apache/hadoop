@@ -1539,4 +1539,17 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file3")));
   }
+
+  @Test
+  public void testSnapshotDiffReportRemoteIterator2() throws Exception {
+    final Path root = new Path("/");
+    hdfs.mkdirs(root);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    try {
+      hdfs.snapshotDiffReportListingRemoteIterator(root, "s0", "");
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Remote Iterator is"
+          + "supported for snapshotDiffReport between two snapshots"));
+    }
+  }
 }
