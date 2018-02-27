@@ -248,9 +248,16 @@ is running, please verify it is fully functional by running some commands like
 
    - `./hdfs scm -init`
 
- Start SCM and KSM.
+ Start SCM.
 
    - `./hdfs --daemon start scm`
+
+ Once SCM gets started, KSM must be initialized.
+
+   - `./hdfs ksm -createObjectStore`
+
+ Start KSM.
+
    - `./hdfs --daemon start ksm`
 
 if you would like to start HDFS and Ozone together, you can do that by running
