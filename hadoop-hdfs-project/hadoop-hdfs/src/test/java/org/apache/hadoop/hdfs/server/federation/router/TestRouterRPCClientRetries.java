@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -64,8 +65,16 @@ public class TestRouterRPCClientRetries {
         .rpc()
         .build();
 
+    // reduce IPC client connection retry times and interval time
+    Configuration clientConf = new Configuration(false);
+    clientConf.setInt(
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
+    clientConf.setInt(
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY, 100);
+
     cluster.addRouterOverrides(routerConf);
-    cluster.startCluster();
+    // override some settings for the client
+    cluster.startCluster(clientConf);
     cluster.startRouters();
     cluster.waitClusterUp();
 
