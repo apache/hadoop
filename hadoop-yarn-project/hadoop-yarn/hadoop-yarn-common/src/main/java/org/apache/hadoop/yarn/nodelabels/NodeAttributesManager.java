@@ -69,10 +69,14 @@ public abstract class NodeAttributesManager extends AbstractService {
       Map<String, Set<NodeAttribute>> nodeAttributeMapping) throws IOException;
 
   /**
+   * Returns a set of node attributes whose prefix is one of the given
+   * prefixes; if the prefix set is null or empty, all attributes are returned;
+   * if prefix set is given but no mapping could be found, an empty set
+   * is returned.
+   *
    * @param prefix set of prefix string's for which the attributes needs to
    *          returned
-   * @return set of node Attributes objects for the specified set of prefixes,
-   *         else return all
+   * @return set of node Attributes
    */
   public abstract Set<NodeAttribute> getClusterNodeAttributes(
       Set<String> prefix);

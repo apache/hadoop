@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -141,6 +142,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
         Host node = nodeCollections.get(nodeHost);
         if (node == null) {
           node = new Host(nodeHost);
+          nodeCollections.put(nodeHost, node);
         }
         switch (op) {
         case REMOVE:
@@ -181,8 +183,16 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
   private void removeNodeFromAttributes(String nodeHost,
       Set<NodeAttribute> attributeMappings) {
-    for (NodeAttribute attribute : attributeMappings) {
-      clusterAttributes.get(attribute).removeNode(nodeHost);
+    for (NodeAttribute rmAttribute : attributeMappings) {
+      RMNodeAttribute host = clusterAttributes.get(rmAttribute);
+      if (host != null) {
+        host.removeNode(nodeHost);
+        // If there is no other host has such attribute,
+        // remove it from the global mapping.
+        if (host.getAssociatedNodeIds().isEmpty()) {
+          clusterAttributes.remove(rmAttribute);
+        }
+      }
     }
   }
 
@@ -305,19 +315,19 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   @Override
   public Set<NodeAttribute> getClusterNodeAttributes(Set<String> prefix) {
     Set<NodeAttribute> attributes = new HashSet<>();
-    try {
-      readLock.lock();
-      attributes.addAll(clusterAttributes.keySet());
-    } finally {
-      readLock.unlock();
+    KeySetView<NodeAttribute, RMNodeAttribute> allAttributes =
+        clusterAttributes.keySet();
+    // Return all if prefix is not given.
+    if (prefix == null || prefix.isEmpty()) {
+      attributes.addAll(allAttributes);
+      return attributes;
     }
-    if (prefix != null && prefix.isEmpty()) {
-      Iterator<NodeAttribute> iterator = attributes.iterator();
-      while (iterator.hasNext()) {
-        NodeAttribute attribute = iterator.next();
-        if (!prefix.contains(attribute.getAttributePrefix())) {
-          iterator.remove();
-        }
+    // Try search attributes by prefix and return valid ones.
+    Iterator<NodeAttribute> iterator = allAttributes.iterator();
+    while (iterator.hasNext()) {
+      NodeAttribute current = iterator.next();
+      if (prefix.contains(current.getAttributePrefix())) {
+        attributes.add(current);
       }
     }
     return attributes;
