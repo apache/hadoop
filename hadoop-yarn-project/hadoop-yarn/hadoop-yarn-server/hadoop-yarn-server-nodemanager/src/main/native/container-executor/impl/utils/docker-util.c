@@ -805,6 +805,14 @@ static int set_group_add(const struct configuration *command_config, char *out, 
   char **group_add = get_configuration_values_delimiter("group-add", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
   size_t tmp_buffer_size = 4096;
   char *tmp_buffer = NULL;
+  char *privileged = NULL;
+
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    free(privileged);
+    return ret;
+  }
+  free(privileged);
 
   if (group_add != NULL) {
     for (i = 0; group_add[i] != NULL; ++i) {
@@ -1211,6 +1219,7 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   size_t tmp_buffer_size = 1024;
   char *tmp_buffer = NULL;
   char **launch_command = NULL;
+  char *privileged = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
@@ -1250,12 +1259,17 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
   memset(tmp_buffer, 0, tmp_buffer_size);
 
-  quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--user=", user);
-  ret = add_to_buffer(out, outlen, tmp_buffer);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, &command_config);
+
+  if (privileged == NULL || strcasecmp(privileged, "false") == 0) {
+      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--user=", user);
+      ret = add_to_buffer(out, outlen, tmp_buffer);
+      if (ret != 0) {
+        return BUFFER_TOO_SMALL;
+      }
+      memset(tmp_buffer, 0, tmp_buffer_size);
   }
-  memset(tmp_buffer, 0, tmp_buffer_size);
+  free(privileged);
 
   ret = detach_container(&command_config, out, outlen);
   if (ret != 0) {
