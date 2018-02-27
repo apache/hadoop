@@ -1419,6 +1419,39 @@ public class TestEncryptionZones {
   }
 
   /**
+   * Test correctness of encryption zones on a existing snapshot path.
+   * Specifically, test the file in encryption zones with no encryption info
+   */
+  @Test
+  public void testSnapshotWithFile() throws Exception {
+    final int len = 8196;
+    final Path zoneParent = new Path("/zones");
+    final Path zone = new Path(zoneParent, "zone");
+    final Path zoneFile = new Path(zone, "zoneFile");
+    fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+    String contents = DFSTestUtil.readFile(fs, zoneFile);
+
+    // Create the snapshot which contains the file
+    dfsAdmin.allowSnapshot(zoneParent);
+    final Path snap1 = fs.createSnapshot(zoneParent, "snap1");
+
+    // Now delete the file and create encryption zone
+    fsWrapper.delete(zoneFile, false);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
+    assertEquals("Got unexpected ez path", zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(zone).getPath());
+
+    // The file in snapshot shouldn't have any encryption info
+    final Path snapshottedZoneFile = new Path(
+        snap1 + "/" + zone.getName() + "/" + zoneFile.getName());
+    FileEncryptionInfo feInfo = getFileEncryptionInfo(snapshottedZoneFile);
+    assertNull("Expected null ez info", feInfo);
+    assertEquals("Contents of snapshotted file have changed unexpectedly",
+        contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
+  }
+
+  /**
    * Verify symlinks can be created in encryption zones and that
    * they function properly when the target is in the same
    * or different ez.
