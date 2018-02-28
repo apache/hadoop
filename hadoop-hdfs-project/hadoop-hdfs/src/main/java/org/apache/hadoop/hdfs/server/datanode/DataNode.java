@@ -1480,22 +1480,35 @@ public class DataNode extends ReconfigurableBase
       throw new RuntimeException(errMessage);
     }
 
-    SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
-    if (resources != null && saslPropsResolver == null) {
-      return;
-    }
     if (dnConf.getIgnoreSecurePortsForTesting()) {
       return;
     }
-    if (saslPropsResolver != null &&
-        DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY &&
-        resources == null) {
-      return;
+
+    if (resources != null) {
+      final boolean httpSecured = resources.isHttpPortPrivileged()
+          || DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY;
+      final boolean rpcSecured = resources.isRpcPortPrivileged()
+          || resources.isSaslEnabled();
+
+      // Allow secure DataNode to startup if:
+      // 1. Http is secure.
+      // 2. Rpc is secure
+      if (rpcSecured && httpSecured) {
+        return;
+      }
+    } else {
+      // Handle cases when SecureDataNodeStarter#getSecureResources is not
+      // invoked
+      SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
+      if (saslPropsResolver != null &&
+          DFSUtil.getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY) {
+        return;
+      }
     }
-    throw new RuntimeException("Cannot start secure DataNode without " +
-      "configuring either privileged resources or SASL RPC data transfer " +
-      "protection and SSL for HTTP.  Using privileged resources in " +
-      "combination with SASL RPC data transfer protection is not supported.");
+
+    throw new RuntimeException("Cannot start secure DataNode due to incorrect "
+        + "config. See https://cwiki.apache.org/confluence/display/HADOOP/"
+        + "Secure+DataNode for details.");
   }
   
   public static String generateUuid() {
