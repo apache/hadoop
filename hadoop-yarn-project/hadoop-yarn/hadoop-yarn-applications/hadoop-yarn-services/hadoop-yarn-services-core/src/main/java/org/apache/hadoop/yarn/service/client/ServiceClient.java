@@ -363,7 +363,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (terminatedStates.contains(report.getYarnApplicationState())) {
       LOG.info("Service {} is already in a terminated state {}", serviceName,
           report.getYarnApplicationState());
-      return EXIT_SUCCESS;
+      return EXIT_COMMAND_ARGUMENT_ERROR;
     }
     if (preRunningStates.contains(report.getYarnApplicationState())) {
       String msg = serviceName + " is at " + report.getYarnApplicationState()
@@ -779,7 +779,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     Service service = ServiceApiUtil.loadService(fs, serviceName);
     ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
     // see if it is actually running and bail out;
-    verifyNoLiveAppInRM(serviceName, "thaw");
+    verifyNoLiveAppInRM(serviceName, "start");
     ApplicationId appId = submitApp(service);
     service.setId(appId.toString());
     // write app definition on to hdfs
