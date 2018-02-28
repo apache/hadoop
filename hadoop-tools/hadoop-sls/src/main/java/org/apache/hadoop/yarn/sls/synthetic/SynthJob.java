@@ -32,6 +32,7 @@ import org.apache.hadoop.tools.rumen.ReduceTaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator;
 
 import java.util.ArrayList;
@@ -92,14 +93,16 @@ public class SynthJob implements JobStory {
     private long maxMemory;
     private long maxVcores;
     private int priority;
+    private ExecutionType executionType;
 
     private SynthTask(String type, long time, long maxMemory, long maxVcores,
-        int priority){
+        int priority, ExecutionType executionType){
       this.type = type;
       this.time = time;
       this.maxMemory = maxMemory;
       this.maxVcores = maxVcores;
       this.priority = priority;
+      this.executionType = executionType;
     }
 
     public String getType(){
@@ -122,11 +125,15 @@ public class SynthJob implements JobStory {
       return priority;
     }
 
+    public ExecutionType getExecutionType() {
+      return executionType;
+    }
+
     @Override
     public String toString(){
       return String.format("[task]\ttype: %1$-10s\ttime: %2$3s\tmemory: "
-              + "%3$4s\tvcores: %4$2s%n", getType(), getTime(), getMemory(),
-          getVcores());
+              + "%3$4s\tvcores: %4$2s\texecution_type: %5$-10s%n", getType(),
+          getTime(), getMemory(), getVcores(), getExecutionType().toString());
     }
   }
 
@@ -181,6 +188,9 @@ public class SynthJob implements JobStory {
       long vcores = task.max_vcores.getLong();
       vcores = vcores < MIN_VCORES ? MIN_VCORES  : vcores;
       int priority = task.priority;
+      ExecutionType executionType = task.executionType == null
+          ? ExecutionType.GUARANTEED
+          : ExecutionType.valueOf(task.executionType);
 
       // Save task information by type
       taskByType.put(taskType, new ArrayList<>());
@@ -192,7 +202,7 @@ public class SynthJob implements JobStory {
         long time = task.time.getLong();
         totalSlotTime += time;
         SynthTask t = new SynthTask(taskType, time, memory, vcores,
-            priority);
+            priority, executionType);
         tasks.add(t);
         taskByType.get(taskType).add(t);
       }
