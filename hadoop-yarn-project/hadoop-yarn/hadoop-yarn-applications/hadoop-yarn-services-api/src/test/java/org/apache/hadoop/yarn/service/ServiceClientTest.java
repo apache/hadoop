@@ -88,6 +88,8 @@ public class ServiceClientTest extends ServiceClient {
     }
     if (serviceName.equals("jenkins")) {
       return EXIT_SUCCESS;
+    } else if (serviceName.equals("jenkins-second-stop")) {
+      return EXIT_COMMAND_ARGUMENT_ERROR;
     } else {
       throw new ApplicationNotFoundException("");
     }

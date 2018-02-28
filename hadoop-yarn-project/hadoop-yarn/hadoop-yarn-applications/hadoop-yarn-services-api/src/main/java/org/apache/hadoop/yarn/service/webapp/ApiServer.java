@@ -59,7 +59,7 @@ import java.util.Map;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
-import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_SUCCESS;
+import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
 /**
  * The rest API endpoints for users to manage services on YARN.
@@ -240,7 +240,7 @@ public class ApiServer {
   private Response stopService(String appName, boolean destroy,
       final UserGroupInformation ugi) throws IOException,
       InterruptedException, YarnException, FileNotFoundException {
-    ugi.doAs(new PrivilegedExceptionAction<Integer>() {
+    int result = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
       @Override
       public Integer run() throws IOException, YarnException,
           FileNotFoundException {
@@ -249,11 +249,12 @@ public class ApiServer {
         sc.init(YARN_CONFIG);
         sc.start();
         result = sc.actionStop(appName, destroy);
+        if (result == EXIT_SUCCESS) {
+          LOG.info("Successfully stopped service {}", appName);
+        }
         if (destroy) {
           result = sc.actionDestroy(appName);
           LOG.info("Successfully deleted service {}", appName);
-        } else {
-          LOG.info("Successfully stopped service {}", appName);
         }
         sc.close();
         return result;
@@ -264,8 +265,13 @@ public class ApiServer {
       serviceStatus.setDiagnostics("Successfully destroyed service " +
           appName);
     } else {
-      serviceStatus.setDiagnostics("Successfully stopped service " +
-          appName);
+      if (result == EXIT_COMMAND_ARGUMENT_ERROR) {
+        serviceStatus
+            .setDiagnostics("Service " + appName + " is already stopped");
+        return formatResponse(Status.BAD_REQUEST, serviceStatus);
+      } else {
+        serviceStatus.setDiagnostics("Successfully stopped service " + appName);
+      }
     }
     return formatResponse(Status.OK, serviceStatus);
   }
