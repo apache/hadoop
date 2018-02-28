@@ -117,13 +117,13 @@
           n.iconState = "down";
           if (n.isSafeMode === true) {
             n.title = capitalise(n.state) + " (safe mode)"
-            n.iconState = "decommisioned";
+            n.iconState = "decommissioned";
           } else if (n.state === "ACTIVE") {
             n.title = capitalise(n.state);
             n.iconState = "alive";
           } else if (nodes[i].state === "STANDBY") {
             n.title = capitalise(n.state);
-            n.iconState = "down-decommisioned";
+            n.iconState = "down-decommissioned";
           } else if (nodes[i].state === "UNAVAILABLE") {
             n.title = capitalise(n.state);
             n.iconState = "down";
@@ -189,10 +189,10 @@
             n.iconState = "alive";
           } else if (n.status === "SAFEMODE") {
             n.title = capitalise(n.status);
-            n.iconState = "down-decommisioned";
+            n.iconState = "down-decommissioned";
           } else if (n.status === "STOPPING") {
             n.title = capitalise(n.status);
-            n.iconState = "decommisioned";
+            n.iconState = "decommissioned";
           } else if (n.status === "SHUTDOWN") {
             n.title = capitalise(n.status);
             n.iconState = "down";
@@ -258,7 +258,7 @@
           if (n.adminState === "In Service") {
             n.state = "alive";
           } else if (nodes[i].adminState === "Decommission In Progress") {
-            n.state = "decommisioning";
+            n.state = "decommissioning";
           } else if (nodes[i].adminState === "Decommissioned") {
             n.state = "decommissioned";
           }
