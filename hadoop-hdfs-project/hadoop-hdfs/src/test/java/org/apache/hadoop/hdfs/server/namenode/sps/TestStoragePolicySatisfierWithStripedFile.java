@@ -69,6 +69,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private int parityBlocks;
   private int cellSize;
   private int defaultStripeBlockSize;
+  private Configuration conf;
 
   private ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
@@ -84,6 +85,13 @@ public class TestStoragePolicySatisfierWithStripedFile {
     parityBlocks = ecPolicy.getNumParityUnits();
     cellSize = ecPolicy.getCellSize();
     defaultStripeBlockSize = cellSize * stripesPerBlock;
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.INTERNAL.toString());
+    // Reduced refresh cycle to update latest datanodes.
+    conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
+        1000);
+    initConfWithStripe(conf, defaultStripeBlockSize);
   }
 
   /**
@@ -103,10 +111,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
       }
     }
 
-    final Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
@@ -216,10 +220,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
       }
     }
 
-    final Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
@@ -325,13 +325,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
       }
     }
 
-    final Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys
         .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
-    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
@@ -420,10 +416,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
       }
     }
 
-    final Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-        StoragePolicySatisfierMode.INTERNAL.toString());
-    initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)

@@ -243,7 +243,7 @@ If administrator wants to switch modes of SPS feature while Namenode is running,
        hdfs dfsadmin -reconfig namenode <host:ipc_port> start
 
 ### Start External SPS Service.
-If administrator wants to start external sps, first he/she needs to configure property `dfs.storage.policy.satisfier.mode` with `external` value in configuration file (`hdfs-site.xml`) and then run Namenode reconfig command. After this start external sps service using following command
+If administrator wants to start external sps, first he/she needs to configure property `dfs.storage.policy.satisfier.mode` with `external` value in configuration file (`hdfs-site.xml`) and then run Namenode reconfig command. Please ensure that network topology configurations in the configuration file are same as namenode, this cluster will be used for matching target nodes. After this, start external sps service using following command
 
 * Command:
 

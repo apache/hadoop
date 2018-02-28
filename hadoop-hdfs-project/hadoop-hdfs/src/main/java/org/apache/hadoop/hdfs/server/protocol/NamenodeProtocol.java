@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -211,20 +210,5 @@ public interface NamenodeProtocol {
    */
   @AtMostOnce
   String getNextSPSPath() throws IOException;
-
-  /**
-   * Verifies whether the given Datanode has the enough estimated size with
-   * given storage type for scheduling the block. This API used by External SPS.
-   *
-   * @param dn
-   *          - datanode
-   * @param type
-   *          - storage type
-   * @param estimatedSize
-   *          - size
-   */
-  @Idempotent
-  boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
-      long estimatedSize) throws IOException;
 }
 

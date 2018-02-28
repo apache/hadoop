@@ -68,6 +68,9 @@ public class TestStoragePolicySatisfierWithHA {
     config.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     config.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.INTERNAL.toString());
+    // Reduced refresh cycle to update latest datanodes.
+    config.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
+        1000);
     startCluster(config, allDiskTypes, numOfDatanodes, storagesPerDatanode,
         capacity);
     dfs = cluster.getFileSystem(nnIndex);

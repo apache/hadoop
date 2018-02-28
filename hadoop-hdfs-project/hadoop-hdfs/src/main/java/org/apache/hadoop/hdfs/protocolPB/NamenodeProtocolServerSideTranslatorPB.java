@@ -23,8 +23,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.CheckDNSpaceRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.CheckDNSpaceResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto;
@@ -273,23 +271,6 @@ public class NamenodeProtocolServerSideTranslatorPB implements
       }
       return GetNextSPSPathResponseProto.newBuilder().setSpsPath(nextSPSPath)
           .build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
-
-  @Override
-  public CheckDNSpaceResponseProto checkDNSpaceForScheduling(
-      RpcController controller, CheckDNSpaceRequestProto request)
-          throws ServiceException {
-    try {
-      CheckDNSpaceResponseProto build = CheckDNSpaceResponseProto.newBuilder()
-          .setIsGoodDatanodeWithSpace(impl.checkDNSpaceForScheduling(
-              PBHelperClient.convert(request.getDnInfo()),
-              PBHelperClient.convertStorageType(request.getStorageType()),
-              request.getEstimatedSize()))
-          .build();
-      return build;
     } catch (IOException e) {
       throw new ServiceException(e);
     }

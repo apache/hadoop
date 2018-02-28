@@ -105,6 +105,9 @@ public class TestPersistentStoragePolicySatisfier {
         "3000");
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.INTERNAL.toString());
+    // Reduced refresh cycle to update latest datanodes.
+    conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
+        1000);
     final int dnNumber = storageTypes.length;
     final short replication = 3;
     MiniDFSCluster.Builder clusterBuilder = new MiniDFSCluster.Builder(conf)
@@ -295,6 +298,9 @@ public class TestPersistentStoragePolicySatisfier {
       conf = new HdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           StoragePolicySatisfierMode.INTERNAL.toString());
+      // Reduced refresh cycle to update latest datanodes.
+      conf.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
+          1000);
       haCluster = new MiniDFSCluster
           .Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))

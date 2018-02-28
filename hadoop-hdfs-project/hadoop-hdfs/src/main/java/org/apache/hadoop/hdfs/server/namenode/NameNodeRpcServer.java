@@ -2583,17 +2583,4 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     return namesystem.getFilePath(pathId);
   }
-
-  @Override
-  public boolean checkDNSpaceForScheduling(DatanodeInfo dn,
-      StorageType type, long estimatedSize) throws IOException {
-    checkNNStartup();
-    String operationName = "checkDNSpaceForScheduling";
-    namesystem.checkSuperuserPrivilege(operationName);
-    if (nn.isStandbyState()) {
-      throw new StandbyException("Not supported by Standby Namenode.");
-    }
-    return namesystem.getBlockManager().getDatanodeManager()
-        .verifyTargetDatanodeHasSpaceForScheduling(dn, type, estimatedSize);
-  }
 }

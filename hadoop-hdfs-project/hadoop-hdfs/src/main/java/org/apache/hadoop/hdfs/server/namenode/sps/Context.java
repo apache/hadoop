@@ -23,11 +23,10 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
@@ -72,9 +71,12 @@ public interface Context<T> {
   /**
    * Gets the network topology.
    *
+   * @param datanodeMap
+   *          target datanodes
+   *
    * @return network topology
    */
-  NetworkTopology getNetworkTopology();
+  NetworkTopology getNetworkTopology(DatanodeMap datanodeMap);
 
   /**
    * Returns true if the give file exists in the Namespace.
@@ -131,22 +133,6 @@ public interface Context<T> {
    */
   DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException;
-
-  /**
-   * Checks whether the given datanode has sufficient space to occupy the given
-   * blockSize data.
-   *
-   * @param dn
-   *          datanode info
-   * @param type
-   *          storage type
-   * @param blockSize
-   *          blockSize to be scheduled
-   * @return true if the given datanode has sufficient space to occupy blockSize
-   *         data, false otherwise.
-   */
-  boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
-      long blockSize);
 
   /**
    * @return next SPS path info to process.

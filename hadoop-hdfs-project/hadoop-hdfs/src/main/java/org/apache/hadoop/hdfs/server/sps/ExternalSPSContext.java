@@ -20,15 +20,14 @@ package org.apache.hadoop.hdfs.server.sps;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -37,6 +36,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeWithStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
@@ -107,8 +108,14 @@ public class ExternalSPSContext implements Context<String> {
   }
 
   @Override
-  public NetworkTopology getNetworkTopology() {
-    return NetworkTopology.getInstance(service.getConf());
+  public NetworkTopology getNetworkTopology(DatanodeMap datanodeMap) {
+    // create network topology.
+    NetworkTopology cluster = NetworkTopology.getInstance(service.getConf());
+    List<DatanodeWithStorage> targets = datanodeMap.getTargets();
+    for (DatanodeWithStorage node : targets) {
+      cluster.add(node.getDatanodeInfo());
+    }
+    return cluster;
   }
 
   @Override
@@ -165,23 +172,6 @@ public class ExternalSPSContext implements Context<String> {
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
     return nnc.getLiveDatanodeStorageReport();
-  }
-
-  @Override
-  public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
-      long estimatedSize) {
-    // TODO: Instead of calling namenode for checking the available space, it
-    // can be optimized by maintaining local cache of datanode storage report
-    // and do the computations. This local cache can be refreshed per file or
-    // periodic fashion.
-    try {
-      return nnc.getNNProtocolConnection().checkDNSpaceForScheduling(dn, type,
-          estimatedSize);
-    } catch (IOException e) {
-      LOG.warn("Verify the given datanode:{} is good and has "
-          + "estimated space in it.", dn, e);
-      return false;
-    }
   }
 
   @Override

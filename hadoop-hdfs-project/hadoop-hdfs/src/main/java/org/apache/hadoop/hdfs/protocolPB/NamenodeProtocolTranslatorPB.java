@@ -22,12 +22,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.CheckDNSpaceRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeysRequestProto;
@@ -276,21 +274,6 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       GetNextSPSPathResponseProto nextSPSPath =
           rpcProxy.getNextSPSPath(NULL_CONTROLLER, req);
       return nextSPSPath.hasSpsPath() ? nextSPSPath.getSpsPath() : null;
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-  }
-
-  @Override
-  public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
-      long estimatedSize) throws IOException {
-    CheckDNSpaceRequestProto req = CheckDNSpaceRequestProto.newBuilder()
-        .setDnInfo(PBHelperClient.convert(dn))
-        .setStorageType(PBHelperClient.convertStorageType(type))
-        .setEstimatedSize(estimatedSize).build();
-    try {
-      return rpcProxy.checkDNSpaceForScheduling(NULL_CONTROLLER, req)
-          .getIsGoodDatanodeWithSpace();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

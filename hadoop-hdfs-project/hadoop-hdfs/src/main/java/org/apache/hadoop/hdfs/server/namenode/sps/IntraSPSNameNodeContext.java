@@ -24,18 +24,16 @@ import java.io.IOException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.DatanodeMap;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
@@ -136,7 +134,7 @@ public class IntraSPSNameNodeContext implements Context<Long> {
   }
 
   @Override
-  public NetworkTopology getNetworkTopology() {
+  public NetworkTopology getNetworkTopology(DatanodeMap datanodeMap) {
     return blockManager.getDatanodeManager().getNetworkTopology();
   }
 
@@ -147,23 +145,6 @@ public class IntraSPSNameNodeContext implements Context<Long> {
     try {
       INode inode = namesystem.getFSDirectory().getINode(path);
       return inode == null ? -1 : inode.getId();
-    } finally {
-      namesystem.readUnlock();
-    }
-  }
-
-  @Override
-  public boolean checkDNSpaceForScheduling(DatanodeInfo dn, StorageType type,
-      long blockSize) {
-    namesystem.readLock();
-    try {
-      DatanodeDescriptor datanode = blockManager.getDatanodeManager()
-          .getDatanode(dn.getDatanodeUuid());
-      if (datanode == null) {
-        LOG.debug("Target datanode: " + dn + " doesn't exists");
-        return false;
-      }
-      return null != datanode.chooseStorage4Block(type, blockSize);
     } finally {
       namesystem.readUnlock();
     }

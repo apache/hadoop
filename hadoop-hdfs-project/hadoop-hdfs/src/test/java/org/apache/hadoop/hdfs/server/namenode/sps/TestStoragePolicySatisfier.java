@@ -159,6 +159,10 @@ public class TestStoragePolicySatisfier {
     config = new HdfsConfiguration();
     config.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.INTERNAL.toString());
+    // Most of the tests are restarting DNs and NN. So, reduced refresh cycle to
+    // update latest datanodes.
+    config.setLong(DFSConfigKeys.DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS,
+        3000);
   }
 
   @Test(timeout = 300000)

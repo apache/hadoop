@@ -221,24 +221,6 @@ message GetNextSPSPathResponseProto {
   optional string spsPath = 1;
 }
 
-message CheckDNSpaceRequestProto {
-  required DatanodeInfoProto dnInfo = 1;
-  required StorageTypeProto storageType = 2;
-  required uint64 estimatedSize = 3;
-}
-
-message CheckDNSpaceResponseProto {
-  required bool isGoodDatanodeWithSpace = 1;
-}
-
-message HasLowRedundancyBlocksRequestProto {
-  required uint64 inodeId = 1;
-}
-
-message HasLowRedundancyBlocksResponseProto {
-  required bool hasLowRedundancyBlocks = 1;
-}
-
 /**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
@@ -326,11 +308,4 @@ service NamenodeProtocolService {
    */
   rpc getNextSPSPath(GetNextSPSPathRequestProto)
       returns (GetNextSPSPathResponseProto);
-
-  /**
-   * Verifies whether the given Datanode has the enough estimated size with
-   * given storage type for scheduling the block movement.
-   */
-  rpc checkDNSpaceForScheduling(CheckDNSpaceRequestProto)
-      returns (CheckDNSpaceResponseProto);
 }

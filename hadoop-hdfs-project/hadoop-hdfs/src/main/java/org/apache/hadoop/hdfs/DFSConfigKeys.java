@@ -646,6 +646,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_SPS_MAX_OUTSTANDING_PATHS_KEY =
       "dfs.storage.policy.satisfier.max.outstanding.paths";
   public static final int DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT = 10000;
+  // SPS datanode cache config, defaulting to 5mins.
+  public static final String DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS =
+      "dfs.storage.policy.satisfier.datanode.cache.refresh.interval.ms";
+  public static final long DFS_SPS_DATANODE_CACHE_REFRESH_INTERVAL_MS_DEFAULT =
+      300000L;
 
   // SPS keytab configurations, by default it is disabled.
   public static final String  DFS_SPS_ADDRESS_KEY =
