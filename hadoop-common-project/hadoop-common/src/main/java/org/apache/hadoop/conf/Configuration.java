@@ -83,7 +83,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -195,6 +194,30 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  * parameters and these are suppressible by configuring
  * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
  * log4j.properties file.
+ *
+ * <h4 id="Tags">Tags</h4>
+ *
+ * <p>Optionally we can tag related properties together by using tag
+ * attributes. System tags are defined by hadoop.system.tags property. Users
+ * can define there own custom tags in  hadoop.custom.tags property.
+ *
+ * <p>For example, we can tag existing property as:
+ * <tt><pre>
+ *  &lt;property&gt;
+ *    &lt;name&gt;dfs.replication&lt;/name&gt;
+ *    &lt;value&gt;3&lt;/value&gt;
+ *    &lt;tag&gt;HDFS,REQUIRED&lt;/tag&gt;
+ *  &lt;/property&gt;
+ *
+ *  &lt;property&gt;
+ *    &lt;name&gt;dfs.data.transfer.protection&lt;/name&gt;
+ *    &lt;value&gt;3&lt;/value&gt;
+ *    &lt;tag&gt;HDFS,SECURITY&lt;/tag&gt;
+ *  &lt;/property&gt;
+ * </pre></tt>
+ * <p> Properties marked with tags can be retrieved with <tt>conf
+ * .getAllPropertiesByTag("HDFS")</tt> or <tt>conf.getAllPropertiesByTags
+ * (Arrays.asList("YARN","SECURITY"))</tt>.</p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -206,6 +229,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final Logger LOG_DEPRECATION =
       LoggerFactory.getLogger(
           "org.apache.hadoop.conf.Configuration.deprecation");
+  private static final Set<String> TAGS = new HashSet<>();
 
   private boolean quietmode = true;
 
@@ -297,14 +321,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     new WeakHashMap<Configuration,Object>();
 
   /**
-   * Map to register all classes holding property tag enums.
-   */
-  private static final Map<String, Class>
-      REGISTERED_TAG_CLASS = new HashMap<>();
-  /**
    * Map to hold properties by there tag groupings.
    */
-  private final Map<PropertyTag, Properties> propertyTagsMap =
+  private final Map<String, Properties> propertyTagsMap =
       new ConcurrentHashMap<>();
 
   /**
@@ -785,11 +804,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
 
-    // Register all classes holding property tags with
-    REGISTERED_TAG_CLASS.put("core", CorePropertyTag.class);
-    REGISTERED_TAG_CLASS.put("hdfs", HDFSPropertyTag.class);
-    REGISTERED_TAG_CLASS.put("yarn", YarnPropertyTag.class);
-
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -820,7 +834,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.finalParameters = Collections.newSetFromMap(
           new ConcurrentHashMap<String, Boolean>());
       this.finalParameters.addAll(other.finalParameters);
-      this.REGISTERED_TAG_CLASS.putAll(other.REGISTERED_TAG_CLASS);
       this.propertyTagsMap.putAll(other.propertyTagsMap);
     }
 
@@ -2919,6 +2932,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         resources.set(i, ret);
       }
     }
+    this.removeUndeclaredTags(properties);
   }
   
   private Resource loadResource(Properties properties,
@@ -3123,7 +3137,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               break;
             }
             confSource.add(name);
-            //Read tags and put them in propertyTagsMap
+            // Read tags and put them in propertyTagsMap
             if (confTag != null) {
               readTagFromConfig(confTag, confName, confValue, confSource);
             }
@@ -3165,48 +3179,61 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  /**
+   * Removes undeclared tags and related properties from propertyTagsMap.
+   * Its required because ordering of properties in xml config files is not
+   * guaranteed.
+   * @param prop
+   */
+  private void removeUndeclaredTags(Properties prop) {
+    // Get all system tags
+    if (prop.containsKey(CommonConfigurationKeys.HADOOP_SYSTEM_TAGS)){
+      String systemTags = prop.getProperty(CommonConfigurationKeys
+              .HADOOP_SYSTEM_TAGS);
+      Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
+    }
+    // Get all custom tags
+    if (prop.containsKey(CommonConfigurationKeys.HADOOP_CUSTOM_TAGS)) {
+      String customTags = prop.getProperty(CommonConfigurationKeys
+          .HADOOP_CUSTOM_TAGS);
+      Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+    }
+
+    Set undeclaredTags = propertyTagsMap.keySet();
+    if (undeclaredTags.retainAll(TAGS)) {
+      LOG.info("Removed undeclared tags:");
+    }
+  }
+
+  /**
+   * Read the values passed as tags and store them in a
+   * map for later retrieval.
+   * @param attributeValue
+   * @param confName
+   * @param confValue
+   * @param confSource
+   */
   private void readTagFromConfig(String attributeValue, String confName, String
       confValue, List<String> confSource) {
     for (String tagStr : attributeValue.split(",")) {
       tagStr = tagStr.trim();
       try {
-        if (confSource.size() > 0) {
-          for (String source : confSource) {
-            PropertyTag tag1 = this.getPropertyTag(tagStr,
-                FilenameUtils.getName(source).split("-")[0]);
-            if (tag1 != null) {
-              //Handle property with no/null value
-              if (confValue == null) {
-                confValue = "";
-              }
-              if (propertyTagsMap.containsKey(tag1)) {
-                propertyTagsMap.get(tag1).setProperty(confName, confValue);
-              } else {
-                Properties props = new Properties();
-                props.setProperty(confName, confValue);
-                propertyTagsMap.put(tag1, props);
-              }
-            }
-          }
+        // Handle property with no/null value
+        if (confValue == null) {
+          confValue = "";
+        }
+        if (propertyTagsMap.containsKey(tagStr)) {
+          propertyTagsMap.get(tagStr).setProperty(confName, confValue);
         } else {
-          // If no source is set try to find tag in CorePropertyTag
-          if (propertyTagsMap.containsKey(CorePropertyTag.valueOf(tagStr))) {
-            propertyTagsMap.get(CorePropertyTag.valueOf(tagStr))
-                .setProperty(confName, confValue);
-          } else {
-            Properties props = new Properties();
-            props.setProperty(confName, confValue);
-            propertyTagsMap.put(CorePropertyTag.valueOf(tagStr),
-                props);
-          }
+          Properties props = new Properties();
+          props.setProperty(confName, confValue);
+          propertyTagsMap.put(tagStr, props);
         }
       } catch (Exception ex) {
-        // Log the invalid tag and continue to parse rest of the properties.
-        LOG.info("Invalid tag '" + tagStr + "' found for "
-            + "property:" + confName + " Source:" + Arrays
-            .toString(confSource.toArray()), ex);
+        // Log the exception at trace level.
+        LOG.trace("Tag '{}' for property:{} Source:{}", tagStr, confName,
+            Arrays.toString(confSource.toArray()), ex);
       }
-
     }
   }
 
@@ -3690,9 +3717,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Get all properties belonging to tag.
-   * @return Properties with matching properties
+   * @param tag tag
+   * @return Properties with matching tag
    */
-  public Properties getAllPropertiesByTag(final PropertyTag tag) {
+  public Properties getAllPropertiesByTag(final String tag) {
     Properties props = new Properties();
     if (propertyTagsMap.containsKey(tag)) {
       props.putAll(propertyTagsMap.get(tag));
@@ -3703,12 +3731,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Get all properties belonging to list of input tags. Calls
    * getAllPropertiesByTag internally.
-   *
-   * @return Properties with all matching properties
+   * @param tagList list of input tags
+   * @return Properties with matching tags
    */
-  public Properties getAllPropertiesByTags(final List<PropertyTag> tagList) {
+  public Properties getAllPropertiesByTags(final List<String> tagList) {
     Properties prop = new Properties();
-    for (PropertyTag tag : tagList) {
+    for (String tag : tagList) {
       prop.putAll(this.getAllPropertiesByTag(tag));
     }
     return prop;
@@ -3718,15 +3746,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Get Property tag Enum corresponding to given source.
    *
    * @param tagStr String representation of Enum
-   * @param group Group to which enum belongs.Ex hdfs,yarn
-   * @return Properties with all matching properties
+   * @return true if tagStr is a valid tag
    */
-  private PropertyTag getPropertyTag(String tagStr, String group) {
-    PropertyTag tag = null;
-    if (REGISTERED_TAG_CLASS.containsKey(group)) {
-      tag = (PropertyTag) Enum.valueOf(REGISTERED_TAG_CLASS.get(group), tagStr);
-    }
-    return tag;
+  public boolean isPropertyTag(String tagStr) {
+    return this.TAGS.contains(tagStr);
   }
 
   private void putIntoUpdatingResource(String key, String[] value) {

@@ -2959,4 +2959,12 @@
         the ZK CLI).
     </description>
   </property>
+  <property>
+    <name>hadoop.system.tags</name>
+    <value>YARN,HDFS,NAMENODE,DATANODE,REQUIRED,SECURITY,KERBEROS,PERFORMANCE,CLIENT
+      ,SERVER,DEBUG,DEPRICATED,COMMON,OPTIONAL</value>
+    <description>
+      System tags to group related properties together.
+    </description>
+  </property>
 </configuration>
