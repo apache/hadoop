@@ -96,6 +96,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
+import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.KILLED_AFTER_APP_COMPLETION;
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
 
@@ -253,6 +254,13 @@ public class ServiceScheduler extends CompositeService {
   public void serviceStop() throws Exception {
     LOG.info("Stopping service scheduler");
 
+    // Mark component-instances/containers as STOPPED
+    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+      for (ContainerId containerId : getLiveInstances().keySet()) {
+        serviceTimelinePublisher.componentInstanceFinished(containerId,
+            KILLED_AFTER_APP_COMPLETION, diagnostics.toString());
+      }
+    }
     if (executorService != null) {
       executorService.shutdownNow();
     }
