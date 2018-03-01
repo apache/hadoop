@@ -81,6 +81,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterTaskAbortEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
@@ -1829,7 +1830,14 @@ public abstract class TaskAttemptImpl implements
         if (src[i] == null) {
           continue;
         } else if (isIP(src[i])) {
-          result.add(resolveHost(src[i]));
+          String host = ((MRAppMaster.RunningAppContext) appContext).getHost(src[i]);
+          if (host == null) {
+            String resolveHost = resolveHost(src[i]);
+            result.add(resolveHost);
+            ((MRAppMaster.RunningAppContext) appContext).putHost(src[i], resolveHost);
+          } else {
+            result.add(host);
+          }
         } else {
           result.add(src[i]);
         }

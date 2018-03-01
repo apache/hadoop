@@ -1082,6 +1082,8 @@ public class MRAppMaster extends CompositeService {
     private TimelineV2Client timelineV2Client = null;
     private String historyUrl = null;
 
+    private Map<String, String> ipHostMaps = new HashMap<>();
+
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
     public RunningAppContext(Configuration config,
@@ -1102,6 +1104,14 @@ public class MRAppMaster extends CompositeService {
           timelineClient = TimelineClient.createTimelineClient();
         }
       }
+    }
+    
+    public String getHost(String ip) {
+      return ipHostMaps.get(ip);
+    }
+
+    public void putHost(String ip, String host) {
+      ipHostMaps.put(ip, host);
     }
 
     @Override
