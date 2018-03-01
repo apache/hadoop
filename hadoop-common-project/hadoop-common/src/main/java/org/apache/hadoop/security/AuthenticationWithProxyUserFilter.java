@@ -20,10 +20,9 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -41,9 +40,6 @@ import java.util.List;
  * otherwise do the next filter.
  */
 public class AuthenticationWithProxyUserFilter extends AuthenticationFilter {
-
-  public static final Logger LOG =
-      LoggerFactory.getLogger(AuthenticationWithProxyUserFilter.class);
 
   /**
    * Constant used in URL's query string to perform a proxy user request, the
@@ -70,30 +66,29 @@ public class AuthenticationWithProxyUserFilter extends AuthenticationFilter {
   protected void doFilter(FilterChain filterChain, HttpServletRequest request,
       HttpServletResponse response) throws IOException, ServletException {
 
-    final String proxyUser = getDoAs(request);
+    // authorize proxy user before calling next filter.
+    String proxyUser = getDoAs(request);
     if (proxyUser != null) {
+      UserGroupInformation realUser =
+          UserGroupInformation.createRemoteUser(request.getRemoteUser());
+      UserGroupInformation proxyUserInfo =
+          UserGroupInformation.createProxyUser(proxyUser, realUser);
 
+      try {
+        ProxyUsers.authorize(proxyUserInfo, request.getRemoteAddr());
+      } catch (AuthorizationException ex) {
+        HttpExceptionUtils.createServletExceptionResponse(response,
+            HttpServletResponse.SC_FORBIDDEN, ex);
+        // stop filter chain if there is an Authorization Exception.
+        return;
+      }
+
+      final UserGroupInformation finalProxyUser = proxyUserInfo;
       // Change the remote user after proxy user is authorized.
-      final HttpServletRequest finalReq = request;
-      request = new HttpServletRequestWrapper(finalReq) {
-
-        private String getRemoteOrProxyUser() throws AuthorizationException {
-          UserGroupInformation realUser =
-              UserGroupInformation.createRemoteUser(finalReq.getRemoteUser());
-          UserGroupInformation proxyUserInfo =
-              UserGroupInformation.createProxyUser(proxyUser, realUser);
-          ProxyUsers.authorize(proxyUserInfo, finalReq.getRemoteAddr());
-          return proxyUserInfo.getUserName();
-        }
-
+      request = new HttpServletRequestWrapper(request) {
         @Override
         public String getRemoteUser() {
-          try {
-            return getRemoteOrProxyUser();
-          } catch (AuthorizationException ex) {
-            LOG.error("Unable to verify proxy user: " + ex.getMessage(), ex);
-          }
-          return null;
+          return finalProxyUser.getUserName();
         }
       };
 
