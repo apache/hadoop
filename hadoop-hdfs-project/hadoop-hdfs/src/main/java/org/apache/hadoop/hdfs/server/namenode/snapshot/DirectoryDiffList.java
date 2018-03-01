@@ -97,7 +97,13 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
     public void setDiff(ChildrenDiff diff) {
       this.diff = diff;
     }
+
+    @Override
+    public String toString() {
+      return "->" + skipTo;
+    }
   }
+
   /**
    * SkipListNode is an implementation of a DirectoryDiff List node,
    * which stores a Directory Diff and references to subsequent nodes.
@@ -191,6 +197,11 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
         return skipDiffList.get(level).getSkipTo();
       }
     }
+
+    @Override
+    public String toString() {
+      return diff != null ? "" + diff.getSnapshotId() : "?";
+    }
   }
 
   /**
@@ -223,13 +234,6 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
     head = new SkipListNode(null, 0);
     this.maxSkipLevels = skipLevel;
     this.skipInterval = interval;
-  }
-
-  public static DirectoryDiffList createSkipList(int capacity, int interval,
-      int skipLevel) {
-    DirectoryDiffList list =
-        new DirectoryDiffList(capacity, interval, skipLevel);
-    return list;
   }
 
   /**
@@ -444,15 +448,15 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
    * order to generate all the changes occurred between fromIndex and
    * toIndex.
    *
-   * @param fromIndex index from where the summation has to start
-   * @param toIndex   index till where the summation has to end
+   * @param fromIndex index from where the summation has to start(inclusive)
+   * @param toIndex   index till where the summation has to end(exclusive)
    * @return list of Directory Diff
    */
   @Override
   public List<DirectoryDiff> getMinListForRange(int fromIndex, int toIndex,
       INodeDirectory dir) {
     final List<DirectoryDiff> subList = new ArrayList<>();
-    final int toSnapshotId = get(toIndex).getSnapshotId();
+    final int toSnapshotId = get(toIndex - 1).getSnapshotId();
     for (SkipListNode current = getNode(fromIndex); current != null;) {
       SkipListNode next = null;
       ChildrenDiff childrenDiff = null;
@@ -467,8 +471,21 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
       subList.add(childrenDiff == null ? curDiff :
           new DirectoryDiff(curDiff.getSnapshotId(), dir, childrenDiff));
 
+      if (current.getDiff().compareTo(toSnapshotId) == 0) {
+        break;
+      }
       current = next;
     }
     return subList;
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
+    b.append("\nhead: ").append(head).append(head.skipDiffList);
+    for (SkipListNode n : skipNodeList) {
+      b.append("\n  ").append(n).append(n.skipDiffList);
+    }
+    return b.toString();
   }
 }
