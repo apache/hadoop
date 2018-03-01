@@ -132,7 +132,7 @@ RUN pip install python-dateutil
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx512m
+ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
 ###
 # Install node js tools for web UI frameowkr
