@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
  * Consider it "best effort"
  */
 public class TestSwiftFileSystemConcurrency extends SwiftFileSystemBaseTest {
-  protected static final Log LOG =
-    LogFactory.getLog(TestSwiftFileSystemConcurrency.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftFileSystemConcurrency.class);
   private Exception thread1Ex, thread2Ex;
   public static final String TEST_RACE_CONDITION_ON_DELETE_DIR =
     "/test/testraceconditionondirdeletetest";
