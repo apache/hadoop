@@ -1107,9 +1107,9 @@
         <version>${hsqldb.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.codahale.metrics</groupId>
+        <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>3.0.1</version>
+        <version>3.2.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
