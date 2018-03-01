@@ -210,7 +210,6 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
   public ApplicationId actionCreate(Service service)
       throws IOException, YarnException {
     String serviceName = service.getName();
-    ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
     verifyNoLiveAppInRM(serviceName, "create");
     Path appDir = checkAppNotExistOnHdfs(service);
