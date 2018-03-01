@@ -247,7 +247,8 @@ class FlowScanner implements RegionScanner, Closeable {
   }
 
   private AggregationOperation getCurrentAggOp(Cell cell) {
-    List<Tag> tags = HBaseTimelineServerUtils.convertCellAsTagList(cell);
+    List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+        cell.getTagsLength());
     // We assume that all the operations for a particular column are the same
     return HBaseTimelineServerUtils.getAggregationOperationFromTagsList(tags);
   }
@@ -315,7 +316,8 @@ class FlowScanner implements RegionScanner, Closeable {
       }
 
       // only if this app has not been seen yet, add to current column cells
-      List<Tag> tags = HBaseTimelineServerUtils.convertCellAsTagList(cell);
+      List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
       String aggDim = HBaseTimelineServerUtils
           .getAggregationCompactionDimension(tags);
       if (!alreadySeenAggDim.contains(aggDim)) {
@@ -452,7 +454,8 @@ class FlowScanner implements RegionScanner, Closeable {
     for (Cell cell : currentColumnCells) {
       AggregationOperation cellAggOp = getCurrentAggOp(cell);
       // if this is the existing flow sum cell
-      List<Tag> tags = HBaseTimelineServerUtils.convertCellAsTagList(cell);
+      List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
       String appId = HBaseTimelineServerUtils
           .getAggregationCompactionDimension(tags);
       if (appId == FLOW_APP_ID) {
@@ -488,16 +491,13 @@ class FlowScanner implements RegionScanner, Closeable {
     if (summationDone) {
       Cell anyCell = currentColumnCells.first();
       List<Tag> tags = new ArrayList<Tag>();
-      Tag t = HBaseTimelineServerUtils.createTag(
-          AggregationOperation.SUM_FINAL.getTagType(),
+      Tag t = new Tag(AggregationOperation.SUM_FINAL.getTagType(),
           Bytes.toBytes(FLOW_APP_ID));
       tags.add(t);
-      t = HBaseTimelineServerUtils.createTag(
-          AggregationCompactionDimension.APPLICATION_ID.getTagType(),
+      t = new Tag(AggregationCompactionDimension.APPLICATION_ID.getTagType(),
           Bytes.toBytes(FLOW_APP_ID));
       tags.add(t);
-      byte[] tagByteArray =
-          HBaseTimelineServerUtils.convertTagListToByteArray(tags);
+      byte[] tagByteArray = Tag.fromList(tags);
       Cell sumCell = HBaseTimelineServerUtils.createNewCell(
           CellUtil.cloneRow(anyCell),
           CellUtil.cloneFamily(anyCell),

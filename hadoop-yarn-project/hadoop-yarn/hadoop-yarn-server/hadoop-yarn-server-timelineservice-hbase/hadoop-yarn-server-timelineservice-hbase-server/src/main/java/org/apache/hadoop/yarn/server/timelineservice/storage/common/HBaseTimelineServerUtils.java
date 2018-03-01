@@ -20,10 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
@@ -31,7 +28,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOpe
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * A utility class used by hbase-server module.
@@ -53,7 +49,7 @@ public final class HBaseTimelineServerUtils {
     AggregationOperation aggOp = AggregationOperation
         .getAggregationOperation(attribute.getKey());
     if (aggOp != null) {
-      Tag t = createTag(aggOp.getTagType(), attribute.getValue());
+      Tag t = new Tag(aggOp.getTagType(), attribute.getValue());
       return t;
     }
 
@@ -61,7 +57,7 @@ public final class HBaseTimelineServerUtils {
         AggregationCompactionDimension.getAggregationCompactionDimension(
             attribute.getKey());
     if (aggCompactDim != null) {
-      Tag t = createTag(aggCompactDim.getTagType(), attribute.getValue());
+      Tag t = new Tag(aggCompactDim.getTagType(), attribute.getValue());
       return t;
     }
     return null;
@@ -101,45 +97,6 @@ public final class HBaseTimelineServerUtils {
   }
 
   /**
-   * Create a Tag.
-   * @param tagType tag type
-   * @param tag the content of the tag in byte array.
-   * @return an instance of Tag
-   */
-  public static Tag createTag(byte tagType, byte[] tag) {
-    return new Tag(tagType, tag);
-  }
-
-  /**
-   * Create a Tag.
-   * @param tagType tag type
-   * @param tag the content of the tag in String.
-   * @return an instance of Tag
-   */
-  public static Tag createTag(byte tagType, String tag) {
-    return createTag(tagType, Bytes.toBytes(tag));
-  }
-
-  /**
-   * Convert a cell to a list of tags.
-   * @param cell the cell to convert
-   * @return a list of tags
-   */
-  public static List<Tag> convertCellAsTagList(Cell cell) {
-    return Tag.asList(
-        cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-  }
-
-  /**
-   * Convert a list of tags to a byte array.
-   * @param tags the list of tags to convert
-   * @return byte array representation of the list of tags
-   */
-  public static byte[] convertTagListToByteArray(List<Tag> tags) {
-    return Tag.fromList(tags);
-  }
-
-  /**
    * returns app id from the list of tags.
    *
    * @param tags cell tags to be looked into
@@ -174,49 +131,5 @@ public final class HBaseTimelineServerUtils {
       }
     }
     return null;
-  }
-
-  // flush and compact all the regions of the primary table
-
-  /**
-   * Flush and compact all regions of a table.
-   * @param server region server
-   * @param table the table to flush and compact
-   * @return the number of regions flushed and compacted
-   */
-  public static int flushCompactTableRegions(HRegionServer server,
-      TableName table) throws IOException {
-    List<Region> regions = server.getOnlineRegions(table);
-    for (Region region : regions) {
-      region.flush(true);
-      region.compact(true);
-    }
-    return regions.size();
-  }
-
-  /**
-   * Check the existence of FlowRunCoprocessor in a table.
-   * @param server region server
-   * @param table  table to check
-   * @param existenceExpected true if the FlowRunCoprocessor is expected
-   *                         to be loaded in the table, false otherwise
-   * @throws Exception
-   */
-  public static void validateFlowRunCoprocessor(HRegionServer server,
-      TableName table, boolean existenceExpected) throws Exception {
-    List<Region> regions = server.getOnlineRegions(table);
-    for (Region region : regions) {
-      boolean found = false;
-      Set<String> coprocs = region.getCoprocessorHost().getCoprocessors();
-      for (String coprocName : coprocs) {
-        if (coprocName.contains("FlowRunCoprocessor")) {
-          found = true;
-        }
-      }
-      if (found != existenceExpected) {
-        throw new Exception("FlowRunCoprocessor is" +
-            (existenceExpected ? " not " : " ") + "loaded in table " + table);
-      }
-    }
   }
 }
