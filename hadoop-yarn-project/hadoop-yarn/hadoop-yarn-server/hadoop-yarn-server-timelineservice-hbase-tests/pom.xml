@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-timelineservice-hbase-tests</artifactId>
   <version>3.2.0-SNAPSHOT</version>
-  <name>Apache Hadoop YARN TimelineService HBase tests</name>
+  <name>Apache Hadoop YARN Timeline Service HBase tests</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -73,6 +73,18 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice-hbase-common</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -402,68 +414,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>hbase1</id>
-      <activation>
-        <property>
-          <name>!hbase.profile</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
-          <scope>test</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-common</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hbase2</id>
-      <activation>
-        <property>
-          <name>hbase.profile</name>
-          <value>2.0</value>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
-          <scope>test</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-common</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <!-- 'mvn dependency:analyze' fails to detect use of this direct
-             dependency -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs-client</artifactId>
-          <version>${hbase-compatible-hadoop.version}</version>
-          <scope>test</scope>
-        </dependency>
-        <!-- 'mvn dependency:analyze' fails to detect use of this direct
-             dependency -->
-        <!-- This is needed by HBaseTestingUtility -->
-        <dependency>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-all</artifactId>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-  </profiles>
 </project>

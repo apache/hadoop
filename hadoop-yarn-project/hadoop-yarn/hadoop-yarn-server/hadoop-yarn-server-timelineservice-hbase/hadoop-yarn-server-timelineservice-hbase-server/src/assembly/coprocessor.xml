@@ -16,8 +16,7 @@
 -->
 <assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3
-                              http://maven.apache.org/xsd/assembly-1.1.3.xsd">
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3 http://maven.apache.org/xsd/assembly-1.1.3.xsd">
   <id>coprocessor</id>
   <formats>
     <format>jar</format>
@@ -31,7 +30,7 @@
       <scope>runtime</scope>
       <includes>
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-common</include>
-        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-server-1</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-server</include>
       </includes>
     </dependencySet>
   </dependencySets>

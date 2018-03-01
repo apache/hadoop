@@ -236,7 +236,7 @@
     </moduleSet>
     <moduleSet>
       <includes>
-        <include>org.apache.hadoop:${hbase-server-artifactid}</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase-server</include>
       </includes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
