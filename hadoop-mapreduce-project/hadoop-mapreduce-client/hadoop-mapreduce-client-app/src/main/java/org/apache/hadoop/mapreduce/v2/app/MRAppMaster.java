@@ -1105,7 +1105,7 @@ public class MRAppMaster extends CompositeService {
         }
       }
     }
-    
+ 
     public String getHost(String ip) {
       return ipHostMaps.get(ip);
     }
