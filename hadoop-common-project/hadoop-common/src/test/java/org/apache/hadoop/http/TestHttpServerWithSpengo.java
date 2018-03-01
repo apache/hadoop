@@ -178,22 +178,9 @@ public class TestHttpServerWithSpengo {
         Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       }
 
-      // userA cannot impersonate userC, but for /stacks, /jmx and /conf,
-      // they doesn't require users to authorize by default, so they
-      // can be accessed.
+      // userA cannot impersonate userC, it fails.
       for (String servlet :
           new String[]{"stacks", "jmx", "conf"}){
-        HttpURLConnection conn = authUrl
-            .openConnection(new URL(serverURL + servlet + "?doAs=userC"),
-                token);
-        Assert.assertEquals(HttpURLConnection.HTTP_OK,
-            conn.getResponseCode());
-      }
-
-      // "/logs" and "/logLevel" require admin authorization,
-      // only userA has the access.
-      for (String servlet :
-          new String[]{"logLevel", "logs"}) {
         HttpURLConnection conn = authUrl
             .openConnection(new URL(serverURL + servlet + "?doAs=userC"),
                 token);
