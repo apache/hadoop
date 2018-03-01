@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.OUTFILE;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
 import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.SKIPDATECHECK;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -269,6 +270,45 @@ public class TestDiskBalancerCommand {
           () -> {
             runCommand(cmdLine, hdfsConf, miniCluster);
           });
+    }  finally{
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 600000)
+  public void testDiskBalancerForceExecute() throws
+      Exception {
+    final int numDatanodes = 1;
+
+    final Configuration hdfsConf = new HdfsConfiguration();
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0d");
+
+    /* new cluster with imbalanced capacity */
+    final MiniDFSCluster miniCluster = DiskBalancerTestUtil.
+        newImbalancedCluster(
+            hdfsConf,
+            numDatanodes,
+            CAPACITIES,
+            DEFAULT_BLOCK_SIZE,
+            FILE_LEN);
+
+    try {
+      /* get full path of plan */
+      final String planFileFullName = runAndVerifyPlan(miniCluster, hdfsConf);
+
+      /* run execute command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s -%s",
+          EXECUTE,
+          planFileFullName,
+          SKIPDATECHECK);
+
+      // Disk Balancer should execute the plan, as skipDateCheck Option is
+      // specified
+      runCommand(cmdLine, hdfsConf, miniCluster);
     }  finally{
       if (miniCluster != null) {
         miniCluster.shutdown();
