@@ -40,6 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -360,17 +361,22 @@ public class ServiceScheduler extends CompositeService {
         amRMClient.releaseAssignedContainer(container.getId());
       }
     }
-
+    ApplicationId appId = ApplicationId.fromString(app.getId());
     existingRecords.forEach((encodedContainerId, record) -> {
       String componentName = record.get(YarnRegistryAttributes.YARN_COMPONENT);
       if (componentName != null) {
         Component component = componentsByName.get(componentName);
-        ComponentInstance compInstance = component.getComponentInstance(
-            record.description);
-        ContainerId containerId = ContainerId.fromString(record.get(
-            YarnRegistryAttributes.YARN_ID));
-        unRecoveredInstances.put(containerId, compInstance);
-        component.removePendingInstance(compInstance);
+        if (component != null) {
+          ComponentInstance compInstance = component.getComponentInstance(
+              record.description);
+          ContainerId containerId = ContainerId.fromString(record.get(
+              YarnRegistryAttributes.YARN_ID));
+          if (containerId.getApplicationAttemptId().getApplicationId()
+              .equals(appId)) {
+            unRecoveredInstances.put(containerId, compInstance);
+            component.removePendingInstance(compInstance);
+          }
+        }
       }
     });
 
