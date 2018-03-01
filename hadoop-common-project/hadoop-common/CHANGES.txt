@@ -27,6 +27,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-15283. Upgrade from findbugs 3.0.1 to spotbugs 3.1.2 in branch-2
     to fix docker image build. (aajisaka)
 
+    HADOOP-15279. Increase maven heap size recommendations.
+    (Allen Wittenauer via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES

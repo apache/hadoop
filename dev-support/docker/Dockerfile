@@ -76,7 +76,7 @@ RUN cabal update && cabal install shellcheck --global
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx512m
+ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
