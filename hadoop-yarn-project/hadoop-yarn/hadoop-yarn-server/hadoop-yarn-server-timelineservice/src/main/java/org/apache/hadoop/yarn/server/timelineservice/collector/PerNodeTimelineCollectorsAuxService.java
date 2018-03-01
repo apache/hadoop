@@ -19,7 +19,12 @@
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +36,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
@@ -59,6 +65,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   private final NodeTimelineCollectorManager collectorManager;
   private long collectorLingerPeriod;
   private ScheduledExecutorService scheduler;
+  private Map<ApplicationId, Set<ContainerId>> appIdToContainerId =
+      new ConcurrentHashMap<>();
 
   public PerNodeTimelineCollectorsAuxService() {
     this(new NodeTimelineCollectorManager(true));
@@ -148,7 +156,15 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
-      addApplication(appId, context.getUser());
+      synchronized (appIdToContainerId) {
+        Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
+        if (masterContainers == null) {
+          masterContainers = new HashSet<>();
+          appIdToContainerId.put(appId, masterContainers);
+        }
+        masterContainers.add(context.getContainerId());
+        addApplication(appId, context.getUser());
+      }
     }
   }
 
@@ -162,14 +178,33 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     // intercept the event of the AM container being stopped and remove the app
     // level collector service
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
-      final ApplicationId appId =
-          context.getContainerId().getApplicationAttemptId().getApplicationId();
-      scheduler.schedule(new Runnable() {
-        public void run() {
-          removeApplication(appId);
-        }
-      }, collectorLingerPeriod, TimeUnit.MILLISECONDS);
+      final ContainerId containerId = context.getContainerId();
+      removeApplicationCollector(containerId);
     }
+  }
+
+  @VisibleForTesting
+  protected Future removeApplicationCollector(final ContainerId containerId) {
+    final ApplicationId appId =
+        containerId.getApplicationAttemptId().getApplicationId();
+    return scheduler.schedule(new Runnable() {
+      public void run() {
+        synchronized (appIdToContainerId) {
+          Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
+          if (masterContainers == null) {
+            LOG.info("Stop container for " + containerId
+                + " is called before initializing container.");
+            return;
+          }
+          masterContainers.remove(containerId);
+          if (masterContainers.size() == 0) {
+            // remove only if it is last master container
+            removeApplication(appId);
+            appIdToContainerId.remove(appId);
+          }
+        }
+      }
+    }, collectorLingerPeriod, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
