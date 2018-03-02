@@ -379,6 +379,27 @@ public class TestContainer {
   }
   
   @Test
+  @SuppressWarnings("unchecked")
+  public void testLocalizationFailureWhileRunning()
+      throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      assertEquals(ContainerState.RUNNING, wc.c.getContainerState());
+      // Now in RUNNING, handle ContainerResourceFailedEvent, cause NPE before
+      wc.handleContainerResourceFailedEvent();
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
   @SuppressWarnings("unchecked") // mocked generic
   public void testCleanupOnKillRequest() throws Exception {
     WrappedContainer wc = null;
@@ -1129,6 +1150,11 @@ public class TestContainer {
 
     public void resourceFailedContainer() {
       c.handle(new ContainerEvent(cId, ContainerEventType.RESOURCE_FAILED));
+      drainDispatcherEvents();
+    }
+
+    public void handleContainerResourceFailedEvent() {
+      c.handle(new ContainerResourceFailedEvent(cId, null, null));
       drainDispatcherEvents();
     }
 
