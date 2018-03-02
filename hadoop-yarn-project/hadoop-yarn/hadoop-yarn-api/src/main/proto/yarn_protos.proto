@@ -152,6 +152,7 @@ message ContainerProto {
   optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
+  repeated string allocation_tags = 10;
 }
 
 message ContainerReportProto {
@@ -383,11 +384,6 @@ enum ExecutionTypeProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message ProfileCapabilityProto {
-  required string profile = 1;
-  required ResourceProto profileCapabilityOverride = 2;
-}
-
 message ResourceRequestProto {
   optional PriorityProto priority = 1;
   optional string resource_name = 2;
@@ -397,7 +393,6 @@ message ResourceRequestProto {
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
   optional int64 allocation_request_id = 8 [default = -1];
-  optional ProfileCapabilityProto profile = 9;
 }
 
 message ExecutionTypeRequestProto {
@@ -405,9 +400,33 @@ message ExecutionTypeRequestProto {
   optional bool enforce_execution_type = 2 [default = false];
 }
 
+message SchedulingRequestProto {
+  optional int64 allocationRequestId = 1 [default = 0];
+  optional PriorityProto priority = 2;
+  optional ExecutionTypeRequestProto executionType = 3;
+  repeated string allocationTags = 4;
+  optional ResourceSizingProto resourceSizing = 5;
+  optional PlacementConstraintProto placementConstraint = 6;
+}
+
+message ResourceSizingProto {
+  optional int32 numAllocations = 1;
+  optional ResourceProto resources = 2;
+}
+
 enum AMCommandProto {
   AM_RESYNC = 1;
   AM_SHUTDOWN = 2;
+}
+
+enum RejectionReasonProto {
+  RRP_COULD_NOT_PLACE_ON_NODE = 1;
+  RRP_COULD_NOT_SCHEDULE_ON_NODE = 2;
+}
+
+message RejectedSchedulingRequestProto {
+  required RejectionReasonProto reason = 1;
+  required SchedulingRequestProto request = 2;
 }
 
 message PreemptionMessageProto {
@@ -544,6 +563,7 @@ message QueueInfoProto {
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+  optional bool intraQueuePreemptionDisabled = 13;
 }
 
 message QueueConfigurationsProto {
@@ -579,6 +599,67 @@ enum SignalContainerCommandProto {
   FORCEFUL_SHUTDOWN = 3;
 }
 
+////////////////////////////////////////////////////////////////////////
+////// Placement constraints ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+message PlacementConstraintProto {
+  optional SimplePlacementConstraintProto simpleConstraint = 1;
+  optional CompositePlacementConstraintProto compositeConstraint = 2;
+}
+
+message SimplePlacementConstraintProto {
+  required string scope = 1;
+  repeated PlacementConstraintTargetProto targetExpressions = 2;
+  optional int32 minCardinality = 3;
+  optional int32 maxCardinality = 4;
+}
+
+message PlacementConstraintTargetProto {
+  enum TargetType {
+    NODE_ATTRIBUTE = 1;
+    ALLOCATION_TAG = 2;
+    SELF = 3;
+  }
+
+  required TargetType targetType = 1;
+  optional string targetKey = 2;
+  repeated string targetValues = 3;
+}
+
+message TimedPlacementConstraintProto {
+  enum DelayUnit {
+    MILLISECONDS = 1;
+    OPPORTUNITIES = 2;
+  }
+
+  required PlacementConstraintProto placementConstraint = 1;
+  required int64 schedulingDelay = 2;
+  optional DelayUnit delayUnit = 3 [ default = MILLISECONDS ];
+}
+
+message CompositePlacementConstraintProto {
+  enum CompositeType {
+    // All children constraints have to be satisfied.
+    AND = 1;
+    // One of the children constraints has to be satisfied.
+    OR = 2;
+    // Attempt to satisfy the first child constraint for delays[0] units (e.g.,
+    // millisec or heartbeats). If this fails, try to satisfy the second child
+    // constraint for delays[1] units and so on.
+    DELAYED_OR = 3;
+  }
+
+  required CompositeType compositeType = 1;
+  repeated PlacementConstraintProto childConstraints = 2;
+  repeated TimedPlacementConstraintProto timedChildConstraints = 3;
+}
+
+// This associates a set of allocation tags to a Placement Constraint.
+message PlacementConstraintMapEntryProto {
+  repeated string allocation_tags = 1;
+  optional PlacementConstraintProto placement_constraint = 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From reservation_protocol /////////////////////////////////////

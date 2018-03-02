@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -57,7 +58,10 @@ public class NodeInfo {
   private long usedVirtualCoresOpport;
   private int numQueuedContainers;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  private AllocationTagsInfo allocationTags;
   protected ResourceUtilizationInfo resourceUtilization;
+  protected ResourceInfo usedResource;
+  protected ResourceInfo availableResource;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -75,6 +79,8 @@ public class NodeInfo {
       this.usedVirtualCores = report.getUsedResource().getVirtualCores();
       this.availableVirtualCores =
           report.getAvailableResource().getVirtualCores();
+      this.usedResource = new ResourceInfo(report.getUsedResource());
+      this.availableResource = new ResourceInfo(report.getAvailableResource());
     }
     this.id = id.toString();
     this.rack = ni.getRackName();
@@ -105,6 +111,14 @@ public class NodeInfo {
     if (labelSet != null) {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
+    }
+
+    // add allocation tags
+    allocationTags = new AllocationTagsInfo();
+    Map<String, Long> allocationTagsInfo = ni.getAllocationTagsWithCount();
+    if (allocationTagsInfo != null) {
+      allocationTagsInfo.forEach((tag, count) ->
+          allocationTags.addAllocationTag(new AllocationTagInfo(tag, count)));
     }
 
     // update node and containers resource utilization
@@ -183,8 +197,29 @@ public class NodeInfo {
     return this.nodeLabels;
   }
 
+  public ResourceInfo getUsedResource() {
+    return usedResource;
+  }
+
+  public void setUsedResource(ResourceInfo used) {
+    this.usedResource = used;
+  }
+
+  public ResourceInfo getAvailableResource() {
+    return availableResource;
+  }
+
+  public void setAvailableResource(ResourceInfo avail) {
+    this.availableResource = avail;
+  }
+
   public ResourceUtilizationInfo getResourceUtilization() {
     return this.resourceUtilization;
+  }
+
+  public String getAllocationTagsSummary() {
+    return this.allocationTags == null ? "" :
+        this.allocationTags.toString();
   }
 
   @VisibleForTesting

@@ -30,11 +30,16 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -169,6 +174,17 @@ public class ContainerLaunch implements Callable<Integer> {
     return var;
   }
 
+  private Map<String, String> expandAllEnvironmentVars(
+      ContainerLaunchContext launchContext, Path containerLogDir) {
+    Map<String, String> environment = launchContext.getEnvironment();
+    for (Entry<String, String> entry : environment.entrySet()) {
+      String value = entry.getValue();
+      value = expandEnvironment(value, containerLogDir);
+      entry.setValue(value);
+    }
+    return environment;
+  }
+
   @Override
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
@@ -202,13 +218,8 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> environment = launchContext.getEnvironment();
-      // Make a copy of env to iterate & do variable expansion
-      for (Entry<String, String> entry : environment.entrySet()) {
-        String value = entry.getValue();
-        value = expandEnvironment(value, containerLogDir);
-        entry.setValue(value);
-      }
+      Map<String, String> environment = expandAllEnvironmentVars(
+          launchContext, containerLogDir);
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
@@ -237,6 +248,9 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
+      List<String> userFilecacheDirs = getUserFilecacheDirs(localDirs);
+      List<String> applicationLocalDirs = getApplicationLocalDirs(localDirs,
+          appIdStr);
 
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
@@ -270,7 +284,7 @@ public class ContainerLaunch implements Callable<Integer> {
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
             localResources, launchContext.getCommands(),
-            new Path(containerLogDirs.get(0)), user);
+            containerLogDir, user);
       }
       // /////////// End of writing out container-script
 
@@ -295,7 +309,9 @@ public class ContainerLaunch implements Callable<Integer> {
           .setFilecacheDirs(filecacheDirs)
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
-          .setContainerLogDirs(containerLogDirs).build());
+          .setContainerLogDirs(containerLogDirs)
+          .setUserFilecacheDirs(userFilecacheDirs)
+          .setApplicationLocalDirs(applicationLocalDirs).build());
     } catch (ConfigurationException e) {
       LOG.error("Failed to launch container due to configuration error.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
@@ -426,6 +442,31 @@ public class ContainerLaunch implements Callable<Integer> {
     return filecacheDirs;
   }
 
+  protected List<String> getUserFilecacheDirs(List<String> localDirs) {
+    List<String> userFilecacheDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+    for (String localDir : localDirs) {
+      String userFilecacheDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+          + Path.SEPARATOR + ContainerLocalizer.FILECACHE;
+      userFilecacheDirs.add(userFilecacheDir);
+    }
+    return userFilecacheDirs;
+  }
+
+  protected List<String> getApplicationLocalDirs(List<String> localDirs,
+      String appIdStr) {
+    List<String> applicationLocalDirs = new ArrayList<>(localDirs.size());
+    String user = container.getUser();
+    for (String localDir : localDirs) {
+      String appLocalDir = localDir + Path.SEPARATOR +
+          ContainerLocalizer.USERCACHE + Path.SEPARATOR + user
+          + Path.SEPARATOR + ContainerLocalizer.APPCACHE
+          + Path.SEPARATOR + appIdStr;
+      applicationLocalDirs.add(appLocalDir);
+    }
+    return applicationLocalDirs;
+  }
 
   protected Map<Path, List<String>> getLocalizedResources()
       throws YarnException {
@@ -1085,8 +1126,14 @@ public class ContainerLaunch implements Callable<Integer> {
 
   public static abstract class ShellScriptBuilder {
     public static ShellScriptBuilder create() {
-      return Shell.WINDOWS ? new WindowsShellScriptBuilder() :
-        new UnixShellScriptBuilder();
+      return create(Shell.osType);
+    }
+
+    @VisibleForTesting
+    public static ShellScriptBuilder create(Shell.OSType osType) {
+      return (osType == Shell.OSType.OS_TYPE_WIN) ?
+          new WindowsShellScriptBuilder() :
+          new UnixShellScriptBuilder();
     }
 
     private static final String LINE_SEPARATOR =
@@ -1212,6 +1259,72 @@ public class ContainerLaunch implements Callable<Integer> {
       return redirectStdErr;
     }
 
+    /**
+     * Parse an environment value and returns all environment keys it uses.
+     * @param envVal an environment variable's value
+     * @return all environment variable names used in <code>envVal</code>.
+     */
+    public Set<String> getEnvDependencies(final String envVal) {
+      return Collections.emptySet();
+    }
+
+    /**
+     * Returns a dependency ordered version of <code>envs</code>. Does not alter
+     * input <code>envs</code> map.
+     * @param envs environment map
+     * @return a dependency ordered version of <code>envs</code>
+     */
+    public final Map<String, String> orderEnvByDependencies(
+        Map<String, String> envs) {
+      if (envs == null || envs.size() < 2) {
+        return envs;
+      }
+      final Map<String, String> ordered = new LinkedHashMap<String, String>();
+      class Env {
+        private boolean resolved = false;
+        private final Collection<Env> deps = new ArrayList<>();
+        private final String name;
+        private final String value;
+        Env(String name, String value) {
+          this.name = name;
+          this.value = value;
+        }
+        void resolve() {
+          resolved = true;
+          for (Env dep : deps) {
+            if (!dep.resolved) {
+              dep.resolve();
+            }
+          }
+          ordered.put(name, value);
+        }
+      }
+      final Map<String, Env> singletons = new HashMap<>();
+      for (Map.Entry<String, String> e : envs.entrySet()) {
+        Env env = singletons.get(e.getKey());
+        if (env == null) {
+          env = new Env(e.getKey(), e.getValue());
+          singletons.put(env.name, env);
+        }
+        for (String depStr : getEnvDependencies(env.value)) {
+          if (!envs.containsKey(depStr)) {
+            continue;
+          }
+          Env depEnv = singletons.get(depStr);
+          if (depEnv == null) {
+            depEnv = new Env(depStr, envs.get(depStr));
+            singletons.put(depStr, depEnv);
+          }
+          env.deps.add(depEnv);
+        }
+      }
+      for (Env env : singletons.values()) {
+        if (!env.resolved) {
+          env.resolve();
+        }
+      }
+      return ordered;
+    }
   }
 
   private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
@@ -1303,6 +1416,79 @@ public class ContainerLaunch implements Callable<Integer> {
     public void setExitOnFailure() {
       line("set -o pipefail -e");
     }
+
+    /**
+     * Parse <code>envVal</code> using bash-like syntax to extract env variables
+     * it depends on.
+     */
+    @Override
+    public Set<String> getEnvDependencies(final String envVal) {
+      if (envVal == null || envVal.isEmpty()) {
+        return Collections.emptySet();
+      }
+      final Set<String> deps = new HashSet<>();
+      // env/whitelistedEnv dump values inside double quotes
+      boolean inDoubleQuotes = true;
+      char c;
+      int i = 0;
+      final int len = envVal.length();
+      while (i < len) {
+        c = envVal.charAt(i);
+        if (c == '"') {
+          inDoubleQuotes = !inDoubleQuotes;
+        } else if (c == '\'' && !inDoubleQuotes) {
+          i++;
+          // eat until closing simple quote
+          while (i < len) {
+            c = envVal.charAt(i);
+            if (c == '\\') {
+              i++;
+            }
+            if (c == '\'') {
+              break;
+            }
+            i++;
+          }
+        } else if (c == '\\') {
+          i++;
+        } else if (c == '$') {
+          i++;
+          if (i >= len) {
+            break;
+          }
+          c = envVal.charAt(i);
+          if (c == '{') { // for ${... bash like syntax
+            i++;
+            if (i >= len) {
+              break;
+            }
+            c = envVal.charAt(i);
+            if (c == '#') { // for ${#... bash array syntax
+              i++;
+              if (i >= len) {
+                break;
+              }
+            }
+          }
+          final int start = i;
+          while (i < len) {
+            c = envVal.charAt(i);
+            if (c != '$' && (
+                (i == start && Character.isJavaIdentifierStart(c)) ||
+                    (i > start && Character.isJavaIdentifierPart(c)))) {
+              i++;
+            } else {
+              break;
+            }
+          }
+          if (i > start) {
+            deps.add(envVal.substring(start, i));
+          }
+        }
+        i++;
+      }
+      return deps;
+    }
   }
 
   private static final class WindowsShellScriptBuilder
@@ -1383,6 +1569,46 @@ public class ContainerLaunch implements Callable<Integer> {
       lineWithLenCheck(
           String.format("@echo \"dir:\" > \"%s\"", output.toString()));
       lineWithLenCheck(String.format("dir >> \"%s\"", output.toString()));
+    }
+
+    /**
+     * Parse <code>envVal</code> using cmd/bat-like syntax to extract env
+     * variables it depends on.
+     */
+    public Set<String> getEnvDependencies(final String envVal) {
+      if (envVal == null || envVal.isEmpty()) {
+        return Collections.emptySet();
+      }
+      final Set<String> deps = new HashSet<>();
+      final int len = envVal.length();
+      int i = 0;
+      while (i < len) {
+        i = envVal.indexOf('%', i); // find beginning of variable
+        if (i < 0 || i == (len - 1)) {
+          break;
+        }
+        i++;
+        // 3 cases: %var%, %var:...% or %%
+        final int j = envVal.indexOf('%', i); // find end of variable
+        if (j == i) {
+          // %% case, just skip it
+          i++;
+          continue;
+        }
+        if (j < 0) {
+          break; // even %var:...% syntax ends with a %, so j cannot be negative
+        }
+        final int k = envVal.indexOf(':', i);
+        if (k >= 0 && k < j) {
+          // %var:...% syntax
+          deps.add(envVal.substring(i, k));
+        } else {
+          // %var% syntax
+          deps.add(envVal.substring(i, j));
+        }
+        i = j + 1;
+      }
+      return deps;
     }
   }
 

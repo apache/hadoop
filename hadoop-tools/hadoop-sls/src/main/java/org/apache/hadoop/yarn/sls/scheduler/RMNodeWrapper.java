@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Private
@@ -127,9 +128,9 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  public void updateNodeHeartbeatResponseForCleanup(
-          NodeHeartbeatResponse nodeHeartbeatResponse) {
-    node.updateNodeHeartbeatResponseForCleanup(nodeHeartbeatResponse);
+  public void setAndUpdateNodeHeartbeatResponse(
+      NodeHeartbeatResponse nodeHeartbeatResponse) {
+    node.setAndUpdateNodeHeartbeatResponse(nodeHeartbeatResponse);
   }
 
   @Override
@@ -143,9 +144,8 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public List<UpdatedContainerInfo> pullContainerUpdates() {
-    List<UpdatedContainerInfo> list = Collections.EMPTY_LIST;
+    List<UpdatedContainerInfo> list = Collections.emptyList();
     if (! pulled) {
       list = updates;
       pulled = true;
@@ -168,16 +168,9 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  public void updateNodeHeartbeatResponseForUpdatedContainers(
-      NodeHeartbeatResponse response) {
-    // TODO Auto-generated method stub
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
   public List<Container> pullNewlyIncreasedContainers() {
     // TODO Auto-generated method stub
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   public OpportunisticContainersStatus getOpportunisticContainersStatus() {
@@ -206,6 +199,11 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public Integer getDecommissioningTimeout() {
     return null;
+  }
+
+  @Override
+  public Map<String, Long> getAllocationTagsWithCount() {
+    return node.getAllocationTagsWithCount();
   }
 
   @Override

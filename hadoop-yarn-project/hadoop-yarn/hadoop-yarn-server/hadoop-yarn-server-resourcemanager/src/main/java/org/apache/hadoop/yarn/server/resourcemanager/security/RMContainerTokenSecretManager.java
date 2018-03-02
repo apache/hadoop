@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -166,25 +168,14 @@ public class RMContainerTokenSecretManager extends
     }
   }
 
-  /**
-   * Helper function for creating ContainerTokens.
-   *
-   * @param containerId Container Id
-   * @param containerVersion Container Version
-   * @param nodeId Node Id
-   * @param appSubmitter App Submitter
-   * @param capability Capability
-   * @param priority Priority
-   * @param createTime Create Time
-   * @return the container-token
-   */
+  @VisibleForTesting
   public Token createContainerToken(ContainerId containerId,
       int containerVersion, NodeId nodeId, String appSubmitter,
       Resource capability, Priority priority, long createTime) {
     return createContainerToken(containerId, containerVersion, nodeId,
         appSubmitter, capability, priority, createTime,
         null, null, ContainerType.TASK,
-        ExecutionType.GUARANTEED, -1);
+        ExecutionType.GUARANTEED, -1, null);
   }
 
   /**
@@ -209,7 +200,7 @@ public class RMContainerTokenSecretManager extends
       Resource capability, Priority priority, long createTime,
       LogAggregationContext logAggregationContext, String nodeLabelExpression,
       ContainerType containerType, ExecutionType execType,
-      long allocationRequestId) {
+      long allocationRequestId, Set<String> allocationTags) {
     byte[] password;
     ContainerTokenIdentifier tokenIdentifier;
     long expiryTimeStamp =
@@ -224,7 +215,7 @@ public class RMContainerTokenSecretManager extends
               this.currentMasterKey.getMasterKey().getKeyId(),
               ResourceManager.getClusterTimeStamp(), priority, createTime,
               logAggregationContext, nodeLabelExpression, containerType,
-              execType, allocationRequestId);
+              execType, allocationRequestId, allocationTags);
       password = this.createPassword(tokenIdentifier);
 
     } finally {

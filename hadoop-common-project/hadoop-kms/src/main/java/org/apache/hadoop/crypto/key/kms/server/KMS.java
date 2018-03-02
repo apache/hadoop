@@ -18,7 +18,6 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +31,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
+import org.apache.hadoop.util.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -555,7 +555,7 @@ public class KMS {
       throws Exception {
     LOG.trace("Entering reencryptEncryptedKeys method.");
     try {
-      final Stopwatch sw = new Stopwatch().start();
+      final StopWatch sw = new StopWatch().start();
       checkNotEmpty(name, "name");
       checkNotNull(jsonPayload, "jsonPayload");
       final UserGroupInformation user = HttpUserGroupInformation.get();

@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformance
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
-import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
 import org.apache.hadoop.http.HttpConfig;
 
 /** 
@@ -414,6 +414,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.snapshotdiff.listing.limit";
   public static final int
       DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT = 1000;
+
+  public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
+      "dfs.namenode.snapshot.max.limit";
+
+  public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
@@ -1141,7 +1146,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Disk Balancer Keys
   public static final String DFS_DISK_BALANCER_ENABLED =
       "dfs.disk.balancer.enabled";
-  public static final boolean DFS_DISK_BALANCER_ENABLED_DEFAULT = false;
+  public static final boolean DFS_DISK_BALANCER_ENABLED_DEFAULT = true;
 
   public static final String DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT =
       "dfs.disk.balancer.max.disk.throughputInMBperSec";
@@ -1222,6 +1227,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_ROUTER_MONITOR_LOCAL_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.localnamenode.enable";
   public static final boolean DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT = true;
+  public static final String DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS =
+      FEDERATION_ROUTER_PREFIX + "heartbeat-state.interval";
+  public static final long DFS_ROUTER_HEARTBEAT_STATE_INTERVAL_MS_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
 
   // HDFS Router NN client
   public static final String DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE =
@@ -1236,6 +1245,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       FEDERATION_ROUTER_PREFIX + "connection.clean.ms";
   public static final long DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+
+  // HDFS Router RPC client
+  public static final String DFS_ROUTER_CLIENT_THREADS_SIZE =
+      FEDERATION_ROUTER_PREFIX + "client.thread-size";
+  public static final int DFS_ROUTER_CLIENT_THREADS_SIZE_DEFAULT = 32;
+  public static final String DFS_ROUTER_CLIENT_MAX_ATTEMPTS =
+      FEDERATION_ROUTER_PREFIX + "client.retry.max.attempts";
+  public static final int DFS_ROUTER_CLIENT_MAX_ATTEMPTS_DEFAULT = 3;
 
   // HDFS Router State Store connection
   public static final String FEDERATION_FILE_RESOLVER_CLIENT_CLASS =
@@ -1266,7 +1283,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String FEDERATION_STORE_DRIVER_CLASS =
       FEDERATION_STORE_PREFIX + "driver.class";
   public static final Class<? extends StateStoreDriver>
-      FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreFileImpl.class;
+      FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreZooKeeperImpl.class;
 
   public static final String FEDERATION_STORE_CONNECTION_TEST_MS =
       FEDERATION_STORE_PREFIX + "connection.test";
@@ -1282,6 +1299,23 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
+      FEDERATION_STORE_PREFIX + "router.expiration";
+  public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
+      TimeUnit.MINUTES.toMillis(5);
+
+  // HDFS Router safe mode
+  public static final String DFS_ROUTER_SAFEMODE_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "safemode.enable";
+  public static final boolean DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_SAFEMODE_EXTENSION =
+      FEDERATION_ROUTER_PREFIX + "safemode.extension";
+  public static final long DFS_ROUTER_SAFEMODE_EXTENSION_DEFAULT =
+      TimeUnit.SECONDS.toMillis(30);
+  public static final String DFS_ROUTER_SAFEMODE_EXPIRATION =
+      FEDERATION_ROUTER_PREFIX + "safemode.expiration";
+  public static final long DFS_ROUTER_SAFEMODE_EXPIRATION_DEFAULT =
+      3 * DFS_ROUTER_CACHE_TIME_TO_LIVE_MS_DEFAULT;
 
   // HDFS Router-based federation mount table entries
   /** Maximum number of cache entries to have. */

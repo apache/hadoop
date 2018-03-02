@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -296,12 +297,12 @@ public class TestContainerAllocation {
             Resource capability, Priority priority, long createTime,
             LogAggregationContext logAggregationContext, String nodeLabelExp,
             ContainerType containerType, ExecutionType executionType,
-            long allocationRequestId) {
+            long allocationRequestId, Set<String> allocationTags) {
           numRetries++;
           return super.createContainerToken(containerId, containerVersion,
               nodeId, appSubmitter, capability, priority, createTime,
               logAggregationContext, nodeLabelExp, containerType,
-              executionType, allocationRequestId);
+              executionType, allocationRequestId, allocationTags);
         }
       };
     }

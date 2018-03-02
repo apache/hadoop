@@ -650,4 +650,12 @@
     <Method name="equals" />
     <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC" />
   </Match>
+
+  <!-- Null pointer exception needs to be ignored here as Findbugs doesn't properly detect code logic -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SingleConstraintAppPlacementAllocator" />
+    <Method name="validateAndSetSchedulingRequest" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH" />
+  </Match>
+
 </FindBugsFilter>

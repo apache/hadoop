@@ -85,7 +85,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected final BlockingQueue<AllocateResponse> responseQueue;
   private int responseId = 0;
   // user name
-  protected String user;  
+  private String user;
   // queue name
   protected String queue;
   // am type
@@ -105,7 +105,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   // waiting for AM container
   volatile boolean isAMContainerRunning = false;
   volatile Container amContainer;
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(AMSimulator.class);
 
   private Resource amContainerResource;
@@ -120,9 +120,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   public void init(int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
-      String simQueue, boolean tracked, String oldApp,
-      ReservationSubmissionRequest rr, long baseTimeMS,
-      Resource amContainerResource) {
+      String simQueue, boolean tracked, String oldApp, long baseTimeMS,
+      Resource amResource, Map<String, String> params) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -134,8 +133,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.baselineTimeMS = baseTimeMS;
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
-    this.reservationRequest = rr;
-    this.amContainerResource = amContainerResource;
+    this.amContainerResource = amResource;
   }
 
   /**
@@ -169,6 +167,10 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.appAttemptId = masterContainer.getId().getApplicationAttemptId();
     registerAM();
     isAMContainerRunning = true;
+  }
+
+  protected void setReservationRequest(ReservationSubmissionRequest rr){
+    this.reservationRequest = rr;
   }
 
   private ReservationId submitReservationWhenSpecified()
@@ -256,7 +258,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
               simulateStartTimeMS, simulateFinishTimeMS);
     }
   }
-  
+
   protected ResourceRequest createResourceRequest(
           Resource resource, String host, int priority, int numContainers) {
     ResourceRequest request = recordFactory
@@ -269,7 +271,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     request.setPriority(prio);
     return request;
   }
-  
+
   protected AllocateRequest createAllocateRequest(List<ResourceRequest> ask,
       List<ContainerId> toRelease) {
     AllocateRequest allocateRequest =
@@ -279,36 +281,39 @@ public abstract class AMSimulator extends TaskRunner.Task {
     allocateRequest.setReleaseList(toRelease);
     return allocateRequest;
   }
-  
+
   protected AllocateRequest createAllocateRequest(List<ResourceRequest> ask) {
     return createAllocateRequest(ask, new ArrayList<ContainerId>());
   }
 
   protected abstract void processResponseQueue() throws Exception;
-  
+
   protected abstract void sendContainerRequest() throws Exception;
-  
+
+  public abstract void initReservation(
+      ReservationId reservationId, long deadline, long now);
+
   protected abstract void checkStop();
-  
+
   private void submitApp(ReservationId reservationId)
           throws YarnException, InterruptedException, IOException {
     // ask for new application
     GetNewApplicationRequest newAppRequest =
         Records.newRecord(GetNewApplicationRequest.class);
-    GetNewApplicationResponse newAppResponse = 
+    GetNewApplicationResponse newAppResponse =
         rm.getClientRMService().getNewApplication(newAppRequest);
     appId = newAppResponse.getApplicationId();
-    
+
     // submit the application
     final SubmitApplicationRequest subAppRequest =
         Records.newRecord(SubmitApplicationRequest.class);
-    ApplicationSubmissionContext appSubContext = 
+    ApplicationSubmissionContext appSubContext =
         Records.newRecord(ApplicationSubmissionContext.class);
     appSubContext.setApplicationId(appId);
     appSubContext.setMaxAppAttempts(1);
     appSubContext.setQueue(queue);
     appSubContext.setPriority(Priority.newInstance(0));
-    ContainerLaunchContext conLauContext = 
+    ContainerLaunchContext conLauContext =
         Records.newRecord(ContainerLaunchContext.class);
     conLauContext.setApplicationACLs(new HashMap<>());
     conLauContext.setCommands(new ArrayList<>());
@@ -379,7 +384,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     }
   }
-  
+
   protected List<ResourceRequest> packageRequests(
           List<ContainerSimulator> csList, int priority) {
     // create requests

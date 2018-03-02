@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -103,6 +104,25 @@ public final class FederationUtil {
       }
     }
     return ret;
+  }
+
+  /**
+   * Fetch the Hadoop version string for this jar.
+   *
+   * @return Hadoop version string, e.g., 3.0.1.
+   */
+  public static String getVersion() {
+    return VersionInfo.getVersion();
+  }
+
+  /**
+   * Fetch the build/compile information for this jar.
+   *
+   * @return String Compilation info.
+   */
+  public static String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch();
   }
 
   /**

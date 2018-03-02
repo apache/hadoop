@@ -30,12 +30,14 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       serviceName: service,
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
-      })
+      }),
+      app: this.fetchAppInfoFromRMorATS(app_id, this.store)
     });
   },
 
   activate() {
     const controller = this.controllerFor("yarn-app.logs");
+    controller.resetAfterRefresh();
     controller.initializeSelect();
   },
 

@@ -24,8 +24,8 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
@@ -60,13 +60,12 @@ public class InterQJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
 
   @Override
-  public GetEditLogManifestFromJournalResponseProto
-      getEditLogManifestFromJournal(String jid, String nameServiceId,
-                                    long sinceTxId, boolean inProgressOk)
+  public GetEditLogManifestResponseProto getEditLogManifestFromJournal(
+      String jid, String nameServiceId, long sinceTxId, boolean inProgressOk)
       throws IOException {
     try {
-      GetEditLogManifestFromJournalRequestProto.Builder req;
-      req = GetEditLogManifestFromJournalRequestProto.newBuilder()
+      GetEditLogManifestRequestProto.Builder req;
+      req = GetEditLogManifestRequestProto.newBuilder()
           .setJid(convertJournalId(jid))
           .setSinceTxId(sinceTxId)
           .setInProgressOk(inProgressOk);

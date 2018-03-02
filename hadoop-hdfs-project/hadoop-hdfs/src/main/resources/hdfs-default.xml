@@ -37,7 +37,7 @@
     RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 9820.
+    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default RPC port is 8020.
   </description>
 </property>
 
@@ -2604,6 +2604,17 @@
 </property>
 
 <property>
+  <name>dfs.domain.socket.disable.interval.seconds</name>
+  <value>600</value>
+  <description>
+    The interval that a DataNode is disabled for future Short-Circuit Reads,
+    after an error happens during a Short-Circuit Read. Setting this to 0 will
+    not disable Short-Circuit Reads at all after errors happen. Negative values
+    are invalid.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.shortcircuit.skip.checksum</name>
   <value>false</value>
   <description>
@@ -4364,6 +4375,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.snapshot.max.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed per snapshottable
+    directory.If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+
+<property>
   <name>dfs.pipeline.ecn</name>
   <value>false</value>
   <description>
@@ -4623,10 +4644,10 @@
 
   <property>
     <name>dfs.disk.balancer.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <description>
         This enables the diskbalancer feature on a cluster. By default, disk
-      balancer is disabled.
+      balancer is enabled.
     </description>
   </property>
 
@@ -5075,9 +5096,15 @@
 
   <property>
     <name>dfs.federation.router.store.driver.class</name>
-    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl</value>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl</value>
     <description>
-      Class to implement the State Store. By default it uses the local disk.
+      Class to implement the State Store. There are three implementation classes currently
+      being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
+      By default it uses the ZooKeeper as the default State Store.
     </description>
   </property>
 
@@ -5091,9 +5118,12 @@
 
   <property>
     <name>dfs.federation.router.cache.ttl</name>
-    <value>60000</value>
+    <value>1m</value>
     <description>
-      How often to refresh the State Store caches in milliseconds.
+      How often to refresh the State Store caches in milliseconds. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
     </description>
   </property>
 
@@ -5118,6 +5148,55 @@
     <value>5000</value>
     <description>
       How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat-state.interval</name>
+    <value>5s</value>
+    <description>
+      How often the Router should heartbeat its state into the State Store in
+      milliseconds. This setting supports multiple time unit suffixes as
+      described in dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration</name>
+    <value>5m</value>
+    <description>
+      Expiration time in milliseconds for a router state record. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.enable</name>
+    <value>true</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.extension</name>
+    <value>30s</value>
+    <description>
+      Time after startup that the Router is in safe mode. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.expiration</name>
+    <value>3m</value>
+    <description>
+      Time without being able to reach the State Store to enter safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
     </description>
   </property>
 
@@ -5164,6 +5243,23 @@
       This setting supports multiple time unit suffixes as described
       in dfs.heartbeat.interval. If no suffix is specified then milliseconds
       is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.thread-size</name>
+    <value>32</value>
+    <description>
+      Max threads size for the RouterClient to execute concurrent
+      requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.retry.max.attempts</name>
+    <value>3</value>
+    <description>
+      Max retry attempts for the RouterClient talking to the Router.
     </description>
   </property>
 </configuration>

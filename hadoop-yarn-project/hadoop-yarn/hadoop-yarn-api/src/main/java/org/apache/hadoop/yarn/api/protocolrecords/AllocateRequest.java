@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -212,6 +214,32 @@ public abstract class AllocateRequest {
   public abstract void setUpdateRequests(
       List<UpdateContainerRequest> updateRequests);
 
+  /**
+   * Get the list of Scheduling requests being sent by the
+   * <code>ApplicationMaster</code>.
+   * @return list of {@link SchedulingRequest} being sent by the
+   *         <code>ApplicationMaster</code>.
+   */
+  @Public
+  @Unstable
+  public List<SchedulingRequest> getSchedulingRequests() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Set the list of Scheduling requests to inform the
+   * <code>ResourceManager</code> about the application's resource requirements
+   * (potentially including allocation tags and placement constraints).
+   * @param schedulingRequests list of {@link SchedulingRequest} to update
+   *          the <code>ResourceManager</code> about the application's resource
+   *          requirements.
+   */
+  @Public
+  @Unstable
+  public void setSchedulingRequests(
+      List<SchedulingRequest> schedulingRequests) {
+  }
+
   @Public
   @Unstable
   public static AllocateRequestBuilder newBuilder() {
@@ -310,6 +338,20 @@ public abstract class AllocateRequest {
     public AllocateRequestBuilder updateRequests(
         List<UpdateContainerRequest> updateRequests) {
       allocateRequest.setUpdateRequests(updateRequests);
+      return this;
+    }
+
+    /**
+     * Set the <code>schedulingRequests</code> of the request.
+     * @see AllocateRequest#setSchedulingRequests(List)
+     * @param schedulingRequests <code>SchedulingRequest</code> of the request
+     * @return {@link AllocateRequestBuilder}
+     */
+    @Public
+    @Unstable
+    public AllocateRequestBuilder schedulingRequests(
+        List<SchedulingRequest> schedulingRequests) {
+      allocateRequest.setSchedulingRequests(schedulingRequests);
       return this;
     }
 

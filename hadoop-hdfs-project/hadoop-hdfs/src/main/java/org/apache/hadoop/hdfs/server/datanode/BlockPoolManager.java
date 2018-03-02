@@ -253,7 +253,20 @@ class BlockPoolManager {
           lifelineAddrs.add(nnIdToLifelineAddr != null ?
               nnIdToLifelineAddr.get(nnId) : null);
         }
-        bpos.refreshNNList(addrs, lifelineAddrs);
+        try {
+          UserGroupInformation.getLoginUser()
+              .doAs(new PrivilegedExceptionAction<Object>() {
+                @Override
+                public Object run() throws Exception {
+                  bpos.refreshNNList(addrs, lifelineAddrs);
+                  return null;
+                }
+              });
+        } catch (InterruptedException ex) {
+          IOException ioe = new IOException();
+          ioe.initCause(ex.getCause());
+          throw ioe;
+        }
       }
     }
   }

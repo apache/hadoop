@@ -1995,6 +1995,93 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
+  /**
+   * Returns a remote iterator so that followup calls are made on demand
+   * while consuming the SnapshotDiffReportListing entries.
+   * This reduces memory consumption overhead in case the snapshotDiffReport
+   * is huge.
+   *
+   * @param snapshotDir
+   *          full path of the directory where snapshots are taken
+   * @param fromSnapshot
+   *          snapshot name of the from point. Null indicates the current
+   *          tree
+   * @param toSnapshot
+   *          snapshot name of the to point. Null indicates the current
+   *          tree.
+   * @return Remote iterator
+   */
+  public RemoteIterator
+      <SnapshotDiffReportListing> snapshotDiffReportListingRemoteIterator(
+      final Path snapshotDir, final String fromSnapshot,
+      final String toSnapshot) throws IOException {
+    Path absF = fixRelativePart(snapshotDir);
+    return new FileSystemLinkResolver
+        <RemoteIterator<SnapshotDiffReportListing>>() {
+      @Override
+      public RemoteIterator<SnapshotDiffReportListing> doCall(final Path p)
+          throws IOException {
+        return new SnapshotDiffReportListingIterator(
+            getPathName(p), fromSnapshot, toSnapshot);
+      }
+
+      @Override
+      public RemoteIterator<SnapshotDiffReportListing> next(final FileSystem fs,
+          final Path p) throws IOException {
+        return ((DistributedFileSystem) fs)
+            .snapshotDiffReportListingRemoteIterator(p, fromSnapshot,
+                toSnapshot);
+      }
+    }.resolve(this, absF);
+
+  }
+
+  /**
+   * This class defines an iterator that returns
+   * the SnapshotDiffReportListing for a snapshottable directory
+   * between two given snapshots.
+   */
+  private final class SnapshotDiffReportListingIterator implements
+      RemoteIterator<SnapshotDiffReportListing> {
+    private final String snapshotDir;
+    private final String fromSnapshot;
+    private final String toSnapshot;
+
+    private byte[] startPath;
+    private int index;
+    private boolean hasNext = true;
+
+    private SnapshotDiffReportListingIterator(String snapshotDir,
+        String fromSnapshot, String toSnapshot) {
+      this.snapshotDir = snapshotDir;
+      this.fromSnapshot = fromSnapshot;
+      this.toSnapshot = toSnapshot;
+      this.startPath = DFSUtilClient.EMPTY_BYTES;
+      this.index = -1;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return hasNext;
+    }
+
+    @Override
+    public SnapshotDiffReportListing next() throws IOException {
+      if (!hasNext) {
+        throw new java.util.NoSuchElementException(
+            "No more entry in SnapshotDiffReport for " + snapshotDir);
+      }
+      final SnapshotDiffReportListing part =
+          dfs.getSnapshotDiffReportListing(snapshotDir, fromSnapshot,
+              toSnapshot, startPath, index);
+      startPath = part.getLastPath();
+      index = part.getLastIndex();
+      hasNext =
+          !(Arrays.equals(startPath, DFSUtilClient.EMPTY_BYTES) && index == -1);
+      return part;
+    }
+  }
+
   private SnapshotDiffReport getSnapshotDiffReportInternal(
       final String snapshotDir, final String fromSnapshot,
       final String toSnapshot) throws IOException {

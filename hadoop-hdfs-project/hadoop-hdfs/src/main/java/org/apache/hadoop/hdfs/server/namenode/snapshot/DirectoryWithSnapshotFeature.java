@@ -225,7 +225,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         private List<INode> initChildren() {
           if (children == null) {
             final ChildrenDiff combined = new ChildrenDiff();
-            for (DirectoryDiff d = DirectoryDiff.this; d != null; 
+            for (DirectoryDiff d = DirectoryDiff.this; d != null;
                 d = d.getPosterior()) {
               combined.combinePosterior(d.diff, null);
             }
@@ -334,7 +334,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     /** Replace the given child in the created/deleted list, if there is any. */
     public boolean replaceChild(final ListType type, final INode oldChild,
         final INode newChild) {
-      final List<DirectoryDiff> diffList = asList();
+      final DiffList<DirectoryDiff> diffList = asList();
       for(int i = diffList.size() - 1; i >= 0; i--) {
         final ChildrenDiff diff = diffList.get(i).diff;
         if (diff.replace(type, oldChild, newChild)) {
@@ -346,7 +346,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
 
     /** Remove the given child in the created/deleted list, if there is any. */
     public boolean removeChild(final ListType type, final INode child) {
-      final List<DirectoryDiff> diffList = asList();
+      final DiffList<DirectoryDiff> diffList = asList();
       for(int i = diffList.size() - 1; i >= 0; i--) {
         final ChildrenDiff diff = diffList.get(i).diff;
         if (diff.removeChild(type, child)) {
@@ -363,7 +363,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
      * given inode is not in any of the snapshot.
      */
     public int findSnapshotDeleted(final INode child) {
-      final List<DirectoryDiff> diffList = asList();
+      final DiffList<DirectoryDiff> diffList = asList();
       for(int i = diffList.size() - 1; i >= 0; i--) {
         final ChildrenDiff diff = diffList.get(i).diff;
         final int d = diff.searchIndex(ListType.DELETED,
@@ -669,7 +669,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
 
     boolean dirMetadataChanged = false;
     INodeDirectoryAttributes dirCopy = null;
-    List<DirectoryDiff> difflist = diffs.asList();
+    DiffList<DirectoryDiff> difflist = diffs.asList();
     for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
       DirectoryDiff sdiff = difflist.get(i);
       diff.combinePosterior(sdiff.diff, null);

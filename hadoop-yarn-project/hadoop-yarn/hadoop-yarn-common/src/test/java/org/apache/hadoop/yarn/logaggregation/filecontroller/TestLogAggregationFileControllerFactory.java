@@ -194,14 +194,15 @@ public class TestLogAggregationFileControllerFactory {
     }
 
     @Override
-    public String getApplicationOwner(Path aggregatedLogPath)
+    public String getApplicationOwner(Path aggregatedLogPath,
+        ApplicationId appId)
         throws IOException {
       return null;
     }
 
     @Override
     public Map<ApplicationAccessType, String> getApplicationAcls(
-        Path aggregatedLogPath) throws IOException {
+        Path aggregatedLogPath, ApplicationId appId) throws IOException {
       return null;
     }
   }

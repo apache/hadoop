@@ -121,6 +121,7 @@ final class FSDirEncryptionZoneOp {
       throw new IOException("Must specify a key name when creating an "
           + "encryption zone");
     }
+    EncryptionFaultInjector.getInstance().ensureKeyIsInitialized();
     KeyProvider.Metadata metadata = provider.getMetadata(keyName);
     if (metadata == null) {
       /*
@@ -692,11 +693,12 @@ final class FSDirEncryptionZoneOp {
    * a different ACL. HDFS should not try to operate on additional ACLs, but
    * rather use the generate ACL it already has.
    */
-  static String getCurrentKeyVersion(final FSDirectory dir, final String zone)
-      throws IOException {
+  static String getCurrentKeyVersion(final FSDirectory dir,
+      final FSPermissionChecker pc, final String zone) throws IOException {
     assert dir.getProvider() != null;
     assert !dir.hasReadLock();
-    final String keyName = FSDirEncryptionZoneOp.getKeyNameForZone(dir, zone);
+    final String keyName = FSDirEncryptionZoneOp.getKeyNameForZone(dir,
+        pc, zone);
     if (keyName == null) {
       throw new IOException(zone + " is not an encryption zone.");
     }
@@ -718,11 +720,10 @@ final class FSDirEncryptionZoneOp {
    * Resolve the zone to an inode, find the encryption zone info associated with
    * that inode, and return the key name. Does not contact the KMS.
    */
-  static String getKeyNameForZone(final FSDirectory dir, final String zone)
-      throws IOException {
+  static String getKeyNameForZone(final FSDirectory dir,
+      final FSPermissionChecker pc, final String zone) throws IOException {
     assert dir.getProvider() != null;
     final INodesInPath iip;
-    final FSPermissionChecker pc = dir.getPermissionChecker();
     dir.readLock();
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);

@@ -27,12 +27,12 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Test;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -43,7 +43,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -51,7 +50,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestAllocationFileLoaderService {
-  
+
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "/tmp")).getAbsolutePath();
 
@@ -112,7 +111,7 @@ public class TestAllocationFileLoaderService {
       fail("Unable to access allocation file from classpath: " + e);
     }
   }
-  
+
   @Test (timeout = 10000)
   public void testReload() throws Exception {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -127,7 +126,7 @@ public class TestAllocationFileLoaderService {
     out.println("  </queuePlacementPolicy>");
     out.println("</allocations>");
     out.close();
-    
+
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
     Configuration conf = new Configuration();
@@ -141,7 +140,7 @@ public class TestAllocationFileLoaderService {
     allocLoader.setReloadListener(confHolder);
     allocLoader.reloadAllocations();
     AllocationConfiguration allocConf = confHolder.allocConf;
-    
+
     // Verify conf
     QueuePlacementPolicy policy = allocConf.getPlacementPolicy();
     List<QueuePlacementRule> rules = policy.getRules();
@@ -154,9 +153,9 @@ public class TestAllocationFileLoaderService {
         .contains("root.queueA"));
     assertTrue(allocConf.getConfiguredQueues().get(FSQueueType.LEAF)
         .contains("root.queueB"));
-    
+
     confHolder.allocConf = null;
-    
+
     // Modify file and advance the clock
     out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -166,22 +165,22 @@ public class TestAllocationFileLoaderService {
     out.println("  </queue>");
     out.println("  <queuePlacementPolicy>");
     out.println("    <rule name='specified' />");
-    out.println("    <rule name='nestedUserQueue' >");  
+    out.println("    <rule name='nestedUserQueue' >");
     out.println("         <rule name='primaryGroup' />");
     out.println("    </rule>");
     out.println("    <rule name='default' />");
     out.println("  </queuePlacementPolicy>");
     out.println("</allocations>");
     out.close();
-    
+
     clock.tickMsec(System.currentTimeMillis()
         + AllocationFileLoaderService.ALLOC_RELOAD_WAIT_MS + 10000);
     allocLoader.start();
-    
+
     while (confHolder.allocConf == null) {
       Thread.sleep(20);
     }
-    
+
     // Verify conf
     allocConf = confHolder.allocConf;
     policy = allocConf.getPlacementPolicy();
@@ -199,91 +198,89 @@ public class TestAllocationFileLoaderService {
     assertTrue(allocConf.getConfiguredQueues().get(FSQueueType.LEAF)
         .contains("root.queueB"));
   }
-  
+
   @Test
   public void testAllocationFileParsing() throws Exception {
     Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
 
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    // Give queue A a minimum of 1024 M
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("<maxResources>2048mb,10vcores</maxResources>");
-    out.println("</queue>");
-    // Give queue B a minimum of 2048 M
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("<maxResources>5120mb,110vcores</maxResources>");
-    out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("</queue>");
-    // Give queue C no minimum
-    out.println("<queue name=\"queueC\">");
-    out.println("<minResources>5120mb,0vcores</minResources>");
-    out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
-    out.println("</queue>");
-    // Give queue D a limit of 3 running apps and 0.4f maxAMShare
-    out.println("<queue name=\"queueD\">");
-    out.println("<maxRunningApps>3</maxRunningApps>");
-    out.println("<maxAMShare>0.4</maxAMShare>");
-    out.println("</queue>");
-    // Give queue E a preemption timeout of one minute
-    out.println("<queue name=\"queueE\">");
-    out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
-    out.println("</queue>");
-    // Make queue F a parent queue without configured leaf queues using the
-    // 'type' attribute
-    out.println("<queue name=\"queueF\" type=\"parent\" >");
-    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
-    out.println("</queue>");
-    // Create hierarchical queues G,H, with different min/fair share preemption
-    // timeouts and preemption thresholds. Also add a child default to make sure
-    // it doesn't impact queue H.
-    out.println("<queue name=\"queueG\">");
-    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
-    out.println("<fairSharePreemptionTimeout>120</fairSharePreemptionTimeout>");
-    out.println("<minSharePreemptionTimeout>50</minSharePreemptionTimeout>");
-    out.println("<fairSharePreemptionThreshold>0.6</fairSharePreemptionThreshold>");
-    out.println("   <queue name=\"queueH\">");
-    out.println("   <fairSharePreemptionTimeout>180</fairSharePreemptionTimeout>");
-    out.println("   <minSharePreemptionTimeout>40</minSharePreemptionTimeout>");
-    out.println("   <fairSharePreemptionThreshold>0.7</fairSharePreemptionThreshold>");
-    out.println("   </queue>");
-    out.println("</queue>");
-    // Set default limit of apps per queue to 15
-    out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
-    // Set default limit of max resource per queue to 4G and 100 cores
-    out.println("<queueMaxResourcesDefault>4096mb,100vcores</queueMaxResourcesDefault>");
-    // Set default limit of apps per user to 5
-    out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
-    // Set default limit of AMResourceShare to 0.5f
-    out.println("<queueMaxAMShareDefault>0.5f</queueMaxAMShareDefault>");
-    // Give user1 a limit of 10 jobs
-    out.println("<user name=\"user1\">");
-    out.println("<maxRunningApps>10</maxRunningApps>");
-    out.println("</user>");
-    // Set default min share preemption timeout to 2 minutes
-    out.println("<defaultMinSharePreemptionTimeout>120"
-        + "</defaultMinSharePreemptionTimeout>");
-    // Set default fair share preemption timeout to 5 minutes
-    out.println("<defaultFairSharePreemptionTimeout>300</defaultFairSharePreemptionTimeout>");
-    // Set default fair share preemption threshold to 0.4
-    out.println("<defaultFairSharePreemptionThreshold>0.4</defaultFairSharePreemptionThreshold>");
-    // Set default scheduling policy to DRF
-    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
-    
+    AllocationFileWriter
+            .create()
+            // Give queue A a minimum of 1024 M
+            .queue("queueA")
+              .minResources("1024mb,0vcores")
+              .maxResources("2048mb,10vcores")
+            .buildQueue()
+            // Give queue B a minimum of 2048 M
+            .queue("queueB")
+                .minResources("2048mb,0vcores")
+                .maxResources("5120mb,110vcores")
+                .aclAdministerApps("alice,bob admins")
+                .schedulingPolicy("fair")
+            .buildQueue()
+            // Give queue C no minimum
+            .queue("queueC")
+              .minResources("5120mb,0vcores")
+              .aclSubmitApps("alice,bob admins")
+            .buildQueue()
+            // Give queue D a limit of 3 running apps and 0.4f maxAMShare
+            .queue("queueD")
+              .maxRunningApps(3)
+              .maxAMShare(0.4)
+            .buildQueue()
+            // Give queue E a preemption timeout of one minute
+            .queue("queueE")
+              .minSharePreemptionTimeout(60)
+            .buildQueue()
+            // Make queue F a parent queue without configured leaf queues
+            // using the 'type' attribute
+            .queue("queueF")
+              .parent(true)
+              .maxChildResources("2048mb,64vcores")
+            .buildQueue()
+            .queue("queueG")
+              .maxChildResources("2048mb,64vcores")
+              .fairSharePreemptionTimeout(120)
+              .minSharePreemptionTimeout(50)
+              .fairSharePreemptionThreshold(0.6)
+            // Create hierarchical queues G,H, with different min/fair
+            // share preemption timeouts and preemption thresholds.
+            // Also add a child default to make sure it doesn't impact queue H.
+              .subQueue("queueH")
+                .fairSharePreemptionTimeout(180)
+                .minSharePreemptionTimeout(40)
+                .fairSharePreemptionThreshold(0.7)
+              .buildSubQueue()
+            .buildQueue()
+            // Set default limit of apps per queue to 15
+            .queueMaxAppsDefault(15)
+            // Set default limit of max resource per queue to 4G and 100 cores
+            .queueMaxResourcesDefault("4096mb,100vcores")
+            // Set default limit of apps per user to 5
+            .userMaxAppsDefault(5)
+            // Set default limit of AMResourceShare to 0.5f
+            .queueMaxAMShareDefault(0.5)
+            // Set default min share preemption timeout to 2 minutes
+            .defaultMinSharePreemptionTimeout(120)
+            // Set default fair share preemption timeout to 5 minutes
+            .defaultFairSharePreemptionTimeout(300)
+            // Set default fair share preemption threshold to 0.4
+            .defaultFairSharePreemptionThreshold(0.4)
+            // Set default scheduling policy to DRF
+            .defaultQueueSchedulingPolicy("drf")
+            // Give user1 a limit of 10 jobs
+            .userSettings("user1")
+              .maxRunningApps(10)
+            .build()
+            .writeToFile(ALLOC_FILE);
+
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
     allocLoader.reloadAllocations();
     AllocationConfiguration queueConf = confHolder.allocConf;
-    
+
     assertEquals(6, queueConf.getConfiguredQueues().get(FSQueueType.LEAF).size());
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
@@ -443,7 +440,7 @@ public class TestAllocationFileLoaderService {
     assertEquals(DominantResourceFairnessPolicy.NAME,
         queueConf.getSchedulingPolicy("root.newqueue").getName());
   }
-  
+
   @Test
   public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
     Configuration conf = new Configuration();
@@ -492,7 +489,7 @@ public class TestAllocationFileLoaderService {
     out.println("<defaultFairSharePreemptionThreshold>0.6</defaultFairSharePreemptionThreshold>");
     out.println("</allocations>");
     out.close();
-    
+
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
@@ -571,27 +568,27 @@ public class TestAllocationFileLoaderService {
     assertEquals(.3f,
         queueConf.getFairSharePreemptionThreshold("root.queueE"), 0.01);
   }
-  
+
   @Test
   public void testSimplePlacementPolicyFromConf() throws Exception {
     Configuration conf = new Configuration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, false);
-    
+
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
     out.println("</allocations>");
     out.close();
-    
+
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
     allocLoader.setReloadListener(confHolder);
     allocLoader.reloadAllocations();
     AllocationConfiguration allocConf = confHolder.allocConf;
-    
+
     QueuePlacementPolicy placementPolicy = allocConf.getPlacementPolicy();
     List<QueuePlacementRule> rules = placementPolicy.getRules();
     assertEquals(2, rules.size());
@@ -599,7 +596,7 @@ public class TestAllocationFileLoaderService {
     assertEquals(false, rules.get(0).create);
     assertEquals(QueuePlacementRule.Default.class, rules.get(1).getClass());
   }
-  
+
   /**
    * Verify that you can't place queues at the same level as the root queue in
    * the allocations file.
@@ -618,7 +615,7 @@ public class TestAllocationFileLoaderService {
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
-    
+
     AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
     allocLoader.init(conf);
     ReloadListener confHolder = new ReloadListener();
@@ -890,7 +887,7 @@ public class TestAllocationFileLoaderService {
 
   private class ReloadListener implements AllocationFileLoaderService.Listener {
     public AllocationConfiguration allocConf;
-    
+
     @Override
     public void onReload(AllocationConfiguration info) {
       allocConf = info;

@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.util.Records;
-
 /**
  * The request sent by the {@code ApplicationMaster} to {@code ResourceManager}
  * on registration.
@@ -132,4 +137,39 @@ public abstract class RegisterApplicationMasterRequest {
   @Public
   @Stable
   public abstract void setTrackingUrl(String trackingUrl);
+
+  /**
+   * Return all Placement Constraints specified at the Application level. The
+   * mapping is from a set of allocation tags to a
+   * <code>PlacementConstraint</code> associated with the tags, i.e., each
+   * {@link org.apache.hadoop.yarn.api.records.SchedulingRequest} that has those
+   * tags will be placed taking into account the corresponding constraint.
+   *
+   * @return A map of Placement Constraints.
+   */
+  @Public
+  @Unstable
+  public Map<Set<String>, PlacementConstraint> getPlacementConstraints() {
+    return new HashMap<>();
+  }
+
+  /**
+   * Set Placement Constraints applicable to the
+   * {@link org.apache.hadoop.yarn.api.records.SchedulingRequest}s
+   * of this application.
+   * The mapping is from a set of allocation tags to a
+   * <code>PlacementConstraint</code> associated with the tags.
+   * For example:
+   *  Map &lt;
+   *   &lt;hb_regionserver&gt; -&gt; node_anti_affinity,
+   *   &lt;hb_regionserver, hb_master&gt; -&gt; rack_affinity,
+   *   ...
+   *  &gt;
+   * @param placementConstraints Placement Constraint Mapping.
+   */
+  @Public
+  @Unstable
+  public void setPlacementConstraints(
+      Map<Set<String>, PlacementConstraint> placementConstraints) {
+  }
 }

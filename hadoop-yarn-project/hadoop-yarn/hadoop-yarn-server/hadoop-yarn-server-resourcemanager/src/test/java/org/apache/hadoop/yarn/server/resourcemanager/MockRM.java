@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -1235,6 +1237,18 @@ public class MockRM extends ResourceManager {
   public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
     MockAM am = launchAM(app, rm, nm);
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    return am;
+  }
+
+  public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm,
+      Map<Set<String>, PlacementConstraint> constraints) throws Exception {
+    MockAM am = launchAM(app, rm, nm);
+    for (Map.Entry<Set<String>, PlacementConstraint> e :
+        constraints.entrySet()) {
+      am.addPlacementConstraint(e.getKey(), e.getValue());
+    }
     am.registerAppAttempt();
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
     return am;

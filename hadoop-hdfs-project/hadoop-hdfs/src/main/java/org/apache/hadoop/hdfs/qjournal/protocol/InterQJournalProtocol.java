@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.qjournal.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
-import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.GetEditLogManifestFromJournalResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.security.KerberosInfo;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public interface InterQJournalProtocol {
    *        segment
    * @return a list of edit log segments since the given transaction ID.
    */
-  GetEditLogManifestFromJournalResponseProto getEditLogManifestFromJournal(
+  GetEditLogManifestResponseProto getEditLogManifestFromJournal(
       String jid, String nameServiceId, long sinceTxId, boolean inProgressOk)
       throws IOException;
 

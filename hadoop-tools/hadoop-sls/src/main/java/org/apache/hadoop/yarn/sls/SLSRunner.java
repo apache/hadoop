@@ -47,17 +47,14 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
-import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -444,7 +441,7 @@ public class SLSRunner extends Configured implements Tool {
 
     for (int i = 0; i < jobCount; i++) {
       runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-          getTaskContainers(jsonJob), null, getAMContainerResource(jsonJob));
+          getTaskContainers(jsonJob), getAMContainerResource(jsonJob));
     }
   }
 
@@ -607,7 +604,7 @@ public class SLSRunner extends Configured implements Tool {
 
     // Only supports the default job type currently
     runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-        jobStartTimeMS, jobFinishTimeMS, containerList, null,
+        jobStartTimeMS, jobFinishTimeMS, containerList,
         getAMContainerResource(null));
   }
 
@@ -628,111 +625,67 @@ public class SLSRunner extends Configured implements Tool {
     localConf.set("fs.defaultFS", "file:///");
     long baselineTimeMS = 0;
 
-    // reservations use wall clock time, so need to have a reference for that
-    UTCClock clock = new UTCClock();
-    long now = clock.getTime();
-
-    try {
-
-      // if we use the nodeFile this could have been not initialized yet.
-      if (stjp == null) {
-        stjp = new SynthTraceJobProducer(getConf(), new Path(inputTraces[0]));
-      }
-
-      SynthJob job = null;
-      // we use stjp, a reference to the job producer instantiated during node
-      // creation
-      while ((job = (SynthJob) stjp.getNextJob()) != null) {
-        // only support MapReduce currently
-        String user = job.getUser();
-        String jobQueue = job.getQueueName();
-        String oldJobId = job.getJobID().toString();
-        long jobStartTimeMS = job.getSubmissionTime();
-
-        // CARLO: Finish time is only used for logging, omit for now
-        long jobFinishTimeMS = -1L;
-
-        if (baselineTimeMS == 0) {
-          baselineTimeMS = jobStartTimeMS;
-        }
-        jobStartTimeMS -= baselineTimeMS;
-        jobFinishTimeMS -= baselineTimeMS;
-        if (jobStartTimeMS < 0) {
-          LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
-          jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
-          jobStartTimeMS = 0;
-        }
-
-        increaseQueueAppNum(jobQueue);
-
-        List<ContainerSimulator> containerList =
-            new ArrayList<ContainerSimulator>();
-        ArrayList<NodeId> keyAsArray = new ArrayList<NodeId>(nmMap.keySet());
-        Random rand = new Random(stjp.getSeed());
-
-        Resource maxMapRes = Resource.newInstance(0, 0);
-        long maxMapDur = 0;
-        // map tasks
-        for (int i = 0; i < job.getNumberMaps(); i++) {
-          TaskAttemptInfo tai = job.getTaskAttemptInfo(TaskType.MAP, i, 0);
-          RMNode node = nmMap
-              .get(keyAsArray.get(rand.nextInt(keyAsArray.size()))).getNode();
-          String hostname = "/" + node.getRackName() + "/" + node.getHostName();
-          long containerLifeTime = tai.getRuntime();
-          Resource containerResource =
-              Resource.newInstance((int) tai.getTaskInfo().getTaskMemory(),
-                  (int) tai.getTaskInfo().getTaskVCores());
-          containerList.add(new ContainerSimulator(containerResource,
-              containerLifeTime, hostname, DEFAULT_MAPPER_PRIORITY, "map"));
-          maxMapRes = Resources.componentwiseMax(maxMapRes, containerResource);
-          maxMapDur =
-              containerLifeTime > maxMapDur ? containerLifeTime : maxMapDur;
-
-        }
-
-        Resource maxRedRes = Resource.newInstance(0, 0);
-        long maxRedDur = 0;
-        // reduce tasks
-        for (int i = 0; i < job.getNumberReduces(); i++) {
-          TaskAttemptInfo tai = job.getTaskAttemptInfo(TaskType.REDUCE, i, 0);
-          RMNode node = nmMap
-              .get(keyAsArray.get(rand.nextInt(keyAsArray.size()))).getNode();
-          String hostname = "/" + node.getRackName() + "/" + node.getHostName();
-          long containerLifeTime = tai.getRuntime();
-          Resource containerResource =
-              Resource.newInstance((int) tai.getTaskInfo().getTaskMemory(),
-                  (int) tai.getTaskInfo().getTaskVCores());
-          containerList.add(new ContainerSimulator(containerResource,
-              containerLifeTime, hostname, DEFAULT_REDUCER_PRIORITY, "reduce"));
-          maxRedRes = Resources.componentwiseMax(maxRedRes, containerResource);
-          maxRedDur =
-              containerLifeTime > maxRedDur ? containerLifeTime : maxRedDur;
-
-        }
-
-        // generating reservations for the jobs that require them
-
-        ReservationSubmissionRequest rr = null;
-        if (job.hasDeadline()) {
-          ReservationId reservationId =
-              ReservationId.newInstance(this.rm.getStartTime(), AM_ID);
-
-          rr = ReservationClientUtil.createMRReservation(reservationId,
-              "reservation_" + AM_ID, maxMapRes, job.getNumberMaps(), maxMapDur,
-              maxRedRes, job.getNumberReduces(), maxRedDur,
-              now + jobStartTimeMS, now + job.getDeadline(),
-              job.getQueueName());
-
-        }
-
-        runNewAM(SLSUtils.DEFAULT_JOB_TYPE, user, jobQueue, oldJobId,
-            jobStartTimeMS, jobFinishTimeMS, containerList, rr,
-            getAMContainerResource(null));
-      }
-    } finally {
-      stjp.close();
+    // if we use the nodeFile this could have been not initialized yet.
+    if (stjp == null) {
+      stjp = new SynthTraceJobProducer(getConf(), new Path(inputTraces[0]));
     }
 
+    SynthJob job = null;
+    // we use stjp, a reference to the job producer instantiated during node
+    // creation
+    while ((job = (SynthJob) stjp.getNextJob()) != null) {
+      // only support MapReduce currently
+      String user = job.getUser();
+      String jobQueue = job.getQueueName();
+      String oldJobId = job.getJobID().toString();
+      long jobStartTimeMS = job.getSubmissionTime();
+
+      // CARLO: Finish time is only used for logging, omit for now
+      long jobFinishTimeMS = jobStartTimeMS + job.getDuration();
+
+      if (baselineTimeMS == 0) {
+        baselineTimeMS = jobStartTimeMS;
+      }
+      jobStartTimeMS -= baselineTimeMS;
+      jobFinishTimeMS -= baselineTimeMS;
+      if (jobStartTimeMS < 0) {
+        LOG.warn("Warning: reset job {} start time to 0.", oldJobId);
+        jobFinishTimeMS = jobFinishTimeMS - jobStartTimeMS;
+        jobStartTimeMS = 0;
+      }
+
+      increaseQueueAppNum(jobQueue);
+
+      List<ContainerSimulator> containerList =
+          new ArrayList<ContainerSimulator>();
+      ArrayList<NodeId> keyAsArray = new ArrayList<NodeId>(nmMap.keySet());
+      Random rand = new Random(stjp.getSeed());
+
+      for (SynthJob.SynthTask task : job.getTasks()) {
+        RMNode node = nmMap.get(keyAsArray.get(rand.nextInt(keyAsArray.size())))
+            .getNode();
+        String hostname = "/" + node.getRackName() + "/" + node.getHostName();
+        long containerLifeTime = task.getTime();
+        Resource containerResource = Resource
+            .newInstance((int) task.getMemory(), (int) task.getVcores());
+        containerList.add(
+            new ContainerSimulator(containerResource, containerLifeTime,
+                hostname, task.getPriority(), task.getType()));
+      }
+
+
+      ReservationId reservationId = null;
+
+      if(job.hasDeadline()){
+        reservationId = ReservationId
+            .newInstance(this.rm.getStartTime(), AM_ID);
+      }
+
+      runNewAM(job.getType(), user, jobQueue, oldJobId,
+          jobStartTimeMS, jobFinishTimeMS, containerList, reservationId,
+          job.getDeadline(), getAMContainerResource(null),
+          job.getParams());
+    }
   }
 
   private Resource getAMContainerResource(Map jsonJob) {
@@ -772,7 +725,17 @@ public class SLSRunner extends Configured implements Tool {
   private void runNewAM(String jobType, String user,
       String jobQueue, String oldJobId, long jobStartTimeMS,
       long jobFinishTimeMS, List<ContainerSimulator> containerList,
-      ReservationSubmissionRequest rr, Resource amContainerResource) {
+      Resource amContainerResource) {
+    runNewAM(jobType, user, jobQueue, oldJobId, jobStartTimeMS,
+        jobFinishTimeMS, containerList, null,  -1,
+        amContainerResource, null);
+  }
+
+  private void runNewAM(String jobType, String user,
+      String jobQueue, String oldJobId, long jobStartTimeMS,
+      long jobFinishTimeMS, List<ContainerSimulator> containerList,
+      ReservationId reservationId, long deadline, Resource amContainerResource,
+      Map<String, String> params) {
 
     AMSimulator amSim = (AMSimulator) ReflectionUtils.newInstance(
         amClassMap.get(jobType), new Configuration());
@@ -787,10 +750,15 @@ public class SLSRunner extends Configured implements Tool {
         oldJobId = Integer.toString(AM_ID);
       }
       AM_ID++;
-
       amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,
-          jobFinishTimeMS, user, jobQueue, isTracked, oldJobId, rr,
-          runner.getStartTimeMS(), amContainerResource);
+          jobFinishTimeMS, user, jobQueue, isTracked, oldJobId,
+          runner.getStartTimeMS(), amContainerResource, params);
+      if(reservationId != null) {
+        // if we have a ReservationId, delegate reservation creation to
+        // AMSim (reservation shape is impl specific)
+        UTCClock clock = new UTCClock();
+        amSim.initReservation(reservationId, deadline, clock.getTime());
+      }
       runner.schedule(amSim);
       maxRuntime = Math.max(maxRuntime, jobFinishTimeMS);
       numTasks += containerList.size();

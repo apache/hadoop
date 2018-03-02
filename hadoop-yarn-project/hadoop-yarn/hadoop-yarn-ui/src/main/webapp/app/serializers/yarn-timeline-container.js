@@ -23,12 +23,10 @@ import Converter from 'yarn-ui/utils/converter';
 export default DS.JSONAPISerializer.extend({
   internalNormalizeSingleResponse(store, primaryModelClass, payload) {
     var payloadEvents = payload.events,
-        createdEvent = payloadEvents.filterBy('id', 'YARN_RM_CONTAINER_CREATED')[0],
+        createdEvent = payloadEvents.filterBy('id', 'YARN_CONTAINER_CREATED')[0],
         startedTime = createdEvent? createdEvent.timestamp : Date.now(),
-        finishedEvent = payloadEvents.filterBy('id', 'YARN_RM_CONTAINER_FINISHED')[0],
-        finishedTime = finishedEvent? finishedEvent.timestamp : Date.now(),
-        containerExitStatus = finishedEvent? finishedEvent.info.YARN_CONTAINER_EXIT_STATUS : '',
-        containerState = finishedEvent? finishedEvent.info.YARN_CONTAINER_STATE : '';
+        finishedEvent = payloadEvents.filterBy('id', 'YARN_CONTAINER_FINISHED')[0],
+        finishedTime = finishedEvent? finishedEvent.timestamp : Date.now()
 
     var fixedPayload = {
       id: payload.id,
@@ -38,11 +36,11 @@ export default DS.JSONAPISerializer.extend({
         allocatedVCores: payload.info.YARN_CONTAINER_ALLOCATED_VCORE,
         assignedNodeId: payload.info.YARN_CONTAINER_ALLOCATED_HOST,
         priority: payload.info.YARN_CONTAINER_ALLOCATED_PRIORITY,
-        startedTime:  Converter.timeStampToDate(startedTime),
-        finishedTime: Converter.timeStampToDate(finishedTime),
+        startedTime:  Converter.timeStampToDate(payload.createdtime),
+        finishedTime: Converter.timeStampToDate(payload.info.YARN_CONTAINER_FINISHED_TIME),
         nodeHttpAddress: payload.info.YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS,
-        containerExitStatus: containerExitStatus,
-        containerState: containerState
+        containerExitStatus: payload.info.YARN_CONTAINER_EXIT_STATUS,
+        containerState: payload.info.YARN_CONTAINER_STATE
       }
     };
     return fixedPayload;

@@ -860,5 +860,7 @@ public class CommonConfigurationKeysPublic {
           "credential$",
           "oauth.*token$",
           HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS);
+  public static final String HADOOP_SYSTEM_TAGS = "hadoop.system.tags";
+  public static final String HADOOP_CUSTOM_TAGS = "hadoop.custom.tags";
 }
 

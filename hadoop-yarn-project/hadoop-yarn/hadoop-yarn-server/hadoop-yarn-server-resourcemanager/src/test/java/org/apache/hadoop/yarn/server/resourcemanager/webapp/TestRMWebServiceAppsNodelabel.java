@@ -213,13 +213,18 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
 
   private void verifyResource(JSONObject partition, String partitionName,
       String amused, String used, String reserved) throws JSONException {
+    JSONObject amusedObject = (JSONObject) partition.get("amUsed");
+    JSONObject usedObject = (JSONObject) partition.get("used");
+    JSONObject reservedObject = (JSONObject) partition.get("reserved");
     assertEquals("Partition expected", partitionName,
         partition.get("partitionName"));
-    assertEquals("partition amused", amused,
-        partition.get("amUsed").toString());
-    assertEquals("partition used", used, partition.get("used").toString());
+    assertEquals("partition amused", amused, getResource(
+        (int) amusedObject.get("memory"), (int) amusedObject.get("vCores")));
+    assertEquals("partition used", used, getResource(
+        (int) usedObject.get("memory"), (int) usedObject.get("vCores")));
     assertEquals("partition reserved", reserved,
-        partition.get("reserved").toString());
+        getResource((int) reservedObject.get("memory"),
+            (int) reservedObject.get("vCores")));
   }
 
   @SuppressWarnings("unchecked")

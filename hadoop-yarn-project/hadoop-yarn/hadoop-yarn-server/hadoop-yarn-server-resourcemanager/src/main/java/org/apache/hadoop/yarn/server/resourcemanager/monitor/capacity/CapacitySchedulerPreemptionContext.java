@@ -30,7 +30,11 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-interface CapacitySchedulerPreemptionContext {
+/**
+ * This interface provides context for the calculation of ideal allocation
+ * and preemption for the {@code CapacityScheduler}.
+ */
+public interface CapacitySchedulerPreemptionContext {
   CapacityScheduler getScheduler();
 
   TempQueuePerPartition getQueueByPartition(String queueName,

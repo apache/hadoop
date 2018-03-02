@@ -45,6 +45,7 @@ function hadoop_usage
   hadoop_add_subcommand "key" client "manage keys via the KeyProvider"
   hadoop_add_subcommand "trace" client "view and modify Hadoop tracing settings"
   hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -147,6 +148,9 @@ function hadoopcmd_case
     ;;
     kerbname)
       HADOOP_CLASSNAME=org.apache.hadoop.security.HadoopKerberosName
+    ;;
+    kdiag)
+      HADOOP_CLASSNAME=org.apache.hadoop.security.KDiag
     ;;
     key)
       HADOOP_CLASSNAME=org.apache.hadoop.crypto.key.KeyShell

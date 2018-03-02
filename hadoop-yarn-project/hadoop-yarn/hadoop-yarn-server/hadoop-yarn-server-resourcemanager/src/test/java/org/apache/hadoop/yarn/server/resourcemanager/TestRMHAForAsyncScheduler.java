@@ -28,13 +28,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAsyncScheduling;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class TestRMHAForAsyncScheduler extends RMHATestBase {
+  private TestCapacitySchedulerAsyncScheduling.NMHeartbeatThread
+      nmHeartbeatThread = null;
 
   @Before
   @Override
@@ -57,26 +63,49 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, true);
   }
 
+  private void keepNMHeartbeat(List<MockNM> mockNMs, int interval) {
+    if (nmHeartbeatThread != null) {
+      nmHeartbeatThread.setShouldStop();
+      nmHeartbeatThread = null;
+    }
+    nmHeartbeatThread =
+        new TestCapacitySchedulerAsyncScheduling.NMHeartbeatThread(mockNMs,
+            interval);
+    nmHeartbeatThread.start();
+  }
+
+  private void pauseNMHeartbeat() {
+    if (nmHeartbeatThread != null) {
+      nmHeartbeatThread.setShouldStop();
+      nmHeartbeatThread = null;
+    }
+  }
+
   @Test(timeout = 60000)
   public void testAsyncScheduleThreadStateAfterRMHATransit() throws Exception {
     // start two RMs, and transit rm1 to active, rm2 to standby
     startRMs();
     // register NM
-    rm1.registerNode("h1:1234", 8192, 8);
+    MockNM nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
     // submit app1 and check
     RMApp app1 = submitAppAndCheckLaunched(rm1);
+    keepNMHeartbeat(Arrays.asList(nm), 1000);
 
     // failover RM1 to RM2
     explicitFailover();
     checkAsyncSchedulerThreads(Thread.currentThread());
+    pauseNMHeartbeat();
 
     // register NM, kill app1
-    rm2.registerNode("h1:1234", 8192, 8);
+    nm = rm2.registerNode("192.1.1.1:1234", 8192, 8);
+    keepNMHeartbeat(Arrays.asList(nm), 1000);
+
     rm2.waitForState(app1.getCurrentAppAttempt().getAppAttemptId(),
         RMAppAttemptState.LAUNCHED);
     rm2.killApp(app1.getApplicationId());
     // submit app3 and check
     RMApp app2 = submitAppAndCheckLaunched(rm2);
+    pauseNMHeartbeat();
 
     // failover RM2 to RM1
     HAServiceProtocol.StateChangeRequestInfo requestInfo =
@@ -92,12 +121,15 @@ public class TestRMHAForAsyncScheduler extends RMHATestBase {
     checkAsyncSchedulerThreads(Thread.currentThread());
 
     // register NM, kill app2
-    rm1.registerNode("h1:1234", 8192, 8);
+    nm = rm1.registerNode("192.1.1.1:1234", 8192, 8);
+    keepNMHeartbeat(Arrays.asList(nm), 1000);
+
     rm1.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),
         RMAppAttemptState.LAUNCHED);
     rm1.killApp(app2.getApplicationId());
     // submit app3 and check
     submitAppAndCheckLaunched(rm1);
+    pauseNMHeartbeat();
 
     rm1.stop();
     rm2.stop();

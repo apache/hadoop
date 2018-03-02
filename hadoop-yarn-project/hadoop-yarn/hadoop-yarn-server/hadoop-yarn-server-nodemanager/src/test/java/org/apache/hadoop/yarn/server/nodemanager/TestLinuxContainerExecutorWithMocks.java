@@ -209,6 +209,8 @@ public class TestLinuxContainerExecutorWithMocks {
         .setUserLocalDirs(new ArrayList<>())
         .setContainerLocalDirs(new ArrayList<>())
         .setContainerLogDirs(new ArrayList<>())
+        .setUserFilecacheDirs(new ArrayList<>())
+        .setApplicationLocalDirs(new ArrayList<>())
         .build());
     assertEquals(0, ret);
     assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
@@ -398,6 +400,8 @@ public class TestLinuxContainerExecutorWithMocks {
             .setUserLocalDirs(new ArrayList<>())
             .setContainerLocalDirs(new ArrayList<>())
             .setContainerLogDirs(new ArrayList<>())
+            .setUserFilecacheDirs(new ArrayList<>())
+            .setApplicationLocalDirs(new ArrayList<>())
             .build());
 
         Assert.assertNotSame(0, ret);
@@ -611,6 +615,8 @@ public class TestLinuxContainerExecutorWithMocks {
         .setUserLocalDirs(new ArrayList<>())
         .setContainerLocalDirs(new ArrayList<>())
         .setContainerLogDirs(new ArrayList<>())
+        .setUserFilecacheDirs(new ArrayList<>())
+        .setApplicationLocalDirs(new ArrayList<>())
         .build());
     lce.deleteAsUser(new DeletionAsUserContext.Builder()
         .setUser(appSubmitter)
@@ -665,6 +671,8 @@ public class TestLinuxContainerExecutorWithMocks {
         .setUserLocalDirs(new ArrayList<>())
         .setContainerLocalDirs(new ArrayList<>())
         .setContainerLogDirs(new ArrayList<>())
+        .setUserFilecacheDirs(new ArrayList<>())
+        .setApplicationLocalDirs(new ArrayList<>())
         .build());
     ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
         PrivilegedOperation.class);

@@ -392,14 +392,9 @@ public class ServiceScheduler extends CompositeService {
     // ZK
     globalTokens.put(ServiceApiConstants.CLUSTER_ZK_QUORUM, getConfig()
         .getTrimmed(KEY_REGISTRY_ZK_QUORUM, DEFAULT_REGISTRY_ZK_QUORUM));
-    String user = null;
-    try {
-      user = UserGroupInformation.getCurrentUser().getShortUserName();
-    } catch (IOException e) {
-      LOG.error("Failed to get user.", e);
-    }
-    globalTokens
-        .put(SERVICE_ZK_PATH, ServiceRegistryUtils.mkServiceHomePath(user, app.getName()));
+    String user = RegistryUtils.currentUser();
+    globalTokens.put(SERVICE_ZK_PATH,
+        ServiceRegistryUtils.mkServiceHomePath(user, app.getName()));
 
     globalTokens.put(ServiceApiConstants.USER, user);
     String dnsDomain = getConfig().getTrimmed(KEY_DNS_DOMAIN);

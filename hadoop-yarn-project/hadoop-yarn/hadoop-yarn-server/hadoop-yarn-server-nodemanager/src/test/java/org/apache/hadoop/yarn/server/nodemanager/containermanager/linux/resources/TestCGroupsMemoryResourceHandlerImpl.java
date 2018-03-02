@@ -149,6 +149,51 @@ public class TestCGroupsMemoryResourceHandlerImpl {
   }
 
   @Test
+  public void testPreStartNonEnforced() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED, false);
+    cGroupsMemoryResourceHandler.bootstrap(conf);
+    String id = "container_01_01";
+    String path = "test-path/" + id;
+    ContainerId mockContainerId = mock(ContainerId.class);
+    when(mockContainerId.toString()).thenReturn(id);
+    Container mockContainer = mock(Container.class);
+    when(mockContainer.getContainerId()).thenReturn(mockContainerId);
+    when(mockCGroupsHandler
+        .getPathForCGroupTasks(CGroupsHandler.CGroupController.MEMORY, id))
+        .thenReturn(path);
+    int memory = 1024;
+    when(mockContainer.getResource())
+        .thenReturn(Resource.newInstance(memory, 1));
+    List<PrivilegedOperation> ret =
+        cGroupsMemoryResourceHandler.preStart(mockContainer);
+    verify(mockCGroupsHandler, times(1))
+        .createCGroup(CGroupsHandler.CGroupController.MEMORY, id);
+    verify(mockCGroupsHandler, times(0))
+        .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
+            String.valueOf(memory) + "M");
+    verify(mockCGroupsHandler, times(0))
+        .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+            String.valueOf((int) (memory * 0.9)) + "M");
+    verify(mockCGroupsHandler, times(0))
+        .updateCGroupParam(CGroupsHandler.CGroupController.MEMORY, id,
+            CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS, String.valueOf(0));
+    Assert.assertNotNull(ret);
+    Assert.assertEquals(1, ret.size());
+    PrivilegedOperation op = ret.get(0);
+    Assert.assertEquals(PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+        op.getOperationType());
+    List<String> args = op.getArguments();
+    Assert.assertEquals(1, args.size());
+    Assert.assertEquals(PrivilegedOperation.CGROUP_ARG_PREFIX + path,
+        args.get(0));
+  }
+
+  @Test
   public void testReacquireContainer() throws Exception {
     ContainerId containerIdMock = mock(ContainerId.class);
     Assert.assertNull(

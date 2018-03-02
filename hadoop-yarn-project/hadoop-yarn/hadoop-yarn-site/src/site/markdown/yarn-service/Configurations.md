@@ -155,7 +155,7 @@ where `regionserver-0` is the actual component instance name assigned by the sys
 | Name | Description |
 | ------------ | ------------- |
 | SERVICE_NAME | name of the service defined by the user
-| USER | user who submits the service |
+| USER | user who submits the service. Note that user name which has "\_" will be converted to use "-", to conform with DNS hostname RFC format which doesn't allow "\_", and all characters will be lowercased E.g. "Bob_dev" will be converted to "bob-dev"  |
 | DOMAIN | the domain name for the cluster |
 | COMPONENT_NAME | the name for a given component |
 | COMPONENT_INSTANCE_NAME | the name for a given component instance (i.e. container) |

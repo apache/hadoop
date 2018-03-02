@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.net.Node;
@@ -141,10 +142,11 @@ public interface RMNode {
 
   /**
    * Update a {@link NodeHeartbeatResponse} with the list of containers and
-   * applications to clean up for this node.
+   * applications to clean up for this node, and the containers to be updated.
+   *
    * @param response the {@link NodeHeartbeatResponse} to update
    */
-  void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
+  void setAndUpdateNodeHeartbeatResponse(NodeHeartbeatResponse response);
 
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
 
@@ -167,13 +169,7 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
-  
-  /**
-   * Update containers to be updated
-   */
-  void updateNodeHeartbeatResponseForUpdatedContainers(
-      NodeHeartbeatResponse response);
-  
+
   public List<Container> pullNewlyIncreasedContainers();
 
   OpportunisticContainersStatus getOpportunisticContainersStatus();
@@ -187,4 +183,10 @@ public interface RMNode {
    * @return the decommissioning timeout in second.
    */
   Integer getDecommissioningTimeout();
+
+  /**
+   * Get the allocation tags and their counts associated with this node.
+   * @return a map of each allocation tag and its count.
+   */
+  Map<String, Long> getAllocationTagsWithCount();
 }

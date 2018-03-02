@@ -31,20 +31,8 @@ package hadoop.hdfs.qjournal;
 import "HdfsServer.proto";
 import "QJournalProtocol.proto";
 
-message GetEditLogManifestFromJournalRequestProto {
-    required JournalIdProto jid = 1;
-    required uint64 sinceTxId = 2;  // Transaction ID
-    optional bool inProgressOk = 3 [default = false];
-    optional string nameServiceId = 4;
-}
-
-message GetEditLogManifestFromJournalResponseProto {
-    required RemoteEditLogManifestProto manifest = 1;
-    required uint32 httpPort = 2;
-    optional string fromURL = 3;
-}
 
 service InterQJournalProtocolService {
-    rpc getEditLogManifestFromJournal(GetEditLogManifestFromJournalRequestProto)
-    returns (GetEditLogManifestFromJournalResponseProto);
+    rpc getEditLogManifestFromJournal(GetEditLogManifestRequestProto)
+    returns (GetEditLogManifestResponseProto);
 }

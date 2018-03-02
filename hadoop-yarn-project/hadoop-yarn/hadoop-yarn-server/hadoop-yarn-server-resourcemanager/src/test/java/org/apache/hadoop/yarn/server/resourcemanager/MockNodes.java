@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -205,7 +206,8 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     @Override
@@ -246,12 +248,6 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForUpdatedContainers(
-        NodeHeartbeatResponse response) {
-      
-    }
-
-    @Override
     public List<Container> pullNewlyIncreasedContainers() {
       return Collections.emptyList();
     }
@@ -281,6 +277,11 @@ public class MockNodes {
 
     @Override
     public Integer getDecommissioningTimeout() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getAllocationTagsWithCount() {
       return null;
     }
 

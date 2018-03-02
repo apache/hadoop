@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.PriorityQueue;
+
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
@@ -25,12 +31,6 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.PriorityQueue;
 
 /**
  * Calculate how much resources need to be preempted for each queue,
@@ -126,11 +126,18 @@ public class AbstractPreemptableResourceCalculator {
       TempQueuePerPartition q = i.next();
       Resource used = q.getUsed();
 
+      Resource initIdealAssigned;
       if (Resources.greaterThan(rc, totGuarant, used, q.getGuaranteed())) {
-        q.idealAssigned = Resources.add(q.getGuaranteed(), q.untouchableExtra);
+        initIdealAssigned =
+            Resources.add(q.getGuaranteed(), q.untouchableExtra);
       } else {
-        q.idealAssigned = Resources.clone(used);
+        initIdealAssigned = Resources.clone(used);
       }
+
+      // perform initial assignment
+      initIdealAssignment(totGuarant, q, initIdealAssigned);
+
+
       Resources.subtractFrom(unassigned, q.idealAssigned);
       // If idealAssigned < (allocated + used + pending), q needs more
       // resources, so
@@ -186,6 +193,21 @@ public class AbstractPreemptableResourceCalculator {
       TempQueuePerPartition q1 = orderedByNeed.remove();
       context.addPartitionToUnderServedQueues(q1.queueName, q1.partition);
     }
+  }
+
+
+  /**
+   * This method is visible to allow sub-classes to override the initialization
+   * behavior.
+   *
+   * @param totGuarant total resources (useful for {@code ResourceCalculator}
+   *          operations)
+   * @param q the {@code TempQueuePerPartition} being initialized
+   * @param initIdealAssigned the proposed initialization value.
+   */
+  protected void initIdealAssignment(Resource totGuarant,
+      TempQueuePerPartition q, Resource initIdealAssigned) {
+    q.idealAssigned = initIdealAssigned;
   }
 
   /**

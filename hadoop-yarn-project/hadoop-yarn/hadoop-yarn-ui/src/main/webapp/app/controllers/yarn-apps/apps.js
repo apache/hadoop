@@ -23,6 +23,7 @@ import AppTableController from '../app-table-columns';
 export default AppTableController.extend({
   queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
   tableDefinition: TableDefinition.create({
+    searchType: 'manual',
     enableFaceting: true,
     rowCount: 25
   }),

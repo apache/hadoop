@@ -22,11 +22,18 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.junit.Assert;
 
 import java.lang.reflect.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints
+    .PlacementTargets.allocationTag;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
 
 /**
  * Generic helper class to validate protocol records.
@@ -85,6 +92,10 @@ public class BasePBImplRecordsTest {
         ByteBuffer buff = ByteBuffer.allocate(4);
         rand.nextBytes(buff.array());
         return buff;
+      } else if (type.equals(PlacementConstraint.class)) {
+        PlacementConstraint.AbstractConstraint sConstraintExpr =
+            targetIn(NODE, allocationTag("foo"));
+        ret = PlacementConstraints.build(sConstraintExpr);
       }
     } else if (type instanceof ParameterizedType) {
       ParameterizedType pt = (ParameterizedType)type;

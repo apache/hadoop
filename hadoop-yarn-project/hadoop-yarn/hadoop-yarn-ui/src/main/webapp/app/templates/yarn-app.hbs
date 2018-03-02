@@ -65,7 +65,7 @@
         <div class="flex-right">
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>  &nbsp;|&nbsp;
+            <a href="{{model.app.masterNodeURL}}">Master Node</a> &nbsp;|&nbsp;
             {{#if isRunningService}}
               <div class="btn-group">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -108,12 +108,6 @@
       <div class="clearfix">
         <ul class="nav nav-pills">
           <ul class="nav nav-pills collapse in">
-            {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
-              {{#link-to 'yarn-app.attempts' appId (query-params service=model.serviceName)}}Attempts List{{/link-to}}
-            {{/link-to}}
-            {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
-              {{#link-to 'yarn-app.charts' appId (query-params service=model.serviceName)}}Resource Usage{{/link-to}}
-            {{/link-to}}
             {{#if model.serviceName}}
               {{#link-to 'yarn-app.components' tagName="li" class=(if (eq target.currentPath 'yarn-app.components') "active")}}
                 {{#link-to 'yarn-app.components' appId (query-params service=model.serviceName)}}Components{{/link-to}}
@@ -122,6 +116,12 @@
                 {{#link-to 'yarn-app.configs' appId (query-params service=model.serviceName)}}Configurations &amp; Metrics{{/link-to}}
               {{/link-to}}
             {{/if}}
+            {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
+              {{#link-to 'yarn-app.attempts' appId (query-params service=model.serviceName)}}Attempts List{{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
+              {{#link-to 'yarn-app.charts' appId (query-params service=model.serviceName)}}Resource Usage{{/link-to}}
+            {{/link-to}}
             {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
               {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Diagnostics{{/link-to}}
             {{/link-to}}
@@ -140,12 +140,12 @@
 
 {{confirm-dialog
   dialogId="stopServiceConfirmDialog"
-  message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
+  message=(concat 'Are you sure you want to stop service "' model.serviceName '" for user "' model.app.user '" ?')
   action="stopService"
 }}
 
 {{confirm-dialog
   dialogId="deleteServiceConfirmDialog"
-  message=(concat 'Are you sure you want to delete service "' model.serviceName '" ?')
+  message=(concat 'Are you sure you want to delete service "' model.serviceName '" for user "' model.app.user '" ?')
   action="deleteService"
 }}

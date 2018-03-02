@@ -30,7 +30,7 @@ module.exports = { // YARN UI App configurations
       cluster: 'ws/v1/cluster',
       metrics: 'ws/v1/cluster/metrics',
       timelineV2: 'ws/v2/timeline',
-      dashService: 'ws/v1/services',
+      dashService: 'app/v1/services',
       node: '{nodeAddress}/ws/v1/node'
     },
 };

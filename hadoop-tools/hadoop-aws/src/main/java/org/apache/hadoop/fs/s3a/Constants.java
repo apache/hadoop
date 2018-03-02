@@ -94,7 +94,7 @@ public final class Constants {
   public static final String ASSUMED_ROLE_CREDENTIALS_PROVIDER =
       "fs.s3a.assumed.role.credentials.provider";
 
-  /** JSON policy containing more restrictions to apply to the role. */
+  /** JSON policy containing the policy to apply to the role. */
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 

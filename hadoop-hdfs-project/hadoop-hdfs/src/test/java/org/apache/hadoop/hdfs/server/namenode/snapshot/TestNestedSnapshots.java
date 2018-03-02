@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature.SNAPSHOT_LIMIT;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -208,7 +208,7 @@ public class TestNestedSnapshots {
     hdfs.allowSnapshot(dir);
 
     int s = 0;
-    for(; s < SNAPSHOT_LIMIT; s++) {
+    for(; s < SNAPSHOT_QUOTA_DEFAULT; s++) {
       final String snapshotName = "s" + s;
       hdfs.createSnapshot(dir, snapshotName);
 
@@ -226,10 +226,10 @@ public class TestNestedSnapshots {
       SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
     }
 
-    for(int f = 0; f < SNAPSHOT_LIMIT; f += step) {
+    for(int f = 0; f < SNAPSHOT_QUOTA_DEFAULT; f += step) {
       final String file = "f" + f;
       s = RANDOM.nextInt(step);
-      for(; s < SNAPSHOT_LIMIT; s += RANDOM.nextInt(step)) {
+      for(; s < SNAPSHOT_QUOTA_DEFAULT; s += RANDOM.nextInt(step)) {
         final Path p = SnapshotTestHelper.getSnapshotPath(dir, "s" + s, file);
         //the file #f exists in snapshot #s iff s > f.
         Assert.assertEquals(s > f, hdfs.exists(p));

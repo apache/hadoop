@@ -21,6 +21,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,6 +60,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -230,7 +237,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
-  private String cgroupsRootDirectory;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
   private boolean enableUserReMapping;
@@ -290,7 +296,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.info("cGroupsHandler is null - cgroups not in use.");
     } else {
       this.cGroupsHandler = cGroupsHandler;
-      this.cgroupsRootDirectory = cGroupsHandler.getCGroupMountPath();
     }
   }
 
@@ -437,7 +442,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     DockerVolumeCommand dockerVolumeInspectCommand = new DockerVolumeCommand(
         DockerVolumeCommand.VOLUME_LS_SUB_COMMAND);
-    dockerVolumeInspectCommand.setFormat("{{.Name}},{{.Driver}}");
     String output = runDockerVolumeCommand(dockerVolumeInspectCommand,
         container);
 
@@ -450,13 +454,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     for (String line : output.split("\n")) {
       line = line.trim();
-      String[] arr = line.split(",");
-      String v = arr[0].trim();
-      String d = null;
-      if (arr.length > 1) {
-        d = arr[1].trim();
-      }
-      if (d != null && volumeName.equals(v) && driverName.equals(d)) {
+      if (line.contains(volumeName) && line.contains(driverName)) {
         // Good we found it.
         LOG.info(
             "Docker volume-name=" + volumeName + " driver-name=" + driverName
@@ -776,16 +774,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     @SuppressWarnings("unchecked")
     List<String> filecacheDirs = ctx.getExecutionAttribute(FILECACHE_DIRS);
     @SuppressWarnings("unchecked")
-    List<String> containerLocalDirs = ctx.getExecutionAttribute(
-        CONTAINER_LOCAL_DIRS);
-    @SuppressWarnings("unchecked")
     List<String> containerLogDirs = ctx.getExecutionAttribute(
         CONTAINER_LOG_DIRS);
     @SuppressWarnings("unchecked")
+    List<String> userFilecacheDirs =
+        ctx.getExecutionAttribute(USER_FILECACHE_DIRS);
+    @SuppressWarnings("unchecked")
+    List<String> applicationLocalDirs =
+        ctx.getExecutionAttribute(APPLICATION_LOCAL_DIRS);
+    @SuppressWarnings("unchecked")
     Map<Path, List<String>> localizedResources = ctx.getExecutionAttribute(
         LOCALIZED_RESOURCES);
-    @SuppressWarnings("unchecked")
-    List<String> userLocalDirs = ctx.getExecutionAttribute(USER_LOCAL_DIRS);
 
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
@@ -796,19 +795,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     setHostname(runCommand, containerIdStr, hostname);
     runCommand.setCapabilities(capabilities);
 
-    if(cgroupsRootDirectory != null) {
-      runCommand.addReadOnlyMountLocation(cgroupsRootDirectory,
-          cgroupsRootDirectory, false);
-    }
-
-    List<String> allDirs = new ArrayList<>(containerLocalDirs);
-    allDirs.addAll(filecacheDirs);
-    allDirs.add(containerWorkDir.toString());
-    allDirs.addAll(containerLogDirs);
-    allDirs.addAll(userLocalDirs);
-    for (String dir: allDirs) {
-      runCommand.addMountLocation(dir, dir, true);
-    }
+    runCommand.addAllReadWriteMountLocations(containerLogDirs);
+    runCommand.addAllReadWriteMountLocations(applicationLocalDirs);
+    runCommand.addAllReadOnlyMountLocations(filecacheDirs);
+    runCommand.addAllReadOnlyMountLocations(userFilecacheDirs);
 
     if (environment.containsKey(ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS)) {
       String mounts = environment.get(
@@ -860,6 +850,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     if (allowPrivilegedContainerExecution(container)) {
       runCommand.setPrivileged();
     }
+
+    addDockerClientConfigToRunCommand(ctx, runCommand);
 
     String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
 
@@ -1020,6 +1012,32 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       }
       String ips = output.substring(0, index).trim();
       String host = output.substring(index+1).trim();
+      if (ips.equals("")) {
+        String network;
+        try {
+          network = container.getLaunchContext().getEnvironment()
+              .get("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK");
+          if (network == null || network.isEmpty()) {
+            network = defaultNetwork;
+          }
+        } catch (NullPointerException e) {
+          network = defaultNetwork;
+        }
+        boolean useHostNetwork = network.equalsIgnoreCase("host");
+        if (useHostNetwork) {
+          // Report back node manager IP in the event where docker
+          // inspect reports no IP address.  This is for bridging a gap for
+          // docker environment to run with host network.
+          InetAddress address;
+          try {
+            address = InetAddress.getLocalHost();
+            ips = address.getHostAddress();
+          } catch (UnknownHostException e) {
+            LOG.error("Can not determine IP for container:"
+                + containerId);
+          }
+        }
+      }
       String[] ipAndHost = new String[2];
       ipAndHost[0] = ips;
       ipAndHost[1] = host;
@@ -1167,6 +1185,38 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
             env, conf, privilegedOperationExecutor, false);
+      }
+    }
+  }
+
+  private void addDockerClientConfigToRunCommand(ContainerRuntimeContext ctx,
+      DockerRunCommand dockerRunCommand) throws ContainerExecutionException {
+    ByteBuffer tokens = ctx.getContainer().getLaunchContext().getTokens();
+    Credentials credentials;
+    if (tokens != null) {
+      tokens.rewind();
+      if (tokens.hasRemaining()) {
+        try {
+          credentials = DockerClientConfigHandler
+              .getCredentialsFromTokensByteBuffer(tokens);
+        } catch (IOException e) {
+          throw new ContainerExecutionException("Unable to read tokens.");
+        }
+        if (credentials.numberOfTokens() > 0) {
+          Path nmPrivateDir =
+              ctx.getExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH)
+                  .getParent();
+          File dockerConfigPath = new File(nmPrivateDir + "/config.json");
+          try {
+            DockerClientConfigHandler
+                .writeDockerCredentialsToPath(dockerConfigPath, credentials);
+          } catch (IOException e) {
+            throw new ContainerExecutionException(
+                "Unable to write Docker client credentials to "
+                    + dockerConfigPath);
+          }
+          dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
+        }
       }
     }
   }

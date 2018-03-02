@@ -99,7 +99,7 @@ export default DS.Model.extend({
 
     const usedResource = this.get("usedResource");
     const availableResource = this.get("availableResource");
-    var resourceInformations = usedResource ? usedResource.resourcesInformations : [];
+    var resourceInformations = usedResource ? usedResource.resourceInformations.resourceInformation : [];
     for (var i = 0; i < resourceInformations.length; i++) {
       ri = resourceInformations[i];
       if (ri.name === "yarn.io/gpu") {
@@ -108,7 +108,7 @@ export default DS.Model.extend({
     }
 
     var available = 0;
-    resourceInformations = availableResource ? availableResource.resourcesInformations : [];
+    resourceInformations = availableResource ? availableResource.resourceInformations.resourceInformation : [];
     for (i = 0; i < resourceInformations.length; i++) {
       ri = resourceInformations[i];
       if (ri.name === "yarn.io/gpu") {

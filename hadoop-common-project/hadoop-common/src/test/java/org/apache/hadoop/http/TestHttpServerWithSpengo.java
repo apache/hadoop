@@ -383,8 +383,9 @@ public class TestHttpServerWithSpengo {
           Assert.fail("should fail with no credentials");
         } catch (AuthenticationException ae) {
           Assert.assertNotNull(ae.getCause());
-          Assert.assertEquals(GSSException.class, ae.getCause().getClass());
-          GSSException gsse = (GSSException)ae.getCause();
+          Assert.assertEquals(GSSException.class,
+              ae.getCause().getCause().getClass());
+          GSSException gsse = (GSSException)ae.getCause().getCause();
           Assert.assertEquals(GSSException.NO_CRED, gsse.getMajor());
         } catch (Throwable t) {
           Assert.fail("Unexpected exception" + t);

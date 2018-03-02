@@ -206,7 +206,7 @@ class YarnChild {
       if (taskid != null) {
         if (!ShutdownHookManager.get().isShutdownInProgress()) {
           umbilical.fatalError(taskid,
-              StringUtils.stringifyException(exception));
+              StringUtils.stringifyException(exception), false);
         }
       }
     } catch (Throwable throwable) {
@@ -218,7 +218,7 @@ class YarnChild {
           String cause =
               tCause == null ? throwable.getMessage() : StringUtils
                   .stringifyException(tCause);
-          umbilical.fatalError(taskid, cause);
+          umbilical.fatalError(taskid, cause, false);
         }
       }
     } finally {

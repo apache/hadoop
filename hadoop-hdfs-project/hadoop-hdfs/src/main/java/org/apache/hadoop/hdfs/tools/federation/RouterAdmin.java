@@ -35,10 +35,17 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
+import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -86,7 +93,9 @@ public class RouterAdmin extends Configured implements Tool {
         + "\t[-ls <path>]\n"
         + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
         + "<quota in bytes or quota size string>]\n"
-        + "\t[-clrQuota <path>\n";
+        + "\t[-clrQuota <path>]\n"
+        + "\t[-safemode enter | leave | get]\n";
+
     System.out.println(usage);
   }
 
@@ -122,6 +131,12 @@ public class RouterAdmin extends Configured implements Tool {
         return exitCode;
       }
     } else if ("-clrQuota".equalsIgnoreCase(cmd)) {
+      if (argv.length < 2) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-safemode".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
         System.err.println("Not enough parameters specificed for cmd " + cmd);
         printUsage();
@@ -172,6 +187,8 @@ public class RouterAdmin extends Configured implements Tool {
           System.out.println(
               "Successfully clear quota for mount point " + argv[i]);
         }
+      } else if ("-safemode".equals(cmd)) {
+        manageSafeMode(argv[i]);
       } else {
         printUsage();
         return exitCode;
@@ -522,6 +539,62 @@ public class RouterAdmin extends Configured implements Tool {
     UpdateMountTableEntryResponse updateResponse = mountTable
         .updateMountTableEntry(updateRequest);
     return updateResponse.getStatus();
+  }
+
+  /**
+   * Manager the safe mode state.
+   * @param cmd Input command, enter or leave safe mode.
+   * @throws IOException
+   */
+  private void manageSafeMode(String cmd) throws IOException {
+    if (cmd.equals("enter")) {
+      if (enterSafeMode()) {
+        System.out.println("Successfully enter safe mode.");
+      }
+    } else if (cmd.equals("leave")) {
+      if (leaveSafeMode()) {
+        System.out.println("Successfully leave safe mode.");
+      }
+    } else if (cmd.equals("get")) {
+      boolean result = getSafeMode();
+      System.out.println("Safe Mode: " + result);
+    }
+  }
+
+  /**
+   * Request the Router entering safemode state.
+   * @return Return true if entering safemode successfully.
+   * @throws IOException
+   */
+  private boolean enterSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    EnterSafeModeResponse response = stateManager.enterSafeMode(
+        EnterSafeModeRequest.newInstance());
+    return response.getStatus();
+  }
+
+  /**
+   * Request the Router leaving safemode state.
+   * @return Return true if leaving safemode successfully.
+   * @throws IOException
+   */
+  private boolean leaveSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    LeaveSafeModeResponse response = stateManager.leaveSafeMode(
+        LeaveSafeModeRequest.newInstance());
+    return response.getStatus();
+  }
+
+  /**
+   * Verify if current Router state is safe mode state.
+   * @return True if the Router is in safe mode.
+   * @throws IOException
+   */
+  private boolean getSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    GetSafeModeResponse response = stateManager.getSafeMode(
+        GetSafeModeRequest.newInstance());
+    return response.isInSafeMode();
   }
 
   /**

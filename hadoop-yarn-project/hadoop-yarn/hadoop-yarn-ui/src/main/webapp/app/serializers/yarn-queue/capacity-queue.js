@@ -54,6 +54,28 @@ export default DS.JSONAPISerializer.extend({
         });
       }
 
+      var partitions = [];
+      var partitionMap = {};
+      if ("capacities" in payload) {
+        partitions = payload.capacities.queueCapacitiesByPartition.map(
+          cap => cap.partitionName || PARTITION_LABEL);
+        partitionMap = payload.capacities.queueCapacitiesByPartition.reduce((init, cap) => {
+          init[cap.partitionName || PARTITION_LABEL] = cap;
+          return init;
+        }, {});
+      } else {
+        partitions = [PARTITION_LABEL];
+        partitionMap[PARTITION_LABEL] = {
+          partitionName: "",
+          capacity: payload.capacity,
+          maxCapacity: payload.maxCapacity,
+          usedCapacity: payload.usedCapacity,
+          absoluteCapacity: 'absoluteCapacity' in payload ? payload.absoluteCapacity : payload.capacity,
+          absoluteMaxCapacity: 'absoluteMaxCapacity' in payload ? payload.absoluteMaxCapacity : payload.maxCapacity,
+          absoluteUsedCapacity: 'absoluteUsedCapacity' in payload ? payload.absoluteUsedCapacity : payload.usedCapacity,
+        };
+      }
+
       var fixedPayload = {
         id: id,
         type: primaryModelClass.modelName, // yarn-queue
@@ -74,11 +96,8 @@ export default DS.JSONAPISerializer.extend({
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
           resources: payload.resources,
-          partitions: payload.capacities.queueCapacitiesByPartition.map(cap => cap.partitionName || PARTITION_LABEL),
-          partitionMap: payload.capacities.queueCapacitiesByPartition.reduce((init, cap) => {
-            init[cap.partitionName || PARTITION_LABEL] = cap;
-            return init;
-          }, {}),
+          partitions: partitions,
+          partitionMap: partitionMap,
           type: "capacity",
         },
         // Relationships

@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineSchemaUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -70,7 +70,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     extends AbstractTimelineReaderHBaseTestBase {
   private static long ts = System.currentTimeMillis();
   private static long dayTs =
-      HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(ts);
+      HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(ts);
   private static String doAsUser = "remoteuser";
 
   @BeforeClass
@@ -371,7 +371,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
             BuilderUtils.newApplicationId(timestamp, count++);
         ApplicationEntity appEntity = new ApplicationEntity();
         appEntity.setId(
-            HBaseTimelineStorageUtils.convertApplicationIdToString(appId));
+            HBaseTimelineSchemaUtils.convertApplicationIdToString(appId));
         appEntity.setCreatedTime(timestamp);
 
         TimelineEvent created = new TimelineEvent();
@@ -929,7 +929,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
           new String[] {"flow1"});
 
       long firstFlowActivity =
-          HBaseTimelineStorageUtils.getTopOfTheDayTimestamp(1425016501000L);
+          HBaseTimelineSchemaUtils.getTopOfTheDayTimestamp(1425016501000L);
 
       DateFormat fmt = TimelineReaderWebServices.DATE_FORMAT.get();
       uri = URI.create("http://localhost:" + getServerPort() + "/ws/v2/" +

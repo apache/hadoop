@@ -17,6 +17,16 @@
 
 package org.apache.hadoop.yarn.service;
 
+import static org.junit.Assert.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
@@ -24,19 +34,12 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.webapp.ApiServer;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import org.mockito.Mockito;
 
 /**
  * Test case for ApiServer REST API.
@@ -44,15 +47,19 @@ import static org.junit.Assert.*;
  */
 public class TestApiServer {
   private ApiServer apiServer;
+  private HttpServletRequest request;
 
   @Before
   public void setup() throws Exception {
+    request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getRemoteUser())
+        .thenReturn(System.getProperty("user.name"));
     ServiceClient mockServerClient = new ServiceClientTest();
     Configuration conf = new Configuration();
     conf.set("yarn.api-service.service.client.class",
         ServiceClientTest.class.getName());
-    ApiServer.setServiceClient(mockServerClient);
-    this.apiServer = new ApiServer(conf);
+    apiServer = new ApiServer(conf);
+    apiServer.setServiceClient(mockServerClient);
   }
 
   @Test
@@ -77,7 +84,7 @@ public class TestApiServer {
   public void testBadCreateService() {
     Service service = new Service();
     // Test for invalid argument
-    final Response actual = apiServer.createService(service);
+    final Response actual = apiServer.createService(request, service);
     assertEquals("Create service is ", actual.getStatus(),
         Response.status(Status.BAD_REQUEST).build().getStatus());
   }
@@ -101,51 +108,51 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    final Response actual = apiServer.createService(service);
+    final Response actual = apiServer.createService(request, service);
     assertEquals("Create service is ", actual.getStatus(),
         Response.status(Status.ACCEPTED).build().getStatus());
   }
 
   @Test
   public void testBadGetService() {
-    final Response actual = apiServer.getService("no-jenkins");
+    final Response actual = apiServer.getService(request, "no-jenkins");
     assertEquals("Get service is ", actual.getStatus(),
         Response.status(Status.NOT_FOUND).build().getStatus());
   }
 
   @Test
   public void testBadGetService2() {
-    final Response actual = apiServer.getService(null);
+    final Response actual = apiServer.getService(request, null);
     assertEquals("Get service is ", actual.getStatus(),
-        Response.status(Status.INTERNAL_SERVER_ERROR)
+        Response.status(Status.NOT_FOUND)
             .build().getStatus());
   }
 
   @Test
   public void testGoodGetService() {
-    final Response actual = apiServer.getService("jenkins");
+    final Response actual = apiServer.getService(request, "jenkins");
     assertEquals("Get service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
   }
 
   @Test
   public void testBadDeleteService() {
-    final Response actual = apiServer.deleteService("no-jenkins");
+    final Response actual = apiServer.deleteService(request, "no-jenkins");
     assertEquals("Delete service is ", actual.getStatus(),
         Response.status(Status.BAD_REQUEST).build().getStatus());
   }
 
   @Test
   public void testBadDeleteService2() {
-    final Response actual = apiServer.deleteService(null);
+    final Response actual = apiServer.deleteService(request, null);
     assertEquals("Delete service is ", actual.getStatus(),
-        Response.status(Status.INTERNAL_SERVER_ERROR)
+        Response.status(Status.BAD_REQUEST)
             .build().getStatus());
   }
 
   @Test
   public void testGoodDeleteService() {
-    final Response actual = apiServer.deleteService("jenkins");
+    final Response actual = apiServer.deleteService(request, "jenkins");
     assertEquals("Delete service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
   }
@@ -170,7 +177,7 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    final Response actual = apiServer.updateService("jenkins",
+    final Response actual = apiServer.updateService(request, "jenkins",
         service);
     assertEquals("update service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
@@ -197,7 +204,7 @@ public class TestApiServer {
     components.add(c);
     service.setComponents(components);
     System.out.println("before stop");
-    final Response actual = apiServer.updateService("no-jenkins",
+    final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
     assertEquals("flex service is ", actual.getStatus(),
         Response.status(Status.BAD_REQUEST).build().getStatus());
@@ -223,7 +230,7 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    final Response actual = apiServer.updateService("jenkins",
+    final Response actual = apiServer.updateService(request, "jenkins",
         service);
     assertEquals("flex service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
@@ -249,10 +256,10 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    final Response actual = apiServer.updateService("no-jenkins",
+    final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
     assertEquals("start service is ", actual.getStatus(),
-        Response.status(Status.INTERNAL_SERVER_ERROR).build()
+        Response.status(Status.BAD_REQUEST).build()
             .getStatus());
   }
 
@@ -276,7 +283,7 @@ public class TestApiServer {
     c.setResource(resource);
     components.add(c);
     service.setComponents(components);
-    final Response actual = apiServer.updateService("jenkins",
+    final Response actual = apiServer.updateService(request, "jenkins",
         service);
     assertEquals("start service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
@@ -303,7 +310,7 @@ public class TestApiServer {
     components.add(c);
     service.setComponents(components);
     System.out.println("before stop");
-    final Response actual = apiServer.updateService("no-jenkins",
+    final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
     assertEquals("stop service is ", actual.getStatus(),
         Response.status(Status.BAD_REQUEST).build().getStatus());
@@ -330,7 +337,7 @@ public class TestApiServer {
     components.add(c);
     service.setComponents(components);
     System.out.println("before stop");
-    final Response actual = apiServer.updateService("jenkins",
+    final Response actual = apiServer.updateService(request, "jenkins",
         service);
     assertEquals("stop service is ", actual.getStatus(),
         Response.status(Status.OK).build().getStatus());
@@ -357,10 +364,57 @@ public class TestApiServer {
     components.add(c);
     service.setComponents(components);
     System.out.println("before stop");
-    final Response actual = apiServer.updateService("no-jenkins",
+    final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
     assertEquals("update service is ", actual.getStatus(),
-        Response.status(Status.INTERNAL_SERVER_ERROR)
+        Response.status(Status.BAD_REQUEST)
             .build().getStatus());
+  }
+
+  @Test
+  public void testUpdateComponent() {
+    Response actual = apiServer.updateComponent(request, "jenkins",
+        "jenkins-master", null);
+    ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no data error",
+        "No component data provided", serviceStatus.getDiagnostics());
+
+    Component comp = new Component();
+    actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
+        comp);
+    serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no count error",
+        "No container count provided", serviceStatus.getDiagnostics());
+
+    comp.setNumberOfContainers(-1L);
+    actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
+        comp);
+    serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no count error",
+        "Invalid number of containers specified -1", serviceStatus.getDiagnostics());
+
+    comp.setName("jenkins-slave");
+    comp.setNumberOfContainers(1L);
+    actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
+        comp);
+    serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals(
+        "Update component should have failed with component name mismatch "
+            + "error",
+        "Component name in the request object (jenkins-slave) does not match "
+            + "that in the URI path (jenkins-master)",
+        serviceStatus.getDiagnostics());
   }
 }

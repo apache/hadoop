@@ -35,22 +35,22 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -268,31 +268,23 @@ public class SchedulerUtils {
   private static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
-    try {
-      RMServerUtils.convertProfileToResourceCapability(resReq,
-          rmContext.getYarnConfiguration(),
-          rmContext.getResourceProfilesManager());
-    } catch (YarnException ye) {
-      throw new InvalidResourceRequestException(ye);
-    }
-
-    if (resReq.getCapability().getMemorySize() < 0 ||
-        resReq.getCapability().getMemorySize() > maximumResource.getMemorySize()) {
-      throw new InvalidResourceRequestException("Invalid resource request"
-          + ", requested memory < 0"
-          + ", or requested memory > max configured"
-          + ", requestedMemory=" + resReq.getCapability().getMemorySize()
-          + ", maxMemory=" + maximumResource.getMemorySize());
-    }
-    if (resReq.getCapability().getVirtualCores() < 0 ||
-        resReq.getCapability().getVirtualCores() >
-        maximumResource.getVirtualCores()) {
-      throw new InvalidResourceRequestException("Invalid resource request"
-          + ", requested virtual cores < 0"
-          + ", or requested virtual cores > max configured"
-          + ", requestedVirtualCores="
-          + resReq.getCapability().getVirtualCores()
-          + ", maxVirtualCores=" + maximumResource.getVirtualCores());
+    Resource requestedResource = resReq.getCapability();
+    for (int i = 0; i < ResourceUtils.getNumberOfKnownResourceTypes(); i++) {
+      ResourceInformation reqRI = requestedResource.getResourceInformation(i);
+      ResourceInformation maxRI = maximumResource.getResourceInformation(i);
+      if (reqRI.getValue() < 0 || reqRI.getValue() > maxRI.getValue()) {
+        throw new InvalidResourceRequestException(
+            "Invalid resource request, requested resource type=[" + reqRI
+                .getName()
+                + "] < 0 or greater than maximum allowed allocation. Requested "
+                + "resource=" + requestedResource
+                + ", maximum allowed allocation=" + maximumResource
+                + ", please note that maximum allowed allocation is calculated "
+                + "by scheduler based on maximum resource of registered "
+                + "NodeManagers, which might be less than configured "
+                + "maximum allocation=" + ResourceUtils
+                .getResourceTypesMaximumAllocation());
+      }
     }
     String labelExp = resReq.getNodeLabelExpression();
     // we don't allow specify label expression other than resourceName=ANY now

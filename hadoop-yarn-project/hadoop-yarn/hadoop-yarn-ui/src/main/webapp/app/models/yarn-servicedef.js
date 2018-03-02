@@ -189,10 +189,12 @@ export default DS.Model.extend({
     json['number_of_containers'] = record.get('numOfContainers');
     json['launch_command'] = record.get('launchCommand');
     json['dependencies'] = [];
-    json['artifact'] = {
-      id: record.get('artifactId'),
-      type: record.get('artifactType')
-    };
+    if (!Ember.isEmpty(record.get('artifactId'))) {
+      json['artifact'] = {
+        id: record.get('artifactId'),
+        type: record.get('artifactType')
+      };
+    }
     json['resource'] = {
       cpus: record.get('cpus'),
       memory: record.get('memory')

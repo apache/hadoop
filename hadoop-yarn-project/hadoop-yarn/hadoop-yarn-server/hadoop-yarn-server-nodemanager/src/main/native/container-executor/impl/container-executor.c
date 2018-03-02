@@ -1008,13 +1008,20 @@ static int open_file_as_nm(const char* filename) {
 static int copy_file(int input, const char* in_filename,
 		     const char* out_filename, mode_t perm) {
   const int buffer_size = 128*1024;
-  char buffer[buffer_size];
+  char* buffer = malloc(buffer_size);
+  if (buffer == NULL) {
+    fprintf(LOGFILE, "Failed to allocate buffer while copying file: %s -> %s",
+      in_filename, out_filename);
+    fflush(LOGFILE);
+    return -1;
+  }
 
   int out_fd = open(out_filename, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, perm);
   if (out_fd == -1) {
     fprintf(LOGFILE, "Can't open %s for output - %s\n", out_filename,
             strerror(errno));
     fflush(LOGFILE);
+    free(buffer);
     return -1;
   }
 
@@ -1024,15 +1031,18 @@ static int copy_file(int input, const char* in_filename,
     while (pos < len) {
       ssize_t write_result = write(out_fd, buffer + pos, len - pos);
       if (write_result <= 0) {
-	fprintf(LOGFILE, "Error writing to %s - %s\n", out_filename,
-		strerror(errno));
-	close(out_fd);
-	return -1;
+        fprintf(LOGFILE, "Error writing to %s - %s\n", out_filename,
+          strerror(errno));
+        close(out_fd);
+        free(buffer);
+        return -1;
       }
       pos += write_result;
     }
     len = read(input, buffer, buffer_size);
   }
+  free(buffer);
+
   if (len < 0) {
     fprintf(LOGFILE, "Failed to read file %s - %s\n", in_filename,
 	    strerror(errno));
@@ -1425,20 +1435,16 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *exit_code_file = NULL;
   char *docker_command_with_binary = NULL;
   char *docker_wait_command = NULL;
-  char *docker_logs_command = NULL;
   char *docker_inspect_command = NULL;
   char *docker_rm_command = NULL;
   char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
-  int BUFFER_SIZE = 4096;
-  char buffer[BUFFER_SIZE];
 
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
   docker_command_with_binary = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_wait_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_logs_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_inspect_exitcode_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
@@ -1567,59 +1573,29 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       sleep(1);
     }
 #endif
-
-    sprintf(docker_inspect_exitcode_command,
-      "%s inspect --format {{.State.ExitCode}} %s",
-    docker_binary, container_id);
-    fprintf(LOGFILE, "Obtaining the exit code...\n");
-    fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
-    FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
-    if(inspect_exitcode_docker == NULL) {
-      fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
-      fflush(ERRORFILE);
-      exit_code = -1;
-      goto cleanup;
-    }
-    res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
-    if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
-    fprintf (ERRORFILE,
-     "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
-      fflush(ERRORFILE);
-      exit_code = -1;
-      goto cleanup;
-    }
-    fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
-    if(exit_code != 0) {
-      fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
-      exit_code);
-      snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
-        docker_binary, container_id);
-      FILE* logs = popen(docker_logs_command, "r");
-      if(logs != NULL) {
-        clearerr(logs);
-        res = fread(buffer, BUFFER_SIZE, 1, logs);
-        if(res < 1) {
-          fprintf(ERRORFILE, "%s %d %d\n",
-            "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
-          fflush(ERRORFILE);
-        }
-        else {
-          fprintf(ERRORFILE, "%s\n", buffer);
-          fflush(ERRORFILE);
-        }
-      }
-      else {
-        fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
-        fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
-        fprintf(ERRORFILE, "%s\n", strerror(errno));
-        fflush(ERRORFILE);
-      }
-      if(pclose(logs) != 0) {
-        fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
-        fflush(ERRORFILE);
-      }
-    }
   }
+
+  sprintf(docker_inspect_exitcode_command,
+    "%s inspect --format {{.State.ExitCode}} %s",
+  docker_binary, container_id);
+  fprintf(LOGFILE, "Obtaining the exit code...\n");
+  fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
+  FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
+  if(inspect_exitcode_docker == NULL) {
+    fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
+    fflush(ERRORFILE);
+    exit_code = -1;
+    goto cleanup;
+  }
+  res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
+  if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
+  fprintf (ERRORFILE,
+   "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
+    fflush(ERRORFILE);
+    exit_code = -1;
+    goto cleanup;
+  }
+  fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
 
 cleanup:
 
@@ -1652,7 +1628,6 @@ cleanup:
   free(cred_file_dest);
   free(docker_command_with_binary);
   free(docker_wait_command);
-  free(docker_logs_command);
   free(docker_inspect_command);
   free(docker_rm_command);
   return exit_code;

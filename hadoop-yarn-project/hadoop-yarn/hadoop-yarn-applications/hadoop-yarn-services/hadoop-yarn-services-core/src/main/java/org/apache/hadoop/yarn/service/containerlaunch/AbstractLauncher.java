@@ -39,8 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import static org.apache.hadoop.yarn.service.provider.docker.DockerKeys.DEFAULT_DOCKER_NETWORK;
-
 /**
  * Launcher of applications: base class
  */
@@ -60,9 +58,9 @@ public class AbstractLauncher {
   private final Map<String, ByteBuffer> serviceData = new HashMap<>();
   protected boolean yarnDockerMode = false;
   protected String dockerImage;
-  protected String dockerNetwork = DEFAULT_DOCKER_NETWORK;
+  protected String dockerNetwork;
   protected String dockerHostname;
-  protected String runPrivilegedContainer;
+  protected boolean runPrivilegedContainer = false;
   private ServiceContext context;
 
   public AbstractLauncher(ServiceContext context) {
@@ -145,10 +143,16 @@ public class AbstractLauncher {
       Map<String, String> env = containerLaunchContext.getEnvironment();
       env.put("YARN_CONTAINER_RUNTIME_TYPE", "docker");
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_IMAGE", dockerImage);
-      env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK", dockerNetwork);
+      if (ServiceUtils.isSet(dockerNetwork)) {
+        env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK",
+            dockerNetwork);
+      }
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME",
           dockerHostname);
-      env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER", runPrivilegedContainer);
+      if (runPrivilegedContainer) {
+        env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
+            "true");
+      }
       StringBuilder sb = new StringBuilder();
       for (Entry<String,String> mount : mountPaths.entrySet()) {
         if (sb.length() > 0) {
@@ -238,11 +242,7 @@ public class AbstractLauncher {
   }
 
   public void setRunPrivilegedContainer(boolean runPrivilegedContainer) {
-    if (runPrivilegedContainer) {
-      this.runPrivilegedContainer = Boolean.toString(true);
-    } else {
-      this.runPrivilegedContainer = Boolean.toString(false);
-    }
+    this.runPrivilegedContainer = runPrivilegedContainer;
   }
 
 }

@@ -390,6 +390,14 @@ public class NamenodeStatusReport {
     return this.numOfBlocksPendingDeletion;
   }
 
+  /**
+   * Set the validity of registration.
+   * @param isValid The desired value to be set.
+   */
+  public void setRegistrationValid(boolean isValid) {
+    this.registrationValid = isValid;
+  }
+
   @Override
   public String toString() {
     return String.format("%s-%s:%s",

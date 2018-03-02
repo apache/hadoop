@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.sls.nodemanager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -144,8 +145,8 @@ public class NodeInfo {
       return runningApplications;
     }
 
-    public void updateNodeHeartbeatResponseForCleanup(
-            NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
@@ -179,13 +180,6 @@ public class NodeInfo {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForUpdatedContainers(
-        NodeHeartbeatResponse response) {
-      // TODO Auto-generated method stub
-      
-    }
-
-    @Override
     public List<Container> pullNewlyIncreasedContainers() {
       // TODO Auto-generated method stub
       return null;
@@ -216,6 +210,11 @@ public class NodeInfo {
 
     @Override
     public Integer getDecommissioningTimeout() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getAllocationTagsWithCount() {
       return null;
     }
 

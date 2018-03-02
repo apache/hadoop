@@ -105,6 +105,7 @@ import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -179,6 +180,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   /** Interface to map global name space to HDFS subcluster name spaces. */
   private final FileSubclusterResolver subclusterResolver;
 
+  /** If we are in safe mode, fail requests as if a standby NN. */
+  private volatile boolean safeMode;
 
   /** Category of the operation that a thread is executing. */
   private final ThreadLocal<OperationCategory> opCategory = new ThreadLocal<>();
@@ -370,12 +373,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @param op Category of the operation to check.
    * @param supported If the operation is supported or not. If not, it will
    *                  throw an UnsupportedOperationException.
-   * @throws StandbyException If the Router is in safe mode and cannot serve
-   *                          client requests.
+   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   *                           client requests.
    * @throws UnsupportedOperationException If the operation is not supported.
    */
   protected void checkOperation(OperationCategory op, boolean supported)
-      throws StandbyException, UnsupportedOperationException {
+      throws RouterSafeModeException, UnsupportedOperationException {
     checkOperation(op);
 
     if (!supported) {
@@ -393,10 +396,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * UNCHECKED. This function should be called by all ClientProtocol functions.
    *
    * @param op Category of the operation to check.
-   * @throws StandbyException If the Router is in safe mode and cannot serve
-   *                          client requests.
+   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   *                           client requests.
    */
-  protected void checkOperation(OperationCategory op) throws StandbyException {
+  protected void checkOperation(OperationCategory op)
+      throws RouterSafeModeException {
     // Log the function we are currently calling.
     if (rpcMonitor != null) {
       rpcMonitor.startOp();
@@ -415,7 +419,33 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       return;
     }
 
-    // TODO check Router safe mode and return Standby exception
+    if (safeMode) {
+      // Throw standby exception, router is not available
+      if (rpcMonitor != null) {
+        rpcMonitor.routerFailureSafemode();
+      }
+      throw new RouterSafeModeException(router.getRouterId(), op);
+    }
+  }
+
+  /**
+   * In safe mode all RPC requests will fail and return a standby exception.
+   * The client will try another Router, similar to the client retry logic for
+   * HA.
+   *
+   * @param mode True if enabled, False if disabled.
+   */
+  public void setSafeMode(boolean mode) {
+    this.safeMode = mode;
+  }
+
+  /**
+   * Check if the Router is in safe mode and cannot serve RPC calls.
+   *
+   * @return If the Router is in safe mode.
+   */
+  public boolean isInSafeMode() {
+    return this.safeMode;
   }
 
   @Override // ClientProtocol
@@ -2147,5 +2177,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    */
   public Quota getQuotaModule() {
     return this.quotaCall;
+  }
+
+  /**
+   * Get RPC metrics info.
+   * @return The instance of FederationRPCMetrics.
+   */
+  public FederationRPCMetrics getRPCMetrics() {
+    return this.rpcMonitor.getRPCMetrics();
   }
 }

@@ -50,7 +50,7 @@ export default Ember.Controller.extend({
         routeName: 'yarn-services'
       }, {
         text: `${serviceName} [${appId}]`,
-        href: `#/yarn-app/${appId}/info?service=${serviceName}`
+        href: `#/yarn-app/${appId}/components?service=${serviceName}`
       }, {
         text: "Attempts",
         href: `#/yarn-app/${appId}/attempts?service=${serviceName}`

@@ -17,3 +17,4 @@ org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier
 org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier
 org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier
 org.apache.hadoop.yarn.security.NMTokenIdentifier
+org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier

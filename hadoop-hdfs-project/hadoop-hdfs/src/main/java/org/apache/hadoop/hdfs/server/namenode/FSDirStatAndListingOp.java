@@ -51,9 +51,9 @@ import java.util.EnumSet;
 import static org.apache.hadoop.util.Time.now;
 
 class FSDirStatAndListingOp {
-  static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
-      byte[] startAfter, boolean needLocation) throws IOException {
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
+  static DirectoryListing getListingInt(FSDirectory fsd, FSPermissionChecker pc,
+      final String srcArg, byte[] startAfter, boolean needLocation)
+      throws IOException {
     final INodesInPath iip = fsd.resolvePath(pc, srcArg, DirOp.READ);
 
     // Get file name when startAfter is an INodePath.  This is not the
@@ -85,7 +85,8 @@ class FSDirStatAndListingOp {
 
   /**
    * Get the file info for a specific file.
-   *
+   * @param fsd The FS directory
+   * @param pc The permission checker
    * @param srcArg The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
@@ -95,11 +96,10 @@ class FSDirStatAndListingOp {
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  static HdfsFileStatus getFileInfo(FSDirectory fsd, String srcArg,
-      boolean resolveLink, boolean needLocation, boolean needBlockToken)
-      throws IOException {
+  static HdfsFileStatus getFileInfo(FSDirectory fsd, FSPermissionChecker pc,
+      String srcArg, boolean resolveLink, boolean needLocation,
+      boolean needBlockToken) throws IOException {
     DirOp dirOp = resolveLink ? DirOp.READ : DirOp.READ_LINK;
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip;
     if (pc.isSuperUser()) {
       // superuser can only get an ACE if an existing ancestor is a file.
@@ -119,19 +119,18 @@ class FSDirStatAndListingOp {
   /**
    * Returns true if the file is closed
    */
-  static boolean isFileClosed(FSDirectory fsd, String src) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+  static boolean isFileClosed(FSDirectory fsd, FSPermissionChecker pc,
+      String src) throws IOException {
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
     return !INodeFile.valueOf(iip.getLastINode(), src).isUnderConstruction();
   }
 
   static ContentSummary getContentSummary(
-      FSDirectory fsd, String src) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+      FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
     final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
     // getContentSummaryInt() call will check access (if enabled) when
     // traversing all sub directories.
-    return getContentSummaryInt(fsd, iip);
+    return getContentSummaryInt(fsd, pc, iip);
   }
 
   /**
@@ -516,7 +515,7 @@ class FSDirStatAndListingOp {
   }
 
   private static ContentSummary getContentSummaryInt(FSDirectory fsd,
-      INodesInPath iip) throws IOException {
+      FSPermissionChecker pc, INodesInPath iip) throws IOException {
     fsd.readLock();
     try {
       INode targetNode = iip.getLastINode();
@@ -528,8 +527,7 @@ class FSDirStatAndListingOp {
         // processed. 0 means disabled. I.e. blocking for the entire duration.
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
-                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(),
-                fsd.getPermissionChecker());
+                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec(), pc);
         ContentSummary cs = targetNode.computeAndConvertContentSummary(
             iip.getPathSnapshotId(), cscc);
         fsd.addYieldCount(cscc.getYieldCount());
@@ -541,8 +539,7 @@ class FSDirStatAndListingOp {
   }
 
   static QuotaUsage getQuotaUsage(
-      FSDirectory fsd, String src) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+      FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
     final INodesInPath iip;
     fsd.readLock();
     try {
@@ -559,7 +556,7 @@ class FSDirStatAndListingOp {
       return usage;
     } else {
       //If quota isn't set, fall back to getContentSummary.
-      return getContentSummaryInt(fsd, iip);
+      return getContentSummaryInt(fsd, pc, iip);
     }
   }
 

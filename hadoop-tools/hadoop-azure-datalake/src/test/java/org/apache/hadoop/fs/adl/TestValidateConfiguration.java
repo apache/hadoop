@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.adl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_BLOCK_SIZE;
@@ -58,6 +57,8 @@ import static org.apache.hadoop.fs.adl.AdlConfKeys
     .TOKEN_PROVIDER_TYPE_REFRESH_TOKEN;
 import static org.apache.hadoop.fs.adl.AdlConfKeys.WRITE_BUFFER_SIZE_KEY;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -70,50 +71,48 @@ public class TestValidateConfiguration {
 
   @Test
   public void validateConfigurationKeys() {
-    Assert
-        .assertEquals("fs.adl.oauth2.refresh.url", AZURE_AD_REFRESH_URL_KEY);
-    Assert.assertEquals("fs.adl.oauth2.access.token.provider",
+    assertEquals("fs.adl.oauth2.refresh.url", AZURE_AD_REFRESH_URL_KEY);
+    assertEquals("fs.adl.oauth2.access.token.provider",
         AZURE_AD_TOKEN_PROVIDER_CLASS_KEY);
-    Assert.assertEquals("fs.adl.oauth2.client.id", AZURE_AD_CLIENT_ID_KEY);
-    Assert.assertEquals("fs.adl.oauth2.refresh.token",
+    assertEquals("fs.adl.oauth2.client.id", AZURE_AD_CLIENT_ID_KEY);
+    assertEquals("fs.adl.oauth2.refresh.token",
         AZURE_AD_REFRESH_TOKEN_KEY);
-    Assert
-        .assertEquals("fs.adl.oauth2.credential", AZURE_AD_CLIENT_SECRET_KEY);
-    Assert.assertEquals("adl.debug.override.localuserasfileowner",
+    assertEquals("fs.adl.oauth2.credential", AZURE_AD_CLIENT_SECRET_KEY);
+    assertEquals("adl.debug.override.localuserasfileowner",
         ADL_DEBUG_OVERRIDE_LOCAL_USER_AS_OWNER);
 
-    Assert.assertEquals("fs.adl.oauth2.access.token.provider.type",
+    assertEquals("fs.adl.oauth2.access.token.provider.type",
         AZURE_AD_TOKEN_PROVIDER_TYPE_KEY);
 
-    Assert.assertEquals("adl.feature.client.cache.readahead",
+    assertEquals("adl.feature.client.cache.readahead",
         READ_AHEAD_BUFFER_SIZE_KEY);
 
-    Assert.assertEquals("adl.feature.client.cache.drop.behind.writes",
+    assertEquals("adl.feature.client.cache.drop.behind.writes",
         WRITE_BUFFER_SIZE_KEY);
 
-    Assert.assertEquals("RefreshToken", TOKEN_PROVIDER_TYPE_REFRESH_TOKEN);
+    assertEquals("RefreshToken", TOKEN_PROVIDER_TYPE_REFRESH_TOKEN);
 
-    Assert.assertEquals("ClientCredential", TOKEN_PROVIDER_TYPE_CLIENT_CRED);
+    assertEquals("ClientCredential", TOKEN_PROVIDER_TYPE_CLIENT_CRED);
 
-    Assert.assertEquals("adl.enable.client.latency.tracker",
+    assertEquals("adl.enable.client.latency.tracker",
         LATENCY_TRACKER_KEY);
 
-    Assert.assertEquals(true, LATENCY_TRACKER_DEFAULT);
+    assertEquals(true, LATENCY_TRACKER_DEFAULT);
 
-    Assert.assertEquals(true, ADL_EXPERIMENT_POSITIONAL_READ_DEFAULT);
+    assertEquals(true, ADL_EXPERIMENT_POSITIONAL_READ_DEFAULT);
 
-    Assert.assertEquals("adl.feature.experiment.positional.read.enable",
+    assertEquals("adl.feature.experiment.positional.read.enable",
         ADL_EXPERIMENT_POSITIONAL_READ_KEY);
 
-    Assert.assertEquals(1, ADL_REPLICATION_FACTOR);
-    Assert.assertEquals(256 * 1024 * 1024, ADL_BLOCK_SIZE);
-    Assert.assertEquals(false, ADL_DEBUG_SET_LOCAL_USER_AS_OWNER_DEFAULT);
-    Assert.assertEquals(4 * 1024 * 1024, DEFAULT_READ_AHEAD_BUFFER_SIZE);
-    Assert.assertEquals(4 * 1024 * 1024, DEFAULT_WRITE_AHEAD_BUFFER_SIZE);
+    assertEquals(1, ADL_REPLICATION_FACTOR);
+    assertEquals(256 * 1024 * 1024, ADL_BLOCK_SIZE);
+    assertEquals(false, ADL_DEBUG_SET_LOCAL_USER_AS_OWNER_DEFAULT);
+    assertEquals(4 * 1024 * 1024, DEFAULT_READ_AHEAD_BUFFER_SIZE);
+    assertEquals(4 * 1024 * 1024, DEFAULT_WRITE_AHEAD_BUFFER_SIZE);
 
-    Assert.assertEquals("adl.feature.ownerandgroup.enableupn",
+    assertEquals("adl.feature.ownerandgroup.enableupn",
         ADL_ENABLEUPN_FOR_OWNERGROUP_KEY);
-    Assert.assertEquals(false,
+    assertEquals(false,
         ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT);
   }
 
@@ -152,6 +151,95 @@ public class TestValidateConfiguration {
     assertDeprecatedKeys(conf);
   }
 
+  @Test
+  public void testGetAccountNameFromFQDN() {
+    assertEquals("dummy", AdlFileSystem.
+        getAccountNameFromFQDN("dummy.azuredatalakestore.net"));
+    assertEquals("localhost", AdlFileSystem.
+        getAccountNameFromFQDN("localhost"));
+  }
+
+  @Test
+  public void testPropagateAccountOptionsDefault() {
+    Configuration conf = new Configuration(false);
+    conf.set("fs.adl.oauth2.client.id", "defaultClientId");
+    conf.set("fs.adl.oauth2.credential", "defaultCredential");
+    conf.set("some.other.config", "someValue");
+    Configuration propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "dummy");
+    assertEquals("defaultClientId",
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals("defaultCredential",
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+  }
+
+  @Test
+  public void testPropagateAccountOptionsSpecified() {
+    Configuration conf = new Configuration(false);
+    conf.set("fs.adl.account.dummy.oauth2.client.id", "dummyClientId");
+    conf.set("fs.adl.account.dummy.oauth2.credential", "dummyCredential");
+    conf.set("some.other.config", "someValue");
+
+    Configuration propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "dummy");
+    assertEquals("dummyClientId",
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals("dummyCredential",
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+
+    propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "anotherDummy");
+    assertEquals(null,
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals(null,
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+  }
+
+  @Test
+  public void testPropagateAccountOptionsAll() {
+    Configuration conf = new Configuration(false);
+    conf.set("fs.adl.oauth2.client.id", "defaultClientId");
+    conf.set("fs.adl.oauth2.credential", "defaultCredential");
+    conf.set("some.other.config", "someValue");
+    conf.set("fs.adl.account.dummy1.oauth2.client.id", "dummyClientId1");
+    conf.set("fs.adl.account.dummy1.oauth2.credential", "dummyCredential1");
+    conf.set("fs.adl.account.dummy2.oauth2.client.id", "dummyClientId2");
+    conf.set("fs.adl.account.dummy2.oauth2.credential", "dummyCredential2");
+
+    Configuration propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "dummy1");
+    assertEquals("dummyClientId1",
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals("dummyCredential1",
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+
+    propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "dummy2");
+    assertEquals("dummyClientId2",
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals("dummyCredential2",
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+
+    propagatedConf =
+        AdlFileSystem.propagateAccountOptions(conf, "anotherDummy");
+    assertEquals("defaultClientId",
+        propagatedConf.get(AZURE_AD_CLIENT_ID_KEY));
+    assertEquals("defaultCredential",
+        propagatedConf.get(AZURE_AD_CLIENT_SECRET_KEY));
+    assertEquals("someValue",
+        propagatedConf.get("some.other.config"));
+  }
+
   private void setDeprecatedKeys(Configuration conf) {
     conf.set("dfs.adls.oauth2.access.token.provider.type", "dummyType");
     conf.set("dfs.adls.oauth2.client.id", "dummyClientId");
@@ -163,19 +251,19 @@ public class TestValidateConfiguration {
   }
 
   private void assertDeprecatedKeys(Configuration conf) {
-    Assert.assertEquals("dummyType",
+    assertEquals("dummyType",
         conf.get(AZURE_AD_TOKEN_PROVIDER_TYPE_KEY));
-    Assert.assertEquals("dummyClientId",
+    assertEquals("dummyClientId",
         conf.get(AZURE_AD_CLIENT_ID_KEY));
-    Assert.assertEquals("dummyRefreshToken",
+    assertEquals("dummyRefreshToken",
         conf.get(AZURE_AD_REFRESH_TOKEN_KEY));
-    Assert.assertEquals("dummyRefreshUrl",
+    assertEquals("dummyRefreshUrl",
         conf.get(AZURE_AD_REFRESH_URL_KEY));
-    Assert.assertEquals("dummyCredential",
+    assertEquals("dummyCredential",
         conf.get(AZURE_AD_CLIENT_SECRET_KEY));
-    Assert.assertEquals("dummyClass",
+    assertEquals("dummyClass",
         conf.get(AZURE_AD_TOKEN_PROVIDER_CLASS_KEY));
-    Assert.assertEquals("dummyTracker",
+    assertEquals("dummyTracker",
         conf.get(LATENCY_TRACKER_KEY));
   }
 }
