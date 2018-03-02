@@ -136,6 +136,10 @@ public class ResourceSet {
   }
 
   public void resourceLocalizationFailed(LocalResourceRequest request) {
+    // Skip null request when localization failed for running container
+    if (request == null) {
+      return;
+    }
     pendingResources.remove(request);
     resourcesFailedToBeLocalized.add(request);
   }
