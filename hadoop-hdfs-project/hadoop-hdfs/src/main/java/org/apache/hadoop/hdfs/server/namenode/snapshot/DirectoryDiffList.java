@@ -22,6 +22,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.
     DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.
     DirectoryWithSnapshotFeature.ChildrenDiff;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -67,6 +69,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * Once a snapshot gets deleted, the list needs to be balanced.
  */
 public class DirectoryDiffList implements DiffList<DirectoryDiff> {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(DirectoryDiffList.class);
 
   private static class SkipDiff {
     /**
@@ -100,7 +104,7 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
 
     @Override
     public String toString() {
-      return "->" + skipTo;
+      return "->" + skipTo + (diff == null? " (diff==null)": "");
     }
   }
 
@@ -136,6 +140,13 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
      */
     public int level() {
       return skipDiffList.size() - 1;
+    }
+
+    void trim() {
+      for (int level = level();
+           level > 0 && getSkipNode(level) == null; level--) {
+        skipDiffList.remove(level);
+      }
     }
 
     public DirectoryDiff getDiff() {
@@ -281,6 +292,23 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
     skipNodeList.add(0, newNode);
   }
 
+  private SkipListNode[] findPreviousNodes(SkipListNode node, int nodeLevel) {
+    final SkipListNode[] nodePath = new SkipListNode[nodeLevel + 1];
+    SkipListNode cur = head;
+    final int headLevel = head.level();
+    for (int level = headLevel < nodeLevel ? headLevel : nodeLevel;
+         level >= 0; level--) {
+      while (cur.getSkipNode(level) != node) {
+        cur = cur.getSkipNode(level);
+      }
+      nodePath[level] = cur;
+    }
+    for (int level = headLevel + 1; level <= nodeLevel; level++) {
+      nodePath[level] = head;
+    }
+    return nodePath;
+  }
+
   /**
    * Adds the specified data element to the end of the SkipList,
    * if the element is not already present.
@@ -289,16 +317,8 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
   @Override
   public boolean addLast(DirectoryDiff diff) {
     final int nodeLevel = randomLevel(skipInterval, maxSkipLevels);
-    final SkipListNode[] nodePath = new SkipListNode[nodeLevel + 1];
-    SkipListNode cur = head;
     final int headLevel = head.level();
-    for (int level = headLevel < nodeLevel ? headLevel : nodeLevel;
-         level >= 0; level--) {
-      while (cur.getSkipNode(level) != null) {
-        cur = cur.getSkipNode(level);
-      }
-      nodePath[level] = cur;
-    }
+    final SkipListNode[] nodePath = findPreviousNodes(null, nodeLevel);
     for (int level = headLevel + 1; level <= nodeLevel; level++) {
       head.skipDiffList.add(new SkipDiff(null));
       nodePath[level] = head;
@@ -327,6 +347,7 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
         }
       }
       nodePath[level].setSkipTo(current, level);
+      current.setSkipTo(null, level);
     }
     return skipNodeList.add(current);
   }
@@ -366,11 +387,44 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
    * Removes the element at the specified position in this list.
    *
    * @param index the index of the element to be removed
-   * @throws UnsupportedOperationException {@inheritDoc}
+   * @return the removed DirectoryDiff
    */
   @Override
   public DirectoryDiff remove(int index) {
-    throw new UnsupportedOperationException();
+    SkipListNode node = getNode(index);
+    int headLevel = head.level();
+    int nodeLevel = node.level();
+    final SkipListNode[] nodePath = findPreviousNodes(node, nodeLevel);
+    for (int level = 0; level <= nodeLevel; level++) {
+      if (nodePath[level] != head && level > 0) {
+        // if the last snapshot is deleted, for all the skip level nodes
+        // pointing to the last one, the combined children diff at each level
+        // > 0 should be made null and skip pointers will be updated to null.
+        // if the snapshot being deleted is not the last one, we have to merge
+        // the diff of deleted node at each level to the previous skip level
+        // node at that level and the skip pointers will be updated to point to
+        // the skip nodes of the deleted node.
+        if (index == size() - 1) {
+          nodePath[level].setSkipDiff(null, level);
+        } else {
+          /* Ideally at level 0, the deleted diff will be combined with
+           * the previous diff , and deleted inodes will be cleaned up
+           * by passing a deleted processor here while combining the diffs.
+           * Level 0 merge with previous diff will be handled inside the
+           * {@link AbstractINodeDiffList#deleteSnapshotDiff} function.
+           */
+          if (node.getChildrenDiff(level) != null) {
+            nodePath[level].getChildrenDiff(level)
+                .combinePosterior(node.getChildrenDiff(level), null);
+          }
+        }
+      }
+      nodePath[level].setSkipTo(node.getSkipNode(level), level);
+    }
+    if (nodeLevel == headLevel) {
+      head.trim();
+    }
+    return skipNodeList.remove(index).getDiff();
   }
 
   /**
@@ -482,7 +536,7 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-    b.append("\nhead: ").append(head).append(head.skipDiffList);
+    b.append(" head: ").append(head).append(head.skipDiffList);
     for (SkipListNode n : skipNodeList) {
       b.append("\n  ").append(n).append(n.skipDiffList);
     }

@@ -35,11 +35,14 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntFunction;
 
 /**
  * This class tests the DirectoryDiffList API's.
  */
 public class TestDirectoryDiffList{
+  static final int NUM_SNAPSHOTS = 100;
   static {
     SnapshotTestHelper.disableLogs();
   }
@@ -78,15 +81,15 @@ public class TestDirectoryDiffList{
   static void verifyChildrenList(DirectoryDiffList skip, INodeDirectory dir) {
     final int n = skip.size();
     for (int i = 0; i < skip.size(); i++) {
-      final List<INode> expected =
-          ReadOnlyList.Util.asList(dir.getChildrenList(i));
+      final List<INode> expected = ReadOnlyList.Util.asList(
+          dir.getChildrenList(dir.getDiffs().asList().get(i).getSnapshotId()));
       final List<INode> computed = getChildrenList(skip, i, n, dir);
       try {
         assertList(expected, computed);
       } catch (AssertionError ae) {
         throw new AssertionError(
             "i = " + i + "\ncomputed = " + computed + "\nexpected = "
-                + expected, ae);
+                + expected + "\n" + skip, ae);
       }
     }
   }
@@ -136,28 +139,16 @@ public class TestDirectoryDiffList{
 
   @Test
   public void testAddLast() throws Exception {
-    testAddLast(7);
+    testAddLast(NUM_SNAPSHOTS);
   }
 
   static void testAddLast(int n) throws Exception {
     final Path root = new Path("/testAddLast" + n);
-    hdfs.mkdirs(root);
-    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
-    for (int i = 1; i < n; i++) {
-      final Path child = getChildPath(root, i);
-      hdfs.mkdirs(child);
-      SnapshotTestHelper.createSnapshot(hdfs, root, "s" + i);
-    }
-    INodeDirectory dir = fsdir.getINode(root.toString()).asDirectory();
-    DiffList<DirectoryDiff> diffs = dir.getDiffs().asList();
+    DirectoryDiffList.LOG.info("run " + root);
 
     final DirectoryDiffList skipList = new DirectoryDiffList(0, 3, 5);
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
-    for (DirectoryDiff d : diffs) {
-      skipList.addLast(d);
-      arrayList.addLast(d);
-    }
-
+    INodeDirectory dir = addDiff(n, skipList, arrayList, root);
     // verify that the both the children list obtained from hdfs and
     // DirectoryDiffList are same
     verifyChildrenList(skipList, dir);
@@ -167,11 +158,13 @@ public class TestDirectoryDiffList{
 
   @Test
   public void testAddFirst() throws Exception {
-    testAddFirst(7);
+    testAddFirst(NUM_SNAPSHOTS);
   }
 
   static void testAddFirst(int n) throws Exception {
     final Path root = new Path("/testAddFirst" + n);
+    DirectoryDiffList.LOG.info("run " + root);
+
     hdfs.mkdirs(root);
     for (int i = 1; i < n; i++) {
       final Path child = getChildPath(root, i);
@@ -182,7 +175,7 @@ public class TestDirectoryDiffList{
     for (int i = 1; i < n; i++) {
       final Path child = getChildPath(root, n - i);
       hdfs.delete(child, false);
-      SnapshotTestHelper.createSnapshot(hdfs, root, "s" + i);
+      hdfs.createSnapshot(root, "s" + i);
     }
     DiffList<DirectoryDiff> diffs = dir.getDiffs().asList();
     List<INode> childrenList = ReadOnlyList.Util.asList(dir.getChildrenList(
@@ -198,5 +191,74 @@ public class TestDirectoryDiffList{
     // DirectoryDiffList are same
     verifyChildrenList(skipList, dir);
     verifyChildrenList(arrayList, skipList, dir, childrenList);
+  }
+
+  static INodeDirectory addDiff(int n, DiffList skipList, DiffList arrayList,
+      final Path root) throws Exception {
+    hdfs.mkdirs(root);
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    for (int i = 1; i < n; i++) {
+      final Path child = getChildPath(root, i);
+      hdfs.mkdirs(child);
+      hdfs.createSnapshot(root, "s" + i);
+    }
+    INodeDirectory dir = fsdir.getINode(root.toString()).asDirectory();
+    DiffList<DirectoryDiff> diffs = dir.getDiffs().asList();
+    for (DirectoryDiff d : diffs) {
+      skipList.addLast(d);
+      arrayList.addLast(d);
+    }
+    return dir;
+  }
+
+  @Test
+  public void testRemoveFromTail() throws Exception {
+    final int n = NUM_SNAPSHOTS;
+    testRemove("FromTail", n, i -> n - 1 - i);
+  }
+
+  @Test
+  public void testReomveFromHead() throws Exception {
+    testRemove("FromHead", NUM_SNAPSHOTS, i -> 0);
+  }
+
+  @Test
+  public void testRemoveRandom() throws Exception {
+    final int n = NUM_SNAPSHOTS;
+    testRemove("Random", n, i -> ThreadLocalRandom.current().nextInt(n - i));
+  }
+
+  static void testRemove(String name, int n, IntFunction<Integer> indexFunction)
+      throws Exception {
+    final Path root = new Path("/testRemove" + name + n);
+    DirectoryDiffList.LOG.info("run " + root);
+
+    final DirectoryDiffList skipList = new DirectoryDiffList(0, 3, 5);
+    final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
+    final INodeDirectory dir = addDiff(n, skipList, arrayList, root);
+    Assert.assertEquals(n, arrayList.size());
+    Assert.assertEquals(n, skipList.size());
+
+    for(int i = 0; i < n; i++) {
+      final int index = indexFunction.apply(i);
+      final DirectoryDiff diff = remove(index, skipList, arrayList);
+      hdfs.deleteSnapshot(root, "s" + diff.getSnapshotId());
+      verifyChildrenList(skipList, dir);
+      verifyChildrenList(arrayList, skipList, dir, Collections.emptyList());
+    }
+  }
+
+  static DirectoryDiff remove(int i, DirectoryDiffList skip,
+      DiffList<DirectoryDiff> array) {
+    DirectoryDiffList.LOG.info("remove " + i);
+    final DirectoryDiff expected = array.remove(i);
+    final DirectoryDiff computed = skip.remove(i);
+    assertDirectoryDiff(expected, computed);
+    return expected;
+  }
+
+  static void assertDirectoryDiff(DirectoryDiff expected,
+      DirectoryDiff computed) {
+    Assert.assertEquals(expected.getSnapshotId(), computed.getSnapshotId());
   }
 }
