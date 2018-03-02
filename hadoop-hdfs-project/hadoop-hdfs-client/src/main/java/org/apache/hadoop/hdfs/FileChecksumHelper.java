@@ -514,8 +514,10 @@ final class FileChecksumHelper {
                 returnedType));
           }
           byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-          blockChecksumForDebug =
-              CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          if (LOG.isDebugEnabled()) {
+            blockChecksumForDebug =
+                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          }
           getBlockChecksumBuf().write(crcBytes);
           break;
         default:
@@ -706,8 +708,10 @@ final class FileChecksumHelper {
                 returnedType));
           }
           byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-          blockChecksumForDebug =
-              CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          if (LOG.isDebugEnabled()) {
+            blockChecksumForDebug =
+                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+          }
           getBlockChecksumBuf().write(crcBytes);
           break;
         default:

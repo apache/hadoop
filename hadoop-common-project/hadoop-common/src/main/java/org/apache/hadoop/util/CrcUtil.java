@@ -27,7 +27,7 @@ import java.util.Arrays;
 /**
  * This class provides utilities for working with CRCs.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
 @InterfaceStability.Evolving
 public final class CrcUtil {
   public static final int MULTIPLICATIVE_IDENTITY = 0x80000000;

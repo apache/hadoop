@@ -33,7 +33,7 @@ import java.io.IOException;
  * a large number of CRCs that correspond to underlying chunks of data all of
  * same size.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
 @InterfaceStability.Evolving
 public class CrcComposer {
   private static final int CRC_SIZE_BYTES = 4;
@@ -172,7 +172,7 @@ public class CrcComposer {
    * is not a multiple of stripeLength, then the last CRC in the array
    * corresponds to totalLength % stripeLength underlying data bytes.
    */
-  public byte[] digest() throws IOException {
+  public byte[] digest() {
     if (curPositionInStripe > 0) {
       digestOut.write(CrcUtil.intToBytes(curCompositeCrc), 0, CRC_SIZE_BYTES);
       curCompositeCrc = 0;

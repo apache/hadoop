@@ -510,55 +510,68 @@ final class BlockChecksumHelper {
         setOutBytes(md5out.getDigest());
         break;
       case COMPOSITE_CRC:
-        CrcComposer crcComposer = CrcComposer.newCrcComposer(
-            getCrcType(), ecPolicy.getCellSize());
-
-        // This should hold all the cell-granularity checksums of blk0
-        // followed by all cell checksums of blk1, etc. We must unstripe the
-        // cell checksums in order of logical file bytes. Also, note that the
-        // length of this array may not equal the the number of actually valid
-        // bytes in the buffer (blockChecksumBuf.getLength()).
-        byte[] flatBlockChecksumData = blockChecksumBuf.getData();
-
-        // Initialize byte-level cursors to where each block's checksum begins
-        // inside the combined flattened buffer.
-        int[] blockChecksumCursors = new int[numDataUnits];
-        for (int idx = 0; idx < numDataUnits; ++idx) {
-          blockChecksumCursors[idx] = blockChecksumPositions[idx];
-        }
-
-        // Reassemble cell-level CRCs in the right order.
-        long numFullCells = checksumLen / ecPolicy.getCellSize();
-        for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
-          int blockIndex = (int) (cellIndex % numDataUnits);
-          int checksumCursor = blockChecksumCursors[blockIndex];
-          int cellCrc = CrcUtil.readInt(
-              flatBlockChecksumData, checksumCursor);
-          blockChecksumCursors[blockIndex] += 4;
-          crcComposer.update(cellCrc, ecPolicy.getCellSize());
-        }
-        if (checksumLen % ecPolicy.getCellSize() != 0) {
-          // Final partial cell.
-          int blockIndex = (int) (numFullCells % numDataUnits);
-          int checksumCursor = blockChecksumCursors[blockIndex];
-          int cellCrc = CrcUtil.readInt(
-              flatBlockChecksumData, checksumCursor);
-          blockChecksumCursors[blockIndex] += 4;
-          crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
-        }
-        byte[] digest = crcComposer.digest();
-        LOG.debug("flatBlockChecksumData.length={}, numDataUnits={}, "
-            + "checksumLen={}, digest={}",
-            flatBlockChecksumData.length,
-            numDataUnits,
-            checksumLen,
-            CrcUtil.newSingleCrcWrapperFromByteArray(digest));
+        byte[] digest = reassembleNonStripedCompositeCrc(checksumLen);
         setOutBytes(digest);
         break;
       default:
         throw new IOException(String.format(
             "Unrecognized BlockChecksumType: %s", type));
       }
+    }
+
+    /**
+     * @param checksumLen The sum of bytes associated with the block checksum
+     *     data being digested into a block-group level checksum.
+     */
+    private byte[] reassembleNonStripedCompositeCrc(long checksumLen)
+        throws IOException {
+      int numDataUnits = ecPolicy.getNumDataUnits();
+      CrcComposer crcComposer = CrcComposer.newCrcComposer(
+          getCrcType(), ecPolicy.getCellSize());
+
+      // This should hold all the cell-granularity checksums of blk0
+      // followed by all cell checksums of blk1, etc. We must unstripe the
+      // cell checksums in order of logical file bytes. Also, note that the
+      // length of this array may not equal the the number of actually valid
+      // bytes in the buffer (blockChecksumBuf.getLength()).
+      byte[] flatBlockChecksumData = blockChecksumBuf.getData();
+
+      // Initialize byte-level cursors to where each block's checksum begins
+      // inside the combined flattened buffer.
+      int[] blockChecksumCursors = new int[numDataUnits];
+      for (int idx = 0; idx < numDataUnits; ++idx) {
+        blockChecksumCursors[idx] = blockChecksumPositions[idx];
+      }
+
+      // Reassemble cell-level CRCs in the right order.
+      long numFullCells = checksumLen / ecPolicy.getCellSize();
+      for (long cellIndex = 0; cellIndex < numFullCells; ++cellIndex) {
+        int blockIndex = (int) (cellIndex % numDataUnits);
+        int checksumCursor = blockChecksumCursors[blockIndex];
+        int cellCrc = CrcUtil.readInt(
+            flatBlockChecksumData, checksumCursor);
+        blockChecksumCursors[blockIndex] += 4;
+        crcComposer.update(cellCrc, ecPolicy.getCellSize());
+      }
+      if (checksumLen % ecPolicy.getCellSize() != 0) {
+        // Final partial cell.
+        int blockIndex = (int) (numFullCells % numDataUnits);
+        int checksumCursor = blockChecksumCursors[blockIndex];
+        int cellCrc = CrcUtil.readInt(
+            flatBlockChecksumData, checksumCursor);
+        blockChecksumCursors[blockIndex] += 4;
+        crcComposer.update(cellCrc, checksumLen % ecPolicy.getCellSize());
+      }
+      byte[] digest = crcComposer.digest();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("flatBlockChecksumData.length={}, numDataUnits={}, "
+            + "checksumLen={}, digest={}",
+            flatBlockChecksumData.length,
+            numDataUnits,
+            checksumLen,
+            CrcUtil.newSingleCrcWrapperFromByteArray(digest));
+      }
+      return digest;
     }
 
     private ExtendedBlock getInternalBlock(int numDataUnits, int idx) {
