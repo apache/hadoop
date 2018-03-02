@@ -3530,6 +3530,17 @@
 </property>
 
 <property>
+  <name>dfs.checksum.combine.mode</name>
+  <value>MD5MD5CRC</value>
+  <description>
+    Defines how lower-level chunk/block checksums are combined into file-level
+    checksums; the original MD5MD5CRC mode is not comparable between files
+    with different block layouts, while modes like COMPOSITE_CRC are
+    comparable independently of block layout.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>
