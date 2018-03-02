@@ -168,12 +168,15 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     private boolean isSnapshotRoot = false;
     
     private DirectoryDiff(int snapshotId, INodeDirectory dir) {
-      super(snapshotId, null, null);
-
-      this.childrenSize = dir.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
-      this.diff = new ChildrenDiff();
+      this(snapshotId, dir, new ChildrenDiff());
     }
 
+    public DirectoryDiff(int snapshotId, INodeDirectory dir,
+        ChildrenDiff diff) {
+      super(snapshotId, null, null);
+      this.childrenSize = dir.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
+      this.diff = diff;
+    }
     /** Constructor used by FSImage loading */
     DirectoryDiff(int snapshotId, INodeDirectoryAttributes snapshotINode,
         DirectoryDiff posteriorDiff, int childrenSize, List<INode> createdList,

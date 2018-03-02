@@ -26,7 +26,8 @@
               "count": { "val": 5, "std": 1},
               "time": {"val": 10, "std": 2},
               "max_memory": {"val": 1024},
-              "max_vcores": {"val": 1}
+              "max_vcores": {"val": 1},
+              "execution_type": "GUARANTEED"
             },
             {
               "type": "reduce",
@@ -34,7 +35,8 @@
               "count": { "val": 5, "std": 1},
               "time": {"val": 20, "std": 4},
               "max_memory": {"val": 2048},
-              "max_vcores": {"val": 2}
+              "max_vcores": {"val": 2},
+              "execution_type": "GUARANTEED"
             }
           ]
         }

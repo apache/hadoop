@@ -173,7 +173,7 @@ RUN apt-get -y install nodejs && \
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx1g
+ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
 
 ###

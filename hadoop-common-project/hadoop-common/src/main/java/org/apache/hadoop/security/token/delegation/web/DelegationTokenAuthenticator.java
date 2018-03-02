@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
@@ -138,11 +139,17 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   public void authenticate(URL url, AuthenticatedURL.Token token)
       throws IOException, AuthenticationException {
     if (!hasDelegationToken(url, token)) {
-      // check and renew TGT to handle potential expiration
-      UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
-      LOG.debug("No delegation token found for url={}, token={}, authenticating"
-          + " with {}", url, token, authenticator.getClass());
-      authenticator.authenticate(url, token);
+      try {
+        // check and renew TGT to handle potential expiration
+        UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+        LOG.debug("No delegation token found for url={}, token={}, "
+            + "authenticating with {}", url, token, authenticator.getClass());
+        authenticator.authenticate(url, token);
+      } catch (IOException ex) {
+        throw NetUtils.wrapException(url.getHost(), url.getPort(),
+            null, 0, ex);
+      }
+
     } else {
       LOG.debug("Authenticated from delegation token. url={}, token={}",
           url, token);

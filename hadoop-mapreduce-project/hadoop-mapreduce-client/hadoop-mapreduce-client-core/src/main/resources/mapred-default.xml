@@ -1731,6 +1731,15 @@
 </property>
 
 <property>
+  <name>mapreduce.jobhistory.intermediate-user-done-dir.permissions</name>
+  <value>770</value>
+  <description>The permissions of the user directories in
+  ${mapreduce.jobhistory.intermediate-done-dir}. The user and the group
+  permission must be 7, this is enforced.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.jobhistory.done-dir</name>
   <value>${yarn.app.mapreduce.am.staging-dir}/history/done</value>
   <description></description>

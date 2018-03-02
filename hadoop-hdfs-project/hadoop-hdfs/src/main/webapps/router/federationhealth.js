@@ -20,6 +20,7 @@
 
   dust.loadSource(dust.compile($('#tmpl-federationhealth').html(), 'federationhealth'));
   dust.loadSource(dust.compile($('#tmpl-namenode').html(), 'namenode-info'));
+  dust.loadSource(dust.compile($('#tmpl-router').html(), 'router-info'));
   dust.loadSource(dust.compile($('#tmpl-datanode').html(), 'datanode-info'));
   dust.loadSource(dust.compile($('#tmpl-mounttable').html(), 'mounttable'));
 
@@ -116,13 +117,13 @@
           n.iconState = "down";
           if (n.isSafeMode === true) {
             n.title = capitalise(n.state) + " (safe mode)"
-            n.iconState = "decommisioned";
+            n.iconState = "decommissioned";
           } else if (n.state === "ACTIVE") {
             n.title = capitalise(n.state);
             n.iconState = "alive";
           } else if (nodes[i].state === "STANDBY") {
             n.title = capitalise(n.state);
-            n.iconState = "down-decommisioned";
+            n.iconState = "down-decommissioned";
           } else if (nodes[i].state === "UNAVAILABLE") {
             n.title = capitalise(n.state);
             n.iconState = "down";
@@ -131,6 +132,48 @@
             n.namenodeId = "";
           }
         }
+      }
+
+      r.Nameservices = node_map_to_array(JSON.parse(r.Nameservices));
+      augment_namenodes(r.Nameservices);
+      r.Namenodes = node_map_to_array(JSON.parse(r.Namenodes));
+      augment_namenodes(r.Namenodes);
+      return r;
+    }
+
+    $.get(
+      '/jmx?qry=Hadoop:service=Router,name=FederationState',
+      guard_with_startup_progress(function (resp) {
+        var data = workaround(resp.beans[0]);
+        var base = dust.makeBase(HELPERS);
+        dust.render('namenode-info', base.push(data), function(err, out) {
+          $('#tab-namenode').html(out);
+          $('#ui-tabs a[href="#tab-namenode"]').tab('show');
+        });
+      })).error(ajax_error_handler);
+  }
+
+  function load_router_info() {
+    var HELPERS = {
+      'helper_lastcontact_tostring' : function (chunk, ctx, bodies, params) {
+        var value = dust.helpers.tap(params.value, chunk, ctx);
+        return chunk.write('' + new Date(Date.now()-1000*Number(value)));
+      }
+    };
+
+    function workaround(r) {
+      function node_map_to_array(nodes) {
+        var res = [];
+        for (var n in nodes) {
+          var p = nodes[n];
+          p.name = n;
+          res.push(p);
+        }
+        return res;
+      }
+
+      function capitalise(string) {
+          return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
       }
 
       function augment_routers(nodes) {
@@ -146,10 +189,10 @@
             n.iconState = "alive";
           } else if (n.status === "SAFEMODE") {
             n.title = capitalise(n.status);
-            n.iconState = "down-decommisioned";
+            n.iconState = "down-decommissioned";
           } else if (n.status === "STOPPING") {
             n.title = capitalise(n.status);
-            n.iconState = "decommisioned";
+            n.iconState = "decommissioned";
           } else if (n.status === "SHUTDOWN") {
             n.title = capitalise(n.status);
             n.iconState = "down";
@@ -157,10 +200,6 @@
         }
       }
 
-      r.Nameservices = node_map_to_array(JSON.parse(r.Nameservices));
-      augment_namenodes(r.Nameservices);
-      r.Namenodes = node_map_to_array(JSON.parse(r.Namenodes));
-      augment_namenodes(r.Namenodes);
       r.Routers = node_map_to_array(JSON.parse(r.Routers));
       augment_routers(r.Routers);
       return r;
@@ -171,9 +210,9 @@
       guard_with_startup_progress(function (resp) {
         var data = workaround(resp.beans[0]);
         var base = dust.makeBase(HELPERS);
-        dust.render('namenode-info', base.push(data), function(err, out) {
-          $('#tab-namenode').html(out);
-          $('#ui-tabs a[href="#tab-namenode"]').tab('show');
+        dust.render('router-info', base.push(data), function(err, out) {
+          $('#tab-router').html(out);
+          $('#ui-tabs a[href="#tab-router"]').tab('show');
         });
       })).error(ajax_error_handler);
   }
@@ -219,7 +258,7 @@
           if (n.adminState === "In Service") {
             n.state = "alive";
           } else if (nodes[i].adminState === "Decommission In Progress") {
-            n.state = "decommisioning";
+            n.state = "decommissioning";
           } else if (nodes[i].adminState === "Decommissioned") {
             n.state = "decommissioned";
           }
@@ -314,17 +353,20 @@
   function load_page() {
     var hash = window.location.hash;
     switch(hash) {
-      case "#tab-mounttable":
-        load_mount_table();
+      case "#tab-overview":
+        load_overview();
         break;
       case "#tab-namenode":
         load_namenode_info();
         break;
+      case "#tab-router":
+        load_router_info();
+        break;
       case "#tab-datanode":
         load_datanode_info();
         break;
-      case "#tab-overview":
-        load_overview();
+      case "#tab-mounttable":
+        load_mount_table();
         break;
       default:
         window.location.hash = "tab-overview";
