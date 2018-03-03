@@ -20,9 +20,8 @@ services:
       image: elek/hadoop-runner:latest
       hostname: namenode
       volumes:
-         - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
+         - ../..//hadoop-${VERSION}:/opt/hadoop
       ports:
-         - 50070:50070
          - 9870:9870
       environment:
           ENSURE_NAMENODE_DIR: /data/namenode
@@ -32,29 +31,34 @@ services:
    datanode:
       image: elek/hadoop-runner:latest
       volumes:
-        - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
+        - ../..//hadoop-${VERSION}:/opt/hadoop
       ports:
         - 9864
       command: ["/opt/hadoop/bin/hdfs","datanode"]
-   ksm:
+   jscsi:
       image: elek/hadoop-runner:latest
-      volumes:
-         - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
       ports:
-         - 9874:9874
-      environment:
-         ENSURE_KSM_INITIALIZED: /data/metadata/ksm/current/VERSION
+        - 3260:3260
+      volumes:
+         - ../..//hadoop-${VERSION}:/opt/hadoop
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","ksm"]
+      command: ["/opt/hadoop/bin/hdfs","jscsi"]
+   cblock:
+      image: elek/hadoop-runner:latest
+      volumes:
+         - ../..//hadoop-${VERSION}:/opt/hadoop
+      env_file:
+          - ./docker-config
+      command: ["/opt/hadoop/bin/hdfs","cblockserver"]
    scm:
       image: elek/hadoop-runner:latest
       volumes:
-         - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
+         - ../..//hadoop-${VERSION}:/opt/hadoop
       ports:
          - 9876:9876
       env_file:
           - ./docker-config
+      command: ["/opt/hadoop/bin/hdfs","scm"]
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
-      command: ["/opt/hadoop/bin/hdfs","scm"]
