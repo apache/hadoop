@@ -61,6 +61,8 @@ public class TestHadoopArchiveLogs {
     Path rootLogDir = new Path("target", "logs");
     String suffix = "logs";
     Path logDir = new Path(rootLogDir, new Path(USER, suffix));
+    fs.delete(logDir, true);
+    Assert.assertFalse(fs.exists(logDir));
     fs.mkdirs(logDir);
 
     // no files found
