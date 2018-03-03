@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 
 /** Composite CRC. */
@@ -57,7 +58,7 @@ public class CompositeCrcFileChecksum extends FileChecksum {
 
   @Override
   public byte[] getBytes() {
-    return WritableUtils.toByteArray(this);
+    return CrcUtil.intToBytes(crc);
   }
 
   @Override
