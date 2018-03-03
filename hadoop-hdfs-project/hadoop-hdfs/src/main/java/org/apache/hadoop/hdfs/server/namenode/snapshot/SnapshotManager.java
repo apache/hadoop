@@ -127,6 +127,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         + snapshotDiffAllowSnapRootDescendant
         + ", maxSnapshotLimit: "
         + maxSnapshotLimit);
+
+    final int maxLevels = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_LEVELS,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_SKIP_LEVELS_DEFAULT);
+    final int skipInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT);
+    DirectoryDiffListFactory.init(skipInterval, maxLevels, LOG);
   }
 
   @VisibleForTesting

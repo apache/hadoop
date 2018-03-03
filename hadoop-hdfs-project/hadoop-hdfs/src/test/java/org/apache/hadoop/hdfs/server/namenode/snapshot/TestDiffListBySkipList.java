@@ -41,7 +41,7 @@ import java.util.function.IntFunction;
 /**
  * This class tests the DirectoryDiffList API's.
  */
-public class TestDirectoryDiffList{
+public class TestDiffListBySkipList {
   static final int NUM_SNAPSHOTS = 100;
   static {
     SnapshotTestHelper.disableLogs();
@@ -78,7 +78,7 @@ public class TestDirectoryDiffList{
     }
   }
 
-  static void verifyChildrenList(DirectoryDiffList skip, INodeDirectory dir) {
+  static void verifyChildrenList(DiffListBySkipList skip, INodeDirectory dir) {
     final int n = skip.size();
     for (int i = 0; i < skip.size(); i++) {
       final List<INode> expected = ReadOnlyList.Util.asList(
@@ -95,7 +95,7 @@ public class TestDirectoryDiffList{
   }
 
   static void verifyChildrenList(
-      DiffList<DirectoryDiff> array, DirectoryDiffList skip,
+      DiffList<DirectoryDiff> array, DiffListBySkipList skip,
       INodeDirectory dir, List<INode> childrenList) {
     final int n = array.size();
     Assert.assertEquals(n, skip.size());
@@ -144,13 +144,13 @@ public class TestDirectoryDiffList{
 
   static void testAddLast(int n) throws Exception {
     final Path root = new Path("/testAddLast" + n);
-    DirectoryDiffList.LOG.info("run " + root);
+    DiffListBySkipList.LOG.info("run " + root);
 
-    final DirectoryDiffList skipList = new DirectoryDiffList(0, 3, 5);
+    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     INodeDirectory dir = addDiff(n, skipList, arrayList, root);
     // verify that the both the children list obtained from hdfs and
-    // DirectoryDiffList are same
+    // DiffListBySkipList are same
     verifyChildrenList(skipList, dir);
     verifyChildrenList(arrayList, skipList, dir, Collections.emptyList());
   }
@@ -163,7 +163,7 @@ public class TestDirectoryDiffList{
 
   static void testAddFirst(int n) throws Exception {
     final Path root = new Path("/testAddFirst" + n);
-    DirectoryDiffList.LOG.info("run " + root);
+    DiffListBySkipList.LOG.info("run " + root);
 
     hdfs.mkdirs(root);
     for (int i = 1; i < n; i++) {
@@ -180,7 +180,7 @@ public class TestDirectoryDiffList{
     DiffList<DirectoryDiff> diffs = dir.getDiffs().asList();
     List<INode> childrenList = ReadOnlyList.Util.asList(dir.getChildrenList(
         diffs.get(0).getSnapshotId()));
-    final DirectoryDiffList skipList = new DirectoryDiffList(0, 3, 5);
+    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     for (int i = diffs.size() - 1; i >= 0; i--) {
       final DirectoryDiff d = diffs.get(i);
@@ -188,7 +188,7 @@ public class TestDirectoryDiffList{
       arrayList.addFirst(d);
     }
     // verify that the both the children list obtained from hdfs and
-    // DirectoryDiffList are same
+    // DiffListBySkipList are same
     verifyChildrenList(skipList, dir);
     verifyChildrenList(arrayList, skipList, dir, childrenList);
   }
@@ -231,9 +231,9 @@ public class TestDirectoryDiffList{
   static void testRemove(String name, int n, IntFunction<Integer> indexFunction)
       throws Exception {
     final Path root = new Path("/testRemove" + name + n);
-    DirectoryDiffList.LOG.info("run " + root);
+    DiffListBySkipList.LOG.info("run " + root);
 
-    final DirectoryDiffList skipList = new DirectoryDiffList(0, 3, 5);
+    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     final INodeDirectory dir = addDiff(n, skipList, arrayList, root);
     Assert.assertEquals(n, arrayList.size());
@@ -248,9 +248,9 @@ public class TestDirectoryDiffList{
     }
   }
 
-  static DirectoryDiff remove(int i, DirectoryDiffList skip,
+  static DirectoryDiff remove(int i, DiffListBySkipList skip,
       DiffList<DirectoryDiff> array) {
-    DirectoryDiffList.LOG.info("remove " + i);
+    DiffListBySkipList.LOG.info("remove " + i);
     final DirectoryDiff expected = array.remove(i);
     final DirectoryDiff computed = skip.remove(i);
     assertDirectoryDiff(expected, computed);

@@ -138,10 +138,14 @@ abstract class AbstractINodeDiffList<N extends INode,
     return n == 0 ? null : diffs.get(n - 1);
   }
 
+  DiffList<D> newDiffs() {
+    return new DiffListByArrayList<>(
+        INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+  }
+
   private void createDiffsIfNeeded() {
     if (diffs == null) {
-      diffs =
-          new DiffListByArrayList<>(INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+      diffs = newDiffs();
     }
   }
 

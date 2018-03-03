@@ -68,9 +68,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>
  * Once a snapshot gets deleted, the list needs to be balanced.
  */
-public class DirectoryDiffList implements DiffList<DirectoryDiff> {
+public class DiffListBySkipList implements DiffList<DirectoryDiff> {
   public static final Logger LOG =
-      LoggerFactory.getLogger(DirectoryDiffList.class);
+      LoggerFactory.getLogger(DiffListBySkipList.class);
 
   private static class SkipDiff {
     /**
@@ -240,7 +240,7 @@ public class DirectoryDiffList implements DiffList<DirectoryDiff> {
   /**
    * Constructs a new, empty instance of SkipList.
    */
-  public DirectoryDiffList(int capacity, int interval, int skipLevel) {
+  public DiffListBySkipList(int capacity, int interval, int skipLevel) {
     skipNodeList = new ArrayList<>(capacity);
     head = new SkipListNode(null, 0);
     this.maxSkipLevels = skipLevel;

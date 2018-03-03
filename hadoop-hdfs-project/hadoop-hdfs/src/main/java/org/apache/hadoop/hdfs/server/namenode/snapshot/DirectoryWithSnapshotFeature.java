@@ -334,6 +334,12 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         : new INodeDirectoryAttributes.SnapshotCopy(currentDir);
     }
 
+    @Override
+    DiffList<DirectoryDiff> newDiffs() {
+      return DirectoryDiffListFactory
+          .createDiffList(INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+    }
+
     /** Replace the given child in the created/deleted list, if there is any. */
     public boolean replaceChild(final ListType type, final INode oldChild,
         final INode newChild) {
