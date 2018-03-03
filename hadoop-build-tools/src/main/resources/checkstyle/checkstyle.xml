@@ -50,8 +50,6 @@
 <module name="Checker">
 
     <module name="SuppressWarningsFilter"/>
-    <module name="SuppressionCommentFilter"/>
-    <module name="SuppressWithNearbyCommentFilter"/>
 
     <!-- Checks that a package.html file exists for each package.     -->
     <!-- See http://checkstyle.sf.net/config_javadoc.html#PackageHtml -->
@@ -72,7 +70,8 @@
     <module name="TreeWalker">
 
         <module name="SuppressWarningsHolder"/>
-        <module name="FileContentsHolder"/>
+        <module name="SuppressionCommentFilter"/>
+        <module name="SuppressWithNearbyCommentFilter"/>
 
 
         <!-- Checks for Javadoc comments.                     -->
