@@ -24,6 +24,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-12568. Update core-default.xml to describe posixGroups support.
     (Wei-Chiu Chuang via aajisaka)
 
+    HADOOP-15283. Upgrade from findbugs 3.0.1 to spotbugs 3.1.2 in branch-2
+    to fix docker image build. (aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
