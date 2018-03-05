@@ -21,6 +21,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -560,5 +561,13 @@ public class AllocationTagsManager {
    */
   public Map<String, Long> getAllocationTagsWithCount(NodeId nodeId) {
     return globalNodeMapping.getTypeToTagsWithCount().get(nodeId);
+  }
+
+  /**
+   * @return all application IDs in a set that currently visible by
+   * the allocation tags manager.
+   */
+  public Set<ApplicationId> getAllApplicationIds() {
+    return ImmutableSet.copyOf(perAppNodeMappings.keySet());
   }
 }
