@@ -52,7 +52,8 @@ public class MiniQJMHACluster {
     private final Configuration conf;
     private StartupOption startOpt = null;
     private final MiniDFSCluster.Builder dfsBuilder;
-    
+    private boolean forceRemoteEditsOnly = false;
+
     public Builder(Configuration conf) {
       this.conf = conf;
       // most QJMHACluster tests don't need DataNodes, so we'll make
@@ -70,6 +71,11 @@ public class MiniQJMHACluster {
 
     public void startupOption(StartupOption startOpt) {
       this.startOpt = startOpt;
+    }
+
+    public Builder setForceRemoteEditsOnly(boolean val) {
+      this.forceRemoteEditsOnly = val;
+      return this;
     }
   }
   
@@ -100,7 +106,7 @@ public class MiniQJMHACluster {
         // start cluster with 2 NameNodes
         MiniDFSNNTopology topology = createDefaultTopology(basePort);
 
-        initHAConf(journalURI, builder.conf, basePort);
+        initHAConf(journalURI, builder, basePort);
 
         // First start up the NNs just to format the namespace. The MinIDFSCluster
         // has no way to just format the NameNodes without also starting them.
@@ -131,11 +137,16 @@ public class MiniQJMHACluster {
     }
   }
 
-  private Configuration initHAConf(URI journalURI, Configuration conf,
+  private Configuration initHAConf(URI journalURI, Builder builder,
       int basePort) {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
         journalURI.toString());
-    
+    if (builder.forceRemoteEditsOnly) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, journalURI.toString());
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          journalURI.toString());
+    }
+
     String address1 = "127.0.0.1:" + basePort;
     String address2 = "127.0.0.1:" + (basePort + 2);
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
