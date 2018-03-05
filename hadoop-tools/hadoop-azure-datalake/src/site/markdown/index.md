@@ -22,6 +22,10 @@ The `hadoop-azure-datalake` module provides support for integration with the
 [Azure Data Lake Store](https://azure.microsoft.com/en-in/documentation/services/data-lake-store/).
 This support comes via the JAR file `azure-datalake-store.jar`.
 
+### Related Documents
+
+* [Troubleshooting](troubleshooting_adl.html).
+
 ## Features
 
 * Read and write data stored in an Azure Data Lake Storage account.
