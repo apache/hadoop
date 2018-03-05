@@ -34,6 +34,9 @@ import org.apache.hadoop.fs.Path;
  * {@code MetadataStore} defines the set of operations that any metadata store
  * implementation must provide.  Note that all {@link Path} objects provided
  * to methods must be absolute, not relative paths.
+ * Implementations must implement any retries needed internally, such that
+ * transient errors are generally recovered from without throwing exceptions
+ * from this API.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
