@@ -431,10 +431,10 @@ public final class PlacementConstraintParser {
       }
 
       String maxCardinalityStr = resetElements.pop();
-      Integer max = toInt(maxCardinalityStr);
+      int max = toInt(maxCardinalityStr);
 
       String minCardinalityStr = resetElements.pop();
-      Integer min = toInt(minCardinalityStr);
+      int min = toInt(minCardinalityStr);
 
       ArrayList<String> targetTags = new ArrayList<>();
       while (!resetElements.empty()) {
