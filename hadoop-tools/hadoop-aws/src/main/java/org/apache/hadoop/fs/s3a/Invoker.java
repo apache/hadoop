@@ -310,6 +310,9 @@ public class Invoker {
     boolean shouldRetry;
     do {
       try {
+        if (retryCount > 0) {
+          LOG.debug("retry #{}", retryCount);
+        }
         // execute the operation, returning if successful
         return operation.execute();
       } catch (IOException | SdkBaseException e) {
@@ -327,8 +330,6 @@ public class Invoker {
             (SdkBaseException)caught);
       }
 
-
-      int attempts = retryCount + 1;
       try {
         // decide action base on operation, invocation count, etc
         retryAction = retryPolicy.shouldRetry(translated, retryCount, 0,
