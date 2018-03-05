@@ -97,7 +97,6 @@ int check_trusted_image(const struct configuration *command_config, const struct
         registry_ptr = strdup(privileged_registry[i]);
       }
       if (strncmp(image_name, registry_ptr, strlen(registry_ptr))==0) {
-        fprintf(ERRORFILE, "image: %s is trusted in %s registry.\n", image_name, privileged_registry[i]);
         found=1;
         free(registry_ptr);
         break;
