@@ -94,7 +94,7 @@ public class TestContainerDeletionChoosingPolicy {
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, conf);
+      ContainerData data = new ContainerData(containerName, new Long(i), conf);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
       Assert.assertTrue(
@@ -144,7 +144,7 @@ public class TestContainerDeletionChoosingPolicy {
     // create [numContainers + 1] containers
     for (int i = 0; i <= numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, conf);
+      ContainerData data = new ContainerData(containerName, new Long(i), conf);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
       Assert.assertTrue(

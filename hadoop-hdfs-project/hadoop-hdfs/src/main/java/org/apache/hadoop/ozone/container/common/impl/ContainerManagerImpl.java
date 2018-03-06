@@ -896,7 +896,8 @@ public class ContainerManagerImpl implements ContainerManager {
           .setReadCount(container.getReadCount())
           .setWriteCount(container.getWriteCount())
           .setReadBytes(container.getReadBytes())
-          .setWriteBytes(container.getWriteBytes());
+          .setWriteBytes(container.getWriteBytes())
+          .setContainerID(container.getContainer().getContainerID());
 
       if (container.getContainer().getHash() != null) {
         ciBuilder.setFinalhash(container.getContainer().getHash());
