@@ -45,24 +45,26 @@ public class ContainerData {
   private String dbPath;  // Path to Level DB Store.
   // Path to Physical file system where container and checksum are stored.
   private String containerFilePath;
-  private boolean open;
   private String hash;
   private AtomicLong bytesUsed;
   private long maxSize;
+  private Long containerID;
+  private OzoneProtos.LifeCycleState state;
 
   /**
    * Constructs a  ContainerData Object.
    *
    * @param containerName - Name
    */
-  public ContainerData(String containerName, Configuration conf) {
+  public ContainerData(String containerName, Long containerID,
+      Configuration conf) {
     this.metadata = new TreeMap<>();
     this.containerName = containerName;
-    this.open = true;
     this.maxSize = conf.getLong(ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY,
         ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT) * OzoneConsts.GB;
     this.bytesUsed =  new AtomicLong(0L);
-
+    this.containerID = containerID;
+    this.state = OzoneProtos.LifeCycleState.OPEN;
   }
 
   /**
@@ -74,7 +76,8 @@ public class ContainerData {
   public static ContainerData getFromProtBuf(
       ContainerProtos.ContainerData protoData, Configuration conf)
       throws IOException {
-    ContainerData data = new ContainerData(protoData.getName(), conf);
+    ContainerData data = new ContainerData(protoData.getName(),
+        protoData.getContainerID(), conf);
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
           protoData.getMetadata(x).getValue());
@@ -88,10 +91,8 @@ public class ContainerData {
       data.setDBPath(protoData.getDbPath());
     }
 
-    if (protoData.hasOpen()) {
-      data.setOpen(protoData.getOpen());
-    } else {
-      data.setOpen(true);
+    if (protoData.hasState()) {
+      data.setState(protoData.getState());
     }
 
     if(protoData.hasHash()) {
@@ -117,6 +118,7 @@ public class ContainerData {
     ContainerProtos.ContainerData.Builder builder = ContainerProtos
         .ContainerData.newBuilder();
     builder.setName(this.getContainerName());
+    builder.setContainerID(this.getContainerID());
 
     if (this.getDBPath() != null) {
       builder.setDbPath(this.getDBPath());
@@ -130,7 +132,7 @@ public class ContainerData {
       builder.setContainerPath(this.getContainerPath());
     }
 
-    builder.setOpen(this.isOpen());
+    builder.setState(this.getState());
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       OzoneProtos.KeyValue.Builder keyValBuilder =
@@ -141,6 +143,10 @@ public class ContainerData {
 
     if (this.getBytesUsed() >= 0) {
       builder.setBytesUsed(this.getBytesUsed());
+    }
+
+    if (this.getKeyCount() >= 0) {
+      builder.setKeyCount(this.getKeyCount());
     }
 
     if (this.getMaxSize() >= 0) {
@@ -246,18 +252,35 @@ public class ContainerData {
   }
 
   /**
+   * Get container ID.
+   * @return - container ID.
+   */
+  public synchronized Long getContainerID() {
+    return containerID;
+  }
+
+  public synchronized  void setState(OzoneProtos.LifeCycleState state) {
+    this.state = state;
+  }
+
+  public synchronized OzoneProtos.LifeCycleState getState() {
+    return this.state;
+  }
+
+  /**
    * checks if the container is open.
    * @return - boolean
    */
   public synchronized  boolean isOpen() {
-    return open;
+    return OzoneProtos.LifeCycleState.OPEN == state;
   }
 
   /**
    * Marks this container as closed.
    */
   public synchronized void closeContainer() {
-    setOpen(false);
+    // TODO: closed or closing here
+    setState(OzoneProtos.LifeCycleState.CLOSED);
 
     // Some thing brain dead for now. name + Time stamp of when we get the close
     // container message.
@@ -275,14 +298,6 @@ public class ContainerData {
 
   public void setHash(String hash) {
     this.hash = hash;
-  }
-
-  /**
-   * Sets the open or closed values.
-   * @param open
-   */
-  public synchronized void setOpen(boolean open) {
-    this.open = open;
   }
 
   public void setMaxSize(long maxSize) {

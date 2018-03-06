@@ -128,7 +128,7 @@ public class TestBlockDeletingService {
       int numOfChunksPerBlock, File chunkDir) throws IOException {
     for (int x = 0; x < numOfContainers; x++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, conf);
+      ContainerData data = new ContainerData(containerName, new Long(x), conf);
       mgr.createContainer(createSingleNodePipeline(containerName), data);
       data = mgr.readContainer(containerName);
       MetadataStore metadata = KeyUtils.getDB(data, conf);
@@ -216,6 +216,7 @@ public class TestBlockDeletingService {
     Assert.assertEquals(0, getUnderDeletionBlocksCount(meta));
 
     svc.shutdown();
+    shutdownContainerMangaer(containerManager);
   }
 
   @Test
@@ -244,6 +245,7 @@ public class TestBlockDeletingService {
     // Shutdown service and verify all threads are stopped
     service.shutdown();
     GenericTestUtils.waitFor(() -> service.getThreadCount() == 0, 100, 1000);
+    shutdownContainerMangaer(containerManager);
   }
 
   @Test
@@ -302,6 +304,7 @@ public class TestBlockDeletingService {
     Assert.assertTrue(!newLog.getOutput().contains(
         "Background task executes timed out, retrying in next interval"));
     svc.shutdown();
+    shutdownContainerMangaer(containerManager);
   }
 
   @Test(timeout = 30000)
@@ -333,6 +336,7 @@ public class TestBlockDeletingService {
       Assert.assertEquals(10, chunksDir.listFiles().length);
     } finally {
       service.shutdown();
+      shutdownContainerMangaer(containerManager);
     }
   }
 
@@ -376,6 +380,17 @@ public class TestBlockDeletingService {
       Assert.assertEquals(0, chunksDir.listFiles().length);
     } finally {
       service.shutdown();
+      shutdownContainerMangaer(containerManager);
+    }
+  }
+
+  private void shutdownContainerMangaer(ContainerManager mgr)
+      throws IOException {
+    mgr.writeLock();
+    try {
+      mgr.shutdown();
+    } finally {
+      mgr.writeUnlock();
     }
   }
 }

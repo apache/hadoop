@@ -201,10 +201,13 @@ message ContainerData {
   repeated KeyValue metadata = 2;
   optional string dbPath = 3;
   optional string containerPath = 4;
-  optional bool open = 5 [default = true];
   optional string hash = 6;
   optional int64 bytesUsed = 7;
   optional int64 size = 8;
+  optional int64 keyCount = 9;
+  //TODO: change required after we switch container ID from string to long
+  optional int64 containerID = 10;
+  optional LifeCycleState state = 11 [default = OPEN];
 }
 
 message ContainerMeta {
