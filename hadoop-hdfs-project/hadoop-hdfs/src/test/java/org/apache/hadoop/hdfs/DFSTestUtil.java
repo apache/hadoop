@@ -862,8 +862,8 @@ public class DFSTestUtil {
       fs.delete(p, true);
     }
     try (InputStream is = new ByteArrayInputStream(bytes);
-      FSDataOutputStream os = fs.create(
-          p, false, 4096, fs.getDefaultReplication(p), blockSize)) {
+        FSDataOutputStream os = fs.create(
+            p, false, 4096, fs.getDefaultReplication(p), blockSize)) {
       IOUtils.copyBytes(is, os, bytes.length);
     }
   }

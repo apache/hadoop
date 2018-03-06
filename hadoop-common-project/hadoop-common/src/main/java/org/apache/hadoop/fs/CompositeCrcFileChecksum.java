@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.CrcUtil;
 import org.apache.hadoop.util.DataChecksum;
 
