@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
@@ -64,6 +62,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriter
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineServerUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -89,7 +88,7 @@ public class TestHBaseStorageFlowRun {
   }
 
   @Test
-  public void checkCoProcessorOff() throws IOException, InterruptedException {
+  public void checkCoProcessorOff() throws Exception, InterruptedException {
     Configuration hbaseConf = util.getConfiguration();
     TableName table = BaseTableRW.getTableName(hbaseConf,
         FlowRunTableRW.TABLE_NAME_CONF_NAME, FlowRunTableRW.DEFAULT_TABLE_NAME);
@@ -127,19 +126,9 @@ public class TestHBaseStorageFlowRun {
   }
 
   private void checkCoprocessorExists(TableName table, boolean exists)
-      throws IOException, InterruptedException {
+      throws Exception {
     HRegionServer server = util.getRSForFirstRegionInTable(table);
-    List<Region> regions = server.getOnlineRegions(table);
-    for (Region region : regions) {
-      boolean found = false;
-      Set<String> coprocs = region.getCoprocessorHost().getCoprocessors();
-      for (String coprocName : coprocs) {
-        if (coprocName.contains("FlowRunCoprocessor")) {
-          found = true;
-        }
-      }
-      assertEquals(found, exists);
-    }
+    HBaseTimelineServerUtils.validateFlowRunCoprocessor(server, table, exists);
   }
 
   /**
