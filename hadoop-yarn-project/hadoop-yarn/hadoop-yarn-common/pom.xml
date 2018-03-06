@@ -371,6 +371,12 @@
               </excludes>
             </configuration>
           </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <excludePackageNames>org.apache.hadoop.yarn.webapp.hamlet</excludePackageNames>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>
