@@ -458,7 +458,7 @@ public class FileStatus implements Writable, Comparable<Object>,
     setSymlink((other.isSymlink() ? other.getSymlink() : null));
     setPath(other.getPath());
     attr = flags(other.hasAcl(), other.isEncrypted(), other.isErasureCoded());
-    assert (isDirectory() && getSymlink() == null) || !isDirectory();
+    assert !(isDirectory() && isSymlink()) : "A directory cannot be a symlink";
   }
 
   /**
