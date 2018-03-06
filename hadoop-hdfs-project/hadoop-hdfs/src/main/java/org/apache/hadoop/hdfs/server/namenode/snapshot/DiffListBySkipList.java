@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.
     DirectoryWithSnapshotFeature.DirectoryDiff;
@@ -30,9 +31,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Random;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * SkipList is an implementation of a data structure for storing a sorted list
@@ -72,7 +71,20 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
   public static final Logger LOG =
       LoggerFactory.getLogger(DiffListBySkipList.class);
 
+  static String childrenDiff2String(ChildrenDiff diff) {
+    if (diff == null) {
+      return "null";
+    }
+    return "@" + Integer.toHexString(System.identityHashCode(diff));
+  }
+
+  static String skip2String(SkipListNode skipTo, ChildrenDiff diff) {
+    return "->" + skipTo + ":diff=" + childrenDiff2String(diff);
+  }
+
   private static class SkipDiff {
+    static final SkipDiff[] EMPTY_ARRAY = {};
+
     /**
      * The references to the subsequent nodes.
      */
@@ -104,7 +116,7 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
 
     @Override
     public String toString() {
-      return "->" + skipTo + (diff == null? " (diff==null)": "");
+      return skip2String(skipTo, diff);
     }
   }
 
@@ -112,17 +124,19 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
    * SkipListNode is an implementation of a DirectoryDiff List node,
    * which stores a Directory Diff and references to subsequent nodes.
    */
-  private final static class SkipListNode implements Comparable<Integer> {
+  final static class SkipListNode implements Comparable<Integer> {
 
     /**
      * The data element stored in this node.
      */
-    private DirectoryDiff diff;
+    private final DirectoryDiff diff;
 
+    /** Next node. */
+    private SkipListNode next;
     /**
-     * List containing combined children diffs over a skip interval.
+     * Array containing combined children diffs over a skip interval.
      */
-    private List<SkipDiff> skipDiffList;
+    private SkipDiff[] skips;
 
     /**
      * Constructs a new instance of SkipListNode with the specified data element
@@ -132,20 +146,28 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
      */
     SkipListNode(DirectoryDiff diff, int level) {
       this.diff = diff;
-      skipDiffList = new ArrayList<>(level + 1);
+
+      this.skips = level > 0? new SkipDiff[level]: SkipDiff.EMPTY_ARRAY;
+      for(int i = 0; i < skips.length; i++) {
+        skips[i] = new SkipDiff(null);
+      }
     }
 
     /**
      * Returns the level of this SkipListNode.
      */
     public int level() {
-      return skipDiffList.size() - 1;
+      return skips.length;
     }
 
     void trim() {
-      for (int level = level();
-           level > 0 && getSkipNode(level) == null; level--) {
-        skipDiffList.remove(level);
+      int n = skips.length - 1;
+      for (; n >= 0 && skips[n] == null; n--) {
+        continue;
+      }
+      n++;
+      if (n < skips.length) {
+        skips = n > 0 ? Arrays.copyOf(skips, n) : SkipDiff.EMPTY_ARRAY;
       }
     }
 
@@ -179,39 +201,65 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
     }
 
     public void setSkipDiff(ChildrenDiff cDiff, int level) {
-      if (level < skipDiffList.size()) {
-        skipDiffList.get(level).setDiff(cDiff);
-      } else {
-        skipDiffList.add(new SkipDiff(cDiff));
+      Preconditions.checkArgument(level > 0);
+      resize(level);
+      skips[level - 1].setDiff(cDiff);
+    }
+
+    void setSkipDiff4Target(
+        SkipListNode target, int startLevel, ChildrenDiff childrenDiff) {
+      for(int i = startLevel; i <= level(); i++) {
+        if (getSkipNode(i) != target) {
+          return;
+        }
+        setSkipDiff(childrenDiff, i);
+      }
+    }
+
+    private void resize(int newLevel) {
+      int i = skips.length;
+      if (i < newLevel) {
+        skips = Arrays.copyOf(skips, newLevel);
+        for (; i < newLevel; i++) {
+          skips[i] = new SkipDiff(null);
+        }
       }
     }
 
     public void setSkipTo(SkipListNode node, int level) {
-      for (int i = skipDiffList.size(); i <= level; i++) {
-        skipDiffList.add(new SkipDiff(null));
+      if (level == 0) {
+        next = node;
+      } else {
+        resize(level);
+        skips[level - 1].setSkipTo(node);
       }
-      skipDiffList.get(level).setSkipTo(node);
     }
 
     public ChildrenDiff getChildrenDiff(int level) {
       if (level == 0) {
-        return diff.getChildrenDiff();
+        return diff != null? diff.getChildrenDiff(): null;
       } else {
-        return skipDiffList.get(level).getDiff();
+        return skips[level - 1].getDiff();
       }
     }
 
     SkipListNode getSkipNode(int level) {
-      if (level >= skipDiffList.size()) {
-        return null;
-      } else {
-        return skipDiffList.get(level).getSkipTo();
-      }
+      return level == 0? next
+          : level <= skips.length? skips[level - 1].getSkipTo()
+          : null;
     }
 
     @Override
     public String toString() {
       return diff != null ? "" + diff.getSnapshotId() : "?";
+    }
+
+    StringBuilder appendTo(StringBuilder b) {
+      b.append(this).append(": ").append(skip2String(next, getChildrenDiff(0)));
+      for(int i = 0; i < skips.length; i++) {
+        b.append(", ").append(skips[i]);
+      }
+      return b;
     }
   }
 
@@ -220,17 +268,7 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
    * The list will grow linearly once a new Directory diff gets added.
    * All the list inteface defined methods provide a linear view of the list.
    */
-  private List<SkipListNode> skipNodeList;
-
-  /**
-   * The max no of skipLevels.
-   */
-  private final int maxSkipLevels;
-
-  /**
-   * The no of diffs after which the level promotion happens.
-   */
-  private final int skipInterval;
+  private final List<SkipListNode> skipNodeList;
 
   /**
    * The head node to the list.
@@ -240,11 +278,9 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
   /**
    * Constructs a new, empty instance of SkipList.
    */
-  public DiffListBySkipList(int capacity, int interval, int skipLevel) {
+  public DiffListBySkipList(int capacity) {
     skipNodeList = new ArrayList<>(capacity);
     head = new SkipListNode(null, 0);
-    this.maxSkipLevels = skipLevel;
-    this.skipInterval = interval;
   }
 
   /**
@@ -254,13 +290,9 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
    */
   @Override
   public void addFirst(DirectoryDiff diff) {
-    final int nodeLevel = randomLevel(skipInterval, maxSkipLevels);
+    final int nodeLevel = DirectoryDiffListFactory.randomLevel();
     final SkipListNode[] nodePath = new SkipListNode[nodeLevel + 1];
-
     Arrays.fill(nodePath, head);
-    for (int level = head.level() + 1; level <= nodeLevel; level++) {
-      head.skipDiffList.add(new SkipDiff(null));
-    }
 
     final SkipListNode newNode = new SkipListNode(diff, nodeLevel);
     for (int level = 0; level <= nodeLevel; level++) {
@@ -316,15 +348,10 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
    */
   @Override
   public boolean addLast(DirectoryDiff diff) {
-    final int nodeLevel = randomLevel(skipInterval, maxSkipLevels);
-    final int headLevel = head.level();
+    final int nodeLevel = DirectoryDiffListFactory.randomLevel();
     final SkipListNode[] nodePath = findPreviousNodes(null, nodeLevel);
-    for (int level = headLevel + 1; level <= nodeLevel; level++) {
-      head.skipDiffList.add(new SkipDiff(null));
-      nodePath[level] = head;
-    }
 
-    final SkipListNode current = new SkipListNode(diff, nodeLevel);
+    final SkipListNode newNode = new SkipListNode(diff, nodeLevel);
     for (int level = 0; level <= nodeLevel; level++) {
       if (level > 0 && nodePath[level] != head) {
         //  suppose the list is like:
@@ -339,22 +366,24 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
         //  level 0:head->    s1->s2->s3->s4->s5->s6->s7->s8->s9---->s10
         //  At level 1, we combine s5, s6, s7, s8, s9 and store as s5'
         //  At level 2, we combine s1', s3', s5' and form s1'' and store at s1.
-        // Note : the last element(elemnt being added) diff is not added while
+        // Note : the last element(element being added) diff is not added while
         // combining the diffs.
-        ChildrenDiff combined = combineDiff(nodePath[level], current, level);
+        ChildrenDiff combined = combineDiff(nodePath[level], newNode, level);
         if (combined != null) {
           nodePath[level].setSkipDiff(combined, level);
         }
       }
-      nodePath[level].setSkipTo(current, level);
-      current.setSkipTo(null, level);
+      nodePath[level].setSkipTo(newNode, level);
+      newNode.setSkipTo(null, level);
     }
-    return skipNodeList.add(current);
+    return skipNodeList.add(newNode);
   }
 
   private static ChildrenDiff combineDiff(SkipListNode from, SkipListNode to,
       int level) {
     ChildrenDiff combined = null;
+    ChildrenDiff first = null;
+
     SkipListNode cur = from;
     for (int i = level - 1; i >= 0; i--) {
       while (cur != to) {
@@ -362,14 +391,20 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
         if (next == null) {
           break;
         }
-        if (combined == null) {
-          combined = new ChildrenDiff();
+
+        if (first == null) {
+          first = cur.getChildrenDiff(i);
+        } else {
+          if (combined == null) {
+            combined = new ChildrenDiff();
+            combined.combinePosterior(first, null);
+          }
+          combined.combinePosterior(cur.getChildrenDiff(i), null);
         }
-        combined.combinePosterior(cur.getChildrenDiff(i), null);
         cur = next;
       }
     }
-    return combined;
+    return combined != null? combined: first;
   }
 
   /**
@@ -383,6 +418,10 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
     return skipNodeList.get(index).getDiff();
   }
 
+  SkipListNode getSkipListNode(int i) {
+    return skipNodeList.get(i);
+  }
+
   /**
    * Removes the element at the specified position in this list.
    *
@@ -391,12 +430,20 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
    */
   @Override
   public DirectoryDiff remove(int index) {
-    SkipListNode node = getNode(index);
+    final SkipListNode node = getNode(index);
+
     int headLevel = head.level();
     int nodeLevel = node.level();
     final SkipListNode[] nodePath = findPreviousNodes(node, nodeLevel);
+
     for (int level = 0; level <= nodeLevel; level++) {
-      if (nodePath[level] != head && level > 0) {
+      final SkipListNode previous = nodePath[level];
+      final SkipListNode next = node.getSkipNode(level);
+      if (level == 0) {
+        if (next != null) {
+          previous.setSkipDiff4Target(next, 1, previous.getChildrenDiff(0));
+        }
+      } else if (previous != head) {
         // if the last snapshot is deleted, for all the skip level nodes
         // pointing to the last one, the combined children diff at each level
         // > 0 should be made null and skip pointers will be updated to null.
@@ -404,8 +451,8 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
         // the diff of deleted node at each level to the previous skip level
         // node at that level and the skip pointers will be updated to point to
         // the skip nodes of the deleted node.
-        if (index == size() - 1) {
-          nodePath[level].setSkipDiff(null, level);
+        if (next == null) {
+          previous.setSkipDiff(null, level);
         } else {
           /* Ideally at level 0, the deleted diff will be combined with
            * the previous diff , and deleted inodes will be cleaned up
@@ -414,12 +461,23 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
            * {@link AbstractINodeDiffList#deleteSnapshotDiff} function.
            */
           if (node.getChildrenDiff(level) != null) {
-            nodePath[level].getChildrenDiff(level)
-                .combinePosterior(node.getChildrenDiff(level), null);
+            final ChildrenDiff combined;
+            if (previous == nodePath[level - 1]
+                && next == node.getSkipNode(level - 1)) {
+              combined = nodePath[level - 1].getChildrenDiff(level - 1);
+              previous.setSkipDiff4Target(next, level + 1, combined);
+            } else if (next == previous.getSkipNode(level + 1)) {
+              combined = previous.getChildrenDiff(level + 1);
+            } else {
+              combined = new ChildrenDiff();
+              combined.combinePosterior(previous.getChildrenDiff(level), null);
+              combined.combinePosterior(node.getChildrenDiff(level), null);
+            }
+            previous.setSkipDiff(combined, level);
           }
         }
       }
-      nodePath[level].setSkipTo(node.getSkipNode(level), level);
+      previous.setSkipTo(next, level);
     }
     if (nodeLevel == headLevel) {
       head.trim();
@@ -478,24 +536,6 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
     return skipNodeList.get(index);
   }
 
-  /**
-   * Returns the level of the skipList node.
-   *
-   * @param skipInterval The max interval after which the next level promotion
-   *                     should happen.
-   * @param maxLevel     Maximum no of skip levels
-   * @return A value in the range 0 to maxLevel-1.
-   */
-  static int randomLevel(int skipInterval, int maxLevel) {
-    final Random r = ThreadLocalRandom.current();
-    for (int level = 0; level < maxLevel; level++) {
-      // skip to the next level with probability 1/skipInterval
-      if (r.nextInt(skipInterval) > 0) {
-        return level;
-      }
-    }
-    return maxLevel;
-  }
 
   /**
    * This function returns the minimal set of diffs required to combine in
@@ -535,10 +575,10 @@ public class DiffListBySkipList implements DiffList<DirectoryDiff> {
 
   @Override
   public String toString() {
-    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-    b.append(" head: ").append(head).append(head.skipDiffList);
+    final StringBuilder b = new StringBuilder().append(" head: ");
+    head.appendTo(b);
     for (SkipListNode n : skipNodeList) {
-      b.append("\n  ").append(n).append(n.skipDiffList);
+      n.appendTo(b.append("\n  "));
     }
     return b.toString();
   }

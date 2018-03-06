@@ -36,8 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -60,6 +58,8 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -74,7 +74,8 @@ import com.google.common.base.Preconditions;
  * if necessary.
  */
 public class SnapshotManager implements SnapshotStatsMXBean {
-  public static final Log LOG = LogFactory.getLog(SnapshotManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SnapshotManager.class);
 
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;

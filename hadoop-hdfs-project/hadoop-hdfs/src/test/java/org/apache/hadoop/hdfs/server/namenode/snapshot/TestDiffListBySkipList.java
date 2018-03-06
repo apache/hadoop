@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffListBySkipList.SkipListNode;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,13 +37,16 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.IntFunction;
+import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
 
 /**
  * This class tests the DirectoryDiffList API's.
  */
 public class TestDiffListBySkipList {
   static final int NUM_SNAPSHOTS = 100;
+  static final int MAX_LEVEL = 5;
+
   static {
     SnapshotTestHelper.disableLogs();
   }
@@ -69,6 +73,11 @@ public class TestDiffListBySkipList {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  static DiffListBySkipList newDiffListBySkipList() {
+    DirectoryDiffListFactory.init(3, MAX_LEVEL, DiffListBySkipList.LOG);
+    return new DiffListBySkipList(0);
   }
 
   static void assertList(List<INode> expected, List<INode> computed) {
@@ -114,6 +123,8 @@ public class TestDiffListBySkipList {
         }
       }
     }
+
+    assertSkipList(skip);
   }
 
   private static ChildrenDiff getCombined(
@@ -146,7 +157,7 @@ public class TestDiffListBySkipList {
     final Path root = new Path("/testAddLast" + n);
     DiffListBySkipList.LOG.info("run " + root);
 
-    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
+    final DiffListBySkipList skipList = newDiffListBySkipList();
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     INodeDirectory dir = addDiff(n, skipList, arrayList, root);
     // verify that the both the children list obtained from hdfs and
@@ -180,7 +191,7 @@ public class TestDiffListBySkipList {
     DiffList<DirectoryDiff> diffs = dir.getDiffs().asList();
     List<INode> childrenList = ReadOnlyList.Util.asList(dir.getChildrenList(
         diffs.get(0).getSnapshotId()));
-    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
+    final DiffListBySkipList skipList = newDiffListBySkipList();
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     for (int i = diffs.size() - 1; i >= 0; i--) {
       final DirectoryDiff d = diffs.get(i);
@@ -208,6 +219,7 @@ public class TestDiffListBySkipList {
       skipList.addLast(d);
       arrayList.addLast(d);
     }
+    DiffListBySkipList.LOG.info("skipList: " + skipList);
     return dir;
   }
 
@@ -228,19 +240,26 @@ public class TestDiffListBySkipList {
     testRemove("Random", n, i -> ThreadLocalRandom.current().nextInt(n - i));
   }
 
-  static void testRemove(String name, int n, IntFunction<Integer> indexFunction)
+  static void testRemove(String name, int n,
+      ToIntFunction<Integer> indexFunction) throws Exception {
+    testRemove(name, n, (skipList, i) -> indexFunction.applyAsInt(i));
+  }
+
+  static void testRemove(String name, int n,
+      ToIntBiFunction<DiffListBySkipList, Integer> indexFunction)
       throws Exception {
     final Path root = new Path("/testRemove" + name + n);
     DiffListBySkipList.LOG.info("run " + root);
 
-    final DiffListBySkipList skipList = new DiffListBySkipList(0, 3, 5);
+    final DiffListBySkipList skipList = newDiffListBySkipList();
     final DiffList<DirectoryDiff> arrayList = new DiffListByArrayList<>(0);
     final INodeDirectory dir = addDiff(n, skipList, arrayList, root);
     Assert.assertEquals(n, arrayList.size());
     Assert.assertEquals(n, skipList.size());
 
-    for(int i = 0; i < n; i++) {
-      final int index = indexFunction.apply(i);
+    for (int i = 0; i < n; i++) {
+      DiffListBySkipList.LOG.debug("i={}: {}", i, skipList);
+      final int index = indexFunction.applyAsInt(skipList, i);
       final DirectoryDiff diff = remove(index, skipList, arrayList);
       hdfs.deleteSnapshot(root, "s" + diff.getSnapshotId());
       verifyChildrenList(skipList, dir);
@@ -248,10 +267,58 @@ public class TestDiffListBySkipList {
     }
   }
 
+  @Test
+  public void testRemoveFromLowerLevel() throws Exception {
+    testRemove("FromLowerLevel", NUM_SNAPSHOTS,
+        new ToIntBiFunction<DiffListBySkipList, Integer>() {
+          private int level = 0;
+
+          @Override
+          public int applyAsInt(DiffListBySkipList skipList, Integer integer) {
+            for (; level <= MAX_LEVEL; level++) {
+              final int index = findIndex(skipList, level);
+              if (index != -1) {
+                return index;
+              }
+            }
+            return -1;
+          }
+        });
+  }
+
+  @Test
+  public void testRemoveFromUpperLevel() throws Exception {
+    testRemove("FromUpperLevel", NUM_SNAPSHOTS,
+        new ToIntBiFunction<DiffListBySkipList, Integer>() {
+      private int level = MAX_LEVEL;
+      @Override
+      public int applyAsInt(DiffListBySkipList skipList, Integer integer) {
+        for(; level >= 0; level--) {
+          final int index = findIndex(skipList, level);
+          if (index != -1) {
+            return index;
+          }
+          DiffListBySkipList.LOG.info("change from level " + level);
+        }
+        return -1;
+      }
+    });
+  }
+
+  static int findIndex(DiffListBySkipList skipList, int level) {
+    for (int i = 0; i < skipList.size(); i++) {
+      if (skipList.getSkipListNode(i).level() == level) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   static DirectoryDiff remove(int i, DiffListBySkipList skip,
       DiffList<DirectoryDiff> array) {
-    DiffListBySkipList.LOG.info("remove " + i);
     final DirectoryDiff expected = array.remove(i);
+    DiffListBySkipList.LOG
+        .info("remove " + i + ", snapshotId=" + expected.getSnapshotId());
     final DirectoryDiff computed = skip.remove(i);
     assertDirectoryDiff(expected, computed);
     return expected;
@@ -260,5 +327,31 @@ public class TestDiffListBySkipList {
   static void assertDirectoryDiff(DirectoryDiff expected,
       DirectoryDiff computed) {
     Assert.assertEquals(expected.getSnapshotId(), computed.getSnapshotId());
+  }
+
+  static void assertSkipList(DiffListBySkipList skipList) {
+    for(int i = 0; i < skipList.size(); i++) {
+      assertSkipListNode(skipList.getSkipListNode(i));
+    }
+  }
+
+  static void assertSkipListNode(SkipListNode n) {
+    for (int i = 1; i <= n.level(); i++) {
+      final SkipListNode target = n.getSkipNode(i);
+      final ChildrenDiff diff = n.getChildrenDiff(i);
+      if (target == null) {
+        if (diff != null) {
+          throw new AssertionError(
+              "Target is null but children diff is not at i=" + i + n
+                  .appendTo(new StringBuilder(": ")));
+        }
+      } else if (target == n.getSkipNode(i - 1)) {
+        if (diff != n.getChildrenDiff(i - 1)) {
+          throw new AssertionError(
+              "Same target but different children diff at i=" + i + n
+                  .appendTo(new StringBuilder(": ")));
+        }
+      }
+    }
   }
 }
