@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
@@ -995,7 +996,9 @@ public class NamenodeWebHdfsMethods {
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
+        String absolutePath = path.getAbsolutePath() == null ? null :
+            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
+        return get(ugi, delegation, username, doAsUser, absolutePath,
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             tokenKind, tokenService, noredirect, startAfter);
