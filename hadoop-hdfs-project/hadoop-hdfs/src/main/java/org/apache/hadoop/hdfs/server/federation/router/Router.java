@@ -47,6 +47,8 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Router that provides a unified view of multiple federated HDFS clusters. It
  * has two main roles: (1) federated interface and (2) NameNode heartbeat.
@@ -99,7 +101,7 @@ public class Router extends CompositeService {
   /** Interface to identify the active NN for a nameservice or blockpool ID. */
   private ActiveNamenodeResolver namenodeResolver;
   /** Updates the namenode status in the namenode resolver. */
-  private Collection<NamenodeHeartbeatService> namenodeHearbeatServices;
+  private Collection<NamenodeHeartbeatService> namenodeHeartbeatServices;
 
   /** Router metrics. */
   private RouterMetricsService metrics;
@@ -191,13 +193,13 @@ public class Router extends CompositeService {
         DFSConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT)) {
 
       // Create status updater for each monitored Namenode
-      this.namenodeHearbeatServices = createNamenodeHearbeatServices();
+      this.namenodeHeartbeatServices = createNamenodeHeartbeatServices();
       for (NamenodeHeartbeatService hearbeatService :
-          this.namenodeHearbeatServices) {
+          this.namenodeHeartbeatServices) {
         addService(hearbeatService);
       }
 
-      if (this.namenodeHearbeatServices.isEmpty()) {
+      if (this.namenodeHeartbeatServices.isEmpty()) {
         LOG.error("Heartbeat is enabled but there are no namenodes to monitor");
       }
 
@@ -398,7 +400,7 @@ public class Router extends CompositeService {
    * @return List of heartbeat services.
    */
   protected Collection<NamenodeHeartbeatService>
-      createNamenodeHearbeatServices() {
+      createNamenodeHeartbeatServices() {
 
     Map<String, NamenodeHeartbeatService> ret = new HashMap<>();
 
@@ -608,5 +610,13 @@ public class Router extends CompositeService {
     if (this.namenodeResolver != null) {
       this.namenodeResolver.setRouterId(this.routerId);
     }
+  }
+
+  /**
+   * Get the list of namenode heartbeat service.
+   */
+  @VisibleForTesting
+  Collection<NamenodeHeartbeatService> getNamenodeHearbeatServices() {
+    return this.namenodeHeartbeatServices;
   }
 }
