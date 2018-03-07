@@ -1572,6 +1572,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     long len = request.getPartSize();
     incrementPutStartStatistics(len);
     try {
+      setOptionalUploadPartRequestParameters(request);
       UploadPartResult uploadPartResult = s3.uploadPart(request);
       incrementPutCompletedStatistics(true, len);
       return uploadPartResult;
@@ -2557,6 +2558,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
         //at the moment, only supports copy using the same key
         req.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+  /**
+   * Sets server side encryption parameters to the part upload
+   * request when encryption is enabled.
+   * @param request upload part request
+   */
+  protected void setOptionalUploadPartRequestParameters(
+      UploadPartRequest request) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_C:
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
       }
       break;
     default:
