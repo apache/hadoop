@@ -52,6 +52,7 @@
 
     <hbase.version>1.2.6</hbase.version>
     <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+    <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
 
@@ -361,7 +362,7 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -610,7 +611,6 @@
         <artifactId>jsp-api</artifactId>
         <version>2.1</version>
       </dependency>
-
       <dependency>
         <groupId>org.glassfish</groupId>
         <artifactId>javax.servlet</artifactId>

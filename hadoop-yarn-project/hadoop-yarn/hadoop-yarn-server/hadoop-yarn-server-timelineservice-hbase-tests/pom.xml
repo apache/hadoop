@@ -28,7 +28,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-timelineservice-hbase-tests</artifactId>
   <version>2.10.0-SNAPSHOT</version>
-  <name>Apache Hadoop YARN Timeline Service HBase tests</name>
+  <name>Apache Hadoop YARN TimelineService HBase tests</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -85,7 +85,7 @@
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>

@@ -20,17 +20,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-yarn-server-timelineservice-hbase</artifactId>
+    <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
     <version>2.10.0-SNAPSHOT</version>
   </parent>
+
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
-  <name>Apache Hadoop YARN TimelineService HBase Client</name>
+  <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
+  <name>Apache Hadoop YARN TimelineService HBase Server 1.2</name>
+  <version>2.10.0-SNAPSHOT</version>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
-    <yarn.basedir>${project.parent.parent.parent.basedir}</yarn.basedir>
+    <yarn.basedir>${project.parent.parent.parent.parent.basedir}</yarn.basedir>
   </properties>
 
   <dependencies>
@@ -42,16 +44,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>commons-cli</groupId>
-      <artifactId>commons-cli</artifactId>
     </dependency>
 
     <dependency>
@@ -73,32 +65,8 @@
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-api</artifactId>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-common</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-common</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-timelineservice</artifactId>
     </dependency>
 
     <dependency>
@@ -162,54 +130,23 @@
         </exclusion>
       </exclusions>
     </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-          <executions>
-            <execution>
-              <goals>
-                <goal>test-jar</goal>
-              </goals>
-              <phase>test-compile</phase>
-            </execution>
-          </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
+        <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
-          <additionalDependencies>
-            <additionalDependency>
-              <groupId>junit</groupId>
-              <artifactId>junit</artifactId>
-              <version>4.11</version>
-            </additionalDependency>
-          </additionalDependencies>
+          <descriptor>src/assembly/coprocessor.xml</descriptor>
+          <attach>true</attach>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <phase>package</phase>
+            <id>create-coprocessor-jar</id>
+            <phase>prepare-package</phase>
             <goals>
-              <goal>copy-dependencies</goal>
+              <goal>single</goal>
             </goals>
-            <configuration>
-              <includeScope>runtime</includeScope>
-              <excludeGroupIds>org.slf4j,org.apache.hadoop,com.github.stephenc.findbugs</excludeGroupIds>
-              <outputDirectory>${project.build.directory}/lib</outputDirectory>
-            </configuration>
           </execution>
         </executions>
       </plugin>

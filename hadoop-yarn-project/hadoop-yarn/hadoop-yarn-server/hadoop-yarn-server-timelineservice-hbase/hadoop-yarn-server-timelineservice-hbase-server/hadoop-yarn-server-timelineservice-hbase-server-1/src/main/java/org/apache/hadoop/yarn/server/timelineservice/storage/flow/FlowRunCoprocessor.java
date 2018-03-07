@@ -102,7 +102,8 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
           tags.add(t);
         }
       }
-      byte[] tagByteArray = Tag.fromList(tags);
+      byte[] tagByteArray =
+          HBaseTimelineServerUtils.convertTagListToByteArray(tags);
       NavigableMap<byte[], List<Cell>> newFamilyMap = new TreeMap<>(
           Bytes.BYTES_COMPARATOR);
       for (Map.Entry<byte[], List<Cell>> entry : put.getFamilyCellMap()
