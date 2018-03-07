@@ -1718,13 +1718,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param datanode on which blocks are located
    * @param size total size of blocks
    */
-  public BlocksWithLocations getBlocks(DatanodeID datanode, long size)
-      throws IOException {
+  public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
+      minimumBlockSize) throws IOException {
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return getBlockManager().getBlocksWithLocations(datanode, size);
+      return getBlockManager().getBlocksWithLocations(datanode, size,
+          minimumBlockSize);
     } finally {
       readUnlock("getBlocks");
     }

@@ -785,7 +785,7 @@ public class Dispatcher {
     private long getBlockList() throws IOException {
       final long size = Math.min(getBlocksSize, blocksToReceive);
       final BlocksWithLocations newBlksLocs =
-          nnc.getBlocks(getDatanodeInfo(), size);
+          nnc.getBlocks(getDatanodeInfo(), size, getBlocksMinBlockSize);
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("getBlocks(" + getDatanodeInfo() + ", "

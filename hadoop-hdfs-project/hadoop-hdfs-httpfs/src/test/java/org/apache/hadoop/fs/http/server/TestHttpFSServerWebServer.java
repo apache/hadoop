@@ -22,9 +22,12 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.MessageFormat;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.junit.Assert;
@@ -57,7 +60,8 @@ public class TestHttpFSServerWebServer {
     System.setProperty("httpfs.home.dir", homeDir.getAbsolutePath());
     System.setProperty("httpfs.log.dir", logsDir.getAbsolutePath());
     System.setProperty("httpfs.config.dir", confDir.getAbsolutePath());
-    new File(confDir, "httpfs-signature.secret").createNewFile();
+    FileUtils.writeStringToFile(new File(confDir, "httpfs-signature.secret"),
+        "foo", Charset.forName("UTF-8"));
   }
 
   @Before
@@ -65,6 +69,8 @@ public class TestHttpFSServerWebServer {
     Configuration conf = new Configuration();
     conf.set(HttpFSServerWebServer.HTTP_HOSTNAME_KEY, "localhost");
     conf.setInt(HttpFSServerWebServer.HTTP_PORT_KEY, 0);
+    conf.set(AuthenticationFilter.SIGNATURE_SECRET_FILE,
+        "httpfs-signature.secret");
     Configuration sslConf = new Configuration();
     webServer = new HttpFSServerWebServer(conf, sslConf);
   }
@@ -76,7 +82,7 @@ public class TestHttpFSServerWebServer {
     URL url = new URL(webServer.getUrl(), MessageFormat.format(
         "/webhdfs/v1/?user.name={0}&op=liststatus", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     BufferedReader reader = new BufferedReader(
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();

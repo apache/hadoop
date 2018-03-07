@@ -958,8 +958,8 @@ public class DiskBalancer {
       ExtendedBlock block = null;
       while (block == null && currentCount < poolIters.size()) {
         currentCount++;
-        poolIndex = poolIndex++ % poolIters.size();
-        FsVolumeSpi.BlockIterator currentPoolIter = poolIters.get(poolIndex);
+        int index = poolIndex++ % poolIters.size();
+        FsVolumeSpi.BlockIterator currentPoolIter = poolIters.get(index);
         block = getBlockToCopy(currentPoolIter, item);
       }
 

@@ -228,12 +228,18 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         private List<INode> initChildren() {
           if (children == null) {
             final ChildrenDiff combined = new ChildrenDiff();
-            for (DirectoryDiff d = DirectoryDiff.this; d != null;
-                d = d.getPosterior()) {
+            DirectoryDiffList directoryDiffList =
+                currentDir.getDirectoryWithSnapshotFeature().diffs;
+            final int diffIndex =
+                directoryDiffList.getDiffIndexById(getSnapshotId());
+            List<DirectoryDiff> diffList = directoryDiffList
+                .getDiffListBetweenSnapshots(diffIndex,
+                    directoryDiffList.asList().size(), currentDir);
+            for (DirectoryDiff d : diffList) {
               combined.combinePosterior(d.diff, null);
             }
-            children = combined.apply2Current(ReadOnlyList.Util.asList(
-                currentDir.getChildrenList(Snapshot.CURRENT_STATE_ID)));
+            children = combined.apply2Current(ReadOnlyList.Util
+                .asList(currentDir.getChildrenList(Snapshot.CURRENT_STATE_ID)));
           }
           return children;
         }
@@ -334,6 +340,12 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         : new INodeDirectoryAttributes.SnapshotCopy(currentDir);
     }
 
+    @Override
+    DiffList<DirectoryDiff> newDiffs() {
+      return DirectoryDiffListFactory
+          .createDiffList(INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+    }
+
     /** Replace the given child in the created/deleted list, if there is any. */
     public boolean replaceChild(final ListType type, final INode oldChild,
         final INode newChild) {
@@ -376,6 +388,19 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         }
       }
       return NO_SNAPSHOT_ID;
+    }
+
+    /**
+     * Returns the list of diffs between two indexes corresponding to two
+     * snapshots.
+     * @param fromIndex Index of the diff corresponding to the earlier snapshot
+     * @param toIndex   Index of the diff corresponding to the later snapshot
+     * @param dir       The Directory to which the diffList belongs
+     * @return list of directory diffs
+     */
+    List<DirectoryDiff> getDiffListBetweenSnapshots(int fromIndex, int toIndex,
+        INodeDirectory dir) {
+      return asList().getMinListForRange(fromIndex, toIndex, dir);
     }
   }
   
@@ -591,7 +616,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     return diff != null ? diff.getChild(name, true, currentINode)
         : currentINode.getChild(name, Snapshot.CURRENT_STATE_ID);
   }
-  
+
   /** Used to record the modification of a symlink node */
   public INode saveChild2Snapshot(INodeDirectory currentINode,
       final INode child, final int latestSnapshotId, final INode snapshotCopy) {
@@ -672,9 +697,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
 
     boolean dirMetadataChanged = false;
     INodeDirectoryAttributes dirCopy = null;
-    DiffList<DirectoryDiff> difflist = diffs.asList();
-    for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
-      DirectoryDiff sdiff = difflist.get(i);
+    List<DirectoryDiff> difflist = diffs
+        .getDiffListBetweenSnapshots(earlierDiffIndex, laterDiffIndex,
+            currentINode);
+    for (DirectoryDiff sdiff : difflist) {
       diff.combinePosterior(sdiff.diff, null);
       if (!dirMetadataChanged && sdiff.snapshotINode != null) {
         if (dirCopy == null) {

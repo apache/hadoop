@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.AmazonS3;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -33,6 +32,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -41,6 +41,7 @@ import java.util.List;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
 
 /**
@@ -552,11 +553,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
    * @param key
    * @param delimiter
    * @return
-   * @throws IOException
+   * @throws IOException on error
    */
-
   private ListObjectsV2Result listObjectsV2(S3AFileSystem fs,
-      String key, String delimiter) throws java.io.IOException {
+      String key, String delimiter) throws IOException {
     ListObjectsV2Request k = fs.createListObjectsRequest(key, delimiter)
         .getV2();
     return invoker.retryUntranslated("list", true,
@@ -565,9 +565,4 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         });
   }
 
-  private static void clearInconsistency(S3AFileSystem fs) throws Exception {
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("s3guard");
-    InconsistentAmazonS3Client ic = InconsistentAmazonS3Client.castFrom(s3);
-    ic.clearInconsistency();
-  }
 }

@@ -49,9 +49,6 @@
     <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
-    <hbase.version>1.2.6</hbase.version>
-    <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
-    <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -148,6 +145,8 @@
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.16</snakeyaml.version>
+    <hbase.one.version>1.2.6</hbase.one.version>
+    <hbase.two.version>2.0.0-beta-1</hbase.two.version>
   </properties>
 
   <dependencyManagement>
@@ -406,12 +405,6 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timelineservice-hbase-common</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -674,7 +667,6 @@
         <artifactId>jsp-api</artifactId>
         <version>2.1</version>
       </dependency>
-
       <dependency>
         <groupId>org.glassfish</groupId>
         <artifactId>javax.servlet</artifactId>
@@ -829,7 +821,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.4</version>
+        <version>2.5</version>
       </dependency>
 
       <dependency>
@@ -1416,6 +1408,11 @@
           <version>3.8.0</version>
           <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>org.jruby.jcodings</groupId>
+        <artifactId>jcodings</artifactId>
+        <version>1.0.13</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -1883,6 +1880,59 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <!-- The profile for building against HBase 1.2.x
+     This is the default.
+     -->
+    <profile>
+      <id>hbase1</id>
+      <activation>
+        <property>
+          <name>!hbase.profile</name>
+        </property>
+      </activation>
+      <properties>
+        <hbase.version>${hbase.one.version}</hbase.version>
+        <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+        <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
+        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-1</hbase-server-artifactid>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>${hbase-server-artifactid}</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+    </profile>
+    <!-- The profile for building against HBase 2.0.0.
+     Activate using: mvn -Dhbase.profile=2.0
+    -->
+    <profile>
+      <id>hbase2</id>
+      <activation>
+        <property>
+          <name>hbase.profile</name>
+          <value>2.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hbase.version>${hbase.two.version}</hbase.version>
+        <hbase-compatible-hadoop.version>3.0.0</hbase-compatible-hadoop.version>
+        <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
+        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-2</hbase-server-artifactid>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>${hbase-server-artifactid}</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
     </profile>
   </profiles>
 

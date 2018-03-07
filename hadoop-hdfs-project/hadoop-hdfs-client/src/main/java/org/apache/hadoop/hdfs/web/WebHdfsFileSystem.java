@@ -37,6 +37,8 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -598,8 +600,32 @@ public class WebHdfsFileSystem extends FileSystem
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
+
+    Path encodedFSPath = fspath;
+    if (fspath != null) {
+      URI fspathUri = fspath.toUri();
+      String fspathUriDecoded = fspathUri.getPath();
+      try {
+        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
+      } catch (IllegalArgumentException ex) {
+        LOG.trace("Cannot decode URL encoded file", ex);
+      }
+      String[] fspathItems = fspathUriDecoded.split("/");
+
+      if (fspathItems.length > 0) {
+        StringBuilder fsPathEncodedItems = new StringBuilder();
+        for (String fsPathItem : fspathItems) {
+          fsPathEncodedItems.append("/");
+          fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
+        }
+        encodedFSPath = new Path(fspathUri.getScheme(),
+                fspathUri.getAuthority(), fsPathEncodedItems.substring(1));
+      }
+    }
+
     final String path = PATH_PREFIX
-        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
+        + (encodedFSPath == null ? "/" :
+            makeQualified(encodedFSPath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);

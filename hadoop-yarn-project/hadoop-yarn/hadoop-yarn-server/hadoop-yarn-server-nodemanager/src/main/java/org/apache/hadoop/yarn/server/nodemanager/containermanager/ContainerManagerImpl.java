@@ -109,6 +109,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService;
@@ -138,6 +139,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.tracker.NMLogAggregationStatusTracker;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.NonAggregatingLogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
@@ -226,6 +228,8 @@ public class ContainerManagerImpl extends CompositeService implements
   // NM metrics publisher is set only if the timeline service v.2 is enabled
   private NMTimelinePublisher nmMetricsPublisher;
 
+  private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
@@ -283,6 +287,10 @@ public class ContainerManagerImpl extends CompositeService implements
 
     addService(dispatcher);
 
+    this.nmLogAggregationStatusTracker = createNMLogAggregationStatusTracker(
+        context);
+    ((NMContext)context).setNMLogAggregationStatusTracker(
+        this.nmLogAggregationStatusTracker);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
@@ -558,6 +566,11 @@ public class ContainerManagerImpl extends CompositeService implements
     return nmTimelinePublisherLocal;
   }
 
+  protected NMLogAggregationStatusTracker createNMLogAggregationStatusTracker(
+      Context ctxt) {
+    return new NMLogAggregationStatusTracker(ctxt);
+  }
+
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
     return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
@@ -653,6 +666,7 @@ public class ContainerManagerImpl extends CompositeService implements
       }
     }
 
+    this.nmLogAggregationStatusTracker.start();
     LOG.info("ContainerManager started at " + connectAddress);
     LOG.info("ContainerManager bound to " + initialAddress);
   }
@@ -691,6 +705,7 @@ public class ContainerManagerImpl extends CompositeService implements
       server.stop();
     }
     super.serviceStop();
+    this.nmLogAggregationStatusTracker.stop();
   }
 
   public void cleanUpApplicationsOnNMShutDown() {

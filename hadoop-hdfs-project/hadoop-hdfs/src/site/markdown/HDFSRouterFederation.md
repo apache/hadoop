@@ -350,6 +350,11 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
 
+Note: The config *dfs.nameservice.id* is recommended to configure if *dfs.federation.router.monitor.localnamenode.enable* is enabled.
+This will allow the Router finding the local node directly. Otherwise, it will find the nameservice Id by matching namenode RPC address with the
+local node address. If multiple addresses are matched, the Router will fail to start. In addition, if the local node is in a HA mode, it is recommend
+to configure *dfs.ha.namenode.id*.
+
 ### Quota
 
 Global quota supported in federation.

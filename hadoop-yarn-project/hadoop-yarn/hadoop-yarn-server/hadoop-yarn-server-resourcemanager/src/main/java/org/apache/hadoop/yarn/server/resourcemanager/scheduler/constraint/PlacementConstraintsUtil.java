@@ -24,8 +24,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespace;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.TargetApplications;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
@@ -35,6 +38,7 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraintTransformations.SingleConstraintTransformer;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.exceptions.InvalidAllocationTagException;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.DefaultPlacementAlgorithm;
@@ -57,6 +61,53 @@ public final class PlacementConstraintsUtil {
   }
 
   /**
+   * Try to the namespace of the allocation tags from the given target key.
+   *
+   * @param targetKey
+   * @return allocation tag namespace.
+   * @throws InvalidAllocationTagsQueryException
+   * if fail to parse the target key to a valid namespace.
+   */
+  private static AllocationTagNamespace getAllocationTagNamespace(
+      ApplicationId currentAppId, String targetKey, AllocationTagsManager atm)
+      throws InvalidAllocationTagException{
+    // Parse to a valid namespace.
+    AllocationTagNamespace namespace = AllocationTagNamespace.parse(targetKey);
+
+    // TODO remove such check once we support all forms of namespaces
+    if (!namespace.isIntraApp() && !namespace.isSingleInterApp()) {
+      throw new InvalidAllocationTagException(
+          "Only support " + AllocationTagNamespaceType.SELF.toString()
+              + " and "+ AllocationTagNamespaceType.APP_ID + " now,"
+              + namespace.toString() + " is not supported yet!");
+    }
+
+    // Evaluate the namespace according to the given target
+    // before it can be consumed.
+    TargetApplications ta = new TargetApplications(currentAppId,
+        atm.getAllApplicationIds());
+    namespace.evaluate(ta);
+    return namespace;
+  }
+
+  // We return a single app Id now, because at present,
+  // only self and app-id namespace is supported. But moving on,
+  // this will return a set of application IDs.
+  // TODO support other forms of namespaces
+  private static ApplicationId getNamespaceScope(
+      AllocationTagNamespace namespace)
+      throws InvalidAllocationTagException {
+    if (namespace.getNamespaceScope() == null
+        || namespace.getNamespaceScope().size() != 1) {
+      throw new InvalidAllocationTagException(
+          "Invalid allocation tag namespace " + namespace.toString()
+              + ", expecting it is not null and only 1 application"
+              + " ID in the scope.");
+    }
+    return namespace.getNamespaceScope().iterator().next();
+  }
+
+  /**
    * Returns true if <b>single</b> placement constraint with associated
    * allocationTags and scope is satisfied by a specific scheduler Node.
    *
@@ -74,6 +125,18 @@ public final class PlacementConstraintsUtil {
       ApplicationId targetApplicationId, SingleConstraint sc,
       TargetExpression te, SchedulerNode node, AllocationTagsManager tm)
       throws InvalidAllocationTagsQueryException {
+    // Parse the allocation tag's namespace from the given target key,
+    // then evaluate the namespace and get its scope,
+    // which is represented by one or more application IDs.
+    ApplicationId effectiveAppID;
+    try {
+      AllocationTagNamespace namespace = getAllocationTagNamespace(
+          targetApplicationId, te.getTargetKey(), tm);
+      effectiveAppID = getNamespaceScope(namespace);
+    } catch (InvalidAllocationTagException e) {
+      throw new InvalidAllocationTagsQueryException(e);
+    }
+
     long minScopeCardinality = 0;
     long maxScopeCardinality = 0;
 
@@ -86,20 +149,20 @@ public final class PlacementConstraintsUtil {
     if (sc.getScope().equals(PlacementConstraints.NODE)) {
       if (checkMinCardinality) {
         minScopeCardinality = tm.getNodeCardinalityByOp(node.getNodeID(),
-            targetApplicationId, te.getTargetValues(), Long::max);
+            effectiveAppID, te.getTargetValues(), Long::max);
       }
       if (checkMaxCardinality) {
         maxScopeCardinality = tm.getNodeCardinalityByOp(node.getNodeID(),
-            targetApplicationId, te.getTargetValues(), Long::min);
+            effectiveAppID, te.getTargetValues(), Long::min);
       }
     } else if (sc.getScope().equals(PlacementConstraints.RACK)) {
       if (checkMinCardinality) {
         minScopeCardinality = tm.getRackCardinalityByOp(node.getRackName(),
-            targetApplicationId, te.getTargetValues(), Long::max);
+            effectiveAppID, te.getTargetValues(), Long::max);
       }
       if (checkMaxCardinality) {
         maxScopeCardinality = tm.getRackCardinalityByOp(node.getRackName(),
-            targetApplicationId, te.getTargetValues(), Long::min);
+            effectiveAppID, te.getTargetValues(), Long::min);
       }
     }
 

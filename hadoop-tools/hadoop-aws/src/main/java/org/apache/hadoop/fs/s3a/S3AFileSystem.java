@@ -166,6 +166,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   // APIs on an uninitialized filesystem.
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.LOG_EVENT);
+  // Only used for very specific code paths which behave differently for
+  // S3Guard. Retries FileNotFound, so be careful if you use this.
+  private Invoker s3guardInvoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      Invoker.LOG_EVENT);
   private final Retried onRetry = this::operationRetried;
   private String bucket;
   private int maxKeys;
@@ -251,6 +255,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
+      s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
+          onRetry);
       writeHelper = new WriteOperationHelper(this, getConf());
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
@@ -697,18 +703,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
 
     return new FSDataInputStream(
-        new S3AInputStream(new S3ObjectAttributes(
-          bucket,
-          pathToKey(f),
-          serverSideEncryptionAlgorithm,
-          getServerSideEncryptionKey(bucket, getConf())),
-            fileStatus.getLen(),
-            s3,
+        new S3AInputStream(new S3AReadOpContext(hasMetadataStore(),
+            invoker,
+            s3guardInvoker,
             statistics,
             instrumentation,
+            fileStatus),
+            new S3ObjectAttributes(bucket,
+                pathToKey(f),
+                serverSideEncryptionAlgorithm,
+                getServerSideEncryptionKey(bucket, getConf())),
+            fileStatus.getLen(),
+            s3,
             readAhead,
-            inputPolicy,
-            invoker));
+            inputPolicy));
   }
 
   /**
@@ -1564,6 +1572,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     long len = request.getPartSize();
     incrementPutStartStatistics(len);
     try {
+      setOptionalUploadPartRequestParameters(request);
       UploadPartResult uploadPartResult = s3.uploadPart(request);
       incrementPutCompletedStatistics(true, len);
       return uploadPartResult;
@@ -2549,6 +2558,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
         //at the moment, only supports copy using the same key
         req.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+  /**
+   * Sets server side encryption parameters to the part upload
+   * request when encryption is enabled.
+   * @param request upload part request
+   */
+  protected void setOptionalUploadPartRequestParameters(
+      UploadPartRequest request) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_C:
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
       }
       break;
     default:

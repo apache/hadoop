@@ -3579,7 +3579,7 @@ public class DataNode extends ReconfigurableBase
               + " Disk balancing not permitted.",
           DiskBalancerException.Result.DATANODE_STATUS_NOT_REGULAR);
     }
-    // TODO : Support force option
+
     this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
             skipDateCheck);
   }
