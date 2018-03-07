@@ -618,15 +618,20 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   // NamenodeProtocol
   /////////////////////////////////////////////////////
   @Override // NamenodeProtocol
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
-  throws IOException {
+  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
+      minBlockSize)
+      throws IOException {
     if(size <= 0) {
       throw new IllegalArgumentException(
-        "Unexpected not positive size: "+size);
+          "Unexpected not positive size: "+size);
+    }
+    if(minBlockSize < 0) {
+      throw new IllegalArgumentException(
+          "Unexpected not positive size: "+size);
     }
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return namesystem.getBlocks(datanode, size);
+    return namesystem.getBlocks(datanode, size, minBlockSize);
   }
 
   @Override // NamenodeProtocol
