@@ -542,6 +542,50 @@ public class TestEncryptionZones {
     assertZonePresent(null, rootDir.toString());
   }
 
+  @Test
+  public void testEZwithFullyQualifiedPath() throws Exception {
+    /* Test failure of create EZ on a directory that doesn't exist. */
+    final Path zoneParent = new Path("/zones");
+    final Path zone1 = new Path(zoneParent, "zone1");
+    final Path zone1FQP = new Path(cluster.getURI().toString(), zone1);
+    final Path zone2 = new Path(zoneParent, "zone2");
+    final Path zone2FQP = new Path(cluster.getURI().toString(), zone2);
+
+    int numZones = 0;
+    EnumSet<CreateEncryptionZoneFlag> withTrash = EnumSet
+        .of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+
+    // Create EZ with Trash using FQP
+    fsWrapper.mkdir(zone1FQP, FsPermission.getDirDefault(), true);
+    dfsAdmin.createEncryptionZone(zone1FQP, TEST_KEY, withTrash);
+    assertNumZones(++numZones);
+    assertZonePresent(TEST_KEY, zone1.toString());
+    // Check that zone1 contains a .Trash directory
+    final Path zone1Trash = new Path(zone1, fs.TRASH_PREFIX);
+    assertTrue("CreateEncryptionZone with trash enabled should create a " +
+        ".Trash directory in the EZ", fs.exists(zone1Trash));
+
+    // getEncryptionZoneForPath for FQP should return the path component
+    EncryptionZone ezForZone1 = dfsAdmin.getEncryptionZoneForPath(zone1FQP);
+    assertTrue("getEncryptionZoneForPath for fully qualified path should " +
+        "return the path component",
+        ezForZone1.getPath().equals(zone1.toString()));
+
+    // Create EZ without Trash
+    fsWrapper.mkdir(zone2FQP, FsPermission.getDirDefault(), true);
+    dfsAdmin.createEncryptionZone(zone2FQP, TEST_KEY, NO_TRASH);
+    assertNumZones(++numZones);
+    assertZonePresent(TEST_KEY, zone2.toString());
+
+    // Provision Trash on zone2 using FQP
+    dfsAdmin.provisionEncryptionZoneTrash(zone2FQP);
+    EncryptionZone ezForZone2 = dfsAdmin.getEncryptionZoneForPath(zone2FQP);
+    Path ezTrashForZone2 = new Path(ezForZone2.getPath(),
+        FileSystem.TRASH_PREFIX);
+    assertTrue("provisionEZTrash with fully qualified path should create " +
+        "trash directory ", fsWrapper.exists(ezTrashForZone2));
+  }
+
   /**
    * Test listing encryption zones as a non super user.
    */
