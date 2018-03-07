@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -105,7 +106,26 @@ public class Apps {
       }
     }
   }
-  
+
+  /**
+   *
+   * @param envString String containing env variable definitions
+   * @param classPathSeparator String that separates the definitions
+   * @return ArrayList of environment variable names
+   */
+  public static ArrayList<String> getEnvVarsFromInputString(String envString,
+      String classPathSeparator) {
+    ArrayList<String> envList = new ArrayList<>();
+    if (envString != null && envString.length() > 0) {
+      Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
+      while (varValMatcher.find()) {
+        String envVar = varValMatcher.group(1);
+        envList.add(envVar);
+      }
+    }
+    return envList;
+  }
+
   /**
    * This older version of this method is kept around for compatibility
    * because downstream frameworks like Spark and Tez have been using it.
