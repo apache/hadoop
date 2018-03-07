@@ -249,10 +249,6 @@
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_masterindex</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_SUCCESS</exclude>
-            <exclude>src/test/resources/application_123456_0001.har/_index</exclude>
-            <exclude>src/test/resources/application_123456_0001.har/part-0</exclude>
-            <exclude>src/test/resources/application_123456_0001.har/_masterindex</exclude>
-            <exclude>src/test/resources/application_123456_0001.har/_SUCCESS</exclude>
           </excludes>
         </configuration>
       </plugin>

@@ -495,21 +495,16 @@ public class LogAggregationIndexedFileController
     boolean getAllContainers = (containerIdStr == null
         || containerIdStr.isEmpty());
     long size = logRequest.getBytes();
-    RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileDir(conf, appId, logRequest.getAppOwner(),
+    List<FileStatus> nodeFiles = LogAggregationUtils
+        .getRemoteNodeFileList(conf, appId, logRequest.getAppOwner(),
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
-    if (!nodeFiles.hasNext()) {
+    if (nodeFiles.isEmpty()) {
       throw new IOException("There is no available log fils for "
           + "application:" + appId);
     }
-    List<FileStatus> allFiles = getAllNodeFiles(nodeFiles, appId);
-    if (allFiles.isEmpty()) {
-      throw new IOException("There is no available log fils for "
-          + "application:" + appId);
-    }
-    Map<String, Long> checkSumFiles = parseCheckSumFiles(allFiles);
+    Map<String, Long> checkSumFiles = parseCheckSumFiles(nodeFiles);
     List<FileStatus> fileToRead = getNodeLogFileToRead(
-        allFiles, nodeIdStr, appId);
+        nodeFiles, nodeIdStr, appId);
     byte[] buf = new byte[65535];
     for (FileStatus thisNodeFile : fileToRead) {
       String nodeName = thisNodeFile.getPath().getName();
@@ -614,21 +609,16 @@ public class LogAggregationIndexedFileController
         containerIdStr.isEmpty());
     String nodeIdStr = (nodeId == null || nodeId.isEmpty()) ? null
         : LogAggregationUtils.getNodeString(nodeId);
-    RemoteIterator<FileStatus> nodeFiles = LogAggregationUtils
-        .getRemoteNodeFileDir(conf, appId, appOwner, this.remoteRootLogDir,
+    List<FileStatus> nodeFiles = LogAggregationUtils
+        .getRemoteNodeFileList(conf, appId, appOwner, this.remoteRootLogDir,
         this.remoteRootLogDirSuffix);
-    if (!nodeFiles.hasNext()) {
+    if (nodeFiles.isEmpty()) {
       throw new IOException("There is no available log fils for "
           + "application:" + appId);
     }
-    List<FileStatus> allFiles = getAllNodeFiles(nodeFiles, appId);
-    if (allFiles.isEmpty()) {
-      throw new IOException("There is no available log fils for "
-          + "application:" + appId);
-    }
-    Map<String, Long> checkSumFiles = parseCheckSumFiles(allFiles);
+    Map<String, Long> checkSumFiles = parseCheckSumFiles(nodeFiles);
     List<FileStatus> fileToRead = getNodeLogFileToRead(
-        allFiles, nodeIdStr, appId);
+        nodeFiles, nodeIdStr, appId);
     for(FileStatus thisNodeFile : fileToRead) {
       try {
         Long checkSumIndex = checkSumFiles.get(
@@ -737,33 +727,21 @@ public class LogAggregationIndexedFileController
       List<FileStatus> nodeFiles, String nodeId, ApplicationId appId)
       throws IOException {
     List<FileStatus> listOfFiles = new ArrayList<>();
-    for (FileStatus thisNodeFile : nodeFiles) {
-      String nodeName = thisNodeFile.getPath().getName();
+    List<FileStatus> files = new ArrayList<>(nodeFiles);
+    for (FileStatus file : files) {
+      String nodeName = file.getPath().getName();
       if ((nodeId == null || nodeId.isEmpty()
           || nodeName.contains(LogAggregationUtils
           .getNodeString(nodeId))) && !nodeName.endsWith(
               LogAggregationUtils.TMP_FILE_SUFFIX) &&
           !nodeName.endsWith(CHECK_SUM_FILE_SUFFIX)) {
-        listOfFiles.add(thisNodeFile);
+        if (nodeName.equals(appId + ".har")) {
+          Path p = new Path("har:///" + file.getPath().toUri().getRawPath());
+          files = Arrays.asList(HarFs.get(p.toUri(), conf).listStatus(p));
+          continue;
+        }
+        listOfFiles.add(file);
       }
-    }
-    return listOfFiles;
-  }
-
-  private List<FileStatus> getAllNodeFiles(
-      RemoteIterator<FileStatus> nodeFiles, ApplicationId appId)
-      throws IOException {
-    List<FileStatus> listOfFiles = new ArrayList<>();
-    while (nodeFiles != null && nodeFiles.hasNext()) {
-      FileStatus thisNodeFile = nodeFiles.next();
-      String nodeName = thisNodeFile.getPath().getName();
-      if (nodeName.equals(appId + ".har")) {
-        Path p = new Path("har:///"
-            + thisNodeFile.getPath().toUri().getRawPath());
-        nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
-        continue;
-      }
-      listOfFiles.add(thisNodeFile);
     }
     return listOfFiles;
   }
