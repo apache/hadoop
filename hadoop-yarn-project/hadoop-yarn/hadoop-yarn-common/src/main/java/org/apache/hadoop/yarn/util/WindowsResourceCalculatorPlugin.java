@@ -177,7 +177,7 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttribute() {
+  public long getGpuAttributeCapacity() {
       //Not support
       return 0;
   }

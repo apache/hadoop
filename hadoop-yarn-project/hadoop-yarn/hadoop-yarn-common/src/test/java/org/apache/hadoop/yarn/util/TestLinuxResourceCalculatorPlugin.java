@@ -159,21 +159,50 @@ public class TestLinuxResourceCalculatorPlugin {
       "procs_blocked 0\n";
 
 
-  static final String GPUINFO_FORMAT =
-    "index, GPU_UUID\n" +
-      "0, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b54\n" +
-      "1, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b55\n" +
-      "2, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b56\n" +
-      "3, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b57\n" +
-      "4, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b58\n" +
-      "5, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b59\n" +
-      "6, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b51\n" +
-      "7, GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b52\n";
+  static final String NVIDIA_GPU_INFO_FORMAT =
+      "Wed Mar  7 08:28:10 2018" +
+      "+-----------------------------------------------------------------------------+" +
+      "| NVIDIA-SMI 384.111                Driver Version: 384.111                   |" +
+      "|-------------------------------+----------------------+----------------------+" +
+      "| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |" +
+        "| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |" +
+        "|===============================+======================+======================|" +
+        "|   0  Tesla K80           Off  | 00006B24:00:00.0 Off |                    0 |" +
+        "| N/A   26C    P8    34W / 149W |   3322MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   1  Tesla K80           Off  | 000083D4:00:00.0 Off |                    1 |" +
+        "| N/A   32C    P8    28W / 149W |     11MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   2  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |" +
+        "| N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   3  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |" +
+        "| N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   4  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |" +
+        "| N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   5  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |" +
+        "| N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   6  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |" +
+        "| N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "|   7  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |" +
+        "| N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |" +
+        "+-------------------------------+----------------------+----------------------+" +
+        "\r\n" +
+        "+-----------------------------------------------------------------------------+" +
+        "| Processes:                                                       GPU Memory |" +
+        "|  GPU       PID   Type   Process name                             Usage      |" +
+        "|=============================================================================|" +
+        "|  0         11111  c     test_process_.bin                        400MiB     |" +
+        "|  2         12222  c     test_process_.bin                        401MiB     |" +
+        "|  3         14441  c     test_process_.bin                        402MiB     |" +
+        "|  4         11555  c     test_process_.bin                        403MiB     |" +
+        "|  7         11777  c     test_process_.bin                        405MiB     |" +
+        "+-----------------------------------------------------------------------------+";
 
-  static final String GPU_USING_FORMAT =
-    "GPU_UUID, Process_Name\n" +
-      "GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b54, Pathon\n" +
-      "GPU-c38d8d8c-638c-ef86-5142-a93eca9b5b55, Pathon\n";
 
   static final String PORTSINFO_FORMAT =
     "Proto Recv-Q Send-Q Local Address           Foreign Address         State\n" +
@@ -280,13 +309,7 @@ public class TestLinuxResourceCalculatorPlugin {
     File tempFile = new File(FAKE_GPUFILE);
     tempFile.deleteOnExit();
     FileWriter fWriter = new FileWriter(FAKE_GPUFILE);
-    fWriter.write(GPUINFO_FORMAT);
-    fWriter.close();
-
-    tempFile = new File(FAKE_GPU_USINGFILE);
-    tempFile.deleteOnExit();
-    fWriter = new FileWriter(FAKE_GPU_USINGFILE);
-    fWriter.write(GPU_USING_FORMAT);
+    fWriter.write(NVIDIA_GPU_INFO_FORMAT);
     fWriter.close();
   }
   /**
