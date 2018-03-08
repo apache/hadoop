@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.server.timelineservice.reader.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
-import org.apache.hadoop.security.AuthenticationWithProxyUserFilter;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 
 /**
- * Filter initializer to initialize {@link AuthenticationWithProxyUserFilter}
+ * Filter initializer to initialize {@link AuthenticationFilter}
  * for ATSv2 timeline reader server with timeline service specific
  * configurations.
  */
@@ -32,9 +32,9 @@ public class TimelineReaderAuthenticationFilterInitializer extends
     TimelineAuthenticationFilterInitializer{
 
   /**
-   * Initializes {@link AuthenticationWithProxyUserFilter}
+   * Initializes {@link AuthenticationFilter}
    * <p>
-   * Propagates to {@link AuthenticationWithProxyUserFilter} configuration all
+   * Propagates to {@link AuthenticationFilter} configuration all
    * YARN configuration properties prefixed with
    * {@value TimelineAuthenticationFilterInitializer#PREFIX}.
    *
@@ -47,7 +47,7 @@ public class TimelineReaderAuthenticationFilterInitializer extends
   public void initFilter(FilterContainer container, Configuration conf) {
     setAuthFilterConfig(conf);
     container.addGlobalFilter("Timeline Reader Authentication Filter",
-        AuthenticationWithProxyUserFilter.class.getName(),
+        AuthenticationFilter.class.getName(),
         getFilterConfig());
   }
 }
