@@ -912,14 +912,26 @@ public class DFSTestUtil {
    */
   public static void appendFileNewBlock(DistributedFileSystem fs,
       Path p, int length) throws IOException {
-    assert fs.exists(p);
     assert length >= 0;
     byte[] toAppend = new byte[length];
     Random random = new Random();
     random.nextBytes(toAppend);
+    appendFileNewBlock(fs, p, toAppend);
+  }
+
+  /**
+   * Append specified bytes to a given file, starting with new block.
+   * @param fs The file system
+   * @param p Path of the file to append
+   * @param bytes The data to append
+   * @throws IOException
+   */
+  public static void appendFileNewBlock(DistributedFileSystem fs,
+      Path p, byte[] bytes) throws IOException {
+    assert fs.exists(p);
     try (FSDataOutputStream out = fs.append(p,
         EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
-      out.write(toAppend);
+      out.write(bytes);
     }
   }
 

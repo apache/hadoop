@@ -39,4 +39,9 @@ public class TestFileChecksumCompositeCrc extends TestFileChecksum {
   protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
     return true;
   }
+
+  @Override
+  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
+    return true;
+  }
 }

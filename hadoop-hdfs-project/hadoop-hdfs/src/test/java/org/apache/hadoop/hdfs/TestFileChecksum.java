@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -30,7 +31,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -73,6 +76,9 @@ public class TestFileChecksum {
   private String stripedFile1 = ecDir + "/stripedFileChecksum1";
   private String stripedFile2 = ecDir + "/stripedFileChecksum2";
   private String replicatedFile = "/replicatedFileChecksum";
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup() throws IOException {
@@ -129,6 +135,14 @@ public class TestFileChecksum {
    * same overall FileChecksum.
    */
   protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
+    return false;
+  }
+
+  /**
+   * Subclasses may override this method to indicate whether checksums are
+   * supported for files where different blocks have different bytesPerCRC.
+   */
+  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
     return false;
   }
 
@@ -518,6 +532,44 @@ public class TestFileChecksum {
     prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         bytesPerCRC - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for small file with less
+   * than file length.
+   */
+  @Test(timeout = 90000)
+  public void testMixedBytesPerChecksum() throws Exception {
+    int fileLength = bytesPerCRC * 3;
+    byte[] fileData = StripedFileTestUtil.generateBytes(fileLength);
+    String replicatedFile1 = "/replicatedFile1";
+
+    // Split file into two parts.
+    byte[] fileDataPart1 = new byte[bytesPerCRC * 2];
+    System.arraycopy(fileData, 0, fileDataPart1, 0, fileDataPart1.length);
+    byte[] fileDataPart2 = new byte[fileData.length - fileDataPart1.length];
+    System.arraycopy(
+        fileData, fileDataPart1.length, fileDataPart2, 0, fileDataPart2.length);
+
+    DFSTestUtil.writeFile(fs, new Path(replicatedFile1), fileDataPart1);
+
+    // Modify bytesPerCRC for second part that we append as separate block.
+    conf.setInt(
+        HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, bytesPerCRC / 2);
+    DFSTestUtil.appendFileNewBlock(
+        ((DistributedFileSystem) FileSystem.newInstance(conf)),
+        new Path(replicatedFile1), fileDataPart2);
+
+    if (expectSupportForSingleFileMixedBytesPerChecksum()) {
+      String replicatedFile2 = "/replicatedFile2";
+      DFSTestUtil.writeFile(fs, new Path(replicatedFile2), fileData);
+      FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
+      FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
+      Assert.assertEquals(checksum1, checksum2);
+    } else {
+      exception.expect(IOException.class);
+      FileChecksum checksum = getFileChecksum(replicatedFile1, -1, false);
+    }
   }
 
   private FileChecksum getFileChecksum(String filePath, int range,

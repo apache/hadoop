@@ -486,8 +486,16 @@ final class FileChecksumHelper {
         if (blockIdx == 0) { //first block
           setBytesPerCRC(bpc);
         } else if (bpc != getBytesPerCRC()) {
-          throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
-              + " but bytesPerCRC=" + getBytesPerCRC());
+          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
+            LOG.warn(
+                "Current bytesPerCRC={} doesn't match next bpc={}, but "
+                + "continuing anyway because we're using COMPOSITE_CRC. "
+                + "If trying to preserve CHECKSUMTYPE, only the current "
+                + "bytesPerCRC will be preserved.", getBytesPerCRC(), bpc);
+          } else {
+            throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
+                + " but bytesPerCRC=" + getBytesPerCRC());
+          }
         }
 
         //read crc-per-block
