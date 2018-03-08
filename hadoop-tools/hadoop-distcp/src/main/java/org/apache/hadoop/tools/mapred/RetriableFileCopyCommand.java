@@ -210,15 +210,30 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     if (!DistCpUtils.checksumsAreEqual(sourceFS, source, sourceChecksum,
         targetFS, target)) {
-      StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
-          .append(source).append(" and ").append(target).append(".");
-      if (sourceFS.getFileStatus(source).getBlockSize() !=
+      StringBuilder errorMessage =
+          new StringBuilder("Checksum mismatch between ")
+              .append(source).append(" and ").append(target).append(".");
+      boolean addSkipHint = false;
+      String srcScheme = sourceFS.getScheme();
+      String targetScheme = targetFS.getScheme();
+      if (!srcScheme.equals(targetScheme)
+          && !(srcScheme.contains("hdfs") && targetScheme.contains("hdfs"))) {
+        // the filesystems are different and they aren't both hdfs connectors
+        errorMessage.append("Source and destination filesystems are of"
+            + " different types\n")
+            .append("Their checksum algorithms may be incompatible");
+        addSkipHint = true;
+      } else if (sourceFS.getFileStatus(source).getBlockSize() !=
           targetFS.getFileStatus(target).getBlockSize()) {
-        errorMessage.append(" Source and target differ in block-size.")
-            .append(" Use -pb to preserve block-sizes during copy.")
-            .append(" Alternatively, skip checksum-checks altogether, using -skipCrc.")
+        errorMessage.append(" Source and target differ in block-size.\n")
+            .append(" Use -pb to preserve block-sizes during copy.");
+        addSkipHint = true;
+      }
+      if (addSkipHint) {
+        errorMessage.append(" You can skip checksum-checks altogether "
+            + " with -skipcrccheck.\n")
             .append(" (NOTE: By skipping checksums, one runs the risk of " +
-                "masking data-corruption during file-transfer.)");
+                "masking data-corruption during file-transfer.)\n");
       }
       throw new IOException(errorMessage.toString());
     }
