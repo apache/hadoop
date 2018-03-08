@@ -32,6 +32,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -303,6 +304,38 @@ public class ConnectionManager {
     return JSON.toString(info);
   }
 
+  @VisibleForTesting
+  Map<ConnectionPoolId, ConnectionPool> getPools() {
+    return this.pools;
+  }
+
+  /**
+   * Clean the unused connections for this pool.
+   *
+   * @param pool Connection pool to cleanup.
+   */
+  @VisibleForTesting
+  void cleanup(ConnectionPool pool) {
+    if (pool.getNumConnections() > pool.getMinSize()) {
+      // Check if the pool hasn't been active in a while or not 50% are used
+      long timeSinceLastActive = Time.now() - pool.getLastActiveTime();
+      int total = pool.getNumConnections();
+      int active = pool.getNumActiveConnections();
+      if (timeSinceLastActive > connectionCleanupPeriodMs ||
+          active < MIN_ACTIVE_RATIO * total) {
+        // Remove and close 1 connection
+        List<ConnectionContext> conns = pool.removeConnections(1);
+        for (ConnectionContext conn : conns) {
+          conn.close();
+        }
+        LOG.debug("Removed connection {} used {} seconds ago. " +
+                "Pool has {}/{} connections", pool.getConnectionPoolId(),
+            TimeUnit.MILLISECONDS.toSeconds(timeSinceLastActive),
+            pool.getNumConnections(), pool.getMaxSize());
+      }
+    }
+  }
+
   /**
    * Removes stale connections not accessed recently from the pool. This is
    * invoked periodically.
@@ -347,32 +380,6 @@ public class ConnectionManager {
           }
         } finally {
           writeLock.unlock();
-        }
-      }
-    }
-
-    /**
-     * Clean the unused connections for this pool.
-     *
-     * @param pool Connection pool to cleanup.
-     */
-    private void cleanup(ConnectionPool pool) {
-      if (pool.getNumConnections() > pool.getMinSize()) {
-        // Check if the pool hasn't been active in a while or not 50% are used
-        long timeSinceLastActive = Time.now() - pool.getLastActiveTime();
-        int total = pool.getNumConnections();
-        int active = getNumActiveConnections();
-        if (timeSinceLastActive > connectionCleanupPeriodMs ||
-            active < MIN_ACTIVE_RATIO * total) {
-          // Remove and close 1 connection
-          List<ConnectionContext> conns = pool.removeConnections(1);
-          for (ConnectionContext conn : conns) {
-            conn.close();
-          }
-          LOG.debug("Removed connection {} used {} seconds ago. " +
-              "Pool has {}/{} connections", pool.getConnectionPoolId(),
-              TimeUnit.MILLISECONDS.toSeconds(timeSinceLastActive),
-              pool.getNumConnections(), pool.getMaxSize());
         }
       }
     }

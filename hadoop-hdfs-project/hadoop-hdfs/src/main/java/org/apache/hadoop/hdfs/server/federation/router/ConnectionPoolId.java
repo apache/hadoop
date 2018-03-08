@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,6 +98,11 @@ public class ConnectionPoolId implements Comparable<ConnectionPoolId> {
       ret = thisTokens.compareTo(otherTokens);
     }
     return ret;
+  }
+
+  @VisibleForTesting
+  UserGroupInformation getUgi() {
+    return this.ugi;
   }
 
   /**
