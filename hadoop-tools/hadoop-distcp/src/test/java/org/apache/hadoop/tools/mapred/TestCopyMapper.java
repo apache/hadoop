@@ -44,6 +44,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
@@ -915,7 +916,7 @@ public class TestCopyMapper {
   }
 
   @Test(timeout=40000)
-  public void testCopyFailOnBlockSizeDifference() {
+  public void testCopyFailOnBlockSizeDifference() throws Exception {
     try {
       deleteState();
       createSourceDataWithDifferentBlockSize();
@@ -942,12 +943,11 @@ public class TestCopyMapper {
 
       Assert.fail("Copy should have failed because of block-size difference.");
     }
-    catch (Exception exception) {
-      // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Failure exception should have suggested the use of -pb.",
-          exception.getCause().getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.",
-          exception.getCause().getCause().getMessage().contains("skipCrc"));
+    catch (IOException exception) {
+      // Check that the exception suggests the use of -pb/-skipcrccheck.
+      Throwable cause = exception.getCause().getCause();
+      GenericTestUtils.assertExceptionContains("-pb", cause);
+      GenericTestUtils.assertExceptionContains("-skipcrccheck", cause);
     }
   }
 
