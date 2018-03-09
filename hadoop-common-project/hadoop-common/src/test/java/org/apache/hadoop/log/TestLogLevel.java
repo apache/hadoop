@@ -356,7 +356,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      GenericTestUtils.assertExceptionContains("recognized SSL message", e);
     }
   }
 
@@ -374,7 +374,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
       fail("A HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      GenericTestUtils.assertExceptionContains("recognized SSL message", e);
     }
   }
 
