@@ -414,7 +414,7 @@ public class TestRouterQuota {
 
     // mkdir and write a new file
     final FileSystem routerFs = routerContext.getFileSystem();
-    routerFs.mkdirs(new Path(path + UUID.randomUUID()));
+    routerFs.mkdirs(new Path(path + "/" + UUID.randomUUID()));
     DFSClient routerClient = routerContext.getClient();
     routerClient.create(path + "/file", true).close();
     appendData(path + "/file", routerClient, BLOCK_SIZE);

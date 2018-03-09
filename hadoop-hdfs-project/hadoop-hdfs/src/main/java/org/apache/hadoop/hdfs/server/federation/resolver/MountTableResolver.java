@@ -521,6 +521,17 @@ public class MountTableResolver
     return this.defaultNameService;
   }
 
+  private boolean isParentEntry(final String path, final String parent) {
+    if (!path.startsWith(parent)) {
+      return false;
+    }
+    if (path.equals(parent)) {
+      return true;
+    }
+    return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
+        || parent.equals(Path.SEPARATOR);
+  }
+
   /**
    * Find the deepest mount point for a path.
    * @param path Path to look for.
@@ -530,7 +541,7 @@ public class MountTableResolver
     readLock.lock();
     try {
       Entry<String, MountTable> entry = this.tree.floorEntry(path);
-      while (entry != null && !path.startsWith(entry.getKey())) {
+      while (entry != null && !isParentEntry(path, entry.getKey())) {
         entry = this.tree.lowerEntry(entry.getKey());
       }
       if (entry == null) {
