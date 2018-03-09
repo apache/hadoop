@@ -415,22 +415,6 @@
 </property>
 
 <property>
-  <name>mapreduce.map.cpu.vcores</name>
-  <value>1</value>
-  <description>
-      The number of virtual cores required for each map task.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.reduce.cpu.vcores</name>
-  <value>1</value>
-  <description>
-      The number of virtual cores required for each reduce task.
-  </description>
-</property>
-
-<property>
   <name>mapreduce.reduce.merge.inmem.threshold</name>
   <value>1000</value>
   <description>The threshold, in terms of the number of files
