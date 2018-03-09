@@ -441,7 +441,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051512412,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-0"
+                    "component_instance_name": "hello-0"
                 },
                 {
                     "id": "container_e03_1503963985568_0002_01_000002",
@@ -450,7 +450,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051536450,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-1"
+                    "component_instance_name": "hello-1"
                 }
             ],
             "launch_command": "./start_nginx.sh",
