@@ -1840,7 +1840,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * <p>
    * Will not return null. Expect IOException upon access error.
    * @param f given path
-   * @return the statuses of the files/directories in the given patch
+   * @return the statuses of the files/directories in the given path
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException see specific implementation
    */
