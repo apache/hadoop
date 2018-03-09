@@ -179,6 +179,29 @@ public class TestMountTableResolver {
   }
 
   @Test
+  public void testGetMountPoint() throws IOException {
+    // Check get the mount table entry for a path
+    MountTable mtEntry;
+    mtEntry = mountTable.getMountPoint("/");
+    assertTrue(mtEntry.getSourcePath().equals("/"));
+
+    mtEntry = mountTable.getMountPoint("/user");
+    assertTrue(mtEntry.getSourcePath().equals("/user"));
+
+    mtEntry = mountTable.getMountPoint("/user/a");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a/");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a/11");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a1");
+    assertTrue(mtEntry.getSourcePath().equals("/user"));
+  }
+
+  @Test
   public void testGetMountPoints() throws IOException {
 
     // Check getting all mount points (virtual and real) beneath a path
