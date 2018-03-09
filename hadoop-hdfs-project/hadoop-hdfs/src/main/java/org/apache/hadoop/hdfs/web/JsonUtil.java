@@ -134,6 +134,9 @@ public class JsonUtil {
     }
     if (status.isErasureCoded()) {
       m.put("ecBit", true);
+      if (status.getErasureCodingPolicy() != null) {
+        m.put("ecPolicy", status.getErasureCodingPolicy().getName());
+      }
     }
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
