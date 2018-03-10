@@ -47,6 +47,7 @@ import javax.ws.rs.core.UriBuilderException;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -63,15 +64,16 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,6 +101,7 @@ public class WebAppProxyServlet extends HttpServlet {
   private final String ahsAppPageUrlBase;
   private final String failurePageUrlBase;
   private transient YarnConfiguration conf;
+  private transient HttpClientBuilder httpClientBuilder;
 
   /**
    * HTTP methods.
@@ -141,6 +144,16 @@ public class WebAppProxyServlet extends HttpServlet {
         StringHelper.pjoin(WebAppUtils.getHttpSchemePrefix(conf)
           + WebAppUtils.getAHSWebAppURLWithoutScheme(conf),
           "applicationhistory", "app");
+    httpClientBuilder = HttpClientBuilder.create();
+    final SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    try {
+      sslFactory.init();
+      httpClientBuilder.setSSLSocketFactory(new SSLConnectionSocketFactory(
+          sslFactory.createSSLSocketFactory(), sslFactory.getHostnameVerifier()));
+    } catch (Exception e) {
+      sslFactory.destroy();
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -186,17 +199,14 @@ public class WebAppProxyServlet extends HttpServlet {
    * @param c the cookie to set if any
    * @param proxyHost the proxy host
    * @param method the http method
+   * @param httpClientBuilder the HttpClientBuilder
    * @throws IOException on any error.
    */
   private static void proxyLink(final HttpServletRequest req,
       final HttpServletResponse resp, final URI link, final Cookie c,
-      final String proxyHost, final HTTP method) throws IOException {
-    DefaultHttpClient client = new DefaultHttpClient();
-    client
-        .getParams()
-        .setParameter(ClientPNames.COOKIE_POLICY,
-            CookiePolicy.BROWSER_COMPATIBILITY)
-        .setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, true);
+      final String proxyHost, final HTTP method,
+      HttpClientBuilder httpClientBuilder) throws IOException {
+    CloseableHttpClient client = httpClientBuilder.build();
     // Make sure we send the request from the proxy address in the config
     // since that is what the AM filter checks against. IP aliasing or
     // similar could cause issues otherwise.
@@ -204,8 +214,6 @@ public class WebAppProxyServlet extends HttpServlet {
     if (LOG.isDebugEnabled()) {
       LOG.debug("local InetAddress for proxy host: {}", localAddress);
     }
-    client.getParams()
-        .setParameter(ConnRoutePNames.LOCAL_ADDRESS, localAddress);
 
     HttpRequestBase base = null;
     if (method.equals(HTTP.GET)) {
@@ -227,6 +235,14 @@ public class WebAppProxyServlet extends HttpServlet {
       resp.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
       return;
     }
+
+    RequestConfig requestConfig = RequestConfig.custom()
+        .setRedirectsEnabled(true)
+        .setCircularRedirectsAllowed(true)
+        .setCookieSpec(CookieSpecs.BROWSER_COMPATIBILITY)
+        .setLocalAddress(localAddress)
+        .build();
+    base.setConfig(requestConfig);
 
     @SuppressWarnings("unchecked")
     Enumeration<String> names = req.getHeaderNames();
@@ -453,7 +469,7 @@ public class WebAppProxyServlet extends HttpServlet {
       if (userWasWarned && userApproved) {
         c = makeCheckCookie(id, true);
       }
-      proxyLink(req, resp, toFetch, c, getProxyHost(), method);
+      proxyLink(req, resp, toFetch, c, getProxyHost(), method, httpClientBuilder);
 
     } catch(URISyntaxException | YarnException e) {
       throw new IOException(e); 
