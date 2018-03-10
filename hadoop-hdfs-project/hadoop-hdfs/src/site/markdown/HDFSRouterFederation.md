@@ -29,7 +29,9 @@ Architecture
 ------------
 
 A natural extension to this partitioned federation is to add a layer of software responsible for federating the namespaces.
-This extra layer allows users to access any subcluster transparently, lets subclusters manage their own block pools independently, and supports rebalancing of data across subclusters.
+This extra layer allows users to access any subcluster transparently, lets subclusters manage their own block pools independently, and will support rebalancing of data across subclusters later
+(see more info in [HDFS-13123](https://issues.apache.org/jira/browse/HDFS-13123)). The subclusters in RBF are not required to be the independent HDFS clusters, a normal federation cluster
+(with multiple block pools) or a mixed cluster with federation and independent cluster is also allowed.
 To accomplish these goals, the federation layer directs block accesses to the proper subcluster, maintains the state of the namespaces, and provides mechanisms for data rebalancing.
 This layer must be scalable, highly available, and fault tolerant.
 
@@ -304,8 +306,8 @@ The connection to the State Store and the internal caching at the Router.
 | Property | Default | Description|
 |:---- |:---- |:---- |
 | dfs.federation.router.store.enable | `true` | If `true`, the Router connects to the State Store. |
-| dfs.federation.router.store.serializer | `StateStoreSerializerPBImpl` | Class to serialize State Store records. |
-| dfs.federation.router.store.driver.class | `StateStoreZooKeeperImpl` | Class to implement the State Store. |
+| dfs.federation.router.store.serializer | `org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl` | Class to serialize State Store records. |
+| dfs.federation.router.store.driver.class | `org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl` | Class to implement the State Store. |
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
@@ -316,8 +318,8 @@ Forwarding client requests to the right subcluster.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.file.resolver.client.class | MountTableResolver | Class to resolve files to subclusters. |
-| dfs.federation.router.namenode.resolver.client.class | MembershipNamenodeResolver | Class to resolve the namenode for a subcluster. |
+| dfs.federation.router.file.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver` | Class to resolve files to subclusters. |
+| dfs.federation.router.namenode.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver` | Class to resolve the namenode for a subcluster. |
 
 ### Namenode monitoring
 
