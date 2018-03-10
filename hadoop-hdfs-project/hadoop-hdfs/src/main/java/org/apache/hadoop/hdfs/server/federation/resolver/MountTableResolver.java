@@ -238,9 +238,17 @@ public class MountTableResolver
       Entry<String, PathLocation> entry = it.next();
       PathLocation loc = entry.getValue();
       String src = loc.getSourcePath();
-      if (src.startsWith(path)) {
-        LOG.debug("Removing {}", src);
-        it.remove();
+      if (src != null) {
+        if (src.startsWith(path)) {
+          LOG.debug("Removing {}", src);
+          it.remove();
+        }
+      } else {
+        String dest = loc.getDefaultLocation().getDest();
+        if (dest.startsWith(path)) {
+          LOG.debug("Removing default cache {}", dest);
+          it.remove();
+        }
       }
     }
 
@@ -287,6 +295,7 @@ public class MountTableResolver
         if (!oldEntries.contains(srcPath)) {
           // Add node, it does not exist
           this.tree.put(srcPath, entry);
+          invalidateLocationCache(srcPath);
           LOG.info("Added new mount point {} to resolver", srcPath);
         } else {
           // Node exists, check for updates
