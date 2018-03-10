@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -82,6 +83,7 @@ public class TestMountTableResolver {
     Configuration conf = new Configuration();
     conf.setInt(
         FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE, TEST_MAX_CACHE_SIZE);
+    conf.setStrings(DFS_ROUTER_DEFAULT_NAMESERVICE, "0");
     mountTable = new MountTableResolver(conf);
 
     // Root mount point
@@ -478,5 +480,49 @@ public class TestMountTableResolver {
     }
     long cacheSize = mountTable.getCacheSize();
     assertTrue(cacheSize <= TEST_MAX_CACHE_SIZE);
+  }
+
+  @Test
+  public void testLocationCache() throws Exception {
+    List<MountTable> entries = new ArrayList<>();
+
+    // Add entry and test location cache
+    Map<String, String> map1 = getMountTableEntry("1", "/testlocationcache");
+    MountTable entry1 = MountTable.newInstance("/testlocationcache", map1);
+    entries.add(entry1);
+
+    Map<String, String> map2 = getMountTableEntry("2",
+            "/anothertestlocationcache");
+    MountTable entry2 = MountTable.newInstance("/anothertestlocationcache",
+            map2);
+    entries.add(entry2);
+    mountTable.refreshEntries(entries);
+    assertEquals("1->/testlocationcache/",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals("2->/anothertestlocationcache/",
+            mountTable.getDestinationForPath("/anothertestlocationcache")
+                    .toString());
+
+    // Remove the entry1
+    entries.remove(entry1);
+    mountTable.refreshEntries(entries);
+
+    // Add the default location and test location cache
+    assertEquals("0->/testlocationcache",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+
+    // Add the entry again but mount to another ns
+    Map<String, String> map3 = getMountTableEntry("3", "/testlocationcache");
+    MountTable entry3 = MountTable.newInstance("/testlocationcache", map3);
+    entries.add(entry3);
+    mountTable.refreshEntries(entries);
+
+    // Ensure location cache update correctly
+    assertEquals("3->/testlocationcache/",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+
+    // Cleanup before exit
+    mountTable.removeEntry("/testlocationcache");
+    mountTable.removeEntry("/anothertestlocationcache");
   }
 }
