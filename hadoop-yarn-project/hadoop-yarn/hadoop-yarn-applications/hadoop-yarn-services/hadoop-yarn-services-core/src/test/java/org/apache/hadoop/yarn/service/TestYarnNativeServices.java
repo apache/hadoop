@@ -144,6 +144,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     ServiceClient client = createClient();
     Service exampleApp = new Service();
     exampleApp.setName("teststartorder");
+    exampleApp.setVersion("v1");
     exampleApp.addComponent(createComponent("compa", 2, "sleep 1000"));
     Component compb = createComponent("compb", 2, "sleep 1000");
 
@@ -173,9 +174,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     Service userAApp = new Service();
     userAApp.setName(sameAppName);
+    userAApp.setVersion("v1");
     userAApp.addComponent(createComponent("comp", 1, "sleep 1000"));
+
     Service userBApp = new Service();
     userBApp.setName(sameAppName);
+    userBApp.setVersion("v1");
     userBApp.addComponent(createComponent("comp", 1, "sleep 1000"));
 
     File userABasePath = null, userBBasePath = null;
@@ -221,9 +225,12 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
     Service appA = new Service();
     appA.setName(sameAppName);
+    appA.setVersion("v1");
     appA.addComponent(createComponent("comp", 1, "sleep 1000"));
+
     Service appB = new Service();
     appB.setName(sameAppName);
+    appB.setVersion("v1");
     appB.addComponent(createComponent("comp", 1, "sleep 1000"));
 
     try {

@@ -81,6 +81,7 @@ public class ServiceTestUtils {
   protected Service createExampleApplication() {
     Service exampleApp = new Service();
     exampleApp.setName("example-app");
+    exampleApp.setVersion("v1");
     exampleApp.addComponent(createComponent("compa"));
     exampleApp.addComponent(createComponent("compb"));
     return exampleApp;

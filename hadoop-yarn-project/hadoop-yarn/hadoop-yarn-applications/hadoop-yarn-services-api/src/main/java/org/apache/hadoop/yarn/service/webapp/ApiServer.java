@@ -123,8 +123,8 @@ public class ApiServer {
             return null;
           }
         });
-        serviceStatus.setDiagnostics("Service "+service.getName() +
-            " saved.");
+        serviceStatus.setDiagnostics("Service " + service.getName() +
+            " version " + service.getVersion() + " saved.");
       } else {
         ApplicationId applicationId = ugi
             .doAs(new PrivilegedExceptionAction<ApplicationId>() {

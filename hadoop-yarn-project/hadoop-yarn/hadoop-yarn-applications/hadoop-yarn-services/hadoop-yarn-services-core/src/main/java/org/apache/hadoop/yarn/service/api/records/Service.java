@@ -47,8 +47,8 @@ import java.util.Objects;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({ "name", "state", "resource", "number_of_containers",
-    "lifetime", "containers" })
+@JsonPropertyOrder({ "name", "version", "description", "state", "resource",
+    "number_of_containers", "lifetime", "containers" })
 public class Service extends BaseResource {
   private static final long serialVersionUID = -4491694636566094885L;
 
@@ -74,6 +74,8 @@ public class Service extends BaseResource {
   @JsonProperty("kerberos_principal")
   @XmlElement(name = "kerberos_principal")
   private KerberosPrincipal kerberosPrincipal = new KerberosPrincipal();
+  private String version = null;
+  private String description = null;
 
   /**
    * A unique service name.
@@ -109,6 +111,43 @@ public class Service extends BaseResource {
 
   public void setId(String id) {
     this.id = id;
+  }
+
+  @ApiModelProperty(example = "null", required = true,
+      value = "Version of the service.")
+  @JsonProperty("version")
+  public String getVersion() {
+    return version;
+  }
+
+  public void setVersion(String version) {
+    this.version = version;
+  }
+
+  /**
+   * Version of the service.
+   */
+  public Service version(String version) {
+    this.version = version;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "Description of the service.")
+  @JsonProperty("description")
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
+  /**
+   * Description of the service.
+   */
+  public Service description(String description) {
+    this.description = description;
+    return this;
   }
 
   /**
@@ -380,6 +419,9 @@ public class Service extends BaseResource {
 
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
+    sb.append("    version: ").append(toIndentedString(version)).append("\n");
+    sb.append("    description: ").append(toIndentedString(description))
+        .append("\n");
     sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
     sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
     sb.append("    launchTime: ").append(toIndentedString(launchTime))

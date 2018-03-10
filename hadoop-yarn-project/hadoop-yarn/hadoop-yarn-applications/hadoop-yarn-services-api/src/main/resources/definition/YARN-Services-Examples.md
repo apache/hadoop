@@ -21,6 +21,8 @@ POST URL - http://localhost:9191/ws/v1/services
 ```json
 {
   "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example",
   "components" :
     [
       {
@@ -48,6 +50,8 @@ Note, lifetime value of -1 means unlimited lifetime.
 ```json
 {
     "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
     "components": [
@@ -154,6 +158,8 @@ POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
 ```json
 {
   "name": "hbase-app-1",
+  "version": "1.0.0",
+  "description": "hbase service",
   "lifetime": "3600",
   "components": [
     {
