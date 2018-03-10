@@ -340,6 +340,8 @@ a service resource has the following attributes.
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
 |name|A unique service name. If Registry DNS is enabled, the max length is 63 characters.|true|string||
+|version|Version of the service.|true|string||
+|description|Description of the service.|false|string||
 |id|A unique service id.|false|string||
 |artifact|The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).|false|Artifact||
 |resource|The default resource for all components of the service (optional).|false|Resource||
@@ -384,6 +386,8 @@ POST URL - http://localhost:8088/app/v1/services
 ```json
 {
   "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example",
   "components" :
     [
       {
@@ -417,6 +421,8 @@ Note, lifetime value of -1 means unlimited lifetime.
 ```json
 {
     "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
     "components": [
@@ -523,6 +529,8 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 ```json
 {
   "name": "hbase-app-1",
+  "version": "1.0.0",
+  "description": "hbase service",
   "lifetime": "3600",
   "components": [
     {

@@ -93,6 +93,7 @@ public class TestApiServer {
   public void testGoodCreateService() {
     Service service = new Service();
     service.setName("jenkins");
+    service.setVersion("v1");
     Artifact artifact = new Artifact();
     artifact.setType(TypeEnum.DOCKER);
     artifact.setId("jenkins:latest");

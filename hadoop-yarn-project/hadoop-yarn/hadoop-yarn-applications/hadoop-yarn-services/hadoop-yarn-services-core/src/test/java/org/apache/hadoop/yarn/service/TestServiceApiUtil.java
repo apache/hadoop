@@ -85,6 +85,17 @@ public class TestServiceApiUtil {
       assertEquals(ERROR_APPLICATION_NAME_INVALID, e.getMessage());
     }
 
+    app.setName("test");
+    // no version
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + " service with no version");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(ERROR_APPLICATION_VERSION_INVALID,
+          app.getName()), e.getMessage());
+    }
+
+    app.setVersion("v1");
     // bad format name
     String[] badNames = {"4finance", "Finance", "finance@home", LEN_64_STR};
     for (String badName : badNames) {
@@ -202,6 +213,7 @@ public class TestServiceApiUtil {
 
     Service app = new Service();
     app.setName("service1");
+    app.setVersion("v1");
     Resource res = new Resource();
     app.setResource(res);
     res.setMemory("512M");
@@ -268,6 +280,7 @@ public class TestServiceApiUtil {
   private static Service createValidApplication(String compName) {
     Service app = new Service();
     app.setName("name");
+    app.setVersion("v1");
     app.setResource(createValidResource());
     if (compName != null) {
       app.addComponent(createValidComponent(compName));
