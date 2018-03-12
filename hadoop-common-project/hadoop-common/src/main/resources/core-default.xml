@@ -1547,6 +1547,17 @@
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.etag.checksum.enabled</name>
+  <value>false</value>
+  <description>
+    Should calls to getFileChecksum() return the etag value of the remote
+    object.
+    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
+    -skipcrccheck is set.
+  </description>
+</property>
+
 <!-- Azure file system properties -->
 <property>
   <name>fs.wasb.impl</name>
