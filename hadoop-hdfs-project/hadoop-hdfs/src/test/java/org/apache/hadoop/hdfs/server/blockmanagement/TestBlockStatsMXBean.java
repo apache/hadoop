@@ -39,10 +39,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.AssumptionViolatedException;
 import org.mortbay.util.ajax.JSON;
 import org.junit.rules.Timeout;
 
@@ -160,6 +162,12 @@ public class TestBlockStatsMXBean {
 
   @Test
   public void testStorageTypeStatsWhenStorageFailed() throws Exception {
+    if (Shell.WINDOWS) {
+      // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+      // volume failures which is currently not supported on Windows.
+      throw new AssumptionViolatedException("Expected Unix-like platform");
+    }
+
     DFSTestUtil.createFile(cluster.getFileSystem(),
         new Path("/blockStatsFile1"), 1024, (short) 1, 0L);
     Map<StorageType, StorageTypeStats> storageTypeStatsMap = cluster
