@@ -2904,6 +2904,20 @@
   <!-- Distributed Node Attributes Configuration -->
   <property>
     <description>
+      This property determines which provider will be plugged by the
+      node manager to collect node-attributes. Administrators can
+      configure "config", "script" or the class name of the provider.
+      Configured class needs to extend
+      org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider.
+      If "config" is configured, then "ConfigurationNodeLabelsProvider" and if
+      "script" is configured, then "ScriptBasedNodeAttributesProvider"
+      will be used.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider</name>
+  </property>
+
+  <property>
+    <description>
       The node attribute script NM runs to collect node attributes.
       Script output Line starting with "NODE_ATTRIBUTE:" will be
       considered as a record of node attribute, attribute name, type
@@ -2937,6 +2951,16 @@
     </description>
     <name>yarn.nodemanager.node-attributes.provider.fetch-timeout-ms</name>
     <value>1200000</value>
+  </property>
+
+  <property>
+    <description>
+      When "yarn.nodemanager.node-attributes.provider" is configured with
+      "config" then ConfigurationNodeAttributesProvider fetches node attributes
+      from this parameter.
+    </description>
+    <name>yarn.nodemanager.node-attributes.provider.configured-node-attributes</name>
+    <value></value>
   </property>
 
   <property>

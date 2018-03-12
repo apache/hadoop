@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.common.base.Strings;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -126,7 +127,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   private void internalUpdateAttributesOnNodes(
       Map<String, Map<NodeAttribute, AttributeValue>> nodeAttributeMapping,
       AttributeMappingOperationType op,
-      Map<NodeAttribute, RMNodeAttribute> newAttributesToBeAdded) {
+      Map<NodeAttribute, RMNodeAttribute> newAttributesToBeAdded,
+      String attributePrefix) {
     try {
       writeLock.lock();
 
@@ -156,8 +158,9 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
           break;
         case REPLACE:
           clusterAttributes.putAll(newAttributesToBeAdded);
-          replaceNodeToAttribute(nodeHost, node.getAttributes(), attributes);
-          node.replaceAttributes(attributes);
+          replaceNodeToAttribute(nodeHost, attributePrefix,
+              node.getAttributes(), attributes);
+          node.replaceAttributes(attributes, attributePrefix);
           break;
         default:
           break;
@@ -199,15 +202,23 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   private void addNodeToAttribute(String nodeHost,
       Map<NodeAttribute, AttributeValue> attributeMappings) {
     for (NodeAttribute attribute : attributeMappings.keySet()) {
-      clusterAttributes.get(attribute).addNode(nodeHost);
+      RMNodeAttribute rmNodeAttribute = clusterAttributes.get(attribute);
+      if (rmNodeAttribute != null) {
+        rmNodeAttribute.addNode(nodeHost);
+      } else {
+        clusterAttributes.put(attribute, new RMNodeAttribute(attribute));
+      }
     }
   }
 
-  private void replaceNodeToAttribute(String nodeHost,
+  private void replaceNodeToAttribute(String nodeHost, String prefix,
       Map<NodeAttribute, AttributeValue> oldAttributeMappings,
       Map<NodeAttribute, AttributeValue> newAttributeMappings) {
     if (oldAttributeMappings != null) {
-      removeNodeFromAttributes(nodeHost, oldAttributeMappings.keySet());
+      Set<NodeAttribute> toRemoveAttributes =
+          NodeLabelUtil.filterAttributesByPrefix(
+              oldAttributeMappings.keySet(), prefix);
+      removeNodeFromAttributes(nodeHost, toRemoveAttributes);
     }
     addNodeToAttribute(nodeHost, newAttributeMappings);
   }
@@ -432,8 +443,19 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
 
     public void replaceAttributes(
-        Map<NodeAttribute, AttributeValue> attributesMapping) {
-      this.attributes.clear();
+        Map<NodeAttribute, AttributeValue> attributesMapping, String prefix) {
+      if (Strings.isNullOrEmpty(prefix)) {
+        this.attributes.clear();
+      } else {
+        Iterator<Entry<NodeAttribute, AttributeValue>> it =
+            this.attributes.entrySet().iterator();
+        while (it.hasNext()) {
+          Entry<NodeAttribute, AttributeValue> current = it.next();
+          if (prefix.equals(current.getKey().getAttributePrefix())) {
+            it.remove();
+          }
+        }
+      }
       this.attributes.putAll(attributesMapping);
     }
 
@@ -506,9 +528,10 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   @Override
-  public void replaceNodeAttributes(
+  public void replaceNodeAttributes(String prefix,
       Map<String, Set<NodeAttribute>> nodeAttributeMapping) throws IOException {
-    processMapping(nodeAttributeMapping, AttributeMappingOperationType.REPLACE);
+    processMapping(nodeAttributeMapping,
+        AttributeMappingOperationType.REPLACE, prefix);
   }
 
   @Override
@@ -526,12 +549,19 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   private void processMapping(
       Map<String, Set<NodeAttribute>> nodeAttributeMapping,
       AttributeMappingOperationType mappingType) throws IOException {
+    processMapping(nodeAttributeMapping, mappingType, null);
+  }
+
+  private void processMapping(
+      Map<String, Set<NodeAttribute>> nodeAttributeMapping,
+      AttributeMappingOperationType mappingType, String attributePrefix)
+      throws IOException {
     Map<NodeAttribute, RMNodeAttribute> newAttributesToBeAdded =
         new HashMap<>();
     Map<String, Map<NodeAttribute, AttributeValue>> validMapping =
         validate(nodeAttributeMapping, newAttributesToBeAdded, false);
 
     internalUpdateAttributesOnNodes(validMapping, mappingType,
-        newAttributesToBeAdded);
+        newAttributesToBeAdded, attributePrefix);
   }
 }

@@ -35,15 +35,18 @@ public abstract class NodeAttributesManager extends AbstractService {
 
   /**
    * To completely replace the mappings for a given node with the new Set of
-   * Attributes. If the mapping contains an attribute whose type does not match
-   * a previously existing Attribute under the same prefix (name space) then
-   * exception is thrown. Key would be name of the node and value would be set
-   * of Attributes to be mapped.
+   * Attributes which are under a given prefix. If the mapping contains an
+   * attribute whose type does not match a previously existing Attribute
+   * under the same prefix (name space) then exception is thrown.
+   * Key would be name of the node and value would be set of Attributes to
+   * be mapped. If the prefix is null, then all node attributes will be
+   * replaced regardless of what prefix they have.
    *
-   * @param nodeAttributeMapping
-   * @throws IOException
+   * @param prefix node attribute prefix
+   * @param nodeAttributeMapping host name to a set of node attributes mapping
+   * @throws IOException if failed to replace attributes
    */
-  public abstract void replaceNodeAttributes(
+  public abstract void replaceNodeAttributes(String prefix,
       Map<String, Set<NodeAttribute>> nodeAttributeMapping) throws IOException;
 
   /**

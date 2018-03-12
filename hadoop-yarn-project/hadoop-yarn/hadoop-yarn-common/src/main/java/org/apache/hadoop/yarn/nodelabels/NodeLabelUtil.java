@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import java.io.IOException;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for all NodeLabel and NodeAttribute operations.
@@ -124,5 +125,23 @@ public final class NodeLabelUtil {
         checkAndThrowLabelName(nodeAttribute.getAttributeName());
       }
     }
+  }
+
+  /**
+   * Filter a set of node attributes by a given prefix. Returns a filtered
+   * set of node attributes whose prefix equals the given prefix.
+   * If the prefix is null or empty, then the original set is returned.
+   * @param attributeSet node attribute set
+   * @param prefix node attribute prefix
+   * @return a filtered set of node attributes
+   */
+  public static Set<NodeAttribute> filterAttributesByPrefix(
+      Set<NodeAttribute> attributeSet, String prefix) {
+    if (Strings.isNullOrEmpty(prefix)) {
+      return attributeSet;
+    }
+    return attributeSet.stream().filter(
+        nodeAttribute -> prefix.equals(nodeAttribute.getAttributePrefix()))
+        .collect(Collectors.toSet());
   }
 }

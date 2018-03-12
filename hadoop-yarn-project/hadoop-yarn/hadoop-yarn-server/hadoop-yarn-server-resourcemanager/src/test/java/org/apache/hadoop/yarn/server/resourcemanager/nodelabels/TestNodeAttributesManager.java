@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.nodelabels.AttributeValue;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
+import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
@@ -254,5 +256,102 @@ public class TestNodeAttributesManager {
     allAttributesPerPrefix = attributesManager
         .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[0]));
     Assert.assertEquals(2, allAttributesPerPrefix.size());
+  }
+
+  @Test
+  public void testReplaceNodeAttributes() throws IOException {
+    Map<String, Set<NodeAttribute>> toAddAttributes = new HashMap<>();
+    Map<String, Set<NodeAttribute>> toReplaceMap = new HashMap<>();
+    Map<NodeAttribute, AttributeValue> nodeAttributes;
+    Set<NodeAttribute> filteredAttributes;
+    Set<NodeAttribute> clusterAttributes;
+
+    // Add 3 attributes to host1
+    //  yarn.test1.io/A1=host1_v1_1
+    //  yarn.test1.io/A2=host1_v1_2
+    //  yarn.test1.io/A3=host1_v1_3
+    toAddAttributes.put(HOSTNAMES[0],
+        createAttributesForTest(PREFIXES[0], 3, "A", "host1_v1"));
+
+    attributesManager.addNodeAttributes(toAddAttributes);
+    nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
+    Assert.assertEquals(3, nodeAttributes.size());
+
+    // Add 10 distributed node attributes to host1
+    //  nn.yarn.io/dist-node-attribute1=dist_v1_1
+    //  nn.yarn.io/dist-node-attribute2=dist_v1_2
+    //  ...
+    //  nn.yarn.io/dist-node-attribute10=dist_v1_10
+    toAddAttributes.clear();
+    toAddAttributes.put(HOSTNAMES[0],
+        createAttributesForTest(NodeAttribute.PREFIX_DISTRIBUTED,
+            10, "dist-node-attribute", "dist_v1"));
+    attributesManager.addNodeAttributes(toAddAttributes);
+    nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
+    Assert.assertEquals(13, nodeAttributes.size());
+    clusterAttributes = attributesManager.getClusterNodeAttributes(
+        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
+    Assert.assertEquals(13, clusterAttributes.size());
+
+    // Replace by prefix
+    // Same distributed attributes names, but different values.
+    Set<NodeAttribute> toReplaceAttributes =
+        createAttributesForTest(NodeAttribute.PREFIX_DISTRIBUTED, 5,
+            "dist-node-attribute", "dist_v2");
+
+    attributesManager.replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
+        ImmutableMap.of(HOSTNAMES[0], toReplaceAttributes));
+    nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
+    Assert.assertEquals(8, nodeAttributes.size());
+    clusterAttributes = attributesManager.getClusterNodeAttributes(
+        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED, PREFIXES[0]));
+    Assert.assertEquals(8, clusterAttributes.size());
+
+    // Now we have 5 distributed attributes
+    filteredAttributes = NodeLabelUtil.filterAttributesByPrefix(
+        nodeAttributes.keySet(), NodeAttribute.PREFIX_DISTRIBUTED);
+    Assert.assertEquals(5, filteredAttributes.size());
+    // Values are updated to have prefix dist_v2
+    Assert.assertTrue(filteredAttributes.stream().allMatch(
+        nodeAttribute ->
+            nodeAttribute.getAttributeValue().startsWith("dist_v2")));
+
+    // We still have 3 yarn.test1.io attributes
+    filteredAttributes = NodeLabelUtil.filterAttributesByPrefix(
+        nodeAttributes.keySet(), PREFIXES[0]);
+    Assert.assertEquals(3, filteredAttributes.size());
+
+    // Replace with prefix
+    // Different attribute names
+    toReplaceAttributes =
+        createAttributesForTest(NodeAttribute.PREFIX_DISTRIBUTED, 1,
+            "dist-node-attribute-v2", "dist_v3");
+    attributesManager.replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
+        ImmutableMap.of(HOSTNAMES[0], toReplaceAttributes));
+    nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
+    Assert.assertEquals(4, nodeAttributes.size());
+    clusterAttributes = attributesManager.getClusterNodeAttributes(
+        Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED));
+    Assert.assertEquals(1, clusterAttributes.size());
+    NodeAttribute att = clusterAttributes.iterator().next();
+    Assert.assertEquals("dist-node-attribute-v2_0", att.getAttributeName());
+    Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+        att.getAttributePrefix());
+    Assert.assertEquals("dist_v3_0", att.getAttributeValue());
+
+    // Replace all attributes
+    toReplaceMap.put(HOSTNAMES[0],
+        createAttributesForTest(PREFIXES[1], 2, "B", "B_v1"));
+    attributesManager.replaceNodeAttributes(null, toReplaceMap);
+
+    nodeAttributes = attributesManager.getAttributesForNode(HOSTNAMES[0]);
+    Assert.assertEquals(2, nodeAttributes.size());
+    clusterAttributes = attributesManager
+        .getClusterNodeAttributes(Sets.newHashSet(PREFIXES[1]));
+    Assert.assertEquals(2, clusterAttributes.size());
+    clusterAttributes = attributesManager
+        .getClusterNodeAttributes(Sets.newHashSet(
+            NodeAttribute.PREFIX_DISTRIBUTED));
+    Assert.assertEquals(0, clusterAttributes.size());
   }
 }

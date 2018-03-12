@@ -160,7 +160,7 @@ public class TestNodeManager {
 
       // With valid whitelisted configurations
       conf.set(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
-          YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER);
+          YarnConfiguration.CONFIG_NODE_DESCRIPTOR_PROVIDER);
       labelsProviderService = nodeManager.createNodeLabelsProvider(conf);
       Assert.assertNotNull("LabelsProviderService should be initialized When "
           + "node labels provider class is configured", labelsProviderService);
