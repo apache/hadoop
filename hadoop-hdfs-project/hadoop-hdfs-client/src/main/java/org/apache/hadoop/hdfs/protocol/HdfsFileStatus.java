@@ -50,7 +50,32 @@ public interface HdfsFileStatus
     HAS_ACL,
     HAS_CRYPT,
     HAS_EC,
-    SNAPSHOT_ENABLED
+    SNAPSHOT_ENABLED;
+
+    /**
+     * Generates an enum set of Flags from a set of attr flags.
+     * @param attr Set of attr flags
+     * @return EnumSet of Flags
+     */
+    public static EnumSet<Flags> convert(Set<AttrFlags> attr) {
+      if (attr.isEmpty()) {
+        return EnumSet.noneOf(Flags.class);
+      }
+      EnumSet<Flags> flags = EnumSet.noneOf(Flags.class);
+      if (attr.contains(AttrFlags.HAS_ACL)) {
+        flags.add(Flags.HAS_ACL);
+      }
+      if (attr.contains(AttrFlags.HAS_EC)) {
+        flags.add(Flags.HAS_EC);
+      }
+      if (attr.contains(AttrFlags.HAS_CRYPT)) {
+        flags.add(Flags.HAS_CRYPT);
+      }
+      if (attr.contains(AttrFlags.SNAPSHOT_ENABLED)) {
+        flags.add(Flags.SNAPSHOT_ENABLED);
+      }
+      return flags;
+    }
   }
 
   /**

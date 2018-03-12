@@ -628,7 +628,7 @@ public class TestWebHDFS {
   }
 
   /**
-   * Test snapshot deletion through WebHdfs
+   * Test snapshot deletion through WebHdfs.
    */
   @Test
   public void testWebHdfsDeleteSnapshot() throws Exception {
@@ -673,7 +673,7 @@ public class TestWebHDFS {
   }
 
   /**
-   * Test snapshot diff through WebHdfs
+   * Test snapshot diff through WebHdfs.
    */
   @Test
   public void testWebHdfsSnapshotDiff() throws Exception {
@@ -738,6 +738,75 @@ public class TestWebHDFS {
     }
   }
 
+  /**
+   * Test snapshottable directory list through WebHdfs.
+   */
+  @Test
+  public void testWebHdfsSnapshottableDirectoryList() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final Path foo = new Path("/foo");
+      final Path bar = new Path("/bar");
+      dfs.mkdirs(foo);
+      dfs.mkdirs(bar);
+      dfs.allowSnapshot(foo);
+      dfs.allowSnapshot(bar);
+      Path file0 = new Path(foo, "file0");
+      DFSTestUtil.createFile(dfs, file0, 100, (short) 1, 0);
+      Path file1 = new Path(bar, "file1");
+      DFSTestUtil.createFile(dfs, file1, 100, (short) 1, 0);
+      SnapshottableDirectoryStatus[] statuses =
+          webHdfs.getSnapshottableDirectoryList();
+      SnapshottableDirectoryStatus[] dfsStatuses =
+          dfs.getSnapshottableDirListing();
+
+      for (int i = 0; i < dfsStatuses.length; i++) {
+        Assert.assertEquals(statuses[i].getSnapshotNumber(),
+            dfsStatuses[i].getSnapshotNumber());
+        Assert.assertEquals(statuses[i].getSnapshotQuota(),
+            dfsStatuses[i].getSnapshotQuota());
+        Assert.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
+            dfsStatuses[i].getParentFullPath()));
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
+            statuses[i].getDirStatus().getChildrenNum());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
+            statuses[i].getDirStatus().getModificationTime());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
+            statuses[i].getDirStatus().isDir());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
+            statuses[i].getDirStatus().getAccessTime());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
+            statuses[i].getDirStatus().getPermission());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
+            statuses[i].getDirStatus().getOwner());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
+            statuses[i].getDirStatus().getGroup());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
+            statuses[i].getDirStatus().getPath());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
+            statuses[i].getDirStatus().getFileId());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
+            statuses[i].getDirStatus().hasAcl());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
+            statuses[i].getDirStatus().isEncrypted());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
+            statuses[i].getDirStatus().isErasureCoded());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
+            statuses[i].getDirStatus().isSnapshotEnabled());
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test
   public void testWebHdfsCreateNonRecursive() throws IOException, URISyntaxException {
     MiniDFSCluster cluster = null;
@@ -763,7 +832,7 @@ public class TestWebHDFS {
     }
   }
   /**
-   * Test snapshot rename through WebHdfs
+   * Test snapshot rename through WebHdfs.
    */
   @Test
   public void testWebHdfsRenameSnapshot() throws Exception {

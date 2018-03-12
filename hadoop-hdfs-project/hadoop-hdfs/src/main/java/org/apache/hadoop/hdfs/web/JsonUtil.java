@@ -530,4 +530,24 @@ public class JsonUtil {
     }
     return m;
   }
+
+  public static String toJsonString(
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
+    Object[] a = new Object[snapshottableDirectoryList.length];
+    for (int i = 0; i < snapshottableDirectoryList.length; i++) {
+      a[i] = toJsonMap(snapshottableDirectoryList[i]);
+    }
+    return toJsonString("SnapshottableDirectoryList", a);
+  }
+
+  private static Object toJsonMap(
+      SnapshottableDirectoryStatus snapshottableDirectoryStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotNumber", snapshottableDirectoryStatus.getSnapshotNumber());
+    m.put("snapshotQuota", snapshottableDirectoryStatus.getSnapshotQuota());
+    m.put("parentFullPath", DFSUtilClient
+        .bytes2String(snapshottableDirectoryStatus.getParentFullPath()));
+    m.put("dirStatus", toJsonMap(snapshottableDirectoryStatus.getDirStatus()));
+    return m;
+  }
 }

@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -1202,6 +1203,12 @@ public class NamenodeWebHdfsMethods {
           cp.getSnapshotDiffReport(fullpath, oldSnapshotName.getValue(),
               snapshotName.getValue());
       final String js = JsonUtil.toJsonString(diffReport);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTTABLEDIRECTORYLIST: {
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList =
+          cp.getSnapshottableDirListing();
+      final String js = JsonUtil.toJsonString(snapshottableDirectoryList);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
