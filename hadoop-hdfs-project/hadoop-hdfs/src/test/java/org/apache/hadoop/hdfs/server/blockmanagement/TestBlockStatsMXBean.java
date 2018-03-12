@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -161,10 +160,6 @@ public class TestBlockStatsMXBean {
 
   @Test
   public void testStorageTypeStatsWhenStorageFailed() throws Exception {
-    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
-    // volume failures which is currently not supported on Windows.
-    assumeNotWindows();
-
     DFSTestUtil.createFile(cluster.getFileSystem(),
         new Path("/blockStatsFile1"), 1024, (short) 1, 0L);
     Map<StorageType, StorageTypeStats> storageTypeStatsMap = cluster
