@@ -1656,11 +1656,48 @@ in these metrics.
 
 ##<a name="further_reading"></a> Other Topics
 
-### Copying Data with distcp
+### <a name="distcp"></a> Copying Data with distcp
 
-Hadoop's `distcp` application can be used to copy data between a Hadoop
+Hadoop's `distcp` tool is often used to copy data between a Hadoop
 cluster and Amazon S3.
 See [Copying Data Between a Cluster and Amazon S3](https://hortonworks.github.io/hdp-aws/s3-copy-data/index.html)
 for details on S3 copying specifically.
 
+The `distcp update` command tries to do incremental updates of data.
+It is straightforward to verify when files do not match when they are of
+different length, but not when they are the same size.
+
+Distcp addresses this by comparing file checksums on the source and destination
+filesystems, which it tries to do *even if the filesystems have incompatible
+checksum algorithms*.
+
+The S3A connector can provide the HTTP etag header to the caller as the
+checksum of the uploaded file. Doing so will break distcp operations
+between hdfs and s3a.
+
+For this reason, the etag-as-checksum feature is disabled by default.
+
+```xml
+<property>
+  <name>fs.s3a.etag.checksum.enabled</name>
+  <value>false</value>
+  <description>
+    Should calls to getFileChecksum() return the etag value of the remote
+    object.
+    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
+    -skipcrccheck is set.
+  </description>
+</property>
+```
+
+If enabled, `distcp` between two S3 buckets can use the checksum to compare
+objects. Their checksums should be identical if they were either each uploaded
+as a single file PUT, or, if in a multipart PUT, in blocks of the same size,
+as configured by the value `fs.s3a.multipart.size`.
+
+To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
+
+```bash
+hadoop distcp -update -skipcrccheck /user/alice/datasets s3a://alice-backup/datasets
+```
 
