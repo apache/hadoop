@@ -74,6 +74,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Shell;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -83,6 +84,7 @@ import com.google.common.base.Supplier;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.AssumptionViolatedException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -307,6 +309,12 @@ public class TestDataNodeVolumeFailure {
   @Test(timeout=10000)
   public void testDataNodeShutdownAfterNumFailedVolumeExceedsTolerated()
       throws InterruptedException, IOException {
+    if (Shell.WINDOWS) {
+      // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+      // volume failures which is currently not supported on Windows.
+      throw new AssumptionViolatedException("Expected Unix-like platform");
+    }
+
     // make both data directories to fail on dn0
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
@@ -326,6 +334,12 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testVolumeFailureRecoveredByHotSwappingVolume()
       throws InterruptedException, ReconfigurationException, IOException {
+    if (Shell.WINDOWS) {
+      // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+      // volume failures which is currently not supported on Windows.
+      throw new AssumptionViolatedException("Expected Unix-like platform");
+    }
+
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
     final DataNode dn0 = cluster.getDataNodes().get(0);
@@ -364,6 +378,12 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testTolerateVolumeFailuresAfterAddingMoreVolumes()
       throws InterruptedException, ReconfigurationException, IOException {
+    if (Shell.WINDOWS) {
+      // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+      // volume failures which is currently not supported on Windows.
+      throw new AssumptionViolatedException("Expected Unix-like platform");
+    }
+
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
     final File dn0VolNew = new File(dataDir, "data_new");
