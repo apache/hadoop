@@ -527,7 +527,7 @@ public class DistCpUtils {
   /**
    * Utility to compare checksums for the paths specified.
    *
-   * If checksums's can't be retrieved, it doesn't fail the test
+   * If checksums can't be retrieved, it doesn't fail the test
    * Only time the comparison would fail is when checksums are
    * available and they don't match
    *
