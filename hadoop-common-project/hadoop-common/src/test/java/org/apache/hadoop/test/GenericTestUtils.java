@@ -286,7 +286,7 @@ public abstract class GenericTestUtils {
   public static void assertExists(File f) {
     Assert.assertTrue("File " + f + " should exist", f.exists());
   }
-    
+
   /**
    * List all of the files in 'dir' that match the regex 'pattern'.
    * Then check that this list is identical to 'expectedMatches'.
@@ -294,7 +294,7 @@ public abstract class GenericTestUtils {
    */
   public static void assertGlobEquals(File dir, String pattern,
       String ... expectedMatches) throws IOException {
-    
+
     Set<String> found = Sets.newTreeSet();
     for (File f : FileUtil.listFiles(dir)) {
       if (f.getName().matches(pattern)) {
@@ -332,7 +332,7 @@ public abstract class GenericTestUtils {
           + StringUtils.stringifyException(t),
           t);
     }
-  }  
+  }
 
   /**
    * Wait for the specified test to return true. The test will be performed
@@ -482,18 +482,18 @@ public abstract class GenericTestUtils {
    */
   public static class DelayAnswer implements Answer<Object> {
     private final Log LOG;
-    
+
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
     private final CountDownLatch resultLatch = new CountDownLatch(1);
-    
+
     private final AtomicInteger fireCounter = new AtomicInteger(0);
     private final AtomicInteger resultCounter = new AtomicInteger(0);
-    
+
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
-    
+
     public DelayAnswer(Log log) {
       this.LOG = log;
     }
@@ -504,7 +504,7 @@ public abstract class GenericTestUtils {
     public void waitForCall() throws InterruptedException {
       fireLatch.await();
     }
-  
+
     /**
      * Tell the method to proceed.
      * This should only be called after waitForCall()
@@ -512,7 +512,7 @@ public abstract class GenericTestUtils {
     public void proceed() {
       waitLatch.countDown();
     }
-  
+
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
@@ -541,7 +541,7 @@ public abstract class GenericTestUtils {
         resultLatch.countDown();
       }
     }
-    
+
     /**
      * After calling proceed(), this will wait until the call has
      * completed and a result has been returned to the caller.
@@ -549,7 +549,7 @@ public abstract class GenericTestUtils {
     public void waitForResult() throws InterruptedException {
       resultLatch.await();
     }
-    
+
     /**
      * After the call has gone through, return any exception that
      * was thrown, or null if no exception was thrown.
@@ -557,7 +557,7 @@ public abstract class GenericTestUtils {
     public Throwable getThrown() {
       return thrown;
     }
-    
+
     /**
      * After the call has gone through, return the call's return value,
      * or null in case it was void or an exception was thrown.
@@ -565,20 +565,20 @@ public abstract class GenericTestUtils {
     public Object getReturnValue() {
       return returnValue;
     }
-    
+
     public int getFireCount() {
       return fireCounter.get();
     }
-    
+
     public int getResultCount() {
       return resultCounter.get();
     }
   }
-  
+
   /**
    * An Answer implementation that simply forwards all calls through
    * to a delegate.
-   * 
+   *
    * This is useful as the default Answer for a mock object, to create
    * something like a spy on an RPC proxy. For example:
    * <code>
@@ -589,14 +589,14 @@ public abstract class GenericTestUtils {
    *    ...
    * </code>
    */
-  public static class DelegateAnswer implements Answer<Object> { 
+  public static class DelegateAnswer implements Answer<Object> {
     private final Object delegate;
     private final Log log;
-    
+
     public DelegateAnswer(Object delegate) {
       this(null, delegate);
     }
-    
+
     public DelegateAnswer(Log log, Object delegate) {
       this.log = log;
       this.delegate = delegate;
@@ -636,7 +636,7 @@ public abstract class GenericTestUtils {
       this.minSleepTime = minSleepTime;
       this.maxSleepTime = maxSleepTime;
     }
-    
+
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       boolean interrupted = false;
@@ -666,11 +666,11 @@ public abstract class GenericTestUtils {
         " but got:\n" + output,
         Pattern.compile(pattern).matcher(output).find());
   }
-  
+
   public static void assertValueNear(long expected, long actual, long allowedError) {
     assertValueWithinRange(expected - allowedError, expected + allowedError, actual);
   }
-  
+
   public static void assertValueWithinRange(long expectedMin, long expectedMax,
       long actual) {
     Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
@@ -825,4 +825,28 @@ public abstract class GenericTestUtils {
       failf(format, args);
     }
   }
+
+  /**
+   * Retreive the max number of parallel test threads when running under maven.
+   * @return int number of threads
+   */
+  public static int getTestsThreadCount() {
+    String propString = System.getProperty("testsThreadCount", "1");
+    int threadCount = 1;
+    if (propString != null) {
+      String trimProp = propString.trim();
+      if (trimProp.endsWith("C")) {
+        double multiplier = Double.parseDouble(
+            trimProp.substring(0, trimProp.length()-1));
+        double calculated = multiplier * ((double) Runtime
+            .getRuntime()
+            .availableProcessors());
+        threadCount = calculated > 0d ? Math.max((int) calculated, 1) : 0;
+      } else {
+        threadCount = Integer.parseInt(trimProp);
+      }
+    }
+    return threadCount;
+  }
+
 }
