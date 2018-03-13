@@ -34,10 +34,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-/**
- * This test ensures the statuses of EC files with the default policy.
- */
-public class TestFileStatusWithDefaultECPolicy {
+public class TestFileStatusWithECPolicy {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private DFSClient client;
@@ -53,7 +50,8 @@ public class TestFileStatusWithDefaultECPolicy {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     client = fs.getClient();
-    fs.enableErasureCodingPolicy(getEcPolicy().getName());
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
   @After
@@ -62,10 +60,6 @@ public class TestFileStatusWithDefaultECPolicy {
       cluster.shutdown();
       cluster = null;
     }
-  }
-
-  public ErasureCodingPolicy getEcPolicy() {
-    return StripedFileTestUtil.getDefaultECPolicy();
   }
 
   @Test
@@ -82,7 +76,8 @@ public class TestFileStatusWithDefaultECPolicy {
     ContractTestUtils.assertNotErasureCoded(fs, file);
     fs.delete(file, true);
 
-    final ErasureCodingPolicy ecPolicy1 = getEcPolicy();
+    final ErasureCodingPolicy ecPolicy1 =
+        StripedFileTestUtil.getDefaultECPolicy();
     // set EC policy on dir
     fs.setErasureCodingPolicy(dir, ecPolicy1.getName());
     ContractTestUtils.assertErasureCoded(fs, dir);
