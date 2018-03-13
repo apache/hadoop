@@ -49,7 +49,18 @@ import org.slf4j.LoggerFactory;
 public abstract class MountTable extends BaseRecord {
 
   private static final Logger LOG = LoggerFactory.getLogger(MountTable.class);
-
+  public static final String ERROR_MSG_NO_SOURCE_PATH =
+      "Invalid entry, no source path specified ";
+  public static final String ERROR_MSG_MUST_START_WITH_BACK_SLASH =
+      "Invalid entry, all mount points must start with / ";
+  public static final String ERROR_MSG_NO_DEST_PATH_SPECIFIED =
+      "Invalid entry, no destination paths specified ";
+  public static final String ERROR_MSG_INVAILD_DEST_NS =
+      "Invalid entry, invalid destination nameservice ";
+  public static final String ERROR_MSG_INVAILD_DEST_PATH =
+      "Invalid entry, invalid destination path ";
+  public static final String ERROR_MSG_ALL_DEST_MUST_START_WITH_BACK_SLASH =
+      "Invalid entry, all destination must start with / ";
 
   /** Comparator for paths which considers the /. */
   public static final Comparator<String> PATH_COMPARATOR =
@@ -314,36 +325,35 @@ public abstract class MountTable extends BaseRecord {
   }
 
   @Override
-  public boolean validate() {
-    boolean ret = super.validate();
+  public void validate() {
+    super.validate();
     if (this.getSourcePath() == null || this.getSourcePath().length() == 0) {
-      LOG.error("Invalid entry, no source path specified ", this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_SOURCE_PATH + this);
     }
     if (!this.getSourcePath().startsWith("/")) {
-      LOG.error("Invalid entry, all mount points must start with / ", this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_MUST_START_WITH_BACK_SLASH + this);
     }
     if (this.getDestinations() == null || this.getDestinations().size() == 0) {
-      LOG.error("Invalid entry, no destination paths specified ", this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_DEST_PATH_SPECIFIED + this);
     }
     for (RemoteLocation loc : getDestinations()) {
       String nsId = loc.getNameserviceId();
       if (nsId == null || nsId.length() == 0) {
-        LOG.error("Invalid entry, invalid destination nameservice ", this);
-        ret = false;
+        throw new IllegalArgumentException(
+            ERROR_MSG_INVAILD_DEST_NS + this);
       }
       if (loc.getDest() == null || loc.getDest().length() == 0) {
-        LOG.error("Invalid entry, invalid destination path ", this);
-        ret = false;
+        throw new IllegalArgumentException(
+            ERROR_MSG_INVAILD_DEST_PATH + this);
       }
       if (!loc.getDest().startsWith("/")) {
-        LOG.error("Invalid entry, all destination must start with / ", this);
-        ret = false;
+        throw new IllegalArgumentException(
+            ERROR_MSG_ALL_DEST_MUST_START_WITH_BACK_SLASH + this);
       }
     }
-    return ret;
   }
 
   @Override
