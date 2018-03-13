@@ -25,29 +25,42 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- * Test {@link BlockInfoStriped}
+ * Test {@link BlockInfoStriped}.
  */
+@RunWith(Parameterized.class)
 public class TestBlockInfoStriped {
   private static final long BASE_ID = -1600;
   private final Block baseBlock = new Block(BASE_ID);
-  private final ErasureCodingPolicy testECPolicy
-      = StripedFileTestUtil.getDefaultECPolicy();
-  private final int totalBlocks = testECPolicy.getNumDataUnits() +
-      testECPolicy.getNumParityUnits();
-  private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
-      testECPolicy);
+  private final ErasureCodingPolicy testECPolicy;
+  private final int totalBlocks;
+  private final BlockInfoStriped info;
+
+  public TestBlockInfoStriped(ErasureCodingPolicy policy) {
+    testECPolicy = policy;
+    totalBlocks = testECPolicy.getNumDataUnits()
+        + testECPolicy.getNumParityUnits();
+    info = new BlockInfoStriped(baseBlock, testECPolicy);
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<Object[]> policies() {
+    return StripedFileTestUtil.getECPolicies();
+  }
 
   private Block[] createReportedBlocks(int num) {
     Block[] blocks = new Block[num];
@@ -61,7 +74,7 @@ public class TestBlockInfoStriped {
   public Timeout globalTimeout = new Timeout(300000);
 
   /**
-   * Test adding storage and reported block
+   * Test adding storage and reported block.
    */
   @Test
   public void testAddStorage() {
@@ -108,8 +121,8 @@ public class TestBlockInfoStriped {
     }
 
     // the same block is reported from another storage
-    DatanodeStorageInfo[] storageInfos2 = DFSTestUtil.createDatanodeStorageInfos(
-        totalBlocks * 2);
+    DatanodeStorageInfo[] storageInfos2 =
+        DFSTestUtil.createDatanodeStorageInfos(totalBlocks * 2);
     // only add the second half of info2
     for (i = totalBlocks; i < storageInfos2.length; i++) {
       info.addStorage(storageInfos2[i], blocks[i % totalBlocks]);
