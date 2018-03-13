@@ -19,9 +19,12 @@ package org.apache.hadoop.hdfs.server.federation.store.records;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
@@ -212,5 +216,44 @@ public class TestMountTable {
     assertEquals(NS_QUOTA, quotaGet.getQuota());
     assertEquals(SS_COUNT, quotaGet.getSpaceConsumed());
     assertEquals(SS_QUOTA, quotaGet.getSpaceQuota());
+  }
+
+  @Test
+  public void testValidation() throws IOException {
+    Map<String, String> destinations = new HashMap<>();
+    destinations.put("ns0", "/testValidate-dest");
+    try {
+      MountTable.newInstance("testValidate", destinations);
+      fail("Mount table entry should be created failed.");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          MountTable.ERROR_MSG_MUST_START_WITH_BACK_SLASH, e);
+    }
+
+    destinations.clear();
+    destinations.put("ns0", "testValidate-dest");
+    try {
+      MountTable.newInstance("/testValidate", destinations);
+      fail("Mount table entry should be created failed.");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          MountTable.ERROR_MSG_ALL_DEST_MUST_START_WITH_BACK_SLASH, e);
+    }
+
+    destinations.clear();
+    destinations.put("", "/testValidate-dest");
+    try {
+      MountTable.newInstance("/testValidate", destinations);
+      fail("Mount table entry should be created failed.");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          MountTable.ERROR_MSG_INVAILD_DEST_NS, e);
+    }
+
+    destinations.clear();
+    destinations.put("ns0", "/testValidate-dest");
+    MountTable record = MountTable.newInstance("/testValidate", destinations);
+    assertNotNull(record);
+
   }
 }
