@@ -32,6 +32,7 @@ import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.Time;
@@ -65,6 +66,14 @@ public class TestRouterSafemode {
     // 2 sec post cache update before entering safemode (2 intervals)
     conf.setTimeDuration(DFS_ROUTER_SAFEMODE_EXPIRATION,
         TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS);
+
+    conf.set(DFSConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY, "0.0.0.0");
+    conf.set(DFSConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFSConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFSConfigKeys.DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+    conf.set(DFSConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFSConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
+
     // RPC + State Store + Safe Mode only
     conf = new RouterConfigBuilder(conf)
         .rpc()
