@@ -65,7 +65,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
@@ -772,15 +771,8 @@ class JsonUtilClient {
     byte[] parentFullPath = toByteArray((String) json.get("parentFullPath"));
     HdfsFileStatus dirStatus =
         toFileStatus((Map<?, ?>) json.get("dirStatus"), false);
-    Set<FileStatus.AttrFlags> attrFlags = FileStatus
-        .attributes(dirStatus.hasAcl(), dirStatus.isEncrypted(),
-            dirStatus.isErasureCoded(), dirStatus.isSnapshotEnabled());
     SnapshottableDirectoryStatus snapshottableDirectoryStatus =
-        new SnapshottableDirectoryStatus(dirStatus.getModificationTime(),
-            dirStatus.getAccessTime(), dirStatus.getPermission(),
-            HdfsFileStatus.Flags.convert(attrFlags), dirStatus.getOwner(),
-            dirStatus.getGroup(), dirStatus.getLocalNameInBytes(),
-            dirStatus.getFileId(), dirStatus.getChildrenNum(), snapshotNumber,
+        new SnapshottableDirectoryStatus(dirStatus, snapshotNumber,
             snapshotQuota, parentFullPath);
     return snapshottableDirectoryStatus;
   }
