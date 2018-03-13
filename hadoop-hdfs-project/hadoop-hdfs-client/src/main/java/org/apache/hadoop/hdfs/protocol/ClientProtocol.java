@@ -1308,8 +1308,7 @@ public interface ClientProtocol {
       String fromSnapshot, String toSnapshot) throws IOException;
 
   /**
-   * Get the difference between two snapshots, or between a snapshot and the
-   * current tree of a directory.
+   * Get the difference between two snapshots of a directory iteratively.
    *
    * @param snapshotRoot
    *          full path of the directory where snapshots are taken

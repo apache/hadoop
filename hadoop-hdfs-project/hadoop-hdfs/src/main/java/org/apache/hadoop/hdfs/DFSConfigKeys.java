@@ -419,6 +419,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.snapshot.max.limit";
 
   public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
+  public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
+      "dfs.namenode.snapshot.skiplist.interval";
+  public static final int DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT =
+      10;
+  public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_LEVELS =
+      "dfs.namenode.snapshot.skiplist.max.levels";
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_SKIP_LEVELS_DEFAULT = 0;
+
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
@@ -1161,6 +1170,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DISK_BALANCER_MAX_DISK_ERRORS =
       "dfs.disk.balancer.max.disk.errors";
   public static final int DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT = 5;
+
+  public static final String DFS_DISK_BALANCER_PLAN_VALID_INTERVAL =
+      "dfs.disk.balancer.plan.valid.interval";
+  public static final String DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT =
+      "1d";
 
 
   public static final String DFS_DISK_BALANCER_BLOCK_TOLERANCE =

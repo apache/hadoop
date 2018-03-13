@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FileSystem;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,10 +71,11 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private volatile boolean closed;
   private S3ObjectInputStream wrappedStream;
-  private final FileSystem.Statistics stats;
+  private final S3AReadOpContext context;
   private final AmazonS3 client;
   private final String bucket;
   private final String key;
+  private final String pathStr;
   private final long contentLength;
   private final String uri;
   private static final Logger LOG =
@@ -85,7 +85,6 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private String serverSideEncryptionKey;
   private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
-  private final Invoker invoker;
 
   /**
    * This is the actual position within the object, used by
@@ -108,40 +107,33 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
    * actual read() operation.
+   * @param ctx operation context
    * @param s3Attributes object attributes from a HEAD request
    * @param contentLength length of content
    * @param client S3 client to use
-   * @param stats statistics to update
-   * @param instrumentation instrumentation to update
    * @param readahead readahead bytes
    * @param inputPolicy IO policy
-   * @param invoker preconfigured invoker
    */
-  public S3AInputStream(S3ObjectAttributes s3Attributes,
-      long contentLength,
-      AmazonS3 client,
-      FileSystem.Statistics stats,
-      S3AInstrumentation instrumentation,
-      long readahead,
-      S3AInputPolicy inputPolicy,
-      Invoker invoker) {
+  public S3AInputStream(S3AReadOpContext ctx, S3ObjectAttributes s3Attributes,
+      long contentLength, AmazonS3 client, long readahead,
+      S3AInputPolicy inputPolicy) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
+    this.context = ctx;
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
+    this.pathStr = ctx.dstFileStatus.getPath().toString();
     this.contentLength = contentLength;
     this.client = client;
-    this.stats = stats;
     this.uri = "s3a://" + this.bucket + "/" + this.key;
-    this.streamStatistics = instrumentation.newInputStreamStatistics();
+    this.streamStatistics = ctx.instrumentation.newInputStreamStatistics();
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
     setInputPolicy(inputPolicy);
     setReadahead(readahead);
-    this.invoker = invoker;
   }
 
   /**
@@ -162,6 +154,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param length length requested
    * @throws IOException on any failure to open the object
    */
+  @Retries.OnceTranslated
   private synchronized void reopen(String reason, long targetPos, long length)
       throws IOException {
 
@@ -185,7 +178,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     }
     String text = String.format("Failed to %s %s at %d",
         (opencount == 0 ? "open" : "re-open"), uri, targetPos);
-    S3Object object = invoker.retry(text, uri, true,
+    S3Object object = context.getReadInvoker().once(text, uri,
         () -> client.getObject(request));
     wrappedStream = object.getObjectContent();
     contentRangeStart = targetPos;
@@ -241,6 +234,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param length length of content that needs to be read from targetPos
    * @throws IOException
    */
+  @Retries.OnceTranslated
   private void seekInStream(long targetPos, long length) throws IOException {
     checkNotClosed();
     if (wrappedStream == null) {
@@ -317,14 +311,22 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param targetPos position from where data should be read
    * @param len length of the content that needs to be read
    */
+  @Retries.RetryTranslated
   private void lazySeek(long targetPos, long len) throws IOException {
-    //For lazy seek
-    seekInStream(targetPos, len);
 
-    //re-open at specific location if needed
-    if (wrappedStream == null) {
-      reopen("read from new offset", targetPos, len);
-    }
+    // With S3Guard, the metadatastore gave us metadata for the file in
+    // open(), so we use a slightly different retry policy.
+    Invoker invoker = context.getReadInvoker();
+    invoker.retry("lazySeek", pathStr, true,
+        () -> {
+          //For lazy seek
+          seekInStream(targetPos, len);
+
+          //re-open at specific location if needed
+          if (wrappedStream == null) {
+            reopen("read from new offset", targetPos, len);
+          }
+        });
   }
 
   /**
@@ -334,28 +336,43 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private void incrementBytesRead(long bytesRead) {
     streamStatistics.bytesRead(bytesRead);
-    if (stats != null && bytesRead > 0) {
-      stats.incrementBytesRead(bytesRead);
+    if (context.stats != null && bytesRead > 0) {
+      context.stats.incrementBytesRead(bytesRead);
     }
   }
 
   @Override
+  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
   public synchronized int read() throws IOException {
     checkNotClosed();
     if (this.contentLength == 0 || (nextReadPos >= contentLength)) {
       return -1;
     }
 
-    int byteRead;
     try {
       lazySeek(nextReadPos, 1);
-      byteRead = wrappedStream.read();
     } catch (EOFException e) {
       return -1;
-    } catch (IOException e) {
-      onReadFailure(e, 1);
-      byteRead = wrappedStream.read();
     }
+
+    // With S3Guard, the metadatastore gave us metadata for the file in
+    // open(), so we use a slightly different retry policy.
+    // read() may not be likely to fail, but reopen() does a GET which
+    // certainly could.
+    Invoker invoker = context.getReadInvoker();
+    int byteRead = invoker.retry("read", pathStr, true,
+        () -> {
+          int b;
+          try {
+            b = wrappedStream.read();
+          } catch (EOFException e) {
+            return -1;
+          } catch (IOException e) {
+            onReadFailure(e, 1);
+            b = wrappedStream.read();
+          }
+          return b;
+        });
 
     if (byteRead >= 0) {
       pos++;
@@ -375,10 +392,11 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param length length of data being attempted to read
    * @throws IOException any exception thrown on the re-open attempt.
    */
+  @Retries.OnceTranslated
   private void onReadFailure(IOException ioe, int length) throws IOException {
-    LOG.info("Got exception while trying to read from stream {}"
-        + " trying to recover: "+ ioe, uri);
-    LOG.debug("While trying to read from stream {}", uri, ioe);
+
+    LOG.info("Got exception while trying to read from stream {}" +
+        " trying to recover: " + ioe, uri);
     streamStatistics.readException();
     reopen("failure recovery", pos, length);
   }
@@ -392,6 +410,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @throws IOException if there are other problems
    */
   @Override
+  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
   public synchronized int read(byte[] buf, int off, int len)
       throws IOException {
     checkNotClosed();
@@ -412,18 +431,27 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       return -1;
     }
 
-    int bytesRead;
-    try {
-      streamStatistics.readOperationStarted(nextReadPos, len);
-      bytesRead = wrappedStream.read(buf, off, len);
-    } catch (EOFException e) {
-      onReadFailure(e, len);
-      // the base implementation swallows EOFs.
-      return -1;
-    } catch (IOException e) {
-      onReadFailure(e, len);
-      bytesRead = wrappedStream.read(buf, off, len);
-    }
+    // With S3Guard, the metadatastore gave us metadata for the file in
+    // open(), so we use a slightly different retry policy.
+    // read() may not be likely to fail, but reopen() does a GET which
+    // certainly could.
+    Invoker invoker = context.getReadInvoker();
+
+    streamStatistics.readOperationStarted(nextReadPos, len);
+    int bytesRead = invoker.retry("read", pathStr, true,
+        () -> {
+          int bytes;
+          try {
+            bytes = wrappedStream.read(buf, off, len);
+          } catch (EOFException e) {
+            // the base implementation swallows EOFs.
+            return -1;
+          } catch (IOException e) {
+            onReadFailure(e, len);
+            bytes= wrappedStream.read(buf, off, len);
+          }
+          return bytes;
+        });
 
     if (bytesRead > 0) {
       pos += bytesRead;
@@ -481,6 +509,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param length length of the stream.
    * @param forceAbort force an abort; used if explicitly requested.
    */
+  @Retries.OnceRaw
   private void closeStream(String reason, long length, boolean forceAbort) {
     if (wrappedStream != null) {
 
@@ -645,6 +674,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    *
    */
   @Override
+  @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
   public void readFully(long position, byte[] buffer, int offset, int length)
       throws IOException {
     checkNotClosed();

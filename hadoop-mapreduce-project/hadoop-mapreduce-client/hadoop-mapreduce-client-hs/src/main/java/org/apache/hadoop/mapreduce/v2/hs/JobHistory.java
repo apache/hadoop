@@ -98,7 +98,7 @@ public class JobHistory extends AbstractService implements HistoryContext {
     try {
       hsManager.initExisting();
     } catch (IOException e) {
-      throw new YarnRuntimeException("Failed to intialize existing directories", e);
+      throw new YarnRuntimeException("Failed to initialize existing directories", e);
     }
 
     storage = createHistoryStorage();

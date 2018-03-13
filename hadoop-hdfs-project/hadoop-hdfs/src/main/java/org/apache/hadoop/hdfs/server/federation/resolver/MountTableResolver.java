@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -238,9 +239,17 @@ public class MountTableResolver
       Entry<String, PathLocation> entry = it.next();
       PathLocation loc = entry.getValue();
       String src = loc.getSourcePath();
-      if (src.startsWith(path)) {
-        LOG.debug("Removing {}", src);
-        it.remove();
+      if (src != null) {
+        if(isParentEntry(src, path)) {
+          LOG.debug("Removing {}", src);
+          it.remove();
+        }
+      } else {
+        String dest = loc.getDefaultLocation().getDest();
+        if (dest.startsWith(path)) {
+          LOG.debug("Removing default cache {}", dest);
+          it.remove();
+        }
       }
     }
 
@@ -287,6 +296,7 @@ public class MountTableResolver
         if (!oldEntries.contains(srcPath)) {
           // Add node, it does not exist
           this.tree.put(srcPath, entry);
+          invalidateLocationCache(srcPath);
           LOG.info("Added new mount point {} to resolver", srcPath);
         } else {
           // Node exists, check for updates
@@ -530,7 +540,7 @@ public class MountTableResolver
     readLock.lock();
     try {
       Entry<String, MountTable> entry = this.tree.floorEntry(path);
-      while (entry != null && !path.startsWith(entry.getKey())) {
+      while (entry != null && !isParentEntry(path, entry.getKey())) {
         entry = this.tree.lowerEntry(entry.getKey());
       }
       if (entry == null) {

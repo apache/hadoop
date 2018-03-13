@@ -97,7 +97,6 @@ int check_trusted_image(const struct configuration *command_config, const struct
         registry_ptr = strdup(privileged_registry[i]);
       }
       if (strncmp(image_name, registry_ptr, strlen(registry_ptr))==0) {
-        fprintf(ERRORFILE, "image: %s is trusted in %s registry.\n", image_name, privileged_registry[i]);
         found=1;
         free(registry_ptr);
         break;
@@ -114,6 +113,22 @@ int check_trusted_image(const struct configuration *command_config, const struct
   free_and_exit:
   free(privileged_registry);
   return ret;
+}
+
+static int is_regex(const char *str) {
+  // regex should begin with prefix "regex:"
+  return (strncmp(str, "regex:", 6) == 0);
+}
+
+static int is_volume_name(const char *volume_name) {
+  const char *regex_str = "^[a-zA-Z0-9]([a-zA-Z0-9_.-]*)$";
+  // execute_regex_match return 0 is matched success
+  return execute_regex_match(regex_str, volume_name) == 0;
+}
+
+static int is_volume_name_matched_by_regex(const char* requested, const char* pattern) {
+  // execute_regex_match return 0 is matched success
+  return is_volume_name(requested) && (execute_regex_match(pattern + sizeof("regex:"), requested) == 0);
 }
 
 static int add_param_to_command_if_allowed(const struct configuration *command_config,
@@ -151,6 +166,7 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
     }
 
     if (permitted_values != NULL) {
+      // Values are user requested.
       for (i = 0; values[i] != NULL; ++i) {
         memset(tmp_buffer, 0, tmp_buffer_size);
         permitted = 0;
@@ -163,13 +179,30 @@ static int add_param_to_command_if_allowed(const struct configuration *command_c
             goto free_and_exit;
           }
         }
+        // Iterate through each permitted value
+        char* dst = NULL;
+        char* pattern = NULL;
+
         for (j = 0; permitted_values[j] != NULL; ++j) {
           if (prefix == 0) {
             ret = strcmp(values[i], permitted_values[j]);
           } else {
-            ret = strncmp(values[i], permitted_values[j], tmp_ptr - values[i]);
+            // If permitted-Values[j] is a REGEX, use REGEX to compare
+            if (is_regex(permitted_values[j])) {
+              size_t offset = tmp_ptr - values[i];
+              dst = (char *) alloc_and_clear_memory(offset, sizeof(char));
+              strncpy(dst, values[i], offset);
+              dst[tmp_ptr - values[i]] = '\0';
+              pattern = (char *) alloc_and_clear_memory((size_t)(strlen(permitted_values[j]) - 6), sizeof(char));
+              strcpy(pattern, permitted_values[j] + 6);
+              ret = execute_regex_match(pattern, dst);
+            } else {
+              ret = strncmp(values[i], permitted_values[j], tmp_ptr - values[i]);
+            }
           }
           if (ret == 0) {
+            free(dst);
+            free(pattern);
             permitted = 1;
             break;
           }
@@ -805,6 +838,14 @@ static int set_group_add(const struct configuration *command_config, char *out, 
   char **group_add = get_configuration_values_delimiter("group-add", DOCKER_COMMAND_FILE_SECTION, command_config, ",");
   size_t tmp_buffer_size = 4096;
   char *tmp_buffer = NULL;
+  char *privileged = NULL;
+
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (privileged != NULL && strcasecmp(privileged, "true") == 0 ) {
+    free(privileged);
+    return ret;
+  }
+  free(privileged);
 
   if (group_add != NULL) {
     for (i = 0; group_add[i] != NULL; ++i) {
@@ -934,9 +975,10 @@ static int set_devices(const struct configuration *command_config, const struct 
  * 2. If the path is a directory, add a '/' at the end (if not present)
  * 3. Return a copy of the canonicalised path(to be freed by the caller)
  * @param mount path to be canonicalised
+ * @param isRegexAllowed whether regex matching is allowed for normalize mount
  * @return pointer to canonicalised path, NULL on error
  */
-static char* normalize_mount(const char* mount) {
+static char* normalize_mount(const char* mount, int isRegexAllowed) {
   int ret = 0;
   struct stat buff;
   char *ret_ptr = NULL, *real_mount = NULL;
@@ -946,10 +988,16 @@ static char* normalize_mount(const char* mount) {
   real_mount = realpath(mount, NULL);
   if (real_mount == NULL) {
     // If mount is a valid named volume, just return it and let docker decide
-    if (validate_volume_name(mount) == 0) {
+    if (is_volume_name(mount)) {
       return strdup(mount);
     }
-
+    // we only allow permitted mount to be REGEX, for permitted mount, we check
+    // if it's a valid REGEX return; for user mount, we need to strictly check
+    if (isRegexAllowed) {
+      if (is_regex(mount)) {
+        return strdup(mount);
+      }
+    }
     fprintf(ERRORFILE, "Could not determine real path of mount '%s'\n", mount);
     free(real_mount);
     return NULL;
@@ -980,14 +1028,14 @@ static char* normalize_mount(const char* mount) {
   return ret_ptr;
 }
 
-static int normalize_mounts(char **mounts) {
+static int normalize_mounts(char **mounts, int isRegexAllowed) {
   int i = 0;
   char *tmp = NULL;
   if (mounts == NULL) {
     return 0;
   }
   for (i = 0; mounts[i] != NULL; ++i) {
-    tmp = normalize_mount(mounts[i]);
+    tmp = normalize_mount(mounts[i], isRegexAllowed);
     if (tmp == NULL) {
       return -1;
     }
@@ -1000,7 +1048,7 @@ static int normalize_mounts(char **mounts) {
 static int check_mount_permitted(const char **permitted_mounts, const char *requested) {
   int i = 0, ret = 0;
   size_t permitted_mount_len = 0;
-  char *normalized_path = normalize_mount(requested);
+  char *normalized_path = normalize_mount(requested, 0);
   if (permitted_mounts == NULL) {
     return 0;
   }
@@ -1012,6 +1060,13 @@ static int check_mount_permitted(const char **permitted_mounts, const char *requ
       ret = 1;
       break;
     }
+    // if (permitted_mounts[i] is a REGEX): use REGEX to compare; return
+    if (is_regex(permitted_mounts[i]) &&
+    is_volume_name_matched_by_regex(normalized_path, permitted_mounts[i])) {
+      ret = 1;
+      break;
+    }
+
     // directory check
     permitted_mount_len = strlen(permitted_mounts[i]);
     struct stat path_stat;
@@ -1052,7 +1107,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
                                                                   CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf, ",");
   char **values = get_configuration_values_delimiter(key, DOCKER_COMMAND_FILE_SECTION, command_config, ",");
   char *tmp_buffer_2 = NULL, *mount_src = NULL;
-  const char *container_executor_cfg_path = normalize_mount(get_config_path(""));
+  const char *container_executor_cfg_path = normalize_mount(get_config_path(""), 0);
   int i = 0, permitted_rw = 0, permitted_ro = 0, ret = 0;
   if (ro != 0) {
     ro_suffix = ":ro";
@@ -1071,9 +1126,8 @@ static int add_mounts(const struct configuration *command_config, const struct c
       ret = 0;
       goto free_and_exit;
     }
-
-    ret = normalize_mounts(permitted_ro_mounts);
-    ret |= normalize_mounts(permitted_rw_mounts);
+    ret = normalize_mounts(permitted_ro_mounts, 1);
+    ret |= normalize_mounts(permitted_rw_mounts, 1);
     if (ret != 0) {
       fprintf(ERRORFILE, "Unable to find permitted docker mounts on disk\n");
       ret = MOUNT_ACCESS_ERROR;
@@ -1101,7 +1155,7 @@ static int add_mounts(const struct configuration *command_config, const struct c
           goto free_and_exit;
         } else {
           // determine if the user can modify the container-executor.cfg file
-          tmp_path_buffer[0] = normalize_mount(mount_src);
+          tmp_path_buffer[0] = normalize_mount(mount_src, 0);
           // just re-use the function, flip the args to check if the container-executor path is in the requested
           // mount point
           ret = check_mount_permitted(tmp_path_buffer, container_executor_cfg_path);
@@ -1211,6 +1265,7 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   size_t tmp_buffer_size = 1024;
   char *tmp_buffer = NULL;
   char **launch_command = NULL;
+  char *privileged = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_RUN_COMMAND, &command_config);
   if (ret != 0) {
@@ -1250,12 +1305,17 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   }
   memset(tmp_buffer, 0, tmp_buffer_size);
 
-  quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--user=", user);
-  ret = add_to_buffer(out, outlen, tmp_buffer);
-  if (ret != 0) {
-    return BUFFER_TOO_SMALL;
+  privileged = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, &command_config);
+
+  if (privileged == NULL || strcasecmp(privileged, "false") == 0) {
+      quote_and_append_arg(&tmp_buffer, &tmp_buffer_size, "--user=", user);
+      ret = add_to_buffer(out, outlen, tmp_buffer);
+      if (ret != 0) {
+        return BUFFER_TOO_SMALL;
+      }
+      memset(tmp_buffer, 0, tmp_buffer_size);
   }
-  memset(tmp_buffer, 0, tmp_buffer_size);
+  free(privileged);
 
   ret = detach_container(&command_config, out, outlen);
   if (ret != 0) {

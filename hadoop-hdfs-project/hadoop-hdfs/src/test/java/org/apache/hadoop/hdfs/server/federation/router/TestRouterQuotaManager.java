@@ -57,6 +57,18 @@ public class TestRouterQuotaManager {
     assertTrue(childrenPaths.contains("/path1/subdir")
         && childrenPaths.contains("/path1/subdir/subdir")
         && childrenPaths.contains("/path1"));
+
+    // test for corner case
+    manager.put("/path3", quotaUsage);
+    manager.put("/path3/subdir", quotaUsage);
+    manager.put("/path3-subdir", quotaUsage);
+
+    childrenPaths = manager.getPaths("/path3");
+    assertEquals(2, childrenPaths.size());
+    // path /path3-subdir should not be returned
+    assertTrue(childrenPaths.contains("/path3")
+        && childrenPaths.contains("/path3/subdir")
+        && !childrenPaths.contains("/path3-subdir"));
   }
 
   @Test

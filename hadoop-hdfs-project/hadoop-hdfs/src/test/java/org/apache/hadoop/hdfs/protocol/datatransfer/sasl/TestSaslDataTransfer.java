@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -167,9 +168,17 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   public void testDataNodeAbortsIfNotHttpsOnly() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig("authentication");
     clusterConf.set(DFS_HTTP_POLICY_KEY,
-      HttpConfig.Policy.HTTP_AND_HTTPS.name());
+        HttpConfig.Policy.HTTP_AND_HTTPS.name());
     exception.expect(RuntimeException.class);
     exception.expectMessage("Cannot start secure DataNode");
+    startCluster(clusterConf);
+  }
+
+  @Test
+  public void testDataNodeStartIfHttpsQopPrivacy() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("privacy");
+    clusterConf.set(DFS_HTTP_POLICY_KEY,
+        Policy.HTTPS_ONLY.name());
     startCluster(clusterConf);
   }
 

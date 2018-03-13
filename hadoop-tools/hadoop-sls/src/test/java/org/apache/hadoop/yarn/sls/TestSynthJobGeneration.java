@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.sls;
 
 import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import static org.codehaus.jackson.JsonParser.Feature.INTERN_FIELD_NAMES;
@@ -254,6 +256,7 @@ public class TestSynthJobGeneration {
       assertTrue(t.getTime() > 0);
       assertTrue(t.getMemory() > 0);
       assertTrue(t.getVcores() > 0);
+      assertEquals(ExecutionType.GUARANTEED, t.getExecutionType());
     }
   }
 }

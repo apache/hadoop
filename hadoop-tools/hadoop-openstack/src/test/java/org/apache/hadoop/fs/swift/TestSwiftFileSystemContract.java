@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
@@ -47,8 +47,8 @@ import java.net.URISyntaxException;
  */
 public class TestSwiftFileSystemContract
         extends FileSystemContractBaseTest {
-  private static final Log LOG =
-          LogFactory.getLog(TestSwiftFileSystemContract.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftFileSystemContract.class);
 
   /**
    * Override this if the filesystem is not case sensitive

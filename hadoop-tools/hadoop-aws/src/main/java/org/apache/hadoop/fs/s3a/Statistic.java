@@ -57,6 +57,8 @@ public enum Statistic {
       "Calls of delete()"),
   INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
       "Calls of exists()"),
+  INVOCATION_GET_FILE_CHECKSUM(CommonStatisticNames.OP_GET_FILE_CHECKSUM,
+      "Calls of getFileChecksum()"),
   INVOCATION_GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS,
       "Calls of getFileStatus()"),
   INVOCATION_GLOB_STATUS(CommonStatisticNames.OP_GLOB_STATUS,

@@ -196,7 +196,15 @@ public class MockServiceAM extends ServiceMaster {
 
           @Override
           public RegisterApplicationMasterResponse registerApplicationMaster(
-              String appHostName, int appHostPort, String appTrackingUrl) {
+              String appHostName, int appHostPort, String appTrackingUrl,
+              Map placementConstraintsMap) throws YarnException, IOException {
+            return this.registerApplicationMaster(appHostName, appHostPort,
+                appTrackingUrl);
+          }
+
+          @Override
+            public RegisterApplicationMasterResponse registerApplicationMaster(
+                String appHostName, int appHostPort, String appTrackingUrl) {
             RegisterApplicationMasterResponse response = mock(
                 RegisterApplicationMasterResponse.class);
             when(response.getResourceTypes()).thenReturn(

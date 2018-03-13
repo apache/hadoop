@@ -69,6 +69,10 @@ public class SnapshotDiffReport {
       }
       return null;
     }
+
+    public static DiffType parseDiffType(String s){
+      return DiffType.valueOf(s.toUpperCase());
+    }
   }
 
   /**

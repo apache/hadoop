@@ -30,11 +30,17 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -217,6 +223,9 @@ public class ContainerLaunch implements Callable<Integer> {
           launchContext, containerLogDir);
       // /////////////////////////// End of variable expansion
 
+      // Use this to track variables that are added to the environment by nm.
+      LinkedHashSet<String> nmEnvVars = new LinkedHashSet<String>();
+
       FileContext lfs = FileContext.getLocalFSFileContext();
 
       Path nmPrivateContainerScriptPath = dirsHandler.getLocalPathForWrite(
@@ -261,7 +270,7 @@ public class ContainerLaunch implements Callable<Integer> {
       }
 
       // Set the token location too.
-      environment.put(
+      addToEnvMap(environment, nmEnvVars,
           ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
           new Path(containerWorkDir,
               FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
@@ -272,14 +281,15 @@ public class ContainerLaunch implements Callable<Integer> {
                    EnumSet.of(CREATE, OVERWRITE))) {
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
-            containerLogDirs, localResources, nmPrivateClasspathJarDir);
+            containerLogDirs, localResources, nmPrivateClasspathJarDir,
+            nmEnvVars);
 
         prepareContainer(localResources, containerLocalDirs);
 
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
             localResources, launchContext.getCommands(),
-            containerLogDir, user);
+            containerLogDir, user, nmEnvVars);
       }
       // /////////// End of writing out container-script
 
@@ -1121,8 +1131,14 @@ public class ContainerLaunch implements Callable<Integer> {
 
   public static abstract class ShellScriptBuilder {
     public static ShellScriptBuilder create() {
-      return Shell.WINDOWS ? new WindowsShellScriptBuilder() :
-        new UnixShellScriptBuilder();
+      return create(Shell.osType);
+    }
+
+    @VisibleForTesting
+    public static ShellScriptBuilder create(Shell.OSType osType) {
+      return (osType == Shell.OSType.OS_TYPE_WIN) ?
+          new WindowsShellScriptBuilder() :
+          new UnixShellScriptBuilder();
     }
 
     private static final String LINE_SEPARATOR =
@@ -1170,6 +1186,9 @@ public class ContainerLaunch implements Callable<Integer> {
     protected abstract void setStdErr(Path stdout) throws IOException;
 
     public abstract void env(String key, String value) throws IOException;
+
+    public abstract void whitelistedEnv(String key, String value)
+        throws IOException;
 
     public abstract void echo(String echoStr) throws IOException;
 
@@ -1248,6 +1267,72 @@ public class ContainerLaunch implements Callable<Integer> {
       return redirectStdErr;
     }
 
+    /**
+     * Parse an environment value and returns all environment keys it uses.
+     * @param envVal an environment variable's value
+     * @return all environment variable names used in <code>envVal</code>.
+     */
+    public Set<String> getEnvDependencies(final String envVal) {
+      return Collections.emptySet();
+    }
+
+    /**
+     * Returns a dependency ordered version of <code>envs</code>. Does not alter
+     * input <code>envs</code> map.
+     * @param envs environment map
+     * @return a dependency ordered version of <code>envs</code>
+     */
+    public final Map<String, String> orderEnvByDependencies(
+        Map<String, String> envs) {
+      if (envs == null || envs.size() < 2) {
+        return envs;
+      }
+      final Map<String, String> ordered = new LinkedHashMap<String, String>();
+      class Env {
+        private boolean resolved = false;
+        private final Collection<Env> deps = new ArrayList<>();
+        private final String name;
+        private final String value;
+        Env(String name, String value) {
+          this.name = name;
+          this.value = value;
+        }
+        void resolve() {
+          resolved = true;
+          for (Env dep : deps) {
+            if (!dep.resolved) {
+              dep.resolve();
+            }
+          }
+          ordered.put(name, value);
+        }
+      }
+      final Map<String, Env> singletons = new HashMap<>();
+      for (Map.Entry<String, String> e : envs.entrySet()) {
+        Env env = singletons.get(e.getKey());
+        if (env == null) {
+          env = new Env(e.getKey(), e.getValue());
+          singletons.put(env.name, env);
+        }
+        for (String depStr : getEnvDependencies(env.value)) {
+          if (!envs.containsKey(depStr)) {
+            continue;
+          }
+          Env depEnv = singletons.get(depStr);
+          if (depEnv == null) {
+            depEnv = new Env(depStr, envs.get(depStr));
+            singletons.put(depStr, depEnv);
+          }
+          env.deps.add(depEnv);
+        }
+      }
+      for (Env env : singletons.values()) {
+        if (!env.resolved) {
+          env.resolve();
+        }
+      }
+      return ordered;
+    }
   }
 
   private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
@@ -1288,6 +1373,11 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void env(String key, String value) throws IOException {
       line("export ", key, "=\"", value, "\"");
+    }
+
+    @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
     }
 
     @Override
@@ -1339,6 +1429,79 @@ public class ContainerLaunch implements Callable<Integer> {
     public void setExitOnFailure() {
       line("set -o pipefail -e");
     }
+
+    /**
+     * Parse <code>envVal</code> using bash-like syntax to extract env variables
+     * it depends on.
+     */
+    @Override
+    public Set<String> getEnvDependencies(final String envVal) {
+      if (envVal == null || envVal.isEmpty()) {
+        return Collections.emptySet();
+      }
+      final Set<String> deps = new HashSet<>();
+      // env/whitelistedEnv dump values inside double quotes
+      boolean inDoubleQuotes = true;
+      char c;
+      int i = 0;
+      final int len = envVal.length();
+      while (i < len) {
+        c = envVal.charAt(i);
+        if (c == '"') {
+          inDoubleQuotes = !inDoubleQuotes;
+        } else if (c == '\'' && !inDoubleQuotes) {
+          i++;
+          // eat until closing simple quote
+          while (i < len) {
+            c = envVal.charAt(i);
+            if (c == '\\') {
+              i++;
+            }
+            if (c == '\'') {
+              break;
+            }
+            i++;
+          }
+        } else if (c == '\\') {
+          i++;
+        } else if (c == '$') {
+          i++;
+          if (i >= len) {
+            break;
+          }
+          c = envVal.charAt(i);
+          if (c == '{') { // for ${... bash like syntax
+            i++;
+            if (i >= len) {
+              break;
+            }
+            c = envVal.charAt(i);
+            if (c == '#') { // for ${#... bash array syntax
+              i++;
+              if (i >= len) {
+                break;
+              }
+            }
+          }
+          final int start = i;
+          while (i < len) {
+            c = envVal.charAt(i);
+            if (c != '$' && (
+                (i == start && Character.isJavaIdentifierStart(c)) ||
+                    (i > start && Character.isJavaIdentifierPart(c)))) {
+              i++;
+            } else {
+              break;
+            }
+          }
+          if (i > start) {
+            deps.add(envVal.substring(start, i));
+          }
+        }
+        i++;
+      }
+      return deps;
+    }
   }
 
   private static final class WindowsShellScriptBuilder
@@ -1381,6 +1544,11 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      env(key, value);
+    }
+
+    @Override
     public void echo(final String echoStr) throws IOException {
       lineWithLenCheck("@echo \"", echoStr, "\"");
     }
@@ -1420,6 +1588,46 @@ public class ContainerLaunch implements Callable<Integer> {
           String.format("@echo \"dir:\" > \"%s\"", output.toString()));
       lineWithLenCheck(String.format("dir >> \"%s\"", output.toString()));
     }
+
+    /**
+     * Parse <code>envVal</code> using cmd/bat-like syntax to extract env
+     * variables it depends on.
+     */
+    public Set<String> getEnvDependencies(final String envVal) {
+      if (envVal == null || envVal.isEmpty()) {
+        return Collections.emptySet();
+      }
+      final Set<String> deps = new HashSet<>();
+      final int len = envVal.length();
+      int i = 0;
+      while (i < len) {
+        i = envVal.indexOf('%', i); // find beginning of variable
+        if (i < 0 || i == (len - 1)) {
+          break;
+        }
+        i++;
+        // 3 cases: %var%, %var:...% or %%
+        final int j = envVal.indexOf('%', i); // find end of variable
+        if (j == i) {
+          // %% case, just skip it
+          i++;
+          continue;
+        }
+        if (j < 0) {
+          break; // even %var:...% syntax ends with a %, so j cannot be negative
+        }
+        final int k = envVal.indexOf(':', i);
+        if (k >= 0 && k < j) {
+          // %var:...% syntax
+          deps.add(envVal.substring(i, k));
+        } else {
+          // %var% syntax
+          deps.add(envVal.substring(i, j));
+        }
+        i = j + 1;
+      }
+      return deps;
+    }
   }
 
   private static void putEnvIfNotNull(
@@ -1435,60 +1643,70 @@ public class ContainerLaunch implements Callable<Integer> {
       putEnvIfNotNull(environment, variable, System.getenv(variable));
     }
   }
-  
+
+  private static void addToEnvMap(
+      Map<String, String> envMap, Set<String> envSet,
+      String envName, String envValue) {
+    envMap.put(envName, envValue);
+    envSet.add(envName);
+  }
+
   public void sanitizeEnv(Map<String, String> environment, Path pwd,
       List<Path> appDirs, List<String> userLocalDirs, List<String>
-      containerLogDirs,
-      Map<Path, List<String>> resources,
-      Path nmPrivateClasspathJarDir) throws IOException {
+      containerLogDirs, Map<Path, List<String>> resources,
+      Path nmPrivateClasspathJarDir,
+      Set<String> nmVars) throws IOException {
     /**
      * Non-modifiable environment variables
      */
 
-    environment.put(Environment.CONTAINER_ID.name(), container
-        .getContainerId().toString());
+    addToEnvMap(environment, nmVars, Environment.CONTAINER_ID.name(),
+        container.getContainerId().toString());
 
-    environment.put(Environment.NM_PORT.name(),
+    addToEnvMap(environment, nmVars, Environment.NM_PORT.name(),
       String.valueOf(this.context.getNodeId().getPort()));
 
-    environment.put(Environment.NM_HOST.name(), this.context.getNodeId()
-      .getHost());
+    addToEnvMap(environment, nmVars, Environment.NM_HOST.name(),
+        this.context.getNodeId().getHost());
 
-    environment.put(Environment.NM_HTTP_PORT.name(),
+    addToEnvMap(environment, nmVars, Environment.NM_HTTP_PORT.name(),
       String.valueOf(this.context.getHttpPort()));
 
-    environment.put(Environment.LOCAL_DIRS.name(),
+    addToEnvMap(environment, nmVars, Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));
 
-    environment.put(Environment.LOCAL_USER_DIRS.name(), StringUtils.join(",",
-        userLocalDirs));
+    addToEnvMap(environment, nmVars, Environment.LOCAL_USER_DIRS.name(),
+        StringUtils.join(",", userLocalDirs));
 
-    environment.put(Environment.LOG_DIRS.name(),
+    addToEnvMap(environment, nmVars, Environment.LOG_DIRS.name(),
       StringUtils.join(",", containerLogDirs));
 
-    environment.put(Environment.USER.name(), container.getUser());
-    
-    environment.put(Environment.LOGNAME.name(), container.getUser());
+    addToEnvMap(environment, nmVars, Environment.USER.name(),
+        container.getUser());
 
-    environment.put(Environment.HOME.name(),
+    addToEnvMap(environment, nmVars, Environment.LOGNAME.name(),
+        container.getUser());
+
+    addToEnvMap(environment, nmVars, Environment.HOME.name(),
         conf.get(
             YarnConfiguration.NM_USER_HOME_DIR, 
             YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
             )
         );
-    
-    environment.put(Environment.PWD.name(), pwd.toString());
-    
-    putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
+
+    addToEnvMap(environment, nmVars, Environment.PWD.name(), pwd.toString());
 
     if (!Shell.WINDOWS) {
-      environment.put("JVM_PID", "$$");
+      addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
     // variables here will be forced in, even if the container has specified them.
-    Apps.setEnvFromInputString(environment, conf.get(
-      YarnConfiguration.NM_ADMIN_USER_ENV,
-      YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV), File.pathSeparator);
+    String nmAdminUserEnv = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
+    Apps.setEnvFromInputString(environment, nmAdminUserEnv, File.pathSeparator);
+    nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnv,
+        File.pathSeparator));
 
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
@@ -1502,6 +1720,7 @@ public class ContainerLaunch implements Callable<Integer> {
         .getAuxServiceMetaData().entrySet()) {
       AuxiliaryServiceHelper.setServiceDataIntoEnv(
           meta.getKey(), meta.getValue(), environment);
+      nmVars.add(AuxiliaryServiceHelper.getPrefixServiceName(meta.getKey()));
     }
   }
 

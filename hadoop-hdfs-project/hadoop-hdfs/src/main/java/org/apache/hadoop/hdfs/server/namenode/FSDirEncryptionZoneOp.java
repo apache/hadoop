@@ -456,17 +456,17 @@ final class FSDirEncryptionZoneOp {
         }
       }
 
-      final CryptoProtocolVersion version = encryptionZone.getVersion();
-      final CipherSuite suite = encryptionZone.getSuite();
-      final String keyName = encryptionZone.getKeyName();
       XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(
           iip, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
-
       if (fileXAttr == null) {
         NameNode.LOG.warn("Could not find encryption XAttr for file " +
             iip.getPath() + " in encryption zone " + encryptionZone.getPath());
         return null;
       }
+
+      final CryptoProtocolVersion version = encryptionZone.getVersion();
+      final CipherSuite suite = encryptionZone.getSuite();
+      final String keyName = encryptionZone.getKeyName();
       try {
         HdfsProtos.PerFileEncryptionInfoProto fileProto =
             HdfsProtos.PerFileEncryptionInfoProto.parseFrom(

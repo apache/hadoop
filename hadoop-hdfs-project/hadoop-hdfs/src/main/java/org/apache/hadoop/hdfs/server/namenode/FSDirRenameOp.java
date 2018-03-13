@@ -588,8 +588,7 @@ class FSDirRenameOp {
     private INode srcChild;
     private INode oldDstChild;
 
-    RenameOperation(FSDirectory fsd, INodesInPath srcIIP, INodesInPath dstIIP)
-        throws QuotaExceededException {
+    RenameOperation(FSDirectory fsd, INodesInPath srcIIP, INodesInPath dstIIP) {
       this.fsd = fsd;
       this.srcIIP = srcIIP;
       this.dstIIP = dstIIP;

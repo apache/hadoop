@@ -35,6 +35,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Scanner;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -58,13 +60,20 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.event.Level;
+import org.slf4j.LoggerFactory;
 
 /** A class for testing quota-related commands */
 public class TestQuota {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestQuota.class);
   
   private static Configuration conf = null;
   private static final ByteArrayOutputStream OUT_STREAM = new ByteArrayOutputStream();
@@ -76,6 +85,9 @@ public class TestQuota {
   private static FileSystem webhdfs;
   /* set a smaller block size so that we can test with smaller space quotas */
   private static final int DEFAULT_BLOCK_SIZE = 512;
+
+  @Rule
+  public final Timeout testTestout = new Timeout(120000);
 
   @BeforeClass
   public static void setUpClass() throws Exception {
@@ -1477,6 +1489,101 @@ public class TestQuota {
         new String[] {"-clrSpaceQuota", dir.toString()},
         -1,
         "clrSpaceQuota");
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnClose() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(PathUtils.getTestPath(getClass()),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args = new String[] {"-setSpaceQuota", "1", dir.toString()};
+    assertEquals(0, ToolRunner.run(dfsAdmin, args));
+
+    final Path testFile = new Path(dir, "file");
+    final FSDataOutputStream stream = dfs.create(testFile);
+    stream.write("whatever".getBytes());
+    try {
+      stream.close();
+      fail("close should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnFlush() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(PathUtils.getTestPath(getClass()),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args = new String[] {"-setSpaceQuota", "1", dir.toString()};
+    assertEquals(0, ToolRunner.run(dfsAdmin, args));
+
+    Path testFile = new Path(dir, "file");
+    FSDataOutputStream stream = dfs.create(testFile);
+    // get the lease renewer now so we can verify it later without calling
+    // getLeaseRenewer, which will automatically add the client into it.
+    final LeaseRenewer leaseRenewer = dfs.getClient().getLeaseRenewer();
+    stream.write("whatever".getBytes());
+    try {
+      stream.hflush();
+      fail("flush should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+    // even if we close the stream in finially, it won't help.
+    try {
+      stream.close();
+      fail("close should fail too");
+    } catch (DSQuotaExceededException expected) {
+    }
+
+    GenericTestUtils.setLogLevel(LeaseRenewer.LOG, Level.TRACE);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("LeaseRenewer: {}", leaseRenewer);
+        return leaseRenewer.isEmpty();
+      }
+    }, 100, 10000);
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testSpaceQuotaExceptionOnAppend() throws Exception {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(PathUtils.getTestPath(getClass()),
+        GenericTestUtils.getMethodName());
+    dfs.delete(dir, true);
+    assertTrue(dfs.mkdirs(dir));
+    final String[] args =
+        new String[] {"-setSpaceQuota", "4000", dir.toString()};
+    ToolRunner.run(dfsAdmin, args);
+
+    final Path testFile = new Path(dir, "file");
+    OutputStream stream = dfs.create(testFile);
+    stream.write("whatever".getBytes());
+    stream.close();
+
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+
+    stream = dfs.append(testFile);
+    byte[] buf = AppendTestUtil.initBuffer(4096);
+    stream.write(buf);
+    try {
+      stream.close();
+      fail("close after append should fail");
+    } catch (DSQuotaExceededException expected) {
+    }
+    assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
   }
 
   private void testSetAndClearSpaceQuotaNoAccessInternal(

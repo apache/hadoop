@@ -43,6 +43,7 @@ import "HdfsServer.proto";
 message GetBlocksRequestProto {
   required DatanodeIDProto datanode = 1; // Datanode ID
   required uint64 size = 2;              // Size in bytes
+  optional uint64 minBlockSize = 3 [default = 0]; // Minimum Block Size in bytes
 }
 
  

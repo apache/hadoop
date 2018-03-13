@@ -4372,7 +4372,6 @@
     across to the client within one rpc call.
   </description>
 </property>
-
 <property>
   <name>dfs.namenode.snapshot.max.limit</name>
   <value>65536</value>
@@ -4380,6 +4379,24 @@
     Limits the maximum number of snapshots allowed per snapshottable
     directory.If the configuration is not set, the default limit
     for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.snapshot.skiplist.max.levels</name>
+  <value>0</value>
+  <description>
+    Maximum no of the skip levels to be maintained in the skip list for
+    storing directory snapshot diffs. By default, it is set to 0 and a linear
+    list will be used to store the directory snapshot diffs.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.snapshot.skiplist.interval</name>
+  <value>10</value>
+  <description>
+    The interval after which the skip levels will be formed in the skip list
+    for storing directory snapshot diffs. By default, value is set to 10.
   </description>
 </property>
 
@@ -4637,6 +4654,17 @@
       During a block move from a source to destination disk, we might
       encounter various errors. This defines how many errors we can tolerate
       before we declare a move between 2 disks (or a step) has failed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.disk.balancer.plan.valid.interval</name>
+    <value>1d</value>
+    <description>
+      Maximum number of hours the disk balancer plan is valid.
+      This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
     </description>
   </property>
 

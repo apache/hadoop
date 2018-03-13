@@ -35,6 +35,7 @@
   <ul class="nav navbar-nav" id="ui-tabs">
     <li><a href="#tab-overview">Overview</a></li>
     <li><a href="#tab-namenode">Subclusters</a></li>
+    <li><a href="#tab-router">Routers</a></li>
     <li><a href="#tab-datanode">Datanodes</a></li>
     <li><a href="#tab-mounttable">Mount table</a></li>
     <li class="dropdown">
@@ -62,6 +63,7 @@
 <div class="tab-content">
   <div class="tab-pane" id="tab-overview"></div>
   <div class="tab-pane" id="tab-namenode"></div>
+  <div class="tab-pane" id="tab-router"></div>
   <div class="tab-pane" id="tab-datanode"></div>
   <div class="tab-pane" id="tab-mounttable"></div>
 </div>
@@ -245,11 +247,13 @@
 </small>
 </script>
 
+<!-- Routers -->
+<script type="text/x-dust-template" id="tmpl-router">
 <div class="page-header"><h1>Routers Information</h1></div>
 <div>
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">Active</li>
-    <li class="dfshealth-node-icon dfshealth-node-decommisioned">Safe mode</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioned">Safe mode</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Unavailable</li>
   </ul>
 </div>
@@ -293,8 +297,8 @@
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
-    <li class="dfshealth-node-icon dfshealth-node-decommisioned">Decommisioned</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-decommisioned">Decommissioned &amp; dead</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
   </ul>
 </div>
 <div class="page-header"><h1><small>In operation</small></h1></div>

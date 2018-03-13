@@ -293,6 +293,10 @@ public class TestDataNodeVolumeFailure {
   @Test(timeout=10000)
   public void testDataNodeShutdownAfterNumFailedVolumeExceedsTolerated()
       throws Exception {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
     // make both data directories to fail on dn0
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
@@ -314,6 +318,10 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testVolumeFailureRecoveredByHotSwappingVolume()
       throws Exception {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
     final DataNode dn0 = cluster.getDataNodes().get(0);
@@ -354,6 +362,10 @@ public class TestDataNodeVolumeFailure {
   @Test
   public void testTolerateVolumeFailuresAfterAddingMoreVolumes()
       throws Exception {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
     final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
     final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
     final File dn0VolNew = new File(dataDir, "data_new");

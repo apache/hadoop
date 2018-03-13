@@ -276,6 +276,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.conversion.rule</name>
+  <value>none</value>
+  <description>
+    The rule is applied on the group names received from LDAP when
+    RuleBasedLdapGroupsMapping is configured.
+    Supported rules are "to_upper", "to_lower" and "none".
+    to_upper: This will convert all the group names to uppercase.
+    to_lower: This will convert all the group names to lowercase.
+    none: This will retain the source formatting, this is default value.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.credential.clear-text-fallback</name>
   <value>true</value>
   <description>
@@ -1531,6 +1544,17 @@
   <description>
     Select which version of the S3 SDK's List Objects API to use.  Currently
     support 2 (default) and 1 (older API).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.etag.checksum.enabled</name>
+  <value>false</value>
+  <description>
+    Should calls to getFileChecksum() return the etag value of the remote
+    object.
+    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
+    -skipcrccheck is set.
   </description>
 </property>
 

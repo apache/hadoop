@@ -138,10 +138,14 @@ abstract class AbstractINodeDiffList<N extends INode,
     return n == 0 ? null : diffs.get(n - 1);
   }
 
+  DiffList<D> newDiffs() {
+    return new DiffListByArrayList<>(
+        INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+  }
+
   private void createDiffsIfNeeded() {
     if (diffs == null) {
-      diffs =
-          new DiffListByArrayList<>(INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+      diffs = newDiffs();
     }
   }
 
@@ -231,6 +235,12 @@ abstract class AbstractINodeDiffList<N extends INode,
     return diff == null ? Snapshot.CURRENT_STATE_ID : diff.getSnapshotId();
   }
 
+  public final int getDiffIndexById(final int snapshotId) {
+    int diffIndex = diffs.binarySearch(snapshotId);
+    diffIndex = diffIndex < 0 ? (-diffIndex - 1) : diffIndex;
+    return diffIndex;
+  }
+
   final int[] changedBetweenSnapshots(Snapshot from, Snapshot to) {
     if (diffs == null) {
       return null;
@@ -243,10 +253,10 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
 
     final int size = diffs.size();
-    int earlierDiffIndex = diffs.binarySearch(earlier.getId());
+    int earlierDiffIndex = getDiffIndexById(earlier.getId());
     int laterDiffIndex = later == null ? size
-        : diffs.binarySearch(later.getId());
-    if (-earlierDiffIndex - 1 == size) {
+        : getDiffIndexById(later.getId());
+    if (earlierDiffIndex == size) {
       // if the earlierSnapshot is after the latest SnapshotDiff stored in
       // diffs, no modification happened after the earlierSnapshot
       return null;
@@ -256,10 +266,6 @@ abstract class AbstractINodeDiffList<N extends INode,
       // before it, no modification happened before the laterSnapshot
       return null;
     }
-    earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
-        : earlierDiffIndex;
-    laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
-        : laterDiffIndex;
     return new int[]{earlierDiffIndex, laterDiffIndex};
   }
 
@@ -300,7 +306,7 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
     return diff;
   }
-  
+
   @Override
   public Iterator<D> iterator() {
     return diffs != null ? diffs.iterator() : Collections.emptyIterator();

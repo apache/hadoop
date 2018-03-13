@@ -591,3 +591,17 @@ The binary distribution of this product bundles binaries of
 swagger-annotations (https://github.com/swagger-api/swagger-core),
 which has the following notices:
  * Copyright 2016 SmartBear Software
+
+The binary distribution of this product bundles binaries of
+metrics-core 3.2.4
+which has the following notices:
+ * Copyright 2010-2013 Coda Hale and Yammer, Inc.
+
+   This product includes software developed by Coda Hale and Yammer, Inc.
+
+   This product includes code derived from the JSR-166 project (ThreadLocalRandom, Striped64,
+   LongAdder), which was released with the following comments:
+
+   Written by Doug Lea with assistance from members of JCP JSR-166
+   Expert Group and released to the public domain, as explained at
+   http://creativecommons.org/publicdomain/zero/1.0/

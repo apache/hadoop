@@ -28,4 +28,40 @@
     <Method name="s3Exists" />
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
   </Match>
+
+  <!--
+    This extends the serializable S3Object, so findbug checks
+    serializability. It is never serialized however, so its
+    warnings are false positives.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.InconsistentS3Object" />
+    <Bug pattern="SE_NO_SERIALVERSIONID" />
+  </Match>
+
+  <!--
+   findbugs gets confused by lambda expressions in synchronized methods
+   and considers references to fields to be unsynchronized.
+   As you can't disable the methods individually, we have to disable
+   them for the entire class.
+    -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AInputStream"/>
+    <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+  </Match>
+  <!--
+    findbugs reporting RV ignored. Not true.
+    "Return value of S3AReadOpContext.getReadInvoker() ignored,
+    but method has no side effect"
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AInputStream"/>
+    <Method name="reopen"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+  </Match>
+
 </FindBugsFilter>

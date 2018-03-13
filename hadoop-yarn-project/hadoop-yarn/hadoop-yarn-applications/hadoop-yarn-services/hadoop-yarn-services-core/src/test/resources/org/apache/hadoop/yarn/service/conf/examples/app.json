@@ -1,5 +1,6 @@
 {
   "name": "app-1",
+  "version": "1.0.0",
   "id" : "application_1503358878042_0011",
   "lifetime": "3600",
   "configuration": {

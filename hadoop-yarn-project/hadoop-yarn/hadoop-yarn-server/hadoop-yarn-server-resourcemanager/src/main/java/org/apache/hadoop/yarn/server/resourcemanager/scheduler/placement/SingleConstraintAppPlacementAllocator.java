@@ -23,6 +23,8 @@ import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespace;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -30,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.SchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.exceptions.InvalidAllocationTagException;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -53,7 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.APPLICATION_LABEL_INTRA_APPLICATION;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PARTITION;
 
 /**
@@ -220,7 +222,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     throw new SchedulerInvalidResoureRequestException(sb.toString());
   }
 
-  private void validateAndSetSchedulingRequest(SchedulingRequest newSchedulingRequest)
+  private void validateAndSetSchedulingRequest(SchedulingRequest
+      newSchedulingRequest)
       throws SchedulerInvalidResoureRequestException {
     // Check sizing exists
     if (newSchedulingRequest.getResourceSizing() == null
@@ -333,15 +336,23 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
         targetAllocationTags = new HashSet<>(
             targetExpression.getTargetValues());
 
-        if (targetExpression.getTargetKey() != null && !targetExpression
-            .getTargetKey().equals(APPLICATION_LABEL_INTRA_APPLICATION)) {
+        try {
+          AllocationTagNamespace tagNS =
+              AllocationTagNamespace.parse(targetExpression.getTargetKey());
+          if (!AllocationTagNamespaceType.SELF
+              .equals(tagNS.getNamespaceType())) {
+            throwExceptionWithMetaInfo(
+                "As of now, the only accepted target key for targetKey of "
+                    + "allocation_tag target expression is: ["
+                    + AllocationTagNamespaceType.SELF.toString()
+                    + "]. Please make changes to placement constraints "
+                    + "accordingly. If this is null, it will be set to "
+                    + AllocationTagNamespaceType.SELF.toString()
+                    + " by default.");
+          }
+        } catch (InvalidAllocationTagException e) {
           throwExceptionWithMetaInfo(
-              "As of now, the only accepted target key for targetKey of "
-                  + "allocation_tag target expression is: ["
-                  + APPLICATION_LABEL_INTRA_APPLICATION
-                  + "]. Please make changes to placement constraints "
-                  + "accordingly. If this is null, it will be set to "
-                  + APPLICATION_LABEL_INTRA_APPLICATION + " by default.");
+              "Invalid allocation tag namespace, message: " + e.getMessage());
         }
       }
     }

@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.api.resource;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespace;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
@@ -49,13 +49,6 @@ public final class PlacementConstraints {
   public static final String NODE = PlacementConstraint.NODE_SCOPE;
   public static final String RACK = PlacementConstraint.RACK_SCOPE;
   public static final String NODE_PARTITION = "yarn_node_partition/";
-
-  private static final String APPLICATION_LABEL_PREFIX =
-      "yarn_application_label/";
-
-  @InterfaceAudience.Private
-  public static final String APPLICATION_LABEL_INTRA_APPLICATION =
-      APPLICATION_LABEL_PREFIX + "%intra_app%";
 
   /**
    * Creates a constraint that requires allocations to be placed on nodes that
@@ -224,6 +217,20 @@ public final class PlacementConstraints {
     }
 
     /**
+     * Constructs a target expression on a set of allocation tags under
+     * a certain namespace.
+     *
+     * @param namespace namespace of the allocation tags
+     * @param allocationTags allocation tags
+     * @return a target expression
+     */
+    public static TargetExpression allocationTagWithNamespace(String namespace,
+        String... allocationTags) {
+      return new TargetExpression(TargetType.ALLOCATION_TAG,
+          namespace, allocationTags);
+    }
+
+    /**
      * Constructs a target expression on an allocation tag. It is satisfied if
      * there are allocations with one of the given tags. Comparing to
      * {@link PlacementTargets#allocationTag(String...)}, this only checks tags
@@ -235,8 +242,9 @@ public final class PlacementConstraints {
      */
     public static TargetExpression allocationTagToIntraApp(
         String... allocationTags) {
+      AllocationTagNamespace selfNs = new AllocationTagNamespace.Self();
       return new TargetExpression(TargetType.ALLOCATION_TAG,
-          APPLICATION_LABEL_INTRA_APPLICATION, allocationTags);
+          selfNs.toString(), allocationTags);
     }
   }
 

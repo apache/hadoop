@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.SignedBytes;
@@ -141,7 +140,7 @@ class SnapshotDiffInfo {
     dirDiffMap.put(dir, diff);
     diffMap.put(dir, relativePath);
     // detect rename
-    for (INode created : diff.getList(ListType.CREATED)) {
+    for (INode created : diff.getCreatedUnmodifiable()) {
       if (created.isReference()) {
         RenameEntry entry = getEntry(created.getId());
         if (entry.getTargetPath() == null) {
@@ -149,7 +148,7 @@ class SnapshotDiffInfo {
         }
       }
     }
-    for (INode deleted : diff.getList(ListType.DELETED)) {
+    for (INode deleted : diff.getDeletedUnmodifiable()) {
       if (deleted instanceof INodeReference.WithName) {
         RenameEntry entry = getEntry(deleted.getId());
         entry.setSource(deleted, relativePath);
@@ -221,11 +220,9 @@ class SnapshotDiffInfo {
   private List<DiffReportEntry> generateReport(ChildrenDiff dirDiff,
       byte[][] parentPath, boolean fromEarlier, Map<Long, RenameEntry> renameMap) {
     List<DiffReportEntry> list = new ChunkedArrayList<>();
-    List<INode> created = dirDiff.getList(ListType.CREATED);
-    List<INode> deleted = dirDiff.getList(ListType.DELETED);
     byte[][] fullPath = new byte[parentPath.length + 1][];
     System.arraycopy(parentPath, 0, fullPath, 0, parentPath.length);
-    for (INode cnode : created) {
+    for (INode cnode : dirDiff.getCreatedUnmodifiable()) {
       RenameEntry entry = renameMap.get(cnode.getId());
       if (entry == null || !entry.isRename()) {
         fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
@@ -233,7 +230,7 @@ class SnapshotDiffInfo {
             : DiffType.DELETE, fullPath));
       }
     }
-    for (INode dnode : deleted) {
+    for (INode dnode : dirDiff.getDeletedUnmodifiable()) {
       RenameEntry entry = renameMap.get(dnode.getId());
       if (entry != null && entry.isRename()) {
         list.add(new DiffReportEntry(DiffType.RENAME,

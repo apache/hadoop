@@ -45,7 +45,6 @@ export default DS.JSONAPISerializer.extend({
         progress: 100,
         applicationType: payload.info.YARN_APPLICATION_TYPE,
         diagnostics: (diagnostics && diagnostics !== 'null')? diagnostics : '',
-        amContainerLogs: '',
         amHostHttpAddress: '',
         logAggregationStatus: '',
         unmanagedApplication: payload.info.YARN_APPLICATION_UNMANAGED_APPLICATION || 'N/A',

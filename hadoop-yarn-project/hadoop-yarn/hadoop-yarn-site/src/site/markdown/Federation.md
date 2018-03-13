@@ -29,6 +29,7 @@ This architecture can provide very tight enforcement of scheduling invariants wi
 Federation is designed as a “layer” atop of existing YARN codebase, with limited changes in the core YARN mechanisms.
 
 Assumptions:
+
 * We assume reasonably good connectivity across sub-clusters (e.g., we are not looking to federate across DC yet, though future investigations of this are not excluded).
 * We rely on HDFS federation (or equivalently scalable DFS solutions) to take care of scalability of the store side.
 
@@ -71,6 +72,7 @@ to minimize overhead on the scheduling infrastructure (more in section on scalab
 ![Architecture of the AMRMProxy interceptor chain | width=800](./images/amrmproxy_architecture.png)
 
 *Role of AMRMProxy*
+
 1. Protect the sub-cluster YARN RMs from misbehaving AMs. The AMRMProxy can prevent DDOS attacks by throttling/killing AMs that are asking too many resources.
 2. Mask the multiple YARN RMs in the cluster, and can transparently allow the AM to span across sub-clusters. All container allocations are done by the YARN RM framework that consists of the AMRMProxy fronting the home and other sub-cluster RMs.
 3. Intercepts all the requests, thus it can enforce application quotas, which would not be enforceable by sub-cluster RM (as each only see a fraction of the AM requests).

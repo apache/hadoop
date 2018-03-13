@@ -42,8 +42,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
@@ -54,6 +56,10 @@ import org.apache.hadoop.util.DataChecksum;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 public class TestCopyMapper {
   private static final Log LOG = LogFactory.getLog(TestCopyMapper.class);
@@ -248,7 +254,11 @@ public class TestCopyMapper {
 
     // do the distcp again with -update and -append option
     CopyMapper copyMapper = new CopyMapper();
-    StubContext stubContext = new StubContext(getConfiguration(), null, 0);
+    Configuration conf = getConfiguration();
+    // set the buffer size to 1/10th the size of the file.
+    conf.setInt(DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
+        DEFAULT_FILE_SIZE/10);
+    StubContext stubContext = new StubContext(conf, null, 0);
     Mapper<Text, CopyListingFileStatus, Text, Text>.Context context =
         stubContext.getContext();
     // Enable append 
@@ -257,6 +267,10 @@ public class TestCopyMapper {
     copyMapper.setup(context);
 
     int numFiles = 0;
+    MetricsRecordBuilder rb =
+        getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+    String readCounter = "ReadsFromLocalClient";
+    long readsFromClient = getLongCounter(readCounter, rb);
     for (Path path: pathList) {
       if (fs.getFileStatus(path).isFile()) {
         numFiles++;
@@ -274,6 +288,15 @@ public class TestCopyMapper {
         .getValue());
     Assert.assertEquals(numFiles, stubContext.getReporter().
         getCounter(CopyMapper.Counter.COPY).getValue());
+    rb = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
+    /*
+     * added as part of HADOOP-15292 to ensure that multiple readBlock()
+     * operations are not performed to read a block from a single Datanode.
+     * assert assumes that there is only one block per file, and that the number
+     * of files appended to in appendSourceData() above is captured by the
+     * variable numFiles.
+     */
+    assertCounter(readCounter, readsFromClient + numFiles, rb);
   }
 
   private void testCopy(boolean preserveChecksum) throws Exception {
@@ -915,7 +938,7 @@ public class TestCopyMapper {
   }
 
   @Test(timeout=40000)
-  public void testCopyFailOnBlockSizeDifference() {
+  public void testCopyFailOnBlockSizeDifference() throws Exception {
     try {
       deleteState();
       createSourceDataWithDifferentBlockSize();
@@ -942,12 +965,11 @@ public class TestCopyMapper {
 
       Assert.fail("Copy should have failed because of block-size difference.");
     }
-    catch (Exception exception) {
-      // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Failure exception should have suggested the use of -pb.",
-          exception.getCause().getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.",
-          exception.getCause().getCause().getMessage().contains("skipCrc"));
+    catch (IOException exception) {
+      // Check that the exception suggests the use of -pb/-skipcrccheck.
+      Throwable cause = exception.getCause().getCause();
+      GenericTestUtils.assertExceptionContains("-pb", cause);
+      GenericTestUtils.assertExceptionContains("-skipcrccheck", cause);
     }
   }
 
