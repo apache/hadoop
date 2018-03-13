@@ -37,6 +37,14 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerialize
  */
 public abstract class MembershipState extends BaseRecord
     implements FederationNamenodeContext {
+  public static final String ERROR_MSG_NO_NS_SPECIFIED =
+      "Invalid registration, no nameservice specified ";
+  public static final String ERROR_MSG_NO_WEB_ADDR_SPECIFIED =
+      "Invalid registration, no web address specified ";
+  public static final String ERROR_MSG_NO_RPC_ADDR_SPECIFIED =
+      "Invalid registration, no rpc address specified ";
+  public static final String ERROR_MSG_NO_BP_SPECIFIED =
+      "Invalid registration, no block pool specified ";
 
   /** Expiration time in ms for this entry. */
   private static long expirationMs;
@@ -226,26 +234,25 @@ public abstract class MembershipState extends BaseRecord
    * is missing required information.
    */
   @Override
-  public boolean validate() {
-    boolean ret = super.validate();
+  public void validate() {
+    super.validate();
     if (getNameserviceId() == null || getNameserviceId().length() == 0) {
-      //LOG.error("Invalid registration, no nameservice specified " + this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_NS_SPECIFIED + this);
     }
     if (getWebAddress() == null || getWebAddress().length() == 0) {
-      //LOG.error("Invalid registration, no web address specified " + this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_WEB_ADDR_SPECIFIED + this);
     }
     if (getRpcAddress() == null || getRpcAddress().length() == 0) {
-      //LOG.error("Invalid registration, no rpc address specified " + this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_RPC_ADDR_SPECIFIED + this);
     }
     if (!isBadState() &&
         (getBlockPoolId().isEmpty() || getBlockPoolId().length() == 0)) {
-      //LOG.error("Invalid registration, no block pool specified " + this);
-      ret = false;
+      throw new IllegalArgumentException(
+          ERROR_MSG_NO_BP_SPECIFIED + this);
     }
-    return ret;
   }
 
 
