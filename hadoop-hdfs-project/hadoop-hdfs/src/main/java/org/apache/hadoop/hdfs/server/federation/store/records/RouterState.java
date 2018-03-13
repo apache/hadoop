@@ -127,14 +127,13 @@ public abstract class RouterState extends BaseRecord {
   }
 
   @Override
-  public boolean validate() {
-    boolean ret = super.validate();
+  public void validate() {
+    super.validate();
     if ((getAddress() == null || getAddress().length() == 0) &&
         getStatus() != RouterServiceState.INITIALIZING) {
-      LOG.error("Invalid router entry, no address specified {}", this);
-      ret = false;
+      throw new IllegalArgumentException(
+          "Invalid router entry, no address specified " + this);
     }
-    return ret;
   }
 
   @Override
