@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 
 import org.junit.Assert;
+import org.junit.Assume;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
@@ -68,6 +70,13 @@ public class TestFSImage {
     setCompressCodec(conf, "org.apache.hadoop.io.compress.DefaultCodec");
     setCompressCodec(conf, "org.apache.hadoop.io.compress.GzipCodec");
     setCompressCodec(conf, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+
+  @Test
+  public void testNativeCompression() throws IOException {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     setCompressCodec(conf, "org.apache.hadoop.io.compress.Lz4Codec");
   }
 
