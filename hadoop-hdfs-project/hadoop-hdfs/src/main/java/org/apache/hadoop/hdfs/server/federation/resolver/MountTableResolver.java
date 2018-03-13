@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -239,7 +240,7 @@ public class MountTableResolver
       PathLocation loc = entry.getValue();
       String src = loc.getSourcePath();
       if (src != null) {
-        if (src.startsWith(path)) {
+        if(isParentEntry(src, path)) {
           LOG.debug("Removing {}", src);
           it.remove();
         }
@@ -528,17 +529,6 @@ public class MountTableResolver
   @Override
   public String getDefaultNamespace() {
     return this.defaultNameService;
-  }
-
-  private boolean isParentEntry(final String path, final String parent) {
-    if (!path.startsWith(parent)) {
-      return false;
-    }
-    if (path.equals(parent)) {
-      return true;
-    }
-    return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
-        || parent.equals(Path.SEPARATOR);
   }
 
   /**
