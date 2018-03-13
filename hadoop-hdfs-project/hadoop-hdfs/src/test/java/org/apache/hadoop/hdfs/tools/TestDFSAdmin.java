@@ -882,4 +882,42 @@ public class TestDFSAdmin {
     assertEquals(-1, ToolRunner.run(dfsAdmin,
         new String[]{"-setBalancerBandwidth", "-10m"}));
   }
+
+  @Test(timeout = 300000L)
+  public void testCheckNumOfBlocksInReportCommand() throws Exception {
+    Configuration config = new Configuration();
+    config.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
+    config.set(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, "3s");
+
+    int numOfDatanodes = 1;
+    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(numOfDatanodes).build();
+    try {
+      miniDFSCluster.waitActive();
+      DistributedFileSystem dfs = miniDFSCluster.getFileSystem();
+      Path path= new Path("/tmp.txt");
+
+      DatanodeInfo[] dn = dfs.getDataNodeStats();
+      assertEquals(dn.length, numOfDatanodes);
+      //Block count should be 0, as no files are created
+      assertEquals(dn[0].getNumBlocks(), 0);
+
+
+      //Create a file with 2 blocks
+      DFSTestUtil.createFile(dfs, path, 1024, (short) 1, 0);
+      int expectedBlockCount = 2;
+
+      //Wait for One Heartbeat
+      Thread.sleep(3 * 1000);
+
+      dn = dfs.getDataNodeStats();
+      assertEquals(dn.length, numOfDatanodes);
+
+      //Block count should be 2, as file is created with block count 2
+      assertEquals(dn[0].getNumBlocks(), expectedBlockCount);
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
