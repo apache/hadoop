@@ -373,13 +373,19 @@ public class TestBalancerWithMultipleNameNodes {
     }
 
     conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f");
+    // Adjust the capacity of each DN since it will redistribute blocks
+    // nNameNodes times in the following operations.
+    long[] newCapacities = new long[nDataNodes];
+    for (int i = 0; i < nDataNodes; i++) {
+      newCapacities[i] = capacities[i] * nNameNodes;
+    }
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
           .numDataNodes(nDataNodes)
           .racks(racks)
-          .simulatedCapacities(capacities)
+          .simulatedCapacities(newCapacities)
           .format(false)
           .build();
       LOG.info("UNEVEN 11");
@@ -407,7 +413,7 @@ public class TestBalancerWithMultipleNameNodes {
           LOG.info("UNEVEN 13: n=" + n);
         }
     
-        final long totalCapacity = TestBalancer.sum(capacities);
+        final long totalCapacity = TestBalancer.sum(newCapacities);
         final long totalUsed = nNameNodes*usedSpacePerNN;
         LOG.info("UNEVEN 14");
         runBalancer(s, totalUsed, totalCapacity);
