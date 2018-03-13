@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -590,5 +591,19 @@ public class StripedFileTestUtil {
     List<ErasureCodingPolicy> policies = SystemErasureCodingPolicies
             .getPolicies();
     return policies.get(1 + rand.nextInt(policies.size() - 1));
+  }
+
+  /**
+   * Get all Erasure Coding Policies for Parameterized tests.
+   * @return Collection<Object[]>
+   */
+  public static Collection<Object[]> getECPolicies() {
+    ArrayList<Object[]> params = new ArrayList<>();
+    List<ErasureCodingPolicy> policies =
+        SystemErasureCodingPolicies.getPolicies();
+    for (ErasureCodingPolicy policy: policies) {
+      params.add(new Object[]{policy});
+    }
+    return params;
   }
 }
