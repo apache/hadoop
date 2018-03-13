@@ -147,7 +147,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
@@ -194,6 +194,27 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // Start the client threads when they are all ready
     ready.await();
     start.countDown();
+  }
+
+  /**
+   * Test that the number of acceptors and selectors can be configured by
+   * trying to configure more of them than would be allowed based on the
+   * maximum thread count.
+   */
+  @Test
+  public void testAcceptorSelectorConfigurability() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, MAX_THREADS - 2);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, MAX_THREADS - 2);
+    HttpServer2 badserver = createTestServer(conf);
+    try {
+      badserver.start();
+      // Should not succeed
+      fail();
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof IllegalStateException);
+    }
   }
   
   @Test public void testEcho() throws Exception {
