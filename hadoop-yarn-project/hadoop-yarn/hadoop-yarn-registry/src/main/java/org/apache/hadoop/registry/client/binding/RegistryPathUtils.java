@@ -24,11 +24,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.exceptions.InvalidPathnameException;
 import org.apache.hadoop.registry.client.impl.zk.RegistryInternalConstants;
+import org.apache.hadoop.registry.server.dns.BaseServiceRecordProcessor;
 import org.apache.zookeeper.common.PathUtils;
 
 import java.net.IDN;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -44,6 +46,9 @@ public class RegistryPathUtils {
    */
   private static final Pattern PATH_ENTRY_VALIDATION_PATTERN =
       Pattern.compile(RegistryInternalConstants.VALID_PATH_ENTRY_PATTERN);
+
+  private static final Pattern USER_NAME =
+      Pattern.compile("/users/([a-z][a-z0-9-.]*)");
 
   /**
    * Validate ZK path with the path itself included in
@@ -214,5 +219,20 @@ public class RegistryPathUtils {
    */
   public static String encodeYarnID(String yarnId) {
     return yarnId.replace("container", "ctr").replace("_", "-");
+  }
+
+  /**
+   * Return the username found in the ZK path.
+   *
+   * @param recPath the ZK recPath.
+   * @return the user name.
+   */
+  public static String getUsername(String recPath) {
+    String user = "anonymous";
+    Matcher matcher = USER_NAME.matcher(recPath);
+    if (matcher.find()) {
+      user = matcher.group(1);
+    }
+    return user;
   }
 }

@@ -435,13 +435,13 @@ public class TestSnapshot {
     hdfs.allowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_LIMIT,
+    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT,
         rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
     // call allowSnapshot again
     hdfs.allowSnapshot(root);
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
-    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_LIMIT,
+    assertEquals(DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT,
         rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
     
     // disallowSnapshot on dir

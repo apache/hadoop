@@ -35,11 +35,10 @@ import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -52,7 +51,8 @@ import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -75,7 +75,9 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public abstract class Storage extends StorageInfo {
-  public static final Log LOG = LogFactory.getLog(Storage.class.getName());
+
+  public static final Logger LOG = LoggerFactory
+      .getLogger(Storage.class.getName());
 
   // last layout version that did not support upgrades
   public static final int LAST_PRE_UPGRADE_LAYOUT_VERSION = -3;
@@ -196,7 +198,10 @@ public abstract class Storage extends StorageInfo {
     Iterator<StorageDirectory> it =
       (dirType == null) ? dirIterator() : dirIterator(dirType);
     for ( ;it.hasNext(); ) {
-      list.add(new File(it.next().getCurrentDir(), fileName));
+      File currentDir = it.next().getCurrentDir();
+      if (currentDir != null) {
+        list.add(new File(currentDir, fileName));
+      }
     }
     return list;
   }
@@ -328,8 +333,18 @@ public abstract class Storage extends StorageInfo {
      */
     public StorageDirectory(String bpid, StorageDirType dirType,
         boolean isShared, StorageLocation location) {
-      this(new File(location.getBpURI(bpid, STORAGE_DIR_CURRENT)), dirType,
+      this(getBlockPoolCurrentDir(bpid, location), dirType,
           isShared, location);
+    }
+
+    private static File getBlockPoolCurrentDir(String bpid,
+        StorageLocation location) {
+      if (location == null ||
+          location.getStorageType() == StorageType.PROVIDED) {
+        return null;
+      } else {
+        return new File(location.getBpURI(bpid, STORAGE_DIR_CURRENT));
+      }
     }
 
     private StorageDirectory(File dir, StorageDirType dirType,
@@ -347,7 +362,8 @@ public abstract class Storage extends StorageInfo {
     }
 
     private static File getStorageLocationFile(StorageLocation location) {
-      if (location == null) {
+      if (location == null ||
+          location.getStorageType() == StorageType.PROVIDED) {
         return null;
       }
       try {
@@ -381,7 +397,7 @@ public abstract class Storage extends StorageInfo {
           return FileUtils.sizeOfDirectory(root);
         }
       } catch (Exception e) {
-        LOG.warn("Failed to get directory size :" + root, e);
+        LOG.warn("Failed to get directory size : {}", root, e);
       }
       return 0;
     }
@@ -406,9 +422,13 @@ public abstract class Storage extends StorageInfo {
      */
     public void clearDirectory() throws IOException {
       File curDir = this.getCurrentDir();
+      if (curDir == null) {
+        // if the directory is null, there is nothing to do.
+        return;
+      }
       if (curDir.exists()) {
         File[] files = FileUtil.listFiles(curDir);
-        LOG.info("Will remove files: " + Arrays.toString(files));
+        LOG.info("Will remove files: {}", Arrays.toString(files));
         if (!(FileUtil.fullyDelete(curDir)))
           throw new IOException("Cannot remove current directory: " + curDir);
       }
@@ -423,6 +443,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getCurrentDir() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_DIR_CURRENT);
     }
 
@@ -443,6 +466,9 @@ public abstract class Storage extends StorageInfo {
      * @return the version file path
      */
     public File getVersionFile() {
+      if (root == null) {
+        return null;
+      }
       return new File(new File(root, STORAGE_DIR_CURRENT), STORAGE_FILE_VERSION);
     }
 
@@ -452,6 +478,9 @@ public abstract class Storage extends StorageInfo {
      * @return the previous version file path
      */
     public File getPreviousVersionFile() {
+      if (root == null) {
+        return null;
+      }
       return new File(new File(root, STORAGE_DIR_PREVIOUS), STORAGE_FILE_VERSION);
     }
 
@@ -462,6 +491,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getPreviousDir() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_DIR_PREVIOUS);
     }
 
@@ -476,6 +508,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getPreviousTmp() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_TMP_PREVIOUS);
     }
 
@@ -490,6 +525,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getRemovedTmp() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_TMP_REMOVED);
     }
 
@@ -503,6 +541,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getFinalizedTmp() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_TMP_FINALIZED);
     }
 
@@ -517,6 +558,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getLastCheckpointTmp() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_TMP_LAST_CKPT);
     }
 
@@ -530,6 +574,9 @@ public abstract class Storage extends StorageInfo {
      * @return the directory path
      */
     public File getPreviousCheckpoint() {
+      if (root == null) {
+        return null;
+      }
       return new File(root, STORAGE_PREVIOUS_CKPT);
     }
 
@@ -543,7 +590,7 @@ public abstract class Storage extends StorageInfo {
     private void checkEmptyCurrent() throws InconsistentFSStateException,
         IOException {
       File currentDir = getCurrentDir();
-      if(!currentDir.exists()) {
+      if(currentDir == null || !currentDir.exists()) {
         // if current/ does not exist, it's safe to format it.
         return;
       }
@@ -589,6 +636,13 @@ public abstract class Storage extends StorageInfo {
     public StorageState analyzeStorage(StartupOption startOpt, Storage storage,
         boolean checkCurrentIsEmpty)
         throws IOException {
+
+      if (location != null &&
+          location.getStorageType() == StorageType.PROVIDED) {
+        // currently we assume that PROVIDED storages are always NORMAL
+        return StorageState.NORMAL;
+      }
+
       assert root != null : "root is null";
       boolean hadMkdirs = false;
       String rootPath = root.getCanonicalPath();
@@ -597,25 +651,25 @@ public abstract class Storage extends StorageInfo {
           // storage directory does not exist
           if (startOpt != StartupOption.FORMAT &&
               startOpt != StartupOption.HOTSWAP) {
-            LOG.warn("Storage directory " + rootPath + " does not exist");
+            LOG.warn("Storage directory {} does not exist", rootPath);
             return StorageState.NON_EXISTENT;
           }
-          LOG.info(rootPath + " does not exist. Creating ...");
+          LOG.info("{} does not exist. Creating ...", rootPath);
           if (!root.mkdirs())
             throw new IOException("Cannot create directory " + rootPath);
           hadMkdirs = true;
         }
         // or is inaccessible
         if (!root.isDirectory()) {
-          LOG.warn(rootPath + "is not a directory");
+          LOG.warn("{} is not a directory", rootPath);
           return StorageState.NON_EXISTENT;
         }
         if (!FileUtil.canWrite(root)) {
-          LOG.warn("Cannot access storage directory " + rootPath);
+          LOG.warn("Cannot access storage directory {}", rootPath);
           return StorageState.NON_EXISTENT;
         }
       } catch(SecurityException ex) {
-        LOG.warn("Cannot access storage directory " + rootPath, ex);
+        LOG.warn("Cannot access storage directory {}", rootPath, ex);
         return StorageState.NON_EXISTENT;
       }
 
@@ -710,46 +764,50 @@ public abstract class Storage extends StorageInfo {
      */
     public void doRecover(StorageState curState) throws IOException {
       File curDir = getCurrentDir();
+      if (curDir == null || root == null) {
+        // at this point, we do not support recovery on PROVIDED storages
+        return;
+      }
       String rootPath = root.getCanonicalPath();
       switch(curState) {
       case COMPLETE_UPGRADE:  // mv previous.tmp -> previous
-        LOG.info("Completing previous upgrade for storage directory " 
-                 + rootPath);
+        LOG.info("Completing previous upgrade for storage directory {}",
+            rootPath);
         rename(getPreviousTmp(), getPreviousDir());
         return;
       case RECOVER_UPGRADE:   // mv previous.tmp -> current
-        LOG.info("Recovering storage directory " + rootPath
-                 + " from previous upgrade");
+        LOG.info("Recovering storage directory {} from previous upgrade",
+            rootPath);
         if (curDir.exists())
           deleteDir(curDir);
         rename(getPreviousTmp(), curDir);
         return;
       case COMPLETE_ROLLBACK: // rm removed.tmp
-        LOG.info("Completing previous rollback for storage directory "
-                 + rootPath);
+        LOG.info("Completing previous rollback for storage directory {}",
+            rootPath);
         deleteDir(getRemovedTmp());
         return;
       case RECOVER_ROLLBACK:  // mv removed.tmp -> current
-        LOG.info("Recovering storage directory " + rootPath
-                 + " from previous rollback");
+        LOG.info("Recovering storage directory {} from previous rollback",
+            rootPath);
         rename(getRemovedTmp(), curDir);
         return;
       case COMPLETE_FINALIZE: // rm finalized.tmp
-        LOG.info("Completing previous finalize for storage directory "
-                 + rootPath);
+        LOG.info("Completing previous finalize for storage directory {}",
+            rootPath);
         deleteDir(getFinalizedTmp());
         return;
       case COMPLETE_CHECKPOINT: // mv lastcheckpoint.tmp -> previous.checkpoint
-        LOG.info("Completing previous checkpoint for storage directory " 
-                 + rootPath);
+        LOG.info("Completing previous checkpoint for storage directory {}",
+            rootPath);
         File prevCkptDir = getPreviousCheckpoint();
         if (prevCkptDir.exists())
           deleteDir(prevCkptDir);
         rename(getLastCheckpointTmp(), prevCkptDir);
         return;
       case RECOVER_CHECKPOINT:  // mv lastcheckpoint.tmp -> current
-        LOG.info("Recovering storage directory " + rootPath
-                 + " from failed checkpoint");
+        LOG.info("Recovering storage directory {} from failed checkpoint",
+            rootPath);
         if (curDir.exists())
           deleteDir(curDir);
         rename(getLastCheckpointTmp(), curDir);
@@ -803,12 +861,12 @@ public abstract class Storage extends StorageInfo {
      */
     public void lock() throws IOException {
       if (isShared()) {
-        LOG.info("Locking is disabled for " + this.root);
+        LOG.info("Locking is disabled for {}", this.root);
         return;
       }
       FileLock newLock = tryLock();
       if (newLock == null) {
-        String msg = "Cannot lock storage " + this.root 
+        String msg = "Cannot lock storage " + this.root
           + ". The directory is already locked";
         LOG.info(msg);
         throw new IOException(msg);
@@ -840,22 +898,22 @@ public abstract class Storage extends StorageInfo {
       try {
         res = file.getChannel().tryLock();
         if (null == res) {
-          LOG.error("Unable to acquire file lock on path " + lockF.toString());
+          LOG.error("Unable to acquire file lock on path {}", lockF);
           throw new OverlappingFileLockException();
         }
         file.write(jvmName.getBytes(Charsets.UTF_8));
-        LOG.info("Lock on " + lockF + " acquired by nodename " + jvmName);
+        LOG.info("Lock on {} acquired by nodename {}", lockF, jvmName);
       } catch(OverlappingFileLockException oe) {
         // Cannot read from the locked file on Windows.
         String lockingJvmName = Path.WINDOWS ? "" : (" " + file.readLine());
-        LOG.error("It appears that another node " + lockingJvmName
-            + " has already locked the storage directory: " + root, oe);
+        LOG.error("It appears that another node {} has already locked the "
+            + "storage directory: {}", lockingJvmName, root, oe);
         file.close();
         return null;
       } catch(IOException e) {
-        LOG.error("Failed to acquire lock on " + lockF
-            + ". If this storage directory is mounted via NFS, " 
-            + "ensure that the appropriate nfs lock services are running.", e);
+        LOG.error("Failed to acquire lock on {}. If this storage directory is"
+            + " mounted via NFS, ensure that the appropriate nfs lock services"
+            + " are running.", lockF, e);
         file.close();
         throw e;
       }
@@ -883,7 +941,8 @@ public abstract class Storage extends StorageInfo {
     
     @Override
     public String toString() {
-      return "Storage Directory " + this.root;
+      return "Storage Directory root= " + this.root +
+          "; location= " + this.location;
     }
 
     /**
@@ -1153,6 +1212,9 @@ public abstract class Storage extends StorageInfo {
   }
   
   public void writeProperties(File to, StorageDirectory sd) throws IOException {
+    if (to == null) {
+      return;
+    }
     Properties props = new Properties();
     setPropertiesFromFields(props, sd);
     writeProperties(to, props);
@@ -1270,10 +1332,8 @@ public abstract class Storage extends StorageInfo {
     }
     if (preserveFileDate) {
       if (destFile.setLastModified(srcFile.lastModified()) == false) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to preserve last modified date from'" + srcFile
-            + "' to '" + destFile + "'");
-        }
+        LOG.debug("Failed to preserve last modified date from'{}' to '{}'",
+            srcFile, destFile);
       }
     }
   }

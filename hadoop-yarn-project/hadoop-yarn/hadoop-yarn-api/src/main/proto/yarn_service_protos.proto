@@ -38,6 +38,7 @@ message RegisterApplicationMasterRequestProto {
   optional string host = 1;
   optional int32 rpc_port = 2;
   optional string tracking_url = 3;
+  repeated PlacementConstraintMapEntryProto placement_constraints = 4;
 }
 
 message RegisterApplicationMasterResponseProto {
@@ -90,6 +91,7 @@ message AllocateRequestProto {
   optional int32 response_id = 4;
   optional float progress = 5;
   repeated UpdateContainerRequestProto update_requests = 7;
+  repeated SchedulingRequestProto scheduling_requests = 10;
 }
 
 message NMTokenProto {
@@ -118,6 +120,7 @@ message AllocateResponseProto {
   repeated UpdateContainerErrorProto update_errors = 15;
   repeated UpdatedContainerProto updated_containers = 16;
   repeated ContainerProto containers_from_previous_attempts = 17;
+  repeated RejectedSchedulingRequestProto rejected_scheduling_requests = 18;
 }
 
 enum SchedulerResourceTypes {

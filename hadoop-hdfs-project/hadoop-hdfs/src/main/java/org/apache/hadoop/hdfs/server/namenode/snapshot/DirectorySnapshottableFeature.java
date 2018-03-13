@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
@@ -61,7 +60,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature {
   /** Limit the number of snapshot per snapshottable directory. */
-  static final int SNAPSHOT_LIMIT = 1 << 16;
+  static final int SNAPSHOT_QUOTA_DEFAULT = 1 << 16;
 
   /**
    * Snapshots of this directory in ascending order of snapshot names.
@@ -70,7 +69,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   private final List<Snapshot> snapshotsByNames = new ArrayList<Snapshot>();
   /** Number of snapshots allowed. */
-  private int snapshotQuota = SNAPSHOT_LIMIT;
+  private int snapshotQuota = SNAPSHOT_QUOTA_DEFAULT;
 
   public DirectorySnapshottableFeature(DirectoryWithSnapshotFeature feature) {
     super(feature == null ? null : feature.getDiffs());
@@ -170,7 +169,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   /** Add a snapshot. */
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles)
+      final LeaseManager leaseManager, final boolean captureOpenFiles,
+      int maxSnapshotLimit)
       throws SnapshotException, QuotaExceededException {
     //check snapshot quota
     final int n = getNumSnapshots();
@@ -178,6 +178,11 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       throw new SnapshotException("Failed to add snapshot: there are already "
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
+    } else if (n + 1 > maxSnapshotLimit) {
+      throw new SnapshotException(
+          "Failed to add snapshot: there are already " + n
+              + " snapshot(s) and the max snapshot limit is "
+              + maxSnapshotLimit);
     }
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
@@ -390,7 +395,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
           .getId());
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(
               snapshotDir, (WithName) child,
@@ -470,7 +475,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         }
         iterate = true;
         level = level + 1;
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(snapshotDir,
               (WithName) child, Snapshot.getSnapshotId(later));

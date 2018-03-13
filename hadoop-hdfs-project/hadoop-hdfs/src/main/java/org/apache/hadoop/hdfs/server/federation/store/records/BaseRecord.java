@@ -32,6 +32,10 @@ import org.apache.hadoop.util.Time;
  * </ul>
  */
 public abstract class BaseRecord implements Comparable<BaseRecord> {
+  public static final String ERROR_MSG_CREATION_TIME_NEGATIVE =
+      "The creation time for the record cannot be negative.";
+  public static final String ERROR_MSG_MODIFICATION_TIME_NEGATIVE =
+      "The modification time for the record cannot be negative.";
 
   /**
    * Set the modification time for the record.
@@ -193,11 +197,15 @@ public abstract class BaseRecord implements Comparable<BaseRecord> {
 
   /**
    * Validates the record. Called when the record is created, populated from the
-   * state store, and before committing to the state store.
-   * @return If the record is valid.
+   * state store, and before committing to the state store. If validate failed,
+   * there throws an exception.
    */
-  public boolean validate() {
-    return getDateCreated() > 0 && getDateModified() > 0;
+  public void validate() {
+    if (getDateCreated() <= 0) {
+      throw new IllegalArgumentException(ERROR_MSG_CREATION_TIME_NEGATIVE);
+    } else if (getDateModified() <= 0) {
+      throw new IllegalArgumentException(ERROR_MSG_MODIFICATION_TIME_NEGATIVE);
+    }
   }
 
   @Override

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -54,7 +55,7 @@ public class MockNM {
 
   private int responseId;
   private NodeId nodeId;
-  private Resource capatibility;
+  private Resource capability;
   private ResourceTrackerService resourceTracker;
   private int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -85,15 +86,15 @@ public class MockNM {
         version);
   }
 
-  public MockNM(String nodeIdStr, Resource capatibility,
+  public MockNM(String nodeIdStr, Resource capability,
       ResourceTrackerService resourceTracker) {
-    this(nodeIdStr, capatibility, resourceTracker,
+    this(nodeIdStr, capability, resourceTracker,
         YarnVersionInfo.getVersion());
   }
 
-  public MockNM(String nodeIdStr, Resource capatibility,
+  public MockNM(String nodeIdStr, Resource capability,
       ResourceTrackerService resourceTracker, String version) {
-    this.capatibility = capatibility;
+    this.capability = capability;
     this.resourceTracker = resourceTracker;
     this.version = version;
     String[] splits = nodeIdStr.split(":");
@@ -130,7 +131,7 @@ public class MockNM {
             container.getResource());
     List<Container> increasedConts = Collections.singletonList(container);
     nodeHeartbeat(Collections.singletonList(containerStatus), increasedConts,
-        true, ++responseId);
+        true, responseId);
   }
 
   public void addRegisteringCollector(ApplicationId appId,
@@ -140,6 +141,13 @@ public class MockNM {
 
   public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
     return this.registeringCollectors;
+  }
+
+  public void unRegisterNode() throws Exception {
+    UnRegisterNodeManagerRequest request = Records
+        .newRecord(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(nodeId);
+    resourceTracker.unRegisterNodeManager(request);
   }
 
   public RegisterNodeManagerResponse registerNode() throws Exception {
@@ -158,7 +166,7 @@ public class MockNM {
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
-    req.setResource(capatibility);
+    req.setResource(capability);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
     req.setRunningApplications(runningApplications);
@@ -169,7 +177,7 @@ public class MockNM {
     this.currentNMTokenMasterKey = registrationResponse.getNMTokenMasterKey();
     Resource newResource = registrationResponse.getResource();
     if (newResource != null) {
-      capatibility = Resources.clone(newResource);
+      capability = Resources.clone(newResource);
     }
     containerStats.clear();
     if (containerReports != null) {
@@ -182,30 +190,31 @@ public class MockNM {
         }
       }
     }
+    responseId = 0;
     return registrationResponse;
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
     return nodeHeartbeat(Collections.<ContainerStatus>emptyList(),
-        Collections.<Container>emptyList(), isHealthy, ++responseId);
+        Collections.<Container>emptyList(), isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
       long containerId, ContainerState containerState) throws Exception {
     ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
         BuilderUtils.newContainerId(attemptId, containerId), containerState,
-        "Success", 0, capatibility);
+        "Success", 0, capability);
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>(1);
     containerStatusList.add(containerStatus);
     Log.getLog().info("ContainerStatus: " + containerStatus);
     return nodeHeartbeat(containerStatusList,
-        Collections.<Container>emptyList(), true, ++responseId);
+        Collections.<Container>emptyList(), true, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy) throws Exception {
-    return nodeHeartbeat(conts, isHealthy, ++responseId);
+    return nodeHeartbeat(conts, isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
@@ -221,7 +230,7 @@ public class MockNM {
   public NodeHeartbeatResponse nodeHeartbeat(
       List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
-        isHealthy, ++responseId);
+        isHealthy, responseId);
   }
 
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
@@ -257,7 +266,8 @@ public class MockNM {
 
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
-    
+    responseId = heartbeatResponse.getResponseId();
+
     MasterKey masterKeyFromRM = heartbeatResponse.getContainerTokenMasterKey();
     if (masterKeyFromRM != null
         && masterKeyFromRM.getKeyId() != this.currentContainerTokenMasterKey
@@ -274,25 +284,29 @@ public class MockNM {
 
     Resource newResource = heartbeatResponse.getResource();
     if (newResource != null) {
-      capatibility = Resources.clone(newResource);
+      capability = Resources.clone(newResource);
     }
 
     return heartbeatResponse;
   }
 
   public long getMemory() {
-    return capatibility.getMemorySize();
+    return capability.getMemorySize();
   }
 
   public int getvCores() {
-    return capatibility.getVirtualCores();
+    return capability.getVirtualCores();
   }
 
-  public Resource getCapatibility() {
-    return capatibility;
+  public Resource getCapability() {
+    return capability;
   }
 
   public String getVersion() {
     return version;
+  }
+
+  public void setResponseId(int id) {
+    this.responseId = id;
   }
 }

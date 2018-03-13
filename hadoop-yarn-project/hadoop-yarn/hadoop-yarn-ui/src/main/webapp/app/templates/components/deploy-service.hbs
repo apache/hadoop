@@ -29,6 +29,16 @@
       </div>
     </div>
   {{/if}}
+  <div class="row">
+    <div class="col-md-4">
+      <div class="form-group shrink-height">
+        <label class="required">User Name for service</label>
+        <span class="glyphicon glyphicon-info-sign info-icon" data-info="userName"></span>
+        {{input type="text" class="form-control" placeholder="User Name" value=userName}}
+      </div>
+      <br>
+    </div>
+  </div>
   <div class="panel panel-default {{if isLoading 'loading-state'}}">
     {{#if isLoading}}
       <img src="assets/images/spinner.gif" alt="Loading...">

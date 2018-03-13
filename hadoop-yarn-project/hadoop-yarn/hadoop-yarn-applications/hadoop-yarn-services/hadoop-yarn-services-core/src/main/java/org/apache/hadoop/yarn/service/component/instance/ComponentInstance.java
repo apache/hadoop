@@ -39,15 +39,15 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
+import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
+import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.hadoop.yarn.service.utils.ServiceUtils;
-import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
-import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
-import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import static org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes.*;
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.KILLED_BY_APPMASTER;
-import static org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState.*;
 
@@ -148,7 +147,6 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               new ContainerStatusRetriever(compInstance.scheduler,
                   event.getContainerId(), compInstance), 0, 1,
               TimeUnit.SECONDS);
-      compInstance.component.incRunningContainers();
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -172,6 +170,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       compInstance.containerSpec = container;
       compInstance.getCompSpec().addContainer(container);
       compInstance.containerStartedTime = containerStartTime;
+      compInstance.component.incRunningContainers();
 
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
@@ -184,8 +183,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.component.incContainersReady();
       compInstance.containerSpec.setState(ContainerState.READY);
+      compInstance.component.incContainersReady();
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
             .componentInstanceBecomeReady(compInstance.containerSpec);
@@ -197,8 +196,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.component.decContainersReady();
       compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
+      compInstance.component.decContainersReady();
     }
   }
 
@@ -398,6 +397,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     record.set(YARN_PERSISTENCE, PersistencePolicies.CONTAINER);
     record.set(YARN_IP, status.getIPs().get(0));
     record.set(YARN_HOSTNAME, status.getHost());
+    record.set(YARN_COMPONENT, component.getName());
     try {
       yarnRegistry
           .putComponent(RegistryPathUtils.encodeYarnID(containerId), record);

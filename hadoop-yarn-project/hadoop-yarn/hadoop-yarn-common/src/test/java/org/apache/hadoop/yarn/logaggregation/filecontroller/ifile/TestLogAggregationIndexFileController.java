@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.ByteArrayOutputStream;
@@ -27,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,7 +57,9 @@ import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.junit.After;
@@ -219,6 +223,25 @@ public class TestLogAggregationIndexFileController {
     }
     sysOutStream.reset();
 
+    Configuration factoryConf = new Configuration(conf);
+    factoryConf.set("yarn.log-aggregation.file-formats", "Indexed");
+    factoryConf.set("yarn.log-aggregation.file-controller.Indexed.class",
+        "org.apache.hadoop.yarn.logaggregation.filecontroller.ifile"
+        + ".LogAggregationIndexedFileController");
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(factoryConf);
+    LogAggregationFileController fileController = factory
+        .getFileControllerForRead(appId, USER_UGI.getShortUserName());
+    Assert.assertTrue(fileController instanceof
+        LogAggregationIndexedFileController);
+    foundLogs = fileController.readAggregatedLogs(logRequest, System.out);
+    Assert.assertTrue(foundLogs);
+    for (String logType : logTypes) {
+      Assert.assertTrue(sysOutStream.toString().contains(logMessage(
+          containerId, logType)));
+    }
+    sysOutStream.reset();
+
     // create a checksum file
     Path checksumFile = new Path(fileFormat.getRemoteAppLogDir(
         appId, USER_UGI.getShortUserName()),
@@ -335,6 +358,58 @@ public class TestLogAggregationIndexFileController {
     fileNames.removeAll(newLogTypes);
     Assert.assertTrue(fileNames.isEmpty());
     foundLogs = fileFormat.readAggregatedLogs(logRequest, System.out);
+    Assert.assertTrue(foundLogs);
+    for (String logType : newLogTypes) {
+      Assert.assertTrue(sysOutStream.toString().contains(logMessage(
+          containerId, logType)));
+    }
+    sysOutStream.reset();
+  }
+
+  @Test(timeout = 15000)
+  public void testFetchApplictionLogsHar() throws Exception {
+    List<String> newLogTypes = new ArrayList<>();
+    newLogTypes.add("syslog");
+    newLogTypes.add("stdout");
+    newLogTypes.add("stderr");
+    newLogTypes.add("test1");
+    newLogTypes.add("test2");
+    URL harUrl = ClassLoader.getSystemClassLoader()
+        .getResource("application_123456_0001.har");
+    assertNotNull(harUrl);
+
+    Path path = new Path(remoteLogDir + "/" + USER_UGI.getShortUserName()
+        + "/logs/application_123456_0001");
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+    assertTrue(fs.mkdirs(path));
+    Path harPath = new Path(path, "application_123456_0001.har");
+    fs.copyFromLocalFile(false, new Path(harUrl.toURI()), harPath);
+    assertTrue(fs.exists(harPath));
+    LogAggregationIndexedFileController fileFormat
+        = new LogAggregationIndexedFileController();
+    fileFormat.initialize(conf, "Indexed");
+    ContainerLogsRequest logRequest = new ContainerLogsRequest();
+    logRequest.setAppId(appId);
+    logRequest.setNodeId(nodeId.toString());
+    logRequest.setAppOwner(USER_UGI.getShortUserName());
+    logRequest.setContainerId(containerId.toString());
+    logRequest.setBytes(Long.MAX_VALUE);
+    List<ContainerLogMeta> meta = fileFormat.readAggregatedLogsMeta(
+        logRequest);
+    Assert.assertEquals(meta.size(), 3);
+    List<String> fileNames = new ArrayList<>();
+    for (ContainerLogMeta log : meta) {
+      Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
+      Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));
+      for (ContainerLogFileInfo file : log.getContainerLogMeta()) {
+        fileNames.add(file.getFileName());
+      }
+    }
+    fileNames.removeAll(newLogTypes);
+    Assert.assertTrue(fileNames.isEmpty());
+    boolean foundLogs = fileFormat.readAggregatedLogs(logRequest, System.out);
     Assert.assertTrue(foundLogs);
     for (String logType : newLogTypes) {
       Assert.assertTrue(sysOutStream.toString().contains(logMessage(

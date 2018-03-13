@@ -20,5 +20,5 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task
  * Available types of {@link DeletionTask}s.
  */
 public enum DeletionTaskType {
-  FILE
+  FILE, DOCKER_CONTAINER
 }

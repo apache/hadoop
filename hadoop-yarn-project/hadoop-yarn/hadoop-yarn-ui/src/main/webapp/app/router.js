@@ -72,7 +72,14 @@ Router.map(function() {
   this.route('yarn-app-attempt', { path: '/yarn-app-attempt/:app_attempt_id'});
   this.route('error');
   this.route('notfound', { path: '*:' });
+  this.route('notauth', { path: '*:' });
   this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
+  this.route('yarn-queue-apps', { path: '/yarn-queue-apps/:queue_name' });
+  this.route('yarn-tools', function() {
+    this.route('yarn-conf');
+    this.route('yarn-metrics');
+    this.route('yarn-rm-log');
+  });
 
   this.route('yarn-flow-activity');
   this.route('yarn-flow', { path: '/yarn-flow/:flow_uid'}, function() {

@@ -2072,7 +2072,7 @@ public class TestBalancer {
         endGetBlocksTime = Time.monotonicNow();
         numGetBlocksCalls++;
         return blk;
-      }}).when(fsnSpy).getBlocks(any(DatanodeID.class), anyLong());
+      }}).when(fsnSpy).getBlocks(any(DatanodeID.class), anyLong(), anyLong());
   }
 
   /**
@@ -2084,7 +2084,7 @@ public class TestBalancer {
     initConf(conf);
     conf.setInt(DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY, 30);
 
-    int numDNs = 40;
+    int numDNs = 20;
     long[] capacities = new long[numDNs];
     String[] racks = new String[numDNs];
     for(int i = 0; i < numDNs; i++) {

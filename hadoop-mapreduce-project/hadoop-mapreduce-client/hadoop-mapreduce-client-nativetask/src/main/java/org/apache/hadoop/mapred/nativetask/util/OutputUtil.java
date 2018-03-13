@@ -20,15 +20,15 @@ package org.apache.hadoop.mapred.nativetask.util;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class OutputUtil {
 
-  private static Log LOG = LogFactory.getLog(OutputUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OutputUtil.class);
   public static final String NATIVE_TASK_OUTPUT_MANAGER = "nativetask.output.manager";
 
   public static NativeTaskOutput createNativeTaskOutput(Configuration conf, String id) {

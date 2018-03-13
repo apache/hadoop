@@ -24,12 +24,16 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.TestDockerClientConfigHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -37,8 +41,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -54,17 +61,21 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -72,8 +83,8 @@ import java.util.Random;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPID;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.APPLICATION_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_ID_STR;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_LOCAL_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_LOG_DIRS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.CONTAINER_WORK_DIR;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.FILECACHE_DIRS;
@@ -88,13 +99,13 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RUN_AS_USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_LOCAL_DIRS;
-import static org.mockito.Matchers.eq;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_FILECACHE_DIRS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -106,14 +117,14 @@ public class TestDockerContainerRuntime {
   private PrivilegedOperationExecutor mockExecutor;
   private CGroupsHandler mockCGroupsHandler;
   private String containerId;
-  private String defaultHostname;
   private Container container;
   private ContainerId cId;
   private ContainerLaunchContext context;
   private HashMap<String, String> env;
   private String image;
   private String uidGidPair;
-  private String runAsUser;
+  private String runAsUser = System.getProperty("user.name");
+  private String[] groups = {};
   private String user;
   private String appId;
   private String containerIdStr = containerId;
@@ -124,8 +135,8 @@ public class TestDockerContainerRuntime {
   private List<String> localDirs;
   private List<String> logDirs;
   private List<String> filecacheDirs;
-  private List<String> userLocalDirs;
-  private List<String> containerLocalDirs;
+  private List<String> userFilecacheDirs;
+  private List<String> applicationLocalDirs;
   private List<String> containerLogDirs;
   private Map<Path, List<String>> localizedResources;
   private String resourcesOptions;
@@ -147,7 +158,6 @@ public class TestDockerContainerRuntime {
         .mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = Mockito.mock(CGroupsHandler.class);
     containerId = "container_id";
-    defaultHostname = RegistryPathUtils.encodeYarnID(containerId);
     container = mock(Container.class);
     cId = mock(ContainerId.class);
     context = mock(ContainerLaunchContext.class);
@@ -162,8 +172,37 @@ public class TestDockerContainerRuntime {
     when(context.getEnvironment()).thenReturn(env);
     when(container.getUser()).thenReturn(submittingUser);
 
-    uidGidPair = "";
-    runAsUser = "run_as_user";
+    // Get the running user's uid and gid for remap
+    String uid = "";
+    String gid = "";
+    Shell.ShellCommandExecutor shexec1 = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-u", runAsUser});
+    Shell.ShellCommandExecutor shexec2 = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-g", runAsUser});
+    Shell.ShellCommandExecutor shexec3 = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-G", runAsUser});
+    try {
+      shexec1.execute();
+      // get rid of newline at the end
+      uid = shexec1.getOutput().replaceAll("\n$", "");
+    } catch (Exception e) {
+      LOG.info("Could not run id -u command: " + e);
+    }
+    try {
+      shexec2.execute();
+      // get rid of newline at the end
+      gid = shexec2.getOutput().replaceAll("\n$", "");
+    } catch (Exception e) {
+      LOG.info("Could not run id -g command: " + e);
+    }
+    try {
+      shexec3.execute();
+      groups = shexec3.getOutput().replace("\n", " ").split(" ");
+    } catch (Exception e) {
+      LOG.info("Could not run id -G command: " + e);
+    }
+    uidGidPair = uid + ":" + gid;
+
     user = "user";
     appId = "app_id";
     containerIdStr = containerId;
@@ -175,16 +214,16 @@ public class TestDockerContainerRuntime {
     logDirs = new ArrayList<>();
     filecacheDirs = new ArrayList<>();
     resourcesOptions = "cgroups=none";
-    userLocalDirs = new ArrayList<>();
-    containerLocalDirs = new ArrayList<>();
+    userFilecacheDirs = new ArrayList<>();
+    applicationLocalDirs = new ArrayList<>();
     containerLogDirs = new ArrayList<>();
     localizedResources = new HashMap<>();
 
     localDirs.add("/test_local_dir");
     logDirs.add("/test_log_dir");
     filecacheDirs.add("/test_filecache_dir");
-    userLocalDirs.add("/test_user_local_dir");
-    containerLocalDirs.add("/test_container_local_dir");
+    userFilecacheDirs.add("/test_user_filecache_dir");
+    applicationLocalDirs.add("/test_application_local_dir");
     containerLogDirs.add("/test_container_log_dir");
     localizedResources.put(new Path("/test_local_dir/test_resource_file"),
         Collections.singletonList("test_dir/test_resource_file"));
@@ -208,8 +247,8 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(LOCAL_DIRS, localDirs)
         .setExecutionAttribute(LOG_DIRS, logDirs)
         .setExecutionAttribute(FILECACHE_DIRS, filecacheDirs)
-        .setExecutionAttribute(USER_LOCAL_DIRS, userLocalDirs)
-        .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
+        .setExecutionAttribute(USER_FILECACHE_DIRS, userFilecacheDirs)
+        .setExecutionAttribute(APPLICATION_LOCAL_DIRS, applicationLocalDirs)
         .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
         .setExecutionAttribute(LOCALIZED_RESOURCES, localizedResources)
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
@@ -242,7 +281,7 @@ public class TestDockerContainerRuntime {
     // warning annotation on the entire method
     verify(mockExecutor, times(1))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), eq(null), eq(false), eq(false));
+            File.class), anyMap(), anyBoolean(), anyBoolean());
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here
@@ -263,57 +302,26 @@ public class TestDockerContainerRuntime {
     List<String> args = op.getArguments();
 
     //This invocation of container-executor should use 13 arguments in a
-    // specific order (sigh.)
-    Assert.assertEquals(13, args.size());
-
-    //verify arguments
-    Assert.assertEquals(user, args.get(1));
+    // specific order
+    int expected = 13;
+    int counter = 1;
+    Assert.assertEquals(expected, args.size());
+    Assert.assertEquals(user, args.get(counter++));
     Assert.assertEquals(Integer.toString(PrivilegedOperation.RunAsUserCommand
-        .LAUNCH_DOCKER_CONTAINER.getValue()), args.get(2));
-    Assert.assertEquals(appId, args.get(3));
-    Assert.assertEquals(containerId, args.get(4));
-    Assert.assertEquals(containerWorkDir.toString(), args.get(5));
+        .LAUNCH_DOCKER_CONTAINER.getValue()), args.get(counter++));
+    Assert.assertEquals(appId, args.get(counter++));
+    Assert.assertEquals(containerId, args.get(counter++));
+    Assert.assertEquals(containerWorkDir.toString(), args.get(counter++));
     Assert.assertEquals(nmPrivateContainerScriptPath.toUri()
-        .toString(), args.get(6));
-    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(), args.get(7));
-    Assert.assertEquals(pidFilePath.toString(), args.get(8));
-    Assert.assertEquals(localDirs.get(0), args.get(9));
-    Assert.assertEquals(logDirs.get(0), args.get(10));
-    Assert.assertEquals(resourcesOptions, args.get(12));
+        .toString(), args.get(counter++));
+    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
+        args.get(counter++));
+    Assert.assertEquals(pidFilePath.toString(), args.get(counter++));
+    Assert.assertEquals(localDirs.get(0), args.get(counter++));
+    Assert.assertEquals(logDirs.get(0), args.get(counter++));
+    Assert.assertEquals(resourcesOptions, args.get(++counter));
 
     return op;
-  }
-
-  private String getExpectedTestCapabilitiesArgumentString()  {
-    /* Ordering of capabilities depends on HashSet ordering. */
-    Set<String> capabilitySet = new HashSet<>(Arrays.asList(testCapabilities));
-    StringBuilder expectedCapabilitiesString = new StringBuilder(
-        "--cap-drop=ALL ");
-
-    for(String capability : capabilitySet) {
-      expectedCapabilitiesString.append("--cap-add=").append(capability)
-          .append(" ");
-    }
-
-    return expectedCapabilitiesString.toString();
-  }
-
-  private String getExpectedCGroupsMountString() {
-    CGroupsHandler cgroupsHandler = ResourceHandlerModule.getCGroupsHandler();
-    if(cgroupsHandler == null) {
-      return "";
-    }
-
-    String cgroupMountPath = cgroupsHandler.getCGroupMountPath();
-    boolean cGroupsMountExists = new File(
-        cgroupMountPath).exists();
-
-    if(cGroupsMountExists) {
-      return "-v " + cgroupMountPath
-          + ":" + cgroupMountPath + ":ro ";
-    } else {
-      return "";
-    }
   }
 
   @Test
@@ -332,7 +340,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
             (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 13;
+    int expected = 15;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -342,6 +350,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -350,16 +360,16 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+        + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
   }
 
   @Test
@@ -368,13 +378,6 @@ public class TestDockerContainerRuntime {
       IOException {
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ENABLE_USER_REMAPPING,
         true);
-    Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
-        new String[]{"whoami"});
-    shexec.execute();
-    // get rid of newline at the end
-    runAsUser = shexec.getOutput().replaceAll("\n$", "");
-    builder.setExecutionAttribute(RUN_AS_USER, runAsUser);
-
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -384,41 +387,10 @@ public class TestDockerContainerRuntime {
     List<String> args = op.getArguments();
     String dockerCommandFile = args.get(11);
 
-    String uid = "";
-    String gid = "";
-    String[] groups = {};
-    Shell.ShellCommandExecutor shexec1 = new Shell.ShellCommandExecutor(
-        new String[]{"id", "-u", runAsUser});
-    Shell.ShellCommandExecutor shexec2 = new Shell.ShellCommandExecutor(
-        new String[]{"id", "-g", runAsUser});
-    Shell.ShellCommandExecutor shexec3 = new Shell.ShellCommandExecutor(
-        new String[]{"id", "-G", runAsUser});
-    try {
-      shexec1.execute();
-      // get rid of newline at the end
-      uid = shexec1.getOutput().replaceAll("\n$", "");
-    } catch (Exception e) {
-      LOG.info("Could not run id -u command: " + e);
-    }
-    try {
-      shexec2.execute();
-      // get rid of newline at the end
-      gid = shexec2.getOutput().replaceAll("\n$", "");
-    } catch (Exception e) {
-      LOG.info("Could not run id -g command: " + e);
-    }
-    try {
-      shexec3.execute();
-      groups = shexec3.getOutput().replace("\n", " ").split(" ");
-    } catch (Exception e) {
-      LOG.info("Could not run id -G command: " + e);
-    }
-    uidGidPair = uid + ":" + gid;
-
     List<String> dockerCommands = Files.readAllLines(
         Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals(15, dockerCommands.size());
     int counter = 0;
     Assert.assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
@@ -439,16 +411,16 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
     Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
   }
 
   @Test
@@ -536,7 +508,7 @@ public class TestDockerContainerRuntime {
     //This is the expected docker invocation for this case
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
-    int expected = 13;
+    int expected = 15;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -546,6 +518,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=test.hostname",
         dockerCommands.get(counter++));
     Assert
@@ -556,16 +530,16 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  net=" + allowedNetwork, dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
   }
 
   @Test
@@ -602,7 +576,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 13;
+    int expected = 15;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -612,6 +586,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -620,16 +596,16 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=sdn1", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
 
     //now set an explicit (non-default) allowedNetwork and ensure that it is
     // used.
@@ -655,6 +631,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -664,16 +642,16 @@ public class TestDockerContainerRuntime {
 
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=sdn2", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
 
 
     //disallowed network should trigger a launch failure
@@ -690,9 +668,112 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
+  public void testLaunchPidNamespaceContainersInvalidEnvVar()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, null);
+
+    env.put(DockerLinuxContainerRuntime
+        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "invalid-value");
+    runtime.launchContainer(builder.build());
+
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(Paths.get
+        (dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 15;
+    Assert.assertEquals(expected, dockerCommands.size());
+
+    String command = dockerCommands.get(0);
+
+    //ensure --pid isn't in the invocation
+    Assert.assertTrue("Unexpected --pid in docker run args : " + command,
+        !command.contains("--pid"));
+  }
+
+  @Test
+  public void testLaunchPidNamespaceContainersWithDisabledSetting()
+      throws ContainerExecutionException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, null);
+
+    env.put(DockerLinuxContainerRuntime
+        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+
+    try {
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a pid host disabled container failure.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
+  }
+
+  @Test
+  public void testLaunchPidNamespaceContainersEnabled()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    //Enable host pid namespace containers.
+    conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_HOST_PID_NAMESPACE,
+        true);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, null);
+
+    env.put(DockerLinuxContainerRuntime
+        .ENV_DOCKER_CONTAINER_PID_NAMESPACE, "host");
+
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 16;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
+    Assert
+        .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  pid=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter));
+  }
+
+  @Test
   public void testLaunchPrivilegedContainersInvalidEnvVar()
       throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      IOException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -705,10 +786,10 @@ public class TestDockerContainerRuntime {
     List<String> args = op.getArguments();
     String dockerCommandFile = args.get(11);
 
-    List<String> dockerCommands = Files.readAllLines(Paths.get
-        (dockerCommandFile), Charset.forName("UTF-8"));
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 13;
+    int expected = 15;
     Assert.assertEquals(expected, dockerCommands.size());
 
     String command = dockerCommands.get(0);
@@ -720,8 +801,7 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testLaunchPrivilegedContainersWithDisabledSetting()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -739,8 +819,7 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testLaunchPrivilegedContainersWithEnabledSettingAndDefaultACL()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      throws ContainerExecutionException {
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -766,8 +845,7 @@ public class TestDockerContainerRuntime {
   @Test
   public void
   testLaunchPrivilegedContainersEnabledAndUserNotInWhitelist()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      throws ContainerExecutionException {
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -794,7 +872,7 @@ public class TestDockerContainerRuntime {
   public void
   testLaunchPrivilegedContainersEnabledAndUserInWhitelist()
       throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      IOException {
     //Enable privileged containers.
     conf.setBoolean(YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
         true);
@@ -817,7 +895,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 14;
+    int expected = 16;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -827,6 +905,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -836,16 +916,16 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=host", dockerCommands.get(counter++));
     Assert.assertEquals("  privileged=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
   }
 
   @Test
@@ -895,9 +975,7 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testMountSourceOnly()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+  public void testMountSourceOnly() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -917,7 +995,7 @@ public class TestDockerContainerRuntime {
   @Test
   public void testMountSourceTarget()
       throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      IOException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -934,39 +1012,42 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    Assert.assertEquals(14, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    int expected = 15;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
     Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
-        dockerCommands.get(1));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(2));
-    Assert.assertEquals("  detach=true", dockerCommands.get(3));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(4));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(5));
-    Assert.assertEquals("  image=busybox:latest", dockerCommands.get(6));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
-        dockerCommands.get(7));
-    Assert.assertEquals("  name=container_id", dockerCommands.get(8));
-    Assert.assertEquals("  net=host", dockerCommands.get(9));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  ro-mounts=/test_local_dir/test_resource_file:test_mount",
-        dockerCommands.get(10));
+        "  ro-mounts=/test_filecache_dir:/test_filecache_dir,/"
+            + "test_user_filecache_dir:/test_user_filecache_dir,"
+            + "/test_local_dir/test_resource_file:test_mount",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
-        dockerCommands.get(11));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(12));
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(13));
+        dockerCommands.get(counter));
   }
 
   @Test
-  public void testMountInvalid()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+  public void testMountInvalid() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -986,7 +1067,7 @@ public class TestDockerContainerRuntime {
   @Test
   public void testMountMultiple()
       throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      IOException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -1004,41 +1085,45 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    Assert.assertEquals(14, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    int expected = 15;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
     Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
-        dockerCommands.get(1));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(2));
-    Assert.assertEquals("  detach=true", dockerCommands.get(3));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(4));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(5));
-    Assert.assertEquals("  image=busybox:latest", dockerCommands.get(6));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
-        dockerCommands.get(7));
-    Assert.assertEquals("  name=container_id", dockerCommands.get(8));
-    Assert.assertEquals("  net=host", dockerCommands.get(9));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  ro-mounts=/test_local_dir/test_resource_file:test_mount1,"
+        "  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir,"
+            + "/test_local_dir/test_resource_file:test_mount1,"
             + "/test_local_dir/test_resource_file:test_mount2",
-        dockerCommands.get(10));
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
-        dockerCommands.get(11));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(12));
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(13));
-
+        dockerCommands.get(counter));
   }
 
   @Test
   public void testUserMounts()
       throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+      IOException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -1055,39 +1140,42 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(
         Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    Assert.assertEquals(14, dockerCommands.size());
-    Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    int expected = 15;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
     Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
-        dockerCommands.get(1));
-    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(2));
-    Assert.assertEquals("  detach=true", dockerCommands.get(3));
-    Assert.assertEquals("  docker-command=run", dockerCommands.get(4));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(5));
-    Assert.assertEquals("  image=busybox:latest", dockerCommands.get(6));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
         "  launch-command=bash,/test_container_work_dir/launch_container.sh",
-        dockerCommands.get(7));
-    Assert.assertEquals("  name=container_id", dockerCommands.get(8));
-    Assert.assertEquals("  net=host", dockerCommands.get(9));
-    Assert.assertEquals("  ro-mounts=/tmp/foo:/tmp/foo",
-        dockerCommands.get(10));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir,"
+            + "/tmp/foo:/tmp/foo",
+        dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir,"
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir,"
             + "/tmp/bar:/tmp/bar",
-        dockerCommands.get(11));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(12));
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(13));
+        dockerCommands.get(counter));
   }
 
   @Test
-  public void testUserMountInvalid()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+  public void testUserMountInvalid() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -1105,9 +1193,7 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testUserMountModeInvalid()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+  public void testUserMountModeInvalid() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -1125,9 +1211,7 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testUserMountModeNulInvalid()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException{
+  public void testUserMountModeNulInvalid() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, null);
@@ -1160,7 +1244,7 @@ public class TestDockerContainerRuntime {
     PrivilegedOperation op = capturePrivilegedOperation();
     Assert.assertEquals(op.getOperationType(),
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
-    Assert.assertEquals("run_as_user", op.getArguments().get(0));
+    Assert.assertEquals(runAsUser, op.getArguments().get(0));
     Assert.assertEquals("user", op.getArguments().get(1));
     Assert.assertEquals("2", op.getArguments().get(2));
     Assert.assertEquals("1234", op.getArguments().get(3));
@@ -1168,11 +1252,12 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnTermSignal()
+  public void testDockerStopOnTermSignalWhenRunning()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.TERM);
+        ContainerExecutor.Signal.TERM,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
     Assert.assertEquals(3, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1180,11 +1265,12 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnKillSignal()
+  public void testDockerStopOnKillSignalWhenRunning()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.KILL);
+        ContainerExecutor.Signal.KILL,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
     Assert.assertEquals(3, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1192,24 +1278,57 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnQuitSignal()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException {
+  public void testDockerKillOnQuitSignalWhenRunning() throws Exception {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.QUIT);
-    Assert.assertEquals(3, dockerCommands.size());
+        ContainerExecutor.Signal.QUIT,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
+    Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
+    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
     Assert.assertEquals("  name=container_id", dockerCommands.get(2));
+    Assert.assertEquals("  signal=QUIT", dockerCommands.get(3));
+  }
+
+  @Test
+  public void testDockerRmOnWhenExited() throws Exception {
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
+        "false");
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
+    MockRuntime runtime = new MockRuntime(mockExecutor,
+        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user);
+    runtime.initialize(enableMockContainerExecutor(conf), null);
+    runtime.reapContainer(builder.build());
+    verify(mockExecutor, times(1))
+        .executePrivilegedOperation(anyList(), any(), any(
+            File.class), anyMap(), anyBoolean(), anyBoolean());
+  }
+
+  @Test
+  public void testNoDockerRmWhenDelayedDeletionEnabled()
+      throws Exception {
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
+        "true");
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
+    MockRuntime runtime = new MockRuntime(mockExecutor,
+        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user);
+    runtime.initialize(enableMockContainerExecutor(conf), null);
+    runtime.reapContainer(builder.build());
+    verify(mockExecutor, never())
+        .executePrivilegedOperation(anyList(), any(), any(
+            File.class), anyMap(), anyBoolean(), anyBoolean());
   }
 
   private List<String> getDockerCommandsForSignal(
-      ContainerExecutor.Signal signal)
+      ContainerExecutor.Signal signal,
+      DockerCommandExecutor.DockerContainerStatus status)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
 
-    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor, mockCGroupsHandler);
+    MockRuntime runtime = new MockRuntime(mockExecutor, status, false);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
@@ -1330,9 +1449,9 @@ public class TestDockerContainerRuntime {
     commandFile = new File(StringUtils.join(",", op.getArguments()));
     fileInputStream = new FileInputStream(commandFile);
     fileContent = new String(IOUtils.toByteArray(fileInputStream));
-    Assert.assertEquals("[docker-command-execution]\n"
-        + "  docker-command=volume\n" + "  format={{.Name}},{{.Driver}}\n"
-        + "  sub-command=ls\n", fileContent);
+    Assert.assertEquals(
+        "[docker-command-execution]\n" + "  docker-command=volume\n"
+            + "  sub-command=ls\n", fileContent);
     fileInputStream.close();
   }
 
@@ -1434,16 +1553,33 @@ public class TestDockerContainerRuntime {
     // For following tests, we expect to have volume1,local in output
 
     // Failure cases
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n", true);
     testDockerCommandPluginWithVolumesOutput("", true);
     testDockerCommandPluginWithVolumesOutput("volume1", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "nvidia-docker       nvidia_driver_375.66\n", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "                    volume1\n", true);
     testDockerCommandPluginWithVolumesOutput("local", true);
     testDockerCommandPluginWithVolumesOutput("volume2,local", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "local               volume2\n", true);
     testDockerCommandPluginWithVolumesOutput("volum1,something", true);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "something               volume1\n", true);
     testDockerCommandPluginWithVolumesOutput("volum1,something\nvolum2,local",
         true);
 
     // Success case
-    testDockerCommandPluginWithVolumesOutput("volume1,local\n", false);
+    testDockerCommandPluginWithVolumesOutput(
+        "DRIVER              VOLUME NAME\n" +
+        "nvidia-docker       nvidia_driver_375.66\n" +
+        "local               volume1\n", false);
     testDockerCommandPluginWithVolumesOutput(
         "volume_xyz,nvidia\nvolume1,local\n\n", false);
     testDockerCommandPluginWithVolumesOutput(" volume1,  local \n", false);
@@ -1499,7 +1635,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 16;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -1509,6 +1645,8 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
     Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -1517,28 +1655,25 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
     Assert.assertEquals("  net=host", dockerCommands.get(counter++));
-    Assert.assertEquals("  ro-mounts=/source/path:/destination/path",
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir,"
+            + "/source/path:/destination/path",
         dockerCommands.get(counter++));
     Assert.assertEquals(
-        "  rw-mounts=/test_container_local_dir:/test_container_local_dir,"
-            + "/test_filecache_dir:/test_filecache_dir,"
-            + "/test_container_work_dir:/test_container_work_dir,"
-            + "/test_container_log_dir:/test_container_log_dir,"
-            + "/test_user_local_dir:/test_user_local_dir",
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=run_as_user", dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
 
     // Verify volume-driver is set to expected value.
     Assert.assertEquals("  volume-driver=driver-1",
         dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
-        dockerCommands.get(counter++));
+        dockerCommands.get(counter));
   }
 
   @Test
-  public void testDockerCapabilities()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException {
+  public void testDockerCapabilities() throws ContainerExecutionException {
     DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
         mockExecutor, mockCGroupsHandler);
     try {
@@ -1575,5 +1710,168 @@ public class TestDockerContainerRuntime {
     Iterator<String> it = runtime.getCapabilities().iterator();
     Assert.assertEquals("CHOWN", it.next());
     Assert.assertEquals("DAC_OVERRIDE", it.next());
+  }
+
+  @Test
+  public void testLaunchContainerWithDockerTokens()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    // Write the JSOn to a temp file.
+    File file = File.createTempFile("docker-client-config", "runtime-test");
+    file.deleteOnExit();
+    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+    bw.write(TestDockerClientConfigHandler.JSON);
+    bw.close();
+
+    // Get the credentials object with the Tokens.
+    Credentials credentials = DockerClientConfigHandler
+        .readCredentialsFromConfigFile(new Path(file.toURI()), conf, appId);
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+
+    // Configure the runtime and launch the container
+    when(context.getTokens()).thenReturn(tokens);
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf, null);
+
+    Set<PosixFilePermission> perms =
+        PosixFilePermissions.fromString("rwxr-xr--");
+    FileAttribute<Set<PosixFilePermission>> attr =
+        PosixFilePermissions.asFileAttribute(perms);
+    Path outDir = new Path(
+        Files.createTempDirectory("docker-client-config-out", attr).toUri()
+            .getPath() + "/launch_container.sh");
+    builder.setExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH, outDir);
+    runtime.launchContainer(builder.build());
+    PrivilegedOperation op = capturePrivilegedOperation();
+    Assert.assertEquals(
+        PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER,
+            op.getOperationType());
+
+    List<String> args = op.getArguments();
+
+    int expectedArgs = 13;
+    int argsCounter = 0;
+    Assert.assertEquals(expectedArgs, args.size());
+    Assert.assertEquals(runAsUser, args.get(argsCounter++));
+    Assert.assertEquals(user, args.get(argsCounter++));
+    Assert.assertEquals(Integer.toString(
+        PrivilegedOperation.RunAsUserCommand.LAUNCH_DOCKER_CONTAINER
+            .getValue()), args.get(argsCounter++));
+    Assert.assertEquals(appId, args.get(argsCounter++));
+    Assert.assertEquals(containerId, args.get(argsCounter++));
+    Assert.assertEquals(containerWorkDir.toString(), args.get(argsCounter++));
+    Assert.assertEquals(outDir.toUri().getPath(), args.get(argsCounter++));
+    Assert.assertEquals(nmPrivateTokensPath.toUri().getPath(),
+        args.get(argsCounter++));
+    Assert.assertEquals(pidFilePath.toString(), args.get(argsCounter++));
+    Assert.assertEquals(localDirs.get(0), args.get(argsCounter++));
+    Assert.assertEquals(logDirs.get(0), args.get(argsCounter++));
+    String dockerCommandFile = args.get(argsCounter++);
+    Assert.assertEquals(resourcesOptions, args.get(argsCounter));
+
+    List<String> dockerCommands = Files
+        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 16;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-add=SYS_CHROOT,NET_BIND_SERVICE",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
+    Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-config=" + outDir.getParent(),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  group-add=" + String.join(",", groups),
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
+    Assert.assertEquals("  image=busybox:latest",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  launch-command=bash,/test_container_work_dir/launch_container.sh",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter++));
+    Assert.assertEquals("  net=host", dockerCommands.get(counter++));
+    Assert.assertEquals("  ro-mounts=/test_filecache_dir:/test_filecache_dir,"
+            + "/test_user_filecache_dir:/test_user_filecache_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals(
+        "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
+            + "/test_application_local_dir:/test_application_local_dir",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  workdir=/test_container_work_dir",
+        dockerCommands.get(counter++));
+  }
+
+  class MockRuntime extends DockerLinuxContainerRuntime {
+
+    private PrivilegedOperationExecutor privilegedOperationExecutor;
+    private DockerCommandExecutor.DockerContainerStatus containerStatus;
+    private boolean delayedRemovalAllowed;
+
+    MockRuntime(PrivilegedOperationExecutor privilegedOperationExecutor,
+        DockerCommandExecutor.DockerContainerStatus containerStatus,
+        boolean delayedRemovalAllowed) {
+      super(privilegedOperationExecutor);
+      this.privilegedOperationExecutor = privilegedOperationExecutor;
+      this.containerStatus = containerStatus;
+      this.delayedRemovalAllowed = delayedRemovalAllowed;
+    }
+
+    @Override
+    public void signalContainer(ContainerRuntimeContext ctx)
+        throws ContainerExecutionException {
+      ContainerExecutor.Signal signal = ctx.getExecutionAttribute(SIGNAL);
+      String containerName = ctx.getContainer().getContainerId().toString();
+      Map<String, String> environment =
+          ctx.getContainer().getLaunchContext().getEnvironment();
+      try {
+        if (ContainerExecutor.Signal.KILL.equals(signal)
+            || ContainerExecutor.Signal.TERM.equals(signal)) {
+          if (DockerCommandExecutor.isStoppable(containerStatus)) {
+            DockerStopCommand dockerStopCommand =
+                new DockerStopCommand(containerName);
+            DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
+                containerName, environment, conf, mockExecutor, false);
+          }
+        } else {
+          if (DockerCommandExecutor.isKillable(containerStatus)) {
+            DockerKillCommand dockerKillCommand =
+                new DockerKillCommand(containerName);
+            dockerKillCommand.setSignal(signal.name());
+            DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
+                containerName, environment, conf, mockExecutor, false);
+          }
+        }
+      } catch (ContainerExecutionException e) {
+        LOG.warn("Signal docker container failed. Exception: ", e);
+        throw new ContainerExecutionException("Signal docker container failed",
+            e.getExitCode(), e.getOutput(), e.getErrorOutput());
+      }
+    }
+
+    @Override
+    public void reapContainer(ContainerRuntimeContext ctx)
+        throws ContainerExecutionException {
+      String delayedRemoval = env.get(ENV_DOCKER_CONTAINER_DELAYED_REMOVAL);
+      if (delayedRemovalAllowed && delayedRemoval != null
+          && delayedRemoval.equalsIgnoreCase("true")) {
+        LOG.info("Delayed removal requested and allowed, skipping removal - "
+            + containerId);
+      } else {
+        if (DockerCommandExecutor.isRemovable(containerStatus)) {
+          DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+          DockerCommandExecutor
+              .executeDockerCommand(dockerRmCommand, containerId, env, conf,
+                  privilegedOperationExecutor, false);
+        }
+      }
+    }
   }
 }

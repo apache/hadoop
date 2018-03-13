@@ -26,11 +26,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,7 +51,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+
+import static org.apache.hadoop.conf.StorageUnit.BYTES;
+import static org.apache.hadoop.conf.StorageUnit.GB;
+import static org.apache.hadoop.conf.StorageUnit.KB;
+import static org.apache.hadoop.conf.StorageUnit.MB;
+import static org.apache.hadoop.conf.StorageUnit.TB;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -56,7 +67,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -69,10 +79,13 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hamcrest.CoreMatchers;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 public class TestConfiguration {
 
+  @Rule
+  public ExpectedException thrown= ExpectedException.none();
   private static final double DOUBLE_DELTA = 0.000000001f;
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
@@ -385,11 +398,9 @@ public class TestConfiguration {
       Configuration conf = new Configuration(false);
       conf.addResource(new Path(CONFIG_MULTI_BYTE));
       assertEquals(value, conf.get(name));
-      FileOutputStream fos = new FileOutputStream(CONFIG_MULTI_BYTE_SAVED);
-      try {
+      try (FileOutputStream fos =
+               new FileOutputStream(CONFIG_MULTI_BYTE_SAVED)) {
         conf.writeXml(fos);
-      } finally {
-        IOUtils.closeStream(fos);
       }
 
       conf = new Configuration(false);
@@ -1326,6 +1337,71 @@ public class TestConfiguration {
       assertEquals(1 + ptd.suffix(), conf.get("test.time.unit"));
       assertEquals(1, conf.getTimeDuration("test.time.unit", 2, ptd.unit()));
     }
+  }
+
+  @Test
+  public void testStorageUnit() {
+    final String key = "valid.key";
+    final String nonKey = "not.a.key";
+    Configuration conf = new Configuration(false);
+
+    conf.setStorageSize(key, 10, MB);
+    // This call returns the value specified in the Key as a double in MBs.
+    assertThat(conf.getStorageSize(key, "1GB", MB),
+        is(10.0));
+
+    // Since this key is missing, This call converts the default value of  1GB
+    // to MBs are returns that value.
+    assertThat(conf.getStorageSize(nonKey, "1GB", MB),
+        is(1024.0));
+
+
+    conf.setStorageSize(key, 1024, BYTES);
+    assertThat(conf.getStorageSize(key, 100, KB), is(1.0));
+
+    assertThat(conf.getStorageSize(nonKey, 100.0, KB), is(100.0));
+
+    // We try out different kind of String formats to see if they work and
+    // during read, we also try to read using a different Storage Units.
+    conf.setStrings(key, "1TB");
+    assertThat(conf.getStorageSize(key, "1PB", GB), is(1024.0));
+
+    conf.setStrings(key, "1bytes");
+    assertThat(conf.getStorageSize(key, "1PB", KB), is(0.001));
+
+    conf.setStrings(key, "2048b");
+    assertThat(conf.getStorageSize(key, "1PB", KB), is(2.0));
+
+    conf.setStrings(key, "64 GB");
+    assertThat(conf.getStorageSize(key, "1PB", GB), is(64.0));
+
+    // Match the parsing patterns of getLongBytes, which takes single char
+    // suffix.
+    conf.setStrings(key, "1T");
+    assertThat(conf.getStorageSize(key, "1GB", TB), is(1.0));
+
+    conf.setStrings(key, "1k");
+    assertThat(conf.getStorageSize(key, "1GB", KB), is(1.0));
+
+    conf.setStrings(key, "10m");
+    assertThat(conf.getStorageSize(key, "1GB", MB), is(10.0));
+
+
+
+    // Missing format specification, this should throw.
+    conf.setStrings(key, "100");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
+
+    // illegal format specification, this should throw.
+    conf.setStrings(key, "1HB");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
+
+    // Illegal number  specification, this should throw.
+    conf.setStrings(key, "HadoopGB");
+    thrown.expect(IllegalArgumentException.class);
+    conf.getStorageSize(key, "1PB", GB);
   }
 
   @Test
@@ -2266,22 +2342,29 @@ public class TestConfiguration {
   @Test
   public void testGetAllPropertiesByTags() throws Exception {
 
-    out = new BufferedWriter(new FileWriter(CONFIG_CORE));
-    startConfig();
-    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG");
-    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,REQUIRED");
-    appendPropertyByTag("dfs.namenode.logging.level", "INFO", "CLIENT,DEBUG");
-    endConfig();
+    try{
+      out = new BufferedWriter(new FileWriter(CONFIG_CORE));
+      startConfig();
+      appendProperty("hadoop.system.tags", "YARN,HDFS,NAMENODE");
+      appendProperty("hadoop.custom.tags", "MYCUSTOMTAG");
+      appendPropertyByTag("dfs.cblock.trace.io", "false", "YARN");
+      appendPropertyByTag("dfs.replication", "1", "HDFS");
+      appendPropertyByTag("dfs.namenode.logging.level", "INFO", "NAMENODE");
+      appendPropertyByTag("dfs.random.key", "XYZ", "MYCUSTOMTAG");
+      endConfig();
 
-    Path fileResource = new Path(CONFIG_CORE);
-    conf.addResource(fileResource);
-    conf.getProps();
+      Path fileResource = new Path(CONFIG_CORE);
+      conf.addResource(fileResource);
+      conf.getProps();
 
-    List<PropertyTag> tagList = new ArrayList<>();
-    tagList.add(CorePropertyTag.REQUIRED);
-    tagList.add(CorePropertyTag.PERFORMANCE);
-    tagList.add(CorePropertyTag.DEBUG);
-    tagList.add(CorePropertyTag.CLIENT);
+    } finally {
+      out.close();
+    }
+    System.out.println(Files.readAllLines(Paths.get(CONFIG_CORE)));
+    List<String> tagList = new ArrayList<>();
+    tagList.add("YARN");
+    tagList.add("HDFS");
+    tagList.add("NAMENODE");
 
     Properties properties = conf.getAllPropertiesByTags(tagList);
     String[] sources = conf.getPropertySources("dfs.replication");
@@ -2293,58 +2376,45 @@ public class TestConfiguration {
     assertEq(true, properties.containsKey("dfs.replication"));
     assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
     assertEq(false, properties.containsKey("namenode.host"));
+
+    properties = conf.getAllPropertiesByTag("DEBUG");
+    assertEq(0, properties.size());
+    assertEq(false, properties.containsKey("dfs.namenode.logging.level"));
+    assertEq(true, conf.isPropertyTag("YARN"));
+    assertEq(true, conf.isPropertyTag("HDFS"));
+    assertEq(true, conf.isPropertyTag("NAMENODE"));
+    assertEq(true, conf.isPropertyTag("MYCUSTOMTAG"));
+    assertEq(false, conf.isPropertyTag("CMYCUSTOMTAG2"));
   }
 
   @Test
-  public void testGetAllPropertiesWithSourceByTags() throws Exception {
+  public void testInvalidTags() throws Exception {
+    PrintStream output = System.out;
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(bytes));
 
-    out = new BufferedWriter(new FileWriter(CONFIG));
-    startConfig();
-    appendPropertyByTag("dfs.cblock.trace.io", "false", "DEBUG",
-        "hdfs-default.xml", "core-site.xml");
-    appendPropertyByTag("dfs.replication", "1", "PERFORMANCE,HDFS",
-        "hdfs-default.xml");
-    appendPropertyByTag("yarn.resourcemanager.work-preserving-recovery"
-        + ".enabled", "INFO", "CLIENT,DEBUG", "yarn-default.xml", "yarn-site"
-        + ".xml");
-    endConfig();
+      out = new BufferedWriter(new FileWriter(CONFIG));
+      startConfig();
+      appendPropertyByTag("dfs.cblock.trace.io", "false", "MYOWNTAG,TAG2");
+      endConfig();
 
-    Path fileResource = new Path(CONFIG);
-    conf.addResource(fileResource);
-    conf.getProps();
+      Path fileResource = new Path(CONFIG);
+      conf.addResource(fileResource);
+      conf.getProps();
 
-    List<PropertyTag> tagList = new ArrayList<>();
-    tagList.add(CorePropertyTag.REQUIRED);
+      List<String> tagList = new ArrayList<>();
+      tagList.add("REQUIRED");
+      tagList.add("MYOWNTAG");
+      tagList.add("TAG2");
 
-    Properties properties;
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertNotEquals(3, properties.size());
-
-    tagList.add(HDFSPropertyTag.DEBUG);
-    tagList.add(YarnPropertyTag.CLIENT);
-    tagList.add(HDFSPropertyTag.PERFORMANCE);
-    tagList.add(HDFSPropertyTag.HDFS);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(3, properties.size());
-
-    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(true, properties.containsKey("dfs.replication"));
-    assertEq(true, properties
-        .containsKey("yarn.resourcemanager.work-preserving-recovery.enabled"));
-    assertEq(false, properties.containsKey("namenode.host"));
-
-    tagList.clear();
-    tagList.add(HDFSPropertyTag.DEBUG);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(true, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(false, properties.containsKey("yarn.resourcemanager"
-        + ".work-preserving-recovery"));
-
-    tagList.clear();
-    tagList.add(YarnPropertyTag.DEBUG);
-    properties = conf.getAllPropertiesByTags(tagList);
-    assertEq(false, properties.containsKey("dfs.cblock.trace.io"));
-    assertEq(true, properties.containsKey("yarn.resourcemanager"
-        + ".work-preserving-recovery.enabled"));
+      Properties properties = conf.getAllPropertiesByTags(tagList);
+      assertEq(0, properties.size());
+      assertFalse(properties.containsKey("dfs.cblock.trace.io"));
+      assertFalse(bytes.toString().contains("Invalid tag "));
+      assertFalse(bytes.toString().contains("Tag"));
+    } finally {
+      System.setOut(output);
+    }
   }
 }

@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
+import "hdfs.proto";
 
 /////////////////////////////////////////////////
 // Membership
@@ -30,6 +31,7 @@ package hadoop.hdfs;
 message NamenodeMembershipStatsRecordProto {
   optional uint64 totalSpace = 1;
   optional uint64 availableSpace = 2;
+  optional uint64 providedSpace = 3;
 
   optional uint64 numOfFiles = 10;
   optional uint64 numOfBlocks = 11;
@@ -129,6 +131,12 @@ message MountTableRecordProto {
     RANDOM = 2;
   }
   optional DestOrder destOrder = 6 [default = HASH];
+
+  optional string ownerName = 10;
+  optional string groupName = 11;
+  optional int32 mode = 12;
+
+  optional QuotaUsageProto quota = 13;
 }
 
 message AddMountTableEntryRequestProto {
@@ -164,3 +172,72 @@ message GetMountTableEntriesResponseProto {
   optional uint64 timestamp = 2;
 }
 
+
+/////////////////////////////////////////////////
+// Routers
+/////////////////////////////////////////////////
+
+message StateStoreVersionRecordProto {
+  optional uint64 membershipVersion = 1;
+  optional uint64 mountTableVersion = 2;
+}
+
+message RouterRecordProto {
+  optional uint64 dateCreated = 1;
+  optional uint64 dateModified = 2;
+  optional string address = 3;
+  optional string status = 4;
+  optional StateStoreVersionRecordProto stateStoreVersion = 5;
+  optional string version = 6;
+  optional string compileInfo = 7;
+  optional uint64 dateStarted = 8;
+}
+
+message GetRouterRegistrationRequestProto {
+  optional string routerId = 1;
+}
+
+message GetRouterRegistrationResponseProto {
+  optional RouterRecordProto router = 1;
+}
+
+message GetRouterRegistrationsRequestProto {
+}
+
+message GetRouterRegistrationsResponseProto {
+  optional uint64 timestamp = 1;
+  repeated RouterRecordProto routers = 2;
+}
+
+message RouterHeartbeatRequestProto {
+  optional RouterRecordProto router = 1;
+}
+
+message RouterHeartbeatResponseProto {
+  optional bool status = 1;
+}
+
+/////////////////////////////////////////////////
+// Route State
+/////////////////////////////////////////////////
+
+message EnterSafeModeRequestProto {
+}
+
+message EnterSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message LeaveSafeModeRequestProto {
+}
+
+message LeaveSafeModeResponseProto {
+  optional bool status = 1;
+}
+
+message GetSafeModeRequestProto {
+}
+
+message GetSafeModeResponseProto {
+  optional bool isInSafeMode = 1;
+}

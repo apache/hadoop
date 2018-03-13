@@ -933,7 +933,31 @@ public class TestQuorumJournalManager {
     
     verifyEdits(streams, 25, 50);
   }
-  
+
+  @Test
+  public void testInProgressRecovery() throws Exception {
+    // Test the case when in-progress edit log tailing is on, and
+    // new active performs recovery when the old active crashes
+    // without closing the last log segment.
+    // See HDFS-13145 for more details.
+
+    // Write two batches of edits. After these, the commitId on the
+    // journals should be 5, and endTxnId should be 8.
+    EditLogOutputStream stm = qjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    writeTxns(stm, 1, 5);
+    writeTxns(stm, 6, 3);
+
+    // Do recovery from a separate QJM, just like in failover.
+    QuorumJournalManager qjm2 = createSpyingQJM();
+    qjm2.recoverUnfinalizedSegments();
+    checkRecovery(cluster, 1, 8);
+
+    // When selecting input stream, we should see all txns up to 8.
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm2.selectInputStreams(streams, 1, true, true);
+    verifyEdits(streams, 1, 8);
+  }
   
   private QuorumJournalManager createSpyingQJM()
       throws IOException, URISyntaxException {

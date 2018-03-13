@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -39,24 +41,28 @@ import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
+import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
 /**
  * Utilities for the S3A tests.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class S3ATestUtils {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ATestUtils.class);
@@ -457,6 +463,33 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Variant of {@code LambdaTestUtils#intercept() which closes the Closeable
+   * returned by the invoked operation, and using its toString() value
+   * for exception messages.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   */
+  public static <E extends Throwable, T extends Closeable> E interceptClosing(
+      Class<E> clazz,
+      String contained,
+      Callable<T> eval)
+      throws Exception {
+
+    return intercept(clazz, contained,
+        () -> {
+          try (Closeable c = eval.call()) {
+            return c.toString();
+          }
+        });
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
@@ -763,28 +796,30 @@ public final class S3ATestUtils {
   }
 
   /**
-   * List a directory.
+   * List a directory/directory tree.
    * @param fileSystem FS
    * @param path path
+   * @param recursive do a recursive listing?
+   * @return the number of files found.
    * @throws IOException failure.
    */
-  public static void lsR(FileSystem fileSystem, Path path, boolean recursive)
+  public static long lsR(FileSystem fileSystem, Path path, boolean recursive)
       throws Exception {
     if (path == null) {
       // surfaces when someone calls getParent() on something at the top
       // of the path
       LOG.info("Empty path");
-      return;
+      return 0;
     }
-    S3AUtils.applyLocatedFiles(fileSystem.listFiles(path, recursive),
-        (status) -> LOG.info("  {}", status));
+    return S3AUtils.applyLocatedFiles(fileSystem.listFiles(path, recursive),
+        (status) -> LOG.info("{}", status));
   }
 
   /**
    * Turn on the inconsistent S3A FS client in a configuration,
    * with 100% probability of inconsistency, default delays.
    * For this to go live, the paths must include the element
-   * {@link InconsistentAmazonS3Client#DEFAULT_DELAY_KEY_SUBSTRING}.
+   * {@link FailureInjectionPolicy#DEFAULT_DELAY_KEY_SUBSTRING}.
    * @param conf configuration to patch
    * @param delay delay in millis
    */
@@ -822,34 +857,31 @@ public final class S3ATestUtils {
   /**
    * Date format used for mapping upload initiation time to human string.
    */
-  private static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
+  public static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd HH:mm:ss");
-
-  /**
-   * Get a list of all pending uploads under a prefix, one which can be printed.
-   * @param prefix prefix to look under
-   * @return possibly empty list
-   * @throws IOException IO failure.
-   */
-  public static List<String> listMultipartUploads(S3AFileSystem fs,
-      String prefix) throws IOException {
-
-    return fs
-        .listMultipartUploads(prefix).stream()
-        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
-            upload.getKey(),
-            upload.getUploadId(),
-            LISTING_FORMAT.format(upload.getInitiated())))
-        .collect(Collectors.toList());
-  }
 
   /**
    * Skip a test if the FS isn't marked as supporting magic commits.
    * @param fs filesystem
    */
-  public void assumeMagicCommitEnabled(S3AFileSystem fs) {
+  public static void assumeMagicCommitEnabled(S3AFileSystem fs) {
     assume("Magic commit option disabled on " + fs,
         fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
+  }
+
+  /**
+   * Probe for the configuration containing a specific credential provider.
+   * If the list is empty, there will be no match, even if the named provider
+   * is on the default list.
+   *
+   * @param conf configuration
+   * @param providerClassname provider class
+   * @return true if the configuration contains that classname.
+   */
+  public static boolean authenticationContains(Configuration conf,
+      String providerClassname) {
+    return conf.getTrimmedStringCollection(AWS_CREDENTIALS_PROVIDER)
+        .contains(providerClassname);
   }
 
 }

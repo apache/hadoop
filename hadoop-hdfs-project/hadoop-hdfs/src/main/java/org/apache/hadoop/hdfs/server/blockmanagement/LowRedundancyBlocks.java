@@ -365,7 +365,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
           NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
-          decrementBlockStat(block, priLevel, oldExpectedReplicas);
+          decrementBlockStat(block, i, oldExpectedReplicas);
           return true;
         }
       }

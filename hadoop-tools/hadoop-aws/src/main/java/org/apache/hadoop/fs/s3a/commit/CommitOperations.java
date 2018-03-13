@@ -101,7 +101,7 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
-    writeOperations = fs.createWriteOperationHelper();
+    writeOperations = fs.getWriteOperationHelper();
   }
 
   /**
@@ -309,7 +309,7 @@ public class CommitOperations {
         } catch (FileNotFoundException e) {
           LOG.debug("listed file already deleted: {}", pendingFile);
         } catch (IOException | IllegalArgumentException e) {
-          if (outcome == null) {
+          if (MaybeIOE.NONE.equals(outcome)) {
             outcome = new MaybeIOE(makeIOE(pendingFile.toString(), e));
           }
         } finally {

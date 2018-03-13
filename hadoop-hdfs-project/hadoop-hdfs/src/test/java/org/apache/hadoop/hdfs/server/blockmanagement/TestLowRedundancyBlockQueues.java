@@ -18,22 +18,37 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
+/**
+ * Test {@link LowRedundancyBlocks}.
+ */
+@RunWith(Parameterized.class)
 public class TestLowRedundancyBlockQueues {
 
-  private final ErasureCodingPolicy ecPolicy =
-      StripedFileTestUtil.getDefaultECPolicy();
+  private final ErasureCodingPolicy ecPolicy;
+
+  public TestLowRedundancyBlockQueues(ErasureCodingPolicy policy) {
+    ecPolicy = policy;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<Object[]> policies() {
+    return StripedFileTestUtil.getECPolicies();
+  }
 
   private BlockInfo genBlockInfo(long id) {
     return new BlockInfoContiguous(new Block(id), (short) 3);
@@ -121,6 +136,21 @@ public class TestLowRedundancyBlockQueues {
     verifyBlockStats(queues, 3, 2, 1, 0, 0);
     queues.update(block_very_low_redundancy, 0, 0, 0, 1, -4, -24);
     verifyBlockStats(queues, 2, 3, 2, 0, 0);
+  }
+
+  @Test
+  public void testRemoveWithWrongPriority() {
+    final LowRedundancyBlocks queues = new LowRedundancyBlocks();
+    final BlockInfo corruptBlock = genBlockInfo(1);
+    assertAdded(queues, corruptBlock, 0, 0, 3);
+    assertInLevel(queues, corruptBlock,
+        LowRedundancyBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+    verifyBlockStats(queues, 0, 1, 0, 0, 0);
+
+    // Remove with wrong priority
+    queues.remove(corruptBlock, LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY);
+    // Verify the number of corrupt block is decremented
+    verifyBlockStats(queues, 0, 0, 0, 0, 0);
   }
 
   @Test

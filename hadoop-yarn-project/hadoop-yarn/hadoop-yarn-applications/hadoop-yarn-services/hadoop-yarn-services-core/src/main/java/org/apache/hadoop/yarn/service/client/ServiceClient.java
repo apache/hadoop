@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -209,7 +210,6 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
   public ApplicationId actionCreate(Service service)
       throws IOException, YarnException {
     String serviceName = service.getName();
-    ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
     verifyNoLiveAppInRM(serviceName, "create");
     Path appDir = checkAppNotExistOnHdfs(service);
@@ -268,7 +268,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       long ret = orig - Long.parseLong(newNumber.substring(1));
       if (ret < 0) {
         LOG.warn(MessageFormat.format(
-            "[COMPONENT {}]: component count goes to negative ({}{} = {}), reset it to 0.",
+            "[COMPONENT {0}]: component count goes to negative ({1}{2} = {3}),"
+                + " ignore and reset it to 0.",
             component.getName(), orig, newNumber, ret));
         ret = 0;
       }
@@ -361,7 +362,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (terminatedStates.contains(report.getYarnApplicationState())) {
       LOG.info("Service {} is already in a terminated state {}", serviceName,
           report.getYarnApplicationState());
-      return EXIT_SUCCESS;
+      return EXIT_COMMAND_ARGUMENT_ERROR;
     }
     if (preRunningStates.contains(report.getYarnApplicationState())) {
       String msg = serviceName + " is at " + report.getYarnApplicationState()
@@ -432,6 +433,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     FileSystem fileSystem = fs.getFileSystem();
     // remove from the appId cache
     cachedAppInfo.remove(serviceName);
+    boolean destroySucceed = true;
     if (fileSystem.exists(appDir)) {
       if (fileSystem.delete(appDir, true)) {
         LOG.info("Successfully deleted service dir for " + serviceName + ": "
@@ -442,20 +444,37 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         LOG.info(message);
         throw new YarnException(message);
       }
+    } else {
+      LOG.info("Service '" + serviceName + "' doesn't exist at hdfs path: "
+          + appDir);
+      destroySucceed = false;
     }
     try {
       deleteZKNode(serviceName);
     } catch (Exception e) {
       throw new IOException("Could not delete zk node for " + serviceName, e);
     }
-    String registryPath = ServiceRegistryUtils.registryPathForInstance(serviceName);
+    String registryPath =
+        ServiceRegistryUtils.registryPathForInstance(serviceName);
     try {
-      getRegistryClient().delete(registryPath, true);
+      if (getRegistryClient().exists(registryPath)) {
+        getRegistryClient().delete(registryPath, true);
+      } else {
+        LOG.info(
+            "Service '" + serviceName + "' doesn't exist at ZK registry path: "
+                + registryPath);
+        destroySucceed = false;
+      }
     } catch (IOException e) {
       LOG.warn("Error deleting registry entry {}", registryPath, e);
     }
-    LOG.info("Destroyed cluster {}", serviceName);
-    return EXIT_SUCCESS;
+    if (destroySucceed) {
+      LOG.info("Successfully destroyed service {}", serviceName);
+      return EXIT_SUCCESS;
+    } else {
+      LOG.error("Error on destroy '" + serviceName + "': not found.");
+      return -1;
+    }
   }
 
   private synchronized RegistryOperations getRegistryClient()
@@ -470,13 +489,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return registryClient;
   }
 
-  private void deleteZKNode(String clusterName) throws Exception {
+  private boolean deleteZKNode(String clusterName) throws Exception {
     CuratorFramework curatorFramework = getCuratorClient();
     String user = RegistryUtils.currentUser();
-    String zkPath = ServiceRegistryUtils.mkClusterPath(user, clusterName);
+    String zkPath = ServiceRegistryUtils.mkServiceHomePath(user, clusterName);
     if (curatorFramework.checkExists().forPath(zkPath) != null) {
       curatorFramework.delete().deletingChildrenIfNeeded().forPath(zkPath);
       LOG.info("Deleted zookeeper path: " + zkPath);
+      return true;
+    } else {
+      LOG.info(
+          "Service '" + clusterName + "' doesn't exist at ZK path: " + zkPath);
+      return false;
     }
   }
 
@@ -515,6 +539,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     request.setApplicationTypes(types);
     request.setApplicationTags(tags);
     request.setApplicationStates(liveStates);
+    String user = UserGroupInformation.getCurrentUser().getUserName();
+    if (user != null) {
+      request.setUsers(Collections.singleton(user));
+    }
     List<ApplicationReport> reports = yarnClient.getApplications(request);
     if (!reports.isEmpty()) {
       String message = "";
@@ -694,14 +722,20 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             libPath, "lib", false);
     Path dependencyLibTarGzip = fs.getDependencyTarGzip();
     if (fs.isFile(dependencyLibTarGzip)) {
-      LOG.debug("Loading lib tar from " + fs.getFileSystem().getScheme() + ":/"
-          + dependencyLibTarGzip);
+      LOG.info("Loading lib tar from " + dependencyLibTarGzip);
       fs.submitTarGzipAndUpdate(localResources);
     } else {
+      if (dependencyLibTarGzip != null) {
+        LOG.warn("Property {} has a value {}, but is not a valid file",
+            YarnServiceConf.DEPENDENCY_TARBALL_PATH, dependencyLibTarGzip);
+      }
       String[] libs = ServiceUtils.getLibDirs();
-      LOG.info("Uploading all dependency jars to HDFS. For faster submission of" +
-          " apps, pre-upload dependency jars to HDFS "
-          + "using command: yarn app -enableFastLaunch");
+      LOG.info("Uploading all dependency jars to HDFS. For faster submission of"
+          + " apps, set config property {} to the dependency tarball location."
+          + " Dependency tarball can be uploaded to any HDFS path directly"
+          + " or by using command: yarn app -{} [<Destination Folder>]",
+          YarnServiceConf.DEPENDENCY_TARBALL_PATH,
+          ApplicationCLI.ENABLE_FAST_LAUNCH);
       for (String libDirProp : libs) {
         ProviderUtils.addAllDependencyJars(localResources, fs, libPath, "lib",
             libDirProp);
@@ -744,7 +778,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     Service service = ServiceApiUtil.loadService(fs, serviceName);
     ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
     // see if it is actually running and bail out;
-    verifyNoLiveAppInRM(serviceName, "thaw");
+    verifyNoLiveAppInRM(serviceName, "start");
     ApplicationId appId = submitApp(service);
     service.setId(appId.toString());
     // write app definition on to hdfs
@@ -878,21 +912,40 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return newTimeout;
   }
 
-  public ServiceState convertState(FinalApplicationStatus status) {
-    switch (status) {
-    case UNDEFINED:
+  public ServiceState convertState(YarnApplicationState state) {
+    switch (state) {
+    case NEW:
+    case NEW_SAVING:
+    case SUBMITTED:
+    case ACCEPTED:
       return ServiceState.ACCEPTED;
-    case FAILED:
+    case RUNNING:
+      return ServiceState.STARTED;
+    case FINISHED:
     case KILLED:
-      return ServiceState.FAILED;
-    case ENDED:
-    case SUCCEEDED:
       return ServiceState.STOPPED;
+    case FAILED:
+      return ServiceState.FAILED;
+    default:
+      return ServiceState.ACCEPTED;
     }
-    return ServiceState.ACCEPTED;
   }
 
-  public String getStatusString(String appId)
+  @Override
+  public String getStatusString(String appIdOrName)
+      throws IOException, YarnException {
+    try {
+      // try parsing appIdOrName, if it succeeds, it means it's appId
+      ApplicationId.fromString(appIdOrName);
+      return getStatusByAppId(appIdOrName);
+    } catch (IllegalArgumentException e) {
+      // not appId format, it could be appName.
+      Service status = getStatus(appIdOrName);
+      return ServiceApiUtil.jsonSerDeser.toJson(status);
+    }
+  }
+
+  private String getStatusByAppId(String appId)
       throws IOException, YarnException {
     ApplicationReport appReport =
         yarnClient.getApplicationReport(ApplicationId.fromString(appId));
@@ -903,8 +956,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (StringUtils.isEmpty(appReport.getHost())) {
       return "";
     }
-    ClientAMProtocol amProxy =
-        createAMProxy(appReport.getName(), appReport);
+    ClientAMProtocol amProxy = createAMProxy(appReport.getName(), appReport);
     GetStatusResponseProto response =
         amProxy.getStatus(GetStatusRequestProto.newBuilder().build());
     return response.getStatus();
@@ -917,7 +969,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     ApplicationReport appReport = yarnClient.getApplicationReport(currentAppId);
     Service appSpec = new Service();
     appSpec.setName(serviceName);
-    appSpec.setState(convertState(appReport.getFinalApplicationStatus()));
+    appSpec.setState(convertState(appReport.getYarnApplicationState()));
     ApplicationTimeout lifetime =
         appReport.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
     if (lifetime != null) {
@@ -938,7 +990,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     GetStatusResponseProto response =
         amProxy.getStatus(GetStatusRequestProto.newBuilder().build());
     appSpec = jsonSerDeser.fromJson(response.getStatus());
-
+    if (lifetime != null) {
+      appSpec.setLifetime(lifetime.getRemainingTime());
+    }
     return appSpec;
   }
 
@@ -946,16 +1000,23 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return this.yarnClient;
   }
 
-  public int enableFastLaunch() throws IOException, YarnException {
-    return actionDependency(true);
+  public int enableFastLaunch(String destinationFolder)
+      throws IOException, YarnException {
+    return actionDependency(destinationFolder, true);
   }
 
-  public int actionDependency(boolean overwrite)
+  public int actionDependency(String destinationFolder, boolean overwrite)
       throws IOException, YarnException {
     String currentUser = RegistryUtils.currentUser();
     LOG.info("Running command as user {}", currentUser);
 
-    Path dependencyLibTarGzip = fs.getDependencyTarGzip();
+    if (destinationFolder == null) {
+      destinationFolder = String.format(YarnServiceConstants.DEPENDENCY_DIR,
+          VersionInfo.getVersion());
+    }
+    Path dependencyLibTarGzip = new Path(destinationFolder,
+        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
+            + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
 
     // Check if dependency has already been uploaded, in which case log
     // appropriately and exit success (unless overwrite has been requested)
@@ -977,6 +1038,9 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Version Info: " + VersionInfo.getBuildVersion());
       fs.copyLocalFileToHdfs(tempLibTarGzipFile, dependencyLibTarGzip,
           new FsPermission(YarnServiceConstants.DEPENDENCY_DIR_PERMISSIONS));
+      LOG.info("To let apps use this tarball, in yarn-site set config property "
+          + "{} to {}", YarnServiceConf.DEPENDENCY_TARBALL_PATH,
+          dependencyLibTarGzip);
       return EXIT_SUCCESS;
     } else {
       return EXIT_FALSE;

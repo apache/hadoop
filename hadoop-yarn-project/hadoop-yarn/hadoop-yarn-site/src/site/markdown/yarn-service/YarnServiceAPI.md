@@ -1,4 +1,4 @@
-<!---
+# <!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -54,7 +54,7 @@ Schemes: HTTP
 ## Paths
 ### Create a service
 ```
-POST /ws/v1/services
+POST /app/v1/services
 ```
 
 #### Description
@@ -78,7 +78,7 @@ Create a service. The request JSON is a service object with details required for
 
 ### (TBD) List of services running in the cluster.
 ```
-GET /ws/v1/services
+GET /app/v1/services
 ```
 
 #### Description
@@ -94,7 +94,7 @@ Get a list of all currently running services (response includes a minimal projec
 
 ### Get current version of the API server.
 ```
-GET /ws/v1/services/version
+GET /app/v1/services/version
 ```
 
 #### Description
@@ -109,7 +109,7 @@ Get current version of the API server.
 
 ### Update a service or upgrade the binary version of the components of a running service
 ```
-PUT /ws/v1/services/{service_name}
+PUT /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -133,7 +133,7 @@ Update the runtime properties of a service. Currently the following operations a
 
 ### Destroy a service
 ```
-DELETE /ws/v1/services/{service_name}
+DELETE /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -156,7 +156,7 @@ Destroy a service and release all resources. This API might have to return JSON 
 
 ### Get details of a service.
 ```
-GET /ws/v1/services/{service_name}
+GET /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -179,7 +179,7 @@ Return the details (including containers) of a running service
 
 ### Flex a component's number of instances.
 ```
-PUT /ws/v1/services/{service_name}/components/{component_name}
+PUT /app/v1/services/{service_name}/components/{component_name}
 ```
 
 #### Description
@@ -330,6 +330,7 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
 |cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
 |memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
+|additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below. |  false | object ||
 
 
 ### Service
@@ -339,6 +340,8 @@ a service resource has the following attributes.
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
 |name|A unique service name. If Registry DNS is enabled, the max length is 63 characters.|true|string||
+|version|Version of the service.|true|string||
+|description|Description of the service.|false|string||
 |id|A unique service id.|false|string||
 |artifact|The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).|false|Artifact||
 |resource|The default resource for all components of the service (optional).|false|Resource||
@@ -377,12 +380,14 @@ The current status of a submitted service, returned as a response to the GET API
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
-POST URL - http://localhost:8088/ws/v1/services
+POST URL - http://localhost:8088/app/v1/services
 
 ##### POST Request JSON
 ```json
 {
   "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example",
   "components" :
     [
       {
@@ -395,21 +400,29 @@ POST URL - http://localhost:8088/ws/v1/services
         "launch_command": "./start_nginx.sh",
         "resource": {
           "cpus": 1,
-          "memory": "256"
-       }
+          "memory": "256",
+          "additional" : {
+            "yarn.io/gpu" : {
+              "value" : 4,
+              "unit" : ""
+            }
+          }     
+        }
       }
     ]
 }
 ```
 
 ##### GET Response JSON
-GET URL - http://localhost:8088/ws/v1/services/hello-world
+GET URL - http://localhost:8088/app/v1/services/hello-world
 
 Note, lifetime value of -1 means unlimited lifetime.
 
 ```json
 {
     "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
     "components": [
@@ -434,7 +447,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051512412,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-0"
+                    "component_instance_name": "hello-0"
                 },
                 {
                     "id": "container_e03_1503963985568_0002_01_000002",
@@ -443,7 +456,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051536450,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-1"
+                    "component_instance_name": "hello-1"
                 }
             ],
             "launch_command": "./start_nginx.sh",
@@ -461,7 +474,7 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 
@@ -473,7 +486,7 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -483,7 +496,7 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world
 ```
 
 ### Start a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -493,7 +506,7 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world
 ```
 
 ### Update to flex up/down the no of containers (instances) of a component of a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
+PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 
 ##### PUT Request JSON
 ```json
@@ -504,18 +517,20 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
 ```
 
 ### Destroy a service
-DELETE URL - http://localhost:8088/ws/v1/services/hello-world
+DELETE URL - http://localhost:8088/app/v1/services/hello-world
 
 ***
 
 ### Create a complicated service  - HBase
-POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
+POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 
 ##### POST Request JSON
 
 ```json
 {
   "name": "hbase-app-1",
+  "version": "1.0.0",
+  "description": "hbase service",
   "lifetime": "3600",
   "components": [
     {
@@ -605,3 +620,5 @@ POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
   }
 }
 ```
+
+

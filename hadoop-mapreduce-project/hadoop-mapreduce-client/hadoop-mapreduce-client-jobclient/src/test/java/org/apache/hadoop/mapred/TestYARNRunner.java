@@ -48,8 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -117,7 +115,6 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
 import org.apache.log4j.spi.LoggingEvent;
@@ -128,6 +125,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -136,7 +135,8 @@ import com.google.common.collect.ImmutableList;
  * fine
  */
 public class TestYARNRunner {
-  private static final Log LOG = LogFactory.getLog(TestYARNRunner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestYARNRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   // prefix before <LOG_DIR>/profile.out
@@ -574,7 +574,8 @@ public class TestYARNRunner {
   }
   @Test(timeout=20000)
   public void testWarnCommandOpts() throws Exception {
-    Logger logger = Logger.getLogger(YARNRunner.class);
+    org.apache.log4j.Logger logger =
+        org.apache.log4j.Logger.getLogger(YARNRunner.class);
     
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     Layout layout = new SimpleLayout();
@@ -1006,7 +1007,8 @@ public class TestYARNRunner {
         MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
         MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
       TestAppender testAppender = new TestAppender();
-      Logger logger = Logger.getLogger(YARNRunner.class);
+      org.apache.log4j.Logger  logger =
+          org.apache.log4j.Logger.getLogger(YARNRunner.class);
       logger.addAppender(testAppender);
       try {
         JobConf jobConf = new JobConf();

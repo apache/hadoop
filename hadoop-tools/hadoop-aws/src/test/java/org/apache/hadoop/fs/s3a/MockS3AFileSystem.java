@@ -24,6 +24,7 @@ import java.net.URI;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +79,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
   private final S3AInstrumentation instrumentation =
       new S3AInstrumentation(FS_URI);
   private Configuration conf;
+  private WriteOperationHelper writeHelper;
 
   public MockS3AFileSystem(S3AFileSystem mock,
       Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome) {
@@ -125,6 +127,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     conf = originalConf;
+    writeHelper = new WriteOperationHelper(this, conf);
+  }
+
+  @Override
+  public WriteOperationHelper getWriteOperationHelper() {
+    return writeHelper;
   }
 
   @Override
@@ -268,6 +276,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
   protected void setOptionalMultipartUploadRequestParameters(
       InitiateMultipartUploadRequest req) {
 // no-op
+  }
+
+  @Override
+  protected void setOptionalUploadPartRequestParameters(
+      UploadPartRequest request) {
   }
 
   @Override

@@ -2083,4 +2083,167 @@ public class TestNodeLabelContainerAllocation {
 
     rm1.close();
   }
+
+  @Test
+  public void testQueueMetricsWithLabelsDisableElasticity() throws Exception {
+    /**
+     * Test case: have a following queue structure:
+     *
+     * <pre>
+     *
+     *          root
+     *        /      \
+     *       a        b
+     *      (x)      (x)
+     *      / \
+     *     a1 a2
+     *    (x) (x)
+     * </pre>
+     *
+     * a/b can access x, both of them has max-capacity-on-x = 50
+     *
+     * When doing non-exclusive allocation, app in a (or b) can use 100% of x
+     * resource.
+     */
+
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
+        this.conf);
+
+    // Define top-level queues
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] { "a", "b" });
+    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+
+    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
+    csConf.setCapacity(queueA, 50);
+    csConf.setMaximumCapacity(queueA, 100);
+    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
+    csConf.setCapacityByLabel(queueA, "x", 50);
+    csConf.setMaximumCapacityByLabel(queueA, "x", 100);
+    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
+    csConf.setCapacity(queueB, 50);
+    csConf.setMaximumCapacity(queueB, 100);
+    csConf.setAccessibleNodeLabels(queueB, toSet("x"));
+    csConf.setCapacityByLabel(queueB, "x", 50);
+    csConf.setMaximumCapacityByLabel(queueB, "x", 100);
+
+    // Define 2nd-level queues
+    csConf.setQueues(queueA, new String[] { "a1",
+        "a2"});
+
+    final String A1 = queueA + ".a1";
+    csConf.setCapacity(A1, 20);
+    csConf.setMaximumCapacity(A1, 60);
+    csConf.setAccessibleNodeLabels(A1, toSet("x"));
+    csConf.setCapacityByLabel(A1, "x", 60);
+    csConf.setMaximumCapacityByLabel(A1, "x", 30);
+
+    final String A2 = queueA + ".a2";
+    csConf.setCapacity(A2, 80);
+    csConf.setMaximumCapacity(A2, 40);
+    csConf.setAccessibleNodeLabels(A2, toSet("x"));
+    csConf.setCapacityByLabel(A2, "x", 40);
+    csConf.setMaximumCapacityByLabel(A2, "x", 20);
+
+    // set node -> label
+    mgr.addToCluserNodeLabels(
+        ImmutableSet.of(NodeLabel.newInstance("x", false)));
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+
+    // inject node label manager
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 20 * GB); // label = x
+    // app1 -> a1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // app1 asks for 6 partition=x containers
+    am1.allocate("*", 1 * GB, 6, new ArrayList<ContainerId>(), "x");
+
+    // NM1 do 50 heartbeats
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    doNMHeartbeat(rm1, nm1.getNodeId(), 50);
+    checkNumOfContainersInAnAppOnGivenNode(6, nm1.getNodeId(),
+        cs.getApplicationAttempt(am1.getApplicationAttemptId()));
+
+    SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
+        .getNodeReport(nm1.getNodeId());
+    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(14 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    // Try to launch app2 in a2, asked 2GB, should success
+    // app2 -> a2
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "a2", "x");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // app2 asks for 4 partition=x containers
+    am2.allocate("*", 1 * GB, 4, new ArrayList<ContainerId>(), "x");
+    // NM1 do 50 heartbeats
+
+    doNMHeartbeat(rm1, nm1.getNodeId(), 50);
+    checkNumOfContainersInAnAppOnGivenNode(4, nm1.getNodeId(),
+        cs.getApplicationAttempt(am2.getApplicationAttemptId()));
+
+    reportNm1 = rm1.getResourceScheduler()
+        .getNodeReport(nm1.getNodeId());
+    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    // Kill all apps in queue a2
+    cs.killAllAppsInQueue("a2");
+    rm1.waitForState(app2.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForAppRemovedFromScheduler(app2.getApplicationId());
+
+    // Try to launch app3 in a2, asked 6GB, should fail
+    // app3 -> a2
+    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "a2", "x");
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
+
+    am3.allocate("*", 1 * GB, 6, new ArrayList<ContainerId>(), "x");
+    // NM1 do 50 heartbeats
+    doNMHeartbeat(rm1, nm1.getNodeId(), 50);
+    // app3 cannot preempt more resources restricted by disable elasticity
+    checkNumOfContainersInAnAppOnGivenNode(4, nm1.getNodeId(),
+        cs.getApplicationAttempt(am3.getApplicationAttemptId()));
+
+    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    // Kill all apps in queue a1
+    cs.killAllAppsInQueue("a1");
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForAppRemovedFromScheduler(app1.getApplicationId());
+
+    // app4 -> a1, try to allocate more than 6GB resource, should fail
+    RMApp app4 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockAM am4 = MockRM.launchAndRegisterAM(app4, rm1, nm1);
+
+    // app3 asks for 7 partition=x containers
+    am4.allocate("*", 1 * GB, 7, new ArrayList<ContainerId>(), "x");
+    // NM1 do 50 heartbeats
+    doNMHeartbeat(rm1, nm1.getNodeId(), 50);
+
+    // app4 should only gets 6GB resource in partition=x
+    // since elasticity is disabled
+    checkNumOfContainersInAnAppOnGivenNode(6, nm1.getNodeId(),
+        cs.getApplicationAttempt(am4.getApplicationAttemptId()));
+
+    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    rm1.close();
+  }
 }

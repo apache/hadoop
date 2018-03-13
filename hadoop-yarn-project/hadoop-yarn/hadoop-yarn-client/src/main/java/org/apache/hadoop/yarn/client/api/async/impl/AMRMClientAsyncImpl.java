@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -36,9 +38,12 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -150,18 +155,50 @@ extends AMRMClientAsync<T> {
                                                    Resource capability) {
     return client.getMatchingRequests(priority, resourceName, capability);
   }
-  
+
+  @Override
+  public void addSchedulingRequests(
+      Collection<SchedulingRequest> schedulingRequests) {
+    client.addSchedulingRequests(schedulingRequests);
+  }
+
   /**
    * Registers this application master with the resource manager. On successful
    * registration, starts the heartbeating thread.
+   *
+   * @param appHostName Name of the host on which master is running
+   * @param appHostPort Port master is listening on
+   * @param appTrackingUrl URL at which the master info can be seen
+   * @return Register AM Response.
    * @throws YarnException
    * @throws IOException
    */
   public RegisterApplicationMasterResponse registerApplicationMaster(
       String appHostName, int appHostPort, String appTrackingUrl)
       throws YarnException, IOException {
+    return registerApplicationMaster(
+        appHostName, appHostPort, appTrackingUrl, null);
+  }
+
+  /**
+   * Registers this application master with the resource manager. On successful
+   * registration, starts the heartbeating thread.
+   *
+   * @param appHostName Name of the host on which master is running
+   * @param appHostPort Port master is listening on
+   * @param appTrackingUrl URL at which the master info can be seen
+   * @param placementConstraintsMap Placement Constraints Mapping.
+   * @return Register AM Response.
+   * @throws YarnException
+   * @throws IOException
+   */
+  public RegisterApplicationMasterResponse registerApplicationMaster(
+      String appHostName, int appHostPort, String appTrackingUrl,
+      Map<Set<String>, PlacementConstraint> placementConstraintsMap)
+      throws YarnException, IOException {
     RegisterApplicationMasterResponse response = client
-        .registerApplicationMaster(appHostName, appHostPort, appTrackingUrl);
+        .registerApplicationMaster(appHostName, appHostPort,
+            appTrackingUrl, placementConstraintsMap);
     heartbeatThread.start();
     return response;
   }
@@ -357,6 +394,22 @@ extends AMRMClientAsync<T> {
           List<Container> allocated = response.getAllocatedContainers();
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
+          }
+
+          if (!response.getContainersFromPreviousAttempts().isEmpty()) {
+            if (handler instanceof AMRMClientAsync.AbstractCallbackHandler) {
+              ((AMRMClientAsync.AbstractCallbackHandler) handler)
+                  .onContainersReceivedFromPreviousAttempts(
+                      response.getContainersFromPreviousAttempts());
+            }
+          }
+          List<RejectedSchedulingRequest> rejectedSchedulingRequests =
+              response.getRejectedSchedulingRequests();
+          if (!rejectedSchedulingRequests.isEmpty()) {
+            if (handler instanceof AMRMClientAsync.AbstractCallbackHandler) {
+              ((AMRMClientAsync.AbstractCallbackHandler) handler)
+                  .onRequestsRejected(rejectedSchedulingRequests);
+            }
           }
           progress = handler.getProgress();
         } catch (Throwable ex) {

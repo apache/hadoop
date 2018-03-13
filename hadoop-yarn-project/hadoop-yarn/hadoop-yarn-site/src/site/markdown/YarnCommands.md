@@ -61,7 +61,7 @@ Usage: `yarn app [options] `
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
 | -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
 | -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. |
-| -status \<ApplicationId\> | Prints the status of the application. |
+| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type.|
 | -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
 | -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
@@ -212,7 +212,7 @@ Usage:
      -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]
      -directlyAccessNodeLabelStore
      -refreshClusterMaxPriority
-     -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])
+     -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) or -updateNodeResource [NodeID] [ResourceTypes] ([OvercommitTimeout])
      -transitionToActive [--forceactive] <serviceId>
      -transitionToStandby <serviceId>
      -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
@@ -238,6 +238,7 @@ Usage:
 | -directlyAccessNodeLabelStore | This is DEPRECATED, will be removed in future releases. Directly access node label store, with this option, all node label related operations will not connect RM. Instead, they will access/modify stored node labels directly. By default, it is false (access via RM). AND PLEASE NOTE: if you configured yarn.node-labels.fs-store.root-dir to a local directory (instead of NFS or HDFS), this option will only work when the command run on the machine where RM is running. |
 | -refreshClusterMaxPriority | Refresh cluster max priority |
 | -updateNodeResource [NodeID] [MemSize] [vCores] \([OvercommitTimeout]\) | Update resource on specific node. |
+| -updateNodeResource [NodeID] [ResourceTypes] \([OvercommitTimeout]\) | Update resource types on specific node. Resource Types is comma-delimited key value pairs of any resources availale at Resource Manager. For example, memory-mb=1024Mi,vcores=1,resource1=2G,resource2=4m|
 | -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> | Transitions the service into Active state. Try to make the target active without checking that there is no active node if the --forceactive option is used. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. This command can not be used if automatic failover is enabled.|
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
 | -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |

@@ -22,90 +22,129 @@ export default Ember.Controller.extend({
   queryParams: ["service"],
   service: undefined,
 
-  selectedAttemptId: '',
+  selectedAttemptId: "",
   attemptContainerList: null,
-  selectedContainerId: '',
-  selectedLogFileName: '',
+  selectedContainerId: "",
+  selectedLogFileName: "",
   containerLogFiles: null,
-  selectedLogFileContent: '',
+  selectedLogFileContent: "",
 
   _isLoadingTopPanel: false,
   _isLoadingBottomPanel: false,
 
+  initializeSelect: function(selector = ".js-fetch-attempt-containers") {
+    Ember.run.schedule("afterRender", this, function() {
+      $(selector).select2({ width: "350px", multiple: false });
+    });
+  },
+
   actions: {
     showContainersForAttemptId(attemptId) {
-      this.set('selectedAttemptId', '');
+      this.set("selectedAttemptId", "");
       if (attemptId) {
-        this.set('_isLoadingTopPanel', true);
-        this.set('selectedAttemptId', attemptId);
-        this.fetchContainersForAttemptId(attemptId).then((hash) => {
-          let containers = null;
-          if (hash.rmContainers.get('length') > 0 && hash.rmContainers.get('content')) {
-            containers = (containers || []).concat(hash.rmContainers.get('content'));
-          }
-          if (hash.tsContainers.get('length') > 0 && hash.tsContainers.get('content')) {
-            containers = (containers || []).concat(hash.tsContainers.get('content'));
-          }
-          this.set('attemptContainerList', containers);
-        }).finally(() => {
-          this.set('_isLoadingTopPanel', false);
-        });
+        this.set("_isLoadingTopPanel", true);
+        this.set("selectedAttemptId", attemptId);
+        this.fetchContainersForAttemptId(attemptId)
+          .then(hash => {
+            let containers = null;
+            let containerIdArr = [];
+            if (
+              hash.rmContainers.get("length") > 0 &&
+              hash.rmContainers.get("content")
+            ) {
+              hash.rmContainers.get("content").forEach(function(o) {
+                containerIdArr.push(o.id);
+              }.bind(this));
+              containers = (containers || []).concat(
+                hash.rmContainers.get("content")
+              );
+            }
+            if (
+              hash.tsContainers.get("length") > 0 &&
+              hash.tsContainers.get("content")
+            ) {
+              let tscontainer = [];
+              hash.tsContainers.get("content").forEach(function(o) {
+                if(!containerIdArr.contains(o.id)) {
+                  tscontainer.push(o);
+                }
+              }.bind(this));
+              containers = (containers || []).concat(
+                tscontainer);
+            }
+            this.set("attemptContainerList", containers);
+            this.initializeSelect(".js-fetch-logs-containers");
+          })
+          .finally(() => {
+            this.set("_isLoadingTopPanel", false);
+          });
       } else {
-        this.set('attemptContainerList', null);
-        this.set('selectedContainerId', '');
-        this.set('containerLogFiles', null);
-        this.set('selectedLogFileName', '');
-        this.set('selectedLogFileContent', '');
+        this.set("attemptContainerList", null);
+        this.set("selectedContainerId", "");
+        this.set("containerLogFiles", null);
+        this.set("selectedLogFileName", "");
+        this.set("selectedLogFileContent", "");
       }
     },
 
     showLogFilesForContainerId(containerId) {
-      this.set('selectedContainerId', '');
-      this.set('containerLogFiles', null);
-      this.set('selectedLogFileName', '');
-      this.set('selectedLogFileContent', '');
+      this.set("selectedContainerId", "");
+      this.set("containerLogFiles", null);
+      this.set("selectedLogFileName", "");
+      this.set("selectedLogFileContent", "");
+
       if (containerId) {
-        this.set('_isLoadingBottomPanel', true);
-        this.set('selectedContainerId', containerId);
-        this.fetchLogFilesForContainerId(containerId).then((hash) => {
-          if (hash.logs.get('length') > 0) {
-            this.set('containerLogFiles', hash.logs);
-          } else {
-            this.set('containerLogFiles', null);
-          }
-        }).finally(() => {
-          this.set('_isLoadingBottomPanel', false);
-        });
+        this.set("_isLoadingBottomPanel", true);
+        this.set("selectedContainerId", containerId);
+        this.fetchLogFilesForContainerId(containerId)
+          .then(hash => {
+            if (hash.logs.get("length") > 0) {
+              this.set("containerLogFiles", hash.logs);
+            } else {
+              this.set("containerLogFiles", null);
+            }
+            this.initializeSelect(".js-fetch-log-for-container");
+          })
+          .finally(() => {
+            this.set("_isLoadingBottomPanel", false);
+          });
       }
     },
 
     showContentForLogFile(logFile) {
-      this.set('selectedLogFileName', '');
-      Ember.$("#logContentTextArea1234554321").val('');
-      this.set('showFullLog', false);
+      this.set("selectedLogFileName", "");
+      Ember.$("#logContentTextArea1234554321").val("");
+      this.set("showFullLog", false);
       if (logFile) {
-        this.set('_isLoadingBottomPanel', true);
-        this.set('selectedLogFileName', logFile);
-        this.fetchContentForLogFile(this.get('selectedContainerId'), logFile).then((content) => {
-          this.set('selectedLogFileContent', content.trim());
-        }, () => {
-          this.set('selectedLogFileContent', '');
-        }).always(() => {
-          this.set('_isLoadingBottomPanel', false);
-        });
+        this.set("_isLoadingBottomPanel", true);
+        this.set("selectedLogFileName", logFile);
+        this.fetchContentForLogFile(this.get("selectedContainerId"), logFile)
+          .then(
+            content => {
+              this.set("selectedLogFileContent", content.trim());
+            },
+            () => {
+              this.set("selectedLogFileContent", "");
+            }
+          )
+          .always(() => {
+            this.set("_isLoadingBottomPanel", false);
+          });
       } else {
-        this.set('selectedLogFileContent', '');
+        this.set("selectedLogFileContent", "");
       }
     },
 
     findNextTextInLogContent() {
-      let searchInputElem = document.getElementById('logSeachInput98765');
-      this.send('searchTextInLogContent', searchInputElem.value);
+      let searchInputElem = document.getElementById("logSeachInput98765");
+      this.send("searchTextInLogContent", searchInputElem.value);
     },
 
     searchTextInLogContent(searchText) {
-      Ember.$('body').scrollTop(278);
-      let textAreaElem = document.getElementById('logContentTextArea1234554321');
+      Ember.$("body").scrollTop(278);
+      let textAreaElem = document.getElementById(
+        "logContentTextArea1234554321"
+      );
       let logContent = textAreaElem.innerText;
       let startIndex = this.searchTextStartIndex || 0;
       if (startIndex === -1) {
@@ -130,75 +169,86 @@ export default Ember.Controller.extend({
           selection.removeAllRanges();
           selection.addRange(range);
         }
-        this.searchTextStartIndex = logContent.indexOf(searchText, endIndex + 1);
+        this.searchTextStartIndex = logContent.indexOf(
+          searchText,
+          endIndex + 1
+        );
       } else {
         this.searchTextStartIndex = 0;
       }
     },
 
     showFullLogFileContent() {
-      this.set('showFullLog', true);
-      this.notifyPropertyChange('selectedLogFileContent');
+      this.set("showFullLog", true);
+      this.notifyPropertyChange("selectedLogFileContent");
     }
   },
 
-  attemptList: Ember.computed('model.attempts', function() {
-    let attempts = this.get('model.attempts');
+  attemptList: Ember.computed("model.attempts", function() {
+    let attempts = this.get("model.attempts");
     let list = null;
-    if (attempts && attempts.get('length') && attempts.get('content')) {
-      list = [].concat(attempts.get('content'));
+    if (attempts && attempts.get("length") && attempts.get("content")) {
+      list = [].concat(attempts.get("content"));
     }
     return list;
   }),
 
   fetchContainersForAttemptId(attemptId) {
     return Ember.RSVP.hash({
-      rmContainers: this.store.query('yarn-container', {
-        app_attempt_id: attemptId
-      }).catch(function() {
-        return Ember.A();
-      }),
-      tsContainers: this.store.query('yarn-timeline-container', {
-        app_attempt_id: attemptId
-      }).catch(function() {
-        return Ember.A();
-      })
+      rmContainers: this.store
+        .query("yarn-container", {
+          app_attempt_id: attemptId
+        })
+        .catch(function() {
+          return Ember.A();
+        }),
+      tsContainers: this.store
+        .query("yarn-timeline-container", {
+          app_attempt_id: attemptId
+        })
+        .catch(function() {
+          return Ember.A();
+        })
     });
   },
 
   fetchLogFilesForContainerId(containerId) {
     return Ember.RSVP.hash({
-      logs: this.store.query('yarn-log', {
-        containerId: containerId
-      }).catch(function() {
-        return Ember.A();
-      })
+      logs: this.store
+        .query("yarn-log", {
+          containerId: containerId
+        })
+        .catch(function() {
+          return Ember.A();
+        })
     });
   },
 
   fetchContentForLogFile(containerId, logFile) {
-    let logAdapter = this.store.adapterFor('yarn-log');
+    let logAdapter = this.store.adapterFor("yarn-log");
     return logAdapter.fetchLogFileContent(containerId, logFile);
   },
 
   resetAfterRefresh() {
-    this.set('selectedAttemptId', '');
-    this.set('attemptContainerList', null);
-    this.set('selectedContainerId', '');
-    this.set('selectedLogFileName', '');
-    this.set('containerLogFiles', null);
-    this.set('selectedLogFileContent', '');
+    this.set("selectedAttemptId", "");
+    this.set("attemptContainerList", null);
+    this.set("selectedContainerId", "");
+    this.set("selectedLogFileName", "");
+    this.set("containerLogFiles", null);
+    this.set("selectedLogFileContent", "");
   },
 
   showFullLog: false,
 
-  showLastFewLinesOfLogContent: Ember.computed('selectedLogFileContent', function() {
-    let content = this.get('selectedLogFileContent');
-    let lines = content.split('\n');
-    if (this.get('showFullLog') || lines.length < 10) {
-      return content;
+  showLastFewLinesOfLogContent: Ember.computed(
+    "selectedLogFileContent",
+    function() {
+      let content = this.get("selectedLogFileContent");
+      let lines = content.split("\n");
+      if (this.get("showFullLog") || lines.length < 10) {
+        return content;
+      }
+      return lines.slice(lines.length - 10).join("\n");
     }
-    return lines.slice(lines.length - 10).join('\n');
-  })
-
+  )
 });

@@ -296,7 +296,10 @@ public class RegistryUtils {
    */
   public static String currentUser() {
     String shortUserName = currentUsernameUnencoded();
-    return encodeForRegistry(shortUserName);
+    String encodedName =  encodeForRegistry(shortUserName);
+    // DNS name doesn't allow "_", replace it with "-"
+    encodedName = RegistryUtils.convertUsername(encodedName);
+    return encodedName.replace("_", "-");
   }
 
   /**

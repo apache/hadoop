@@ -50,6 +50,16 @@ abstract public class ReplicaInfo extends Block
       new FileIoProvider(null, null);
 
   /**
+   * Constructor.
+   * @param block a block
+   * @param vol volume where replica is located
+   */
+  ReplicaInfo(Block block, FsVolumeSpi vol) {
+    this(vol, block.getBlockId(), block.getNumBytes(),
+        block.getGenerationStamp());
+  }
+
+  /**
   * Constructor
   * @param vol volume where replica is located
   * @param blockId block id
@@ -62,7 +72,14 @@ abstract public class ReplicaInfo extends Block
   }
   
   /**
-   * Get the volume where this replica is located on disk.
+   * Copy constructor.
+   * @param from where to copy from
+   */
+  ReplicaInfo(ReplicaInfo from) {
+    this(from, from.getVolume());
+  }
+
+  /**
    * @return the volume where this replica is located on disk
    */
   public FsVolumeSpi getVolume() {

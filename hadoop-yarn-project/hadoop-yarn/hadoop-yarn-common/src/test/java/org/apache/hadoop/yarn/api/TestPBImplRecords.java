@@ -132,12 +132,12 @@ import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -149,8 +149,10 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -182,14 +184,15 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionContractPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProfileCapabilityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceOptionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourceSizingPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceTypeInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.SchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.SerializedExceptionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.StrictPreemptionContractPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
@@ -225,6 +228,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceOptionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceSizingProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.SchedulingRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StrictPreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.URLProto;
@@ -315,7 +320,6 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationResponseP
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllResourceProfilesResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetResourceProfileRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetResourceProfileResponseProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
@@ -377,7 +381,6 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(NodeReport.class);
     generateByNewInstance(Token.class);
     generateByNewInstance(NMToken.class);
-    generateByNewInstance(ProfileCapability.class);
     generateByNewInstance(ResourceRequest.class);
     generateByNewInstance(ApplicationAttemptReport.class);
     generateByNewInstance(ApplicationResourceUsageReport.class);
@@ -407,7 +410,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     // it is recursive(has sub queues)
     typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
-        "x && y", null, false));
+        "x && y", null, false, null, false));
     generateByNewInstance(QueueStatistics.class);
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
@@ -428,6 +431,9 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(QueueConfigurations.class);
     generateByNewInstance(CollectorInfo.class);
     generateByNewInstance(ResourceTypeInfo.class);
+    generateByNewInstance(ResourceSizing.class);
+    generateByNewInstance(SchedulingRequest.class);
+    generateByNewInstance(RejectedSchedulingRequest.class);
   }
 
   @Test
@@ -907,6 +913,17 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   }
 
   @Test
+  public void testResourceSizingPBImpl() throws Exception {
+    validatePBImplRecord(ResourceSizingPBImpl.class, ResourceSizingProto.class);
+  }
+
+  @Test
+  public void testSchedulingRequestPBImpl() throws Exception {
+    validatePBImplRecord(SchedulingRequestPBImpl.class,
+        SchedulingRequestProto.class);
+  }
+
+  @Test
   public void testSerializedExceptionPBImpl() throws Exception {
     validatePBImplRecord(SerializedExceptionPBImpl.class,
         SerializedExceptionProto.class);
@@ -1192,12 +1209,6 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   public void testGetResourceProfileResponsePBImpl() throws Exception {
     validatePBImplRecord(GetResourceProfileResponsePBImpl.class,
         GetResourceProfileResponseProto.class);
-  }
-
-  @Test
-  public void testProfileCapabilityPBImpl() throws Exception {
-    validatePBImplRecord(ProfileCapabilityPBImpl.class,
-        ProfileCapabilityProto.class);
   }
 
   @Test

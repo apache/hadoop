@@ -32,9 +32,6 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster.CustomNodeManager;
-import org.apache.hadoop.yarn.server.api.ResourceTracker;
-import org.apache.hadoop.yarn.server.api.ServerRMProxy;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
@@ -87,8 +84,7 @@ public class TestMiniYarnClusterNodeUtilization {
     assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
 
     nm = (CustomNodeManager)cluster.getNodeManager(0);
-    int responseId = 1;
-    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), responseId,
+    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), 0,
         CONTAINER_PMEM_1, CONTAINER_VMEM_1, CONTAINER_CPU_1,
         NODE_PMEM_1, NODE_VMEM_1, NODE_CPU_1);
     nm.setNodeStatus(nodeStatus);
@@ -105,23 +101,14 @@ public class TestMiniYarnClusterNodeUtilization {
     assertTrue("NMs fail to connect to the RM",
         cluster.waitForNodeManagersToConnect(10000));
 
-    // Simulate heartbeat using NodeStatus fixture
-    NodeHeartbeatRequest request =
-        NodeHeartbeatRequest.newInstance(nodeStatus, null, null, null);
-    ResourceTracker tracker =
-        ServerRMProxy.createRMProxy(conf, ResourceTracker.class);
-    tracker.nodeHeartbeat(request);
-
     // Give the heartbeat time to propagate to the RM
     verifySimulatedUtilization();
 
     // Alter utilization
-    int responseId = 10;
-    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), responseId,
+    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), 0,
         CONTAINER_PMEM_2, CONTAINER_VMEM_2, CONTAINER_CPU_2,
         NODE_PMEM_2, NODE_VMEM_2, NODE_CPU_2);
     nm.setNodeStatus(nodeStatus);
-    tracker.nodeHeartbeat(request);
 
     // Give the heartbeat time to propagate to the RM
     verifySimulatedUtilization();
@@ -145,8 +132,7 @@ public class TestMiniYarnClusterNodeUtilization {
     verifySimulatedUtilization();
 
     // Alter utilization
-    int responseId = 20;
-    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), responseId,
+    nodeStatus = createNodeStatus(nm.getNMContext().getNodeId(), 0,
         CONTAINER_PMEM_2, CONTAINER_VMEM_2, CONTAINER_CPU_2,
         NODE_PMEM_2, NODE_VMEM_2, NODE_CPU_2);
     nm.setNodeStatus(nodeStatus);

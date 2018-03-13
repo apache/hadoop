@@ -18,10 +18,15 @@
 
 import Ember from 'ember';
 import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Controller.extend({
   queryParams: ["service"],
   service: undefined,
+
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
 
   tableColumns: Ember.computed('model.appId', 'model.serviceName', function() {
     var cols = [];

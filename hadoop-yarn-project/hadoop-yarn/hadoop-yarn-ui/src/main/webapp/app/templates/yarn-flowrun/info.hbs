@@ -87,7 +87,7 @@
 
   <!-- Flowrun aggregated data -->
   <h3>Applications</h3>
-  {{em-table columns=columns rows=model.apps}}
+  {{em-table columns=columns rows=model.apps definition=tableDefinition}}
 
   {{#if (and cpuVCoresVizData.length vizWidgets.cpuVcores)}}
     <div class="panel panel-default">

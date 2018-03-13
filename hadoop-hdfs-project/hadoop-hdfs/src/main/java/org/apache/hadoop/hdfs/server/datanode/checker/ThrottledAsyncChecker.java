@@ -119,7 +119,6 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
   @Override
   public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
                                                 K context) {
-    LOG.info("Scheduling a check for {}", target);
     if (checksInProgress.containsKey(target)) {
       return Optional.absent();
     }
@@ -135,6 +134,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
       }
     }
 
+    LOG.info("Scheduling a check for {}", target);
     final ListenableFuture<V> lfWithoutTimeout = executorService.submit(
         new Callable<V>() {
           @Override

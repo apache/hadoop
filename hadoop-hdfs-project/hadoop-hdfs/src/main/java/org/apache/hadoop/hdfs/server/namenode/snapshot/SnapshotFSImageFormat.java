@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
@@ -82,7 +81,7 @@ public class SnapshotFSImageFormat {
     if (diffs == null) {
       out.writeInt(-1); // no diffs
     } else {
-      final List<D> list = diffs.asList();
+      final DiffList<D> list = diffs.asList();
       final int size = list.size();
       out.writeInt(size);
       for (int i = size - 1; i >= 0; i--) {
@@ -145,8 +144,7 @@ public class SnapshotFSImageFormat {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children
     for (DirectoryDiff postDiff : parent.getDiffs()) {
-      final INode d = postDiff.getChildrenDiff().search(ListType.DELETED,
-          createdNodeName);
+      final INode d = postDiff.getChildrenDiff().getDeleted(createdNodeName);
       if (d != null) {
         return d;
       } // else go to the next SnapshotDiff
@@ -306,7 +304,7 @@ public class SnapshotFSImageFormat {
     List<INode> deletedList = loadDeletedList(parent, createdList, in, loader);
     
     // 6. Compose the SnapshotDiff
-    List<DirectoryDiff> diffs = parent.getDiffs().asList();
+    DiffList<DirectoryDiff> diffs = parent.getDiffs().asList();
     DirectoryDiff sdiff = new DirectoryDiff(snapshot.getId(), snapshotINode,
         diffs.isEmpty() ? null : diffs.get(0), childrenSize, createdList,
         deletedList, snapshotINode == snapshot.getRoot());

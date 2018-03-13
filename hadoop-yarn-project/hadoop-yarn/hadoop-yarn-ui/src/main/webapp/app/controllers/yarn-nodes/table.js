@@ -23,7 +23,9 @@ import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Controller.extend({
     queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
-    tableDefinition: TableDefinition.create(),
+    tableDefinition: TableDefinition.create({
+      searchType: 'manual',
+    }),
     searchText: Ember.computed.alias('tableDefinition.searchText'),
     sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
     sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
@@ -31,6 +33,7 @@ export default Ember.Controller.extend({
     rowCount: Ember.computed.alias('tableDefinition.rowCount'),
     tableDefinition: TableDefinition.create({
         enableFaceting: true,
+        minValuesToDisplay: 1,
         rowCount: 25
     }),
     columns: function() {

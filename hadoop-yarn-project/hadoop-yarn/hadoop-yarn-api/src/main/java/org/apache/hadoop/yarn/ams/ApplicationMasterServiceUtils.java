@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.ams;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 
@@ -85,5 +86,20 @@ public final class ApplicationMasterServiceUtils {
       allocatedContainers.addAll(allocateResponse.getAllocatedContainers());
     }
     allocateResponse.setAllocatedContainers(allocatedContainers);
+  }
+
+  /**
+   * Add rejected Scheduling Requests to {@link AllocateResponse}.
+   * @param allocateResponse Allocate Response.
+   * @param rejectedRequests Rejected SchedulingRequests.
+   */
+  public static void addToRejectedSchedulingRequests(
+      AllocateResponse allocateResponse,
+      List<RejectedSchedulingRequest> rejectedRequests) {
+    if (allocateResponse.getRejectedSchedulingRequests() != null
+        && !allocateResponse.getRejectedSchedulingRequests().isEmpty()) {
+      rejectedRequests.addAll(allocateResponse.getRejectedSchedulingRequests());
+    }
+    allocateResponse.setRejectedSchedulingRequests(rejectedRequests);
   }
 }

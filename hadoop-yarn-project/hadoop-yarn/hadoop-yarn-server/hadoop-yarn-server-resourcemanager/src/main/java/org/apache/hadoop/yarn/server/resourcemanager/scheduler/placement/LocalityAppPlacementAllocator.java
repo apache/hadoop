@@ -22,8 +22,9 @@ import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -46,24 +47,22 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * containers.
  */
 public class LocalityAppPlacementAllocator <N extends SchedulerNode>
-    implements AppPlacementAllocator<N> {
+    extends AppPlacementAllocator<N> {
   private static final Log LOG =
       LogFactory.getLog(LocalityAppPlacementAllocator.class);
 
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();
-  private AppSchedulingInfo appSchedulingInfo;
   private volatile String primaryRequestedPartition =
       RMNodeLabelsManager.NO_LABEL;
 
   private final ReentrantReadWriteLock.ReadLock readLock;
   private final ReentrantReadWriteLock.WriteLock writeLock;
 
-  public LocalityAppPlacementAllocator(AppSchedulingInfo info) {
+  public LocalityAppPlacementAllocator() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
-    this.appSchedulingInfo = info;
   }
 
   @Override
@@ -173,6 +172,19 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Override
+  public PendingAskUpdateResult updatePendingAsk(
+      SchedulerRequestKey schedulerRequestKey,
+      SchedulingRequest schedulingRequest,
+      boolean recoverPreemptedRequestForAContainer)
+      throws SchedulerInvalidResoureRequestException {
+    throw new SchedulerInvalidResoureRequestException(this.getClass().getName()
+        + " not be able to handle SchedulingRequest, there exists a "
+        + "ResourceRequest with the same scheduler key=" + schedulerRequestKey
+        + ", please send SchedulingRequest with a different allocationId and "
+        + "priority");
   }
 
   @Override
@@ -356,13 +368,13 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
   }
 
   @Override
-  public boolean acceptNodePartition(String nodePartition,
+  public boolean precheckNode(SchedulerNode schedulerNode,
       SchedulingMode schedulingMode) {
     // We will only look at node label = nodeLabelToLookAt according to
     // schedulingMode and partition of node.
     String nodePartitionToLookAt;
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      nodePartitionToLookAt = nodePartition;
+      nodePartitionToLookAt = schedulerNode.getPartition();
     } else {
       nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
     }

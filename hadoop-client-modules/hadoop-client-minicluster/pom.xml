@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.1.0-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -615,6 +615,7 @@
                       <excludes>
                         <exclude>testjar/*</exclude>
                         <exclude>testshell/*</exclude>
+                        <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->

@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URL;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocolProtos.InterQJournalProtocolService;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRe
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.QJournalProtocolService;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolPB;
+import org.apache.hadoop.hdfs.qjournal.protocolPB.InterQJournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -46,13 +49,15 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URL;
 
 
 @InterfaceAudience.Private
 @VisibleForTesting
-public class JournalNodeRpcServer implements QJournalProtocol {
+public class JournalNodeRpcServer implements QJournalProtocol,
+    InterQJournalProtocol {
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
@@ -83,6 +88,19 @@ public class JournalNodeRpcServer implements QJournalProtocol {
       .setNumHandlers(HANDLER_COUNT)
       .setVerbose(false)
       .build();
+
+
+    //Adding InterQJournalProtocolPB to server
+    InterQJournalProtocolServerSideTranslatorPB
+        qJournalProtocolServerSideTranslatorPB = new
+        InterQJournalProtocolServerSideTranslatorPB(this);
+
+    BlockingService interQJournalProtocolService = InterQJournalProtocolService
+        .newReflectiveBlockingService(qJournalProtocolServerSideTranslatorPB);
+
+    DFSUtil.addPBProtocol(confCopy, InterQJournalProtocolPB.class,
+        interQJournalProtocolService, server);
+
 
     // set service-level authorization security policy
     if (confCopy.getBoolean(
@@ -262,5 +280,22 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   public Long getJournalCTime(String journalId,
                               String nameServiceId) throws IOException {
     return jn.getJournalCTime(journalId, nameServiceId);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public GetEditLogManifestResponseProto getEditLogManifestFromJournal(
+      String jid, String nameServiceId,
+      long sinceTxId, boolean inProgressOk)
+      throws IOException {
+
+    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
+        .getEditLogManifest(sinceTxId, inProgressOk);
+
+    return GetEditLogManifestResponseProto.newBuilder()
+        .setManifest(PBHelper.convert(manifest))
+        .setHttpPort(jn.getBoundHttpAddress().getPort())
+        .setFromURL(jn.getHttpServerURI())
+        .build();
   }
 }

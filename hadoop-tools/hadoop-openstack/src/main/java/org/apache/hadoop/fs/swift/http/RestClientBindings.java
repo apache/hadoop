@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConfigurationException;
 
@@ -39,7 +39,8 @@ import static org.apache.hadoop.fs.swift.http.SwiftProtocolConstants.*;
  * and then builds an appropriate Properties file.
  */
 public final class RestClientBindings {
-  private static final Log LOG = LogFactory.getLog(RestClientBindings.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RestClientBindings.class);
 
   public static final String E_INVALID_NAME = "Invalid swift hostname '%s':" +
           " hostname must in form container.service";

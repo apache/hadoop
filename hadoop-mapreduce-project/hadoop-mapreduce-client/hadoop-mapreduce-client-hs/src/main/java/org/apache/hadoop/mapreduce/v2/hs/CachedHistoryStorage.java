@@ -173,9 +173,14 @@ public class CachedHistoryStorage extends AbstractService implements
     HistoryFileInfo fileInfo;
 
     fileInfo = hsManager.getFileInfo(jobId);
+
     if (fileInfo == null) {
       throw new HSFileRuntimeException("Unable to find job " + jobId);
-    } else if (fileInfo.isDeleted()) {
+    }
+
+    fileInfo.waitUntilMoved();
+
+    if (fileInfo.isDeleted()) {
       throw new HSFileRuntimeException("Cannot load deleted job " + jobId);
     } else {
       return fileInfo.loadJob();
@@ -211,6 +216,7 @@ public class CachedHistoryStorage extends AbstractService implements
       for (HistoryFileInfo mi : hsManager.getAllFileInfo()) {
         if (mi != null) {
           JobId id = mi.getJobId();
+          mi.waitUntilMoved();
           result.put(id, new PartialJob(mi.getJobIndexInfo(), id));
         }
       }

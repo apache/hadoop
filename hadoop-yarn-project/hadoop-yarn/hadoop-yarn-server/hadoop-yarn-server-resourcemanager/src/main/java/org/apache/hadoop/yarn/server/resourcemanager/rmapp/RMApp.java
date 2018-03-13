@@ -307,8 +307,14 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   boolean isAppInCompletedStates();
 
   /**
-   * Get the application -> queue placement context
+   * Get the application -&gt; queue placement context
    * @return ApplicationPlacementContext
    */
   ApplicationPlacementContext getApplicationPlacementContext();
+
+  /**
+   * Get the application scheduling environment variables.
+   * @return Map of envs related to application scheduling preferences.
+   */
+  Map<String, String> getApplicationSchedulingEnvs();
 }

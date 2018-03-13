@@ -146,7 +146,7 @@ public class ContainerUpdateContext {
           createResourceRequests(rmContainer, schedulerNode,
               schedulerKey, resToIncrease);
       updateResReqs.put(schedulerKey, resMap);
-      appSchedulingInfo.addRequestToAppPlacement(false, updateResReqs);
+      appSchedulingInfo.updateResourceRequests(updateResReqs, false);
     }
     return true;
   }
@@ -290,7 +290,7 @@ public class ContainerUpdateContext {
           (rmContainer, node, schedulerKey,
           rmContainer.getContainer().getResource());
       reqsToUpdate.put(schedulerKey, resMap);
-      appSchedulingInfo.addRequestToAppPlacement(true, reqsToUpdate);
+      appSchedulingInfo.updateResourceRequests(reqsToUpdate, true);
       return UNDEFINED;
     }
     return retVal;

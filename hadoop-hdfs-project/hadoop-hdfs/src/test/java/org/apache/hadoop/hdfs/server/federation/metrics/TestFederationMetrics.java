@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -84,6 +86,10 @@ public class TestFederationMetrics extends TestMetricsBase {
               json.getString("nameserviceId"));
           assertEquals(entry.getDefaultLocation().getDest(),
               json.getString("path"));
+          assertEquals(entry.getOwnerName(), json.getString("ownerName"));
+          assertEquals(entry.getGroupName(), json.getString("groupName"));
+          assertEquals(entry.getMode().toString(), json.getString("mode"));
+          assertEquals(entry.getQuota().toString(), json.getString("quota"));
           assertNotNullAndNotEmpty(json.getString("dateCreated"));
           assertNotNullAndNotEmpty(json.getString("dateModified"));
           match++;
@@ -187,14 +193,64 @@ public class TestFederationMetrics extends TestMetricsBase {
           json.getLong("numOfDecomActiveDatanodes"));
       assertEquals(stats.getNumOfDecomDeadDatanodes(),
           json.getLong("numOfDecomDeadDatanodes"));
+      assertEquals(stats.getProvidedSpace(),
+          json.getLong("providedSpace"));
       nameservicesFound++;
     }
     assertEquals(getNameservices().size(), nameservicesFound);
   }
 
+  @Test
+  public void testRouterStatsDataSource() throws IOException, JSONException {
+
+    FederationMetrics metrics = getRouter().getMetrics();
+    String jsonString = metrics.getRouters();
+    JSONObject jsonObject = new JSONObject(jsonString);
+    Iterator<?> keys = jsonObject.keys();
+    int routersFound = 0;
+    while (keys.hasNext()) {
+      JSONObject json = jsonObject.getJSONObject((String) keys.next());
+      String address = json.getString("address");
+      assertNotNullAndNotEmpty(address);
+      RouterState router = findMockRouter(address);
+      assertNotNull(router);
+
+      assertEquals(router.getStatus().toString(), json.getString("status"));
+      assertEquals(router.getCompileInfo(), json.getString("compileInfo"));
+      assertEquals(router.getVersion(), json.getString("version"));
+      assertEquals(router.getDateStarted(), json.getLong("dateStarted"));
+      assertEquals(router.getDateCreated(), json.getLong("dateCreated"));
+      assertEquals(router.getDateModified(), json.getLong("dateModified"));
+
+      StateStoreVersion version = router.getStateStoreVersion();
+      assertEquals(
+          FederationMetrics.getDateString(version.getMembershipVersion()),
+          json.get("lastMembershipUpdate"));
+      assertEquals(
+          FederationMetrics.getDateString(version.getMountTableVersion()),
+          json.get("lastMountTableUpdate"));
+      assertEquals(version.getMembershipVersion(),
+          json.get("membershipVersion"));
+      assertEquals(version.getMountTableVersion(),
+          json.get("mountTableVersion"));
+      routersFound++;
+    }
+
+    assertEquals(getMockRouters().size(), routersFound);
+  }
+
   private void assertNotNullAndNotEmpty(String field) {
     assertNotNull(field);
     assertTrue(field.length() > 0);
+  }
+
+  private RouterState findMockRouter(String routerId) {
+    for (RouterState router : getMockRouters()) {
+      if (router.getAddress().equals(routerId)) {
+        return router;
+      }
+    }
+    return null;
   }
 
   private void validateClusterStatsBean(FederationMBean bean)

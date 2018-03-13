@@ -59,7 +59,6 @@ public class AmFilterInitializer extends FilterInitializer {
     }
     sb.setLength(sb.length() - 1);
     params.put(AmIpFilter.PROXY_URI_BASES, sb.toString());
-    container.addFilter(FILTER_NAME, FILTER_CLASS, params);
 
     // Handle RM HA urls
     // Include yarn-site.xml in the classpath
@@ -75,6 +74,8 @@ public class AmFilterInitializer extends FilterInitializer {
         params.put(RM_HA_URLS, StringUtils.join(",", urls));
       }
     }
+
+    container.addFilter(FILTER_NAME, FILTER_CLASS, params);
   }
 
   private Collection<String> getRmIds(Configuration conf) {

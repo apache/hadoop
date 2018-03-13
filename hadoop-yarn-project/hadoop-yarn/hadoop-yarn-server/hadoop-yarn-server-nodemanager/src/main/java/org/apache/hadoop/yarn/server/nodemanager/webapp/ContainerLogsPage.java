@@ -29,13 +29,25 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -43,13 +55,19 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.PRE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 
 public class ContainerLogsPage extends NMView {
-  
+  public static final Logger LOG = LoggerFactory.getLogger(
+      ContainerLogsPage.class);
+
   public static final String REDIRECT_URL = "redirect.url";
-  
+  public static final String LOG_AGGREGATION_TYPE = "log.aggregation.type";
+  public static final String LOG_AGGREGATION_REMOTE_TYPE = "remote";
+  public static final String LOG_AGGREGATION_LOCAL_TYPE = "local";
+
   @Override protected void preHead(Page.HTML<__> html) {
     String redirectUrl = $(REDIRECT_URL);
     if (redirectUrl == null || redirectUrl.isEmpty()) {
@@ -73,10 +91,13 @@ public class ContainerLogsPage extends NMView {
   public static class ContainersLogsBlock extends HtmlBlock implements
       YarnWebParams {    
     private final Context nmContext;
+    private final LogAggregationFileControllerFactory factory;
 
     @Inject
     public ContainersLogsBlock(Context context) {
       this.nmContext = context;
+      this.factory = new LogAggregationFileControllerFactory(
+          context.getConf());
     }
 
     @Override
@@ -85,27 +106,73 @@ public class ContainerLogsPage extends NMView {
       String redirectUrl = $(REDIRECT_URL);
       if (redirectUrl !=null && redirectUrl.equals("false")) {
         html.h1("Failed while trying to construct the redirect url to the log" +
-        		" server. Log Server url may not be configured");
+            " server. Log Server url may not be configured");
         //Intentional fallthrough.
       }
 
       ContainerId containerId;
+      ApplicationId appId;
       try {
         containerId = ContainerId.fromString($(CONTAINER_ID));
+        appId = containerId.getApplicationAttemptId().getApplicationId();
       } catch (IllegalArgumentException ex) {
         html.h1("Invalid container ID: " + $(CONTAINER_ID));
         return;
       }
 
+      LogAggregationFileController fileController = null;
+      boolean foundAggregatedLogs = false;
+      try {
+        fileController = this.factory.getFileControllerForRead(
+            appId, $(APP_OWNER));
+        foundAggregatedLogs = true;
+      } catch (IOException fnf) {
+        // Do Nothing
+      }
+
       try {
         if ($(CONTAINER_LOG_TYPE).isEmpty()) {
+          html.h2("Local Logs:");
           List<File> logFiles = ContainerLogsUtils.getContainerLogDirs(containerId,
               request().getRemoteUser(), nmContext);
-          printLogFileDirectory(html, logFiles);
+          printLocalLogFileDirectory(html, logFiles);
+          if (foundAggregatedLogs) {
+            // print out the aggregated logs if exists
+            try {
+              ContainerLogsRequest logRequest = new ContainerLogsRequest();
+              logRequest.setAppId(appId);
+              logRequest.setAppOwner($(APP_OWNER));
+              logRequest.setContainerId($(CONTAINER_ID));
+              logRequest.setNodeId(this.nmContext.getNodeId().toString());
+              List<ContainerLogMeta> containersLogMeta = fileController
+                  .readAggregatedLogsMeta(logRequest);
+              if (containersLogMeta != null && !containersLogMeta.isEmpty()) {
+                html.h2("Aggregated Logs:");
+                printAggregatedLogFileDirectory(html, containersLogMeta);
+              }
+            } catch (Exception ex) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(ex.getMessage());
+              }
+            }
+          }
         } else {
-          File logFile = ContainerLogsUtils.getContainerLogFile(containerId,
-              $(CONTAINER_LOG_TYPE), request().getRemoteUser(), nmContext);
-          printLogFile(html, logFile);
+          String aggregationType = $(LOG_AGGREGATION_TYPE);
+          if (aggregationType == null || aggregationType.isEmpty() ||
+              aggregationType.trim().toLowerCase().equals(
+                  LOG_AGGREGATION_LOCAL_TYPE)) {
+            File logFile = ContainerLogsUtils.getContainerLogFile(containerId,
+                $(CONTAINER_LOG_TYPE), request().getRemoteUser(), nmContext);
+            printLocalLogFile(html, logFile);
+          } else if (!LOG_AGGREGATION_LOCAL_TYPE.trim().toLowerCase().equals(
+              aggregationType) && !LOG_AGGREGATION_REMOTE_TYPE.trim()
+                  .toLowerCase().equals(aggregationType)) {
+            html.h1("Invalid value for query parameter: "
+                + LOG_AGGREGATION_TYPE + ". "
+                + "The valid value could be either "
+                + LOG_AGGREGATION_LOCAL_TYPE + " or "
+                + LOG_AGGREGATION_REMOTE_TYPE + ".");
+          }
         }
       } catch (YarnException ex) {
         html.h1(ex.getMessage());
@@ -114,7 +181,7 @@ public class ContainerLogsPage extends NMView {
       }
     }
     
-    private void printLogFile(Block html, File logFile) {
+    private void printLocalLogFile(Block html, File logFile) {
       long start =
           $("start").isEmpty() ? -4 * 1024 : Long.parseLong($("start"));
       start = start < 0 ? logFile.length() + start : start;
@@ -184,7 +251,8 @@ public class ContainerLogsPage extends NMView {
       }
     }
     
-    private void printLogFileDirectory(Block html, List<File> containerLogsDirs) {
+    private void printLocalLogFileDirectory(Block html,
+        List<File> containerLogsDirs) {
       // Print out log types in lexical order
       Collections.sort(containerLogsDirs);
       boolean foundLogFile = false;
@@ -206,6 +274,63 @@ public class ContainerLogsPage extends NMView {
         html.h1("No logs available for container " + $(CONTAINER_ID));
         return;
       }
+    }
+
+    private void printAggregatedLogFileDirectory(Block html,
+        List<ContainerLogMeta> containersLogMeta) throws ParseException {
+      List<ContainerLogFileInfo> filesInfo = new ArrayList<>();
+      for (ContainerLogMeta logMeta : containersLogMeta) {
+        filesInfo.addAll(logMeta.getContainerLogMeta());
+      }
+
+      //sort the list, so we could list the log file in order.
+      Collections.sort(filesInfo, new Comparator<ContainerLogFileInfo>() {
+        @Override
+        public int compare(ContainerLogFileInfo o1,
+            ContainerLogFileInfo o2) {
+          return createAggregatedLogFileName(o1.getFileName(),
+              o1.getLastModifiedTime()).compareTo(
+                  createAggregatedLogFileName(o2.getFileName(),
+                      o2.getLastModifiedTime()));
+        }
+      });
+
+      boolean foundLogFile = false;
+      for (ContainerLogFileInfo fileInfo : filesInfo) {
+        long timestamp = convertDateToTimeStamp(fileInfo.getLastModifiedTime());
+        foundLogFile = true;
+        String fileName = createAggregatedLogFileName(fileInfo.getFileName(),
+            fileInfo.getLastModifiedTime());
+        html.p().a(url("containerlogs", $(CONTAINER_ID), $(APP_OWNER),
+            fileInfo.getFileName(),
+            "?start=-4096&" + LOG_AGGREGATION_TYPE + "="
+                + LOG_AGGREGATION_REMOTE_TYPE + "&start.time="
+                + (timestamp - 1000) + "&end.time=" + (timestamp + 1000)),
+            fileName + " : Total file length is "
+                + fileInfo.getFileSize() + " bytes.").__();
+      }
+
+      if (!foundLogFile) {
+        html.h4("No aggregated logs available for container "
+            + $(CONTAINER_ID));
+        return;
+      }
+    }
+
+    private String createAggregatedLogFileName(String fileName,
+        String modificationTime) {
+      return fileName + "_" + modificationTime;
+    }
+
+    private long convertDateToTimeStamp(String dateTime)
+        throws ParseException {
+      SimpleDateFormat sdf = new SimpleDateFormat(
+          "EEE MMM dd HH:mm:ss Z yyyy");
+      Date d = sdf.parse(dateTime);
+
+      Calendar c = Calendar.getInstance();
+      c.setTime(d);
+      return c.getTimeInMillis();
     }
   }
 }

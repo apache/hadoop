@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
@@ -376,7 +378,7 @@ public abstract class AllocateResponse {
    * Get the list of running containers as viewed by
    * <code>ResourceManager</code> from previous application attempts which
    * have not been reported to the Application Master yet.
-   * <br/>
+   * <br>
    * These containers were recovered by the RM after the application master
    * had already registered. This may happen after RM restart when some NMs get
    * delayed in connecting to the RM and reporting the active containers.
@@ -394,7 +396,7 @@ public abstract class AllocateResponse {
    * Set the list of running containers as viewed by
    * <code>ResourceManager</code> from previous application attempts which have
    * not been reported to the Application Master yet.
-   * <br/>
+   * <br>
    * These containers were recovered by the RM after the application master
    * had already registered. This may happen after RM restart when some NMs get
    * delayed in connecting to the RM and reporting the active containers.
@@ -409,6 +411,27 @@ public abstract class AllocateResponse {
   @Unstable
   public abstract void setContainersFromPreviousAttempts(
       List<Container> containersFromPreviousAttempt);
+
+  /**
+   * Get a list of all SchedulingRequests that the RM has rejected between
+   * this allocate call and the previous one.
+   * @return List of RejectedSchedulingRequests.
+   */
+  @Public
+  @Unstable
+  public List<RejectedSchedulingRequest> getRejectedSchedulingRequests() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Add a list of rejected SchedulingRequests to the AllocateResponse.
+   * @param rejectedRequests List of Rejected Scheduling Requests.
+   */
+  @Private
+  @Unstable
+  public void setRejectedSchedulingRequests(
+      List<RejectedSchedulingRequest> rejectedRequests) {
+  }
 
   @Private
   @Unstable

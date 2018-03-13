@@ -26,16 +26,26 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
+import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
@@ -44,6 +54,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -77,9 +88,14 @@ public class RouterAdmin extends Configured implements Tool {
   public void printUsage() {
     String usage = "Federation Admin Tools:\n"
         + "\t[-add <source> <nameservice> <destination> "
-        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL]]\n"
+        + "[-readonly] -owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-rm <source>]\n"
-        + "\t[-ls <path>]\n";
+        + "\t[-ls <path>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+        + "<quota in bytes or quota size string>]\n"
+        + "\t[-clrQuota <path>]\n"
+        + "\t[-safemode enter | leave | get]\n";
+
     System.out.println(usage);
   }
 
@@ -108,6 +124,24 @@ public class RouterAdmin extends Configured implements Tool {
         printUsage();
         return exitCode;
       }
+    } else if ("-setQuota".equalsIgnoreCase(cmd)) {
+      if (argv.length < 4) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-clrQuota".equalsIgnoreCase(cmd)) {
+      if (argv.length < 2) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-safemode".equalsIgnoreCase(cmd)) {
+      if (argv.length < 2) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
     }
 
     // Initialize RouterClient
@@ -131,11 +165,11 @@ public class RouterAdmin extends Configured implements Tool {
     try {
       if ("-add".equals(cmd)) {
         if (addMount(argv, i)) {
-          System.err.println("Successfuly added mount point " + argv[i]);
+          System.out.println("Successfuly added mount point " + argv[i]);
         }
       } else if ("-rm".equals(cmd)) {
         if (removeMount(argv[i])) {
-          System.err.println("Successfully removed mount point " + argv[i]);
+          System.out.println("Successfully removed mount point " + argv[i]);
         }
       } else if ("-ls".equals(cmd)) {
         if (argv.length > 1) {
@@ -143,6 +177,18 @@ public class RouterAdmin extends Configured implements Tool {
         } else {
           listMounts("/");
         }
+      } else if ("-setQuota".equals(cmd)) {
+        if (setQuota(argv, i)) {
+          System.out.println(
+              "Successfully set quota for mount point " + argv[i]);
+        }
+      } else if ("-clrQuota".equals(cmd)) {
+        if (clrQuota(argv[i])) {
+          System.out.println(
+              "Successfully clear quota for mount point " + argv[i]);
+        }
+      } else if ("-safemode".equals(cmd)) {
+        manageSafeMode(argv[i]);
       } else {
         printUsage();
         return exitCode;
@@ -193,6 +239,9 @@ public class RouterAdmin extends Configured implements Tool {
 
     // Optional parameters
     boolean readOnly = false;
+    String owner = null;
+    String group = null;
+    FsPermission mode = null;
     DestinationOrder order = DestinationOrder.HASH;
     while (i < parameters.length) {
       if (parameters[i].equals("-readonly")) {
@@ -204,11 +253,23 @@ public class RouterAdmin extends Configured implements Tool {
         } catch(Exception e) {
           System.err.println("Cannot parse order: " + parameters[i]);
         }
+      } else if (parameters[i].equals("-owner")) {
+        i++;
+        owner = parameters[i];
+      } else if (parameters[i].equals("-group")) {
+        i++;
+        group = parameters[i];
+      } else if (parameters[i].equals("-mode")) {
+        i++;
+        short modeValue = Short.parseShort(parameters[i], 8);
+        mode = new FsPermission(modeValue);
       }
+
       i++;
     }
 
-    return addMount(mount, nss, dest, readOnly, order);
+    return addMount(mount, nss, dest, readOnly, order,
+        new ACLEntity(owner, group, mode));
   }
 
   /**
@@ -219,11 +280,13 @@ public class RouterAdmin extends Configured implements Tool {
    * @param dest Destination path.
    * @param readonly If the mount point is read only.
    * @param order Order of the destination locations.
+   * @param aclInfo the ACL info for mount point.
    * @return If the mount point was added.
    * @throws IOException Error adding the mount point.
    */
   public boolean addMount(String mount, String[] nss, String dest,
-      boolean readonly, DestinationOrder order) throws IOException {
+      boolean readonly, DestinationOrder order, ACLEntity aclInfo)
+      throws IOException {
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     GetMountTableEntriesRequest getRequest =
@@ -251,6 +314,20 @@ public class RouterAdmin extends Configured implements Tool {
       if (order != null) {
         newEntry.setDestOrder(order);
       }
+
+      // Set ACL info for mount table entry
+      if (aclInfo.getOwner() != null) {
+        newEntry.setOwnerName(aclInfo.getOwner());
+      }
+
+      if (aclInfo.getGroup() != null) {
+        newEntry.setGroupName(aclInfo.getGroup());
+      }
+
+      if (aclInfo.getMode() != null) {
+        newEntry.setMode(aclInfo.getMode());
+      }
+
       AddMountTableEntryRequest request =
           AddMountTableEntryRequest.newInstance(newEntry);
       AddMountTableEntryResponse addResponse =
@@ -273,6 +350,20 @@ public class RouterAdmin extends Configured implements Tool {
       if (order != null) {
         existingEntry.setDestOrder(order);
       }
+
+      // Update ACL info of mount table entry
+      if (aclInfo.getOwner() != null) {
+        existingEntry.setOwnerName(aclInfo.getOwner());
+      }
+
+      if (aclInfo.getGroup() != null) {
+        existingEntry.setGroupName(aclInfo.getGroup());
+      }
+
+      if (aclInfo.getMode() != null) {
+        existingEntry.setMode(aclInfo.getMode());
+      }
+
       UpdateMountTableEntryRequest updateRequest =
           UpdateMountTableEntryRequest.newInstance(existingEntry);
       UpdateMountTableEntryResponse updateResponse =
@@ -323,8 +414,8 @@ public class RouterAdmin extends Configured implements Tool {
   private static void printMounts(List<MountTable> entries) {
     System.out.println("Mount Table Entries:");
     System.out.println(String.format(
-        "%-25s %-25s",
-        "Source", "Destinations"));
+        "%-25s %-25s %-25s %-25s %-25s %-25s",
+        "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage"));
     for (MountTable entry : entries) {
       StringBuilder destBuilder = new StringBuilder();
       for (RemoteLocation location : entry.getDestinations()) {
@@ -334,8 +425,202 @@ public class RouterAdmin extends Configured implements Tool {
         destBuilder.append(String.format("%s->%s", location.getNameserviceId(),
             location.getDest()));
       }
-      System.out.println(String.format("%-25s %-25s", entry.getSourcePath(),
+      System.out.print(String.format("%-25s %-25s", entry.getSourcePath(),
           destBuilder.toString()));
+
+      System.out.print(String.format(" %-25s %-25s %-25s",
+          entry.getOwnerName(), entry.getGroupName(), entry.getMode()));
+
+      System.out.println(String.format(" %-25s", entry.getQuota()));
+    }
+  }
+
+  /**
+   * Set quota for a mount table entry.
+   *
+   * @param parameters Parameters of the quota.
+   * @param i Index in the parameters.
+   */
+  private boolean setQuota(String[] parameters, int i) throws IOException {
+    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
+
+    String mount = parameters[i++];
+    while (i < parameters.length) {
+      if (parameters[i].equals("-nsQuota")) {
+        i++;
+        try {
+          nsQuota = Long.parseLong(parameters[i]);
+        } catch (Exception e) {
+          System.err.println("Cannot parse nsQuota: " + parameters[i]);
+        }
+      } else if (parameters[i].equals("-ssQuota")) {
+        i++;
+        try {
+          ssQuota = StringUtils.TraditionalBinaryPrefix
+              .string2long(parameters[i]);
+        } catch (Exception e) {
+          System.err.println("Cannot parse ssQuota: " + parameters[i]);
+        }
+      }
+
+      i++;
+    }
+
+    if (nsQuota <= 0 || ssQuota <= 0) {
+      System.err.println("Input quota value should be a positive number.");
+      return false;
+    }
+
+    return updateQuota(mount, nsQuota, ssQuota);
+  }
+
+  /**
+   * Clear quota of the mount point.
+   *
+   * @param mount Mount table to clear
+   * @return If the quota was cleared.
+   * @throws IOException Error clearing the mount point.
+   */
+  private boolean clrQuota(String mount) throws IOException {
+    return updateQuota(mount, HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.QUOTA_DONT_SET);
+  }
+
+  /**
+   * Update quota of specified mount table.
+   *
+   * @param mount Specified mount table to update.
+   * @param nsQuota Namespace quota.
+   * @param ssQuota Storage space quota.
+   * @return If the quota was updated.
+   * @throws IOException Error updating quota.
+   */
+  private boolean updateQuota(String mount, long nsQuota, long ssQuota)
+      throws IOException {
+    // Get existing entry
+    MountTableManager mountTable = client.getMountTableManager();
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(mount);
+    GetMountTableEntriesResponse getResponse = mountTable
+        .getMountTableEntries(getRequest);
+    List<MountTable> results = getResponse.getEntries();
+    MountTable existingEntry = null;
+    for (MountTable result : results) {
+      if (mount.equals(result.getSourcePath())) {
+        existingEntry = result;
+        break;
+      }
+    }
+
+    if (existingEntry == null) {
+      return false;
+    } else {
+      long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
+      long ssCount = existingEntry.getQuota().getSpaceConsumed();
+      // If nsQuota or ssQuota was unset, reset corresponding usage
+      // value to zero.
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+        nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      }
+
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+        ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      }
+
+      RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
+          .fileAndDirectoryCount(nsCount).quota(nsQuota)
+          .spaceConsumed(ssCount).spaceQuota(ssQuota).build();
+      existingEntry.setQuota(updatedQuota);
+    }
+
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(existingEntry);
+    UpdateMountTableEntryResponse updateResponse = mountTable
+        .updateMountTableEntry(updateRequest);
+    return updateResponse.getStatus();
+  }
+
+  /**
+   * Manager the safe mode state.
+   * @param cmd Input command, enter or leave safe mode.
+   * @throws IOException
+   */
+  private void manageSafeMode(String cmd) throws IOException {
+    if (cmd.equals("enter")) {
+      if (enterSafeMode()) {
+        System.out.println("Successfully enter safe mode.");
+      }
+    } else if (cmd.equals("leave")) {
+      if (leaveSafeMode()) {
+        System.out.println("Successfully leave safe mode.");
+      }
+    } else if (cmd.equals("get")) {
+      boolean result = getSafeMode();
+      System.out.println("Safe Mode: " + result);
+    }
+  }
+
+  /**
+   * Request the Router entering safemode state.
+   * @return Return true if entering safemode successfully.
+   * @throws IOException
+   */
+  private boolean enterSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    EnterSafeModeResponse response = stateManager.enterSafeMode(
+        EnterSafeModeRequest.newInstance());
+    return response.getStatus();
+  }
+
+  /**
+   * Request the Router leaving safemode state.
+   * @return Return true if leaving safemode successfully.
+   * @throws IOException
+   */
+  private boolean leaveSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    LeaveSafeModeResponse response = stateManager.leaveSafeMode(
+        LeaveSafeModeRequest.newInstance());
+    return response.getStatus();
+  }
+
+  /**
+   * Verify if current Router state is safe mode state.
+   * @return True if the Router is in safe mode.
+   * @throws IOException
+   */
+  private boolean getSafeMode() throws IOException {
+    RouterStateManager stateManager = client.getRouterStateManager();
+    GetSafeModeResponse response = stateManager.getSafeMode(
+        GetSafeModeRequest.newInstance());
+    return response.isInSafeMode();
+  }
+
+  /**
+   * Inner class that stores ACL info of mount table.
+   */
+  static class ACLEntity {
+    private final String owner;
+    private final String group;
+    private final FsPermission mode;
+
+    ACLEntity(String owner, String group, FsPermission mode) {
+      this.owner = owner;
+      this.group = group;
+      this.mode = mode;
+    }
+
+    public String getOwner() {
+      return owner;
+    }
+
+    public String getGroup() {
+      return group;
+    }
+
+    public FsPermission getMode() {
+      return mode;
     }
   }
 }

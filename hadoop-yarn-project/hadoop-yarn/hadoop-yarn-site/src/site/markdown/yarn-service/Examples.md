@@ -19,6 +19,10 @@ This document describes some example service definitions (`Yarnfile`).
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 ## Apache web server - httpd (with registry DNS)
+
+For this example to work, centos/httpd-24-centos7 image must be included in `docker.privileged-containers.registries`.
+For server side configuration, please refer to [Running Applications in Docker Containers](../DockerContainers.html) document.
+
 Below is the `Yarnfile` for a service called `httpd-service` with two `httpd` instances.
 There is also an httpd proxy instance (httpd-proxy-0) that proxies between the other two httpd instances (httpd-0 and httpd-1).
 
@@ -111,7 +115,7 @@ The pages should alternately show "Hello from httpd-0!" or "Hello from httpd-1!"
 
 The individual httpd URLs can also be visited, `http://httpd-0.${SERVICE_NAME}.${USER}.${DOMAIN}:8080` and `http://httpd-1.${SERVICE_NAME}.${USER}.${DOMAIN}:8080`.
 
-If unsure of your hostnames, visit the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
+If unsure of your hostnames, visit the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 
 ## Apache web server - httpd (without registry DNS)
 
@@ -157,5 +161,5 @@ yarn app -launch <service-name> httpd-no-dns
 ```
 where `service-name` is optional. If omitted, it uses the name defined in the `Yarnfile`.
 
-Look up your IPs at the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
+Look up your IPs at the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 Then visit port 8080 for each IP to view the pages.

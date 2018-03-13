@@ -29,7 +29,9 @@ Architecture
 ------------
 
 A natural extension to this partitioned federation is to add a layer of software responsible for federating the namespaces.
-This extra layer allows users to access any subcluster transparently, lets subclusters manage their own block pools independently, and supports rebalancing of data across subclusters.
+This extra layer allows users to access any subcluster transparently, lets subclusters manage their own block pools independently, and will support rebalancing of data across subclusters later
+(see more info in [HDFS-13123](https://issues.apache.org/jira/browse/HDFS-13123)). The subclusters in RBF are not required to be the independent HDFS clusters, a normal federation cluster
+(with multiple block pools) or a mixed cluster with federation and independent cluster is also allowed.
 To accomplish these goals, the federation layer directs block accesses to the proper subcluster, maintains the state of the namespaces, and provides mechanisms for data rebalancing.
 This layer must be scalable, highly available, and fault tolerant.
 
@@ -81,6 +83,14 @@ The Routers are stateless and metadata operations are atomic at the NameNodes.
 If a Router becomes unavailable, any Router can take over for it.
 The clients configure their DFS HA client (e.g., ConfiguredFailoverProvider or RequestHedgingProxyProvider) with all the Routers in the federation as endpoints.
 
+* **Unavailable State Store:**
+If a Router cannot contact the State Store, it will enter into a Safe Mode state which disallows it from serving requests.
+Clients will treat Routers in Safe Mode as it was an Standby NameNode and try another Router. There is a manual way to manage the Safe Mode for the Router.
+
+The Safe Mode state can be managed by using the following command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -safemode enter | leave | get
+
 * **NameNode heartbeat HA:**
 For high availability and flexibility, multiple Routers can monitor the same NameNode and heartbeat the information to the State Store.
 This increases clients' resiliency to stale information, should a Router fail.
@@ -127,6 +137,11 @@ Examples users may encounter include the following.
 * Copy file/folder in two different nameservices.
 * Write into a file/folder being rebalanced.
 
+### Quota management
+Federation supports and controls global quota at mount table level.
+For performance reasons, the Router caches the quota usage and updates it periodically. These quota usage values
+will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html)
+for the quota detail.
 
 ### State Store
 The (logically centralized, but physically distributed) State Store maintains:
@@ -184,8 +199,35 @@ For example, to create three mount points and list them:
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data/app2 ns3 /data/app2
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -ls
 
+It also supports mount points that disallow writes:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /readonly ns1 / -readonly
+
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
+Mount table have UNIX-like *permissions*, which restrict which users and groups have access to the mount point. Write permissions allow users to add
+, update or remove mount point. Read permissions allow users to list mount point. Execute permissions are unused.
+
+Mount table permission can be set by following command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /tmp ns1 /tmp -owner root -group supergroup -mode 0755
+
+The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
+
+Router-based federation supports global quota at mount table level. Mount table entries may spread multiple subclusters and the global quota will be
+accounted across these subclusters.
+
+The federation admin tool supports setting quotas for specified mount table entries:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -setQuota /path -nsQuota 100 -ssQuota 1024
+
+The above command means that we allow the path to have a maximum of 100 file/directories and use at most 1024 bytes storage space. The parameter for *ssQuota*
+supports multiple size-unit suffix (e.g. 1k is 1KB, 5m is 5MB). If no suffix is specified then bytes is assumed.
+
+Ls command will show below information for each mount table entry:
+
+    Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
+    /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
 
 Client configuration
 --------------------
@@ -200,7 +242,7 @@ For example, a cluster with 4 namespaces **ns0, ns1, ns2, ns3**, can add a new o
     <value>ns0,ns1,ns2,ns3,ns-fed</value>
   </property>
   <property>
-    <name>dfs.namenodes.ns-fed</name>
+    <name>dfs.ha.namenodes.ns-fed</name>
     <value>r1,r2</value>
   </property>
   <property>
@@ -284,8 +326,8 @@ The connection to the State Store and the internal caching at the Router.
 | Property | Default | Description|
 |:---- |:---- |:---- |
 | dfs.federation.router.store.enable | `true` | If `true`, the Router connects to the State Store. |
-| dfs.federation.router.store.serializer | `StateStoreSerializerPBImpl` | Class to serialize State Store records. |
-| dfs.federation.router.store.driver.class | `StateStoreZKImpl` | Class to implement the State Store. |
+| dfs.federation.router.store.serializer | `org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl` | Class to serialize State Store records. |
+| dfs.federation.router.store.driver.class | `org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl` | Class to implement the State Store. |
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
@@ -296,8 +338,8 @@ Forwarding client requests to the right subcluster.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.file.resolver.client.class | MountTableResolver | Class to resolve files to subclusters. |
-| dfs.federation.router.namenode.resolver.client.class | MembershipNamenodeResolver | Class to resolve the namenode for a subcluster. |
+| dfs.federation.router.file.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver` | Class to resolve files to subclusters. |
+| dfs.federation.router.namenode.resolver.client.class | `org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver` | Class to resolve the namenode for a subcluster. |
 
 ### Namenode monitoring
 
@@ -309,3 +351,23 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
+
+Note: The config *dfs.nameservice.id* is recommended to configure if *dfs.federation.router.monitor.localnamenode.enable* is enabled.
+This will allow the Router finding the local node directly. Otherwise, it will find the nameservice Id by matching namenode RPC address with the
+local node address. If multiple addresses are matched, the Router will fail to start. In addition, if the local node is in a HA mode, it is recommend
+to configure *dfs.ha.namenode.id*.
+
+### Quota
+
+Global quota supported in federation.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. |
+| dfs.federation.router.quota-cache.update.interval | 60s | How often the Router updates quota cache. This setting supports multiple time unit suffixes. If no suffix is specified then milliseconds is assumed. |
+
+Metrics
+-------
+
+The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
+More metrics info can see [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).

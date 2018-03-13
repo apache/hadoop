@@ -66,6 +66,7 @@ class CapacitySchedulerPage extends RmView {
   static final String Q_END = "left:101%";
   static final String Q_GIVEN =
       "left:0%;background:none;border:1px dashed #BFBFBF";
+  static final String Q_AUTO_CREATED = "background:#F4F0CB";
   static final String Q_OVER = "background:#FFA333";
   static final String Q_UNDER = "background:#5BD75B";
   static final String ACTIVE_USER = "background:#FFFF00"; // Yellow highlight
@@ -143,33 +144,49 @@ class CapacitySchedulerPage extends RmView {
       // Get UserInfo from first user to calculate AM Resource Limit per user.
       ResourceInfo userAMResourceLimit = null;
       ArrayList<UserInfo> usersList = lqinfo.getUsers().getUsersList();
-      if (usersList.isEmpty()) {
-        // If no users are present, consider AM Limit for that queue.
+      if (!usersList.isEmpty()) {
+        userAMResourceLimit = resourceUsages.getUserAmLimit();
+      }
+      // If no users are present or if AM limit per user doesn't exist, retrieve
+      // AM Limit for that queue.
+      if (userAMResourceLimit == null) {
         userAMResourceLimit = resourceUsages.getAMLimit();
-      } else {
-        userAMResourceLimit = usersList.get(0)
-            .getResourceUsageInfo().getPartitionResourceUsageInfo(label)
-            .getAMLimit();
       }
       ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
           ? new ResourceInfo(Resources.none())
           : resourceUsages.getAmUsed();
       ri.
-          __("Used Capacity:", percent(capacities.getUsedCapacity() / 100)).
-          __("Configured Capacity:", percent(capacities.getCapacity() / 100)).
-          __("Configured Max Capacity:", percent(capacities.getMaxCapacity() / 100)).
-          __("Absolute Used Capacity:", percent(capacities.getAbsoluteUsedCapacity() / 100)).
-          __("Absolute Configured Capacity:", percent(capacities.getAbsoluteCapacity() / 100)).
-          __("Absolute Configured Max Capacity:", percent(capacities.getAbsoluteMaxCapacity() / 100)).
-          __("Used Resources:", resourceUsages.getUsed().toString()).
-          __("Configured Max Application Master Limit:", StringUtils.format("%.1f",
-          capacities.getMaxAMLimitPercentage())).
-          __("Max Application Master Resources:",
-          resourceUsages.getAMLimit().toString()).
-          __("Used Application Master Resources:",
-          amUsed.toString()).
-          __("Max Application Master Resources Per User:",
-          userAMResourceLimit.toString());
+          __("Used Capacity:",
+              appendPercent(resourceUsages.getUsed().toString(),
+                  capacities.getUsedCapacity() / 100))
+          .__("Configured Capacity:",
+              capacities.getConfiguredMinResource().toString())
+          .__("Configured Max Capacity:",
+              (capacities.getConfiguredMaxResource() == null
+                  || capacities.getConfiguredMaxResource().getResource()
+                      .equals(Resources.none()))
+                          ? "unlimited"
+                          : capacities.getConfiguredMaxResource().toString())
+          .__("Effective Capacity:",
+              appendPercent(capacities.getEffectiveMinResource().toString(),
+                  capacities.getCapacity() / 100))
+          .__("Effective Max Capacity:",
+              appendPercent(capacities.getEffectiveMaxResource().toString(),
+                  capacities.getMaxCapacity() / 100))
+          .__("Absolute Used Capacity:",
+              percent(capacities.getAbsoluteUsedCapacity() / 100))
+          .__("Absolute Configured Capacity:",
+              percent(capacities.getAbsoluteCapacity() / 100))
+          .__("Absolute Configured Max Capacity:",
+              percent(capacities.getAbsoluteMaxCapacity() / 100))
+          .__("Used Resources:", resourceUsages.getUsed().toString())
+          .__("Configured Max Application Master Limit:",
+              StringUtils.format("%.1f", capacities.getMaxAMLimitPercentage()))
+          .__("Max Application Master Resources:",
+              resourceUsages.getAMLimit().toString())
+          .__("Used Application Master Resources:", amUsed.toString())
+          .__("Max Application Master Resources Per User:",
+              userAMResourceLimit.toString());
     }
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
@@ -183,7 +200,10 @@ class CapacitySchedulerPage extends RmView {
           __("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
           __("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
           __("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
-          __("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+          __("Preemption:",
+              lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+          __("Intra-queue Preemption:", lqinfo.getIntraQueuePreemptionDisabled()
+                  ? "disabled" : "enabled").
           __("Default Node Label Expression:",
               lqinfo.getDefaultNodeLabelExpression() == null
                   ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
@@ -218,11 +238,25 @@ class CapacitySchedulerPage extends RmView {
               .$class("ui-state-default").__("Non-Schedulable Apps").__().__().__()
               .tbody();
 
+      PartitionResourcesInfo queueUsageResources =
+          lqinfo.getResources().getPartitionResourceUsageInfo(
+              nodeLabel == null ? "" : nodeLabel);
+
       ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
       for (UserInfo userInfo : users) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
-        PartitionResourcesInfo resourceUsages = userInfo.getResourceUsageInfo()
-            .getPartitionResourceUsageInfo((nodeLabel == null) ? "" : nodeLabel);
+        ResourceInfo userAMLimitPerPartition =
+            queueUsageResources.getUserAmLimit();
+        // If AM limit per user is null, use the AM limit for the queue level.
+        if (userAMLimitPerPartition == null) {
+          userAMLimitPerPartition = queueUsageResources.getAMLimit();
+        }
+        if (userInfo.getUserWeight() != 1.0) {
+          userAMLimitPerPartition =
+              new ResourceInfo(
+                  Resources.multiply(userAMLimitPerPartition.getResource(),
+                      userInfo.getUserWeight()));
+        }
         if (nodeLabel != null) {
           resourcesUsed = userInfo.getResourceUsageInfo()
               .getPartitionResourceUsageInfo(nodeLabel).getUsed();
@@ -237,7 +271,7 @@ class CapacitySchedulerPage extends RmView {
             .td(userInfo.getUserResourceLimit().toString())
             .td(String.valueOf(userInfo.getUserWeight()))
             .td(resourcesUsed.toString())
-            .td(resourceUsages.getAMLimit().toString())
+            .td(userAMLimitPerPartition.toString())
             .td(amUsed.toString())
             .td(Integer.toString(userInfo.getNumActiveApplications()))
             .td(Integer.toString(userInfo.getNumPendingApplications())).__();
@@ -283,9 +317,16 @@ class CapacitySchedulerPage extends RmView {
         absMaxCap = partitionQueueCapsInfo.getAbsoluteMaxCapacity() / 100;
         absUsedCap = partitionQueueCapsInfo.getAbsoluteUsedCapacity() / 100;
 
+        boolean isAutoCreatedLeafQueue = info.isLeafQueue() ?
+            ((CapacitySchedulerLeafQueueInfo) info).isAutoCreatedLeafQueue()
+            : false;
+
+        String Q_WIDTH = width(absMaxCap * Q_MAX_WIDTH);
         LI<UL<Hamlet>> li = ul.
           li().
-            a(_Q).$style(width(absMaxCap * Q_MAX_WIDTH)).
+            a(_Q).$style(isAutoCreatedLeafQueue? join( Q_AUTO_CREATED, ";",
+            Q_WIDTH)
+            :  Q_WIDTH).
               $title(join("Absolute Capacity:", percent(absCap))).
               span().$style(join(Q_GIVEN, ";font-size:1px;", width(absCap/absMaxCap))).
             __('.').__().
@@ -297,7 +338,7 @@ class CapacitySchedulerPage extends RmView {
             __(join(percent(used), " used")).__();
 
         csqinfo.qinfo = info;
-        if (info.getQueues() == null) {
+        if (info.isLeafQueue()) {
           li.ul("#lq").li().__(LeafQueueInfoBlock.class).__().__();
           li.ul("#lq").li().__(QueueUsersInfoBlock.class).__().__();
         } else {
@@ -406,6 +447,8 @@ class CapacitySchedulerPage extends RmView {
               __("Max Capacity").__().
             span().$class("qlegend ui-corner-all").$style(ACTIVE_USER).
             __("Users Requesting Resources").__().
+            span().$class("qlegend ui-corner-all").$style(Q_AUTO_CREATED).
+            __("Auto Created Queues").__().
           __();
 
         float used = 0;
@@ -613,6 +656,10 @@ class CapacitySchedulerPage extends RmView {
 
   @Override protected Class<? extends SubView> content() {
     return QueuesBlock.class;
+  }
+
+  static String appendPercent(String message, float f) {
+    return message + " (" + StringUtils.formatPercent(f, 1) + ")";
   }
 
   static String percent(float f) {

@@ -15,17 +15,6 @@ limitations under the License. See accompanying LICENSE file.
 -->
 
 <configuration>
-
- <property>
-   <name>yarn.nodemanager.resource-type.memory-mb</name>
-   <value>1024Mi</value>
- </property>
-
- <property>
-   <name>yarn.nodemanager.resource-type.vcores</name>
-   <value>1</value>
- </property>
-
  <property>
    <name>yarn.nodemanager.resource-type.resource1</name>
    <value>5Gi</value>
@@ -34,6 +23,11 @@ limitations under the License. See accompanying LICENSE file.
  <property>
    <name>yarn.nodemanager.resource-type.resource2</name>
    <value>2m</value>
+ </property>
+
+ <property>
+   <name>yarn.nodemanager.resource-type.yarn.io/gpu</name>
+   <value>1</value>
  </property>
 
 </configuration>

@@ -214,7 +214,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
+          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -232,7 +232,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
+          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -299,6 +299,24 @@
     </test>
 
     <test>
+      <description>setPolicy : set policy on non-empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024k erasure coding policy</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>unsetPolicy : unset inherited EC policy, has no effect</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
@@ -322,6 +340,25 @@
     </test>
 
     <test>
+      <description>unsetPolicy : unset policy on non-empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: unsetting erasure coding policy on a non-empty directory will not automatically convert existing files to replicated data</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /noec</command>
@@ -339,7 +376,7 @@
     </test>
 
     <test>
-      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <description>getPolicy : get EC policy information at specified path, which has an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
@@ -357,7 +394,7 @@
     </test>
 
     <test>
-      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <description>getPolicy : get EC policy information at specified path, which has an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
@@ -654,6 +691,28 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Set default erasure coding policy on /ecdir</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>setPolicy : set erasure coding policy without given a specific policy name on a non empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -mkdir /ecdir/ecsubdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Set default erasure coding policy on /ecdir</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to default erasure coding policy</expected-output>
         </comparator>
       </comparators>
     </test>

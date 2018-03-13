@@ -205,7 +205,7 @@ public class NodeManager extends CompositeService
   }
 
   protected NodeResourceMonitor createNodeResourceMonitor() {
-    return new NodeResourceMonitorImpl();
+    return new NodeResourceMonitorImpl(context);
   }
 
   protected ContainerManagerImpl createContainerManager(Context context,
@@ -242,6 +242,7 @@ public class NodeManager extends CompositeService
     NMContext nmContext = new NMContext(containerTokenSecretManager,
         nmTokenSecretManager, dirsHandler, aclsManager, stateStore,
         isDistSchedulerEnabled, conf);
+    nmContext.setNodeManagerMetrics(metrics);
     DefaultContainerStateListener defaultListener =
         new DefaultContainerStateListener();
     nmContext.setContainerStateTransitionListener(defaultListener);
@@ -399,6 +400,7 @@ public class NodeManager extends CompositeService
 
 
     ((NMContext)context).setContainerExecutor(exec);
+    ((NMContext)context).setDeletionService(del);
 
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
@@ -450,19 +452,17 @@ public class NodeManager extends CompositeService
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
     ((NMContext) context).setNodeStatusUpdater(nodeStatusUpdater);
+    nmStore.setNodeStatusUpdater(nodeStatusUpdater);
 
-    super.serviceInit(conf);
-    // TODO add local dirs to del
-  }
-
-  @Override
-  protected void serviceStart() throws Exception {
+    // Do secure login before calling init for added services.
     try {
       doSecureLogin();
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed NodeManager login", e);
     }
-    super.serviceStart();
+
+    super.serviceInit(conf);
+    // TODO add local dirs to del
   }
 
   @Override
@@ -574,6 +574,8 @@ public class NodeManager extends CompositeService
 
     private Configuration conf = null;
 
+    private NodeManagerMetrics metrics = null;
+
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
@@ -607,6 +609,7 @@ public class NodeManager extends CompositeService
         logAggregationReportForApps;
     private NodeStatusUpdater nodeStatusUpdater;
     private final boolean isDistSchedulingEnabled;
+    private DeletionService deletionService;
 
     private OpportunisticContainerAllocator containerAllocator;
 
@@ -823,9 +826,41 @@ public class NodeManager extends CompositeService
       return resourcePluginManager;
     }
 
+    /**
+     * Returns the {@link NodeManagerMetrics} instance of this node.
+     * This might return a null if the instance was not set to the context.
+     * @return node manager metrics.
+     */
+    @Override
+    public NodeManagerMetrics getNodeManagerMetrics() {
+      return metrics;
+    }
+
+    public void setNodeManagerMetrics(NodeManagerMetrics nmMetrics) {
+      this.metrics = nmMetrics;
+    }
+
     public void setResourcePluginManager(
         ResourcePluginManager resourcePluginManager) {
       this.resourcePluginManager = resourcePluginManager;
+    }
+
+    /**
+     * Return the NM's {@link DeletionService}.
+     *
+     * @return the NM's {@link DeletionService}.
+     */
+    public DeletionService getDeletionService() {
+      return this.deletionService;
+    }
+
+    /**
+     * Set the NM's {@link DeletionService}.
+     *
+     * @param deletionService the {@link DeletionService} to add to the Context.
+     */
+    public void setDeletionService(DeletionService deletionService) {
+      this.deletionService = deletionService;
     }
   }
 

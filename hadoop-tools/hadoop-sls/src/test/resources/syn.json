@@ -27,8 +27,10 @@
           "rtime_stddev": 4,
           "map_max_memory_avg": 1024,
           "map_max_memory_stddev": 0.001,
+          "map_execution_type": "GUARANTEED",
           "reduce_max_memory_avg": 2048,
           "reduce_max_memory_stddev": 0.001,
+          "reduce_execution_type": "GUARANTEED",
           "map_max_vcores_avg": 1,
           "map_max_vcores_stddev": 0.001,
           "reduce_max_vcores_avg": 2,
@@ -45,7 +47,7 @@
         },
         {
           "time": 60,
-          "jobs": 0
+          "weight": 0
         }
       ]
     }

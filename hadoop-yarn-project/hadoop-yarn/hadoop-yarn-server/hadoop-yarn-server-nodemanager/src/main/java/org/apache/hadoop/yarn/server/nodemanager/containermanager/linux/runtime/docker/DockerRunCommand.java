@@ -56,6 +56,11 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand setPidNamespace(String type) {
+    super.addCommandArguments("pid", type);
+    return this;
+  }
+
   public DockerRunCommand addMountLocation(String sourcePath, String
       destinationPath, boolean createSource) {
     boolean sourceExists = new File(sourcePath).exists();
@@ -72,6 +77,13 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand addAllReadWriteMountLocations(List<String> paths) {
+    for (String dir: paths) {
+      this.addReadWriteMountLocation(dir, dir);
+    }
+    return this;
+  }
+
   public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
       destinationPath, boolean createSource) {
     boolean sourceExists = new File(sourcePath).exists();
@@ -85,6 +97,13 @@ public class DockerRunCommand extends DockerCommand {
   public DockerRunCommand addReadOnlyMountLocation(String sourcePath, String
       destinationPath) {
     super.addCommandArguments("ro-mounts", sourcePath + ":" + destinationPath);
+    return this;
+  }
+
+  public DockerRunCommand addAllReadOnlyMountLocations(List<String> paths) {
+    for (String dir: paths) {
+      this.addReadOnlyMountLocation(dir, dir);
+    }
     return this;
   }
 

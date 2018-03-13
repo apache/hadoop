@@ -51,6 +51,8 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -154,18 +156,24 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.reservedForReplicas = new AtomicLong(0L);
     this.storageLocation = sd.getStorageLocation();
     this.currentDir = sd.getCurrentDir();
-    File parent = currentDir.getParentFile();
-    this.usage = new DF(parent, conf);
     this.storageType = storageLocation.getStorageType();
     this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY
         + "." + StringUtils.toLowerCase(storageType.toString()), conf.getLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT));
     this.configuredCapacity = -1;
+    if (currentDir != null) {
+      File parent = currentDir.getParentFile();
+      this.usage = new DF(parent, conf);
+      cacheExecutor = initializeCacheExecutor(parent);
+      this.metrics = DataNodeVolumeMetrics.create(conf, parent.getPath());
+    } else {
+      this.usage = null;
+      cacheExecutor = null;
+      this.metrics = null;
+    }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    cacheExecutor = initializeCacheExecutor(parent);
-    this.metrics = DataNodeVolumeMetrics.create(conf, getBaseURI().getPath());
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -440,7 +448,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   /**
    * Unplanned Non-DFS usage, i.e. Extra usage beyond reserved.
    *
-   * @return
+   * @return Disk usage excluding space used by HDFS and excluding space
+   * reserved for blocks open for write.
    * @throws IOException
    */
   public long getNonDfsUsed() throws IOException {
@@ -518,7 +527,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public String[] getBlockPoolList() {
     return bpSlices.keySet().toArray(new String[bpSlices.keySet().size()]);   
   }
-    
+
   /**
    * Temporary files. They get moved to the finalized block directory when
    * the block is finalized.
@@ -943,10 +952,22 @@ public class FsVolumeImpl implements FsVolumeSpi {
       long bytesReserved) throws IOException {
     releaseReservedSpace(bytesReserved);
     File dest = getBlockPoolSlice(bpid).addFinalizedBlock(b, replicaInfo);
+    byte[] checksum = null;
+    // copy the last partial checksum if the replica is originally
+    // in finalized or rbw state.
+    if (replicaInfo.getState() == ReplicaState.FINALIZED) {
+      FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
+      checksum = finalized.getLastPartialChunkChecksum();
+    } else if (replicaInfo.getState() == ReplicaState.RBW) {
+      ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
+      checksum = rbw.getLastChecksumAndDataLen().getChecksum();
+    }
+
     return new ReplicaBuilder(ReplicaState.FINALIZED)
         .setBlock(replicaInfo)
         .setFsVolume(this)
         .setDirectoryToUse(dest.getParentFile())
+        .setLastPartialChunkChecksum(checksum)
         .build();
   }
 
@@ -1176,12 +1197,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
         .setBytesToReserve(bytesReserved)
         .buildLocalReplicaInPipeline();
 
+    // Only a finalized replica can be appended.
+    FinalizedReplica finalized = (FinalizedReplica)replicaInfo;
     // load last checksum and datalen
-    LocalReplica localReplica = (LocalReplica)replicaInfo;
-    byte[] lastChunkChecksum = loadLastPartialChunkChecksum(
-        localReplica.getBlockFile(), localReplica.getMetaFile());
     newReplicaInfo.setLastChecksumAndDataLen(
-        replicaInfo.getNumBytes(), lastChunkChecksum);
+        finalized.getVisibleLength(), finalized.getLastPartialChunkChecksum());
 
     // rename meta file to rbw directory
     // rename block file to rbw directory

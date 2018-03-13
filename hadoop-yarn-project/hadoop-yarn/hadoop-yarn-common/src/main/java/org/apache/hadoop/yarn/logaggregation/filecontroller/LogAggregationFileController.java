@@ -226,10 +226,12 @@ public abstract class LogAggregationFileController {
    * Returns the owner of the application.
    *
    * @param aggregatedLogPath the aggregatedLog path
+   * @param appId the ApplicationId
    * @return the application owner
    * @throws IOException if we can not get the application owner
    */
-  public abstract String getApplicationOwner(Path aggregatedLogPath)
+  public abstract String getApplicationOwner(Path aggregatedLogPath,
+      ApplicationId appId)
       throws IOException;
 
   /**
@@ -237,11 +239,12 @@ public abstract class LogAggregationFileController {
    * found.
    *
    * @param aggregatedLogPath the aggregatedLog path.
+   * @param appId the ApplicationId
    * @return a map of the Application ACLs.
    * @throws IOException if we can not get the application acls
    */
   public abstract Map<ApplicationAccessType, String> getApplicationAcls(
-      Path aggregatedLogPath) throws IOException;
+      Path aggregatedLogPath, ApplicationId appId) throws IOException;
 
   /**
    * Verify and create the remote log directory.
@@ -494,4 +497,5 @@ public abstract class LogAggregationFileController {
         + "\n\n");
     return sb.toString();
   }
+
 }

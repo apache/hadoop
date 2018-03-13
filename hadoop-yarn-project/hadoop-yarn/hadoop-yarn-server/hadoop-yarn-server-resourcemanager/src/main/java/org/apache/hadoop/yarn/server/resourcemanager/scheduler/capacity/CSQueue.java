@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.AccessControlException;
@@ -41,14 +40,18 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -227,7 +230,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @param newlyParsedQueue new queue to re-initalize from
    * @param clusterResource resources in the cluster
    */
-  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource) 
+  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
 
    /**
@@ -273,7 +276,21 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return true if <em>disable_preemption</em> is set, false if not
    */
   public boolean getPreemptionDisabled();
-  
+
+  /**
+   * Check whether intra-queue preemption is disabled for this queue
+   * @return true if either intra-queue preemption or inter-queue preemption
+   * is disabled for this queue, false if neither is disabled.
+   */
+  public boolean getIntraQueuePreemptionDisabled();
+
+  /**
+   * Determines whether or not the intra-queue preemption disabled switch is set
+   *  at any level in this queue's hierarchy.
+   * @return state of the intra-queue preemption switch at this queue level
+   */
+  public boolean getIntraQueuePreemptionDisabledInHierarchy();
+
   /**
    * Get QueueCapacities of this queue
    * @return queueCapacities
@@ -355,4 +372,62 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return map of usernames and corresponding weight
    */
   Map<String, Float> getUserWeights();
+
+  /**
+   * Get QueueResourceQuotas associated with each queue.
+   * @return QueueResourceQuotas
+   */
+  public QueueResourceQuotas getQueueResourceQuotas();
+
+  /**
+   * Get CapacityConfigType as PERCENTAGE or ABSOLUTE_RESOURCE.
+   * @return CapacityConfigType
+   */
+  public CapacityConfigType getCapacityConfigType();
+
+  /**
+   * Get effective capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   *
+   * @param label
+   *          partition
+   * @return effective queue capacity
+   */
+  Resource getEffectiveCapacity(String label);
+
+  /**
+   * Get effective capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   * Also round down the result to normalizeDown.
+   *
+   * @param label
+   *          partition
+   * @param factor
+   *          factor to normalize down 
+   * @return effective queue capacity
+   */
+  Resource getEffectiveCapacityDown(String label, Resource factor);
+
+  /**
+   * Get effective max capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   *
+   * @param label
+   *          partition
+   * @return effective max queue capacity
+   */
+  Resource getEffectiveMaxCapacity(String label);
+
+  /**
+   * Get effective max capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   * Also round down the result to normalizeDown.
+   *
+   * @param label
+   *          partition
+   * @param factor
+   *          factor to normalize down 
+   * @return effective max queue capacity
+   */
+  Resource getEffectiveMaxCapacityDown(String label, Resource factor);
 }

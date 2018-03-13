@@ -59,7 +59,7 @@ public class ResourceUtils {
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
-  private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
+  public static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
   private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(
@@ -84,20 +84,22 @@ public class ResourceUtils {
       Map<String, ResourceInformation> resourceInformationMap)
       throws YarnRuntimeException {
     /*
-     * Supporting 'memory' also as invalid resource name, in addition to
+     * Supporting 'memory', 'memory-mb', 'vcores' also as invalid resource names, in addition to
      * 'MEMORY' for historical reasons
      */
-    String key = "memory";
-    if (resourceInformationMap.containsKey(key)) {
-      LOG.warn(
-          "Attempt to define resource '" + key + "', but it is not allowed.");
-      throw new YarnRuntimeException(
-          "Attempt to re-define mandatory resource '" + key + "'.");
+    String keys[] = { "memory", ResourceInformation.MEMORY_URI,
+        ResourceInformation.VCORES_URI };
+    for(String key : keys) {
+      if (resourceInformationMap.containsKey(key)) {
+        LOG.warn("Attempt to define resource '" + key + "', but it is not allowed.");
+        throw new YarnRuntimeException(
+            "Attempt to re-define mandatory resource '" + key + "'.");
+      }
     }
 
     for (Map.Entry<String, ResourceInformation> mandatoryResourceEntry :
         ResourceInformation.MANDATORY_RESOURCES.entrySet()) {
-      key = mandatoryResourceEntry.getKey();
+      String key = mandatoryResourceEntry.getKey();
       ResourceInformation mandatoryRI = mandatoryResourceEntry.getValue();
 
       ResourceInformation newDefinedRI = resourceInformationMap.get(key);
@@ -199,9 +201,23 @@ public class ResourceUtils {
     }
   }
 
-  @VisibleForTesting
-  static void initializeResourcesMap(Configuration conf) {
+  /**
+   * Get maximum allocation from config, *THIS WILL NOT UPDATE INTERNAL DATA*
+   * @param conf config
+   * @return maximum allocation
+   */
+  public static Resource fetchMaximumAllocationFromConfig(Configuration conf) {
+    Map<String, ResourceInformation> resourceInformationMap =
+        getResourceInformationMapFromConfig(conf);
+    Resource ret = Resource.newInstance(0, 0);
+    for (ResourceInformation entry : resourceInformationMap.values()) {
+      ret.setResourceValue(entry.getName(), entry.getMaximumAllocation());
+    }
+    return ret;
+  }
 
+  private static Map<String, ResourceInformation> getResourceInformationMapFromConfig(
+      Configuration conf) {
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
     String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
 
@@ -247,6 +263,13 @@ public class ResourceUtils {
 
     setAllocationForMandatoryResources(resourceInformationMap, conf);
 
+    return resourceInformationMap;
+  }
+
+  @VisibleForTesting
+  static void initializeResourcesMap(Configuration conf) {
+    Map<String, ResourceInformation> resourceInformationMap =
+        getResourceInformationMapFromConfig(conf);
     initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
 
@@ -401,7 +424,7 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  synchronized static void resetResourceTypes() {
+  public synchronized static void resetResourceTypes() {
     initializedResources = false;
   }
 
@@ -415,16 +438,37 @@ public class ResourceUtils {
   }
 
   public static String getUnits(String resourceValue) {
-    String units;
-    for (int i = 0; i < resourceValue.length(); i++) {
+    return parseResourceValue(resourceValue)[0];
+  }
+
+  /**
+   * Extract unit and actual value from resource value.
+   * @param resourceValue Value of the resource
+   * @return Array containing unit and value. [0]=unit, [1]=value
+   * @throws IllegalArgumentException if units contain non alpha characters
+   */
+  public static String[] parseResourceValue(String resourceValue) {
+    String[] resource = new String[2];
+    int i = 0;
+    for (; i < resourceValue.length(); i++) {
       if (Character.isAlphabetic(resourceValue.charAt(i))) {
-        units = resourceValue.substring(i);
-        if (StringUtils.isAlpha(units)) {
-          return units;
-        }
+        break;
       }
     }
-    return "";
+    String units = resourceValue.substring(i);
+
+    if((StringUtils.isAlpha(units))) {
+      resource[0] = units;
+      resource[1] = resourceValue.substring(0, i);
+      return resource;
+    } else {
+      throw new IllegalArgumentException("Units '" + units + "'"
+          + " contains non alphabet characters, which is not allowed.");
+    }
+  }
+
+  public static long getValue(String resourceValue) {
+    return Long.parseLong(parseResourceValue(resourceValue)[1]);
   }
 
   /**
@@ -443,8 +487,8 @@ public class ResourceUtils {
         if (!initializedNodeResources) {
           Map<String, ResourceInformation> nodeResources = initializeNodeResourceInformation(
               conf);
-          addMandatoryResources(nodeResources);
           checkMandatoryResources(nodeResources);
+          addMandatoryResources(nodeResources);
           setAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
           initializedNodeResources = true;
@@ -464,21 +508,18 @@ public class ResourceUtils {
     for (Map.Entry<String, String> entry : conf) {
       String key = entry.getKey();
       String value = entry.getValue();
-
-      if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
-        addResourceInformation(key, value, nodeResources);
-      }
+      addResourceTypeInformation(key, value, nodeResources);
     }
 
     return nodeResources;
   }
 
-  private static void addResourceInformation(String prop, String value,
+  private static void addResourceTypeInformation(String prop, String value,
       Map<String, ResourceInformation> nodeResources) {
-    String[] parts = prop.split("\\.");
-    LOG.info("Found resource entry " + prop);
-    if (parts.length == 4) {
-      String resourceType = parts[3];
+    if (prop.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
+      LOG.info("Found resource entry " + prop);
+      String resourceType = prop.substring(
+          YarnConfiguration.NM_RESOURCES_PREFIX.length());
       if (!nodeResources.containsKey(resourceType)) {
         nodeResources
             .put(resourceType, ResourceInformation.newInstance(resourceType));
@@ -526,19 +567,8 @@ public class ResourceUtils {
   public static Resource getResourceTypesMaximumAllocation() {
     Resource ret = Resource.newInstance(0, 0);
     for (ResourceInformation entry : resourceTypesArray) {
-      String name = entry.getName();
-      if (name.equals(ResourceInformation.MEMORY_MB.getName())) {
-        ret.setMemorySize(entry.getMaximumAllocation());
-      } else if (name.equals(ResourceInformation.VCORES.getName())) {
-        Long tmp = entry.getMaximumAllocation();
-        if (tmp > Integer.MAX_VALUE) {
-          tmp = (long) Integer.MAX_VALUE;
-        }
-        ret.setVirtualCores(tmp.intValue());
-        continue;
-      } else {
-        ret.setResourceValue(name, entry.getMaximumAllocation());
-      }
+      ret.setResourceValue(entry.getName(),
+          entry.getMaximumAllocation());
     }
     return ret;
   }
@@ -630,6 +660,49 @@ public class ResourceUtils {
       result.add(resourceInformation);
     }
     return result;
+  }
+  /**
+   * Are mandatory resources like memory-mb, vcores available?
+   * If not, throw exceptions. On availability, ensure those values are
+   * within boundary.
+   * @param res resource
+   * @throws IllegalArgumentException if mandatory resource is not available or
+   * value is not within boundary
+   */
+  public static void areMandatoryResourcesAvailable(Resource res) {
+    ResourceInformation memoryResourceInformation =
+        res.getResourceInformation(MEMORY);
+    if (memoryResourceInformation != null) {
+      long value = memoryResourceInformation.getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Value '" + value + "' for "
+            + "resource memory is more than the maximum for an integer.");
+      }
+      if (value == 0) {
+        throw new IllegalArgumentException("Invalid value for resource '" +
+            MEMORY + "'. Value cannot be 0(zero).");
+      }
+    } else {
+      throw new IllegalArgumentException("Mandatory resource 'memory-mb' "
+          + "is missing.");
+    }
+
+    ResourceInformation vcoresResourceInformation =
+        res.getResourceInformation(VCORES);
+    if (vcoresResourceInformation != null) {
+      long value = vcoresResourceInformation.getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Value '" + value + "' for resource"
+            + " vcores is more than the maximum for an integer.");
+      }
+      if (value == 0) {
+        throw new IllegalArgumentException("Invalid value for resource '" +
+            VCORES + "'. Value cannot be 0(zero).");
+      }
+    } else {
+      throw new IllegalArgumentException("Mandatory resource 'vcores' "
+          + "is missing.");
+    }
   }
 
   /**

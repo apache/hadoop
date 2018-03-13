@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ContainerType;
@@ -197,6 +198,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   protected ReentrantReadWriteLock.ReadLock readLock;
   protected ReentrantReadWriteLock.WriteLock writeLock;
 
+  private Map<String, String> applicationSchedulingEnvs = new HashMap<>();
+
   // Not confirmed allocation resource, will be used to avoid too many proposal
   // rejected because of duplicated allocation
   private AtomicLong unconfirmedAllocatedMem = new AtomicLong();
@@ -207,9 +210,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       RMContext rmContext) {
     Preconditions.checkNotNull(rmContext, "RMContext should not be null");
     this.rmContext = rmContext;
-    this.appSchedulingInfo = 
-        new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
     this.pendingRelease = Collections.newSetFromMap(
         new ConcurrentHashMap<ContainerId, Boolean>());
@@ -227,8 +227,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         this.logAggregationContext =
             appSubmissionContext.getLogAggregationContext();
       }
+      applicationSchedulingEnvs = rmApp.getApplicationSchedulingEnvs();
     }
 
+    this.appSchedulingInfo = new AppSchedulingInfo(applicationAttemptId, user,
+        queue, abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage,
+        applicationSchedulingEnvs, rmContext);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -442,6 +446,23 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       writeLock.lock();
       if (!isStopped) {
         return appSchedulingInfo.updateResourceRequests(requests, false);
+      }
+      return false;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public boolean updateSchedulingRequests(
+      List<SchedulingRequest> requests) {
+    if (requests == null) {
+      return false;
+    }
+
+    try {
+      writeLock.lock();
+      if (!isStopped) {
+        return appSchedulingInfo.updateSchedulingRequests(requests, false);
       }
       return false;
     } finally {
@@ -667,7 +688,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               container.getPriority(), rmContainer.getCreationTime(),
               this.logAggregationContext, rmContainer.getNodeLabelExpression(),
               containerType, container.getExecutionType(),
-              container.getAllocationRequestId()));
+              container.getAllocationRequestId(),
+              rmContainer.getAllocationTags()));
+      container.setAllocationTags(rmContainer.getAllocationTags());
       updateNMToken(container);
     } catch (IllegalArgumentException e) {
       // DNS might be down, skip returning this container.
@@ -1433,5 +1456,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     public String getDiagnosticMessage() {
       return diagnosticMessage;
     }
+  }
+
+  public Map<String, String> getApplicationSchedulingEnvs() {
+    return this.applicationSchedulingEnvs;
   }
 }

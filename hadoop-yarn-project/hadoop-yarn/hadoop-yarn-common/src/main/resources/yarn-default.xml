@@ -132,6 +132,46 @@
 
   <property>
     <description>
+      Specify which handler will be used to process PlacementConstraints.
+      Acceptable values are: `placement-processor`, `scheduler` and `disabled`.
+      For a detailed explanation of these values, please refer to documentation.
+    </description>
+    <name>yarn.resourcemanager.placement-constraints.handler</name>
+    <value>disabled</value>
+  </property>
+
+  <property>
+    <description>Number of times to retry placing of rejected SchedulingRequests</description>
+    <name>yarn.resourcemanager.placement-constraints.retry-attempts</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>Constraint Placement Algorithm to be used.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.DefaultPlacementAlgorithm</value>
+  </property>
+
+  <property>
+    <description>Placement Algorithm Requests Iterator to be used.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.iterator</name>
+    <value>SERIAL</value>
+  </property>
+
+  <property>
+    <description>Threadpool size for the Algorithm used for placement constraint processing.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>Threadpool size for the Scheduler invocation phase of placement constraint processing.</description>
+    <name>yarn.resourcemanager.placement-constraints.scheduler.pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
       Comma separated class names of ApplicationMasterServiceProcessor
       implementations. The processors will be applied in the order
       they are specified.
@@ -1282,7 +1322,7 @@
     slowness in launching containers.
     </description>
     <name>yarn.nodemanager.log-container-debug-info.enabled</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
@@ -1306,6 +1346,37 @@
     </description>
     <name>yarn.nodemanager.resource.system-reserved-memory-mb</name>
     <value>-1</value>
+  </property>
+
+  <property>
+    <description>Whether YARN CGroups memory tracking is enabled.</description>
+    <name>yarn.nodemanager.resource.memory.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Whether YARN CGroups strict memory enforcement is enabled.
+    </description>
+    <name>yarn.nodemanager.resource.memory.enforced</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>If memory limit is enforced, this the percentage of soft limit
+      compared to the memory assigned to the container. If there is memory
+      pressure container memory usage will be pushed back to its soft limit
+      by swapping out memory.
+    </description>
+    <name>yarn.nodemanager.resource.memory.cgroups.soft-limit-percentage</name>
+    <value>90.0</value>
+  </property>
+
+  <property>
+    <description>Container swappiness is the likelihood a page will be swapped
+      out compared to be kept in memory. Value is between 0-100.
+    </description>
+    <name>yarn.nodemanager.resource.memory.cgroups.swappiness</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -1622,7 +1693,8 @@
     or be allowed to consume spare resources if they need them. For example, turning the
     flag on will restrict apps to use only their share of CPU, even if the node has spare
     CPU cycles. The default value is false i.e. use available resources. Please note that
-    turning this flag on may reduce job throughput on the cluster.</description>
+    turning this flag on may reduce job throughput on the cluster. This setting does
+    not apply to other subsystems like memory.</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage</name>
     <value>false</value>
   </property>
@@ -1678,9 +1750,17 @@
   </property>
 
   <property>
+    <description>This configuration setting determines whether the host's PID
+      namespace is allowed for docker containers on this cluster.
+      Use with care.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.host-pid-namespace.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Property to enable docker user remapping</description>
     <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
@@ -1694,6 +1774,14 @@
     <description>lower limit for acceptable gids of user remapped user</description>
     <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
     <value>1</value>
+  </property>
+
+  <property>
+    <description>Whether or not users are allowed to request that Docker
+      containers honor the debug deletion delay. This is useful for
+      troubleshooting Docker container related launch failures.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -3597,6 +3685,81 @@
     </description>
     <name>yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices</name>
     <value>0,1</value>
+  </property>
+
+  <property>
+    <description>The http address of the timeline reader web application.</description>
+    <name>yarn.timeline-service.reader.webapp.address</name>
+    <value>${yarn.timeline-service.webapp.address}</value>
+  </property>
+
+  <property>
+    <description>The https address of the timeline reader web application.</description>
+    <name>yarn.timeline-service.reader.webapp.https.address</name>
+    <value>${yarn.timeline-service.webapp.https.address}</value>
+  </property>
+
+  <property>
+    <description>
+      The actual address timeline reader will bind to. If this optional address is
+      set, the reader server will bind to this address and the port specified in
+      yarn.timeline-service.reader.webapp.address.
+      This is most useful for making the service listen to all interfaces by setting to
+      0.0.0.0.
+    </description>
+    <name>yarn.timeline-service.reader.bind-host</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Whether to enable the NUMA awareness for containers in Node Manager.
+    </description>
+    <name>yarn.nodemanager.numa-awareness.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    Whether to read the NUMA topology from the system or from the
+    configurations. If the value is true then NM reads the NUMA topology from
+    system using the command 'numactl --hardware'. If the value is false then NM
+    reads the topology from the configurations
+    'yarn.nodemanager.numa-awareness.node-ids'(for node id's),
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.memory'(for each node memory),
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.cpus'(for each node cpus).
+    </description>
+    <name>yarn.nodemanager.numa-awareness.read-topology</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    NUMA node id's in the form of comma separated list. Memory and No of CPUs
+    will be read using the properties
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.memory' and
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.cpus' for each id specified
+    in this value. This property value will be read only when
+    'yarn.nodemanager.numa-awareness.read-topology=false'.
+
+    For example, if yarn.nodemanager.numa-awareness.node-ids=0,1
+    then need to specify memory and cpus for node id's '0' and '1' like below,
+    yarn.nodemanager.numa-awareness.0.memory=73717
+    yarn.nodemanager.numa-awareness.0.cpus=4
+    yarn.nodemanager.numa-awareness.1.memory=73727
+    yarn.nodemanager.numa-awareness.1.cpus=4
+    </description>
+    <name>yarn.nodemanager.numa-awareness.node-ids</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    The numactl command path which controls NUMA policy for processes or
+    shared memory.
+    </description>
+    <name>yarn.nodemanager.numa-awareness.numactl.cmd</name>
+    <value>/usr/bin/numactl</value>
   </property>
 
 </configuration>

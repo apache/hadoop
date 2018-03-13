@@ -24,8 +24,17 @@ function getTimeLineURL(rmhost) {
   var url = window.location.protocol + '//' +
     (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
 
+  url += '/conf?name=yarn.timeline-service.reader.webapp.address';
+  Ember.Logger.log("Get Timeline V2 Address URL: " + url);
+  return url;
+}
+
+function getTimeLineV1URL(rmhost) {
+  var url = window.location.protocol + '//' +
+    (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
+
   url += '/conf?name=yarn.timeline-service.webapp.address';
-  Ember.Logger.log("Get Timeline Address URL: " + url);
+  Ember.Logger.log("Get Timeline V1 Address URL: " + url);
   return url;
 }
 
@@ -64,10 +73,46 @@ function updateConfigs(application) {
           Ember.Logger.log("Timeline Updated Address: " + updatedAddress);
         }
         application.advanceReadiness();
+      },
+      error: function() {
+        application.advanceReadiness();
       }
     });
   } else {
     Ember.Logger.log("Timeline Address: " + ENV.hosts.timelineWebAddress);
+    application.advanceReadiness();
+  }
+
+  if(!ENV.hosts.timelineV1WebAddress) {
+    var timelinehost = "";
+    $.ajax({
+      type: 'GET',
+      dataType: 'json',
+      async: true,
+      context: this,
+      url: getTimeLineV1URL(rmhost),
+      success: function(data) {
+        timelinehost = data.property.value;
+        ENV.hosts.timelineV1WebAddress = timelinehost;
+
+        var address = timelinehost.split(":")[0];
+        var port = timelinehost.split(":")[1];
+
+        Ember.Logger.log("Timeline V1 Address from RM: " + timelinehost);
+
+        if(address === "0.0.0.0" || address === "localhost") {
+          var updatedAddress =  hostname + ":" + port;
+          ENV.hosts.timelineV1WebAddress = updatedAddress;
+          Ember.Logger.log("Timeline V1 Updated Address: " + updatedAddress);
+        }
+        application.advanceReadiness();
+      },
+      error: function() {
+        application.advanceReadiness();
+      }
+    });
+  } else {
+    Ember.Logger.log("Timeline V1 Address: " + ENV.hosts.timelineV1WebAddress);
     application.advanceReadiness();
   }
 }

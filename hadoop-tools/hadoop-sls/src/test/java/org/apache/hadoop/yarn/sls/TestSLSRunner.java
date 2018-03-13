@@ -78,7 +78,7 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
     exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 90000)
   @SuppressWarnings("all")
   public void testSimulatorRunning() throws Exception {
     Configuration conf = new Configuration(false);

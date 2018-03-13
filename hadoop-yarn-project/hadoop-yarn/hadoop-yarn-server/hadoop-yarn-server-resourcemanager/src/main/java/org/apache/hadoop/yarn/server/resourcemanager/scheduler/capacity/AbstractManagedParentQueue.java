@@ -17,13 +17,21 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
+    .QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * A container class for automatically created child leaf queues.
@@ -35,13 +43,12 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractManagedParentQueue.class);
 
-  protected AutoCreatedLeafQueueTemplate leafQueueTemplate;
+  protected AutoCreatedLeafQueueConfig leafQueueTemplate;
+  protected AutoCreatedQueueManagementPolicy queueManagementPolicy = null;
 
   public AbstractManagedParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
-
-    super.setupQueueConfigs(csContext.getClusterResource());
   }
 
   @Override
@@ -53,43 +60,9 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
       // Set new configs
       setupQueueConfigs(clusterResource);
 
-      // run reinitialize on each existing queue, to trigger absolute cap
-      // recomputations
-      for (CSQueue res : this.getChildQueues()) {
-        res.reinitialize(res, clusterResource);
-      }
     } finally {
       writeLock.unlock();
     }
-  }
-
-  /**
-   * Initialize leaf queue configs from template configurations specified on
-   * parent queue.
-   */
-  protected AutoCreatedLeafQueueTemplate.Builder initializeLeafQueueConfigs
-    (String queuePath) {
-
-    CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-
-    AutoCreatedLeafQueueTemplate.Builder leafQueueTemplateBuilder = new
-        AutoCreatedLeafQueueTemplate.Builder();
-    int maxApps = conf.getMaximumApplicationsPerQueue(queuePath);
-    if (maxApps < 0) {
-      maxApps = (int) (
-          CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS
-              * getAbsoluteCapacity());
-    }
-
-    int userLimit = conf.getUserLimit(queuePath);
-    float userLimitFactor = conf.getUserLimitFactor(queuePath);
-    leafQueueTemplateBuilder.userLimit(userLimit)
-          .userLimitFactor(userLimitFactor)
-          .maxApps(maxApps)
-          .maxAppsPerUser(
-              (int) (maxApps * (userLimit / 100.0f) * userLimitFactor));
-
-    return leafQueueTemplateBuilder;
   }
 
   /**
@@ -98,7 +71,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
    * @throws SchedulerDynamicEditException
    */
   public void addChildQueue(CSQueue childQueue)
-      throws SchedulerDynamicEditException {
+      throws SchedulerDynamicEditException, IOException {
     try {
       writeLock.lock();
       if (childQueue.getCapacity() > 0) {
@@ -193,84 +166,69 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     }
   }
 
-  public static class AutoCreatedLeafQueueTemplate {
-
-    private QueueCapacities queueCapacities;
-
-    private int maxApps;
-    private int maxAppsPerUser;
-    private int userLimit;
-    private float userLimitFactor;
-
-    AutoCreatedLeafQueueTemplate(Builder builder) {
-      this.maxApps = builder.maxApps;
-      this.maxAppsPerUser = builder.maxAppsPerUser;
-      this.userLimit = builder.userLimit;
-      this.userLimitFactor = builder.userLimitFactor;
-      this.queueCapacities = builder.queueCapacities;
-    }
-
-    public static class Builder {
-      private int maxApps;
-      private int maxAppsPerUser;
-
-      private int userLimit;
-      private float userLimitFactor;
-
-      private QueueCapacities queueCapacities;
-
-      Builder maxApps(int maxApplications) {
-        this.maxApps =  maxApplications;
-        return this;
-      }
-
-      Builder maxAppsPerUser(int maxApplicationsPerUser) {
-        this.maxAppsPerUser = maxApplicationsPerUser;
-        return this;
-      }
-
-      Builder userLimit(int usrLimit) {
-        this.userLimit = usrLimit;
-        return this;
-      }
-
-      Builder userLimitFactor(float ulf) {
-        this.userLimitFactor = ulf;
-        return this;
-      }
-
-      Builder capacities(QueueCapacities capacities) {
-        this.queueCapacities = capacities;
-        return this;
-      }
-
-      AutoCreatedLeafQueueTemplate build() {
-        return new AutoCreatedLeafQueueTemplate(this);
-      }
-    }
-
-    public int getUserLimit() {
-      return userLimit;
-    }
-
-    public float getUserLimitFactor() {
-      return userLimitFactor;
-    }
-
-    public QueueCapacities getQueueCapacities() {
-      return queueCapacities;
-    }
-
-    public int getMaxApps() {
-      return maxApps;
-    }
-
-    public int getMaxAppsPerUser() {
-      return maxAppsPerUser;
-    }
+  public AutoCreatedLeafQueueConfig getLeafQueueTemplate() {
+    return leafQueueTemplate;
   }
 
-  public AutoCreatedLeafQueueTemplate getLeafQueueTemplate() {
-    return leafQueueTemplate;
+  public AutoCreatedQueueManagementPolicy
+  getAutoCreatedQueueManagementPolicy() {
+    return queueManagementPolicy;
+  }
+
+  protected SortedMap<String, String> getConfigurationsWithPrefix
+      (SortedMap<String, String> sortedConfigs, String prefix) {
+    return sortedConfigs.subMap( prefix, prefix + Character.MAX_VALUE );
+  }
+
+  protected SortedMap<String, String> sortCSConfigurations() {
+    SortedMap<String, String> sortedConfigs = new TreeMap(
+        new Comparator<String>() {
+          public int compare(String s1, String s2) {
+            return s1.compareToIgnoreCase(s2);
+          }
+
+        });
+
+    for (final Iterator<Map.Entry<String, String>> iterator =
+         csContext.getConfiguration().iterator(); iterator.hasNext(); ) {
+      final Map.Entry<String, String> confKeyValuePair = iterator.next();
+      sortedConfigs.put(confKeyValuePair.getKey(), confKeyValuePair.getValue());
+    }
+    return sortedConfigs;
+  }
+
+  protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String
+      configPrefix) {
+
+    CapacitySchedulerConfiguration leafQueueConfigs = new
+        CapacitySchedulerConfiguration(new Configuration(false), false);
+
+    SortedMap<String, String> sortedConfigs = sortCSConfigurations();
+    SortedMap<String, String> templateConfigs = getConfigurationsWithPrefix
+        (sortedConfigs, configPrefix);
+
+    for (final Iterator<Map.Entry<String, String>> iterator =
+         templateConfigs.entrySet().iterator(); iterator.hasNext(); ) {
+      Map.Entry<String, String> confKeyValuePair = iterator.next();
+      leafQueueConfigs.set(confKeyValuePair.getKey(),
+          confKeyValuePair.getValue());
+    }
+
+    return leafQueueConfigs;
+  }
+
+  protected void validateQueueEntitlementChange(AbstractAutoCreatedLeafQueue
+      leafQueue, QueueEntitlement entitlement)
+      throws SchedulerDynamicEditException {
+
+    float sumChilds = sumOfChildCapacities();
+    float newChildCap =
+        sumChilds - leafQueue.getCapacity() + entitlement.getCapacity();
+
+    if (!(newChildCap >= 0 && newChildCap < 1.0f + CSQueueUtils.EPSILON)) {
+      throw new SchedulerDynamicEditException(
+          "Sum of child queues should exceed 100% for auto creating parent "
+              + "queue : " + queueName);
+    }
   }
 }

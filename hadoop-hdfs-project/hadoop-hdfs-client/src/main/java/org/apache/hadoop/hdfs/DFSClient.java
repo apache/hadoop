@@ -38,7 +38,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -62,8 +61,6 @@ import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -82,6 +79,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
@@ -125,12 +123,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatusIterator;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -138,6 +139,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -907,45 +909,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Decrypts a EDEK by consulting the KeyProvider.
-   */
-  private KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
-      feInfo) throws IOException {
-    try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
-      KeyProvider provider = getKeyProvider();
-      if (provider == null) {
-        throw new IOException("No KeyProvider is configured, cannot access" +
-            " an encrypted file");
-      }
-      EncryptedKeyVersion ekv = EncryptedKeyVersion.createForDecryption(
-          feInfo.getKeyName(), feInfo.getEzKeyVersionName(), feInfo.getIV(),
-          feInfo.getEncryptedDataEncryptionKey());
-      try {
-        KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
-            .createKeyProviderCryptoExtension(provider);
-        return cryptoProvider.decryptEncryptedKey(ekv);
-      } catch (GeneralSecurityException e) {
-        throw new IOException(e);
-      }
-    }
-  }
-
-  /**
    * Wraps the stream in a CryptoInputStream if the underlying file is
    * encrypted.
    */
   public HdfsDataInputStream createWrappedInputStream(DFSInputStream dfsis)
       throws IOException {
-    final FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
+    FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
     if (feInfo != null) {
-      // File is encrypted, wrap the stream in a crypto stream.
-      // Currently only one version, so no special logic based on the version #
-      HdfsKMSUtil.getCryptoProtocolVersion(feInfo);
-      final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
-      final KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
-      final CryptoInputStream cryptoIn =
-          new CryptoInputStream(dfsis, codec, decrypted.getMaterial(),
-              feInfo.getIV());
+      CryptoInputStream cryptoIn;
+      try (TraceScope ignored = getTracer().newScope("decryptEDEK")) {
+        cryptoIn = HdfsKMSUtil.createWrappedInputStream(dfsis,
+            getKeyProvider(), feInfo, getConfiguration());
+      }
       return new HdfsDataInputStream(cryptoIn);
     } else {
       // No FileEncryptionInfo so no encryption.
@@ -974,7 +949,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // Currently only one version, so no special logic based on the version #
       HdfsKMSUtil.getCryptoProtocolVersion(feInfo);
       final CryptoCodec codec = HdfsKMSUtil.getCryptoCodec(conf, feInfo);
-      KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
+      KeyVersion decrypted;
+      try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
+        decrypted = HdfsKMSUtil.decryptEncryptedDataEncryptionKey(feInfo,
+          getKeyProvider());
+      }
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
               decrypted.getMaterial(), feInfo.getIV(), startPos);
@@ -1015,16 +994,46 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     //    Get block info from namenode
     try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
       LocatedBlocks locatedBlocks = getLocatedBlocks(src, 0);
-      if (locatedBlocks != null) {
-        ErasureCodingPolicy ecPolicy = locatedBlocks.getErasureCodingPolicy();
-        if (ecPolicy != null) {
-          return new DFSStripedInputStream(this, src, verifyChecksum, ecPolicy,
-              locatedBlocks);
-        }
-        return new DFSInputStream(this, src, verifyChecksum, locatedBlocks);
-      } else {
-        throw new IOException("Cannot open filename " + src);
+      return openInternal(locatedBlocks, src, verifyChecksum);
+    }
+  }
+
+  /**
+   * Create an input stream from the {@link HdfsPathHandle} if the
+   * constraints encoded from {@link
+   * DistributedFileSystem#createPathHandle(FileStatus, Options.HandleOpt...)}
+   * are satisfied. Note that HDFS does not ensure that these constraints
+   * remain invariant for the life of the stream. It only checks that they
+   * still held when the stream was opened.
+   * @param fd Handle to an entity in HDFS, with constraints
+   * @param buffersize ignored
+   * @param verifyChecksum Verify checksums before returning data to client
+   * @return Data from the referent of the {@link HdfsPathHandle}.
+   * @throws IOException On I/O error
+   */
+  public DFSInputStream open(HdfsPathHandle fd, int buffersize,
+      boolean verifyChecksum) throws IOException {
+    checkOpen();
+    String src = fd.getPath();
+    try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
+      HdfsLocatedFileStatus s = getLocatedFileInfo(src, true);
+      fd.verify(s); // check invariants in path handle
+      LocatedBlocks locatedBlocks = s.getLocatedBlocks();
+      return openInternal(locatedBlocks, src, verifyChecksum);
+    }
+  }
+
+  private DFSInputStream openInternal(LocatedBlocks locatedBlocks, String src,
+      boolean verifyChecksum) throws IOException {
+    if (locatedBlocks != null) {
+      ErasureCodingPolicy ecPolicy = locatedBlocks.getErasureCodingPolicy();
+      if (ecPolicy != null) {
+        return new DFSStripedInputStream(this, src, verifyChecksum, ecPolicy,
+            locatedBlocks);
       }
+      return new DFSInputStream(this, src, verifyChecksum, locatedBlocks);
+    } else {
+      throw new IOException("Cannot open filename " + src);
     }
   }
 
@@ -1587,7 +1596,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           FileNotFoundException.class,
           SafeModeException.class,
           UnresolvedPathException.class,
-          SnapshotAccessControlException.class);
+          SnapshotAccessControlException.class,
+          PathIsNotEmptyDirectoryException.class);
     }
   }
 
@@ -1647,6 +1657,30 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * Get the file info for a specific file or directory.
+   * @param src The string representation of the path to the file
+   * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
+   *        When block tokens are included, this call is a superset of
+   *        {@link #getBlockLocations(String, long)}.
+   * @return object containing information regarding the file
+   *         or null if file not found
+   *
+   * @see DFSClient#open(HdfsPathHandle, int, boolean)
+   * @see ClientProtocol#getFileInfo(String) for description of
+   *      exceptions
+   */
+  public HdfsLocatedFileStatus getLocatedFileInfo(String src,
+      boolean needBlockToken) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getLocatedFileInfo", src)) {
+      return namenode.getLocatedFileInfo(src, needBlockToken);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
+    }
+  }
   /**
    * Close status of a file
    * @return true if file is already closed
@@ -2085,6 +2119,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
+   * @see ClientProtocol#getSnapshotDiffReport
+   */
+  public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
+      String fromSnapshot, String toSnapshot) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
+      return namenode
+          .getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  /**
+   * Get the difference between two snapshots of a directory iteratively.
    * @see ClientProtocol#getSnapshotDiffReportListing
    */
   public SnapshotDiffReportListing getSnapshotDiffReportListing(
@@ -3028,8 +3076,51 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @throws IOException
    */
+  @Deprecated
   public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
     checkOpen();
-    return new OpenFilesIterator(namenode, tracer);
+    return listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by path,
+   * managed by NameNode.
+   *
+   * @param path
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(String path)
+      throws IOException {
+    checkOpen();
+    return listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES), path);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by type,
+   * managed by NameNode.
+   *
+   * @param openFilesTypes
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+    checkOpen();
+    return listOpenFiles(openFilesTypes,
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by type and path,
+   * managed by NameNode.
+   *
+   * @param openFilesTypes
+   * @param path
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    checkOpen();
+    return new OpenFilesIterator(namenode, tracer, openFilesTypes, path);
   }
 }

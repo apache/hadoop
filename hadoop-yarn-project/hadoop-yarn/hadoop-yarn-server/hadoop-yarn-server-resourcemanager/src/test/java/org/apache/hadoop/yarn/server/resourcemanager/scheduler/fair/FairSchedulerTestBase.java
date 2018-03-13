@@ -163,16 +163,18 @@ public class FairSchedulerTestBase {
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers,
       int priority) {
-    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++,
+        this.ATTEMPT_ID++);
     scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
     // This conditional is for testAclSubmitApplication where app is rejected
     // and no app is added.
-    if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
+    if (scheduler.getSchedulerApplications().
+        containsKey(id.getApplicationId())) {
       scheduler.addApplicationAttempt(id, false, false);
     }
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
-        priority, numContainers, true);
+    ResourceRequest request = createResourceRequest(memory, vcores,
+        ResourceRequest.ANY, priority, numContainers, true);
     ask.add(request);
 
     RMApp rmApp = mock(RMApp.class);
@@ -180,15 +182,17 @@ public class FairSchedulerTestBase {
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
         new RMAppAttemptMetrics(id, resourceManager.getRMContext()));
-    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
     when(submissionContext.getUnmanagedAM()).thenReturn(false);
     when(rmAppAttempt.getSubmissionContext()).thenReturn(submissionContext);
+    when(rmApp.getApplicationSubmissionContext()).thenReturn(submissionContext);
     Container container = mock(Container.class);
     when(rmAppAttempt.getMasterContainer()).thenReturn(container);
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
 
-    scheduler.allocate(id, ask, new ArrayList<ContainerId>(),
+    scheduler.allocate(id, ask, null, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
     scheduler.update();
     return id;
@@ -210,13 +214,15 @@ public class FairSchedulerTestBase {
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
         new RMAppAttemptMetrics(id,resourceManager.getRMContext()));
-    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
     when(submissionContext.getUnmanagedAM()).thenReturn(false);
     when(rmAppAttempt.getSubmissionContext()).thenReturn(submissionContext);
+    when(rmApp.getApplicationSubmissionContext()).thenReturn(submissionContext);
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
 
-    scheduler.allocate(id, ask, new ArrayList<ContainerId>(),
+    scheduler.allocate(id, ask, null, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
     return id;
   }
@@ -239,7 +245,7 @@ public class FairSchedulerTestBase {
       ResourceRequest request, ApplicationAttemptId attId) {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ask.add(request);
-    scheduler.allocate(attId, ask,  new ArrayList<ContainerId>(),
+    scheduler.allocate(attId, ask, null, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
     scheduler.update();
   }
@@ -275,9 +281,11 @@ public class FairSchedulerTestBase {
     RMAppAttemptMetrics attemptMetric = mock(RMAppAttemptMetrics.class);
     when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
     when(app.getCurrentAppAttempt()).thenReturn(attempt);
-    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    ApplicationSubmissionContext submissionContext =
+        mock(ApplicationSubmissionContext.class);
     when(submissionContext.getUnmanagedAM()).thenReturn(false);
     when(attempt.getSubmissionContext()).thenReturn(submissionContext);
+    when(app.getApplicationSubmissionContext()).thenReturn(submissionContext);
     resourceManager.getRMContext().getRMApps()
         .put(attemptId.getApplicationId(), app);
     return app;

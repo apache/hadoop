@@ -134,6 +134,9 @@ public class JsonUtil {
     }
     if (status.isErasureCoded()) {
       m.put("ecBit", true);
+      if (status.getErasureCodingPolicy() != null) {
+        m.put("ecPolicy", status.getErasureCodingPolicy().getName());
+      }
     }
     if (status.isSnapshotEnabled()) {
       m.put("snapshotEnabled", status.isSnapshotEnabled());
@@ -492,6 +495,59 @@ public class JsonUtil {
     m.put("checksumType", serverDefaults.getChecksumType().id);
     m.put("keyProviderUri", serverDefaults.getKeyProviderUri());
     m.put("defaultStoragePolicyId", serverDefaults.getDefaultStoragePolicyId());
+    return m;
+  }
+
+  public static String toJsonString(SnapshotDiffReport diffReport) {
+    return toJsonString(SnapshotDiffReport.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReport diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotRoot", diffReport.getSnapshotRoot());
+    m.put("fromSnapshot", diffReport.getFromSnapshot());
+    m.put("toSnapshot", diffReport.getLaterSnapshotName());
+    Object[] diffList = new Object[diffReport.getDiffList().size()];
+    for (int i = 0; i < diffReport.getDiffList().size(); i++) {
+      diffList[i] = toJsonMap(diffReport.getDiffList().get(i));
+    }
+    m.put("diffList", diffList);
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReport.DiffReportEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("type", diffReportEntry.getType());
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.bytes2String(diffReportEntry.getSourcePath()));
+    }
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.bytes2String(diffReportEntry.getTargetPath()));
+    }
+    return m;
+  }
+
+  public static String toJsonString(
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
+    Object[] a = new Object[snapshottableDirectoryList.length];
+    for (int i = 0; i < snapshottableDirectoryList.length; i++) {
+      a[i] = toJsonMap(snapshottableDirectoryList[i]);
+    }
+    return toJsonString("SnapshottableDirectoryList", a);
+  }
+
+  private static Object toJsonMap(
+      SnapshottableDirectoryStatus snapshottableDirectoryStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("snapshotNumber", snapshottableDirectoryStatus.getSnapshotNumber());
+    m.put("snapshotQuota", snapshottableDirectoryStatus.getSnapshotQuota());
+    m.put("parentFullPath", DFSUtilClient
+        .bytes2String(snapshottableDirectoryStatus.getParentFullPath()));
+    m.put("dirStatus", toJsonMap(snapshottableDirectoryStatus.getDirStatus()));
     return m;
   }
 }

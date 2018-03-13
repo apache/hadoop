@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,7 +43,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -51,26 +51,22 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.*;
-import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.InvalidContainerRequestException;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
-import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -78,10 +74,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -94,155 +88,23 @@ import org.eclipse.jetty.util.log.Log;
  * Test application master client class to resource manager.
  */
 @RunWith(value = Parameterized.class)
-public class TestAMRMClient {
-  private String schedulerName = null;
-  private Configuration conf = null;
-  private MiniYARNCluster yarnCluster = null;
-  private YarnClient yarnClient = null;
-  private List<NodeReport> nodeReports = null;
-  private ApplicationAttemptId attemptId = null;
-  private int nodeCount = 3;
-  
-  static final int rolling_interval_sec = 13;
-  static final long am_expire_ms = 4000;
+public class TestAMRMClient extends BaseAMRMClientTest{
 
-  private Resource capability;
-  private Priority priority;
-  private Priority priority2;
-  private String node;
-  private String rack;
-  private String[] nodes;
-  private String[] racks;
   private final static int DEFAULT_ITERATION = 3;
 
-  public TestAMRMClient(String schedulerName) {
+  public TestAMRMClient(String schedulerName, boolean autoUpdate) {
     this.schedulerName = schedulerName;
+    this.autoUpdate = autoUpdate;
   }
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
-    List<Object[]> list = new ArrayList<Object[]>(2);
-    list.add(new Object[] {CapacityScheduler.class.getName()});
-    list.add(new Object[] {FairScheduler.class.getName()});
-    return list;
-  }
-
-  @Before
-  public void setup() throws Exception {
-    conf = new YarnConfiguration();
-    createClusterAndStartApplication(conf);
-  }
-
-  private void createClusterAndStartApplication(Configuration conf)
-      throws Exception {
-    // start minicluster
-    this.conf = conf;
-    conf.set(YarnConfiguration.RM_SCHEDULER, schedulerName);
-    conf.setLong(
-      YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
-      rolling_interval_sec);
-    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, am_expire_ms);
-    conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 100);
-    // set the minimum allocation so that resource decrease can go under 1024
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
-    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
-    conf.setBoolean(
-        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
-    conf.setInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
-    yarnCluster = new MiniYARNCluster(TestAMRMClient.class.getName(), nodeCount, 1, 1);
-    yarnCluster.init(conf);
-    yarnCluster.start();
-
-    // start rm client
-    yarnClient = YarnClient.createYarnClient();
-    yarnClient.init(conf);
-    yarnClient.start();
-
-    // get node info
-    assertTrue("All node managers did not connect to the RM within the "
-        + "allotted 5-second timeout",
-        yarnCluster.waitForNodeManagersToConnect(5000L));
-    nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
-    assertEquals("Not all node managers were reported running",
-        nodeCount, nodeReports.size());
-
-    priority = Priority.newInstance(1);
-    priority2 = Priority.newInstance(2);
-    capability = Resource.newInstance(1024, 1);
-
-    node = nodeReports.get(0).getNodeId().getHost();
-    rack = nodeReports.get(0).getRackName();
-    nodes = new String[]{ node };
-    racks = new String[]{ rack };
-
-    // submit new app
-    ApplicationSubmissionContext appContext = 
-        yarnClient.createApplication().getApplicationSubmissionContext();
-    ApplicationId appId = appContext.getApplicationId();
-    // set the application name
-    appContext.setApplicationName("Test");
-    // Set the priority for the application master
-    Priority pri = Records.newRecord(Priority.class);
-    pri.setPriority(0);
-    appContext.setPriority(pri);
-    // Set the queue to which this application is to be submitted in the RM
-    appContext.setQueue("default");
-    // Set up the container launch context for the application master
-    ContainerLaunchContext amContainer =
-        BuilderUtils.newContainerLaunchContext(
-          Collections.<String, LocalResource> emptyMap(),
-          new HashMap<String, String>(), Arrays.asList("sleep", "100"),
-          new HashMap<String, ByteBuffer>(), null,
-          new HashMap<ApplicationAccessType, String>());
-    appContext.setAMContainerSpec(amContainer);
-    appContext.setResource(Resource.newInstance(1024, 1));
-    // Create the request to send to the applications manager
-    SubmitApplicationRequest appRequest = Records
-        .newRecord(SubmitApplicationRequest.class);
-    appRequest.setApplicationSubmissionContext(appContext);
-    // Submit the application to the applications manager
-    yarnClient.submitApplication(appContext);
-
-    // wait for app to start
-    RMAppAttempt appAttempt = null;
-    while (true) {
-      ApplicationReport appReport = yarnClient.getApplicationReport(appId);
-      if (appReport.getYarnApplicationState() == YarnApplicationState.ACCEPTED) {
-        attemptId = appReport.getCurrentApplicationAttemptId();
-        appAttempt =
-            yarnCluster.getResourceManager().getRMContext().getRMApps()
-              .get(attemptId.getApplicationId()).getCurrentAppAttempt();
-        while (true) {
-          if (appAttempt.getAppAttemptState() == RMAppAttemptState.LAUNCHED) {
-            break;
-          }
-        }
-        break;
-      }
-    }
-    // Just dig into the ResourceManager and get the AMRMToken just for the sake
-    // of testing.
-    UserGroupInformation.setLoginUser(UserGroupInformation
-      .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
-
-    // emulate RM setup of AMRM token in credentials by adding the token
-    // *before* setting the token service
-    UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
-    appAttempt.getAMRMToken().setService(ClientRMProxy.getAMRMTokenService(conf));
-  }
-  
-  @After
-  public void teardown() throws YarnException, IOException {
-    yarnClient.killApplication(attemptId.getApplicationId());
-    attemptId = null;
-
-    if (yarnClient != null && yarnClient.getServiceState() == STATE.STARTED) {
-      yarnClient.stop();
-    }
-    if (yarnCluster != null && yarnCluster.getServiceState() == STATE.STARTED) {
-      yarnCluster.stop();
-    }
+    // Currently only capacity scheduler supports auto update.
+    return Arrays.asList(new Object[][] {
+        {CapacityScheduler.class.getName(), true},
+        {CapacityScheduler.class.getName(), false},
+        {FairScheduler.class.getName(), false}
+    });
   }
 
   @Test (timeout = 60000)
@@ -608,19 +470,16 @@ public class TestAMRMClient {
       amClient.addContainerRequest(storedContainer1);
       amClient.addContainerRequest(storedContainer2);
       amClient.addContainerRequest(storedContainer3);
-
-      ProfileCapability profileCapability =
-          ProfileCapability.newInstance(capability);
       
       // test addition and storage
       RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
           amClient.getTable(0);
       int containersRequestedAny = remoteRequestsTable.get(priority,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
           .remoteRequest.getNumContainers();
       assertEquals(2, containersRequestedAny);
       containersRequestedAny = remoteRequestsTable.get(priority1,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
           .remoteRequest.getNumContainers();
          assertEquals(1, containersRequestedAny);
       List<? extends Collection<ContainerRequest>> matches = 
@@ -895,7 +754,7 @@ public class TestAMRMClient {
     initAMRMClientAndTest(false);
   }
 
-  private void initAMRMClientAndTest(boolean useAllocReqId)
+  protected void initAMRMClientAndTest(boolean useAllocReqId)
       throws YarnException, IOException {
     AMRMClient<ContainerRequest> amClient = null;
     try {
@@ -1157,6 +1016,139 @@ public class TestAMRMClient {
     assertEquals(1, updatedContainers.size());
   }
 
+  @Test
+  public void testAMRMContainerPromotionAndDemotionWithAutoUpdate()
+      throws Exception {
+    AMRMClientImpl<AMRMClient.ContainerRequest> amClient =
+        (AMRMClientImpl<AMRMClient.ContainerRequest>) AMRMClient
+            .createAMRMClient();
+    amClient.init(conf);
+    amClient.start();
+
+    // start am nm client
+    NMClientImpl nmClient = (NMClientImpl) NMClient.createNMClient();
+    Assert.assertNotNull(nmClient);
+    nmClient.init(conf);
+    nmClient.start();
+    assertEquals(STATE.STARTED, nmClient.getServiceState());
+
+    amClient.registerApplicationMaster("Host", 10000, "");
+
+    // setup container request
+    assertEquals(0, amClient.ask.size());
+    assertEquals(0, amClient.release.size());
+
+    // START OPPORTUNISTIC Container, Send allocation request to RM
+    Resource reqResource = Resource.newInstance(512, 1);
+    amClient.addContainerRequest(
+        new AMRMClient.ContainerRequest(reqResource, null, null, priority2, 0,
+            true, null, ExecutionTypeRequest
+            .newInstance(ExecutionType.OPPORTUNISTIC, true)));
+
+    // RM should allocate container within 1 calls to allocate()
+    AllocateResponse allocResponse = waitForAllocation(amClient, 1, 0);
+
+    assertEquals(1, allocResponse.getAllocatedContainers().size());
+    startContainer(allocResponse, nmClient);
+
+    Container c = allocResponse.getAllocatedContainers().get(0);
+    amClient.requestContainerUpdate(c,
+        UpdateContainerRequest.newInstance(c.getVersion(),
+            c.getId(), ContainerUpdateType.PROMOTE_EXECUTION_TYPE,
+            null, ExecutionType.GUARANTEED));
+
+    allocResponse = waitForAllocation(amClient, 0, 1);
+
+    // Make sure container is updated.
+    UpdatedContainer updatedContainer = allocResponse
+        .getUpdatedContainers().get(0);
+
+    // If container auto update is not enabled, we need to notify
+    // NM about this update.
+    if (!autoUpdate) {
+      nmClient.updateContainerResource(updatedContainer.getContainer());
+    }
+
+    // Wait until NM context updated, or fail on timeout.
+    waitForNMContextUpdate(updatedContainer, ExecutionType.GUARANTEED);
+
+    // Once promoted, demote it back to OPPORTUNISTIC
+    amClient.requestContainerUpdate(updatedContainer.getContainer(),
+        UpdateContainerRequest.newInstance(
+            updatedContainer.getContainer().getVersion(),
+            updatedContainer.getContainer().getId(),
+            ContainerUpdateType.DEMOTE_EXECUTION_TYPE,
+            null, ExecutionType.OPPORTUNISTIC));
+
+    allocResponse = waitForAllocation(amClient, 0, 1);
+
+    // Make sure container is updated.
+    updatedContainer = allocResponse.getUpdatedContainers().get(0);
+
+    if (!autoUpdate) {
+      nmClient.updateContainerResource(updatedContainer.getContainer());
+    }
+
+    // Wait until NM context updated, or fail on timeout.
+    waitForNMContextUpdate(updatedContainer, ExecutionType.OPPORTUNISTIC);
+
+    amClient.close();
+  }
+
+  private AllocateResponse waitForAllocation(AMRMClient amrmClient,
+      int expectedAllocatedContainerNum, int expectedUpdatedContainerNum)
+      throws Exception {
+    AllocateResponse allocResponse = null;
+    int iteration = 100;
+    while(iteration>0) {
+      allocResponse = amrmClient.allocate(0.1f);
+      int actualAllocated = allocResponse.getAllocatedContainers().size();
+      int actualUpdated = allocResponse.getUpdatedContainers().size();
+      if (expectedAllocatedContainerNum == actualAllocated &&
+          expectedUpdatedContainerNum == actualUpdated) {
+        break;
+      }
+      Thread.sleep(100);
+      iteration--;
+    }
+    return allocResponse;
+  }
+
+  private void waitForNMContextUpdate(UpdatedContainer updatedContainer,
+      ExecutionType expectedType) {
+    for (int i=0; i<nodeCount; i++) {
+      NodeManager nm = yarnCluster.getNodeManager(i);
+      if (nm.getNMContext().getNodeId()
+          .equals(updatedContainer.getContainer().getNodeId())) {
+        try {
+          GenericTestUtils.waitFor(() -> {
+            org.apache.hadoop.yarn.server.nodemanager.containermanager
+                .container.Container nmContainer =
+                nm.getNMContext().getContainers()
+                    .get(updatedContainer.getContainer().getId());
+            if (nmContainer != null) {
+              ExecutionType actual = nmContainer.getContainerTokenIdentifier()
+                  .getExecutionType();
+              return actual.equals(expectedType);
+            }
+            return false;
+          }, 1000, 30000);
+        } catch (TimeoutException e) {
+          fail("Times out waiting for container state in"
+              + " NM context to be updated");
+        } catch (InterruptedException e) {
+          // Ignorable.
+        }
+        break;
+      }
+
+      // Iterated all nodes but still can't get a match
+      if (i == nodeCount -1) {
+        fail("Container doesn't exist in NM context.");
+      }
+    }
+  }
+
   @Test(timeout=60000)
   public void testAMRMClientWithContainerPromotion()
       throws YarnException, IOException {
@@ -1190,11 +1182,9 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.OPPORTUNISTIC, true)));
 
-    ProfileCapability profileCapability =
-          ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1331,11 +1321,9 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.GUARANTEED, true)));
 
-    ProfileCapability profileCapability =
-        ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.GUARANTEED, profileCapability).remoteRequest
+            ExecutionType.GUARANTEED, capability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1446,7 +1434,9 @@ public class TestAMRMClient {
     for (UpdatedContainer updatedContainer : allocResponse
         .getUpdatedContainers()) {
       Container container = updatedContainer.getContainer();
-      nmClient.increaseContainerResource(container);
+      if (!autoUpdate) {
+        nmClient.increaseContainerResource(container);
+      }
       // NodeManager may still need some time to get the stable
       // container status
       while (true) {
@@ -1713,16 +1703,14 @@ public class TestAMRMClient {
       int expAsks, int expRelease) {
     RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
         amClient.getTable(allocationReqId);
-    ProfileCapability profileCapability =
-        ProfileCapability.newInstance(capability);
     int containersRequestedNode = remoteRequestsTable.get(priority,
-        node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        node, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedRack = remoteRequestsTable.get(priority,
-        rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
+        rack, ExecutionType.GUARANTEED, capability).remoteRequest
         .getNumContainers();
     int containersRequestedAny = remoteRequestsTable.get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
         .remoteRequest.getNumContainers();
 
     assertEquals(expNode, containersRequestedNode);
@@ -1801,7 +1789,7 @@ public class TestAMRMClient {
       // Wait for enough time and make sure the roll_over happens
       // At mean time, the old AMRMToken should continue to work
       while (System.currentTimeMillis() - startTime <
-          rolling_interval_sec * 1000) {
+          rollingIntervalSec * 1000) {
         amClient.allocate(0.1f);
         sleep(1000);
       }
@@ -1934,31 +1922,20 @@ public class TestAMRMClient {
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
 
-      ProfileCapability capability1 = ProfileCapability.newInstance("minimum");
-      ProfileCapability capability2 = ProfileCapability.newInstance("default");
-      ProfileCapability capability3 = ProfileCapability.newInstance("maximum");
-      ProfileCapability capability4 = ProfileCapability
-          .newInstance("minimum", Resource.newInstance(2048, 1));
-      ProfileCapability capability5 = ProfileCapability.newInstance("default");
-      ProfileCapability capability6 = ProfileCapability
-          .newInstance("default", Resource.newInstance(2048, 1));
-      // http has the same capabilities as default
-      ProfileCapability capability7 = ProfileCapability.newInstance("http");
-
-      ContainerRequest storedContainer1 =
-          new ContainerRequest(capability1, nodes, racks, priority);
-      ContainerRequest storedContainer2 =
-          new ContainerRequest(capability2, nodes, racks, priority);
-      ContainerRequest storedContainer3 =
-          new ContainerRequest(capability3, nodes, racks, priority);
-      ContainerRequest storedContainer4 =
-          new ContainerRequest(capability4, nodes, racks, priority);
-      ContainerRequest storedContainer5 =
-          new ContainerRequest(capability5, nodes, racks, priority2);
-      ContainerRequest storedContainer6 =
-          new ContainerRequest(capability6, nodes, racks, priority);
-      ContainerRequest storedContainer7 =
-          new ContainerRequest(capability7, nodes, racks, priority);
+      ContainerRequest storedContainer1 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "minimum");
+      ContainerRequest storedContainer2 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "default");
+      ContainerRequest storedContainer3 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "maximum");
+      ContainerRequest storedContainer4 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority, "minimum");
+      ContainerRequest storedContainer5 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority2, "default");
+      ContainerRequest storedContainer6 = new ContainerRequest(
+          Resource.newInstance(2048, 1), nodes, racks, priority, "default");
+      ContainerRequest storedContainer7 = new ContainerRequest(
+          Resource.newInstance(0, 0), nodes, racks, priority, "http");
 
 
       amClient.addContainerRequest(storedContainer1);
@@ -1973,11 +1950,8 @@ public class TestAMRMClient {
       List<? extends Collection<ContainerRequest>> matches;
       ContainerRequest storedRequest;
       // exact match
-      ProfileCapability testCapability1 =
-          ProfileCapability.newInstance("minimum");
-      matches = amClient
-          .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
-              testCapability1);
+      matches = amClient.getMatchingRequests(priority, node,
+          ExecutionType.GUARANTEED, Resource.newInstance(0, 0), "minimum");
       verifyMatches(matches, 1);
       storedRequest = matches.get(0).iterator().next();
       assertEquals(storedContainer1, storedRequest);
@@ -1986,11 +1960,9 @@ public class TestAMRMClient {
       // exact matching with order maintained
       // we should get back 3 matches - default + http because they have the
       // same capability
-      ProfileCapability testCapability2 =
-          ProfileCapability.newInstance("default");
       matches = amClient
           .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
-              testCapability2);
+              Resource.newInstance(0, 0), "default");
       verifyMatches(matches, 2);
       // must be returned in the order they were made
       int i = 0;

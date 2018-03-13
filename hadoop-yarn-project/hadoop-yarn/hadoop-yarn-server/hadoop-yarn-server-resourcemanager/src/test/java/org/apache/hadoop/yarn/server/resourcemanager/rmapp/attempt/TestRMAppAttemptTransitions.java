@@ -327,7 +327,15 @@ public class TestRMAppAttemptTransitions {
             masterService, submissionContext, new Configuration(),
             Collections.singletonList(BuilderUtils.newResourceRequest(
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1)), application);
+                submissionContext.getResource(), 1)), application) {
+        @Override
+        protected void onInvalidTranstion(
+                RMAppAttemptEventType rmAppAttemptEventType,
+                RMAppAttemptState state) {
+            Assert.assertTrue("RMAppAttemptImpl can't handle "
+                + rmAppAttemptEventType + " at state " + state, false);
+        }
+    };
 
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
@@ -466,7 +474,7 @@ public class TestRMAppAttemptTransitions {
 
     assertEquals(expectedState, applicationAttempt.getAppAttemptState());
     verify(scheduler, times(expectedAllocateCount)).allocate(
-        any(ApplicationAttemptId.class), any(List.class), any(List.class),
+        any(ApplicationAttemptId.class), any(List.class), eq(null), any(List.class),
         any(List.class), any(List.class), any(ContainerUpdates.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
@@ -487,7 +495,7 @@ public class TestRMAppAttemptTransitions {
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
     verify(scheduler, times(2)).allocate(any(ApplicationAttemptId.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class));
     verify(nmTokenManager).clearNodeSetForAttempt(
       applicationAttempt.getAppAttemptId());
@@ -635,7 +643,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class))).
     thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -974,6 +982,23 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptState());
   }
 
+  @Test(timeout = 10000)
+  public void testAttemptAddedAtFinalSaving() {
+    submitApplicationAttempt();
+
+    // SUBNITED->FINAL_SAVING
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+                   .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+                   applicationAttempt.getAppAttemptState());
+
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+                   .getAppAttemptId(), RMAppAttemptEventType.ATTEMPT_ADDED));
+
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+                   applicationAttempt.getAppAttemptState());
+  }
+
   @Test
   public void testAMCrashAtAllocated() {
     Container amContainer = allocateApplicationAttempt();
@@ -1136,7 +1161,7 @@ public class TestRMAppAttemptTransitions {
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(amContainer));
     when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
-        any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class)))
         .thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -1611,7 +1636,7 @@ public class TestRMAppAttemptTransitions {
   public void testScheduleTransitionReplaceAMContainerRequestWithDefaults() {
     YarnScheduler mockScheduler = mock(YarnScheduler.class);
     when(mockScheduler.allocate(any(ApplicationAttemptId.class),
-        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class), any(List.class),
         any(ContainerUpdates.class)))
         .thenAnswer(new Answer<Allocation>() {
 

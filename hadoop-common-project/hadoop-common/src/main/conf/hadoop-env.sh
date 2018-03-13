@@ -396,6 +396,15 @@ esac
 # export HDFS_MOVER_OPTS=""
 
 ###
+# Router-based HDFS Federation specific parameters
+# Specify the JVM options to be used when starting the RBF Routers.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_DFSROUTER_OPTS=""
+###
+
+###
 # Advanced Users Only!
 ###
 

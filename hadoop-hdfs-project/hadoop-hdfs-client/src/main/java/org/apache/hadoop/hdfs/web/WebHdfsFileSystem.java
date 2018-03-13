@@ -37,8 +37,13 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Base64.Decoder;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -66,6 +71,7 @@ import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -92,6 +98,10 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam.Op;
@@ -133,6 +143,8 @@ public class WebHdfsFileSystem extends FileSystem
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
   public static final String PATH_PREFIX = "/" + WebHdfsConstants.WEBHDFS_SCHEME
       + "/v" + VERSION;
+  public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
+  public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
 
   /**
    * Default connection factory may be overridden in tests to use smaller
@@ -589,8 +601,32 @@ public class WebHdfsFileSystem extends FileSystem
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
+
+    Path encodedFSPath = fspath;
+    if (fspath != null) {
+      URI fspathUri = fspath.toUri();
+      String fspathUriDecoded = fspathUri.getPath();
+      try {
+        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
+      } catch (IllegalArgumentException ex) {
+        LOG.trace("Cannot decode URL encoded file", ex);
+      }
+      String[] fspathItems = fspathUriDecoded.split("/");
+
+      if (fspathItems.length > 0) {
+        StringBuilder fsPathEncodedItems = new StringBuilder();
+        for (String fsPathItem : fspathItems) {
+          fsPathEncodedItems.append("/");
+          fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
+        }
+        encodedFSPath = new Path(fspathUri.getScheme(),
+                fspathUri.getAuthority(), fsPathEncodedItems.substring(1));
+      }
+    }
+
     final String path = PATH_PREFIX
-        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
+        + (encodedFSPath == null ? "/" :
+            makeQualified(encodedFSPath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
@@ -613,10 +649,17 @@ public class WebHdfsFileSystem extends FileSystem
 
     private boolean checkRetry;
     private String redirectHost;
+    private boolean followRedirect = true;
 
     protected AbstractRunner(final HttpOpParam.Op op, boolean redirected) {
       this.op = op;
       this.redirected = redirected;
+    }
+
+    protected AbstractRunner(final HttpOpParam.Op op, boolean redirected,
+        boolean followRedirect) {
+      this(op, redirected);
+      this.followRedirect = followRedirect;
     }
 
     T run() throws IOException {
@@ -685,9 +728,17 @@ public class WebHdfsFileSystem extends FileSystem
           // See http://tinyurl.com/java7-http-keepalive
           conn.disconnect();
         }
+        if (!followRedirect) {
+          return conn;
+        }
       }
       try {
-        return connect(op, url);
+        final HttpURLConnection conn = connect(op, url);
+        // output streams will validate on close
+        if (!op.getDoOutput()) {
+          validateResponse(op, conn, false);
+        }
+        return conn;
       } catch (IOException ioe) {
         if (redirectHost != null) {
           if (excludeDatanodes.getValue() != null) {
@@ -713,6 +764,7 @@ public class WebHdfsFileSystem extends FileSystem
         // The value of the header is unimportant.  Only its presence matters.
         conn.setRequestProperty(restCsrfCustomHeader, "\"\"");
       }
+      conn.setRequestProperty(EZ_HEADER, "true");
       switch (op.getType()) {
       // if not sending a message body for a POST or PUT operation, need
       // to ensure the server/proxy knows this
@@ -760,10 +812,6 @@ public class WebHdfsFileSystem extends FileSystem
         final URL url = getUrl();
         try {
           final HttpURLConnection conn = connect(url);
-          // output streams will validate on close
-          if (!op.getDoOutput()) {
-            validateResponse(op, conn, false);
-          }
           return getResponse(conn);
         } catch (AccessControlException ace) {
           // no retries for auth failures
@@ -809,7 +857,6 @@ public class WebHdfsFileSystem extends FileSystem
               a.action == RetryPolicy.RetryAction.RetryDecision.RETRY;
           boolean isFailoverAndRetry =
               a.action == RetryPolicy.RetryAction.RetryDecision.FAILOVER_AND_RETRY;
-
           if (isRetry || isFailoverAndRetry) {
             LOG.info("Retrying connect to namenode: {}. Already retried {}"
                     + " time(s); retry policy is {}, delay {}ms.",
@@ -990,16 +1037,16 @@ public class WebHdfsFileSystem extends FileSystem
   /**
    * Used by open() which tracks the resolved url itself
    */
-  final class URLRunner extends AbstractRunner<HttpURLConnection> {
+  class URLRunner extends AbstractRunner<HttpURLConnection> {
     private final URL url;
     @Override
-    protected URL getUrl() {
+    protected URL getUrl() throws IOException {
       return url;
     }
 
     protected URLRunner(final HttpOpParam.Op op, final URL url,
-        boolean redirected) {
-      super(op, redirected);
+        boolean redirected, boolean followRedirect) {
+      super(op, redirected, followRedirect);
       this.url = url;
     }
 
@@ -1298,6 +1345,33 @@ public class WebHdfsFileSystem extends FileSystem
         new SnapshotNameParam(snapshotNewName)).run();
   }
 
+  public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+      final String fromSnapshot, final String toSnapshot) throws IOException {
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
+    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
+    return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
+        new OldSnapshotNameParam(fromSnapshot),
+        new SnapshotNameParam(toSnapshot)) {
+      @Override
+      SnapshotDiffReport decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toSnapshotDiffReport(json);
+      }
+    }.run();
+  }
+
+  public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()
+      throws IOException {
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
+    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTTABLEDIRECTORYLIST;
+    return new FsPathResponseRunner<SnapshottableDirectoryStatus[]>(op, null) {
+      @Override
+      SnapshottableDirectoryStatus[] decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toSnapshottableDirectoryList(json);
+      }
+    }.run();
+  }
+
   @Override
   public boolean setReplication(final Path p, final short replication
   ) throws IOException {
@@ -1412,12 +1486,20 @@ public class WebHdfsFileSystem extends FileSystem
     ).run();
   }
 
+  @SuppressWarnings("resource")
   @Override
   public FSDataInputStream open(final Path f, final int bufferSize
   ) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.OPEN);
-    return new FSDataInputStream(new WebHdfsInputStream(f, bufferSize));
+    WebHdfsInputStream webfsInputStream =
+        new WebHdfsInputStream(f, bufferSize);
+    if (webfsInputStream.getFileEncryptionInfo() == null) {
+      return new FSDataInputStream(webfsInputStream);
+    } else {
+      return new FSDataInputStream(
+          webfsInputStream.createWrappedInputStream());
+    }
   }
 
   @Override
@@ -1462,7 +1544,8 @@ public class WebHdfsFileSystem extends FileSystem
         final boolean resolved) throws IOException {
       final URL offsetUrl = offset == 0L? url
           : new URL(url + "&" + new OffsetParam(offset));
-      return new URLRunner(GetOpParam.Op.OPEN, offsetUrl, resolved).run();
+      return new URLRunner(GetOpParam.Op.OPEN, offsetUrl, resolved,
+          true).run();
     }
   }
 
@@ -1841,8 +1924,17 @@ public class WebHdfsFileSystem extends FileSystem
     try {
       keyProviderUri = getServerDefaults().getKeyProviderUri();
     } catch (UnsupportedOperationException e) {
-      // This means server doesn't supports GETSERVERDEFAULTS call.
+      // This means server doesn't support GETSERVERDEFAULTS call.
       // Do nothing, let keyProviderUri = null.
+    } catch (RemoteException e) {
+      if (e.getClassName() != null &&
+          e.getClassName().equals("java.lang.IllegalArgumentException")) {
+        // See HDFS-13100.
+        // This means server doesn't support GETSERVERDEFAULTS call.
+        // Do nothing, let keyProviderUri = null.
+      } else {
+        throw e;
+      }
     }
     return HdfsKMSUtil.getKeyProviderUri(ugi, getUri(), keyProviderUri,
         getConf());
@@ -1928,6 +2020,15 @@ public class WebHdfsFileSystem extends FileSystem
     void setReadRunner(ReadRunner rr) {
       this.readRunner = rr;
     }
+
+    FileEncryptionInfo getFileEncryptionInfo() {
+      return readRunner.getFileEncryptionInfo();
+    }
+
+    InputStream createWrappedInputStream() throws IOException {
+      return HdfsKMSUtil.createWrappedInputStream(
+          this, getKeyProvider(), getFileEncryptionInfo(), getConf());
+    }
   }
 
   enum RunnerState {
@@ -1964,7 +2065,7 @@ public class WebHdfsFileSystem extends FileSystem
     private byte[] readBuffer;
     private int readOffset;
     private int readLength;
-    private RunnerState runnerState = RunnerState.DISCONNECTED;
+    private RunnerState runnerState = RunnerState.SEEK;
     private URL originalUrl = null;
     private URL resolvedUrl = null;
 
@@ -1972,6 +2073,7 @@ public class WebHdfsFileSystem extends FileSystem
     private final int bufferSize;
     private long pos = 0;
     private long fileLength = 0;
+    private FileEncryptionInfo feInfo = null;
 
     /* The following methods are WebHdfsInputStream helpers. */
 
@@ -1979,6 +2081,36 @@ public class WebHdfsFileSystem extends FileSystem
       super(GetOpParam.Op.OPEN, p, new BufferSizeParam(bs));
       this.path = p;
       this.bufferSize = bs;
+      getRedirectedUrl();
+    }
+
+    private void getRedirectedUrl() throws IOException {
+      URLRunner urlRunner = new URLRunner(GetOpParam.Op.OPEN, null, false,
+          false) {
+        @Override
+        protected URL getUrl() throws IOException {
+          return toUrl(op, path, new BufferSizeParam(bufferSize));
+        }
+      };
+      HttpURLConnection conn = urlRunner.run();
+      String feInfoStr = conn.getHeaderField(FEFINFO_HEADER);
+      if (feInfoStr != null) {
+        Decoder decoder = Base64.getDecoder();
+        byte[] decodedBytes = decoder.decode(
+            feInfoStr.getBytes(StandardCharsets.UTF_8));
+        feInfo = PBHelperClient
+            .convert(FileEncryptionInfoProto.parseFrom(decodedBytes));
+      }
+      String location = conn.getHeaderField("Location");
+      if (location != null) {
+        // This saves the location for datanode where redirect was issued.
+        // Need to remove offset because seek can be called after open.
+        resolvedUrl = removeOffsetParam(new URL(location));
+      } else {
+        // This is cached for proxies like httpfsfilesystem.
+        cachedConnection = conn;
+      }
+      originalUrl = super.getUrl();
     }
 
     int read(byte[] b, int off, int len) throws IOException {
@@ -2011,7 +2143,8 @@ public class WebHdfsFileSystem extends FileSystem
       if (runnerState == RunnerState.SEEK) {
         try {
           final URL rurl = new URL(resolvedUrl + "&" + new OffsetParam(pos));
-          cachedConnection = new URLRunner(GetOpParam.Op.OPEN, rurl, true).run();
+          cachedConnection = new URLRunner(GetOpParam.Op.OPEN, rurl, true,
+              false).run();
         } catch (IOException ioe) {
           closeInputStream(RunnerState.DISCONNECTED);
         }
@@ -2194,6 +2327,10 @@ public class WebHdfsFileSystem extends FileSystem
 
     long getPos() {
       return pos;
+    }
+
+    protected FileEncryptionInfo getFileEncryptionInfo() {
+      return feInfo;
     }
   }
 }

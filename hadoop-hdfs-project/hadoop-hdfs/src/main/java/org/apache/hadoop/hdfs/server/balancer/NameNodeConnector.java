@@ -162,9 +162,10 @@ public class NameNodeConnector implements Closeable {
   }
 
   /** @return blocks with locations. */
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
+  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
+      minBlockSize)
       throws IOException {
-    return namenode.getBlocks(datanode, size);
+    return namenode.getBlocks(datanode, size, minBlockSize);
   }
 
   /**

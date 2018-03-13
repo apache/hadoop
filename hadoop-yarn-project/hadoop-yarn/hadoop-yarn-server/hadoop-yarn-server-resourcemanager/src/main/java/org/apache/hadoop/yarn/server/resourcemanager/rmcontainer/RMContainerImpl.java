@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -189,6 +188,8 @@ public class RMContainerImpl implements RMContainer {
   private boolean isExternallyAllocated;
   private SchedulerRequestKey allocatedSchedulerKey;
 
+  private volatile Set<String> allocationTags = null;
+
   public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext) {
@@ -258,6 +259,9 @@ public class RMContainerImpl implements RMContainer {
     if (saveNonAMContainerMetaInfo && null != container.getId()) {
       rmContext.getSystemMetricsPublisher().containerCreated(
           this, this.creationTime);
+    }
+    if (this.container != null) {
+      this.allocationTags = this.container.getAllocationTags();
     }
   }
 
@@ -501,6 +505,15 @@ public class RMContainerImpl implements RMContainer {
     return nodeId;
   }
 
+  @Override
+  public Set<String> getAllocationTags() {
+    return allocationTags;
+  }
+
+  public void setAllocationTags(Set<String> tags) {
+    this.allocationTags = tags;
+  }
+
   private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 
@@ -518,12 +531,18 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEvent event) {
       NMContainerStatus report =
           ((RMContainerRecoverEvent) event).getContainerReport();
+      // Set the allocation tags from the NMContainerStatus
+      container.setAllocationTags(report.getAllocationTags());
+      // Notify AllocationTagsManager
+      container.rmContext.getAllocationTagsManager().addContainer(
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
+
       if (report.getContainerState().equals(ContainerState.COMPLETE)) {
         ContainerStatus status =
             ContainerStatus.newInstance(report.getContainerId(),
               report.getContainerState(), report.getDiagnostics(),
               report.getContainerExitStatus());
-
         new FinishedTransition().transition(container,
           new RMContainerFinishedEvent(container.getContainerId(), status,
             RMContainerEventType.FINISHED));
@@ -565,6 +584,11 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // Notify AllocationTagsManager
+      container.rmContext.getAllocationTagsManager().addContainer(
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
+
       container.eventHandler.handle(new RMAppAttemptEvent(
           container.appAttemptId, RMAppAttemptEventType.CONTAINER_ALLOCATED));
     }
@@ -663,7 +687,7 @@ public class RMContainerImpl implements RMContainer {
         // Something wrong happened, kill the container
         LOG.warn("Something wrong happened, container size reported by NM"
             + " is not expected, ContainerID=" + container.getContainerId()
-            + " rm-size-resource:" + rmContainerResource + " nm-size-reosurce:"
+            + " rm-size-resource:" + rmContainerResource + " nm-size-resource:"
             + nmContainerResource);
         container.eventHandler.handle(new RMNodeCleanContainerEvent(
             container.nodeId, container.getContainerId()));
@@ -676,6 +700,11 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // Notify AllocationTagsManager
+      container.rmContext.getAllocationTagsManager().removeContainer(
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
+
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
       container.finishTime = System.currentTimeMillis();

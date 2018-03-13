@@ -26,12 +26,15 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
 import org.apache.hadoop.yarn.service.ContainerFailureTracker;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
+import org.apache.hadoop.yarn.service.ServiceMaster;
 import org.apache.hadoop.yarn.service.ServiceMetrics;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -105,6 +108,10 @@ public class Component implements EventHandler<ComponentEvent> {
               FLEX, new FlexComponentTransition())
           // container recovered on AM restart
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
+              new ContainerRecoveredTransition())
+
+          // container recovered in AM heartbeat
+          .addTransition(FLEXING, FLEXING, CONTAINER_RECOVERED,
               new ContainerRecoveredTransition())
 
           // container allocated by RM
@@ -205,6 +212,7 @@ public class Component implements EventHandler<ComponentEvent> {
         component.createNumCompInstances(delta);
         component.componentSpec.setState(
             org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
+        component.getScheduler().getApp().setState(ServiceState.STARTED);
         return FLEXING;
       } else if (delta < 0){
         delta = 0 - delta;
@@ -225,14 +233,11 @@ public class Component implements EventHandler<ComponentEvent> {
           component.instanceIdCounter.decrementAndGet();
           instance.destroy();
         }
-        component.componentSpec.setState(
-            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
+        checkAndUpdateComponentState(component, false);
         return STABLE;
       } else {
         LOG.info("[FLEX COMPONENT " + component.getName() + "]: already has " +
             event.getDesired() + " instances, ignoring");
-        component.componentSpec.setState(
-            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
         return STABLE;
       }
     }
@@ -285,7 +290,7 @@ public class Component implements EventHandler<ComponentEvent> {
 
   private static ComponentState checkIfStable(Component component) {
     // if desired == running
-    if (component.componentMetrics.containersRunning.value() == component
+    if (component.componentMetrics.containersReady.value() == component
         .getComponentSpec().getNumberOfContainers()) {
       component.componentSpec.setState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
@@ -294,6 +299,46 @@ public class Component implements EventHandler<ComponentEvent> {
       component.componentSpec.setState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
       return FLEXING;
+    }
+  }
+
+  // This method should be called whenever there is an increment or decrement
+  // of a READY state container of a component
+  public static synchronized void checkAndUpdateComponentState(
+      Component component, boolean isIncrement) {
+    org.apache.hadoop.yarn.service.api.records.ComponentState curState =
+        component.componentSpec.getState();
+    if (isIncrement) {
+      // check if all containers are in READY state
+      if (component.componentMetrics.containersReady
+          .value() == component.componentMetrics.containersDesired.value()) {
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
+        if (curState != component.componentSpec.getState()) {
+          LOG.info("[COMPONENT {}] state changed from {} -> {}",
+              component.componentSpec.getName(), curState,
+              component.componentSpec.getState());
+        }
+        // component state change will trigger re-check of service state
+        ServiceMaster.checkAndUpdateServiceState(component.scheduler,
+            isIncrement);
+      }
+    } else {
+      // container moving out of READY state could be because of FLEX down so
+      // still need to verify the count before changing the component state
+      if (component.componentMetrics.containersReady
+          .value() < component.componentMetrics.containersDesired.value()) {
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
+        if (curState != component.componentSpec.getState()) {
+          LOG.info("[COMPONENT {}] state changed from {} -> {}",
+              component.componentSpec.getName(), curState,
+              component.componentSpec.getState());
+        }
+        // component state change will trigger re-check of service state
+        ServiceMaster.checkAndUpdateServiceState(component.scheduler,
+            isIncrement);
+      }
     }
   }
 
@@ -306,7 +351,12 @@ public class Component implements EventHandler<ComponentEvent> {
               STOP).setStatus(event.getStatus()));
       component.componentSpec.setState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
+      component.getScheduler().getApp().setState(ServiceState.STARTED);
     }
+  }
+
+  public void removePendingInstance(ComponentInstance instance) {
+    pendingInstances.remove(instance);
   }
 
   public void reInsertPendingInstance(ComponentInstance instance) {
@@ -343,9 +393,37 @@ public class Component implements EventHandler<ComponentEvent> {
 
   @SuppressWarnings({ "unchecked" })
   public void requestContainers(long count) {
-    Resource resource = Resource
-        .newInstance(componentSpec.getResource().getMemoryMB(),
-            componentSpec.getResource().getCpus());
+    org.apache.hadoop.yarn.service.api.records.Resource componentResource =
+        componentSpec.getResource();
+
+    Resource resource = Resource.newInstance(componentResource.calcMemoryMB(),
+        componentResource.getCpus());
+
+    if (componentResource.getAdditional() != null) {
+      for (Map.Entry<String, ResourceInformation> entry : componentResource
+          .getAdditional().entrySet()) {
+
+        String resourceName = entry.getKey();
+
+        // Avoid setting memory/cpu under "additional"
+        if (resourceName.equals(
+            org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI)
+            || resourceName.equals(
+            org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI)) {
+          LOG.warn("Please set memory/vcore in the main section of resource, "
+              + "ignoring this entry=" + resourceName);
+          continue;
+        }
+
+        ResourceInformation specInfo = entry.getValue();
+        org.apache.hadoop.yarn.api.records.ResourceInformation ri =
+            org.apache.hadoop.yarn.api.records.ResourceInformation.newInstance(
+                entry.getKey(),
+                specInfo.getUnit(),
+                specInfo.getValue());
+        resource.setResourceInformation(resourceName, ri);
+      }
+    }
 
     for (int i = 0; i < count; i++) {
       //TODO Once YARN-5468 is done, use that for anti-affinity
@@ -464,11 +542,13 @@ public class Component implements EventHandler<ComponentEvent> {
   public void incContainersReady() {
     componentMetrics.containersReady.incr();
     scheduler.getServiceMetrics().containersReady.incr();
+    checkAndUpdateComponentState(this, true);
   }
 
   public void decContainersReady() {
     componentMetrics.containersReady.decr();
     scheduler.getServiceMetrics().containersReady.decr();
+    checkAndUpdateComponentState(this, false);
   }
 
   public int getNumReadyInstances() {

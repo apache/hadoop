@@ -242,6 +242,8 @@ public class TestChildQueueOrder {
       Resources.createResource(numNodes * (memoryPerNode*GB), 
           numNodes * coresPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Start testing
     CSQueue a = queues.get(A);

@@ -26,10 +26,12 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -106,6 +108,25 @@ public final class FederationUtil {
   }
 
   /**
+   * Fetch the Hadoop version string for this jar.
+   *
+   * @return Hadoop version string, e.g., 3.0.1.
+   */
+  public static String getVersion() {
+    return VersionInfo.getVersion();
+  }
+
+  /**
+   * Fetch the build/compile information for this jar.
+   *
+   * @return String Compilation info.
+   */
+  public static String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch();
+  }
+
+  /**
    * Create an instance of an interface with a constructor using a context.
    *
    * @param conf Configuration for the class names.
@@ -165,5 +186,24 @@ public final class FederationUtil {
         DFSConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS_DEFAULT,
         ActiveNamenodeResolver.class);
     return newInstance(conf, stateStore, StateStoreService.class, clazz);
+  }
+
+  /**
+   * Check if the given path is the child of parent path.
+   * @param path Path to be check.
+   * @param parent Parent path.
+   * @return True if parent path is parent entry for given path.
+   */
+  public static boolean isParentEntry(final String path, final String parent) {
+    if (!path.startsWith(parent)) {
+      return false;
+    }
+
+    if (path.equals(parent)) {
+      return true;
+    }
+
+    return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
+        || parent.equals(Path.SEPARATOR);
   }
 }

@@ -66,9 +66,11 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.TRUNCATE, new Class[]{NewLengthParam.class});
     PARAMS_DEF.put(Operation.CREATE,
-      new Class[]{PermissionParam.class, OverwriteParam.class,
-                  ReplicationParam.class, BlockSizeParam.class, DataParam.class});
-    PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class});
+        new Class[]{PermissionParam.class, OverwriteParam.class,
+            ReplicationParam.class, BlockSizeParam.class, DataParam.class,
+            UnmaskedPermissionParam.class});
+    PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class,
+        UnmaskedPermissionParam.class});
     PARAMS_DEF.put(Operation.RENAME, new Class[]{DestinationParam.class});
     PARAMS_DEF.put(Operation.SETOWNER,
         new Class[]{OwnerParam.class, GroupParam.class});
@@ -380,6 +382,28 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public PermissionParam() {
       super(NAME, HttpFSFileSystem.DEFAULT_PERMISSION, 8);
+    }
+
+  }
+
+  /**
+   * Class for unmaskedpermission parameter.
+   */
+  @InterfaceAudience.Private
+  public static class UnmaskedPermissionParam extends ShortParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME =
+        HttpFSFileSystem.UNMASKED_PERMISSION_PARAM;
+
+
+    /**
+     * Constructor.
+     */
+    public UnmaskedPermissionParam() {
+      super(NAME, (short) -1, 8);
     }
 
   }

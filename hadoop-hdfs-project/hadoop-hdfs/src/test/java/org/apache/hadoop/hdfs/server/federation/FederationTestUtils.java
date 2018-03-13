@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -52,6 +51,9 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServi
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.GenericTestUtils;
+
+import com.google.common.base.Supplier;
 
 /**
  * Helper utilities for testing HDFS Federation.
@@ -108,33 +110,41 @@ public final class FederationTestUtils {
     return report;
   }
 
-  public static void waitNamenodeRegistered(ActiveNamenodeResolver resolver,
-      String nsId, String nnId, FederationNamenodeServiceState finalState)
-          throws InterruptedException, IllegalStateException, IOException {
+  /**
+   * Wait for a namenode to be registered with a particular state.
+   * @param resolver Active namenode resolver.
+   * @param nsId Nameservice identifier.
+   * @param nnId Namenode identifier.
+   * @param finalState State to check for.
+   * @throws Exception Failed to verify State Store registration of namenode
+   *                   nsId:nnId for state.
+   */
+  public static void waitNamenodeRegistered(
+      final ActiveNamenodeResolver resolver,
+      final String nsId, final String nnId,
+      final FederationNamenodeServiceState state) throws Exception {
 
-    for (int loopCount = 0; loopCount < 20; loopCount++) {
-      if (loopCount > 0) {
-        Thread.sleep(1000);
-      }
-
-      List<? extends FederationNamenodeContext> namenodes =
-          resolver.getNamenodesForNameserviceId(nsId);
-      for (FederationNamenodeContext namenode : namenodes) {
-        // Check if this is the Namenode we are checking
-        if (namenode.getNamenodeId() == nnId  ||
-            namenode.getNamenodeId().equals(nnId)) {
-          if (finalState != null && !namenode.getState().equals(finalState)) {
-            // Wrong state, wait a bit more
-            break;
-          } else {
-            // Found and verified
-            return;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          List<? extends FederationNamenodeContext> namenodes =
+              resolver.getNamenodesForNameserviceId(nsId);
+          if (namenodes != null) {
+            for (FederationNamenodeContext namenode : namenodes) {
+              // Check if this is the Namenode we are checking
+              if (namenode.getNamenodeId() == nnId  ||
+                  namenode.getNamenodeId().equals(nnId)) {
+                return state == null || namenode.getState().equals(state);
+              }
+            }
           }
+        } catch (IOException e) {
+          // Ignore
         }
+        return false;
       }
-    }
-    fail("Failed to verify State Store registration of " + nsId + " " + nnId +
-        " for state " + finalState);
+    }, 1000, 20 * 1000);
   }
 
   public static boolean verifyDate(Date d1, Date d2, long precision) {

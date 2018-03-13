@@ -21,8 +21,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.AbstractList;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -36,10 +37,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,7 +140,7 @@ public class DatanodeAdminManager {
         new ThreadFactoryBuilder().setNameFormat("DatanodeAdminMonitor-%d")
             .setDaemon(true).build());
     outOfServiceNodeBlocks = new TreeMap<>();
-    pendingNodes = new LinkedList<>();
+    pendingNodes = new ArrayDeque<>();
   }
 
   /**
@@ -215,7 +220,7 @@ public class DatanodeAdminManager {
         pendingNodes.add(node);
       }
     } else {
-      LOG.trace("startDecommission: Node {} in {}, nothing to do." +
+      LOG.trace("startDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -238,7 +243,7 @@ public class DatanodeAdminManager {
       pendingNodes.remove(node);
       outOfServiceNodeBlocks.remove(node);
     } else {
-      LOG.trace("stopDecommission: Node {} in {}, nothing to do." +
+      LOG.trace("stopDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -268,7 +273,7 @@ public class DatanodeAdminManager {
       // IN_MAINTENANCE to support maintenance expiration.
       pendingNodes.add(node);
     } else {
-      LOG.trace("startMaintenance: Node {} in {}, nothing to do." +
+      LOG.trace("startMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -317,7 +322,7 @@ public class DatanodeAdminManager {
       pendingNodes.remove(node);
       outOfServiceNodeBlocks.remove(node);
     } else {
-      LOG.trace("stopMaintenance: Node {} in {}, nothing to do." +
+      LOG.trace("stopMaintenance: Node {} in {}, nothing to do.",
           node, node.getAdminState());
     }
   }
@@ -391,7 +396,7 @@ public class DatanodeAdminManager {
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       nodeList.append(node);
-      nodeList.append(" ");
+      nodeList.append(' ');
     }
     NameNode.blockStateChangeLog.info(
         "Block: " + block + ", Expected Replicas: "
@@ -513,7 +518,7 @@ public class DatanodeAdminManager {
       final Iterator<Map.Entry<DatanodeDescriptor, AbstractList<BlockInfo>>>
           it = new CyclicIteration<>(outOfServiceNodeBlocks,
               iterkey).iterator();
-      final LinkedList<DatanodeDescriptor> toRemove = new LinkedList<>();
+      final List<DatanodeDescriptor> toRemove = new ArrayList<>();
 
       while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
           .isRunning()) {
@@ -579,12 +584,12 @@ public class DatanodeAdminManager {
                   "A node is in an invalid state!");
             }
             LOG.debug("Node {} is sufficiently replicated and healthy, "
-                + "marked as {}.", dn.getAdminState());
+                + "marked as {}.", dn, dn.getAdminState());
           } else {
             LOG.debug("Node {} {} healthy."
                 + " It needs to replicate {} more blocks."
                 + " {} is still in progress.", dn,
-                isHealthy? "is": "isn't", blocks.size(), dn.getAdminState());
+                isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
           }
         } else {
           LOG.debug("Node {} still has {} blocks to replicate "
@@ -649,8 +654,10 @@ public class DatanodeAdminManager {
         boolean pruneReliableBlocks) {
       boolean firstReplicationLog = true;
       // Low redundancy in UC Blocks only
-      int lowRedundancyInOpenFiles = 0;
-      // All low redundancy blocks. Includes lowRedundancyInOpenFiles.
+      int lowRedundancyBlocksInOpenFiles = 0;
+      LightWeightHashSet<Long> lowRedundancyOpenFiles =
+          new LightWeightLinkedSet<>();
+      // All low redundancy blocks. Includes lowRedundancyOpenFiles.
       int lowRedundancyBlocks = 0;
       // All maintenance and decommission replicas.
       int outOfServiceOnlyReplicas = 0;
@@ -737,15 +744,24 @@ public class DatanodeAdminManager {
         // Update various counts
         lowRedundancyBlocks++;
         if (bc.isUnderConstruction()) {
-          lowRedundancyInOpenFiles++;
+          INode ucFile = namesystem.getFSDirectory().getInode(bc.getId());
+          if (!(ucFile instanceof  INodeFile) ||
+              !ucFile.asFile().isUnderConstruction()) {
+            LOG.warn("File {} is not under construction. Skipping add to " +
+                "low redundancy open files!", ucFile.getLocalName());
+          } else {
+            lowRedundancyBlocksInOpenFiles++;
+            lowRedundancyOpenFiles.add(ucFile.getId());
+          }
         }
         if ((liveReplicas == 0) && (num.outOfServiceReplicas() > 0)) {
           outOfServiceOnlyReplicas++;
         }
       }
 
-      datanode.getLeavingServiceStatus().set(lowRedundancyInOpenFiles,
-          lowRedundancyBlocks, outOfServiceOnlyReplicas);
+      datanode.getLeavingServiceStatus().set(lowRedundancyBlocksInOpenFiles,
+          lowRedundancyOpenFiles, lowRedundancyBlocks,
+          outOfServiceOnlyReplicas);
     }
   }
 

@@ -269,7 +269,9 @@ public class DiskBalancerVolume {
    * @param dfsUsedSpace - dfsUsedSpace for this volume.
    */
   public void setUsed(long dfsUsedSpace) {
-    Preconditions.checkArgument(dfsUsedSpace < this.getCapacity());
+    Preconditions.checkArgument(dfsUsedSpace < this.getCapacity(),
+        "DiskBalancerVolume.setUsed: dfsUsedSpace(%s) < capacity(%s)",
+        dfsUsedSpace, getCapacity());
     this.used = dfsUsedSpace;
   }
 

@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -59,16 +58,17 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     return new TestableUnmanagedAMPoolManager(threadPool);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  protected ApplicationMasterProtocol createHomeRMProxy(
-      AMRMProxyApplicationContext appContext) {
+  protected <T> T createHomeRMProxy(AMRMProxyApplicationContext appContext,
+      Class<T> protocol, UserGroupInformation user) {
     synchronized (this) {
       if (mockRm == null) {
         mockRm = new MockResourceManagerFacade(
             new YarnConfiguration(super.getConf()), 0);
       }
     }
-    return mockRm;
+    return (T) mockRm;
   }
 
   @SuppressWarnings("unchecked")

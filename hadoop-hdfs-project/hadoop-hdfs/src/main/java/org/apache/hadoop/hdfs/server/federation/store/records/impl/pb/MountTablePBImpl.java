@@ -21,13 +21,19 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto.Builder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto.DestOrder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoteLocationProto;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
+import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.FederationProtocolPBTranslator;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 
@@ -186,6 +192,100 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       builder.clearDestOrder();
     } else {
       builder.setDestOrder(convert(order));
+    }
+  }
+
+  @Override
+  public String getOwnerName() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+    if (!proto.hasOwnerName()) {
+      return RouterAdminServer.getSuperUser();
+    }
+    return proto.getOwnerName();
+  }
+
+  @Override
+  public void setOwnerName(String owner) {
+    Builder builder = this.translator.getBuilder();
+    if (owner == null) {
+      builder.clearOwnerName();
+    } else {
+      builder.setOwnerName(owner);
+    }
+  }
+
+  @Override
+  public String getGroupName() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+    if (!proto.hasGroupName()) {
+      return RouterAdminServer.getSuperGroup();
+    }
+    return proto.getGroupName();
+  }
+
+  @Override
+  public void setGroupName(String group) {
+    Builder builder = this.translator.getBuilder();
+    if (group == null) {
+      builder.clearGroupName();
+    } else {
+      builder.setGroupName(group);
+    }
+  }
+
+  @Override
+  public FsPermission getMode() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+    short mode = RouterPermissionChecker.MOUNT_TABLE_PERMISSION_DEFAULT;
+    if (proto.hasMode()) {
+      mode = (short) proto.getMode();
+    }
+    return new FsPermission(mode);
+  }
+
+  @Override
+  public void setMode(FsPermission mode) {
+    Builder builder = this.translator.getBuilder();
+    if (mode == null) {
+      builder.clearMode();
+    } else {
+      builder.setMode(mode.toShort());
+    }
+  }
+
+  @Override
+  public RouterQuotaUsage getQuota() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+
+    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    long nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
+    long ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+    if (proto.hasQuota()) {
+      QuotaUsageProto quotaProto = proto.getQuota();
+      nsQuota = quotaProto.getQuota();
+      nsCount = quotaProto.getFileAndDirectoryCount();
+      ssQuota = quotaProto.getSpaceQuota();
+      ssCount = quotaProto.getSpaceConsumed();
+    }
+
+    RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+        .quota(nsQuota).fileAndDirectoryCount(nsCount).spaceQuota(ssQuota)
+        .spaceConsumed(ssCount);
+    return builder.build();
+  }
+
+  @Override
+  public void setQuota(RouterQuotaUsage quota) {
+    Builder builder = this.translator.getBuilder();
+    if (quota == null) {
+      builder.clearQuota();
+    } else {
+      QuotaUsageProto quotaUsage = QuotaUsageProto.newBuilder()
+          .setFileAndDirectoryCount(quota.getFileAndDirectoryCount())
+          .setQuota(quota.getQuota()).setSpaceConsumed(quota.getSpaceConsumed())
+          .setSpaceQuota(quota.getSpaceQuota()).build();
+      builder.setQuota(quotaUsage);
     }
   }
 

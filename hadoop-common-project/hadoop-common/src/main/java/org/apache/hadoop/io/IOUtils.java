@@ -19,6 +19,7 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -35,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -296,7 +298,19 @@ public class IOUtils {
       cleanupWithLogger(null, stream);
     }
   }
-  
+
+  /**
+   * Closes the streams ignoring {@link Throwable}.
+   * Must only be called in cleaning up from exception handlers.
+   *
+   * @param streams the Streams to close
+   */
+  public static void closeStreams(java.io.Closeable... streams) {
+    if (streams != null) {
+      cleanupWithLogger(null, streams);
+    }
+  }
+
   /**
    * Closes the socket ignoring {@link IOException}
    *
@@ -436,6 +450,60 @@ public class IOUtils {
       }
       // Throw original exception
       throw ioe;
+    }
+  }
+
+  /**
+   * Takes an IOException, file/directory path, and method name and returns an
+   * IOException with the input exception as the cause and also include the
+   * file,method details. The new exception provides the stack trace of the
+   * place where the exception is thrown and some extra diagnostics
+   * information.
+   *
+   * Return instance of same exception if exception class has a public string
+   * constructor; Otherwise return an PathIOException.
+   * InterruptedIOException and PathIOException are returned unwrapped.
+   *
+   * @param path file/directory path
+   * @param methodName method name
+   * @param exception the caught exception.
+   * @return an exception to throw
+   */
+  public static IOException wrapException(final String path,
+      final String methodName, final IOException exception) {
+
+    if (exception instanceof InterruptedIOException
+        || exception instanceof PathIOException) {
+      return exception;
+    } else {
+      String msg = String
+          .format("Failed with %s while processing file/directory :[%s] in "
+                  + "method:[%s]",
+              exception.getClass().getName(), path, methodName);
+      try {
+        return wrapWithMessage(exception, msg);
+      } catch (Exception ex) {
+        // For subclasses which have no (String) constructor throw IOException
+        // with wrapped message
+
+        return new PathIOException(path, exception);
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T extends IOException> T wrapWithMessage(
+      final T exception, final String msg) throws T {
+    Class<? extends Throwable> clazz = exception.getClass();
+    try {
+      Constructor<? extends Throwable> ctor = clazz
+          .getConstructor(String.class);
+      Throwable t = ctor.newInstance(msg);
+      return (T) (t.initCause(exception));
+    } catch (Throwable e) {
+      LOG.warn("Unable to wrap exception of type " +
+          clazz + ": it has no (String) constructor", e);
+      throw exception;
     }
   }
 }

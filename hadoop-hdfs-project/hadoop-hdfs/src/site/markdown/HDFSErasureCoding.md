@@ -99,6 +99,10 @@ Deployment
 
   Encoding and decoding work consumes additional CPU on both HDFS clients and DataNodes.
 
+  Erasure coding requires a minimum of as many DataNodes in the cluster as
+  the configured EC stripe width. For EC policy RS (6,3), this means
+  a minimum of 9 DataNodes.
+
   Erasure coded files are also spread across racks for rack fault-tolerance.
   This means that when reading and writing striped files, most operations are off-rack.
   Network bisection bandwidth is thus very important.
@@ -220,11 +224,14 @@ Below are the details about each command.
 Limitations
 -----------
 
-Certain HDFS file write operations, i.e., `hflush`, `hsync` and `append`,
+Certain HDFS operations, i.e., `hflush`, `hsync`, `concat`, `setReplication`, `truncate` and `append`,
 are not supported on erasure coded files due to substantial technical
 challenges.
 
-* `append()` on an erasure coded file will throw `IOException`.
+* `append()` and `truncate()` on an erasure coded file will throw `IOException`.
+* `concat()` will throw `IOException` if files are mixed with different erasure
+coding policies or with replicated files.
+* `setReplication()` is no-op on erasure coded files.
 * `hflush()` and `hsync()` on `DFSStripedOutputStream` are no-op. Thus calling
 `hflush()` or `hsync()` on an erasure coded file can not guarantee data
 being persistent.

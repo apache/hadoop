@@ -418,7 +418,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.ATTEMPT_NEW_SAVED,
               RMAppAttemptEventType.KILL,
-              RMAppAttemptEventType.FAIL))
+              RMAppAttemptEventType.FAIL,
+              RMAppAttemptEventType.ATTEMPT_ADDED))
 
       // Transitions from FAILED State
       // For work-preserving AM restart, failed attempt are still capturing
@@ -909,7 +910,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       } catch (InvalidStateTransitionException e) {
         LOG.error("App attempt: " + appAttemptID
             + " can't handle this event at current state", e);
-        /* TODO fail the application on the failed transition */
+        onInvalidTranstion(event.getType(), oldState);
       }
 
       // Log at INFO if we're not recovering or not in a terminal state.
@@ -1112,8 +1113,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         Allocation amContainerAllocation =
             appAttempt.scheduler.allocate(
                 appAttempt.applicationAttemptId,
-                appAttempt.amReqs,
-                EMPTY_CONTAINER_RELEASE_LIST,
+                appAttempt.amReqs, null, EMPTY_CONTAINER_RELEASE_LIST,
                 amBlacklist.getBlacklistAdditions(),
                 amBlacklist.getBlacklistRemovals(),
                 new ContainerUpdates());
@@ -1139,7 +1139,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Acquire the AM container from the scheduler.
       Allocation amContainerAllocation =
           appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
-            EMPTY_CONTAINER_REQUEST_LIST, EMPTY_CONTAINER_RELEASE_LIST, null,
+            EMPTY_CONTAINER_REQUEST_LIST, null, EMPTY_CONTAINER_RELEASE_LIST, null,
             null, new ContainerUpdates());
       // There must be at least one container allocated, because a
       // CONTAINER_ALLOCATED is emitted after an RMContainer is constructed,
@@ -2237,7 +2237,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         return attempt.getBlacklistedNodes();
       }
     }
-    return Collections.EMPTY_SET;
+    return Collections.emptySet();
   }
 
+  protected void onInvalidTranstion(RMAppAttemptEventType rmAppAttemptEventType,
+          RMAppAttemptState state){
+      /* TODO fail the application on the failed transition */
+  }
 }

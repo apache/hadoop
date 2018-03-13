@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
+import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
@@ -64,10 +65,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegist
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegistrationsResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationsRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetRouterRegistrationsResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
+import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -75,6 +80,8 @@ import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of the Router metrics collector.
@@ -106,6 +113,8 @@ public class FederationMetrics implements FederationMBean {
   private MembershipStore membershipStore;
   /** Mount table store. */
   private MountTableStore mountTableStore;
+  /** Router state store. */
+  private RouterStore routerStore;
 
 
   public FederationMetrics(Router router) throws IOException {
@@ -131,6 +140,8 @@ public class FederationMetrics implements FederationMBean {
           MembershipStore.class);
       this.mountTableStore = stateStore.getRegisteredRecordStore(
           MountTableStore.class);
+      this.routerStore = stateStore.getRegisteredRecordStore(
+          RouterStore.class);
     }
   }
 
@@ -262,6 +273,63 @@ public class FederationMetrics implements FederationMBean {
   }
 
   @Override
+  public String getRouters() {
+    final Map<String, Map<String, Object>> info = new LinkedHashMap<>();
+    try {
+      // Get all the routers in order
+      GetRouterRegistrationsRequest request =
+          GetRouterRegistrationsRequest.newInstance();
+      GetRouterRegistrationsResponse response =
+          routerStore.getRouterRegistrations(request);
+      final List<RouterState> routers = response.getRouters();
+      List<RouterState> routersOrder = new ArrayList<>(routers);
+      Collections.sort(routersOrder);
+
+      // Dump router information into JSON
+      for (RouterState record : routersOrder) {
+        Map<String, Object> innerInfo = new HashMap<>();
+        Map<String, Object> map = getJson(record);
+        innerInfo.putAll(map);
+        long dateModified = record.getDateModified();
+        long lastHeartbeat = getSecondsSince(dateModified);
+        innerInfo.put("lastHeartbeat", lastHeartbeat);
+
+        StateStoreVersion stateStoreVersion = record.getStateStoreVersion();
+        if (stateStoreVersion == null) {
+          LOG.error("Cannot get State Store versions");
+        } else {
+          setStateStoreVersions(innerInfo, stateStoreVersion);
+        }
+
+        info.put(record.getPrimaryKey(),
+            Collections.unmodifiableMap(innerInfo));
+      }
+    } catch (IOException e) {
+      LOG.error("Cannot get Routers JSON from the State Store", e);
+      return "{}";
+    }
+    return JSON.toString(info);
+  }
+
+  /**
+   * Populate the map with the State Store versions.
+   *
+   * @param innerInfo Map with the information.
+   * @param version State Store versions.
+   */
+  private static void setStateStoreVersions(
+      Map<String, Object> map, StateStoreVersion version) {
+
+    long membershipVersion = version.getMembershipVersion();
+    String lastMembershipUpdate = getDateString(membershipVersion);
+    map.put("lastMembershipUpdate", lastMembershipUpdate);
+
+    long mountTableVersion = version.getMountTableVersion();
+    String lastMountTableDate = getDateString(mountTableVersion);
+    map.put("lastMountTableUpdate", lastMountTableDate);
+  }
+
+  @Override
   public long getTotalCapacity() {
     return getNameserviceAggregatedLong(MembershipStats::getTotalSpace);
   }
@@ -269,6 +337,11 @@ public class FederationMetrics implements FederationMBean {
   @Override
   public long getRemainingCapacity() {
     return getNameserviceAggregatedLong(MembershipStats::getAvailableSpace);
+  }
+
+  @Override
+  public long getProvidedSpace() {
+    return getNameserviceAggregatedLong(MembershipStats::getProvidedSpace);
   }
 
   @Override
@@ -582,7 +655,8 @@ public class FederationMetrics implements FederationMBean {
    * @param time Seconds since 1970.
    * @return String representing the date.
    */
-  private static String getDateString(long time) {
+  @VisibleForTesting
+  static String getDateString(long time) {
     if (time <= 0) {
       return "-";
     }

@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -67,7 +69,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -75,6 +76,7 @@ import org.apache.hadoop.yarn.util.TestProcfsBasedProcessTree;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 
 public class TestContainersMonitor extends BaseContainerManagerTest {
@@ -93,6 +95,22 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
         LinuxResourceCalculatorPlugin.class, ResourceCalculatorPlugin.class);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     super.setup();
+  }
+
+  @Test
+  public void testMetricsUpdate() throws Exception {
+    // This test doesn't verify the correction of those metrics
+    // updated by the monitor, it only verifies that the monitor
+    // do publish these info to node manager metrics system in
+    // each monitor interval.
+    Context spyContext = spy(context);
+    ContainersMonitorImpl cm =
+        new ContainersMonitorImpl(mock(ContainerExecutor.class),
+            mock(AsyncDispatcher.class), spyContext);
+    cm.init(getConfForCM(false, true, 1024, 2.1f));
+    cm.start();
+    Mockito.verify(spyContext, timeout(500).atLeastOnce())
+        .getNodeManagerMetrics();
   }
 
   /**
@@ -314,8 +332,8 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     Assert.assertEquals(ContainerExitStatus.KILLED_EXCEEDED_VMEM,
         containerStatus.getExitStatus());
     String expectedMsgPattern =
-        "Container \\[pid=" + pid + ",containerID=" + cId
-            + "\\] is running beyond virtual memory limits. Current usage: "
+        "Container \\[pid=" + pid + ",containerID=" + cId + "\\] is running "
+            + "[0-9]+B beyond the 'VIRTUAL' memory limit. Current usage: "
             + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B physical memory used; "
             + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B virtual memory used. "
             + "Killing container.\nDump of the process-tree for "

@@ -312,7 +312,7 @@ public class TestDFSClientFailover {
     conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + service,
         namenode);
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + service + "."
-        + namenode, "localhost:9820");
+        + namenode, "localhost:8020");
 
     // call createProxy implicitly and explicitly
     Path p = new Path("/");

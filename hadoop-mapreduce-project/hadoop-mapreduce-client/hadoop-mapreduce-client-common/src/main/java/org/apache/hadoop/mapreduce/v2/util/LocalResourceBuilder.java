@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +34,8 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for MR applications that parses distributed cache artifacts and
@@ -45,7 +45,8 @@ import org.apache.hadoop.yarn.api.records.URL;
 @Private
 @Unstable
 class LocalResourceBuilder {
-  public static final Log LOG = LogFactory.getLog(LocalResourceBuilder.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LocalResourceBuilder.class);
 
   private Configuration conf;
   private LocalResourceType type;

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
@@ -47,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
@@ -89,7 +91,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   @Override
   protected Path path(String filepath) throws IOException {
     return useInconsistentClient() ?
-           super.path(InconsistentAmazonS3Client.DEFAULT_DELAY_KEY_SUBSTRING
+           super.path(FailureInjectionPolicy.DEFAULT_DELAY_KEY_SUBSTRING
                + "/" + filepath)
            : super.path(filepath);
   }
@@ -207,7 +209,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param p probability of a throttling occurring: 0-1.0
    */
   protected void setThrottling(float p) {
-    inconsistentClient.setThrottleProbability(p);
+    if (inconsistentClient != null) {
+      inconsistentClient.setThrottleProbability(p);
+    }
   }
 
   /**
@@ -216,7 +220,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param limit limit to number of calls which fail
    */
   protected void setThrottling(float p, int limit) {
-    inconsistentClient.setThrottleProbability(p);
+    if (inconsistentClient != null) {
+      inconsistentClient.setThrottleProbability(p);
+    }
     setFailureLimit(limit);
   }
 
@@ -234,7 +240,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param limit limit to number of calls which fail
    */
   private void setFailureLimit(int limit) {
-    inconsistentClient.setFailureLimit(limit);
+    if (inconsistentClient != null) {
+      inconsistentClient.setFailureLimit(limit);
+    }
   }
 
   /**
@@ -247,7 +255,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.createWriteOperationHelper();
+      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
       int count = writeOps.abortMultipartUploadsUnderPath(key);
       if (count > 0) {
         log().info("Multipart uploads deleted: {}", count);

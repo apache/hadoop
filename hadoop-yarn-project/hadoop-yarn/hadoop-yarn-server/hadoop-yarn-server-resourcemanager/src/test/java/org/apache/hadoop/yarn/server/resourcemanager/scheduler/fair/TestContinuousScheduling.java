@@ -61,10 +61,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Deprecated
 public class TestContinuousScheduling extends FairSchedulerTestBase {
   private ControlledClock mockClock;
   private static int delayThresholdTimeMs = 1000;
 
+  @SuppressWarnings("deprecation")
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -77,6 +79,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     return conf;
   }
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setup() {
     mockClock = new ControlledClock();
@@ -122,7 +125,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
     scheduler.allocate(
-        appAttemptId, ask, new ArrayList<ContainerId>(),
+        appAttemptId, ask, null, new ArrayList<ContainerId>(),
         null, null, NULL_UPDATE_REQUESTS);
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
@@ -160,8 +163,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ResourceRequest request =
         createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
@@ -172,8 +174,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
     ask.clear();
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     checkAppConsumption(app, Resources.createResource(2048,2));
@@ -187,6 +188,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     Assert.assertEquals(2, nodes.size());
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testWithNodeRemoved() throws Exception {
     // Disable continuous scheduling, will invoke continuous
@@ -240,6 +242,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testInterruptedException()
           throws Exception {
@@ -284,6 +287,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testSchedulerThreadLifeCycle() throws InterruptedException {
     scheduler.start();
@@ -300,6 +304,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     assertNotEquals("The Scheduling thread is still alive", 0, numRetries);
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void TestNodeAvailableResourceComparatorTransitivity() {
     ClusterNodeTracker<FSSchedulerNode> clusterNodeTracker =
@@ -366,7 +371,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         true);
     ask1.add(request1);
     ask1.add(request2);
-    scheduler.allocate(id11, ask1, new ArrayList<ContainerId>(), null, null,
+    scheduler.allocate(id11, ask1, null, new ArrayList<ContainerId>(), null, null,
         NULL_UPDATE_REQUESTS);
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
@@ -384,6 +389,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     assertEquals(delayThresholdTimeMs, initSchedulerTime);
   }
 
+  @SuppressWarnings("deprecation")
   private void triggerSchedulingAttempt() throws InterruptedException {
     Thread.sleep(
         2 * scheduler.getConf().getContinuousSchedulingSleepMs());

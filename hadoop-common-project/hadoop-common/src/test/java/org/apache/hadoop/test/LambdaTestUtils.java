@@ -604,8 +604,44 @@ public final class LambdaTestUtils {
   public static <T> void assertOptionalUnset(String message,
       Optional<T> actual) {
     Assert.assertNotNull(message, actual);
-    if (actual.isPresent()) {
-      Assert.fail("Expected empty option, got " + actual.get().toString());
+    actual.ifPresent(
+        t -> Assert.fail("Expected empty option, got " + t.toString()));
+  }
+
+  /**
+   * Invoke a callable; wrap all checked exceptions with an
+   * AssertionError.
+   * @param closure closure to execute
+   * @param <T> return type of closure
+   * @return the value of the closure
+   * @throws AssertionError if the operation raised an IOE or
+   * other checked exception.
+   */
+  public static <T> T eval(Callable<T> closure) {
+    try {
+      return closure.call();
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new AssertionError(e.toString(), e);
+    }
+  }
+
+  /**
+   * Invoke a callable; wrap all checked exceptions with an
+   * AssertionError.
+   * @param closure closure to execute
+   * @return the value of the closure
+   * @throws AssertionError if the operation raised an IOE or
+   * other checked exception.
+   */
+  public static void eval(VoidCallable closure) {
+    try {
+      closure.call();
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new AssertionError(e.toString(), e);
     }
   }
 

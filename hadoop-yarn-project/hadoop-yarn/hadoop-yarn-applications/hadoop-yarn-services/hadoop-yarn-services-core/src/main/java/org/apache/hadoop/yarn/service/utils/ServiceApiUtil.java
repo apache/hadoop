@@ -61,6 +61,9 @@ public class ServiceApiUtil {
   private static final PatternValidator namePattern
       = new PatternValidator("[a-z][a-z0-9-]*");
 
+  private static final PatternValidator userNamePattern
+      = new PatternValidator("[a-z][a-z0-9-.]*");
+
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
     jsonSerDeser = jsd;
@@ -72,14 +75,24 @@ public class ServiceApiUtil {
       IOException {
     boolean dnsEnabled = conf.getBoolean(RegistryConstants.KEY_DNS_ENABLED,
         RegistryConstants.DEFAULT_DNS_ENABLED);
-    if (dnsEnabled && RegistryUtils.currentUser().length() > RegistryConstants
-        .MAX_FQDN_LABEL_LENGTH) {
-      throw new IllegalArgumentException(RestApiErrorMessages
-          .ERROR_USER_NAME_INVALID);
+    if (dnsEnabled) {
+      if (RegistryUtils.currentUser().length()
+          > RegistryConstants.MAX_FQDN_LABEL_LENGTH) {
+        throw new IllegalArgumentException(
+            RestApiErrorMessages.ERROR_USER_NAME_INVALID);
+      }
+      userNamePattern.validate(RegistryUtils.currentUser());
     }
+
     if (StringUtils.isEmpty(service.getName())) {
       throw new IllegalArgumentException(
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
+    }
+
+    if (StringUtils.isEmpty(service.getVersion())) {
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_APPLICATION_VERSION_INVALID,
+          service.getName()));
     }
 
     validateNameFormat(service.getName(), conf);
@@ -330,13 +343,19 @@ public class ServiceApiUtil {
       org.apache.hadoop.yarn.api.records.Resource maxResource,
       Service service) throws YarnException {
     for (Component component : service.getComponents()) {
-      // only handle mem now.
       long mem = Long.parseLong(component.getResource().getMemory());
       if (mem > maxResource.getMemorySize()) {
         throw new YarnException(
-            "Component " + component.getName() + " memory size (" + mem
-                + ") is larger than configured max container memory size ("
-                + maxResource.getMemorySize() + ")");
+            "Component " + component.getName() + ": specified memory size ("
+                + mem + ") is larger than configured max container memory " +
+                "size (" + maxResource.getMemorySize() + ")");
+      }
+      int cpu = component.getResource().getCpus();
+      if (cpu > maxResource.getVirtualCores()) {
+        throw new YarnException(
+            "Component " + component.getName() + ": specified number of " +
+                "virtual core (" + cpu + ") is larger than configured max " +
+                "virtual core size (" + maxResource.getVirtualCores() + ")");
       }
     }
   }

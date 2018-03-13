@@ -20,7 +20,6 @@ package org.apache.hadoop.util.curator;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.curator.framework.AuthInfo;
@@ -32,6 +31,7 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
@@ -100,22 +100,11 @@ public final class ZKCuratorManager {
    * Utility method to fetch ZK auth info from the configuration.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
+   * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
    */
   public static List<ZKUtil.ZKAuthInfo> getZKAuths(Configuration conf)
       throws IOException {
-    String zkAuthConf = conf.get(CommonConfigurationKeys.ZK_AUTH);
-    try {
-      zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
-      if (zkAuthConf != null) {
-        return ZKUtil.parseAuth(zkAuthConf);
-      } else {
-        return Collections.emptyList();
-      }
-    } catch (IOException | ZKUtil.BadAuthFormatException e) {
-      LOG.error("Couldn't read Auth based on {}",
-          CommonConfigurationKeys.ZK_AUTH);
-      throw e;
-    }
+    return SecurityUtil.getZKAuthInfos(conf, CommonConfigurationKeys.ZK_AUTH);
   }
 
   /**

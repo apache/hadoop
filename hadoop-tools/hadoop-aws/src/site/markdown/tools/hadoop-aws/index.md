@@ -1,4 +1,3 @@
-
 <!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,10 +25,12 @@ Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 See also:
 
 * [Encryption](./encryption.html)
+* [Performance](./performance.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
+* [Working with IAM Assumed Roles](./assumed_roles.html)
 * [Testing](./testing.html)
 
 ##<a name="overview"></a> Overview
@@ -491,30 +492,88 @@ This means that the default S3A authentication chain can be defined as
 </property>
 ```
 
-### <a name="auth_security"></a> Protecting the AWS Credentials
+## <a name="auth_security"></a> Protecting the AWS Credentials
 
-To protect the access/secret keys from prying eyes, it is recommended that you
-use either IAM role-based authentication (such as EC2 instance profile) or
-the credential provider framework securely storing them and accessing them
-through configuration. The following describes using the latter for AWS
-credentials in the S3A FileSystem.
+It is critical that you never share or leak your AWS credentials.
+Loss of credentials can leak/lose all your data, run up large bills,
+and significantly damage your organisation.
 
+1. Never share your secrets.
 
-## <a name="credential_providers"></a>Storing secrets with Hadoop Credential Providers
+1. Never commit your secrets into an SCM repository.
+The [git secrets](https://github.com/awslabs/git-secrets) can help here.
+
+1. Avoid using s3a URLs which have key and secret in the URL. This
+is dangerous as the secrets leak into the logs.
+
+1. Never include AWS credentials in bug reports, files attached to them,
+or similar.
+
+1. If you use the `AWS_` environment variables,  your list of environment variables
+is equally sensitive.
+
+1. Never use root credentials.
+Use IAM user accounts, with each user/application having its own set of credentials.
+
+1. Use IAM permissions to restrict the permissions individual users and applications
+have. This is best done through roles, rather than configuring individual users.
+
+1. Avoid passing in secrets to Hadoop applications/commands on the command line.
+The command line of any launched program is visible to all users on a Unix system
+(via `ps`), and preserved in command histories.
+
+1. Explore using [IAM Assumed Roles](assumed_roles.html) for role-based permissions
+management: a specific S3A connection can be made with a different assumed role
+and permissions from the primary user account.
+
+1. Consider a workflow in which usera and applications are issued with short-lived
+session credentials, configuring S3A to use these through
+the `TemporaryAWSCredentialsProvider`.
+
+1. Have a secure process in place for cancelling and re-issuing credentials for
+users and applications. Test it regularly by using it to refresh credentials.
+
+When running in EC2, the IAM EC2 instance credential provider will automatically
+obtain the credentials needed to access AWS services in the role the EC2 VM
+was deployed as.
+This credential provider is enabled in S3A by default.
+
+The safest way to keep the AWS login keys a secret within Hadoop is to use
+Hadoop Credentials.
+
+## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
 The Hadoop Credential Provider Framework allows secure "Credential Providers"
 to keep secrets outside Hadoop configuration files, storing them in encrypted
 files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
-(`fs.s3a.secret.key`, `fs.s3a.access.key` and `fs.s3a.session.token`) can
+(`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
+and `fs.s3a.server-side-encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
-credential provider is all that is passed as a direct configuration option.
+credential provider then declareed in the hadoop configuration.
 
 For additional reading on the Hadoop Credential Provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
+
+The following configuration options can be storeed in Hadoop Credential Provider
+stores.
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.session.token
+fs.s3a.server-side-encryption.key
+fs.s3a.server-side-encryption-algorithm
+```
+
+The first three are for authentication; the final two for
+[encryption](./encryption.html). Of the latter, only the encryption key can
+be considered "sensitive". However, being able to include the algorithm in
+the credentials allows for a JCECKS file to contain all the options needed
+to encrypt new data written to S3.
 
 ### Step 1: Create a credential file
 
@@ -523,7 +582,6 @@ a Unix filesystem the permissions are automatically set to keep the file
 private to the reader —though as directory permissions are not touched,
 users should verify that the directory containing the file is readable only by
 the current user.
-
 
 ```bash
 hadoop credential create fs.s3a.access.key -value 123 \
@@ -580,9 +638,12 @@ over that of the `hadoop.security` list (i.e. they are prepended to the common l
 </property>
 ```
 
-Supporting a separate list in an `fs.s3a.` prefix permits per-bucket configuration
-of credential files.
-
+This was added to suppport binding different credential providers on a per
+bucket basis, without adding alternative secrets in the credential list.
+However, some applications (e.g Hive) prevent the list of credential providers
+from being dynamically updated by users. As per-bucket secrets are now supported,
+it is better to include per-bucket keys in JCEKS files and other sources
+of credentials.
 
 ### Using secrets from credential providers
 
@@ -1092,16 +1153,28 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 
 ### Customizing S3A secrets held in credential files
 
-Although most properties are automatically propagated from their
-`fs.s3a.bucket.`-prefixed custom entry to that of the base `fs.s3a.` option
-supporting secrets kept in Hadoop credential files is slightly more complex.
-This is because the property values are kept in these files, and cannot be
-dynamically patched.
 
-Instead, callers need to create different configuration files for each
-bucket, setting the base secrets (`fs.s3a.access.key`, etc),
-then declare the path to the appropriate credential file in
-a bucket-specific version of the property `fs.s3a.security.credential.provider.path`.
+Secrets in JCEKS files or provided by other Hadoop credential providers
+can also be configured on a per bucket basis. The S3A client will
+look for the per-bucket secrets be
+
+
+Consider a JCEKS file with six keys:
+
+```
+fs.s3a.access.key
+fs.s3a.secret.key
+fs.s3a.server-side-encryption-algorithm
+fs.s3a.bucket.nightly.access.key
+fs.s3a.bucket.nightly.secret.key
+fs.s3a.bucket.nightly.session.token
+fs.s3a.bucket.nightly.server-side-encryption.key
+fs.s3a.bucket.nightly.server-side-encryption-algorithm
+```
+
+When accessing the bucket `s3a://nightly/`, the per-bucket configuration
+options for that backet will be used, here the access keys and token,
+and including the encryption algorithm and key.
 
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
@@ -1491,8 +1564,13 @@ from VMs running on EC2.
 </property>
 ```
 
-### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures: `fs.s3a.multipart.purge`
+### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures
 
+There are two mechanisms for cleaning up after leftover multipart
+uploads:
+- Hadoop s3guard CLI commands for listing and deleting uploads by their
+age. Doumented in the [S3Guard](./s3guard.html) section.
+- The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
 If an large stream writeoperation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
@@ -1535,78 +1613,91 @@ The S3A Filesystem client supports the notion of input policies, similar
 to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
 client to optimise HTTP GET requests for the different use cases.
 
-*"sequential"*
+See [Improving data input performance through fadvise](./performance.html#fadvise)
+for the details.
 
-Read through the file, possibly with some short forward seeks.
+##<a name="metrics"></a>Metrics
 
-The whole document is requested in a single HTTP request; forward seeks
-within the readahead range are supported by skipping over the intermediate
-data.
+S3A metrics can be monitored through Hadoop's metrics2 framework. S3A creates
+its own metrics system called s3a-file-system, and each instance of the client
+will create its own metrics source, named with a JVM-unique numerical ID.
 
-This is leads to maximum read throughput —but with very expensive
-backward seeks.
+As a simple example, the following can be added to `hadoop-metrics2.properties`
+to write all S3A metrics to a log file every 10 seconds:
 
+    s3a-file-system.sink.my-metrics-config.class=org.apache.hadoop.metrics2.sink.FileSink
+    s3a-file-system.sink.my-metrics-config.filename=/var/log/hadoop-yarn/s3a-metrics.out
+    *.period=10
 
-*"normal" (default)*
+Lines in that file will be structured like the following:
 
-This is currently the same as "sequential", though it may evolve in future.
+    1511208770680 s3aFileSystem.s3aFileSystem: Context=s3aFileSystem, s3aFileSystemId=892b02bb-7b30-4ffe-80ca-3a9935e1d96e, bucket=bucket,
+    Hostname=hostname-1.hadoop.apache.com, files_created=1, files_copied=2, files_copied_bytes=10000, files_deleted=5, fake_directories_deleted=3,
+    directories_created=3, directories_deleted=0, ignored_errors=0, op_copy_from_local_file=0, op_exists=0, op_get_file_status=15, op_glob_status=0,
+    op_is_directory=0, op_is_file=0, op_list_files=0, op_list_located_status=0, op_list_status=3, op_mkdirs=1, op_rename=2, object_copy_requests=0,
+    object_delete_requests=6, object_list_requests=23, object_continue_list_requests=0, object_metadata_requests=46, object_multipart_aborted=0,
+    object_put_bytes=0, object_put_requests=4, object_put_requests_completed=4, stream_write_failures=0, stream_write_block_uploads=0,
+    stream_write_block_uploads_committed=0, stream_write_block_uploads_aborted=0, stream_write_total_time=0, stream_write_total_data=0,
+    s3guard_metadatastore_put_path_request=10, s3guard_metadatastore_initialization=0, object_put_requests_active=0, object_put_bytes_pending=0,
+    stream_write_block_uploads_active=0, stream_write_block_uploads_pending=0, stream_write_block_uploads_data_pending=0,
+    S3guard_metadatastore_put_path_latencyNumOps=0, S3guard_metadatastore_put_path_latency50thPercentileLatency=0,
+    S3guard_metadatastore_put_path_latency75thPercentileLatency=0, S3guard_metadatastore_put_path_latency90thPercentileLatency=0,
+    S3guard_metadatastore_put_path_latency95thPercentileLatency=0, S3guard_metadatastore_put_path_latency99thPercentileLatency=0
 
-*"random"*
+Depending on other configuration, metrics from other systems, contexts, etc. may
+also get recorded, for example the following:
 
-Optimised for random IO, specifically the Hadoop `PositionedReadable`
-operations —though `seek(offset); read(byte_buffer)` also benefits.
+    1511208770680 metricssystem.MetricsSystem: Context=metricssystem, Hostname=s3a-metrics-4.gce.cloudera.com, NumActiveSources=1, NumAllSources=1,
+    NumActiveSinks=1, NumAllSinks=0, Sink_fileNumOps=2, Sink_fileAvgTime=1.0, Sink_fileDropped=0, Sink_fileQsize=0, SnapshotNumOps=5,
+    SnapshotAvgTime=0.0, PublishNumOps=2, PublishAvgTime=0.0, DroppedPubAll=0
 
-Rather than ask for the whole file, the range of the HTTP request is
-set to that that of the length of data desired in the `read` operation
-(Rounded up to the readahead value set in `setReadahead()` if necessary).
-
-By reducing the cost of closing existing HTTP requests, this is
-highly efficient for file IO accessing a binary file
-through a series of `PositionedReadable.read()` and `PositionedReadable.readFully()`
-calls. Sequential reading of a file is expensive, as now many HTTP requests must
-be made to read through the file.
-
-For operations simply reading through a file: copying, distCp, reading
-Gzipped or other compressed formats, parsing .csv files, etc, the `sequential`
-policy is appropriate. This is the default: S3A does not need to be configured.
-
-For the specific case of high-performance random access IO, the `random` policy
-may be considered. The requirements are:
-
-* Data is read using the `PositionedReadable` API.
-* Long distance (many MB) forward seeks
-* Backward seeks as likely as forward seeks.
-* Little or no use of single character `read()` calls or small `read(buffer)`
-calls.
-* Applications running close to the S3 data store. That is: in EC2 VMs in
-the same datacenter as the S3 instance.
-
-The desired fadvise policy must be set in the configuration option
-`fs.s3a.experimental.input.fadvise` when the filesystem instance is created.
-That is: it can only be set on a per-filesystem basis, not on a per-file-read
-basis.
-
-    <property>
-      <name>fs.s3a.experimental.input.fadvise</name>
-      <value>random</value>
-      <description>Policy for reading files.
-       Values: 'random', 'sequential' or 'normal'
-       </description>
-    </property>
-
-[HDFS-2744](https://issues.apache.org/jira/browse/HDFS-2744),
-*Extend FSDataInputStream to allow fadvise* proposes adding a public API
-to set fadvise policies on input streams. Once implemented,
-this will become the supported mechanism used for configuring the input IO policy.
-
+Note that low-level metrics from the AWS SDK itself are not currently included
+in these metrics.
 
 ##<a name="further_reading"></a> Other Topics
 
-### Copying Data with distcp
+### <a name="distcp"></a> Copying Data with distcp
 
-Hadoop's `distcp` application can be used to copy data between a Hadoop
+Hadoop's `distcp` tool is often used to copy data between a Hadoop
 cluster and Amazon S3.
 See [Copying Data Between a Cluster and Amazon S3](https://hortonworks.github.io/hdp-aws/s3-copy-data/index.html)
 for details on S3 copying specifically.
 
+The `distcp update` command tries to do incremental updates of data.
+It is straightforward to verify when files do not match when they are of
+different length, but not when they are the same size.
+
+Distcp addresses this by comparing file checksums on the source and destination
+filesystems, which it tries to do *even if the filesystems have incompatible
+checksum algorithms*.
+
+The S3A connector can provide the HTTP etag header to the caller as the
+checksum of the uploaded file. Doing so will break distcp operations
+between hdfs and s3a.
+
+For this reason, the etag-as-checksum feature is disabled by default.
+
+```xml
+<property>
+  <name>fs.s3a.etag.checksum.enabled</name>
+  <value>false</value>
+  <description>
+    Should calls to getFileChecksum() return the etag value of the remote
+    object.
+    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
+    -skipcrccheck is set.
+  </description>
+</property>
+```
+
+If enabled, `distcp` between two S3 buckets can use the checksum to compare
+objects. Their checksums should be identical if they were either each uploaded
+as a single file PUT, or, if in a multipart PUT, in blocks of the same size,
+as configured by the value `fs.s3a.multipart.size`.
+
+To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
+
+```bash
+hadoop distcp -update -skipcrccheck /user/alice/datasets s3a://alice-backup/datasets
+```
 

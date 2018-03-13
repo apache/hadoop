@@ -315,11 +315,11 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     List<String> blacklistAdditions = new ArrayList<String>(1);
     List<String> blacklistRemovals = new ArrayList<String>(1);
     blacklistAdditions.add(n1.getNodeName());
-    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
-    app.getQueue().setFairShare(clusterResource);
     FSAppAttempt spyApp = spy(app);
     doReturn(false)
         .when(spyApp).isWaitingForAMContainer();
+    spyApp.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    spyApp.getQueue().setFairShare(clusterResource);
     assertTrue(spyApp.isPlaceBlacklisted(n1.getNodeName()));
     assertFalse(spyApp.isPlaceBlacklisted(n2.getNodeName()));
     assertEquals(n2.getUnallocatedResource(), spyApp.getHeadroom());
@@ -327,7 +327,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     blacklistAdditions.clear();
     blacklistAdditions.add(n2.getNodeName());
     blacklistRemovals.add(n1.getNodeName());
-    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    spyApp.updateBlacklist(blacklistAdditions, blacklistRemovals);
     assertFalse(spyApp.isPlaceBlacklisted(n1.getNodeName()));
     assertTrue(spyApp.isPlaceBlacklisted(n2.getNodeName()));
     assertEquals(n1.getUnallocatedResource(), spyApp.getHeadroom());
@@ -335,7 +335,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     blacklistAdditions.clear();
     blacklistRemovals.clear();
     blacklistRemovals.add(n2.getNodeName());
-    app.updateBlacklist(blacklistAdditions, blacklistRemovals);
+    spyApp.updateBlacklist(blacklistAdditions, blacklistRemovals);
     assertFalse(spyApp.isPlaceBlacklisted(n1.getNodeName()));
     assertFalse(spyApp.isPlaceBlacklisted(n2.getNodeName()));
     assertEquals(clusterResource, spyApp.getHeadroom());

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,9 +30,10 @@ import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.apache.hadoop.metrics2.annotation.Metrics;
-import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
@@ -58,16 +60,49 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  * the operations to increment/query metric values are designed to handle
  * lookup failures.
  */
-@Metrics(about = "Metrics for S3a", context = "S3AFileSystem")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AInstrumentation {
+public class S3AInstrumentation implements Closeable, MetricsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 
-  public static final String CONTEXT = "S3AFileSystem";
+  private static final String METRICS_SOURCE_BASENAME = "S3AMetrics";
+
+  /**
+   * {@value #METRICS_SYSTEM_NAME} The name of the s3a-specific metrics
+   * system instance used for s3a metrics.
+   */
+  public static final String METRICS_SYSTEM_NAME = "s3a-file-system";
+
+  /**
+   * {@value #CONTEXT} Currently all s3a metrics are placed in a single
+   * "context". Distinct contexts may be used in the future.
+   */
+  public static final String CONTEXT = "s3aFileSystem";
+
+  /**
+   * {@value #METRIC_TAG_FILESYSTEM_ID} The name of a field added to metrics
+   * records that uniquely identifies a specific FileSystem instance.
+   */
+  public static final String METRIC_TAG_FILESYSTEM_ID = "s3aFileSystemId";
+
+  /**
+   * {@value #METRIC_TAG_BUCKET} The name of a field added to metrics records
+   * that indicates the hostname portion of the FS URL.
+   */
+  public static final String METRIC_TAG_BUCKET = "bucket";
+
+  // metricsSystemLock must be used to synchronize modifications to
+  // metricsSystem and the following counters.
+  private static Object metricsSystemLock = new Object();
+  private static MetricsSystem metricsSystem = null;
+  private static int metricsSourceNameCounter = 0;
+  private static int metricsSourceActiveCounter = 0;
+
+  private String metricsSourceName;
+
   private final MetricsRegistry registry =
-      new MetricsRegistry("S3AFileSystem").setContext(CONTEXT);
+      new MetricsRegistry("s3aFileSystem").setContext(CONTEXT);
   private final MutableCounterLong streamOpenOperations;
   private final MutableCounterLong streamCloseOperations;
   private final MutableCounterLong streamClosed;
@@ -93,8 +128,6 @@ public class S3AInstrumentation {
   private final MutableCounterLong numberOfFakeDirectoryDeletes;
   private final MutableCounterLong numberOfDirectoriesCreated;
   private final MutableCounterLong numberOfDirectoriesDeleted;
-  private final Map<String, MutableCounterLong> streamMetrics =
-      new HashMap<>(30);
 
   /** Instantiate this without caring whether or not S3Guard is enabled. */
   private final S3GuardInstrumentation s3GuardInstrumentation
@@ -102,7 +135,11 @@ public class S3AInstrumentation {
 
   private static final Statistic[] COUNTERS_TO_CREATE = {
       INVOCATION_COPY_FROM_LOCAL_FILE,
+      INVOCATION_CREATE,
+      INVOCATION_CREATE_NON_RECURSIVE,
+      INVOCATION_DELETE,
       INVOCATION_EXISTS,
+      INVOCATION_GET_FILE_CHECKSUM,
       INVOCATION_GET_FILE_STATUS,
       INVOCATION_GLOB_STATUS,
       INVOCATION_IS_DIRECTORY,
@@ -111,6 +148,7 @@ public class S3AInstrumentation {
       INVOCATION_LIST_LOCATED_STATUS,
       INVOCATION_LIST_STATUS,
       INVOCATION_MKDIRS,
+      INVOCATION_OPEN,
       INVOCATION_RENAME,
       OBJECT_COPY_REQUESTS,
       OBJECT_DELETE_REQUESTS,
@@ -146,7 +184,6 @@ public class S3AInstrumentation {
       STORE_IO_THROTTLED
   };
 
-
   private static final Statistic[] GAUGES_TO_CREATE = {
       OBJECT_PUT_REQUESTS_ACTIVE,
       OBJECT_PUT_BYTES_PENDING,
@@ -157,33 +194,31 @@ public class S3AInstrumentation {
 
   public S3AInstrumentation(URI name) {
     UUID fileSystemInstanceId = UUID.randomUUID();
-    registry.tag("FileSystemId",
-        "A unique identifier for the FS ",
-        fileSystemInstanceId.toString() + "-" + name.getHost());
-    registry.tag("fsURI",
-        "URI of this filesystem",
-        name.toString());
-    streamOpenOperations = streamCounter(STREAM_OPENED);
-    streamCloseOperations = streamCounter(STREAM_CLOSE_OPERATIONS);
-    streamClosed = streamCounter(STREAM_CLOSED);
-    streamAborted = streamCounter(STREAM_ABORTED);
-    streamSeekOperations = streamCounter(STREAM_SEEK_OPERATIONS);
-    streamReadExceptions = streamCounter(STREAM_READ_EXCEPTIONS);
+    registry.tag(METRIC_TAG_FILESYSTEM_ID,
+        "A unique identifier for the instance",
+        fileSystemInstanceId.toString());
+    registry.tag(METRIC_TAG_BUCKET, "Hostname from the FS URL", name.getHost());
+    streamOpenOperations = counter(STREAM_OPENED);
+    streamCloseOperations = counter(STREAM_CLOSE_OPERATIONS);
+    streamClosed = counter(STREAM_CLOSED);
+    streamAborted = counter(STREAM_ABORTED);
+    streamSeekOperations = counter(STREAM_SEEK_OPERATIONS);
+    streamReadExceptions = counter(STREAM_READ_EXCEPTIONS);
     streamForwardSeekOperations =
-        streamCounter(STREAM_FORWARD_SEEK_OPERATIONS);
+        counter(STREAM_FORWARD_SEEK_OPERATIONS);
     streamBackwardSeekOperations =
-        streamCounter(STREAM_BACKWARD_SEEK_OPERATIONS);
-    streamBytesSkippedOnSeek = streamCounter(STREAM_SEEK_BYTES_SKIPPED);
+        counter(STREAM_BACKWARD_SEEK_OPERATIONS);
+    streamBytesSkippedOnSeek = counter(STREAM_SEEK_BYTES_SKIPPED);
     streamBytesBackwardsOnSeek =
-        streamCounter(STREAM_SEEK_BYTES_BACKWARDS);
-    streamBytesRead = streamCounter(STREAM_SEEK_BYTES_READ);
-    streamReadOperations = streamCounter(STREAM_READ_OPERATIONS);
+        counter(STREAM_SEEK_BYTES_BACKWARDS);
+    streamBytesRead = counter(STREAM_SEEK_BYTES_READ);
+    streamReadOperations = counter(STREAM_READ_OPERATIONS);
     streamReadFullyOperations =
-        streamCounter(STREAM_READ_FULLY_OPERATIONS);
+        counter(STREAM_READ_FULLY_OPERATIONS);
     streamReadsIncomplete =
-        streamCounter(STREAM_READ_OPERATIONS_INCOMPLETE);
-    streamBytesReadInClose = streamCounter(STREAM_CLOSE_BYTES_READ);
-    streamBytesDiscardedInAbort = streamCounter(STREAM_ABORT_BYTES_DISCARDED);
+        counter(STREAM_READ_OPERATIONS_INCOMPLETE);
+    streamBytesReadInClose = counter(STREAM_CLOSE_BYTES_READ);
+    streamBytesDiscardedInAbort = counter(STREAM_ABORT_BYTES_DISCARDED);
     numberOfFilesCreated = counter(FILES_CREATED);
     numberOfFilesCopied = counter(FILES_COPIED);
     bytesOfFilesCopied = counter(FILES_COPIED_BYTES);
@@ -204,6 +239,39 @@ public class S3AInstrumentation {
         "ops", "latency", interval);
     quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
+
+    registerAsMetricsSource(name);
+  }
+
+  @VisibleForTesting
+  public MetricsSystem getMetricsSystem() {
+    synchronized (metricsSystemLock) {
+      if (metricsSystem == null) {
+        metricsSystem = new MetricsSystemImpl();
+        metricsSystem.init(METRICS_SYSTEM_NAME);
+      }
+    }
+    return metricsSystem;
+  }
+
+  /**
+   * Register this instance as a metrics source.
+   * @param name s3a:// URI for the associated FileSystem instance
+   */
+  private void registerAsMetricsSource(URI name) {
+    int number;
+    synchronized(metricsSystemLock) {
+      getMetricsSystem();
+
+      metricsSourceActiveCounter++;
+      number = ++metricsSourceNameCounter;
+    }
+    String msName = METRICS_SOURCE_BASENAME + number;
+    if (number > 1) {
+      msName = msName + number;
+    }
+    metricsSourceName = msName + "-" + name.getHost();
+    metricsSystem.register(metricsSourceName, "", this);
   }
 
   /**
@@ -217,36 +285,12 @@ public class S3AInstrumentation {
   }
 
   /**
-   * Create a counter in the stream map: these are unregistered in the public
-   * metrics.
-   * @param name counter name
-   * @param desc counter description
-   * @return a new counter
-   */
-  protected final MutableCounterLong streamCounter(String name, String desc) {
-    MutableCounterLong counter = new MutableCounterLong(
-        Interns.info(name, desc), 0L);
-    streamMetrics.put(name, counter);
-    return counter;
-  }
-
-  /**
    * Create a counter in the registry.
    * @param op statistic to count
    * @return a new counter
    */
   protected final MutableCounterLong counter(Statistic op) {
     return counter(op.getSymbol(), op.getDescription());
-  }
-
-  /**
-   * Create a counter in the stream map: these are unregistered in the public
-   * metrics.
-   * @param op statistic to count
-   * @return a new counter
-   */
-  protected final MutableCounterLong streamCounter(Statistic op) {
-    return streamCounter(op.getSymbol(), op.getDescription());
   }
 
   /**
@@ -299,11 +343,6 @@ public class S3AInstrumentation {
         prefix,
         separator, suffix);
     registry.snapshot(metricBuilder, all);
-    for (Map.Entry<String, MutableCounterLong> entry:
-        streamMetrics.entrySet()) {
-      metricBuilder.tuple(entry.getKey(),
-          Long.toString(entry.getValue().value()));
-    }
     return metricBuilder.toString();
   }
 
@@ -381,9 +420,6 @@ public class S3AInstrumentation {
    */
   public MutableMetric lookupMetric(String name) {
     MutableMetric metric = getRegistry().get(name);
-    if (metric == null) {
-      metric = streamMetrics.get(name);
-    }
     return metric;
   }
 
@@ -560,6 +596,23 @@ public class S3AInstrumentation {
     streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
   }
 
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    registry.snapshot(collector.addRecord(registry.info().name()), true);
+  }
+
+  public void close() {
+    synchronized (metricsSystemLock) {
+      metricsSystem.unregisterSource(metricsSourceName);
+      int activeSources = --metricsSourceActiveCounter;
+      if (activeSources == 0) {
+        metricsSystem.publishMetricsNow();
+        metricsSystem.shutdown();
+        metricsSystem = null;
+      }
+    }
+  }
+
   /**
    * Statistics updated by an input stream during its actual operation.
    * These counters not thread-safe and are for use in a single instance
@@ -584,6 +637,8 @@ public class S3AInstrumentation {
     public long readsIncomplete;
     public long bytesReadInClose;
     public long bytesDiscardedInAbort;
+    public long policySetCount;
+    public long inputPolicy;
 
     private InputStreamStatistics() {
     }
@@ -700,6 +755,15 @@ public class S3AInstrumentation {
     }
 
     /**
+     * The input policy has been switched.
+     * @param updatedPolicy enum value of new policy.
+     */
+    public void inputPolicySet(int updatedPolicy) {
+      policySetCount++;
+      inputPolicy = updatedPolicy;
+    }
+
+    /**
      * String operator describes all the current statistics.
      * <b>Important: there are no guarantees as to the stability
      * of this value.</b>
@@ -730,6 +794,8 @@ public class S3AInstrumentation {
       sb.append(", ReadsIncomplete=").append(readsIncomplete);
       sb.append(", BytesReadInClose=").append(bytesReadInClose);
       sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
+      sb.append(", InputPolicy=").append(inputPolicy);
+      sb.append(", InputPolicySetCount=").append(policySetCount);
       sb.append('}');
       return sb.toString();
     }
@@ -1045,10 +1111,6 @@ public class S3AInstrumentation {
   public Map<String, Long> toMap() {
     MetricsToMap metricBuilder = new MetricsToMap(null);
     registry.snapshot(metricBuilder, true);
-    for (Map.Entry<String, MutableCounterLong> entry :
-        streamMetrics.entrySet()) {
-      metricBuilder.tuple(entry.getKey(), entry.getValue().value());
-    }
     return metricBuilder.getMap();
   }
 

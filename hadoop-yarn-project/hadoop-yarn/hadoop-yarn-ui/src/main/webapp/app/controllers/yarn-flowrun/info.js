@@ -19,9 +19,14 @@
 import Ember from 'ember';
 import ColumnDef from 'em-table/utils/column-definition';
 import Converter from 'yarn-ui/utils/converter';
+import TableDefinition from 'em-table/utils/table-definition';
 
 function createColumn() {
   var columns = [];
+
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
 
   // Generate columns
   columns.push({

@@ -300,6 +300,11 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
+***Note: Running scale tests with -Ds3guard and -Ddynamo requires that
+you use a private, testing-only DynamoDB table.*** The tests do disruptive
+things such as deleting metadata and setting the provisioned throughput
+to very low values.
+
 ### <a name="enabling-scale"></a> Enabling the Scale Tests
 
 The tests are enabled if the `scale` property is set in the maven build
@@ -1033,3 +1038,46 @@ There is an in-memory Metadata Store for testing.
 ```
 
 This is not for use in production.
+
+##<a name="assumed_roles"></a> Testing Assumed Roles
+
+Tests for the AWS Assumed Role credential provider require an assumed
+role to request.
+
+If this role is not set, the tests which require it will be skipped.
+
+To run the tests in `ITestAssumeRole`, you need:
+
+1. A role in your AWS account will full read and write access rights to
+the S3 bucket used in the tests, and ideally DynamoDB, for S3Guard.
+If your bucket is set up by default to use S3Guard, the role must have access
+to that service.
+
+1.  Your IAM User to have the permissions to adopt that role.
+
+1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
+
+```xml
+<property>
+  <name>fs.s3a.assumed.role.arn</name>
+  <value>arn:aws:iam::9878543210123:role/role-s3-restricted</value>
+</property>
+```
+
+The tests assume the role with different subsets of permissions and verify
+that the S3A client (mostly) works when the caller has only write access
+to part of the directory tree.
+
+You can also run the entire test suite in an assumed role, a more
+thorough test, by switching to the credentials provider.
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider</value>
+</property>
+```
+
+The usual credentials needed to log in to the bucket will be used, but now
+the credentials used to interact with S3 and DynamoDB will be temporary
+role credentials, rather than the full credentials.

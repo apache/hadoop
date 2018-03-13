@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -363,11 +364,12 @@ public class StripedFileTestUtil {
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
     LocatedBlocks lbs = dfs.getClient().getLocatedBlocks(srcPath.toString(), 0L,
         Long.MAX_VALUE);
-    int expectedNumGroup = 0;
+
     if (length > 0) {
-      expectedNumGroup = (length - 1) / blkGroupSize + 1;
+      int expectedNumGroup = (length - 1) / blkGroupSize + 1;
+
+      assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
     }
-    assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
 
     final ErasureCodingPolicy ecPolicy = dfs.getErasureCodingPolicy(srcPath);
     final int cellSize = ecPolicy.getCellSize();
@@ -589,5 +591,19 @@ public class StripedFileTestUtil {
     List<ErasureCodingPolicy> policies = SystemErasureCodingPolicies
             .getPolicies();
     return policies.get(1 + rand.nextInt(policies.size() - 1));
+  }
+
+  /**
+   * Get all Erasure Coding Policies for Parameterized tests.
+   * @return Collection<Object[]>
+   */
+  public static Collection<Object[]> getECPolicies() {
+    ArrayList<Object[]> params = new ArrayList<>();
+    List<ErasureCodingPolicy> policies =
+        SystemErasureCodingPolicies.getPolicies();
+    for (ErasureCodingPolicy policy: policies) {
+      params.add(new Object[]{policy});
+    }
+    return params;
   }
 }

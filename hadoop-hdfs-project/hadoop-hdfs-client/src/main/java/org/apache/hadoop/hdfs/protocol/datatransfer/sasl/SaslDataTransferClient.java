@@ -203,11 +203,15 @@ public class SaslDataTransferClient {
       DataEncryptionKeyFactory encryptionKeyFactory,
       Token<BlockTokenIdentifier> accessToken, DatanodeID datanodeId)
       throws IOException {
-    if (!trustedChannelResolver.isTrusted() &&
-        !trustedChannelResolver.isTrusted(addr)) {
+    boolean localTrusted = trustedChannelResolver.isTrusted();
+    boolean remoteTrusted = trustedChannelResolver.isTrusted(addr);
+    LOG.debug("SASL encryption trust check: localHostTrusted = {}, "
+        + "remoteHostTrusted = {}", localTrusted, remoteTrusted);
+
+    if (!localTrusted || !remoteTrusted) {
       // The encryption key factory only returns a key if encryption is enabled.
-      DataEncryptionKey encryptionKey =
-          encryptionKeyFactory.newDataEncryptionKey();
+      DataEncryptionKey encryptionKey = encryptionKeyFactory
+          .newDataEncryptionKey();
       return send(addr, underlyingOut, underlyingIn, encryptionKey, accessToken,
           datanodeId);
     } else {

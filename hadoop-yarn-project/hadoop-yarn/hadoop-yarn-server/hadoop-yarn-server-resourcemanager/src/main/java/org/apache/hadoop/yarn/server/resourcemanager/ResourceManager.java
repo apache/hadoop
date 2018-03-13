@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -68,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPub
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
@@ -93,6 +96,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
@@ -490,6 +496,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
       throws InstantiationException, IllegalAccessException {
     return new RMNodeLabelsManager();
   }
+
+  protected AllocationTagsManager createAllocationTagsManager() {
+    return new AllocationTagsManager(this.rmContext);
+  }
+
+  protected PlacementConstraintManagerService
+      createPlacementConstraintManager() {
+    // Use the in memory Placement Constraint Manager.
+    return new MemoryPlacementConstraintManager();
+  }
   
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
@@ -513,26 +529,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    SystemMetricsPublisher publisher;
-    if (YarnConfiguration.timelineServiceEnabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-        // we're dealing with the v.2.x publisher
-        LOG.info("system metrics publisher with the timeline service V2 is " +
-            "configured");
-        publisher = new TimelineServiceV2Publisher(
-            rmContext.getRMTimelineCollectorManager());
-      } else {
-        // we're dealing with the v.1.x publisher
-        LOG.info("system metrics publisher with the timeline service V1 is " +
-            "configured");
-        publisher = new TimelineServiceV1Publisher();
-      }
-    } else {
-      LOG.info("TimelineServicePublisher is not configured");
-      publisher = new NoOpSystemMetricPublisher();
+    List<SystemMetricsPublisher> publishers =
+        new ArrayList<SystemMetricsPublisher>();
+    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+      SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
+      publishers.add(publisherV1);
     }
-    return publisher;
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // we're dealing with the v.2.x publisher
+      LOG.info("system metrics publisher with the timeline service V2 is "
+          + "configured");
+      SystemMetricsPublisher publisherV2 = new TimelineServiceV2Publisher(
+          rmContext.getRMTimelineCollectorManager());
+      publishers.add(publisherV2);
+    }
+    if (publishers.isEmpty()) {
+      LOG.info("TimelineServicePublisher is not configured");
+      SystemMetricsPublisher noopPublisher = new NoOpSystemMetricPublisher();
+      publishers.add(noopPublisher);
+    }
+
+    for (SystemMetricsPublisher publisher : publishers) {
+      addIfService(publisher);
+    }
+
+    SystemMetricsPublisher combinedPublisher =
+        new CombinedSystemMetricsPublisher(publishers);
+    return combinedPublisher;
   }
 
   // sanity check for configurations
@@ -608,6 +631,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
       nlm.setRMContext(rmContext);
       addService(nlm);
       rmContext.setNodeLabelManager(nlm);
+
+      AllocationTagsManager allocationTagsManager =
+          createAllocationTagsManager();
+      rmContext.setAllocationTagsManager(allocationTagsManager);
+
+      PlacementConstraintManagerService placementConstraintManager =
+          createPlacementConstraintManager();
+      addService(placementConstraintManager);
+      rmContext.setPlacementConstraintManager(placementConstraintManager);
 
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();
@@ -937,11 +969,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     public void handle(RMAppAttemptEvent event) {
-      ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      ApplicationId appAttemptId = appAttemptID.getApplicationId();
-      RMApp rmApp = this.rmContext.getRMApps().get(appAttemptId);
+      ApplicationAttemptId appAttemptId = event.getApplicationAttemptId();
+      ApplicationId appId = appAttemptId.getApplicationId();
+      RMApp rmApp = this.rmContext.getRMApps().get(appId);
       if (rmApp != null) {
-        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptID);
+        RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
         if (rmAppAttempt != null) {
           try {
             rmAppAttempt.handle(event);
@@ -1041,11 +1073,23 @@ public class ResourceManager extends CompositeService implements Recoverable {
     RMWebAppUtil.setupSecurityAndFilters(conf,
         getClientRMService().rmDTSecretManager);
 
+    Map<String, String> params = new HashMap<String, String>();
+    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+        false)) {
+      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
+          "org.apache.hadoop.yarn.webapp";
+      params.put("com.sun.jersey.config.property.resourceConfigClass",
+          "com.sun.jersey.api.core.PackagesResourceConfig");
+      params.put("com.sun.jersey.config.property.packages", apiPackages);
+    }
+
     Builder<ApplicationMasterService> builder = 
         WebApps
             .$for("cluster", ApplicationMasterService.class, masterService,
                 "ws")
             .with(conf)
+            .withServlet("API-Service", "/app/*",
+                ServletContainer.class, params)
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
@@ -1101,15 +1145,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
 
-    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
-        false)) {
-      serviceConfig = new HashMap<String, String>();
-      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
-          "org.apache.hadoop.yarn.webapp";
-      serviceConfig.put("PackageName", apiPackages);
-      serviceConfig.put("PathSpec", "/app/*");
-    }
-    webApp = builder.start(new RMWebApp(this), uiWebAppContext, serviceConfig);
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 
   private String getWebAppsPath(String appName) {

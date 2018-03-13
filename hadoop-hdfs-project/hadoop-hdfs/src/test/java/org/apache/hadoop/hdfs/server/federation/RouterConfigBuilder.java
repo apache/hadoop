@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.federation;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 
 /**
  * Constructs a router configuration with individual features enabled/disabled.
@@ -34,6 +36,8 @@ public class RouterConfigBuilder {
   private boolean enableLocalHeartbeat = false;
   private boolean enableStateStore = false;
   private boolean enableMetrics = false;
+  private boolean enableQuota = false;
+  private boolean enableSafemode = false;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -51,6 +55,7 @@ public class RouterConfigBuilder {
     this.enableLocalHeartbeat = true;
     this.enableStateStore = true;
     this.enableMetrics = true;
+    this.enableSafemode = true;
     return this;
   }
 
@@ -89,6 +94,16 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder quota(boolean enable) {
+    this.enableQuota = enable;
+    return this;
+  }
+
+  public RouterConfigBuilder safemode(boolean enable) {
+    this.enableSafemode = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
@@ -106,11 +121,23 @@ public class RouterConfigBuilder {
   }
 
   public RouterConfigBuilder stateStore() {
+    // reset the State Store driver implementation class for testing
+    conf.setClass(DFSConfigKeys.FEDERATION_STORE_DRIVER_CLASS,
+        FederationStateStoreTestUtils.getTestDriverClass(),
+        StateStoreDriver.class);
     return this.stateStore(true);
   }
 
   public RouterConfigBuilder metrics() {
     return this.metrics(true);
+  }
+
+  public RouterConfigBuilder quota() {
+    return this.quota(true);
+  }
+
+  public RouterConfigBuilder safemode() {
+    return this.safemode(true);
   }
 
   public Configuration build() {
@@ -127,6 +154,10 @@ public class RouterConfigBuilder {
         this.enableLocalHeartbeat);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_METRICS_ENABLE,
         this.enableMetrics);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_QUOTA_ENABLE,
+        this.enableQuota);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
+        this.enableSafemode);
     return conf;
   }
 }

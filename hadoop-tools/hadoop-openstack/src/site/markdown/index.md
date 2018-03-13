@@ -165,7 +165,7 @@ Hadoop uses URIs to refer to files within a filesystem. Some common examples are
 
         local://etc/hosts
         hdfs://cluster1/users/example/data/set1
-        hdfs://cluster2.example.org:9820/users/example/data/set1
+        hdfs://cluster2.example.org:8020/users/example/data/set1
 
 The Swift Filesystem Client adds a new URL type `swift`. In a Swift Filesystem URL, the hostname part of a URL identifies the container and the service to work with; the path the name of the object. Here are some examples
 

@@ -46,7 +46,7 @@ consumes:
 produces:
   - application/json
 paths:
-  /ws/v1/services/version:
+  /app/v1/services/version:
     get:
       summary: Get current version of the API server.
       description: Get current version of the API server.
@@ -54,7 +54,7 @@ paths:
         200:
           description: Successful request
 
-  /ws/v1/services:
+  /app/v1/services:
     get:
       summary: (TBD) List of services running in the cluster.
       description: Get a list of all currently running services (response includes a minimal projection of the service info). For more details do a GET on a specific service name.
@@ -91,7 +91,7 @@ paths:
           schema:
             $ref: '#/definitions/ServiceStatus'
 
-  /ws/v1/services/{service_name}:
+  /app/v1/services/{service_name}:
     put:
       summary: Update a service or upgrade the binary version of the components of a running service
       description: Update the runtime properties of a service. Currently the following operations are supported - update lifetime, stop/start a service.
@@ -162,7 +162,7 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/ServiceStatus'
-  /ws/v1/services/{service_name}/components/{component_name}:
+  /app/v1/services/{service_name}/components/{component_name}:
     put:
       summary: Flex a component's number of instances.
       description: Set a component's desired number of instanes
@@ -197,10 +197,17 @@ definitions:
     description: a service resource has the following attributes.
     required:
       - name
+      - version
     properties:
       name:
         type: string
         description: A unique service name. If Registry DNS is enabled, the max length is 63 characters.
+      version:
+        type: string
+        description: Version of the service.
+      description:
+        type: string
+        description: Description of the service.
       id:
         type: string
         description: A unique service id.
@@ -247,7 +254,18 @@ definitions:
       kerberos_principal:
         description: The Kerberos Principal of the service
         $ref: '#/definitions/KerberosPrincipal'
-
+  ResourceInformation:
+    description:
+      ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object
+    properties:
+      value:
+        type: integer
+        format: int64
+        description: Integer value of the resource.
+      unit:
+        type: string
+        description:
+          Unit of the resource, acceptable values are: p/n/u/m/k/M/G/T/P/Ki/Mi/Gi/Ti/Pi. By default it is empty means no unit
   Resource:
     description:
       Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.
@@ -262,6 +280,11 @@ definitions:
       memory:
         type: string
         description: Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.
+      additional:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/ResourceInformation'
+        description: Map of resource name to ResourceInformation
   PlacementPolicy:
     description: Placement policy of an instance of a service. This feature is in the works in YARN-6592.
     properties:

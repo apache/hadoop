@@ -17,23 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,47 +29,71 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
-import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
-import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.datanode.*;
+import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
+import org.apache.hadoop.hdfs.server.datanode.checker.ThrottledAsyncChecker;
+import org.apache.hadoop.hdfs.server.namenode.*;
+import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
+import org.apache.hadoop.http.HttpRequestLog;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.GSet;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.*;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Helper for writing snapshot related tests
  */
 public class SnapshotTestHelper {
-  public static final Log LOG = LogFactory.getLog(SnapshotTestHelper.class);
+  static final Logger LOG = LoggerFactory.getLogger(SnapshotTestHelper.class);
 
   /** Disable the logs that are not very useful for snapshot related tests. */
   public static void disableLogs() {
     final String[] lognames = {
+        "org.apache.hadoop.hdfs.server.common.Util",
+        "org.apache.hadoop.hdfs.server.blockmanagement.BlockReportLeaseManager",
+        "org.apache.hadoop.hdfs.server.namenode.FileJournalManager",
+        "org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager",
+        "org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf",
+        "org.apache.hadoop.hdfs.server.namenode.FSEditLog",
         "org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceScanner",
+        "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice",
         "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl",
         "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetAsyncDiskService",
+        "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl" +
+            ".RamDiskAsyncLazyPersistService",
     };
     for(String n : lognames) {
-      GenericTestUtils.disableLog(LogFactory.getLog(n));
+      GenericTestUtils.disableLog(LoggerFactory.getLogger(n));
     }
     
-    GenericTestUtils.disableLog(LogFactory.getLog(UserGroupInformation.class));
-    GenericTestUtils.disableLog(LogFactory.getLog(BlockManager.class));
-    GenericTestUtils.disableLog(LogFactory.getLog(FSNamesystem.class));
-    GenericTestUtils.disableLog(LogFactory.getLog(DirectoryScanner.class));
-    GenericTestUtils.disableLog(LogFactory.getLog(MetricsSystemImpl.class));
-    
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(
+        UserGroupInformation.class));
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(BlockManager.class));
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(FSNamesystem.class));
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(
+        DirectoryScanner.class));
+    GenericTestUtils.disableLog(LoggerFactory.getLogger(
+        MetricsSystemImpl.class));
+
+    GenericTestUtils.disableLog(DatasetVolumeChecker.LOG);
+    GenericTestUtils.disableLog(DatanodeDescriptor.LOG);
+    GenericTestUtils.disableLog(GSet.LOG);
+    GenericTestUtils.disableLog(TopMetrics.LOG);
+    GenericTestUtils.disableLog(HttpRequestLog.LOG);
+    GenericTestUtils.disableLog(ThrottledAsyncChecker.LOG);
+    GenericTestUtils.disableLog(VolumeScanner.LOG);
     GenericTestUtils.disableLog(BlockScanner.LOG);
     GenericTestUtils.disableLog(HttpServer2.LOG);
     GenericTestUtils.disableLog(DataNode.LOG);

@@ -24,8 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.Cluster;
@@ -144,6 +142,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestClientRedirect {
 
@@ -151,7 +151,8 @@ public class TestClientRedirect {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
-  private static final Log LOG = LogFactory.getLog(TestClientRedirect.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClientRedirect.class);
   private static final String RMADDRESS = "0.0.0.0:8054";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 

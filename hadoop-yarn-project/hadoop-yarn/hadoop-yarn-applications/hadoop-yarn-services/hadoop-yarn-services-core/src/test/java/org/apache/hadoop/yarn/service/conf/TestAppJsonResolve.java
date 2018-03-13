@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.conf;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
+import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
@@ -193,6 +194,22 @@ public class TestAppJsonResolve extends Assert {
     assertEquals("b", worker.getProperty("g2"));
     assertEquals("60",
         worker.getProperty("yarn.service.failure-count-reset.window"));
+
+    // Validate worker's resources
+    Resource workerResource = orig.getComponent("worker").getResource();
+    Assert.assertEquals(1, workerResource.getCpus().intValue());
+    Assert.assertEquals(1024, workerResource.calcMemoryMB());
+    Assert.assertNotNull(workerResource.getAdditional());
+    Assert.assertEquals(2, workerResource.getAdditional().size());
+    Assert.assertEquals(3333, workerResource.getAdditional().get(
+        "resource-1").getValue().longValue());
+    Assert.assertEquals("Gi", workerResource.getAdditional().get(
+        "resource-1").getUnit());
+
+    Assert.assertEquals(5, workerResource.getAdditional().get(
+        "yarn.io/gpu").getValue().longValue());
+    Assert.assertEquals("", workerResource.getAdditional().get(
+        "yarn.io/gpu").getUnit());
 
     other = orig.getComponent("other").getConfiguration();
     assertEquals(0, other.getProperties().size());

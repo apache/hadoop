@@ -38,6 +38,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,11 +82,12 @@ public class WriteOperationHelper {
   /**
    * Constructor.
    * @param owner owner FS creating the helper
+   * @param conf Configuration object
    *
    */
-  protected WriteOperationHelper(S3AFileSystem owner) {
+  protected WriteOperationHelper(S3AFileSystem owner, Configuration conf) {
     this.owner = owner;
-    this.invoker = new Invoker(new S3ARetryPolicy(owner.getConf()),
+    this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
   }
 

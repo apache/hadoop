@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 
 /**
  * A mock version of ServiceClient - This class is design
@@ -49,9 +50,9 @@ public class ServiceClientTest extends ServiceClient {
   }
 
   @Override
-  public ApplicationId actionCreate(Service service) {
-    String serviceName = service.getName();
-    ServiceApiUtil.validateNameFormat(serviceName, getConfig());
+  public ApplicationId actionCreate(Service service) throws IOException {
+    ServiceApiUtil.validateAndResolveService(service,
+        new SliderFileSystem(conf), getConfig());
     return ApplicationId.newInstance(System.currentTimeMillis(), 1);
   }
 
@@ -88,6 +89,8 @@ public class ServiceClientTest extends ServiceClient {
     }
     if (serviceName.equals("jenkins")) {
       return EXIT_SUCCESS;
+    } else if (serviceName.equals("jenkins-second-stop")) {
+      return EXIT_COMMAND_ARGUMENT_ERROR;
     } else {
       throw new ApplicationNotFoundException("");
     }

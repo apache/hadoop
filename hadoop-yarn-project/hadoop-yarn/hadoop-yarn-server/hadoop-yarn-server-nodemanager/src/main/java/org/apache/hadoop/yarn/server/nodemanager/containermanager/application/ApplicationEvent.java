@@ -27,7 +27,7 @@ public class ApplicationEvent extends AbstractEvent<ApplicationEventType> {
 
   public ApplicationEvent(ApplicationId appID,
       ApplicationEventType appEventType) {
-    super(appEventType);
+    super(appEventType, System.currentTimeMillis());
     this.applicationID = appID;
   }
 

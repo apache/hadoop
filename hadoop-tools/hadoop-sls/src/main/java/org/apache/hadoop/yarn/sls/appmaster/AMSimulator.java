@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -85,7 +87,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected final BlockingQueue<AllocateResponse> responseQueue;
   private int responseId = 0;
   // user name
-  protected String user;  
+  private String user;
   // queue name
   protected String queue;
   // am type
@@ -105,7 +107,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   // waiting for AM container
   volatile boolean isAMContainerRunning = false;
   volatile Container amContainer;
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(AMSimulator.class);
 
   private Resource amContainerResource;
@@ -120,9 +122,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   public void init(int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
-      String simQueue, boolean tracked, String oldApp,
-      ReservationSubmissionRequest rr, long baseTimeMS,
-      Resource amContainerResource) {
+      String simQueue, boolean tracked, String oldApp, long baseTimeMS,
+      Resource amResource, Map<String, String> params) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -134,8 +135,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.baselineTimeMS = baseTimeMS;
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
-    this.reservationRequest = rr;
-    this.amContainerResource = amContainerResource;
+    this.amContainerResource = amResource;
   }
 
   /**
@@ -169,6 +169,10 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.appAttemptId = masterContainer.getId().getApplicationAttemptId();
     registerAM();
     isAMContainerRunning = true;
+  }
+
+  protected void setReservationRequest(ReservationSubmissionRequest rr){
+    this.reservationRequest = rr;
   }
 
   private ReservationId submitReservationWhenSpecified()
@@ -256,20 +260,23 @@ public abstract class AMSimulator extends TaskRunner.Task {
               simulateStartTimeMS, simulateFinishTimeMS);
     }
   }
-  
-  protected ResourceRequest createResourceRequest(
-          Resource resource, String host, int priority, int numContainers) {
+
+  protected ResourceRequest createResourceRequest(Resource resource,
+      ExecutionType executionType, String host, int priority, int
+      numContainers) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setCapability(resource);
     request.setResourceName(host);
     request.setNumContainers(numContainers);
+    request.setExecutionTypeRequest(
+        ExecutionTypeRequest.newInstance(executionType));
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
     request.setPriority(prio);
     return request;
   }
-  
+
   protected AllocateRequest createAllocateRequest(List<ResourceRequest> ask,
       List<ContainerId> toRelease) {
     AllocateRequest allocateRequest =
@@ -279,36 +286,39 @@ public abstract class AMSimulator extends TaskRunner.Task {
     allocateRequest.setReleaseList(toRelease);
     return allocateRequest;
   }
-  
+
   protected AllocateRequest createAllocateRequest(List<ResourceRequest> ask) {
     return createAllocateRequest(ask, new ArrayList<ContainerId>());
   }
 
   protected abstract void processResponseQueue() throws Exception;
-  
+
   protected abstract void sendContainerRequest() throws Exception;
-  
+
+  public abstract void initReservation(
+      ReservationId reservationId, long deadline, long now);
+
   protected abstract void checkStop();
-  
+
   private void submitApp(ReservationId reservationId)
           throws YarnException, InterruptedException, IOException {
     // ask for new application
     GetNewApplicationRequest newAppRequest =
         Records.newRecord(GetNewApplicationRequest.class);
-    GetNewApplicationResponse newAppResponse = 
+    GetNewApplicationResponse newAppResponse =
         rm.getClientRMService().getNewApplication(newAppRequest);
     appId = newAppResponse.getApplicationId();
-    
+
     // submit the application
     final SubmitApplicationRequest subAppRequest =
         Records.newRecord(SubmitApplicationRequest.class);
-    ApplicationSubmissionContext appSubContext = 
+    ApplicationSubmissionContext appSubContext =
         Records.newRecord(ApplicationSubmissionContext.class);
     appSubContext.setApplicationId(appId);
     appSubContext.setMaxAppAttempts(1);
     appSubContext.setQueue(queue);
     appSubContext.setPriority(Priority.newInstance(0));
-    ContainerLaunchContext conLauContext = 
+    ContainerLaunchContext conLauContext =
         Records.newRecord(ContainerLaunchContext.class);
     conLauContext.setApplicationACLs(new HashMap<>());
     conLauContext.setCommands(new ArrayList<>());
@@ -379,7 +389,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     }
   }
-  
+
   protected List<ResourceRequest> packageRequests(
           List<ContainerSimulator> csList, int priority) {
     // create requests
@@ -395,8 +405,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
           rackLocalRequestMap.get(rackname).setNumContainers(
               rackLocalRequestMap.get(rackname).getNumContainers() + 1);
         } else {
-          ResourceRequest request =
-              createResourceRequest(cs.getResource(), rackname, priority, 1);
+          ResourceRequest request = createResourceRequest(cs.getResource(),
+              cs.getExecutionType(), rackname, priority, 1);
           rackLocalRequestMap.put(rackname, request);
         }
         // check node local
@@ -405,15 +415,15 @@ public abstract class AMSimulator extends TaskRunner.Task {
           nodeLocalRequestMap.get(hostname).setNumContainers(
               nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
         } else {
-          ResourceRequest request =
-              createResourceRequest(cs.getResource(), hostname, priority, 1);
+          ResourceRequest request = createResourceRequest(cs.getResource(),
+              cs.getExecutionType(), hostname, priority, 1);
           nodeLocalRequestMap.put(hostname, request);
         }
       }
       // any
       if (anyRequest == null) {
-        anyRequest = createResourceRequest(
-                cs.getResource(), ResourceRequest.ANY, priority, 1);
+        anyRequest = createResourceRequest(cs.getResource(),
+            cs.getExecutionType(), ResourceRequest.ANY, priority, 1);
       } else {
         anyRequest.setNumContainers(anyRequest.getNumContainers() + 1);
       }

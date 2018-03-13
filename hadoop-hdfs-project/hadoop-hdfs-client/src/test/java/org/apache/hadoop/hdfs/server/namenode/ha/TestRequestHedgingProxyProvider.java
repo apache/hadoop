@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -70,10 +71,10 @@ public class TestRequestHedgingProxyProvider {
         HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns, "nn1,nn2");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn1",
-        "machine1.foo.bar:9820");
+        "machine1.foo.bar:8020");
     conf.set(
         HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn2",
-        "machine2.foo.bar:9820");
+        "machine2.foo.bar:8020");
   }
 
   @Test
@@ -290,11 +291,55 @@ public class TestRequestHedgingProxyProvider {
   }
 
   @Test
+  public void testSingleProxyFailover() throws Exception {
+    String singleNS = "mycluster-" + Time.monotonicNow();
+    URI singleNNUri = new URI("hdfs://" + singleNS);
+    Configuration singleConf = new Configuration();
+    singleConf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, singleNS);
+    singleConf.set(HdfsClientConfigKeys.
+        DFS_HA_NAMENODES_KEY_PREFIX + "." + singleNS, "nn1");
+
+    singleConf.set(HdfsClientConfigKeys.
+            DFS_NAMENODE_RPC_ADDRESS_KEY + "." + singleNS + ".nn1",
+        RandomStringUtils.randomAlphabetic(8) + ".foo.bar:9820");
+    ClientProtocol active = Mockito.mock(ClientProtocol.class);
+    Mockito
+        .when(active.getBlockLocations(Matchers.anyString(),
+            Matchers.anyLong(), Matchers.anyLong()))
+        .thenThrow(new RemoteException("java.io.FileNotFoundException",
+            "File does not exist!"));
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(singleConf, singleNNUri,
+            ClientProtocol.class, createFactory(active));
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (RemoteException ex) {
+      Exception rEx = ex.unwrapRemoteException();
+      Assert.assertTrue(rEx instanceof FileNotFoundException);
+    }
+    //Perform failover now, there will be no active proxies now
+    provider.performFailover(active);
+    try {
+      provider.getProxy().proxy.getBlockLocations("/tmp/test.file", 0L, 20L);
+      Assert.fail("Should fail since the active namenode throws"
+          + " FileNotFoundException!");
+    } catch (RemoteException ex) {
+      Exception rEx = ex.unwrapRemoteException();
+      Assert.assertTrue(rEx instanceof IOException);
+      Assert.assertTrue(rEx.getMessage().equals("No valid proxies left."
+          + " All NameNode proxies have failed over."));
+    }
+  }
+
+  @Test
   public void testPerformFailoverWith3Proxies() throws Exception {
     conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
             "nn1,nn2,nn3");
     conf.set(HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn3",
-            "machine3.foo.bar:9820");
+            "machine3.foo.bar:8020");
 
     final AtomicInteger counter = new AtomicInteger(0);
     final int[] isGood = {1};

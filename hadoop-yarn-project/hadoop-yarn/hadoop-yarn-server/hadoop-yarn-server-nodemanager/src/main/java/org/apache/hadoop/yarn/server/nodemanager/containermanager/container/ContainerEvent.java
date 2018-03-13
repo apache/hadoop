@@ -27,7 +27,7 @@ public class ContainerEvent extends AbstractEvent<ContainerEventType> {
   private final ContainerId containerID;
 
   public ContainerEvent(ContainerId cID, ContainerEventType eventType) {
-    super(eventType);
+    super(eventType, System.currentTimeMillis());
     this.containerID = cID;
   }
 

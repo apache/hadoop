@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.scale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.util.Duration;
@@ -29,7 +29,8 @@ import org.junit.Test;
 
 public class TestWriteManySmallFiles extends SwiftScaleTestBase {
 
-  public static final Log LOG = LogFactory.getLog(TestWriteManySmallFiles.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestWriteManySmallFiles.class);
 
   @Test(timeout = SWIFT_BULK_IO_TEST_TIMEOUT)
   public void testScaledWriteThenRead() throws Throwable {

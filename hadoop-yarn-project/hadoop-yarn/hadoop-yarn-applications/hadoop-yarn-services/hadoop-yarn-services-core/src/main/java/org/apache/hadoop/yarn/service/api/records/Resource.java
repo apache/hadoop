@@ -17,15 +17,16 @@
 
 package org.apache.hadoop.yarn.service.api.records;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-
-import java.util.Objects;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import javax.xml.bind.annotation.XmlElement;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Resource determines the amount of resources (vcores, memory, network, etc.)
@@ -45,6 +46,10 @@ public class Resource extends BaseResource implements Cloneable {
   private String profile = null;
   private Integer cpus = 1;
   private String memory = null;
+
+  @JsonProperty("additional")
+  @XmlElement(name = "additional")
+  private Map<String, ResourceInformation> additional = null;
 
   /**
    * Each resource profile has a unique id which is associated with a
@@ -104,12 +109,34 @@ public class Resource extends BaseResource implements Cloneable {
     this.memory = memory;
   }
 
-  @JsonIgnore
-  public long getMemoryMB() {
+  @JsonIgnoreProperties(ignoreUnknown=true)
+  public long calcMemoryMB() {
     if (this.memory == null) {
       return 0;
     }
     return Long.parseLong(memory);
+  }
+
+  public Resource setResourceInformations(
+      Map<String, ResourceInformation> resourceInformations) {
+    this.additional = resourceInformations;
+    return this;
+  }
+
+  public Resource resourceInformations(
+      Map<String, ResourceInformation> resourceInformations) {
+    this.additional = resourceInformations;
+    return this;
+  }
+
+  /**
+   * Map of resource name to ResourceInformation
+   * @return additional
+   **/
+  @ApiModelProperty(value = "Map of resource name to ResourceInformation")
+  @JsonProperty("additional")
+  public Map<String, ResourceInformation> getAdditional() {
+    return additional;
   }
 
   @Override
@@ -121,14 +148,15 @@ public class Resource extends BaseResource implements Cloneable {
       return false;
     }
     Resource resource = (Resource) o;
-    return Objects.equals(this.profile, resource.profile)
-        && Objects.equals(this.cpus, resource.cpus)
-        && Objects.equals(this.memory, resource.memory);
+    return Objects.equals(this.profile, resource.profile) && Objects.equals(
+        this.cpus, resource.cpus) && Objects.equals(this.memory,
+        resource.memory) && Objects.equals(this.additional,
+        resource.additional);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(profile, cpus, memory);
+    return Objects.hash(profile, cpus, memory, additional);
   }
 
   @Override
@@ -139,6 +167,8 @@ public class Resource extends BaseResource implements Cloneable {
     sb.append("    profile: ").append(toIndentedString(profile)).append("\n");
     sb.append("    cpus: ").append(toIndentedString(cpus)).append("\n");
     sb.append("    memory: ").append(toIndentedString(memory)).append("\n");
+    sb.append("    additional: ").append(
+        toIndentedString(additional)).append("\n");
     sb.append("}");
     return sb.toString();
   }

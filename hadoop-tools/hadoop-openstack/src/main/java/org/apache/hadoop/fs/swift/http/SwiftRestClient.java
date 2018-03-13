@@ -40,8 +40,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.swift.auth.ApiKeyAuthenticationRequest;
 import org.apache.hadoop.fs.swift.auth.ApiKeyCredentials;
@@ -97,7 +97,8 @@ import static org.apache.hadoop.fs.swift.http.SwiftProtocolConstants.*;
  * details.
  */
 public final class SwiftRestClient {
-  private static final Log LOG = LogFactory.getLog(SwiftRestClient.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftRestClient.class);
 
   /**
    * Header that says "use newest version" -ensures that
@@ -1725,7 +1726,7 @@ public final class SwiftRestClient {
       for (Header header : req.getAllHeaders()) {
         builder.append(header.toString());
       }
-      LOG.debug(builder);
+      LOG.debug(builder.toString());
     }
     HttpResponse resp = client.execute(req);
     if (LOG.isDebugEnabled()) {

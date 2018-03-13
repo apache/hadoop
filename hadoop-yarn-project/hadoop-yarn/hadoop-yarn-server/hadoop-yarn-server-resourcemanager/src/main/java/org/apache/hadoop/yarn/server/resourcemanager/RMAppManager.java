@@ -366,22 +366,20 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String user, boolean isRecovery, long startTime) throws YarnException {
 
     ApplicationPlacementContext placementContext = null;
+    try {
+      placementContext = placeApplication(rmContext, submissionContext, user);
+    } catch (YarnException e) {
+      String msg =
+          "Failed to place application " + submissionContext.getApplicationId()
+              + " to queue and specified " + "queue is invalid : "
+              + submissionContext.getQueue();
+      LOG.error(msg, e);
+      throw e;
+    }
 
-    // We only do queue mapping when it's a new application
+    // We only replace the queue when it's a new application
     if (!isRecovery) {
-      try {
-        // Do queue mapping
-        placementContext = placeApplication(rmContext,
-            submissionContext, user);
-        replaceQueueFromPlacementContext(placementContext,
-            submissionContext);
-      } catch (YarnException e) {
-        String msg = "Failed to place application " +
-            submissionContext.getApplicationId() + " to queue and specified "
-            + "queue is invalid : " + submissionContext.getQueue();
-        LOG.error(msg, e);
-        throw e;
-      }
+      replaceQueueFromPlacementContext(placementContext, submissionContext);
 
       // fail the submission if configured application timeout value is invalid
       RMServerUtils.validateApplicationTimeouts(
@@ -395,10 +393,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Verify and get the update application priority and set back to
     // submissionContext
     UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
-    Priority appPriority = scheduler.checkAndGetApplicationPriority(
-        submissionContext.getPriority(), userUgi, submissionContext.getQueue(),
-        applicationId);
-    submissionContext.setPriority(appPriority);
+
+    // Application priority needed to be validated only while submitting. During
+    // recovery, validated priority could be recovered from submission context.
+    if (!isRecovery) {
+      Priority appPriority = scheduler.checkAndGetApplicationPriority(
+          submissionContext.getPriority(), userUgi,
+          submissionContext.getQueue(),
+          applicationId);
+      submissionContext.setPriority(appPriority);
+    }
 
     // Since FairScheduler queue mapping is done inside scheduler,
     // if FairScheduler is used and the queue doesn't exist, we should not
@@ -410,7 +414,15 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String queueName = submissionContext.getQueue();
       String appName = submissionContext.getApplicationName();
       CSQueue csqueue = ((CapacityScheduler) scheduler).getQueue(queueName);
-      if (null != csqueue
+
+      if (csqueue == null && placementContext != null) {
+        //could be an auto created queue through queue mapping. Validate
+        // parent queue exists and has valid acls
+        String parentQueueName = placementContext.getParentQueue();
+        csqueue = ((CapacityScheduler) scheduler).getQueue(parentQueueName);
+      }
+
+      if (csqueue != null
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),

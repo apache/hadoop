@@ -45,6 +45,7 @@ public class TestSnapshotCommands {
   @BeforeClass
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 3);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -112,6 +113,23 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn0", 0, "/sub1/.snapshot/sn0/sub1sub2", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub1", conf);
     DFSTestUtil.FsShellRun("-ls /sub1/.snapshot/sn1", 0, "/sub1/.snapshot/sn1/sub1sub3", conf);
+  }
+
+  @Test
+  public void testMaxSnapshotLimit() throws Exception {
+    DFSTestUtil.FsShellRun("-mkdir /sub3", conf);
+    DFSTestUtil.DFSAdminRun("-allowSnapshot /sub3", 0,
+        "Allowing snapshot " + "on /sub3 succeeded", conf);
+    // test createSnapshot
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn0", 0,
+        "Created snapshot /sub3/.snapshot/sn0", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn1", 0,
+        "Created snapshot /sub3/.snapshot/sn1", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn2", 0,
+        "Created snapshot /sub3/.snapshot/sn2", conf);
+    DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn3", 1,
+        "Failed to add snapshot: there are already 3 snapshot(s) and "
+            + "the max snapshot limit is 3", conf);
   }
 
   @Test

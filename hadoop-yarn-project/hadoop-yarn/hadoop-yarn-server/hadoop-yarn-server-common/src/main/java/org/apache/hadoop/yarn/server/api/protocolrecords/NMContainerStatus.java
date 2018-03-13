@@ -27,6 +27,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.util.Collections;
+import java.util.Set;
+
 /**
  * NMContainerStatus includes the current information of a container. This
  * record is used by YARN only, whereas {@link ContainerStatus} is used both
@@ -161,4 +164,15 @@ public abstract class NMContainerStatus {
   }
 
   public void setExecutionType(ExecutionType executionType) { }
+
+  /**
+   * Get and set the Allocation tags associated with the container.
+   */
+  public Set<String> getAllocationTags() {
+    return Collections.emptySet();
+  }
+
+  public void setAllocationTags(Set<String> allocationTags) {
+
+  }
 }

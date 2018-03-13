@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
@@ -136,6 +137,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLin
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLocatedFileInfoRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLocatedFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaUsageRequestProto;
@@ -343,6 +346,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE = 
   GetFileInfoResponseProto.newBuilder().build();
+
+  private static final GetLocatedFileInfoResponseProto
+      VOID_GETLOCATEDFILEINFO_RESPONSE =
+          GetLocatedFileInfoResponseProto.newBuilder().build();
 
   private static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE = 
   GetFileLinkInfoResponseProto.newBuilder().build();
@@ -952,7 +959,23 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+  public GetLocatedFileInfoResponseProto getLocatedFileInfo(
+      RpcController controller, GetLocatedFileInfoRequestProto req)
+      throws ServiceException {
+    try {
+      HdfsFileStatus result = server.getLocatedFileInfo(req.getSrc(),
+          req.getNeedBlockToken());
+      if (result != null) {
+        return GetLocatedFileInfoResponseProto.newBuilder().setFs(
+            PBHelperClient.convert(result)).build();
+      }
+      return VOID_GETLOCATEDFILEINFO_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 
+  @Override
   public GetFileLinkInfoResponseProto getFileLinkInfo(RpcController controller,
       GetFileLinkInfoRequestProto req) throws ServiceException {
     try {
@@ -1830,13 +1853,17 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListOpenFilesResponseProto listOpenFiles(RpcController controller,
       ListOpenFilesRequestProto req) throws ServiceException {
     try {
-      BatchedEntries<OpenFileEntry> entries = server.listOpenFiles(req.getId());
+      EnumSet<OpenFilesType> openFilesTypes =
+          PBHelperClient.convertOpenFileTypes(req.getTypesList());
+      BatchedEntries<OpenFileEntry> entries = server.listOpenFiles(req.getId(),
+          openFilesTypes, req.getPath());
       ListOpenFilesResponseProto.Builder builder =
           ListOpenFilesResponseProto.newBuilder();
       builder.setHasMore(entries.hasMore());
       for (int i = 0; i < entries.size(); i++) {
         builder.addEntries(PBHelperClient.convert(entries.get(i)));
       }
+      builder.addAllTypes(req.getTypesList());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);

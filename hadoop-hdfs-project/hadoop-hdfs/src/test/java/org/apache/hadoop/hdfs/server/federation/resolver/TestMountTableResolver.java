@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -24,6 +26,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +49,8 @@ public class TestMountTableResolver {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMountTableResolver.class);
+
+  private static final int TEST_MAX_CACHE_SIZE = 10;
 
   private MountTableResolver mountTable;
 
@@ -69,11 +75,15 @@ public class TestMountTableResolver {
    * ______file1.txt -> 4:/user/file1.txt
    * __usr
    * ____bin -> 2:/bin
+   * __readonly -> 2:/tmp
    *
    * @throws IOException If it cannot set the mount table.
    */
   private void setupMountTable() throws IOException {
     Configuration conf = new Configuration();
+    conf.setInt(
+        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE, TEST_MAX_CACHE_SIZE);
+    conf.setStrings(DFS_ROUTER_DEFAULT_NAMESERVICE, "0");
     mountTable = new MountTableResolver(conf);
 
     // Root mount point
@@ -107,6 +117,12 @@ public class TestMountTableResolver {
     // /user/a/demo/test/b
     map = getMountTableEntry("3", "/user/test");
     mountTable.addEntry(MountTable.newInstance("/user/a/demo/test/b", map));
+
+    // /readonly
+    map = getMountTableEntry("2", "/tmp");
+    MountTable readOnlyEntry = MountTable.newInstance("/readonly", map);
+    readOnlyEntry.setReadOnly(true);
+    mountTable.addEntry(readOnlyEntry);
   }
 
   @Before
@@ -152,6 +168,9 @@ public class TestMountTableResolver {
     assertEquals("3->/user/test/a",
         mountTable.getDestinationForPath("/user/test/a").toString());
 
+    assertEquals("2->/tmp/tesfile1.txt",
+        mountTable.getDestinationForPath("/readonly/tesfile1.txt").toString());
+
   }
 
   private void compareLists(List<String> list1, String[] list2) {
@@ -162,12 +181,35 @@ public class TestMountTableResolver {
   }
 
   @Test
+  public void testGetMountPoint() throws IOException {
+    // Check get the mount table entry for a path
+    MountTable mtEntry;
+    mtEntry = mountTable.getMountPoint("/");
+    assertTrue(mtEntry.getSourcePath().equals("/"));
+
+    mtEntry = mountTable.getMountPoint("/user");
+    assertTrue(mtEntry.getSourcePath().equals("/user"));
+
+    mtEntry = mountTable.getMountPoint("/user/a");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a/");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a/11");
+    assertTrue(mtEntry.getSourcePath().equals("/user/a"));
+
+    mtEntry = mountTable.getMountPoint("/user/a1");
+    assertTrue(mtEntry.getSourcePath().equals("/user"));
+  }
+
+  @Test
   public void testGetMountPoints() throws IOException {
 
     // Check getting all mount points (virtual and real) beneath a path
     List<String> mounts = mountTable.getMountPoints("/");
-    assertEquals(3, mounts.size());
-    compareLists(mounts, new String[] {"tmp", "user", "usr"});
+    assertEquals(4, mounts.size());
+    compareLists(mounts, new String[] {"tmp", "user", "usr", "readonly"});
 
     mounts = mountTable.getMountPoints("/user");
     assertEquals(2, mounts.size());
@@ -212,9 +254,10 @@ public class TestMountTableResolver {
 
     // Check listing the mount table records at or beneath a path
     List<MountTable> records = mountTable.getMounts("/");
-    assertEquals(8, records.size());
+    assertEquals(9, records.size());
     compareRecords(records, new String[] {"/", "/tmp", "/user", "/usr/bin",
-        "user/a", "/user/a/demo/a", "/user/a/demo/b", "/user/b/file1.txt"});
+        "user/a", "/user/a/demo/a", "/user/a/demo/b", "/user/b/file1.txt",
+        "readonly"});
 
     records = mountTable.getMounts("/user");
     assertEquals(5, records.size());
@@ -229,6 +272,11 @@ public class TestMountTableResolver {
     records = mountTable.getMounts("/tmp");
     assertEquals(1, records.size());
     compareRecords(records, new String[] {"/tmp"});
+
+    records = mountTable.getMounts("/readonly");
+    assertEquals(1, records.size());
+    compareRecords(records, new String[] {"/readonly"});
+    assertTrue(records.get(0).isReadOnly());
   }
 
   @Test
@@ -237,7 +285,7 @@ public class TestMountTableResolver {
 
     // 3 mount points are present /tmp, /user, /usr
     compareLists(mountTable.getMountPoints("/"),
-        new String[] {"user", "usr", "tmp"});
+        new String[] {"user", "usr", "tmp", "readonly"});
 
     // /tmp currently points to namespace 2
     assertEquals("2", mountTable.getDestinationForPath("/tmp/testfile.txt")
@@ -248,7 +296,7 @@ public class TestMountTableResolver {
 
     // Now 2 mount points are present /user, /usr
     compareLists(mountTable.getMountPoints("/"),
-        new String[] {"user", "usr"});
+        new String[] {"user", "usr", "readonly"});
 
     // /tmp no longer exists, uses default namespace for mapping /
     assertEquals("1", mountTable.getDestinationForPath("/tmp/testfile.txt")
@@ -261,7 +309,7 @@ public class TestMountTableResolver {
 
     // 3 mount points are present /tmp, /user, /usr
     compareLists(mountTable.getMountPoints("/"),
-        new String[] {"user", "usr", "tmp"});
+        new String[] {"user", "usr", "tmp", "readonly"});
 
     // /usr is virtual, uses namespace 1->/
     assertEquals("1", mountTable.getDestinationForPath("/usr/testfile.txt")
@@ -272,7 +320,7 @@ public class TestMountTableResolver {
 
     // Verify the remove failed
     compareLists(mountTable.getMountPoints("/"),
-        new String[] {"user", "usr", "tmp"});
+        new String[] {"user", "usr", "tmp", "readonly"});
   }
 
   @Test
@@ -304,7 +352,7 @@ public class TestMountTableResolver {
 
     // Initial table loaded
     testDestination();
-    assertEquals(8, mountTable.getMounts("/").size());
+    assertEquals(9, mountTable.getMounts("/").size());
 
     // Replace table with /1 and /2
     List<MountTable> records = new ArrayList<>();
@@ -392,5 +440,89 @@ public class TestMountTableResolver {
 
     assertEquals(numRootTrees, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+  }
+
+  @Test
+  public void testUpdate() throws IOException {
+
+    // Add entry to update later
+    Map<String, String> map = getMountTableEntry("1", "/");
+    mountTable.addEntry(MountTable.newInstance("/testupdate", map));
+
+    MountTable entry = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests = entry.getDestinations();
+    assertEquals(1, dests.size());
+    RemoteLocation dest = dests.get(0);
+    assertEquals("1", dest.getNameserviceId());
+
+    // Update entry
+    Collection<MountTable> entries = Collections.singletonList(
+        MountTable.newInstance("/testupdate", getMountTableEntry("2", "/")));
+    mountTable.refreshEntries(entries);
+
+    MountTable entry1 = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests1 = entry1.getDestinations();
+    assertEquals(1, dests1.size());
+    RemoteLocation dest1 = dests1.get(0);
+    assertEquals("2", dest1.getNameserviceId());
+
+    // Remove the entry to test updates and check
+    mountTable.removeEntry("/testupdate");
+    MountTable entry2 = mountTable.getMountPoint("/testupdate");
+    assertNull(entry2);
+  }
+
+  @Test
+  public void testCacheCleaning() throws Exception {
+    for (int i = 0; i < 1000; i++) {
+      String filename = String.format("/user/a/file-%04d.txt", i);
+      mountTable.getDestinationForPath(filename);
+    }
+    long cacheSize = mountTable.getCacheSize();
+    assertTrue(cacheSize <= TEST_MAX_CACHE_SIZE);
+  }
+
+  @Test
+  public void testLocationCache() throws Exception {
+    List<MountTable> entries = new ArrayList<>();
+
+    // Add entry and test location cache
+    Map<String, String> map1 = getMountTableEntry("1", "/testlocationcache");
+    MountTable entry1 = MountTable.newInstance("/testlocationcache", map1);
+    entries.add(entry1);
+
+    Map<String, String> map2 = getMountTableEntry("2",
+            "/anothertestlocationcache");
+    MountTable entry2 = MountTable.newInstance("/anothertestlocationcache",
+            map2);
+    entries.add(entry2);
+    mountTable.refreshEntries(entries);
+    assertEquals("1->/testlocationcache/",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+    assertEquals("2->/anothertestlocationcache/",
+            mountTable.getDestinationForPath("/anothertestlocationcache")
+                    .toString());
+
+    // Remove the entry1
+    entries.remove(entry1);
+    mountTable.refreshEntries(entries);
+
+    // Add the default location and test location cache
+    assertEquals("0->/testlocationcache",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+
+    // Add the entry again but mount to another ns
+    Map<String, String> map3 = getMountTableEntry("3", "/testlocationcache");
+    MountTable entry3 = MountTable.newInstance("/testlocationcache", map3);
+    entries.add(entry3);
+    mountTable.refreshEntries(entries);
+
+    // Ensure location cache update correctly
+    assertEquals("3->/testlocationcache/",
+            mountTable.getDestinationForPath("/testlocationcache").toString());
+
+    // Cleanup before exit
+    mountTable.removeEntry("/testlocationcache");
+    mountTable.removeEntry("/anothertestlocationcache");
   }
 }

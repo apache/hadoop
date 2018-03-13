@@ -540,7 +540,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -589,7 +589,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -642,7 +642,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -694,7 +694,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
     ResourceTrackerService resourceTrackerService =
@@ -723,13 +723,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private NodeStatus getNodeStatusObject(NodeId nodeId) {
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setNodeId(nodeId);
     status.setResponseId(0);
-    status.setContainersStatuses(Collections.EMPTY_LIST);
-    status.setKeepAliveApplications(Collections.EMPTY_LIST);
+    status.setContainersStatuses(Collections.emptyList());
+    status.setKeepAliveApplications(Collections.emptyList());
     return status;
   }
 
@@ -755,7 +754,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -801,7 +800,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         Records.newRecord(NodeHeartbeatRequest.class);
     heartbeatReq.setNodeLabels(null); // Node heartbeat label update
     nodeStatusObject = getNodeStatusObject(nodeId);
-    nodeStatusObject.setResponseId(responseId+2);
+    nodeStatusObject.setResponseId(responseId+1);
     heartbeatReq.setNodeStatus(nodeStatusObject);
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
         .getNMTokenMasterKey());
@@ -840,7 +839,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while intializing");
+      Assert.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -1128,8 +1127,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         "", System.currentTimeMillis());
     NodeStatus nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
         statusList, null, nodeHealth, null, null, null);
-    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus,
-        nodeHeartbeat1));
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
 
     Assert.assertEquals(1, node1.getRunningApps().size());
     Assert.assertEquals(app1.getApplicationId(), node1.getRunningApps().get(0));
@@ -1145,8 +1143,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     statusList.add(status2);
     nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
         statusList, null, nodeHealth, null, null, null);
-    node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeStatus,
-        nodeHeartbeat2));
+    node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeStatus));
     Assert.assertEquals(1, node2.getRunningApps().size());
     Assert.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
 
@@ -2289,5 +2286,32 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         break;
       }
     }
+  }
+
+  @Test
+  public void testResponseIdOverflow() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+
+    // prepare the responseId that's about to overflow
+    RMNode node = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    node.getLastNodeHeartBeatResponse().setResponseId(Integer.MAX_VALUE);
+
+    nm1.setResponseId(Integer.MAX_VALUE);
+
+    // heartbeat twice and check responseId
+    nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+    Assert.assertEquals(0, nodeHeartbeat.getResponseId());
+
+    nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+    Assert.assertEquals(1, nodeHeartbeat.getResponseId());
   }
 }

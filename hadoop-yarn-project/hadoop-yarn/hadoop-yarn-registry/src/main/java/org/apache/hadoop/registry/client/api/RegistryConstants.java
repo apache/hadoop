@@ -221,6 +221,7 @@ public interface RegistryConstants {
    * No authentication; client is anonymous.
    */
   String REGISTRY_CLIENT_AUTH_ANONYMOUS = "";
+  String REGISTRY_CLIENT_AUTH_SIMPLE = "simple";
 
   /**
    * Registry client authentication ID.

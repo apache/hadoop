@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -171,7 +173,7 @@ class JobResourceUploader {
 
     if (!conf.getBoolean(MRJobConfig.MR_AM_STAGING_DIR_ERASURECODING_ENABLED,
         MRJobConfig.DEFAULT_MR_AM_STAGING_ERASURECODING_ENABLED)) {
-      disableErasureCodingForPath(jtFs, submitJobDir);
+      disableErasureCodingForPath(submitJobDir);
     }
 
     // Get the resources that have been added via command line arguments in the
@@ -874,13 +876,26 @@ class JobResourceUploader {
     return finalPath;
   }
 
-  private void disableErasureCodingForPath(FileSystem fs, Path path)
+  private void disableErasureCodingForPath(Path path)
       throws IOException {
-    if (jtFs instanceof DistributedFileSystem) {
-      LOG.info("Disabling Erasure Coding for path: " + path);
-      DistributedFileSystem dfs = (DistributedFileSystem) jtFs;
-      dfs.setErasureCodingPolicy(path,
-          SystemErasureCodingPolicies.getReplicationPolicy().getName());
+    try {
+      if (jtFs instanceof DistributedFileSystem) {
+        LOG.info("Disabling Erasure Coding for path: " + path);
+        DistributedFileSystem dfs = (DistributedFileSystem) jtFs;
+        dfs.setErasureCodingPolicy(path,
+            SystemErasureCodingPolicies.getReplicationPolicy().getName());
+      }
+    } catch (RemoteException e) {
+      if (!RpcNoSuchMethodException.class.getName().equals(e.getClassName())) {
+        throw e;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Ignore disabling erasure coding for path {} because method "
+                  + "disableErasureCodingForPath doesn't exist, probably "
+                  + "talking to a lower version HDFS.", path.toString(), e);
+        }
+      }
     }
   }
 }

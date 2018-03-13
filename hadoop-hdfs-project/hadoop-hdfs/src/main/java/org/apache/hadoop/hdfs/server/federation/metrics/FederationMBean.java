@@ -47,6 +47,12 @@ public interface FederationMBean {
   String getMountTable();
 
   /**
+   * Get the latest state of all routers.
+   * @return JSON with all of the known routers or null if failure.
+   */
+  String getRouters();
+
+  /**
    * Get the total capacity of the federated cluster.
    * @return Total capacity of the federated cluster.
    */
@@ -63,6 +69,12 @@ public interface FederationMBean {
    * @return Remaining capacity of the federated cluster.
    */
   long getRemainingCapacity();
+
+  /**
+   * Get the total remote storage capacity mounted in the federated cluster.
+   * @return Remote capacity of the federated cluster.
+   */
+  long getProvidedSpace();
 
   /**
    * Get the number of nameservices in the federation.

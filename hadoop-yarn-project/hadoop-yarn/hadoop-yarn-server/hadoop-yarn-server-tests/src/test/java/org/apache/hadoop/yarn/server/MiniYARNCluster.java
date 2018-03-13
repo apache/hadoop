@@ -251,6 +251,15 @@ public class MiniYARNCluster extends CompositeService {
     useFixedPorts = conf.getBoolean(
         YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS);
+
+    if (!useFixedPorts) {
+      String hostname = MiniYARNCluster.getHostname();
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
+
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          hostname + ":" + ServerSocketUtil.getPort(9188, 10));
+    }
+
     useRpc = conf.getBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC,
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
     failoverTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
@@ -644,9 +653,8 @@ public class MiniYARNCluster extends CompositeService {
       if(nodeStatus == null) {
         return currentStatus;
       } else {
-        // Increment response ID, the RMNodeStatusEvent will not get recorded
-        // for a duplicate heartbeat
-        nodeStatus.setResponseId(nodeStatus.getResponseId() + 1);
+        // Use the same responseId for the custom node status
+        nodeStatus.setResponseId(currentStatus.getResponseId());
         return nodeStatus;
       }
     }
@@ -808,12 +816,6 @@ public class MiniYARNCluster extends CompositeService {
       }
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
           MemoryTimelineStateStore.class, TimelineStateStore.class);
-      if (!useFixedPorts) {
-        String hostname = MiniYARNCluster.getHostname();
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-            hostname + ":" + ServerSocketUtil.getPort(9188, 10));
-      }
       appHistoryServer.init(conf);
       super.serviceInit(conf);
     }

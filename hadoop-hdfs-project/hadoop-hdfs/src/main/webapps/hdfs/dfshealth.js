@@ -37,6 +37,8 @@
       {"name": "nnstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
       {"name": "fs",      "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState"},
       {"name": "fsn",     "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystem"},
+      {"name": "replicastat",      "url": "/jmx?qry=Hadoop:service=NameNode,name=ReplicatedBlocksState"},
+      {"name": "ecstat",      "url": "/jmx?qry=Hadoop:service=NameNode,name=ECBlockGroupsState"},
       {"name": "blockstats",      "url": "/jmx?qry=Hadoop:service=NameNode,name=BlockStats"},
       {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"}
     ];
@@ -329,14 +331,14 @@
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
             'columns': [
-              { 'orderDataType': 'ng-value', 'searchable': true },
-              { 'orderDataType': 'ng-value', 'searchable': true },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num' },
-              { 'type': 'num' },
-              { 'orderDataType': 'ng-value', 'type': 'num'},
-              { 'type': 'string' }
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": ""},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'type': 'string' , "defaultContent": ""}
             ]});
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');

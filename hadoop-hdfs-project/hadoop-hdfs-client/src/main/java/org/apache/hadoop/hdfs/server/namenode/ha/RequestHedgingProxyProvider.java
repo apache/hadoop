@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * per-se. It constructs a wrapper proxy that sends the request to ALL
  * underlying proxies simultaneously. It assumes the in an HA setup, there will
  * be only one Active, and the active should respond faster than any configured
- * standbys. Once it receive a response from any one of the configred proxies,
+ * standbys. Once it receive a response from any one of the configured proxies,
  * outstanding requests to other proxies are immediately cancelled.
  */
 public class RequestHedgingProxyProvider<T> extends
@@ -87,6 +88,11 @@ public class RequestHedgingProxyProvider<T> extends
         // Optimization : if only 2 proxies are configured and one had failed
         // over, then we dont need to create a threadpool etc.
         targetProxies.remove(toIgnore);
+        if (targetProxies.size() == 0) {
+          LOG.trace("No valid proxies left");
+          throw new RemoteException(IOException.class.getName(),
+              "No valid proxies left. All NameNode proxies have failed over.");
+        }
         if (targetProxies.size() == 1) {
           ProxyInfo<T> proxyInfo = targetProxies.values().iterator().next();
           try {

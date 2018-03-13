@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceHandlerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
@@ -63,6 +64,8 @@ public class ResourceHandlerModule {
    */
   private static volatile TrafficControlBandwidthHandlerImpl
       trafficControlBandwidthHandler;
+  private static volatile NetworkPacketTaggingHandlerImpl
+      networkPacketTaggingHandlerImpl;
   private static volatile CGroupsHandler cGroupsHandler;
   private static volatile CGroupsBlkioResourceHandlerImpl
       cGroupsBlkioResourceHandler;
@@ -98,7 +101,27 @@ public class ResourceHandlerModule {
     return cGroupsHandler;
   }
 
-  private static CGroupsCpuResourceHandlerImpl getCGroupsCpuResourceHandler(
+  public static NetworkPacketTaggingHandlerImpl
+      getNetworkResourceHandler() {
+    return networkPacketTaggingHandlerImpl;
+  }
+
+  public static DiskResourceHandler
+      getDiskResourceHandler() {
+    return cGroupsBlkioResourceHandler;
+  }
+
+  public static MemoryResourceHandler
+      getMemoryResourceHandler() {
+    return cGroupsMemoryResourceHandler;
+  }
+
+  public static CpuResourceHandler
+      getCpuResourceHandler() {
+    return cGroupsCpuResourceHandler;
+  }
+
+  private static CGroupsCpuResourceHandlerImpl initCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -131,7 +154,7 @@ public class ResourceHandlerModule {
       if (trafficControlBandwidthHandler == null) {
         synchronized (OutboundBandwidthResourceHandler.class) {
           if (trafficControlBandwidthHandler == null) {
-            LOG.debug("Creating new traffic control bandwidth handler");
+            LOG.info("Creating new traffic control bandwidth handler.");
             trafficControlBandwidthHandler = new
                 TrafficControlBandwidthHandlerImpl(PrivilegedOperationExecutor
                 .getInstance(conf), getInitializedCGroupsHandler(conf),
@@ -147,13 +170,43 @@ public class ResourceHandlerModule {
     }
   }
 
-  public static OutboundBandwidthResourceHandler
-      getOutboundBandwidthResourceHandler(Configuration conf)
+  public static ResourceHandler initNetworkResourceHandler(Configuration conf)
         throws ResourceHandlerException {
+    boolean useNetworkTagHandler = conf.getBoolean(
+        YarnConfiguration.NM_NETWORK_TAG_HANDLER_ENABLED,
+        YarnConfiguration.DEFAULT_NM_NETWORK_TAG_HANDLER_ENABLED);
+    if (useNetworkTagHandler) {
+      LOG.info("Using network-tagging-handler.");
+      return getNetworkTaggingHandler(conf);
+    } else {
+      LOG.info("Using traffic control bandwidth handler");
+      return getTrafficControlBandwidthHandler(conf);
+    }
+  }
+
+  public static ResourceHandler getNetworkTaggingHandler(Configuration conf)
+      throws ResourceHandlerException {
+    if (networkPacketTaggingHandlerImpl == null) {
+      synchronized (OutboundBandwidthResourceHandler.class) {
+        if (networkPacketTaggingHandlerImpl == null) {
+          LOG.info("Creating new network-tagging-handler.");
+          networkPacketTaggingHandlerImpl =
+              new NetworkPacketTaggingHandlerImpl(
+                  PrivilegedOperationExecutor.getInstance(conf),
+                  getInitializedCGroupsHandler(conf));
+        }
+      }
+    }
+    return networkPacketTaggingHandlerImpl;
+  }
+
+  public static OutboundBandwidthResourceHandler
+      initOutboundBandwidthResourceHandler(Configuration conf)
+      throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
 
-  public static DiskResourceHandler getDiskResourceHandler(Configuration conf)
+  public static DiskResourceHandler initDiskResourceHandler(Configuration conf)
       throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_DISK_RESOURCE_ENABLED)) {
@@ -177,7 +230,7 @@ public class ResourceHandlerModule {
     return cGroupsBlkioResourceHandler;
   }
 
-  public static MemoryResourceHandler getMemoryResourceHandler(
+  public static MemoryResourceHandler initMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENABLED)) {
@@ -201,6 +254,14 @@ public class ResourceHandlerModule {
     return cGroupsMemoryResourceHandler;
   }
 
+  private static ResourceHandler getNumaResourceHandler(Configuration conf,
+      Context nmContext) {
+    if (YarnConfiguration.numaAwarenessEnabled(conf)) {
+      return new NumaResourceHandlerImpl(conf, nmContext);
+    }
+    return null;
+  }
+
   private static void addHandlerIfNotNull(List<ResourceHandler> handlerList,
       ResourceHandler handler) {
     if (handler != null) {
@@ -213,10 +274,15 @@ public class ResourceHandlerModule {
       throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
-    addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
-    addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initNetworkResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initDiskResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initMemoryResourceHandler(conf));
+    addHandlerIfNotNull(handlerList,
+        initCGroupsCpuResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getNumaResourceHandler(conf, nmContext));
     addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }

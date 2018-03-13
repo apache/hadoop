@@ -86,7 +86,8 @@ public class NamenodeProtocolServerSideTranslatorPB implements
         .build();
     BlocksWithLocations blocks;
     try {
-      blocks = impl.getBlocks(dnInfo, request.getSize());
+      blocks = impl.getBlocks(dnInfo, request.getSize(),
+          request.getMinBlockSize());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

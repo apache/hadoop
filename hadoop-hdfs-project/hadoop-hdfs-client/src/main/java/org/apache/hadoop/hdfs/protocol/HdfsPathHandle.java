@@ -19,9 +19,11 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsPathHandleProto;
 
@@ -34,16 +36,17 @@ import com.google.protobuf.ByteString;
 @InterfaceStability.Unstable
 public final class HdfsPathHandle implements PathHandle {
 
-  private static final long serialVersionUID = 0xc5308795428L;
+  private static final long serialVersionUID = 0xc53087a5428L;
 
-  private final long inodeId;
+  private final String path;
+  private final Long mtime;
+  private final Long inodeId;
 
-  public HdfsPathHandle(HdfsFileStatus hstat) {
-    this(hstat.getFileId());
-  }
-
-  public HdfsPathHandle(long inodeId) {
-    this.inodeId = inodeId;
+  public HdfsPathHandle(String path,
+      Optional<Long> inodeId, Optional<Long> mtime) {
+    this.path = path;
+    this.mtime = mtime.orElse(null);
+    this.inodeId = inodeId.orElse(null);
   }
 
   public HdfsPathHandle(ByteBuffer bytes) throws IOException {
@@ -52,20 +55,39 @@ public final class HdfsPathHandle implements PathHandle {
     }
     HdfsPathHandleProto p =
         HdfsPathHandleProto.parseFrom(ByteString.copyFrom(bytes));
-    inodeId = p.getInodeId();
+    path = p.getPath();
+    mtime   = p.hasMtime()   ? p.getMtime()   : null;
+    inodeId = p.hasInodeId() ? p.getInodeId() : null;
   }
 
-  public long getInodeId() {
-    return inodeId;
+  public String getPath() {
+    return path;
+  }
+
+  public void verify(HdfsLocatedFileStatus stat)
+      throws InvalidPathHandleException {
+    if (null == stat) {
+      throw new InvalidPathHandleException("Could not resolve handle");
+    }
+    if (mtime != null && mtime != stat.getModificationTime()) {
+      throw new InvalidPathHandleException("Content changed");
+    }
+    if (inodeId != null && inodeId != stat.getFileId()) {
+      throw new InvalidPathHandleException("Wrong file");
+    }
   }
 
   @Override
   public ByteBuffer bytes() {
-    return HdfsPathHandleProto.newBuilder()
-      .setInodeId(getInodeId())
-      .build()
-      .toByteString()
-      .asReadOnlyByteBuffer();
+    HdfsPathHandleProto.Builder b = HdfsPathHandleProto.newBuilder();
+    b.setPath(path);
+    if (inodeId != null) {
+      b.setInodeId(inodeId);
+    }
+    if (mtime != null) {
+      b.setMtime(mtime);
+    }
+    return b.build().toByteString().asReadOnlyByteBuffer();
   }
 
   @Override
@@ -78,19 +100,25 @@ public final class HdfsPathHandle implements PathHandle {
       return false;
     }
     HdfsPathHandle o = (HdfsPathHandle)other;
-    return getInodeId() == o.getInodeId();
+    return getPath().equals(o.getPath());
   }
 
   @Override
   public int hashCode() {
-    return Long.hashCode(inodeId);
+    return path.hashCode();
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{ ");
-    sb.append("inodeId : ").append(Long.toString(getInodeId()));
+    sb.append("\"path\" : \"").append(path).append("\"");
+    if (inodeId != null) {
+      sb.append(",\"inodeId\" : ").append(inodeId);
+    }
+    if (mtime != null) {
+      sb.append(",\"mtime\" : ").append(mtime);
+    }
     sb.append(" }");
     return sb.toString();
   }

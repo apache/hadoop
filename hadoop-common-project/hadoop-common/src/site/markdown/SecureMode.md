@@ -167,7 +167,9 @@ Because the DataNode data transfer protocol does not use the Hadoop RPC framewor
 
 When you execute the `hdfs datanode` command as root, the server process binds privileged ports at first, then drops privilege and runs as the user account specified by `HDFS_DATANODE_SECURE_USER`. This startup process uses [the jsvc program](https://commons.apache.org/proper/commons-daemon/jsvc.html "Link to Apache Commons Jsvc") installed to `JSVC_HOME`. You must specify `HDFS_DATANODE_SECURE_USER` and `JSVC_HOME` as environment variables on start up (in `hadoop-env.sh`).
 
-As of version 2.6.0, SASL can be used to authenticate the data transfer protocol. In this configuration, it is no longer required for secured clusters to start the DataNode as root using `jsvc` and bind to privileged ports. To enable SASL on data transfer protocol, set `dfs.data.transfer.protection` in hdfs-site.xml, set a non-privileged port for `dfs.datanode.address`, set `dfs.http.policy` to `HTTPS_ONLY` and make sure the `HDFS_DATANODE_SECURE_USER` environment variable is not defined. Note that it is not possible to use SASL on data transfer protocol if `dfs.datanode.address` is set to a privileged port. This is required for backwards-compatibility reasons.
+As of version 2.6.0, SASL can be used to authenticate the data transfer protocol. In this configuration, it is no longer required for secured clusters to start the DataNode as root using `jsvc` and bind to privileged ports. To enable SASL on data transfer protocol, set `dfs.data.transfer.protection` in hdfs-site.xml. A SASL enabled DataNode can be started in secure mode in following two ways:
+1. Set a non-privileged port for `dfs.datanode.address`.
+1. Set `dfs.http.policy` to `HTTPS_ONLY` or set `dfs.datanode.http.address` to a privileged port and make sure the `HDFS_DATANODE_SECURE_USER` and `JSVC_HOME` environment variables are specified properly as environment variables on start up (in `hadoop-env.sh`).
 
 In order to migrate an existing cluster that used root authentication to start using SASL instead, first ensure that version 2.6.0 or later has been deployed to all cluster nodes as well as any external applications that need to connect to the cluster. Only versions 2.6.0 and later of the HDFS client can connect to a DataNode that uses SASL for authentication of data transfer protocol, so it is vital that all callers have the correct version before migrating. After version 2.6.0 or later has been deployed everywhere, update configuration of any external applications to enable SASL. If an HDFS client is enabled for SASL, then it can connect successfully to a DataNode running with either root authentication or SASL authentication. Changing configuration for all clients guarantees that subsequent configuration changes on DataNodes will not disrupt the applications. Finally, each individual DataNode can be migrated by changing its configuration and restarting. It is acceptable to have a mix of some DataNodes running with root authentication and some DataNodes running with SASL authentication temporarily during this migration period, because an HDFS client enabled for SASL can connect to both.
 
@@ -435,17 +437,12 @@ or a specific principal in a named keytab.
 The output of the command can be used for local diagnostics, or forwarded to
 whoever supports the cluster.
 
-The `KDiag` command has its own entry point; it is currently not hooked up
-to the end-user CLI.
-
-It is invoked simply by passing its full classname to one of the `bin/hadoop`,
-`bin/hdfs` or `bin/yarn` commands. Accordingly, it will display the kerberos client
-state of the command used to invoke it.
+The `KDiag` command has its own entry point; It is invoked by passing `kdiag` to
+`bin/hadoop` command. Accordingly, it will display the kerberos client state
+of the command used to invoke it.
 
 ```
-hadoop org.apache.hadoop.security.KDiag
-hdfs org.apache.hadoop.security.KDiag
-yarn org.apache.hadoop.security.KDiag
+hadoop kdiag
 ```
 
 The command returns a status code of 0 for a successful diagnostics run.
@@ -525,7 +522,7 @@ some basic Kerberos preconditions.
 #### `--out outfile`: Write output to file.
 
 ```
-hadoop org.apache.hadoop.security.KDiag --out out.txt
+hadoop kdiag --out out.txt
 ```
 
 Much of the diagnostics information comes from the JRE (to `stderr`) and
@@ -534,7 +531,7 @@ To get all the output, it is best to redirect both these output streams
 to the same file, and omit the `--out` option.
 
 ```
-hadoop org.apache.hadoop.security.KDiag --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM > out.txt 2>&1
+hadoop kdiag --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM > out.txt 2>&1
 ```
 
 Even there, the output of the two streams, emitted across multiple threads, can
@@ -543,15 +540,12 @@ name in the Log4j output to distinguish background threads from the main thread
 helps at the hadoop level, but doesn't assist in JVM-level logging.
 
 #### `--resource <resource>` : XML configuration resource to load.
-
-When using the `hdfs` and `yarn` commands, it is often useful to force
-load the `hdfs-site.xml` and `yarn-site.xml` resource files, to pick up any Kerberos-related
-configuration options therein.
-The `core-default` and `core-site` XML resources are always loaded.
+To load XML configuration files, this option can be used. As by default, the
+`core-default` and `core-site` XML resources are only loaded. This will help,
+when additional configuration files has any Kerberos related configurations.
 
 ```
-hdfs org.apache.hadoop.security.KDiag --resource hbase-default.xml --resource hbase-site.xml
-yarn org.apache.hadoop.security.KDiag --resource yarn-default.xml --resource yarn-site.xml
+hadoop kdiag --resource hbase-default.xml --resource hbase-site.xml
 ```
 
 For extra logging during the operation, set the logging and `HADOOP_JAAS_DEBUG`
@@ -572,7 +566,7 @@ or implicitly set to "simple":
 
 Needless to say, an application so configured cannot talk to a secure Hadoop cluster.
 
-#### `--verifyshortname &lt;principal>`: validate the short name of a principal
+#### `--verifyshortname <principal>`: validate the short name of a principal
 
 This verifies that the short name of a principal contains neither the `"@"`
 nor `"/"` characters.
@@ -580,9 +574,9 @@ nor `"/"` characters.
 ### Example
 
 ```
-hdfs org.apache.hadoop.security.KDiag \
+hadoop kdiag \
   --nofail \
-  --resource hbase-default.xml --resource hbase-site.xml \
+  --resource hdfs-site.xml --resource yarn-site.xml \
   --keylen 1024 \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```

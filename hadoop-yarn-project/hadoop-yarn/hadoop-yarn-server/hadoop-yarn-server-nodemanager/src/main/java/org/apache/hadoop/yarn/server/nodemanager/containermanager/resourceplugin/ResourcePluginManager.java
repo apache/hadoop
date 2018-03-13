@@ -46,7 +46,8 @@ public class ResourcePluginManager {
   private static final Set<String> SUPPORTED_RESOURCE_PLUGINS = ImmutableSet.of(
       GPU_URI, FPGA_URI);
 
-  private Map<String, ResourcePlugin> configuredPlugins = Collections.EMPTY_MAP;
+  private Map<String, ResourcePlugin> configuredPlugins =
+          Collections.emptyMap();
 
   public synchronized void initialize(Context context)
       throws YarnException {

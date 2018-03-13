@@ -39,13 +39,12 @@ import static org.apache.hadoop.util.Time.now;
 
 class FSDirMkdirOp {
 
-  static FileStatus mkdirs(FSNamesystem fsn, String src,
+  static FileStatus mkdirs(FSNamesystem fsn, FSPermissionChecker pc, String src,
       PermissionStatus permissions, boolean createParent) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.CREATE);

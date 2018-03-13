@@ -20,21 +20,19 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-ui</artifactId>
-  <version>3.1.0-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN UI</name>
   <packaging>${packagingType}</packaging>
 
   <properties>
     <packagingType>pom</packagingType>
-
     <webappDir>${basedir}/target/webapp</webappDir>
     <nodeExecutable>${basedir}/target/webapp/node/node</nodeExecutable>
     <packageManagerScript>node/yarn/dist/bin/yarn.js</packageManagerScript>
-
     <keepUIBuildCache>false</keepUIBuildCache>
   </properties>
 
@@ -178,7 +176,7 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
 
-              <!-- Build -->
+              <!-- Ember Build -->
               <execution>
                 <id>ember build</id>
                 <phase>generate-resources</phase>

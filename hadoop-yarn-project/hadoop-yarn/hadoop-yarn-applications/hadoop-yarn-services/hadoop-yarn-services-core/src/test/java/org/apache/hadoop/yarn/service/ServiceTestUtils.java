@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -80,6 +81,7 @@ public class ServiceTestUtils {
   protected Service createExampleApplication() {
     Service exampleApp = new Service();
     exampleApp.setName("example-app");
+    exampleApp.setVersion("v1");
     exampleApp.addComponent(createComponent("compa"));
     exampleApp.addComponent(createComponent("compb"));
     return exampleApp;
@@ -165,6 +167,10 @@ public class ServiceTestUtils {
     // Disable vmem check to disallow NM killing the container
     conf.setBoolean(NM_VMEM_CHECK_ENABLED, false);
     conf.setBoolean(NM_PMEM_CHECK_ENABLED, false);
+    // set auth filters
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        "org.apache.hadoop.security.AuthenticationFilterInitializer,"
+            + "org.apache.hadoop.security.HttpCrossOriginFilterInitializer");
     // setup zk cluster
     zkCluster = new TestingCluster(1);
     zkCluster.start();

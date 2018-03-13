@@ -36,8 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -60,6 +58,8 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -74,7 +74,8 @@ import com.google.common.base.Preconditions;
  * if necessary.
  */
 public class SnapshotManager implements SnapshotStatsMXBean {
-  public static final Log LOG = LogFactory.getLog(SnapshotManager.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SnapshotManager.class);
 
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;
@@ -99,6 +100,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
+  private final int maxSnapshotLimit;
   
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
@@ -116,11 +118,24 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
         DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT);
+    this.maxSnapshotLimit = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT);
     LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
         + ", skipCaptureAccessTimeOnlyChange: "
         + skipCaptureAccessTimeOnlyChange
         + ", snapshotDiffAllowSnapRootDescendant: "
-        + snapshotDiffAllowSnapRootDescendant);
+        + snapshotDiffAllowSnapRootDescendant
+        + ", maxSnapshotLimit: "
+        + maxSnapshotLimit);
+
+    final int maxLevels = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_LEVELS,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_SKIP_LEVELS_DEFAULT);
+    final int skipInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT);
+    DirectoryDiffListFactory.init(skipInterval, maxLevels, LOG);
   }
 
   @VisibleForTesting
@@ -176,7 +191,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
     if (d.isSnapshottable()) {
       //The directory is already a snapshottable directory.
-      d.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
+      d.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT);
     } else {
       d.addSnapshottableFeature();
     }
@@ -301,7 +316,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles);
+        this.captureOpenFiles, maxSnapshotLimit);
       
     //create success, update id
     snapshotCounter++;
