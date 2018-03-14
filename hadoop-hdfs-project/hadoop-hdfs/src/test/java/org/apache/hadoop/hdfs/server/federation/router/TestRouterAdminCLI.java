@@ -44,7 +44,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -110,7 +109,7 @@ public class TestRouterAdminCLI {
     String src = "/test-addmounttable";
     String dest = "/addmounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
-    Assert.assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -130,7 +129,7 @@ public class TestRouterAdminCLI {
     // test mount table update behavior
     dest = dest + "-new";
     argv = new String[] {"-add", src, nsId, dest, "-readonly"};
-    Assert.assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(0, ToolRunner.run(admin, argv));
     stateStore.loadCache(MountTableStoreImpl.class, true);
 
     getResponse = client.getMountTableManager()
@@ -212,7 +211,7 @@ public class TestRouterAdminCLI {
   @Test
   public void testMountTableDefaultACL() throws Exception {
     String[] argv = new String[] {"-add", "/testpath0", "ns0", "/testdir0"};
-    Assert.assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -395,6 +394,37 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin,
         new String[] {"-safemode", "get"}));
     assertTrue(out.toString().contains("false"));
+  }
+
+  @Test
+  public void testCreateInvalidEntry() throws Exception {
+    String[] argv = new String[] {
+        "-add", "test-createInvalidEntry", "ns0", "/createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", "/test-createInvalidEntry", "ns0", "createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", null, "ns0", "/createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", "/test-createInvalidEntry", "ns0", null};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", "", "ns0", "/createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", "/test-createInvalidEntry", null, "/createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
+    argv = new String[] {
+        "-add", "/test-createInvalidEntry", "", "/createInvalidEntry"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
   }
 
   /**

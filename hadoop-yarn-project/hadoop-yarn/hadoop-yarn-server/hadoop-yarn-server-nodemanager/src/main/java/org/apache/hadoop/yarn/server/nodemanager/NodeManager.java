@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.tracker.NMLogAggregationStatusTracker;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
@@ -622,8 +621,6 @@ public class NodeManager extends CompositeService
 
     private ResourcePluginManager resourcePluginManager;
 
-    private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
-
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
@@ -864,15 +861,6 @@ public class NodeManager extends CompositeService
      */
     public void setDeletionService(DeletionService deletionService) {
       this.deletionService = deletionService;
-    }
-
-    public void setNMLogAggregationStatusTracker(
-        NMLogAggregationStatusTracker nmLogAggregationStatusTracker) {
-      this.nmLogAggregationStatusTracker = nmLogAggregationStatusTracker;
-    }
-    @Override
-    public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
-      return nmLogAggregationStatusTracker;
     }
   }
 

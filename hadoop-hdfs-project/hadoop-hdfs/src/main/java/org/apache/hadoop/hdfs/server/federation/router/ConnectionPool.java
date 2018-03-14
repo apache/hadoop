@@ -159,7 +159,7 @@ public class ConnectionPool {
     for (int i=0; i<size; i++) {
       int index = (threadIndex + i) % size;
       conn = tmpConnections.get(index);
-      if (conn != null && !conn.isUsable()) {
+      if (conn != null && conn.isUsable()) {
         return conn;
       }
     }

@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
@@ -145,8 +144,7 @@ public class SnapshotFSImageFormat {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children
     for (DirectoryDiff postDiff : parent.getDiffs()) {
-      final INode d = postDiff.getChildrenDiff().search(ListType.DELETED,
-          createdNodeName);
+      final INode d = postDiff.getChildrenDiff().getDeleted(createdNodeName);
       if (d != null) {
         return d;
       } // else go to the next SnapshotDiff

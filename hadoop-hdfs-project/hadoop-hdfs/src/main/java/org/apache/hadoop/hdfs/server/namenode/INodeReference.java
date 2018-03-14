@@ -126,10 +126,6 @@ public abstract class INodeReference extends INode {
     return referred;
   }
 
-  public final void setReferredINode(INode referred) {
-    this.referred = referred;
-  }
-  
   @Override
   public final boolean isReference() {
     return true;

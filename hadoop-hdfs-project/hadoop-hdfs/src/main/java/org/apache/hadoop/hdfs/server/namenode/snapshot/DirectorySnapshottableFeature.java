@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
@@ -396,7 +395,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
           .getId());
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(
               snapshotDir, (WithName) child,
@@ -476,7 +475,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         }
         iterate = true;
         level = level + 1;
-        boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
+        boolean toProcess = !diff.containsDeleted(name);
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(snapshotDir,
               (WithName) child, Snapshot.getSnapshotId(later));

@@ -30,7 +30,6 @@ export default DS.Model.extend({
   finishedTime: DS.attr('finishedTime'),
   progress: DS.attr('number'),
   diagnostics: DS.attr('string'),
-  amContainerLogs: DS.attr('string'),
   amHostHttpAddress: DS.attr('string'),
   logAggregationStatus: DS.attr('string'),
   unmanagedApplication: DS.attr('string'),

@@ -2667,7 +2667,11 @@ public class TestKMS {
                   kp.createKey("kbb", new KeyProvider.Options(conf));
                   Assert.fail();
                 } catch (Exception ex) {
-                  Assert.assertTrue(ex.getMessage(), ex.getMessage().contains("Forbidden"));
+                  GenericTestUtils.assertExceptionContains("Error while " +
+                      "authenticating with endpoint", ex);
+                  GenericTestUtils.assertExceptionContains("Forbidden", ex
+                      .getCause().getCause());
+
                 }
                 return null;
               }

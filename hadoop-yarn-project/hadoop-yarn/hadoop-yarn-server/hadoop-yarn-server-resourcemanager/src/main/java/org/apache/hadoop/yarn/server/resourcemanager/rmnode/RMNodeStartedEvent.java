@@ -22,14 +22,12 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
 public class RMNodeStartedEvent extends RMNodeEvent {
 
   private List<NMContainerStatus> containerStatuses;
   private List<ApplicationId> runningApplications;
-  private List<LogAggregationReport> logAggregationReportsForApps;
 
   public RMNodeStartedEvent(NodeId nodeId,
       List<NMContainerStatus> containerReports,
@@ -45,14 +43,5 @@ public class RMNodeStartedEvent extends RMNodeEvent {
   
   public List<ApplicationId> getRunningApplications() {
     return runningApplications;
-  }
-
-  public List<LogAggregationReport> getLogAggregationReportsForApps() {
-    return this.logAggregationReportsForApps;
-  }
-
-  public void setLogAggregationReportsForApps(
-      List<LogAggregationReport> logAggregationReportsForApps) {
-    this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 }

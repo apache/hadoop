@@ -2993,17 +2993,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * Get the etag of a object at the path via HEAD request and return it
-   * as a checksum object. This has the whatever guarantees about equivalence
-   * the S3 implementation offers.
+   * When enabled, get the etag of a object at the path via HEAD request and
+   * return it as a checksum object.
    * <ol>
    *   <li>If a tag has not changed, consider the object unchanged.</li>
    *   <li>Two tags being different does not imply the data is different.</li>
    * </ol>
    * Different S3 implementations may offer different guarantees.
+   *
+   * This check is (currently) only made if
+   * {@link Constants#ETAG_CHECKSUM_ENABLED} is set; turning it on
+   * has caused problems with Distcp (HADOOP-15273).
+   *
    * @param f The file path
    * @param length The length of the file range for checksum calculation
-   * @return The EtagChecksum or null if checksums are not supported.
+   * @return The EtagChecksum or null if checksums are not enabled or supported.
    * @throws IOException IO failure
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html">Common Response Headers</a>
    */
@@ -3012,15 +3016,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public EtagChecksum getFileChecksum(Path f, final long length)
       throws IOException {
     Preconditions.checkArgument(length >= 0);
-    Path path = qualify(f);
-    LOG.debug("getFileChecksum({})", path);
-    return once("getFileChecksum", path.toString(),
-        () -> {
-          // this always does a full HEAD to the object
-          ObjectMetadata headers = getObjectMetadata(path);
-          String eTag = headers.getETag();
-          return eTag != null ? new EtagChecksum(eTag) : null;
-        });
+    entryPoint(INVOCATION_GET_FILE_CHECKSUM);
+
+    if (getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
+        ETAG_CHECKSUM_ENABLED_DEFAULT)) {
+      Path path = qualify(f);
+      LOG.debug("getFileChecksum({})", path);
+      return once("getFileChecksum", path.toString(),
+          () -> {
+            // this always does a full HEAD to the object
+            ObjectMetadata headers = getObjectMetadata(path);
+            String eTag = headers.getETag();
+            return eTag != null ? new EtagChecksum(eTag) : null;
+          });
+    } else {
+      // disabled
+      return null;
+    }
   }
 
   /**

@@ -4651,9 +4651,9 @@
     <name>dfs.disk.balancer.plan.valid.interval</name>
     <value>1d</value>
     <description>
-      Maximum number of hours the disk balancer plan is valid.
-      This setting supports multiple time unit suffixes as described
-      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      Maximum amount of time disk balancer plan is valid. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds
       is assumed.
     </description>
   </property>

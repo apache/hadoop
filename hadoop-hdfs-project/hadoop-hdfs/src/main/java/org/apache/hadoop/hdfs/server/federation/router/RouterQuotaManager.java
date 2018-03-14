@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
+
+import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -94,7 +97,16 @@ public class RouterQuotaManager {
       String from = parentPath;
       String to = parentPath + Character.MAX_VALUE;
       SortedMap<String, RouterQuotaUsage> subMap = this.cache.subMap(from, to);
-      return subMap.keySet();
+
+      Set<String> validPaths = new HashSet<>();
+      if (subMap != null) {
+        for (String path : subMap.keySet()) {
+          if (isParentEntry(path, parentPath)) {
+            validPaths.add(path);
+          }
+        }
+      }
+      return validPaths;
     } finally {
       readLock.unlock();
     }

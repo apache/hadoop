@@ -78,7 +78,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import com.google.common.base.Preconditions;
@@ -581,10 +580,9 @@ public class FSImageFormatPBSnapshot {
                     buildINodeDirectory(copy, parent.getSaverContext()));
           }
           // process created list and deleted list
-          List<INode> created = diff.getChildrenDiff()
-              .getList(ListType.CREATED);
+          List<INode> created = diff.getChildrenDiff().getCreatedUnmodifiable();
           db.setCreatedListSize(created.size());
-          List<INode> deleted = diff.getChildrenDiff().getList(ListType.DELETED);
+          List<INode> deleted = diff.getChildrenDiff().getDeletedUnmodifiable();
           for (INode d : deleted) {
             if (d.isReference()) {
               refList.add(d.asReference());

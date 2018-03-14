@@ -44,6 +44,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Random;
@@ -81,6 +82,7 @@ import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -109,6 +111,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.log4j.Level;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
@@ -625,7 +628,7 @@ public class TestWebHDFS {
   }
 
   /**
-   * Test snapshot deletion through WebHdfs
+   * Test snapshot deletion through WebHdfs.
    */
   @Test
   public void testWebHdfsDeleteSnapshot() throws Exception {
@@ -670,7 +673,7 @@ public class TestWebHDFS {
   }
 
   /**
-   * Test snapshot diff through WebHdfs
+   * Test snapshot diff through WebHdfs.
    */
   @Test
   public void testWebHdfsSnapshotDiff() throws Exception {
@@ -735,6 +738,75 @@ public class TestWebHDFS {
     }
   }
 
+  /**
+   * Test snapshottable directory list through WebHdfs.
+   */
+  @Test
+  public void testWebHdfsSnapshottableDirectoryList() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final Path foo = new Path("/foo");
+      final Path bar = new Path("/bar");
+      dfs.mkdirs(foo);
+      dfs.mkdirs(bar);
+      dfs.allowSnapshot(foo);
+      dfs.allowSnapshot(bar);
+      Path file0 = new Path(foo, "file0");
+      DFSTestUtil.createFile(dfs, file0, 100, (short) 1, 0);
+      Path file1 = new Path(bar, "file1");
+      DFSTestUtil.createFile(dfs, file1, 100, (short) 1, 0);
+      SnapshottableDirectoryStatus[] statuses =
+          webHdfs.getSnapshottableDirectoryList();
+      SnapshottableDirectoryStatus[] dfsStatuses =
+          dfs.getSnapshottableDirListing();
+
+      for (int i = 0; i < dfsStatuses.length; i++) {
+        Assert.assertEquals(statuses[i].getSnapshotNumber(),
+            dfsStatuses[i].getSnapshotNumber());
+        Assert.assertEquals(statuses[i].getSnapshotQuota(),
+            dfsStatuses[i].getSnapshotQuota());
+        Assert.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
+            dfsStatuses[i].getParentFullPath()));
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
+            statuses[i].getDirStatus().getChildrenNum());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
+            statuses[i].getDirStatus().getModificationTime());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
+            statuses[i].getDirStatus().isDir());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
+            statuses[i].getDirStatus().getAccessTime());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
+            statuses[i].getDirStatus().getPermission());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
+            statuses[i].getDirStatus().getOwner());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
+            statuses[i].getDirStatus().getGroup());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
+            statuses[i].getDirStatus().getPath());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
+            statuses[i].getDirStatus().getFileId());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
+            statuses[i].getDirStatus().hasAcl());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
+            statuses[i].getDirStatus().isEncrypted());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
+            statuses[i].getDirStatus().isErasureCoded());
+        Assert.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
+            statuses[i].getDirStatus().isSnapshotEnabled());
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test
   public void testWebHdfsCreateNonRecursive() throws IOException, URISyntaxException {
     MiniDFSCluster cluster = null;
@@ -760,7 +832,7 @@ public class TestWebHDFS {
     }
   }
   /**
-   * Test snapshot rename through WebHdfs
+   * Test snapshot rename through WebHdfs.
    */
   @Test
   public void testWebHdfsRenameSnapshot() throws Exception {
@@ -1575,6 +1647,114 @@ public class TestWebHDFS {
       }
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests that the LISTSTATUS ang GETFILESTATUS WebHDFS calls return the
+   * ecPolicy for EC files.
+   */
+  @Test(timeout=300000)
+  public void testECPolicyInFileStatus() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    final String ecPolicyName = ecPolicy.getName();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(5)
+        .build();
+    cluster.waitActive();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+
+    // Create an EC dir and write a test file in it
+    final Path ecDir = new Path("/ec");
+    Path ecFile = new Path(ecDir, "ec_file.txt");
+    Path nonEcFile = new Path(ecDir, "non_ec_file.txt");
+    fs.mkdirs(ecDir);
+
+    // Create a non-EC file before enabling ec policy
+    DFSTestUtil.createFile(fs, nonEcFile, 1024, (short) 1, 0);
+
+    fs.enableErasureCodingPolicy(ecPolicyName);
+    fs.setErasureCodingPolicy(ecDir, ecPolicyName);
+
+    // Create a EC file
+    DFSTestUtil.createFile(fs, ecFile, 1024, (short) 1, 0);
+
+    // Query webhdfs REST API to list statuses of files/directories in ecDir
+    InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+    URL listStatusUrl = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + ecDir.toString() + "?op=LISTSTATUS");
+
+    HttpURLConnection conn = (HttpURLConnection) listStatusUrl.openConnection();
+    conn.setRequestMethod("GET");
+    conn.setInstanceFollowRedirects(false);
+    String listStatusResponse = IOUtils.toString(conn.getInputStream(),
+        StandardCharsets.UTF_8);
+    Assert.assertEquals("Response wasn't " + HttpURLConnection.HTTP_OK,
+        HttpURLConnection.HTTP_OK, conn.getResponseCode());
+
+    // Verify that ecPolicy is set in the ListStatus response for ec file
+    String ecpolicyForECfile = getECPolicyFromFileStatusJson(
+        getFileStatusJson(listStatusResponse, ecFile.getName()));
+    assertEquals("EC policy for ecFile should match the set EC policy",
+        ecpolicyForECfile, ecPolicyName);
+
+    // Verify that ecPolicy is not set in the ListStatus response for non-ec
+    // file
+    String ecPolicyForNonECfile = getECPolicyFromFileStatusJson(
+        getFileStatusJson(listStatusResponse, nonEcFile.getName()));
+    assertEquals("EC policy for nonEcFile should be null (not set)",
+        ecPolicyForNonECfile, null);
+
+    // Query webhdfs REST API to get fileStatus for ecFile
+    URL getFileStatusUrl = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + ecFile.toString() +
+            "?op=GETFILESTATUS");
+
+    conn = (HttpURLConnection) getFileStatusUrl.openConnection();
+    conn.setRequestMethod("GET");
+    conn.setInstanceFollowRedirects(false);
+    String getFileStatusResponse = IOUtils.toString(conn.getInputStream(),
+        StandardCharsets.UTF_8);
+    Assert.assertEquals("Response wasn't " + HttpURLConnection.HTTP_OK,
+        HttpURLConnection.HTTP_OK, conn.getResponseCode());
+
+    // Verify that ecPolicy is set in getFileStatus response for ecFile
+    JSONObject fileStatusObject = new JSONObject(getFileStatusResponse)
+        .getJSONObject("FileStatus");
+    ecpolicyForECfile = getECPolicyFromFileStatusJson(fileStatusObject);
+    assertEquals("EC policy for ecFile should match the set EC policy",
+        ecpolicyForECfile, ecPolicyName);
+  }
+
+  /**
+   * Get FileStatus JSONObject from ListStatus response.
+   */
+  private JSONObject getFileStatusJson(String response, String fileName)
+      throws JSONException {
+    JSONObject listStatusResponseJson = new JSONObject(response);
+    JSONArray fileStatusArray = listStatusResponseJson
+        .getJSONObject("FileStatuses")
+        .getJSONArray("FileStatus");
+    for (int i = 0; i < fileStatusArray.length(); i++) {
+      JSONObject fileStatusJsonObject = fileStatusArray.getJSONObject(i);
+      if (fileName.equals(fileStatusJsonObject.get("pathSuffix"))) {
+        return fileStatusJsonObject;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get ECPolicy name from FileStatus JSONObject.
+   */
+  private String getECPolicyFromFileStatusJson(JSONObject fileStatusJsonObject)
+      throws JSONException {
+    if (fileStatusJsonObject.has("ecPolicy")) {
+      return fileStatusJsonObject.getString("ecPolicy");
+    } else {
+      return null;
     }
   }
 

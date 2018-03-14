@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.service.exceptions;
 public interface RestApiErrorMessages {
   String ERROR_APPLICATION_NAME_INVALID =
       "Service name is either empty or not provided";
+  String ERROR_APPLICATION_VERSION_INVALID =
+      "Version of service %s is either empty or not provided";
   String ERROR_APPLICATION_NAME_INVALID_FORMAT =
       "Service name %s is not valid - only lower case letters, digits, " +
           "and hyphen are allowed, and the name must be no more " +
