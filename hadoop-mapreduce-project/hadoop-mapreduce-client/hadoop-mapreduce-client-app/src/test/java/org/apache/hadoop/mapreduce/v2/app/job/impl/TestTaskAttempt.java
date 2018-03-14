@@ -186,77 +186,103 @@ public class TestTaskAttempt{
 
   @Test
   public void testMRAppHistoryForMap() throws Exception {
-    MRApp app = new FailingAttemptsMRApp(1, 0);
-    testMRAppHistory(app);
+    MRApp app = null;
+    try {
+      app = new FailingAttemptsMRApp(1, 0);
+      testMRAppHistory(app);
+    } finally {
+      app.close();
+    }
   }
 
   @Test
   public void testMRAppHistoryForReduce() throws Exception {
-    MRApp app = new FailingAttemptsMRApp(0, 1);
-    testMRAppHistory(app);
+    MRApp app = null;
+    try {
+      app = new FailingAttemptsMRApp(0, 1);
+      testMRAppHistory(app);
+    } finally {
+      app.close();
+    }
   }
 
   @Test
   public void testMRAppHistoryForTAFailedInAssigned() throws Exception {
     // test TA_CONTAINER_LAUNCH_FAILED for map
-    FailingAttemptsDuringAssignedMRApp app =
-        new FailingAttemptsDuringAssignedMRApp(1, 0,
-            TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED);
-    testTaskAttemptAssignedFailHistory(app);
+    FailingAttemptsDuringAssignedMRApp app = null;
 
-    // test TA_CONTAINER_LAUNCH_FAILED for reduce
-    app =
-        new FailingAttemptsDuringAssignedMRApp(0, 1,
-            TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED);
-    testTaskAttemptAssignedFailHistory(app);
+    try {
+      app =
+          new FailingAttemptsDuringAssignedMRApp(1, 0,
+              TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_CONTAINER_COMPLETED for map
-    app =
-        new FailingAttemptsDuringAssignedMRApp(1, 0,
-            TaskAttemptEventType.TA_CONTAINER_COMPLETED);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_CONTAINER_LAUNCH_FAILED for reduce
+      app =
+          new FailingAttemptsDuringAssignedMRApp(0, 1,
+              TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_CONTAINER_COMPLETED for reduce
-    app =
-        new FailingAttemptsDuringAssignedMRApp(0, 1,
-            TaskAttemptEventType.TA_CONTAINER_COMPLETED);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_CONTAINER_COMPLETED for map
+      app =
+          new FailingAttemptsDuringAssignedMRApp(1, 0,
+              TaskAttemptEventType.TA_CONTAINER_COMPLETED);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_FAILMSG for map
-    app =
-        new FailingAttemptsDuringAssignedMRApp(1, 0,
-            TaskAttemptEventType.TA_FAILMSG);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_CONTAINER_COMPLETED for reduce
+      app =
+          new FailingAttemptsDuringAssignedMRApp(0, 1,
+              TaskAttemptEventType.TA_CONTAINER_COMPLETED);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_FAILMSG for reduce
-    app =
-        new FailingAttemptsDuringAssignedMRApp(0, 1,
-            TaskAttemptEventType.TA_FAILMSG);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_FAILMSG for map
+      app =
+          new FailingAttemptsDuringAssignedMRApp(1, 0,
+              TaskAttemptEventType.TA_FAILMSG);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_FAILMSG_BY_CLIENT for map
-    app =
-        new FailingAttemptsDuringAssignedMRApp(1, 0,
-            TaskAttemptEventType.TA_FAILMSG_BY_CLIENT);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_FAILMSG for reduce
+      app =
+          new FailingAttemptsDuringAssignedMRApp(0, 1,
+              TaskAttemptEventType.TA_FAILMSG);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_FAILMSG_BY_CLIENT for reduce
-    app =
-        new FailingAttemptsDuringAssignedMRApp(0, 1,
-            TaskAttemptEventType.TA_FAILMSG_BY_CLIENT);
-    testTaskAttemptAssignedFailHistory(app);
+      // test TA_FAILMSG_BY_CLIENT for map
+      app =
+          new FailingAttemptsDuringAssignedMRApp(1, 0,
+              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_KILL for map
-    app =
-        new FailingAttemptsDuringAssignedMRApp(1, 0,
-            TaskAttemptEventType.TA_KILL);
-    testTaskAttemptAssignedKilledHistory(app);
+      // test TA_FAILMSG_BY_CLIENT for reduce
+      app =
+          new FailingAttemptsDuringAssignedMRApp(0, 1,
+              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT);
+      testTaskAttemptAssignedFailHistory(app);
+      app.close();
 
-    // test TA_KILL for reduce
-    app =
-        new FailingAttemptsDuringAssignedMRApp(0, 1,
-            TaskAttemptEventType.TA_KILL);
-    testTaskAttemptAssignedKilledHistory(app);
+      // test TA_KILL for map
+      app =
+          new FailingAttemptsDuringAssignedMRApp(1, 0,
+              TaskAttemptEventType.TA_KILL);
+      testTaskAttemptAssignedKilledHistory(app);
+      app.close();
+
+      // test TA_KILL for reduce
+      app =
+          new FailingAttemptsDuringAssignedMRApp(0, 1,
+              TaskAttemptEventType.TA_KILL);
+      testTaskAttemptAssignedKilledHistory(app);
+      app.close();
+    } finally {
+      app.close();
+    }
   }
 
   @Test
