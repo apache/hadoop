@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -1292,24 +1289,6 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
-   * check whether user is static and unauthenticated, if the
-   * answer is TRUE, that means http sever is in non-security
-   * environment.
-   * @param servletContext the servlet context.
-   * @param request the servlet request.
-   * @return TRUE/FALSE based on the logic described above.
-   */
-  public static boolean isStaticUserAndNoneAuthType(
-      ServletContext servletContext, HttpServletRequest request) {
-    Configuration conf =
-        (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
-    final String authType = request.getAuthType();
-    final String staticUser = conf.get(HADOOP_HTTP_STATIC_USER,
-        DEFAULT_HADOOP_HTTP_STATIC_USER);
-    return authType == null && staticUser.equals(request.getRemoteUser());
-  }
-
-  /**
    * Checks the user has privileges to access to instrumentation servlets.
    * <p/>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to FALSE
@@ -1406,14 +1385,9 @@ public final class HttpServer2 implements FilterContainer {
 
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-      // If user is a static user and auth Type is null, that means
-      // there is a non-security environment and no need authorization,
-      // otherwise, do the authorization.
-      final ServletContext servletContext = getServletContext();
-      if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-          !HttpServer2.isInstrumentationAccessAllowed(servletContext,
-              request, response)) {
+      throws ServletException, IOException {
+      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
+                                                      request, response)) {
         return;
       }
       response.setContentType("text/plain; charset=UTF-8");

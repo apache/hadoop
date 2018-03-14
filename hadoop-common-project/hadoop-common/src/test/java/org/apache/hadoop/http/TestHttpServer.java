@@ -69,9 +69,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer2 server;
@@ -464,7 +461,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     String serverURL = "http://"
         + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
-        "logLevel", "jmx" }) {
+        "logLevel" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
@@ -472,18 +469,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       assertEquals(HttpURLConnection.HTTP_FORBIDDEN, getHttpStatusCode(
           serverURL + servlet, "userE"));
     }
-
-    // hadoop.security.authorization is set as true while
-    // hadoop.http.authentication.type's value is `simple`(default value)
-    // in this case, static user has administrator access
-    final String staticUser = conf.get(HADOOP_HTTP_STATIC_USER,
-        DEFAULT_HADOOP_HTTP_STATIC_USER);
-    for (String servlet : new String[] {"conf", "logs", "stacks",
-        "logLevel", "jmx"}) {
-      assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
-          serverURL + servlet, staticUser));
-    }
-
     myServer.stop();
   }
   
