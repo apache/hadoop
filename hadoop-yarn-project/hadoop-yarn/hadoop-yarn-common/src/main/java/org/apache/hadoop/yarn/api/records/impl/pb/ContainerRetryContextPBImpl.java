@@ -165,6 +165,21 @@ public class ContainerRetryContextPBImpl extends ContainerRetryContext {
     builder.setRetryInterval(retryInterval);
   }
 
+  @Override
+  public long getFailuresValidityInterval() {
+    ContainerRetryContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasFailuresValidityInterval()) {
+      return -1;
+    }
+    return p.getFailuresValidityInterval();
+  }
+
+  @Override
+  public void setFailuresValidityInterval(long failuresValidityInterval) {
+    maybeInitBuilder();
+    builder.setFailuresValidityInterval(failuresValidityInterval);
+  }
+
   private ContainerRetryPolicyProto convertToProtoFormat(
       ContainerRetryPolicy containerRetryPolicy) {
     return ProtoUtils.convertToProtoFormat(containerRetryPolicy);
