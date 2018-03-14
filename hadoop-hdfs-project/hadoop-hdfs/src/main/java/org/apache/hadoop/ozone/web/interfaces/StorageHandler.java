@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -45,7 +46,7 @@ import java.io.OutputStream;
  * and another which will point to the HDFS backend.
  */
 @InterfaceAudience.Private
-public interface StorageHandler {
+public interface StorageHandler extends Closeable{
 
   /**
    * Creates a Storage Volume.

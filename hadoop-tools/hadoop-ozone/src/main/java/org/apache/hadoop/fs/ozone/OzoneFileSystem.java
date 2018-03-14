@@ -27,6 +27,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -47,9 +53,6 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.ReplicationFactor;
 import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -90,6 +93,9 @@ public class OzoneFileSystem extends FileSystem {
   private ReplicationType replicationType;
   private ReplicationFactor replicationFactor;
 
+  private static final Pattern URL_SCHEMA_PATTERN =
+      Pattern.compile("(.+)\\.([^\\.]+)");
+
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
@@ -97,29 +103,20 @@ public class OzoneFileSystem extends FileSystem {
     Objects.requireNonNull(name.getScheme(), "No scheme provided in " + name);
     assert getScheme().equals(name.getScheme());
 
-    Path path = new Path(name.getPath());
-    String hostStr = name.getAuthority();
-    String volumeStr = null;
-    String bucketStr = null;
+    String authority = name.getAuthority();
 
-    while (path != null && !path.isRoot()) {
-      bucketStr = volumeStr;
-      volumeStr = path.getName();
-      path = path.getParent();
-    }
+    Matcher matcher = URL_SCHEMA_PATTERN.matcher(authority);
 
-    if (hostStr == null) {
-      throw new IllegalArgumentException("No host provided in " + name);
-    } else if (volumeStr == null) {
-      throw new IllegalArgumentException("No volume provided in " + name);
-    } else if (bucketStr == null) {
-      throw new IllegalArgumentException("No bucket provided in " + name);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException("Ozone file system url should be "
+          + "in the form o3://bucket.volume");
     }
+    String bucketStr = matcher.group(1);
+    String volumeStr = matcher.group(2);
 
     try {
-      uri = new URIBuilder().setScheme(OZONE_URI_SCHEME).setHost(hostStr)
-          .setPath(OZONE_URI_DELIMITER + volumeStr + OZONE_URI_DELIMITER
-              + bucketStr + OZONE_URI_DELIMITER).build();
+      uri = new URIBuilder().setScheme(OZONE_URI_SCHEME)
+          .setHost(authority).build();
       LOG.trace("Ozone URI for ozfs initialization is " + uri);
       this.ozoneClient = OzoneClientFactory.getRpcClient(conf);
       objectStore = ozoneClient.getObjectStore();
@@ -302,14 +299,12 @@ public class OzoneFileSystem extends FileSystem {
     }
 
     // Cannot rename a directory to its own subdirectory
-    Path parent = dst.getParent();
-    while (parent != null && !src.equals(parent)) {
-      parent = parent.getParent();
+    Path dstParent = dst.getParent();
+    while (dstParent != null && !src.equals(dstParent)) {
+      dstParent = dstParent.getParent();
     }
-    if (parent != null) {
-      return false;
-    }
-
+    Preconditions.checkArgument(dstParent == null,
+        "Cannot rename a directory to its own subdirectory");
     // Check if the source exists
     FileStatus srcStatus;
     try {
@@ -435,7 +430,7 @@ public class OzoneFileSystem extends FileSystem {
         }
       }
       // left with only subkeys now
-      if (keyPath.getParent().getName().equals(f.getName())) {
+      if (pathToKey(keyPath.getParent()).equals(pathToKey(f))) {
         // skip keys which are for subdirectories of the directory
         statuses.add(getFileStatus(keyPath));
       }
