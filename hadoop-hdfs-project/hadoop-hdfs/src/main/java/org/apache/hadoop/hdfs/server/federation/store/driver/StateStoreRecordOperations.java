@@ -49,21 +49,6 @@ public interface StateStoreRecordOperations {
   <T extends BaseRecord> QueryResult<T> get(Class<T> clazz) throws IOException;
 
   /**
-   * Get all records of the requested record class from the data store. To use
-   * the default implementations in this class, getAll must return new instances
-   * of the records on each call. It is recommended to override the default
-   * implementations for better performance.
-   *
-   * @param clazz Class of record to fetch.
-   * @param sub Sub path.
-   * @return List of all records that match the clazz and the sub path.
-   * @throws IOException
-   */
-  @Idempotent
-  <T extends BaseRecord> QueryResult<T> get(Class<T> clazz, String sub)
-      throws IOException;
-
-  /**
    * Get a single record from the store that matches the query.
    *
    * @param clazz Class of record to fetch.

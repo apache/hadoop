@@ -140,5 +140,10 @@ public final class StateStoreMetrics implements StateStoreMBean {
     writes.resetMinMax();
     removes.resetMinMax();
     failures.resetMinMax();
+
+    reads.lastStat().reset();
+    writes.lastStat().reset();
+    removes.lastStat().reset();
+    failures.lastStat().reset();
   }
 }
