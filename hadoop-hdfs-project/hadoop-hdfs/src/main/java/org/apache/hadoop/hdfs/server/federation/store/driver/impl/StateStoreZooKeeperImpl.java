@@ -117,12 +117,6 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   @Override
   public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz)
       throws IOException {
-    return get(clazz, (String)null);
-  }
-
-  @Override
-  public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz, String sub)
-      throws IOException {
     verifyDriverReady();
     long start = monotonicNow();
     List<T> ret = new ArrayList<>();
