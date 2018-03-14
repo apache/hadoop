@@ -34,6 +34,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +93,7 @@ public class KMSWebApp implements ServletContextListener {
       LOG.info("  KMS Hadoop Version: " + VersionInfo.getVersion());
       LOG.info("-------------------------------------------------------------");
 
-      kmsAcls = new KMSACLs();
+      kmsAcls = createKMSACLs(kmsConf);
       kmsAcls.startReloader();
 
       metricRegistry = new MetricRegistry();
@@ -174,6 +175,13 @@ public class KMSWebApp implements ServletContextListener {
       System.out.println();
       System.exit(1);
     }
+  }
+
+  private KMSACLs createKMSACLs(Configuration conf) {
+    Class<? extends KMSACLs> aclClass = conf.getClass(
+        KMSConfiguration.KEY_MANAGEMENT_ACL_CLASS, FileBasedKMSACLs.class,
+        KMSACLs.class);
+    return ReflectionUtils.newInstance(aclClass, conf);
   }
 
   @Override

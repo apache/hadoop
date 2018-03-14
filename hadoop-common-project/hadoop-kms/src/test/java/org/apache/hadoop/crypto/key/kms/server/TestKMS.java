@@ -33,6 +33,7 @@ import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
+import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -368,6 +369,37 @@ public class TestKMS {
           new AppConfigurationEntry(getKrb5LoginModuleName(),
               AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
               options)};
+    }
+  }
+
+  private static class TestKeyManagementACLs extends KMSACLs {
+
+    @Override
+    public boolean hasAccessToKey(String aclName, UserGroupInformation ugi,
+        KeyOpType opType) {
+      return false;
+    }
+
+    @Override
+    public boolean isACLPresent(String aclName, KeyOpType opType) {
+      return false;
+    }
+
+    @Override
+    public boolean hasAccess(Type type, UserGroupInformation ugi) {
+      return false;
+    }
+
+    @Override
+    public void loadAcls(boolean forceReload) {
+    }
+
+    @Override
+    public void startReloader() {
+    }
+
+    @Override
+    public void stopReloader() {
     }
   }
 
@@ -1361,6 +1393,34 @@ public class TestKMS {
   }
 
   @Test
+  public void testKMSAclConfigurable() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    final File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir, conf);
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    conf.set("hadoop.kms.key.management.acl.class",
+        TestKeyManagementACLs.class.getName());
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+
+      @Override
+      public Void call() throws Exception {
+        Assert.assertNotNull("KMSWebApp.getACLs() is not null",
+            KMSWebApp.getACLs());
+        Assert.assertEquals("Expected KeyManagementACLs type",
+            TestKeyManagementACLs.class, KMSWebApp.getACLs().getClass());
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testKMSAuthFailureRetry() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "kerberos");
@@ -1751,8 +1811,7 @@ public class TestKMS {
         conf.set(KMSACLs.Type.CREATE.getAclConfigKey(), "foo");
         conf.set(KMSACLs.Type.GENERATE_EEK.getAclConfigKey(), "foo");
         writeConf(testDir, conf);
-        KMSWebApp.getACLs().forceNextReloadForTesting();
-        KMSWebApp.getACLs().run(); // forcing a reload by hand.
+        KMSWebApp.getACLs().loadAcls(true); // forcing a reload by hand.
 
         // should not be able to create a key now
         doAs("CREATE", new PrivilegedExceptionAction<Void>() {

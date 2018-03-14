@@ -23,7 +23,6 @@ import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.OpStatus;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;

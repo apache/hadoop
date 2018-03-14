@@ -85,7 +85,7 @@ public class TestReencryptionWithKMS extends TestReencryption{
     try (Writer writer = new FileWriter(kmsAcl)) {
       acl.writeXml(writer);
     }
-    KMSWebApp.getACLs().run();
+    KMSWebApp.getACLs().loadAcls(true);
     testReencryptionBasic();
   }
 
