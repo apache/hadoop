@@ -70,9 +70,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
+    .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.placement
     .UserGroupMappingPlacementRule.CURRENT_USER_MAPPING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -118,13 +122,26 @@ public class TestCapacitySchedulerAutoQueueCreation
       ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(
           PARENT_QUEUE);
       assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
-      validateInitialQueueEntitlement(parentQueue, USER0, 0.1f);
+      validateInitialQueueEntitlement(parentQueue, USER0, 0.1f, accessibleNodeLabelsOnC);
       validateUserAndAppLimits(autoCreatedLeafQueue, 1000, 1000);
 
       assertTrue(autoCreatedLeafQueue
           .getOrderingPolicy() instanceof FairOrderingPolicy);
+
+      setupGroupQueueMappings("d", cs.getConfiguration(), "%user");
+      cs.reinitialize(cs.getConfiguration(), mockRM.getRMContext());
+
+      submitApp(mockRM, cs.getQueue("d"), TEST_GROUPUSER, TEST_GROUPUSER, 1, 1);
+      autoCreatedLeafQueue =
+          (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
+      parentQueue = (ManagedParentQueue) cs.getQueue("d");
+      assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+      validateInitialQueueEntitlement(parentQueue, TEST_GROUPUSER, 0.02f,
+          new HashSet<String>() {{ add(NO_LABEL); }});
+
     } finally {
       cleanupQueue(USER0);
+      cleanupQueue(TEST_GROUPUSER);
     }
   }
 
@@ -158,8 +175,8 @@ public class TestCapacitySchedulerAutoQueueCreation
           PARENT_QUEUE);
       assertEquals(parentQueue, user0Queue.getParent());
       assertEquals(parentQueue, user1Queue.getParent());
-      validateInitialQueueEntitlement(parentQueue, USER0, 0.2f);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.2f);
+      validateInitialQueueEntitlement(parentQueue, USER0, 0.2f, accessibleNodeLabelsOnC);
+      validateInitialQueueEntitlement(parentQueue, USER1, 0.2f, accessibleNodeLabelsOnC);
 
       ApplicationAttemptId appAttemptId = appsInC.get(0);
 
@@ -200,7 +217,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) cs.getQueue(
           USER1);
       validateInitialQueueEntitlement(parentQueue, leafQueue.getQueueName(),
-          0.1f);
+          0.1f, accessibleNodeLabelsOnC);
 
     } finally {
       cleanupQueue(USER0);
@@ -482,12 +499,12 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER1
       submitApp(mockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f);
+      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
       ApplicationId user2AppId = submitApp(mockRM, parentQueue, USER2, USER2, 2,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f);
+      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
 
       //submit another app3 as USER1
       submitApp(mockRM, parentQueue, USER1, USER1, 3, 2);
@@ -548,12 +565,12 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
       CSQueue user1LeafQueue = newCS.getQueue(USER1);
 
       //submit another app2 as USER2
       submitApp(newMockRM, parentQueue, USER2, USER2, 2, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
       CSQueue user2LeafQueue = newCS.getQueue(USER2);
 
       //validate total activated abs capacity remains the same
@@ -642,7 +659,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       submitApp(USER1, USER1, NODEL_LABEL_GPU);
       //submit app1 as USER1
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f);
+      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
     } finally {
       cleanupQueue(USER1);
     }
@@ -662,12 +679,12 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
       ApplicationId user2AppId = submitApp(newMockRM, parentQueue, USER2, USER2,
           2, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
 
       //update parent queue capacity
       conf.setCapacity(C, 30f);
@@ -692,7 +709,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER3
       submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f, accessibleNodeLabelsOnC);
       AutoCreatedLeafQueue user3Queue = (AutoCreatedLeafQueue) newCS.getQueue(
           USER1);
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f, 0.2f);
@@ -701,7 +718,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       //submit app1 as USER1 - is already activated. there should be no diff
       // in capacities
       submitApp(newMockRM, parentQueue, USER3, USER3, 4, 2);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f, accessibleNodeLabelsOnC);
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f, 0.2f);
       validateUserAndAppLimits(user3Queue, 900, 900);
 

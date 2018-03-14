@@ -410,12 +410,12 @@ public class TestAppManager{
         new ClientToAMTokenSecretManagerInRM(), newMockRMContext.getScheduler(),
         masterService, new ApplicationACLsManager(conf), conf);
 
-    //only user test has permission to submit to 'test' queue
+    //only user test has permission to submit to 'user1' queue
     newAppMonitor.submitApplication(asContext, "user1");
 
     try {
       //should fail since user does not have permission to submit to queue
-      // 'test'
+      // 'managedparent'
       asContext.setApplicationId(appId = MockApps.newAppID(2));
       newAppMonitor.submitApplication(asContext, "user2");
     } catch (YarnException e) {

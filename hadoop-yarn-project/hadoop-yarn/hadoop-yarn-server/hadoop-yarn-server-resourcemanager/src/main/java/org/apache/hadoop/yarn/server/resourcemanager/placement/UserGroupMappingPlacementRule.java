@@ -104,6 +104,10 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       return parentQueue;
     }
 
+    public boolean hasParentQueue() {
+      return parentQueue != null;
+    }
+
     public MappingType getType() {
       return type;
     }
@@ -164,6 +168,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       if (mapping.type == MappingType.GROUP) {
         for (String userGroups : groups.getGroups(user)) {
           if (userGroups.equals(mapping.source)) {
+            if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+              return getPlacementContext(mapping, user);
+            }
             return getPlacementContext(mapping);
           }
         }
