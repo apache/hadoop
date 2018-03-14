@@ -108,8 +108,8 @@ class OzoneContract extends AbstractFSContract {
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
 
-    String uri = String.format("%s://localhost:%d/%s/%s",
-        Constants.OZONE_URI_SCHEME, port, volumeName, bucketName);
+    String uri = String.format("%s://%s.%s/",
+        Constants.OZONE_URI_SCHEME, bucketName, volumeName);
     getConf().set("fs.defaultFS", uri);
     copyClusterConfigs(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY);
     copyClusterConfigs(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);
