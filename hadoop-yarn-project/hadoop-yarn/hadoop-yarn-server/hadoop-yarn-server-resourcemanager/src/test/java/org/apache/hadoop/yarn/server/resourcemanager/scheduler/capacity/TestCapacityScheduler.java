@@ -43,8 +43,11 @@ import java.util.concurrent.CyclicBarrier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -102,6 +105,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -4720,6 +4726,34 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(4096, amResourceLimit.getMemorySize());
     Assert.assertEquals(4, amResourceLimit.getVirtualCores());
     rm.stop();
+  }
+
+
+  @Test
+  public void testQueueMappingWithCurrentUserQueueMappingForaGroup() throws
+      Exception {
+
+    CapacitySchedulerConfiguration config =
+        new CapacitySchedulerConfiguration();
+    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    setupQueueConfiguration(config);
+
+    config.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
+    config.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
+        "a1" +"=" + "agroup" + "");
+    config.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
+        "g:agroup:%user");
+
+    MockRM rm = new MockRM(config);
+    rm.start();
+    CapacityScheduler cs = ((CapacityScheduler) rm.getResourceScheduler());
+    cs.start();
+
+    RMApp app = rm.submitApp(GB, "appname", "a1", null, "default");
+    List<ApplicationAttemptId> appsInA1 = cs.getAppsInQueue("a1");
+    assertEquals(1, appsInA1.size());
   }
 
   @Test(timeout = 30000)
