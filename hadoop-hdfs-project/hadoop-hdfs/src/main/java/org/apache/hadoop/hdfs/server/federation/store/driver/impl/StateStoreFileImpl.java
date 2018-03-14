@@ -26,11 +26,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,10 +48,6 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   public static final String FEDERATION_STORE_FILE_DIRECTORY =
       DFSConfigKeys.FEDERATION_STORE_PREFIX + "driver.file.directory";
 
-  /** Synchronization. */
-  private static final ReadWriteLock READ_WRITE_LOCK =
-      new ReentrantReadWriteLock();
-
   /** Root directory for the state store. */
   private String rootDirectory;
 
@@ -70,12 +65,30 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
+  protected boolean rename(String src, String dst) {
+    try {
+      Files.move(new File(src), new File(dst));
+      return true;
+    } catch (IOException e) {
+      LOG.error("Cannot rename {} to {}", src, dst, e);
+      return false;
+    }
+  }
+
+  @Override
+  protected boolean remove(String path) {
+    File file = new File(path);
+    return file.delete();
+  }
+
+  @Override
   protected String getRootDir() {
     if (this.rootDirectory == null) {
       String dir = getConf().get(FEDERATION_STORE_FILE_DIRECTORY);
       if (dir == null) {
         File tempDir = Files.createTempDir();
         dir = tempDir.getAbsolutePath();
+        LOG.warn("The root directory is not available, using {}", dir);
       }
       this.rootDirectory = dir;
     }
@@ -83,79 +96,53 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
-  protected <T extends BaseRecord> void lockRecordWrite(Class<T> recordClass) {
-    // TODO - Synchronize via FS
-    READ_WRITE_LOCK.writeLock().lock();
-  }
-
-  @Override
-  protected <T extends BaseRecord> void unlockRecordWrite(
-      Class<T> recordClass) {
-    // TODO - Synchronize via FS
-    READ_WRITE_LOCK.writeLock().unlock();
-  }
-
-  @Override
-  protected <T extends BaseRecord> void lockRecordRead(Class<T> recordClass) {
-    // TODO - Synchronize via FS
-    READ_WRITE_LOCK.readLock().lock();
-  }
-
-  @Override
-  protected <T extends BaseRecord> void unlockRecordRead(Class<T> recordClass) {
-    // TODO - Synchronize via FS
-    READ_WRITE_LOCK.readLock().unlock();
-  }
-
-  @Override
-  protected <T extends BaseRecord> BufferedReader getReader(
-      Class<T> clazz, String sub) {
-    String filename = StateStoreUtils.getRecordName(clazz);
-    if (sub != null && sub.length() > 0) {
-      filename += "/" + sub;
-    }
-    filename += "/" + getDataFileName();
-
+  protected <T extends BaseRecord> BufferedReader getReader(String filename) {
+    BufferedReader reader = null;
     try {
       LOG.debug("Loading file: {}", filename);
-      File file = new File(getRootDir(), filename);
+      File file = new File(filename);
       FileInputStream fis = new FileInputStream(file);
       InputStreamReader isr =
           new InputStreamReader(fis, StandardCharsets.UTF_8);
-      BufferedReader reader = new BufferedReader(isr);
-      return reader;
+      reader = new BufferedReader(isr);
     } catch (Exception ex) {
-      LOG.error(
-          "Cannot open read stream for record {}", clazz.getSimpleName(), ex);
-      return null;
+      LOG.error("Cannot open read stream for record {}", filename, ex);
     }
+    return reader;
   }
 
   @Override
-  protected <T extends BaseRecord> BufferedWriter getWriter(
-      Class<T> clazz, String sub) {
-    String filename = StateStoreUtils.getRecordName(clazz);
-    if (sub != null && sub.length() > 0) {
-      filename += "/" + sub;
-    }
-    filename += "/" + getDataFileName();
-
+  protected <T extends BaseRecord> BufferedWriter getWriter(String filename) {
+    BufferedWriter writer = null;
     try {
-      File file = new File(getRootDir(), filename);
+      LOG.debug("Writing file: {}", filename);
+      File file = new File(filename);
       FileOutputStream fos = new FileOutputStream(file, false);
       OutputStreamWriter osw =
           new OutputStreamWriter(fos, StandardCharsets.UTF_8);
-      BufferedWriter writer = new BufferedWriter(osw);
-      return writer;
-    } catch (IOException ex) {
-      LOG.error(
-          "Cannot open read stream for record {}", clazz.getSimpleName(), ex);
-      return null;
+      writer = new BufferedWriter(osw);
+    } catch (IOException e) {
+      LOG.error("Cannot open write stream for record {}", filename, e);
     }
+    return writer;
   }
 
   @Override
   public void close() throws Exception {
     setInitialized(false);
+  }
+
+  @Override
+  protected List<String> getChildren(String path) {
+    List<String> ret = new LinkedList<>();
+    File dir = new File(path);
+    File[] files = dir.listFiles();
+    if (files != null) {
+      for (File file : files) {
+        String filename = file.getName();
+        ret.add(filename);
+      }
+    }
+    return ret;
   }
 }

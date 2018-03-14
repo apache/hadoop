@@ -24,13 +24,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +77,36 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
+  protected boolean rename(String src, String dst) {
+    try {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem)fs;
+        dfs.rename(new Path(src), new Path(dst), Options.Rename.OVERWRITE);
+        return true;
+      } else {
+        // Replace should be atomic but not available
+        if (fs.exists(new Path(dst))) {
+          fs.delete(new Path(dst), true);
+        }
+        return fs.rename(new Path(src), new Path(dst));
+      }
+    } catch (Exception e) {
+      LOG.error("Cannot rename {} to {}", src, dst, e);
+      return false;
+    }
+  }
+
+  @Override
+  protected boolean remove(String path) {
+    try {
+      return fs.delete(new Path(path), true);
+    } catch (Exception e) {
+      LOG.error("Cannot remove {}", path, e);
+      return false;
+    }
+  }
+
+  @Override
   protected String getRootDir() {
     if (this.workPath == null) {
       String rootPath = getConf().get(FEDERATION_STORE_FS_PATH);
@@ -95,84 +129,50 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
     }
   }
 
-  /**
-   * Get the folder path for the record class' data.
-   *
-   * @param clazz Data record class.
-   * @return Path of the folder containing the record class' data files.
-   */
-  private Path getPathForClass(Class<? extends BaseRecord> clazz) {
-    if (clazz == null) {
-      return null;
-    }
-    // TODO extract table name from class: entry.getTableName()
-    String className = StateStoreUtils.getRecordName(clazz);
-    return new Path(workPath, className);
-  }
-
   @Override
-  protected <T extends BaseRecord> void lockRecordRead(Class<T> clazz) {
-    // Not required, synced with HDFS leasing
-  }
-
-  @Override
-  protected <T extends BaseRecord> void unlockRecordRead(Class<T> clazz) {
-    // Not required, synced with HDFS leasing
-  }
-
-  @Override
-  protected <T extends BaseRecord> void lockRecordWrite(Class<T> clazz) {
-    // TODO -> wait for lease to be available
-  }
-
-  @Override
-  protected <T extends BaseRecord> void unlockRecordWrite(Class<T> clazz) {
-    // TODO -> ensure lease is closed for the file
-  }
-
-  @Override
-  protected <T extends BaseRecord> BufferedReader getReader(
-      Class<T> clazz, String sub) {
-
-    Path path = getPathForClass(clazz);
-    if (sub != null && sub.length() > 0) {
-      path = Path.mergePaths(path, new Path("/" + sub));
-    }
-    path = Path.mergePaths(path, new Path("/" + getDataFileName()));
-
+  protected <T extends BaseRecord> BufferedReader getReader(String pathName) {
+    BufferedReader reader = null;
+    Path path = new Path(pathName);
     try {
       FSDataInputStream fdis = fs.open(path);
       InputStreamReader isr =
           new InputStreamReader(fdis, StandardCharsets.UTF_8);
-      BufferedReader reader = new BufferedReader(isr);
-      return reader;
+      reader = new BufferedReader(isr);
     } catch (IOException ex) {
-      LOG.error("Cannot open write stream for {}  to {}",
-          clazz.getSimpleName(), path);
-      return null;
+      LOG.error("Cannot open read stream for {}", path);
     }
+    return reader;
   }
 
   @Override
-  protected <T extends BaseRecord> BufferedWriter getWriter(
-      Class<T> clazz, String sub) {
-
-    Path path = getPathForClass(clazz);
-    if (sub != null && sub.length() > 0) {
-      path = Path.mergePaths(path, new Path("/" + sub));
-    }
-    path = Path.mergePaths(path, new Path("/" + getDataFileName()));
-
+  protected <T extends BaseRecord> BufferedWriter getWriter(String pathName) {
+    BufferedWriter writer = null;
+    Path path = new Path(pathName);
     try {
       FSDataOutputStream fdos = fs.create(path, true);
       OutputStreamWriter osw =
           new OutputStreamWriter(fdos, StandardCharsets.UTF_8);
-      BufferedWriter writer = new BufferedWriter(osw);
-      return writer;
+      writer = new BufferedWriter(osw);
     } catch (IOException ex) {
-      LOG.error("Cannot open write stream for {} to {}",
-          clazz.getSimpleName(), path);
-      return null;
+      LOG.error("Cannot open write stream for {}", path);
     }
+    return writer;
+  }
+
+  @Override
+  protected List<String> getChildren(String pathName) {
+    List<String> ret = new LinkedList<>();
+    Path path = new Path(workPath, pathName);
+    try {
+      FileStatus[] files = fs.listStatus(path);
+      for (FileStatus file : files) {
+        Path filePath = file.getPath();
+        String fileName = filePath.getName();
+        ret.add(fileName);
+      }
+    } catch (Exception e) {
+      LOG.error("Cannot get children for {}", pathName, e);
+    }
+    return ret;
   }
 }
