@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.CachedRecordStore;
@@ -75,14 +76,15 @@ public class RouterHeartbeatService extends PeriodicService {
   /**
    * Update the state of the Router in the State Store.
    */
-  private synchronized void updateStateStore() {
+  @VisibleForTesting
+  synchronized void updateStateStore() {
     String routerId = router.getRouterId();
     if (routerId == null) {
       LOG.error("Cannot heartbeat for router: unknown router id");
       return;
     }
-    RouterStore routerStore = router.getRouterStateManager();
-    if (routerStore != null) {
+    if (isStoreAvailable()) {
+      RouterStore routerStore = router.getRouterStateManager();
       try {
         RouterState record = RouterState.newInstance(
             routerId, router.getStartTime(), router.getRouterState());
@@ -151,5 +153,15 @@ public class RouterHeartbeatService extends PeriodicService {
   @Override
   public void periodicInvoke() {
     updateStateStore();
+  }
+
+  private boolean isStoreAvailable() {
+    if (router.getRouterStateManager() == null) {
+      return false;
+    }
+    if (router.getStateStore() == null) {
+      return false;
+    }
+    return router.getStateStore().isDriverReady();
   }
 }
