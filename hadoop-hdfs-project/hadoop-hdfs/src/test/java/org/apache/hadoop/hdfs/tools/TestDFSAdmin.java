@@ -349,11 +349,14 @@ public class TestDFSAdmin {
           containsString("FAILED: Change property " +
               DFS_DATANODE_DATA_DIR_KEY));
     }
+    File dnDir0 = cluster.getInstanceStorageDir(0, 0);
+    File dnDir1 = cluster.getInstanceStorageDir(0, 1);
     assertThat(outs.get(offset + 1),
-        is(allOf(containsString("From:"), containsString("data1"),
-            containsString("data2"))));
-    assertThat(outs.get(offset + 2),
-        is(not(anyOf(containsString("data1"), containsString("data2")))));
+        is(allOf(containsString("From:"), containsString(dnDir0.getName()),
+            containsString(dnDir1.getName()))));
+    assertThat(outs.get(offset + 2), is(not(
+        anyOf(containsString(dnDir0.getName()),
+            containsString(dnDir1.getName())))));
     assertThat(outs.get(offset + 2),
         is(allOf(containsString("To"), containsString("data_new"))));
   }
