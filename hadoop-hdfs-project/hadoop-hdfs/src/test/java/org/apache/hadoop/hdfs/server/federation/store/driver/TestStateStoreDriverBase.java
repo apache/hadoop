@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +73,14 @@ public class TestStateStoreDriverBase {
    */
   protected StateStoreDriver getStateStoreDriver() {
     return stateStore.getDriver();
+  }
+
+  @After
+  public void cleanMetrics() {
+    if (stateStore != null) {
+      StateStoreMetrics metrics = stateStore.getMetrics();
+      metrics.reset();
+    }
   }
 
   @AfterClass
