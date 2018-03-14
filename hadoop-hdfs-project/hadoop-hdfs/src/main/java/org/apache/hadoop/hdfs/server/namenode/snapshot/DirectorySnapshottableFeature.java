@@ -30,7 +30,6 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Content;
@@ -171,7 +170,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
       int maxSnapshotLimit)
-      throws SnapshotException, QuotaExceededException {
+      throws SnapshotException {
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
