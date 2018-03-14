@@ -89,13 +89,11 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
 
   @Override
   public synchronized int read() throws IOException {
-    checkNotClosed();
-    if (streamEntries.size() <= currentStreamIndex) {
+    byte[] buf = new byte[1];
+    if (read(buf, 0, 1) == EOF) {
       return EOF;
     }
-    ChunkInputStreamEntry entry = streamEntries.get(currentStreamIndex);
-    int data = entry.read();
-    return data;
+    return Byte.toUnsignedInt(buf[0]);
   }
 
   @Override
@@ -120,7 +118,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
       int actualLen = current.read(b, off, readLen);
       // this means the underlying stream has nothing at all, return
       if (actualLen == EOF) {
-        return totalReadLen > 0? totalReadLen : EOF;
+        return totalReadLen > 0 ? totalReadLen : EOF;
       }
       totalReadLen += actualLen;
       // this means there is no more data to read beyond this point, return

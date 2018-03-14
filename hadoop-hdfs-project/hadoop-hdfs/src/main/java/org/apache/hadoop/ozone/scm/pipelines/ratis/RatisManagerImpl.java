@@ -87,7 +87,7 @@ public class RatisManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           ratisMembers.addAll(newNodesList);
-          LOG.info("Allocating a new pipelineChannel of size: {}", count);
+          LOG.info("Allocating a new ratis pipelineChannel of size: {}", count);
           // Start all channel names with "Ratis", easy to grep the logs.
           String conduitName = PREFIX +
               UUID.randomUUID().toString().substring(PREFIX.length());

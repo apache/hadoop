@@ -99,7 +99,9 @@ public class TestOzoneFileInterfaces {
   public void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+        .numDataNodes(10)
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+        .build();
     storageHandler =
         new ObjectStoreHandler(conf).getStorageHandler();
 

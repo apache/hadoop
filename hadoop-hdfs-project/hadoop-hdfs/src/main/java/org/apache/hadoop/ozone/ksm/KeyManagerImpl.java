@@ -360,10 +360,8 @@ public class KeyManagerImpl implements KeyManager {
     } catch (KSMException e) {
       throw e;
     } catch (IOException ex) {
-      if (!(ex instanceof KSMException)) {
-        LOG.error("Key commit failed for volume:{} bucket:{} key:{}",
-            volumeName, bucketName, keyName, ex);
-      }
+      LOG.error("Key commit failed for volume:{} bucket:{} key:{}",
+          volumeName, bucketName, keyName, ex);
       throw new KSMException(ex.getMessage(),
           KSMException.ResultCodes.FAILED_KEY_ALLOCATION);
     } finally {

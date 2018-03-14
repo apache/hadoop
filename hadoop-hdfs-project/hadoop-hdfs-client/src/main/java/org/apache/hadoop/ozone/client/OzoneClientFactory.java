@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -285,15 +286,19 @@ public final class OzoneClientFactory {
       Class<? extends ClientProtocol> protocolClass, Configuration config)
       throws IOException {
     try {
-      LOG.info("Using {} as client protocol.",
+      LOG.debug("Using {} as client protocol.",
           protocolClass.getCanonicalName());
       Constructor<? extends ClientProtocol> ctor =
           protocolClass.getConstructor(Configuration.class);
       return ctor.newInstance(config);
     } catch (Exception e) {
       final String message = "Couldn't create protocol " + protocolClass;
+      LOG.error(message + " exception:" + e);
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
+      } else if (e instanceof InvocationTargetException) {
+        throw new IOException(message,
+            ((InvocationTargetException) e).getTargetException());
       } else {
         throw new IOException(message, e);
       }

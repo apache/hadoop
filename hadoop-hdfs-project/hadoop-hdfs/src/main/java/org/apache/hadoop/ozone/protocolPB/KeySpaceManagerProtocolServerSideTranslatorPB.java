@@ -473,11 +473,17 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         CommitKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
+      OzoneProtos.ReplicationType type =
+          keyArgs.hasType()? keyArgs.getType() : null;
+      OzoneProtos.ReplicationFactor factor =
+          keyArgs.hasFactor()? keyArgs.getFactor() : null;
       KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
           .setDataSize(keyArgs.getDataSize())
+          .setType(type)
+          .setFactor(factor)
           .build();
       int id = request.getClientID();
       impl.commitKey(ksmKeyArgs, id);
@@ -495,10 +501,16 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         AllocateBlockResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
+      OzoneProtos.ReplicationType type =
+          keyArgs.hasType()? keyArgs.getType() : null;
+      OzoneProtos.ReplicationFactor factor =
+          keyArgs.hasFactor()? keyArgs.getFactor() : null;
       KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
+          .setType(type)
+          .setFactor(factor)
           .build();
       int id = request.getClientID();
       KsmKeyLocationInfo newLocation = impl.allocateBlock(ksmKeyArgs, id);

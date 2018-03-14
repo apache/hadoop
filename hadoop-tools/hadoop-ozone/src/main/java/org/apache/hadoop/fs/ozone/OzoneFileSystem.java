@@ -582,7 +582,7 @@ public class OzoneFileSystem extends FileSystem {
    */
   private boolean createDirectory(String keyName) {
     try {
-      LOG.info("creating dir for key:{}", keyName);
+      LOG.trace("creating dir for key:{}", keyName);
       bucket.createKey(keyName, 0, replicationType, replicationFactor).close();
       return true;
     } catch (IOException ioe) {
@@ -673,7 +673,7 @@ public class OzoneFileSystem extends FileSystem {
         LOG.trace("Iterating directory:{}", pathKey);
         while (keyIterator.hasNext()) {
           OzoneKey key = keyIterator.next();
-          LOG.info("iterating key:{}", key.getName());
+          LOG.trace("iterating key:{}", key.getName());
           if (!processKey(key.getName())) {
             return false;
           }
