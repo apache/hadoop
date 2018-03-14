@@ -61,7 +61,6 @@ import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -93,8 +92,8 @@ public class TestConfiguration {
   final static String CONFIG_CORE = new File("./core-site.xml")
       .getAbsolutePath();
   final static String CONFIG_FOR_ENUM = new File("./test-config-enum-TestConfiguration.xml").getAbsolutePath();
-  final static String CONFIG_FOR_URI = "file://"
-      + new File("./test-config-uri-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG_FOR_URI = new File(
+      "./test-config-uri-TestConfiguration.xml").toURI().toString();
 
   private static final String CONFIG_MULTI_BYTE = new File(
     "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
@@ -877,7 +876,8 @@ public class TestConfiguration {
     out.close();
     out=new BufferedWriter(new FileWriter(CONFIG));
     writeHeader();
-    declareSystemEntity("configuration", "d", CONFIG2);
+    declareSystemEntity("configuration", "d",
+        new Path(CONFIG2).toUri().toString());
     writeConfiguration();
     appendProperty("a", "b");
     appendProperty("c", "&d;");
@@ -1749,7 +1749,7 @@ public class TestConfiguration {
       assertEquals("test.key2", jp1.getKey());
       assertEquals("value2", jp1.getValue());
       assertEquals(true, jp1.isFinal);
-      assertEquals(fileResource.toUri().getPath(), jp1.getResource());
+      assertEquals(fileResource.toString(), jp1.getResource());
 
       // test xml format
       outWriter = new StringWriter();
@@ -1760,7 +1760,7 @@ public class TestConfiguration {
       assertEquals(1, actualConf1.size());
       assertEquals("value2", actualConf1.get("test.key2"));
       assertTrue(actualConf1.getFinalParameters().contains("test.key2"));
-      assertEquals(fileResource.toUri().getPath(),
+      assertEquals(fileResource.toString(),
           actualConf1.getPropertySources("test.key2")[0]);
 
       // case 2: dump an non existing property
@@ -2271,7 +2271,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
@@ -2299,7 +2300,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
