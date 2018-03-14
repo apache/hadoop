@@ -83,7 +83,8 @@ public class StandaloneManagerImpl extends PipelineManager {
           // once a datanode has been added to a pipeline, exclude it from
           // further allocations
           standAloneMembers.addAll(newNodesList);
-          LOG.info("Allocating a new pipeline channel of size: {}", count);
+          LOG.info("Allocating a new standalone pipeline channel of size: {}",
+              count);
           String channelName =
               "SA-" + UUID.randomUUID().toString().substring(3);
           return PipelineSelector.newPipelineFromNodes(newNodesList,

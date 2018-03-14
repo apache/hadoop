@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
@@ -87,7 +88,7 @@ public class RpcClient implements ClientProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcClient.class);
 
-  private final Configuration conf;
+  private final OzoneConfiguration conf;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private final KeySpaceManagerProtocolClientSideTranslatorPB
@@ -105,7 +106,7 @@ public class RpcClient implements ClientProtocol {
     */
   public RpcClient(Configuration conf) throws IOException {
     Preconditions.checkNotNull(conf);
-    this.conf = conf;
+    this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
         KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);

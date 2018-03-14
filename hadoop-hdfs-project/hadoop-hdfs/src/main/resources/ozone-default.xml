@@ -1136,6 +1136,15 @@
     </description>
   </property>
   <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Controls the number of node pools that can be processed in parallel by
+      Container Supervisor.
+    </description>
+  </property>
+  <property>
     <name>ozone.trace.enabled</name>
     <value>false</value>
     <tag>OZONE, DEBUG</tag>
