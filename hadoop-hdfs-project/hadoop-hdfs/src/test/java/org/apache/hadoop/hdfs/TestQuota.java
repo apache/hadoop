@@ -132,7 +132,7 @@ public class TestQuota {
   }
 
   @AfterClass
-  public static void tearDownClass() throws Exception {
+  public static void tearDownClass() {
     try {
       System.out.flush();
       System.err.flush();
@@ -170,7 +170,7 @@ public class TestQuota {
    * @throws Exception
    */
   @Test
-  public void testDSQuotaExceededExceptionIsHumanReadable() throws Exception {
+  public void testDSQuotaExceededExceptionIsHumanReadable() {
     Integer bytes = 1024;
     try {
       throw new DSQuotaExceededException(bytes, bytes);

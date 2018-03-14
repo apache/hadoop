@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -524,7 +523,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    * to make sure that parent is in the given snapshot "latest".
    */
   public boolean addChild(INodeDirectory parent, INode inode,
-      boolean setModTime, int latestSnapshotId) throws QuotaExceededException {
+      boolean setModTime, int latestSnapshotId) {
     ChildrenDiff diff = diffs.checkAndAddLatestSnapshotDiff(latestSnapshotId,
         parent).diff;
     final int undoInfo = diff.create(inode);

@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
@@ -171,13 +170,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public void addSpaceConsumed(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
+  public void addSpaceConsumed(QuotaCounts counts) {
+    super.addSpaceConsumed(counts);
+
     final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
-    if (q != null) {
-      q.addSpaceConsumed(this, counts, verify);
-    } else {
-      addSpaceConsumed2Parent(counts, verify);
+    if (q != null && isQuotaSet()) {
+      q.addSpaceConsumed2Cache(counts);
     }
   }
 
@@ -281,7 +279,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   public Snapshot addSnapshot(int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
       int maxSnapshotLimit)
-      throws SnapshotException, QuotaExceededException {
+      throws SnapshotException {
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
         leaseManager, captureOpenFiles, maxSnapshotLimit);
   }
@@ -543,7 +541,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    *         otherwise, return true;
    */
   public boolean addChild(INode node, final boolean setModTime,
-      final int latestSnapshotId) throws QuotaExceededException {
+      final int latestSnapshotId) {
     final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
@@ -739,10 +737,9 @@ public class INodeDirectory extends INodeWithAdditionalFields
    *          The reference node to be removed/replaced
    * @param newChild
    *          The node to be added back
-   * @throws QuotaExceededException should not throw this exception
    */
   public void undoRename4ScrParent(final INodeReference oldChild,
-      final INode newChild) throws QuotaExceededException {
+      final INode newChild) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     assert sf != null : "Directory does not have snapshot feature";
     sf.getDiffs().removeDeletedChild(oldChild);
@@ -756,8 +753,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * and delete possible record in the deleted list.  
    */
   public void undoRename4DstParent(final BlockStoragePolicySuite bsps,
-      final INode deletedChild,
-      int latestSnapshotId) throws QuotaExceededException {
+      final INode deletedChild, int latestSnapshotId) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     assert sf != null : "Directory does not have snapshot feature";
     boolean removeDeletedChild = sf.getDiffs().removeDeletedChild(deletedChild);
@@ -767,8 +763,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     // been stored in deleted list before
     if (added && !removeDeletedChild) {
       final QuotaCounts counts = deletedChild.computeQuotaUsage(bsps);
-      addSpaceConsumed(counts, false);
-
+      addSpaceConsumed(counts);
     }
   }
 

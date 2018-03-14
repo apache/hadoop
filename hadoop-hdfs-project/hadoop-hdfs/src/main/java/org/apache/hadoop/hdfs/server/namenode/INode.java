@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -471,21 +470,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /**
    * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
-   * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
-    addSpaceConsumed2Parent(counts, verify);
-  }
-
-  /**
-   * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
-   * @throws QuotaExceededException if quote is violated.
-   */
-  void addSpaceConsumed2Parent(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
+  public void addSpaceConsumed(QuotaCounts counts) {
     if (parent != null) {
-      parent.addSpaceConsumed(counts, verify);
+      parent.addSpaceConsumed(counts);
     }
   }
 

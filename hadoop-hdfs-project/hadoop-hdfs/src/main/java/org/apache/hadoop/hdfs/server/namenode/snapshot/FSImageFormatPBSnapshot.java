@@ -120,7 +120,7 @@ public class FSImageFormatPBSnapshot {
     }
 
     private INodeReference loadINodeReference(
-        INodeReferenceSection.INodeReference r) throws IOException {
+        INodeReferenceSection.INodeReference r) {
       long referredId = r.getReferredId();
       INode referred = fsDir.getInode(referredId);
       WithCount withCount = (WithCount) referred.getParentReference();
