@@ -69,20 +69,26 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
   }
 
   @Test
-  public void testUpdate()
-      throws IllegalArgumentException, IllegalAccessException, IOException {
-    testInsert(getStateStoreDriver());
+  public void testUpdate() throws IllegalArgumentException, IOException,
+      SecurityException, ReflectiveOperationException {
+    testPut(getStateStoreDriver());
   }
 
   @Test
   public void testDelete()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testInsert(getStateStoreDriver());
+    testRemove(getStateStoreDriver());
   }
 
   @Test
   public void testFetchErrors()
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testFetchErrors(getStateStoreDriver());
+  }
+
+  @Test
+  public void testMetrics()
+      throws IllegalArgumentException, IllegalAccessException, IOException {
+    testMetrics(getStateStoreDriver());
   }
 }
