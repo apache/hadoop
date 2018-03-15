@@ -689,13 +689,13 @@ class FSDirRenameOp {
       return fsd.addLastINodeNoQuotaCheck(dstParentIIP, toDst);
     }
 
-    void updateMtimeAndLease(long timestamp) throws QuotaExceededException {
+    void updateMtimeAndLease(long timestamp) {
       srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
       final INode dstParent = dstParentIIP.getLastINode();
       dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
     }
 
-    void restoreSource() throws QuotaExceededException {
+    void restoreSource() {
       // Rename failed - restore src
       final INode oldSrcChild = srcChild;
       // put it back
@@ -722,7 +722,7 @@ class FSDirRenameOp {
       }
     }
 
-    void restoreDst(BlockStoragePolicySuite bsps) throws QuotaExceededException {
+    void restoreDst(BlockStoragePolicySuite bsps) {
       Preconditions.checkState(oldDstChild != null);
       final INodeDirectory dstParent = dstParentIIP.getLastINode().asDirectory();
       if (dstParent.isWithSnapshot()) {
@@ -738,8 +738,8 @@ class FSDirRenameOp {
       }
     }
 
-    boolean cleanDst(BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks)
-        throws QuotaExceededException {
+    boolean cleanDst(
+        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks) {
       Preconditions.checkState(oldDstChild != null);
       List<INode> removedINodes = new ChunkedArrayList<>();
       List<Long> removedUCFiles = new ChunkedArrayList<>();
@@ -762,13 +762,13 @@ class FSDirRenameOp {
       return filesDeleted;
     }
 
-    void updateQuotasInSourceTree(BlockStoragePolicySuite bsps) throws QuotaExceededException {
+    void updateQuotasInSourceTree(BlockStoragePolicySuite bsps) {
       // update the quota usage in src tree
       if (isSrcInSnapshot) {
         // get the counts after rename
         QuotaCounts newSrcCounts = srcChild.computeQuotaUsage(bsps, false);
         newSrcCounts.subtract(oldSrcCounts);
-        srcParent.addSpaceConsumed(newSrcCounts, false);
+        srcParent.addSpaceConsumed(newSrcCounts);
       }
     }
   }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -284,7 +285,7 @@ public class DiskBalancerCluster {
   public void createSnapshot(String snapShotName) throws IOException {
     String json = this.toJson();
     File outFile = new File(getOutput() + "/" + snapShotName);
-    FileUtils.writeStringToFile(outFile, json);
+    FileUtils.writeStringToFile(outFile, json, StandardCharsets.UTF_8);
   }
 
   /**

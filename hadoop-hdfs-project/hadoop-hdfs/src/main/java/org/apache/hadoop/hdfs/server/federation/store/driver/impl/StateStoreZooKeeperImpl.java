@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
@@ -111,17 +113,18 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
   @Override
   public boolean isDriverReady() {
-    return zkManager != null;
+    if (zkManager == null) {
+      return false;
+    }
+    CuratorFramework curator = zkManager.getCurator();
+    if (curator == null) {
+      return false;
+    }
+    return curator.getState() == CuratorFrameworkState.STARTED;
   }
 
   @Override
   public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz)
-      throws IOException {
-    return get(clazz, (String)null);
-  }
-
-  @Override
-  public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz, String sub)
       throws IOException {
     verifyDriverReady();
     long start = monotonicNow();

@@ -615,15 +615,15 @@ public class TestDiskBalancerCommand {
     assertThat(
         outputs.get(3),
         is(allOf(containsString("DISK"),
-            containsString(cluster.getInstanceStorageDir(0, 0).getName()),
+            containsString(cluster.getInstanceStorageDir(0, 0)
+                .getAbsolutePath()),
             containsString("0.00"),
             containsString("1.00"))));
-
-
     assertThat(
         outputs.get(4),
         is(allOf(containsString("DISK"),
-            containsString(cluster.getInstanceStorageDir(0, 1).getName()),
+            containsString(cluster.getInstanceStorageDir(0, 1)
+                .getAbsolutePath()),
             containsString("0.00"),
             containsString("1.00"))));
   }

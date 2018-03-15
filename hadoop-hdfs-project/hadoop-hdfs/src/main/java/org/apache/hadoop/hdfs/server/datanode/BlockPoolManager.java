@@ -149,10 +149,8 @@ class BlockPoolManager {
     LOG.info("Refresh request received for nameservices: " +
         conf.get(DFSConfigKeys.DFS_NAMESERVICES));
 
-    Map<String, Map<String, InetSocketAddress>> newAddressMap =
-        new HashMap<>();
-    Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap =
-        new HashMap<>();
+    Map<String, Map<String, InetSocketAddress>> newAddressMap = null;
+    Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap = null;
 
     try {
       newAddressMap =
@@ -160,11 +158,10 @@ class BlockPoolManager {
       newLifelineAddressMap =
           DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
     } catch (IOException ioe) {
-      LOG.warn("Unable to get NameNode addresses. (Note: Namenode is required "
-          +  "even for Ozone cluster.)");
+      LOG.warn("Unable to get NameNode addresses.");
     }
 
-    if (newAddressMap.isEmpty()) {
+    if (newAddressMap == null || newAddressMap.isEmpty()) {
       throw new IOException("No services to connect, missing NameNode " +
           "address.");
     }
