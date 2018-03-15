@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -46,8 +47,18 @@ import com.google.common.collect.Maps;
 /**
  * CopyListingFileStatus is a view of {@link FileStatus}, recording additional
  * data members useful to distcp.
+ *
+ * This is the datastructure persisted in the sequence files generated
+ * in the CopyCommitter when deleting files.
+ * Any tool working with these generated files needs to be aware of an
+ * important stability guarantee: there is none; expect it to change
+ * across minor Hadoop releases without any support for reading the files of
+ * different versions.
+ * Tools parsing the listings must be built and tested against the point
+ * release of Hadoop which they intend to support.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("Distcp support tools")
+@InterfaceStability.Unstable
 public final class CopyListingFileStatus implements Writable {
 
   private static final byte NO_ACL_ENTRIES = -1;
