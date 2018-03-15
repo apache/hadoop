@@ -153,9 +153,9 @@ public class TestRouterRpc {
     // Wait to ensure NN has fully created its test directories
     Thread.sleep(100);
 
-    // Pick a NS, namenode and router for this test
+    // Default namenode and random router for this test
     this.router = cluster.getRandomRouter();
-    this.ns = cluster.getRandomNameservice();
+    this.ns = cluster.getNameservices().get(0);
     this.namenode = cluster.getNamenode(ns, null);
 
     // Handles to the ClientProtocol interface
