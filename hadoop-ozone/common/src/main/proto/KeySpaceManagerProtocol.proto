@@ -1,0 +1,457 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.ozone.protocol.proto";
+option java_outer_classname = "KeySpaceManagerProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.ozone;
+
+/**
+This is file contains the protocol to communicate with
+Ozone key space manager. Ozone KSM manages the namespace for ozone.
+This is similar to Namenode for Ozone.
+*/
+
+import "hdfs.proto";
+import "hdsl.proto";
+
+enum Status {
+    OK = 1;
+    VOLUME_NOT_UNIQUE = 2;
+    VOLUME_NOT_FOUND = 3;
+    VOLUME_NOT_EMPTY = 4;
+    VOLUME_ALREADY_EXISTS = 5;
+    USER_NOT_FOUND = 6;
+    USER_TOO_MANY_VOLUMES = 7;
+    BUCKET_NOT_FOUND = 8;
+    BUCKET_NOT_EMPTY = 9;
+    BUCKET_ALREADY_EXISTS = 10;
+    KEY_ALREADY_EXISTS = 11;
+    KEY_NOT_FOUND = 12;
+    ACCESS_DENIED = 13;
+    INTERNAL_ERROR = 14;
+}
+
+
+message VolumeInfo {
+    required string adminName = 1;
+    required string ownerName = 2;
+    required string volume = 3;
+    optional uint64 quotaInBytes = 4;
+    repeated hadoop.hdsl.KeyValue metadata = 5;
+    repeated OzoneAclInfo volumeAcls = 6;
+    required uint64 creationTime = 7;
+}
+
+/**
+    Creates a volume
+*/
+message CreateVolumeRequest {
+    required VolumeInfo volumeInfo = 1;
+}
+
+message CreateVolumeResponse {
+
+    required Status status = 1;
+}
+
+message VolumeList {
+    repeated string volumeNames = 1;
+}
+
+/**
+    Changes the Volume Properties -- like ownership and quota for a volume.
+*/
+message SetVolumePropertyRequest {
+    required string volumeName = 1;
+    optional string ownerName = 2;
+    optional uint64 quotaInBytes = 3;
+}
+
+message SetVolumePropertyResponse {
+    required Status status = 1;
+}
+
+/**
+ * Checks if the user has specified permissions for the volume
+ */
+message CheckVolumeAccessRequest {
+    required string volumeName = 1;
+    required OzoneAclInfo userAcl = 2;
+}
+
+message CheckVolumeAccessResponse {
+
+    required Status status = 1;
+}
+
+
+/**
+    Returns information about a volume.
+*/
+
+message InfoVolumeRequest {
+    required string volumeName = 1;
+}
+
+message InfoVolumeResponse {
+    required Status status = 1;
+    optional VolumeInfo volumeInfo = 2;
+
+}
+
+/**
+    Deletes an existing volume.
+*/
+message DeleteVolumeRequest {
+    required string volumeName = 1;
+}
+
+message DeleteVolumeResponse {
+    required Status status = 1;
+}
+
+
+/**
+    List Volumes -- List all volumes in the cluster or by user.
+*/
+
+message ListVolumeRequest {
+    enum Scope {
+        USER_VOLUMES = 1;   // User volumes -- called by user
+        VOLUMES_BY_USER = 2; // User volumes - called by Admin
+        VOLUMES_BY_CLUSTER = 3; // All volumes in the cluster
+    }
+    required Scope scope = 1;
+    optional string userName = 2;
+    optional string prefix = 3;
+    optional string prevKey = 4;
+    optional uint32 maxKeys = 5;
+}
+
+message ListVolumeResponse {
+    required Status status = 1;
+    repeated VolumeInfo volumeInfo = 2;
+}
+
+message BucketInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    repeated OzoneAclInfo acls = 3;
+    required bool isVersionEnabled = 4 [default = false];
+    required hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
+    required uint64 creationTime = 6;
+}
+
+message BucketArgs {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    repeated OzoneAclInfo addAcls = 3;
+    repeated OzoneAclInfo removeAcls = 4;
+    optional bool isVersionEnabled = 5;
+    optional hadoop.hdfs.StorageTypeProto storageType = 6;
+}
+
+message OzoneAclInfo {
+    enum OzoneAclType {
+        USER = 1;
+        GROUP = 2;
+        WORLD = 3;
+    }
+    enum OzoneAclRights {
+        READ = 1;
+        WRITE = 2;
+        READ_WRITE = 3;
+    }
+    required OzoneAclType type = 1;
+    required string name = 2;
+    required OzoneAclRights rights = 3;
+}
+
+message CreateBucketRequest {
+    required BucketInfo bucketInfo = 1;
+}
+
+message CreateBucketResponse {
+    required Status status = 1;
+}
+
+message InfoBucketRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+}
+
+message InfoBucketResponse {
+    required Status status = 1;
+    optional BucketInfo bucketInfo = 2;
+}
+
+message ListBucketsRequest {
+    required string volumeName = 1;
+    optional string startKey = 2;
+    optional string prefix = 3;
+    optional int32 count = 4;
+}
+
+message ListBucketsResponse {
+    required Status status = 1;
+    repeated BucketInfo bucketInfo = 2;
+}
+
+message KeyArgs {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    optional uint64 dataSize = 4;
+    optional hadoop.hdsl.ReplicationType type = 5;
+    optional hadoop.hdsl.ReplicationFactor factor = 6;
+}
+
+message KeyLocation {
+    required string blockID = 1;
+    required string containerName = 2;
+    required bool shouldCreateContainer = 3;
+    required uint64 offset = 4;
+    required uint64 length = 5;
+    // indicated at which version this block gets created.
+    optional uint64 createVersion = 6;
+}
+
+message KeyLocationList {
+    optional uint64 version = 1;
+    repeated KeyLocation keyLocations = 2;
+}
+
+message KeyInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required uint64 dataSize = 4;
+    repeated KeyLocationList keyLocationList = 5;
+    required uint64 creationTime = 6;
+    required uint64 modificationTime = 7;
+    optional uint64 latestVersion = 8;
+}
+
+message LocateKeyRequest {
+    required KeyArgs keyArgs = 1;
+}
+
+message LocateKeyResponse {
+    required Status status = 1;
+    optional KeyInfo keyInfo = 2;
+    // clients' followup request may carry this ID for stateful operations (similar
+    // to a cookie).
+    optional uint32 ID = 3;
+    // TODO : allow specifiying a particular version to read.
+    optional uint64 openVersion = 4;
+}
+
+message SetBucketPropertyRequest {
+    required BucketArgs bucketArgs = 1;
+}
+
+message SetBucketPropertyResponse {
+    required Status status = 1;
+}
+
+message DeleteBucketRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+}
+
+message DeleteBucketResponse {
+    required Status status = 1;
+}
+
+message ListKeysRequest {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    optional string startKey = 3;
+    optional string prefix = 4;
+    optional int32 count = 5;
+}
+
+message ListKeysResponse {
+    required Status status = 1;
+    repeated KeyInfo keyInfo = 2;
+}
+
+message AllocateBlockRequest {
+    required KeyArgs keyArgs = 1;
+    required uint32 clientID = 2;
+}
+
+message AllocateBlockResponse {
+    required Status status = 1;
+    required KeyLocation keyLocation = 2;
+}
+
+message CommitKeyRequest {
+    required KeyArgs keyArgs = 1;
+    required uint32 clientID = 2;
+}
+
+message CommitKeyResponse {
+    required Status status = 1;
+}
+
+message ServiceListRequest {
+}
+
+message ServiceListResponse {
+    required Status status = 1;
+    repeated ServiceInfo serviceInfo = 2;
+}
+
+message ServicePort {
+    enum Type {
+        RPC = 1;
+        HTTP = 2;
+        HTTPS = 3;
+        RATIS = 4;
+    };
+    required Type type = 1;
+    required uint32 value = 2;
+}
+
+message ServiceInfo {
+    required hadoop.hdsl.NodeType nodeType = 1;
+    required string hostname = 2;
+    repeated ServicePort servicePorts = 3;
+}
+
+/**
+ The KSM service that takes care of Ozone namespace.
+*/
+service KeySpaceManagerService {
+
+    /**
+        Creates a Volume.
+    */
+    rpc createVolume(CreateVolumeRequest)
+        returns(CreateVolumeResponse);
+
+    /**
+        Allows modificiation of volume properties.
+    */
+    rpc setVolumeProperty(SetVolumePropertyRequest)
+        returns (SetVolumePropertyResponse);
+
+    /**
+        Checks if the specified volume is accesible by the specified user.
+    */
+    rpc checkVolumeAccess(CheckVolumeAccessRequest)
+        returns (CheckVolumeAccessResponse);
+
+    /**
+        Gets Volume information.
+    */
+    rpc infoVolume(InfoVolumeRequest)
+        returns(InfoVolumeResponse);
+    /**
+        Deletes a volume if it is empty.
+    */
+    rpc deleteVolume(DeleteVolumeRequest)
+        returns (DeleteVolumeResponse);
+
+    /**
+        Lists Volumes
+    */
+    rpc listVolumes(ListVolumeRequest)
+        returns (ListVolumeResponse);
+
+    /**
+        Creates a Bucket.
+    */
+    rpc createBucket(CreateBucketRequest)
+        returns(CreateBucketResponse);
+
+    /**
+        Get Bucket information.
+    */
+    rpc infoBucket(InfoBucketRequest)
+        returns(InfoBucketResponse);
+
+    /**
+        Sets bucket properties.
+    */
+    rpc setBucketProperty(SetBucketPropertyRequest)
+        returns(SetBucketPropertyResponse);
+
+    /**
+        Get key.
+    */
+    rpc createKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
+
+    /**
+       Look up for an existing key.
+    */
+    rpc lookupKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
+
+    /**
+       Delete an existing key.
+    */
+    rpc deleteKey(LocateKeyRequest)
+        returns(LocateKeyResponse);
+
+    /**
+       Deletes a bucket from volume if it is empty.
+    */
+    rpc deleteBucket(DeleteBucketRequest)
+        returns (DeleteBucketResponse);
+
+    /**
+       List Buckets.
+    */
+    rpc listBuckets(ListBucketsRequest)
+    returns(ListBucketsResponse);
+
+    /**
+       List Keys.
+    */
+    rpc listKeys(ListKeysRequest)
+    returns(ListKeysResponse);
+
+    /**
+      Commit a key.
+    */
+    rpc commitKey(CommitKeyRequest)
+    returns(CommitKeyResponse);
+
+    /**
+      Allocate a new block for a key.
+    */
+    rpc allocateBlock(AllocateBlockRequest)
+    returns(AllocateBlockResponse);
+
+    /**
+      Returns list of Ozone services with its configuration details.
+    */
+    rpc getServiceList(ServiceListRequest)
+    returns(ServiceListResponse);
+}

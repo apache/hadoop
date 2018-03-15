@@ -27,6 +27,7 @@ HDFS-SITE.XML_dfs.namenode.rpc-address=namenode:9000
 HDFS-SITE.XML_dfs.namenode.name.dir=/data/namenode
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
+HDFS-SITE.XML_dfs.datanode.plugins=org.apache.hadoop.ozone.HdslServerPlugin,org.apache.hadoop.ozone.web.ObjectStoreRestPlugin
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout

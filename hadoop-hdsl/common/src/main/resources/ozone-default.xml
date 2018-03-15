@@ -1,0 +1,1031 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into ozone-site.xml and change them -->
+<!-- there.  If ozone-site.xml does not already exist, create it.      -->
+
+<!--Tags supported are OZONE, CBLOCK, MANAGEMENT, SECURITY, PERFORMANCE,   -->
+<!--DEBUG, CLIENT, SERVER, KSM, SCM, CRITICAL, RATIS, CONTAINER, REQUIRED, -->
+<!--REST, STORAGE, PIPELINE, STANDALONE                                    -->
+
+<configuration>
+
+  <!--Container Settings used by Datanode-->
+  <property>
+    <name>ozone.container.cache.size</name>
+    <value>1024</value>
+    <tag>PERFORMANCE, CONTAINER, STORAGE</tag>
+    <description>The open container is cached on the data node side. We maintain
+      an LRU
+      cache for caching the recently used containers. This setting controls the
+      size of that cache.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ipc</name>
+    <value>9859</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>The ipc port number of container.</description>
+  </property>
+  <property>
+    <name>dfs.container.ipc.random.port</name>
+    <value>false</value>
+    <tag>OZONE, DEBUG, CONTAINER</tag>
+    <description>Allocates a random free port for ozone container. This is used
+      only while
+      running unit tests.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.datanode.storage.dir</name>
+    <value/>
+    <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing Ratis metadata like logs. If
+      this is
+      not set then default metadata dirs is used. A warning will be logged if
+      this not set. Ideally, this should be mapped to a fast disk like an SSD.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT, PIPELINE, RATIS</tag>
+    <description>Ozone supports different kinds of replication pipelines. Ratis
+      is one of
+      the replication pipeline supported by ozone.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.ipc</name>
+    <value>9858</value>
+    <tag>OZONE, CONTAINER, PIPELINE, RATIS, MANAGEMENT</tag>
+    <description>The ipc port number of container.</description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.ipc.random.port</name>
+    <value>false</value>
+    <tag>OZONE,DEBUG</tag>
+    <description>Allocates a random free port for ozone ratis port for the
+      container. This
+      is used only while running unit tests.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.rpc.type</name>
+    <value>GRPC</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>Ratis supports different kinds of transports like netty, GRPC,
+      Hadoop RPC
+      etc. This picks one of those for this cluster.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.num.write.chunk.threads</name>
+    <value>60</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>Maximum number of threads in the thread pool that Ratis
+      will use for writing chunks (60 by default).
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.segment.size</name>
+    <value>1073741824</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>The size of the raft segment used by Apache Ratis on datanodes.
+      (1 GB by default)
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.segment.preallocated.size</name>
+    <value>134217728</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>The size of the buffer which is preallocated for raft segment
+      used by Apache Ratis on datanodes.(128 MB by default)
+    </description>
+  </property>
+  <property>
+    <name>ozone.container.report.interval</name>
+    <value>60000ms</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Time interval of the datanode to send container report. Each
+      datanode periodically send container report upon receive
+      sendContainerReport from SCM. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)</description>
+  </property>
+  <!--Ozone Settings-->
+  <property>
+    <name>ozone.administrators</name>
+    <value/>
+    <tag>OZONE, SECURITY</tag>
+    <description>Ozone administrator users delimited by the comma.
+      If not set, only the user who launches an ozone service will be the admin
+      user. This property must be set if ozone services are started by different
+      users. Otherwise, the RPC layer will reject calls from other servers which
+      are started by users not in the list.
+    </description>
+  </property>
+  <property>
+    <name>ozone.block.deleting.container.limit.per.interval</name>
+    <value>10</value>
+    <tag>OZONE, PERFORMANCE, SCM</tag>
+    <description>A maximum number of containers to be scanned by block deleting
+      service per
+      time interval. The block deleting service spawns a thread to handle block
+      deletions in a container. This property is used to throttle the number of
+      threads spawned for block deletions.
+    </description>
+  </property>
+  <property>
+    <name>ozone.block.deleting.limit.per.task</name>
+    <value>1000</value>
+    <tag>OZONE, PERFORMANCE, SCM</tag>
+    <description>A maximum number of blocks to be deleted by block deleting
+      service per
+      time interval. This property is used to throttle the actual number of
+      block deletions on a data node per container.
+    </description>
+  </property>
+  <property>
+    <name>ozone.block.deleting.service.interval</name>
+    <value>1m</value>
+    <tag>OZONE, PERFORMANCE, SCM</tag>
+    <description>Time interval of the block deleting service.
+      The block deleting service runs on each datanode periodically and
+      deletes blocks queued for deletion. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)
+    </description>
+  </property>
+  <property>
+    <name>ozone.block.deleting.service.timeout</name>
+    <value>300000ms</value>
+    <tag>OZONE, PERFORMANCE, SCM</tag>
+    <description>A timeout value of block deletion service. If this is set
+      greater than 0,
+      the service will stop waiting for the block deleting completion after this
+      time. If timeout happens to a large proportion of block deletion, this
+      needs to be increased with ozone.block.deleting.limit.per.task. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified, then milliseconds is
+      assumed.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.connection.timeout</name>
+    <value>5000ms</value>
+    <tag>OZONE, PERFORMANCE, CLIENT</tag>
+    <description>Connection timeout for Ozone client in milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.protocol</name>
+    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>Protocol class to be used by the client to connect to ozone
+      cluster.
+      The build-in implementation includes:
+      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
+      org.apache.hadoop.ozone.client.rest.RestClient for REST
+      The default is the RpClient. Please do not change this unless you have a
+      very good understanding of what you are doing.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.socket.timeout</name>
+    <value>5000ms</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Socket timeout for Ozone client. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)</description>
+  </property>
+  <property>
+    <name>ozone.enabled</name>
+    <value>false</value>
+    <tag>OZONE, REQUIRED</tag>
+    <description>
+      Status of the Ozone Object Storage service is enabled.
+      Set to true to enable Ozone.
+      Set to false to disable Ozone.
+      Unless this value is set to true, Ozone services will not be started in
+      the cluster.
+
+      Please note: By default ozone is disabled on a hadoop cluster.
+    </description>
+  </property>
+  <property>
+    <name>ozone.handler.type</name>
+    <value>distributed</value>
+    <tag>OZONE, REST</tag>
+    <description>
+      Tells ozone which storage handler to use. The possible values are:
+      distributed - The Ozone distributed storage handler, which speaks to
+      KSM/SCM on the backend and provides REST services to clients.
+      local - Local Storage handler strictly for testing - To be removed.
+    </description>
+  </property>
+  <property>
+    <name>ozone.key.deleting.limit.per.task</name>
+    <value>1000</value>
+    <tag>KSM, PERFORMANCE</tag>
+    <description>
+      A maximum number of keys to be scanned by key deleting service
+      per time interval in KSM. Those keys are sent to delete metadata and
+      generate transactions in SCM for next async deletion between SCM
+      and DataNode.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.address</name>
+    <value/>
+    <tag>KSM, REQUIRED</tag>
+    <description>
+      The address of the Ozone KSM service. This allows clients to discover
+      the KSMs address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.group.rights</name>
+    <value>READ_WRITE</value>
+    <tag>KSM, SECURITY</tag>
+    <description>
+      Default group permissions in Ozone KSM.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.handler.count.key</name>
+    <value>20</value>
+    <tag>KSM, PERFORMANCE</tag>
+    <description>
+      The number of RPC handler threads for KSM service endpoints.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.http-address</name>
+    <value>0.0.0.0:9874</value>
+    <tag>KSM, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the KSM web UI will listen on.
+
+      If the port is 0, then the server will start on a free port. However, it
+      is best to specify a well-known port, so it is easy to connect and see
+      the KSM management UI.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>KSM, MANAGEMENT</tag>
+    <description>
+      The actual address the KSM web server will bind to. If this optional
+      the address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.http.enabled</name>
+    <value>true</value>
+    <tag>KSM, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable KSM web user interface.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.https-address</name>
+    <value>0.0.0.0:9875</value>
+    <tag>KSM, MANAGEMENT, SECURITY</tag>
+    <description>
+      The address and the base port where the KSM web UI will listen
+      on using HTTPS.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>KSM, MANAGEMENT, SECURITY</tag>
+    <description>
+      The actual address the KSM web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.ksm.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.keytab.file</name>
+    <value/>
+    <tag>KSM, SECURITY</tag>
+    <description>
+      The keytab file for Kerberos authentication in KSM.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.db.cache.size.mb</name>
+    <value>128</value>
+    <tag>KSM, PERFORMANCE</tag>
+    <description>
+      The size of KSM DB cache in MB that used for caching files.
+      This value is set to an abnormally low value in the default configuration.
+      That is to make unit testing easy. Generally, this value should be set to
+      something like 16GB or more, if you intend to use Ozone at scale.
+
+      A large value for this key allows a proportionally larger amount of KSM
+      metadata to be cached in memory. This makes KSM operations faster.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.user.max.volume</name>
+    <value>1024</value>
+    <tag>KSM, MANAGEMENT</tag>
+    <description>
+      The maximum number of volumes a user can have on a cluster.Increasing or
+      decreasing this number has no real impact on ozone cluster. This is
+      defined only for operational purposes. Only an administrator can create a
+      volume, once a volume is created there are no restrictions on the number
+      of buckets or keys inside each bucket a user can create.
+    </description>
+  </property>
+  <property>
+    <name>ozone.ksm.user.rights</name>
+    <value>READ_WRITE</value>
+    <tag>KSM, SECURITY</tag>
+    <description>
+      Default user permissions used in KSM.
+    </description>
+  </property>
+  <property>
+    <name>ozone.localstorage.root</name>
+    <value>${hadoop.tmp.dir}/ozone</value>
+    <tag>OZONE, DEBUG</tag>
+    <description>
+      This is used only for testing purposes. This value is used by the local
+      storage handler to simulate a REST backend. This is useful only when
+      debugging the REST front end independent of KSM and SCM. To be removed.
+    </description>
+  </property>
+  <property>
+    <name>ozone.metadata.dirs</name>
+    <value/>
+    <tag>OZONE, KSM, SCM, CONTAINER, REQUIRED, STORAGE</tag>
+    <description>
+      Ozone metadata is shared among KSM, which acts as the namespace
+      manager for ozone, SCM which acts as the block manager and data nodes
+      which maintain the name of the key(Key Name and BlockIDs). This
+      replicated and distributed metadata store is maintained under the
+      directory pointed by this key. Since metadata can be I/O intensive, at
+      least on KSM and SCM we recommend having SSDs. If you have the luxury
+      of mapping this path to SSDs on all machines in the cluster, that will
+      be excellent.
+
+      If Ratis metadata directories are not specified, Ratis server will emit a
+      warning and use this path for storing its metadata too.
+    </description>
+  </property>
+  <property>
+    <name>ozone.metastore.impl</name>
+    <value>RocksDB</value>
+    <tag>OZONE, KSM, SCM, CONTAINER, STORAGE</tag>
+    <description>
+      Ozone metadata store implementation. Ozone metadata are well
+      distributed to multiple services such as ksm, scm. They are stored in
+      some local key-value databases. This property determines which database
+      library to use. Supported value is either LevelDB or RocksDB.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.metastore.rocksdb.statistics</name>
+    <value>ALL</value>
+    <tag>OZONE, KSM, SCM, STORAGE, PERFORMANCE</tag>
+    <description>
+      The statistics level of the rocksdb store. If you use any value from
+      org.rocksdb.StatsLevel (eg. ALL or EXCEPT_DETAILED_TIMERS), the rocksdb
+      statistics will be exposed over JMX bean with the choosed setting. Set
+      it to OFF to not initialize rocksdb statistics at all. Please note that
+      collection of statistics could have 5-10% performance penalty.
+      Check the rocksdb documentation for more details.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.block.client.address</name>
+    <value/>
+    <tag>OZONE, SCM</tag>
+    <description>The address of the Ozone SCM block client service. If not
+      defined value of ozone.scm.client.address is used.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.block.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      The hostname or IP address used by the SCM block client
+      endpoint to bind.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.block.client.port</name>
+    <value>9863</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      The port number of the Ozone SCM block client service.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.block.deletion.max.retry</name>
+    <value>4096</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      SCM wraps up many blocks in a deletion transaction and sends that to data
+      node for physical deletion periodically. This property determines how many
+      times SCM is going to retry sending a deletion operation to the data node.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.block.size.in.mb</name>
+    <value>256</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      The default size of a scm block in bytes. This is maps to the default
+      Ozone block size.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.chunk.size</name>
+    <value>16777216</value>
+    <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
+    <description>
+      The chunk size for reading/writing chunk operations in bytes.
+
+      The chunk size defaults to 8MB. If the value configured is more than the
+      maximum size (16MB), it will be reset to the maximum size. This maps to
+      the network packet sizes and file write operations in the client to
+      datanode protocol.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.client.address</name>
+    <value/>
+    <tag>OZONE, SCM, REQUIRED</tag>
+    <description>
+      The address of the Ozone SCM client service. This is a required setting.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9860.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, SCM, MANAGEMENT</tag>
+    <description>The hostname or IP address used by the SCM client endpoint to
+      bind.
+      This setting is used by the SCM only and never used by clients.
+
+      The setting can be useful in multi-homed setups to restrict the
+      availability of the SCM client service to a specific interface.
+
+      The default is appropriate for most clusters.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.client.port</name>
+    <value>9860</value>
+    <tag>OZONE, SCM, MANAGEMENT</tag>
+    <description>The port number of the Ozone SCM client service.</description>
+  </property>
+  <property>
+    <name>ozone.scm.container.deletion-choosing.policy</name>
+    <value>
+      org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy
+    </value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The policy used for choosing desire containers for block deletion.
+      Datanode selects some containers to process block deletion
+      in a certain interval defined by ozone.block.deleting.service.interval.
+      The number of containers to process in each interval is defined
+      by ozone.block.deleting.container.limit.per.interval. This property is
+      used to configure the policy applied while selecting containers.
+      There are two policies supporting now:
+      RandomContainerDeletionChoosingPolicy and
+      TopNOrderedContainerDeletionChoosingPolicy.
+      org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy
+      implements a simply random policy that to return a random list of
+      containers.
+      org.apache.hadoop.ozone.container.common.impl.TopNOrderedContainerDeletionChoosingPolicy
+      implements a policy that choosing top count number of containers in a
+      pending-deletion-blocks's num
+      based descending order.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.placement.impl</name>
+    <value>
+      org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementRandom
+    </value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Placement policy class for containers.
+      Defaults to SCMContainerPlacementRandom.class
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.provision_batch_size</name>
+    <value>20</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>Pre-provision specified number of containers for block
+      allocation.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.report.processing.interval</name>
+    <value>60s</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>Time interval for scm to process container reports
+      for a node pool. Scm handles node pool reports in a cyclic clock
+      manner, it fetches pools periodically with this time interval.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.reports.wait.timeout</name>
+    <value>300s</value>
+    <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
+    <description>Maximum time to wait in seconds for processing all container
+      reports from
+      a node pool. It determines the timeout for a
+      node pool report.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.size.gb</name>
+    <value>5</value>
+    <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
+    <description>
+      Default container size used by Ozone. This value is specified
+      in GB.
+      There are two considerations while picking this number. The speed at which
+      a container can be replicated, determined by the network speed and the
+      metadata that each container generates. So selecting a large number
+      creates less SCM metadata, but recovery time will be more. 5GB is a number
+      that maps to quick replication times in gigabit networks, but still
+      balances the amount of metadata.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.datanode.address</name>
+    <value/>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address of the Ozone SCM service used for internal
+      communication between the DataNodes and the SCM.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9861.
+
+      This setting is optional. If unspecified then the hostname portion
+      is picked from the ozone.scm.client.address setting and the
+      default service port of 9861 is chosen.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.datanode.bind.host</name>
+    <value/>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The hostname or IP address used by the SCM service endpoint to
+      bind.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.datanode.id</name>
+    <value/>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>The path that datanodes will use to store the datanode ID.
+      If this value is not set, then datanode ID is created under the
+      metadata directory.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.datanode.port</name>
+    <value>9861</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The port number of the Ozone SCM service.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.db.cache.size.mb</name>
+    <value>128</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>SCM keeps track of the Containers in the cluster. This DB holds
+      the container metadata. This value is set to a small value to make the
+      unit
+      testing runs smooth. In production, we recommend a value of 16GB or
+      higher. This allows SCM to avoid disk I/O's while looking up the container
+      location.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.dead.node.interval</name>
+    <value>10m</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The interval between heartbeats before a node is tagged as dead.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.handler.count.key</name>
+    <value>10</value>
+    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
+    <description>
+      The number of RPC handler threads for each SCM service
+      endpoint.
+
+      The default is appropriate for small clusters (tens of nodes).
+
+      Set a value that is appropriate for the cluster size. Generally, HDFS
+      recommends RPC handler count is set to 20 * log2(Cluster Size) with an
+      upper limit of 200. However, SCM will not have the same amount of
+      traffic as Namenode, so a value much smaller than that will work well too.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.heartbeat.interval</name>
+    <value>30s</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The heartbeat interval from a data node to SCM. Yes,
+      it is not three but 30, since most data nodes will heart beating via Ratis
+      heartbeats. If a client is not able to talk to a data node, it will notify
+      KSM/SCM eventually. So a 30 second HB seems to work. This assumes that
+      replication strategy used is Ratis if not, this value should be set to
+      something smaller like 3 seconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.heartbeat.log.warn.interval.count</name>
+    <value>10</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      Defines how frequently we will log the missing of a heartbeat to SCM.
+      For example in the default case, we will write a warning message for each
+      ten consecutive heartbeats that we miss to SCM. This helps in reducing
+      clutter in a data node log, but trade off is that logs will have less of
+      this statement.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.heartbeat.rpc-timeout</name>
+    <value>1000</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      Timeout value for the RPC from Datanode to SCM in milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.heartbeat.thread.interval</name>
+    <value>3s</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      When a heartbeat from the data node arrives on SCM, It is queued for
+      processing with the time stamp of when the heartbeat arrived. There is a
+      heartbeat processing thread inside SCM that runs at a specified interval.
+      This value controls how frequently this thread is run.
+
+      There are some assumptions build into SCM such as this value should allow
+      the heartbeat processing thread to run at least three times more
+      frequently than heartbeats and at least five times more than stale node
+      detection time. If you specify a wrong value, SCM will gracefully refuse
+      to run. For more info look at the node manager tests in SCM.
+
+      In short, you don't need to change this.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.http-address</name>
+    <value>0.0.0.0:9876</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the SCM web ui will listen on.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the SCM web server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.http.enabled</name>
+    <value>true</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable SCM web ui.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.https-address</name>
+    <value>0.0.0.0:9877</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the SCM web UI will listen
+      on using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the SCM web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.scm.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.keytab.file</name>
+    <value/>
+    <tag>OZONE, SECURITY</tag>
+    <description>
+      The keytab file for Kerberos authentication in SCM.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.container.report.threads</name>
+    <value>100</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Maximum number of threads to process container reports in scm.
+      Each container report from a data node is processed by scm in a worker
+      thread, fetched from a thread pool. This property is used to control the
+      maximum size of the thread pool.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.hb.count.to.process</name>
+    <value>5000</value>
+    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
+    <description>
+      The maximum number of heartbeat to process per loop of the
+      heartbeat process thread. Please see
+      ozone.scm.heartbeat.thread.interval
+      for more info.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, MANAGEMENT, PERFORMANCE</tag>
+    <description>
+      Number of node pools to process in parallel.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.names</name>
+    <value/>
+    <tag>OZONE</tag>
+    <description>
+      The value of this property is a set of DNS | DNS:PORT | IP
+      Address | IP:PORT. Written as a comma separated string. e.g. scm1,
+      scm2:8020, 7.7.7.7:7777.
+      This property allows datanodes to discover where SCM is, so that
+      datanodes can send heartbeat to SCM.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.stale.node.interval</name>
+    <value>90s</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The interval for stale node flagging. Please
+      see ozone.scm.heartbeat.thread.interval before changing this value.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.max.nodepool.processing.threads</name>
+    <value>1</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Controls the number of node pools that can be processed in parallel by
+      Container Supervisor.
+    </description>
+  </property>
+  <property>
+    <name>ozone.trace.enabled</name>
+    <value>false</value>
+    <tag>OZONE, DEBUG</tag>
+    <description>
+      Setting this flag to true dumps the HTTP request/ response in
+      the logs. Very useful when debugging REST protocol.
+    </description>
+  </property>
+  <property>
+    <name>ozone.web.authentication.kerberos.principal</name>
+    <value/>
+    <tag>OZONE, SECURITY</tag>
+    <description>
+      The server principal used by the SCM and KSM for web UI SPNEGO
+      authentication when Kerberos security is enabled. This is typically set to
+      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
+      HTTP/ by convention.
+
+      If the value is '*', the web server will attempt to login with
+      every principal specified in the keytab file.
+    </description>
+  </property>
+
+  <!--Client Settings-->
+  <property>
+    <name>scm.container.client.idle.threshold</name>
+    <value>10s</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      In the standalone pipelines, the SCM clients use netty to
+      communicate with the container. It also uses connection pooling to
+      reduce client side overheads. This allows a connection to stay idle for
+      a while before the connection is closed.
+    </description>
+  </property>
+  <property>
+    <name>scm.container.client.max.size</name>
+    <value>256</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Controls the maximum number of connections that we cached via
+      clientconnection pooling. If the number of connection
+      exceed this count then the oldest idle connection is evicted.
+    </description>
+  </property>
+
+  <property>
+    <name>scm.container.client.max.outstanding.requests</name>
+    <value>100</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Controls the maximum number of outstanding async requests that can be
+      handled by the Standalone as well as Ratis client.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.container.creation.lease.timeout</name>
+    <value>60s</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Container creation timeout in milliseconds to be used by SCM. When
+      BEGIN_CREATE event happens the container is moved from ALLOCATED to
+      CREATING state, SCM will now wait for the configured amount of time
+      to get COMPLETE_CREATE event if it doesn't receive it will move the
+      container to DELETING.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.key.preallocation.maxsize</name>
+    <value>134217728</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      When a new key write request is sent to KSM, if a size is requested, at most
+      128MB of size is allocated at request time. If client needs more space for the
+      write, separate block allocation requests will be made.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.list.cache</name>
+    <value>1000</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Configuration property to configure the cache size of client list calls.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.replication</name>
+    <value>3</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      Default replication value. The actual number of replications can be
+      specified when writing the key. The default is used if replication
+      is not specified. Supported values: 1 and 3.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.replication.type</name>
+    <value>RATIS</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      Default replication type to be used while writing key into ozone. The
+      value can be specified when writing the key, default is used when
+      nothing is specified. Supported values: RATIS, STAND_ALONE and CHAINED.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.container.close.threshold</name>
+    <value>0.9f</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      This determines the threshold to be used for closing a container.
+      When the container used percentage reaches this threshold,
+      the container will be closed. Value should be a positive, non-zero
+      percentage in float notation (X.Yf), with 1.0f meaning 100%.
+    </description>
+  </property>
+  <property>
+    <name>ozone.rest.client.http.connection.max</name>
+    <value>100</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      This defines the overall connection limit for the connection pool used in
+      RestClient.
+    </description>
+  </property>
+  <property>
+    <name>ozone.rest.client.http.connection.per-route.max</name>
+    <value>20</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      This defines the connection limit per one HTTP route/host. Total max
+      connection is limited by ozone.rest.client.http.connection.max property.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.open.key.cleanup.service.interval.seconds</name>
+    <value>86400</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      A background job periodically checks open key entries and delete the expired ones. This entry controls the
+      interval of this cleanup check.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.open.key.expire.threshold</name>
+    <value>86400</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      Controls how long an open key operation is considered active. Specifically, if a key
+      has been open longer than the value of this config entry, that open key is considered as
+      expired (e.g. due to client crash). Default to 24 hours.
+    </description>
+  </property>
+
+
+  <property>
+    <name>hdsl.rest.rest-csrf.enabled</name>
+    <value>false</value>
+    <description>
+      If true, then enables Object Store REST server protection against
+      cross-site request forgery (CSRF).
+    </description>
+  </property>
+
+  <property>
+    <name>hdsl.rest.http-address</name>
+    <value>0.0.0.0:9880</value>
+    <description>The http address of Object Store REST server inside the
+      datanode.</description>
+  </property>
+
+
+  <property>
+    <name>hdsl.rest.netty.high.watermark</name>
+    <value>65535</value>
+    <description>
+      High watermark configuration to Netty for Object Store REST server.
+    </description>
+  </property>
+
+  <property>
+    <name>hdsl.rest.netty.low.watermark</name>
+    <value>32768</value>
+    <description>
+      Low watermark configuration to Netty for Object Store REST server.
+    </description>
+  </property>
+
+
+</configuration>

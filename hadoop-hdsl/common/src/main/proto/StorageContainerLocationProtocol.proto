@@ -1,0 +1,214 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdsl.protocol.proto";
+option java_outer_classname = "StorageContainerLocationProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdsl;
+
+import "hdfs.proto";
+import "hdsl.proto";
+
+/**
+* Request send to SCM asking where the container should be created.
+*/
+message ContainerRequestProto {
+  required string containerName = 1;
+  // Ozone only support replciation of either 1 or 3.
+  required ReplicationFactor replicationFactor = 2;
+  required ReplicationType  replicationType = 3;
+  required string owner = 4;
+
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message ContainerResponseProto {
+  enum Error {
+    success = 1;
+    errorContainerAlreadyExists = 2;
+    errorContainerMissing = 3;
+  }
+  required Error errorCode = 1;
+  required Pipeline pipeline = 2;
+  optional string errorMessage = 3;
+}
+
+message GetContainerRequestProto {
+  required string containerName = 1;
+}
+
+message GetContainerResponseProto {
+  required Pipeline pipeline = 1;
+}
+
+message SCMListContainerRequestProto {
+  required uint32 count = 1;
+  optional string startName = 2;
+  optional string prefixName = 3;
+}
+
+message SCMListContainerResponseProto {
+  repeated SCMContainerInfo containers = 1;
+}
+
+message SCMDeleteContainerRequestProto {
+  required string containerName = 1;
+}
+
+message SCMDeleteContainerResponseProto {
+  // Empty response
+}
+
+message ObjectStageChangeRequestProto {
+  enum Type {
+    container = 1;
+    pipeline = 2;
+  }
+  // delete/copy operation may be added later
+  enum Op {
+    create = 1;
+    close = 2;
+  }
+  enum Stage {
+    begin = 1;
+    complete = 2;
+  }
+  required string name = 1;
+  required Type type = 2;
+  required Op op= 3;
+  required Stage stage = 4;
+}
+
+message ObjectStageChangeResponseProto {
+  // Empty response
+}
+
+/*
+ NodeQueryRequest sends a request to SCM asking to send a list of nodes that
+ match the NodeState that we are requesting.
+*/
+message NodeQueryRequestProto {
+
+
+  // Repeated, So we can specify more than one status type.
+  // These NodeState types are additive for now, in the sense that
+  // if you specify HEALTHY and FREE_NODE members --
+  // Then you get all healthy node which are not raft members.
+  //
+  // if you specify all healthy and dead nodes, you will get nothing
+  // back. Server is not going to dictate what combinations make sense,
+  // it is entirely up to the caller.
+  // TODO: Support operators like OR and NOT. Currently it is always an
+  // implied AND.
+
+  repeated NodeState query = 1;
+  required QueryScope scope = 2;
+  optional string poolName = 3; // if scope is pool, then pool name is needed.
+}
+
+message NodeQueryResponseProto {
+  required NodePool datanodes = 1;
+}
+
+/**
+  Request to create a replication pipeline.
+ */
+message PipelineRequestProto {
+  required ReplicationType replicationType = 1;
+  required ReplicationFactor replicationFactor = 2;
+
+  // if datanodes are specified then pipelines are created using those
+  // datanodes.
+  optional NodePool nodePool = 3;
+  optional string pipelineID = 4;
+}
+
+message  PipelineResponseProto {
+  enum Error {
+    success = 1;
+    errorPipelineAlreadyExists = 2;
+  }
+  required Error errorCode = 1;
+  optional Pipeline  pipeline = 2;
+  optional string errorMessage = 3;
+}
+
+/**
+ * Protocol used from an HDFS node to StorageContainerManager.  See the request
+ * and response messages for details of the RPC calls.
+ */
+service StorageContainerLocationProtocolService {
+
+  /**
+   * Creates a container entry in SCM.
+   */
+  rpc allocateContainer(ContainerRequestProto) returns (ContainerResponseProto);
+
+  /**
+   * Returns the pipeline for a given container.
+   */
+  rpc getContainer(GetContainerRequestProto) returns (GetContainerResponseProto);
+
+  rpc listContainer(SCMListContainerRequestProto) returns (SCMListContainerResponseProto);
+
+  /**
+   * Deletes a container in SCM.
+   */
+  rpc deleteContainer(SCMDeleteContainerRequestProto) returns (SCMDeleteContainerResponseProto);
+
+  /**
+  * Returns a set of Nodes that meet a criteria.
+  */
+  rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
+
+  /**
+  * Notify from client when begin or finish container or pipeline operations on datanodes.
+  */
+  rpc notifyObjectStageChange(ObjectStageChangeRequestProto) returns (ObjectStageChangeResponseProto);
+
+  /*
+  *  Apis that Manage Pipelines.
+  *
+  * Pipelines are abstractions offered by SCM and Datanode that allows users
+  * to create a replication pipeline.
+  *
+  *  These following APIs allow command line programs like SCM CLI to list
+  * and manage pipelines.
+  */
+
+  /**
+  *  Creates a replication pipeline.
+  */
+  rpc allocatePipeline(PipelineRequestProto)
+      returns (PipelineResponseProto);
+
+  /**
+  *  Returns information about SCM.
+  */
+  rpc getScmInfo(GetScmInfoRequestProto)
+      returns (GetScmInfoRespsonseProto);
+}

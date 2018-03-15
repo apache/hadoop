@@ -27,7 +27,7 @@ OZONE-SITE.XML_ozone.scm.client.address=scm
 OZONE-SITE.XML_dfs.cblock.jscsi.cblock.server.address=cblock
 OZONE-SITE.XML_dfs.cblock.scm.ipaddress=scm
 OZONE-SITE.XML_dfs.cblock.service.leveldb.path=/tmp
-
+HDFS-SITE.XML_dfs.datanode.plugins=org.apache.hadoop.ozone.HdslServerPlugin,org.apache.hadoop.ozone.web.ObjectStoreRestPlugin
 HDFS-SITE.XML_dfs.namenode.rpc-address=namenode:9000
 HDFS-SITE.XML_dfs.namenode.name.dir=/data/namenode
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true

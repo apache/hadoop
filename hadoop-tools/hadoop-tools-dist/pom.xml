@@ -113,7 +113,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone</artifactId>
+      <artifactId>hadoop-ozone-filesystem</artifactId>
       <scope>compile</scope>
       <version>${project.version}</version>
     </dependency>

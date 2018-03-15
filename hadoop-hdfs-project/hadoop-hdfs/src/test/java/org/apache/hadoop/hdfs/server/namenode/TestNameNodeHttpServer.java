@@ -52,10 +52,8 @@ public class TestNameNodeHttpServer {
 
   @Parameters
   public static Collection<Object[]> policy() {
-    Object[][] params = new Object[][] {
-        {HttpConfig.Policy.HTTP_ONLY },
-        {HttpConfig.Policy.HTTPS_ONLY },
-        {HttpConfig.Policy.HTTP_AND_HTTPS } };
+    Object[][] params = new Object[][] { { HttpConfig.Policy.HTTP_ONLY },
+        { HttpConfig.Policy.HTTPS_ONLY }, { HttpConfig.Policy.HTTP_AND_HTTPS } };
     return Arrays.asList(params);
   }
 
@@ -118,9 +116,8 @@ public class TestNameNodeHttpServer {
   }
 
   private static boolean canAccess(String scheme, InetSocketAddress addr) {
-    if (addr == null) {
+    if (addr == null)
       return false;
-    }
     try {
       URL url = new URL(scheme + "://" + NetUtils.getHostPortString(addr));
       URLConnection conn = connectionFactory.openConnection(url);

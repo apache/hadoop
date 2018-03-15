@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into ozone-site.xml and change them -->
+<!-- there.  If ozone-site.xml does not already exist, create it.      -->
+
+<!--Tags supported are OZONE, CBLOCK, MANAGEMENT, SECURITY, PERFORMANCE,   -->
+<!--DEBUG, CLIENT, SERVER, KSM, SCM, CRITICAL, RATIS, CONTAINER, REQUIRED, -->
+<!--REST, STORAGE, PIPELINE, STANDALONE                                    -->
+
+<configuration>
+
+  <!--CBlock Settings-->
+  <property>
+    <name>dfs.cblock.block.buffer.flush.interval</name>
+    <value>60s</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Controls the frequency at this the local cache flushes the
+      blocks to the remote containers.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.block.buffer.size</name>
+    <value>512</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Size of the local cache for blocks. So cache size will be block
+      size multiplied by this number.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.core.min.pool.size</name>
+    <value>16</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      A minimum number of threads in the pool that cBlock cache will
+      use for the background I/O to remote containers.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.max.pool.size</name>
+    <value>256</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Maximum number of threads in the pool that cBlock cache will
+      use for background I/O to remote containers.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.keep.alive</name>
+    <value>60s</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      If the cblock cache has no I/O, then the threads in the cache
+      pool are kept idle for this amount of time before shutting down.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.leveldb.cache.size.mb</name>
+    <value>256</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      The amount of physical memory allocated to the local cache. The
+      SCSI driver will allocate this much RAM cache instances.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.max.retry</name>
+    <value>65536</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      If the local cache is enabled then, CBlock writes to the local
+      cache when I/O happens. Then the background I/O threads write this
+      block to the remote containers. This value controls how many times the
+      background thread should attempt to do I/O to the remote containers
+      before giving up.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.queue.size.in.kb</name>
+    <value>256</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Size of the in memory cache queue, that is flushed to local
+      disk.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.cache.thread.priority</name>
+    <value>5</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Priority of cache flusher thread, affecting the relative performance of
+      write and read. Supported values are 1, 5, 10.
+      Use 10 for high priority and 1 for low priority.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.container.size.gb</name>
+    <value>5</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The size of ozone container in the number of GBs. Note that
+      this is not setting container size for ozone. This setting is
+      instructing CBlock to manage containers at a standard size.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.disk.cache.path</name>
+    <value>${hadoop.tmp.dir}/cblockCacheDB</value>
+    <tag>CBLOCK, REQUIRED</tag>
+    <description>
+      The default path for the cblock local cache. If the cblock
+      local cache is enabled, then it must be set to a valid path. This cache
+      *should* be mapped to the fastest disk on a given machine, For example,
+      an SSD drive would be a good idea. Currently, all mounted disk on a
+      data node is mapped to a single path, so having a large number of IOPS
+      is essential.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.jscsi-address</name>
+    <value/>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The address that cblock will be bind to, should be a host:port
+      format, This setting is required for cblock server to start.
+      This address to be used by jscsi to mount volume.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.jscsi.cblock.server.address</name>
+    <value>127.0.0.1</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The address local jscsi server will use to talk to cblock manager.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.jscsi.port</name>
+    <value>9811</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The port on CBlockManager node for jSCSI to talk to.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.jscsi.rpc-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The actual address the cblock jscsi rpc server will bind to. If
+      this optional address is set, it overrides only the hostname portion of
+      dfs.cblock.jscsi-address.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.jscsi.server.address</name>
+    <value>0.0.0.0</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The address that jscsi server will be running, it is nice have one
+      local jscsi server for each client(Linux JSCSI client) that tries to
+      mount cblock.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.manager.pool.size</name>
+    <value>16</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Number of active threads that cblock manager will use for container
+      operations. The maximum number of the threads are limited to the
+      processor count * 2.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.rpc.timeout</name>
+    <value>300s</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      RPC timeout used for cblock CLI operations. When you
+      create very large disks, like 5TB, etc. The number of containers
+      allocated in the system is huge. It is will 5TB/5GB, which is 1000
+      containers. The client CLI might timeout even though the cblock manager
+      creates the specified disk. This value allows the user to wait for a
+      longer period.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.scm.ipaddress</name>
+    <value>127.0.0.1</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      IP address used by cblock to connect to SCM.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.scm.port</name>
+    <value>9860</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      Port used by cblock to connect to SCM.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.service.handler.count</name>
+    <value>10</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      Default number of handlers for CBlock service rpc.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.service.leveldb.path</name>
+    <value>${hadoop.tmp.dir}/cblock_server.dat</value>
+    <tag>CBLOCK, REQUIRED</tag>
+    <description>
+      Default path for the cblock meta data store.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.service.rpc-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>CBLOCK, MANAGEMENT</tag>
+    <description>
+      The actual address the cblock service RPC server will bind to.
+      If the optional address is set, it overrides only the hostname portion of
+      dfs.cblock.servicerpc-address.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.servicerpc-address</name>
+    <value/>
+    <tag>CBLOCK, MANAGEMENT, REQUIRED</tag>
+    <description>
+      The address that cblock will be bind to, should be a host:port
+      format, this setting is required for cblock server to start.
+      This address is used for cblock management operations like create, delete,
+      info and list volumes
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.short.circuit.io</name>
+    <value>false</value>
+    <tag>CBLOCK, PERFORMANCE</tag>
+    <description>
+      Enables use of the local cache in cblock. Enabling this allows
+      I/O against the local cache and background threads do actual I/O against
+      the
+      containers.
+    </description>
+  </property>
+  <property>
+    <name>dfs.cblock.trace.io</name>
+    <value>false</value>
+    <tag>CBLOCK, DEBUG</tag>
+    <description>Default flag for enabling trace io, Trace I/O logs all I/O with
+      hashes of
+      data. This is useful for detecting things like data corruption.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.ip</name>
+    <value>0.0.0.0</value>
+    <tag>CBLOCK</tag>
+    <description>
+      IP address returned during the iscsi discovery.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.port</name>
+    <value>3260</value>
+    <tag>CBLOCK</tag>
+    <description>
+      TCP port returned during the iscsi discovery.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.dynamic-provisioner.enabled</name>
+    <value>false</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Flag to enable automatic creation of cblocks and
+      kubernetes PersitentVolumes in kubernetes environment.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.cblock-user</name>
+    <value>iqn.2001-04.org.apache.hadoop</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>CBlock user to use for the dynamic provisioner.
+      This user will own all of the auto-created cblocks.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.kubernetes.configfile</name>
+    <value></value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Location of the kubernetes configuration file
+      to access the kubernetes cluster. Not required inside a pod
+      as the default service account will be if this value is
+      empty.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.ip</name>
+    <value></value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>IP where the cblock target server is available
+      from the kubernetes nodes. Usually it's a cluster ip address
+      which is defined by a deployed Service.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.cblock.iscsi.advertised.port</name>
+    <value>3260</value>
+    <tag>CBLOCK, KUBERNETES</tag>
+    <description>Port where the cblock target server is available
+      from the kubernetes nodes. Could be different from the
+      listening port if jscsi is behind a Service.
+    </description>
+  </property>
+</configuration>

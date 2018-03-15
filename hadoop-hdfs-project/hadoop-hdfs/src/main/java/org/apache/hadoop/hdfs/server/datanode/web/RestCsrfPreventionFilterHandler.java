@@ -43,7 +43,7 @@ import org.apache.hadoop.security.http.RestCsrfPreventionFilter.HttpInteraction;
  * handler drops the request and immediately sends an HTTP 400 response.
  */
 @InterfaceAudience.Private
-final class RestCsrfPreventionFilterHandler
+public final class RestCsrfPreventionFilterHandler
     extends SimpleChannelInboundHandler<HttpRequest> {
 
   private static final Log LOG = DatanodeHttpServer.LOG;

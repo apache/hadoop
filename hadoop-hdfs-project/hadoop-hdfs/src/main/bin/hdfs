@@ -46,7 +46,6 @@ function hadoop_usage
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
-  hadoop_add_subcommand "freon" client "runs an ozone data generator"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
   hadoop_add_subcommand "groups" client "get the groups which users belong to"
@@ -139,9 +138,6 @@ function hdfscmd_case
     ;;
     fetchdt)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
-    ;;
-    freon)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Freon
     ;;
     fsck)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck

@@ -1,0 +1,162 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdsl.protocol.proto";
+option java_outer_classname = "HdslProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdsl;
+
+import "hdfs.proto";
+
+message PipelineChannel {
+    required string leaderID = 1;
+    repeated hadoop.hdfs.DatanodeIDProto members = 2;
+    optional LifeCycleState state = 3 [default = OPEN];
+    optional ReplicationType type = 4 [default = STAND_ALONE];
+    optional ReplicationFactor factor = 5 [default = ONE];
+    optional string name = 6;
+}
+
+// A pipeline is composed of PipelineChannel (Ratis/StandAlone) that back a
+// container.
+message Pipeline {
+    required string containerName = 1;
+    required PipelineChannel pipelineChannel = 2;
+}
+
+message KeyValue {
+    required string key = 1;
+    optional string value = 2;
+}
+
+/**
+ * Type of the node.
+ */
+enum NodeType {
+    KSM = 1;
+    SCM = 2;
+    DATANODE = 3;
+}
+
+// Should we rename NodeState to DatanodeState?
+/**
+ * Enum that represents the Node State. This is used in calls to getNodeList
+ * and getNodeCount.
+ */
+enum NodeState {
+    HEALTHY             = 1;
+    STALE               = 2;
+    DEAD                = 3;
+    DECOMMISSIONING     = 4;
+    DECOMMISSIONED      = 5;
+    RAFT_MEMBER         = 6;
+    FREE_NODE           = 7; // Not a member in raft.
+    INVALID             = 8;
+}
+
+enum QueryScope {
+    CLUSTER = 1;
+    POOL = 2;
+}
+
+message Node {
+    required hadoop.hdfs.DatanodeIDProto nodeID = 1;
+    repeated NodeState nodeStates = 2;
+}
+
+message NodePool {
+    repeated Node nodes = 1;
+}
+
+/**
+ * LifeCycleState for SCM object creation state machine:
+ *    ->Allocated: allocated on SCM but clean has not started creating it yet.
+ *    ->Creating: allocated and assigned to client to create but not ack-ed yet.
+ *    ->Open: allocated on SCM and created on datanodes and ack-ed by a client.
+ *    ->Close: container closed due to space all used or error?
+ *    ->Timeout -> container failed to create on datanodes or ack-ed by client.
+ *    ->Deleting(TBD) -> container will be deleted after timeout
+ * 1. ALLOCATE-ed containers on SCM can't serve key/block related operation
+ *    until ACK-ed explicitly which changes the state to OPEN.
+ * 2. Only OPEN/CLOSED containers can serve key/block related operation.
+ * 3. ALLOCATE-ed containers that are not ACK-ed timely will be TIMEOUT and
+ *    CLEANUP asynchronously.
+ */
+
+enum LifeCycleState {
+    ALLOCATED = 1;
+    CREATING = 2; // Used for container allocated/created by different client.
+    OPEN =3; // Mostly an update to SCM via HB or client call.
+    CLOSING = 4;
+    CLOSED = 5; // !!State after this has not been used yet.
+    DELETING = 6;
+    DELETED = 7; // object is deleted.
+}
+
+enum LifeCycleEvent {
+    CREATE = 1; // A request to client to create this object
+    CREATED = 2;
+    FINALIZE = 3;
+    CLOSE = 4; // !!Event after this has not been used yet.
+    UPDATE = 5;
+    TIMEOUT = 6; // creation has timed out from SCM's View.
+    DELETE = 7;
+    CLEANUP = 8;
+}
+
+message SCMContainerInfo {
+    // TODO : Remove the container name from pipeline.
+    required string containerName = 1;
+    required LifeCycleState state = 2;
+    required Pipeline pipeline = 3;
+    // This is not total size of container, but space allocated by SCM for
+    // clients to write blocks
+    required uint64 allocatedBytes = 4;
+    required uint64 usedBytes = 5;
+    required uint64 numberOfKeys = 6;
+    optional int64 stateEnterTime = 7;
+    required string owner = 8;
+    required int64 containerID = 9;
+}
+
+message GetScmInfoRequestProto {
+}
+
+message GetScmInfoRespsonseProto {
+    required string clusterId = 1;
+    required string scmId = 2;
+}
+
+
+enum ReplicationType {
+    RATIS = 1;
+    STAND_ALONE = 2;
+    CHAINED = 3;
+}
+
+enum ReplicationFactor {
+    ONE = 1;
+    THREE = 3;
+}
