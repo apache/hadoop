@@ -17,14 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver.order;
 
+import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
+
+
 /**
- * Order of the destinations when we have multiple of them. When the resolver
- * of files to subclusters (FileSubclusterResolver) has multiple destinations,
- * this determines which location should be checked first.
+ * Policy that decides which should be the first location accessed given
+ * multiple destinations.
  */
-public enum DestinationOrder {
-  HASH, // Follow consistent hashing in the first folder level
-  LOCAL, // Local first
-  RANDOM, // Random order
-  HASH_ALL // Follow consistent hashing
+public interface OrderedResolver {
+
+  /**
+   * Get the first namespace based on this resolver approach.
+   *
+   * @param path Path to check.
+   * @param loc Federated location with multiple destinations.
+   * @return First namespace out of the locations.
+   */
+  String getFirstNamespace(String path, PathLocation loc);
 }
