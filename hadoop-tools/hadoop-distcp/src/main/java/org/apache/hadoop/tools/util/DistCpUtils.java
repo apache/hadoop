@@ -433,24 +433,45 @@ public class DistCpUtils {
   }
 
   /**
-   * Sort sequence file containing FileStatus and Text as key and value respecitvely
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively.
    *
-   * @param fs - File System
    * @param conf - Configuration
    * @param sourceListing - Source listing file
    * @return Path of the sorted file. Is source file with _sorted appended to the name
    * @throws IOException - Any exception during sort.
    */
-  public static Path sortListing(FileSystem fs, Configuration conf, Path sourceListing)
+  public static Path sortListing(Configuration conf,
+      Path sourceListing)
       throws IOException {
+    Path output = new Path(sourceListing.toString() +  "_sorted");
+    sortListing(conf, sourceListing, output);
+    return output;
+  }
+
+  /**
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively, saving the result to the {@code output} path, which
+   * will be deleted first.
+   *
+   * @param conf - Configuration
+   * @param sourceListing - Source listing file
+   * @param output output path
+   * @throws IOException - Any exception during sort.
+   */
+
+  public static void sortListing(final Configuration conf,
+      final Path sourceListing,
+      final Path output) throws IOException {
+    FileSystem fs = sourceListing.getFileSystem(conf);
+    // force verify that the destination FS matches the input
+    fs.makeQualified(output);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, Text.class,
       CopyListingFileStatus.class, conf);
-    Path output = new Path(sourceListing.toString() +  "_sorted");
 
     fs.delete(output, false);
 
     sorter.sort(sourceListing, output);
-    return output;
   }
 
   /**
@@ -547,9 +568,13 @@ public class DistCpUtils {
       throws IOException {
     FileChecksum targetChecksum = null;
     try {
-      sourceChecksum = sourceChecksum != null ? sourceChecksum : sourceFS
-          .getFileChecksum(source);
-      targetChecksum = targetFS.getFileChecksum(target);
+      sourceChecksum = sourceChecksum != null
+          ? sourceChecksum
+          : sourceFS.getFileChecksum(source);
+      if (sourceChecksum != null) {
+        // iff there's a source checksum, look for one at the destination.
+        targetChecksum = targetFS.getFileChecksum(target);
+      }
     } catch (IOException e) {
       LOG.error("Unable to retrieve checksum for " + source + " or " + target, e);
     }
