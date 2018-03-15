@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuil
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.proto.YarnProtos.ValueRangesProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 
 public class NodeStatusPBImpl extends NodeStatus {
