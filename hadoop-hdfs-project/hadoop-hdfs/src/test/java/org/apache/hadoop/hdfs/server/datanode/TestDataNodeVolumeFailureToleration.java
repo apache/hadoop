@@ -159,7 +159,7 @@ public class TestDataNodeVolumeFailureToleration {
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     // Fail a volume on the 2nd DN
-    File dn2Vol1 = cluster.getStorageDir(1, 0);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn2Vol1);
 
     // Should only get two replicas (the first DN and the 3rd)
