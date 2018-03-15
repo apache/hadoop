@@ -110,12 +110,12 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    |  7         11777  c     test_process_.bin                        405MiB     |
    +-----------------------------------------------------------------------------+
    */
-  private static final Pattern GPU_INFO_FORMAT =
+  Pattern GPU_INFO_FORMAT =
     Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+(0|1)\\s+");
-  private static final Pattern GPU_MEM_FORMAT =
+  Pattern GPU_MEM_FORMAT =
     Pattern.compile("([0-9]+)MiB\\s*/\\s*([0-9]+)MiB");
 
-  private static final Pattern GPU_PROCESS_FORMAT =
+  Pattern GPU_PROCESS_FORMAT =
     Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+([0-9]+)MiB");
   /**
    * the output format of the Ports information:
@@ -444,15 +444,15 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs() {
-    refreshGpuIfNeeded();
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpus) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
     return numGPUs;
   }
 
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttributeCapacity() {
-    refreshGpuIfNeeded();
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
     return gpuAttributeCapacity;
   }
 
@@ -477,7 +477,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
   }
 
-  private void refreshGpuIfNeeded() {
+  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus) {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
@@ -529,12 +529,20 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           }
           input.close();
           ir.close();
-          numGPUs = Long.bitCount(gpuAttributeCapacity);
-          this.gpuAttributeCapacity = gpuAttributeCapacity;
-          this.gpuAttributeUsed = gpuAttributeUsed;
-          if( (gpuAttributeUsed & gpuAttributeCapacity) != (gpuAttributeProcess & gpuAttributeCapacity)) {
-            LOG.error("ignored error: some GPUs are using by un-know process, possibly there are some zombie containers");
+          Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
+        if( (ownerLessGpus != 0)) {
+          if (excludeOwnerlessUsingGpus) {
+            gpuAttributeCapacity -= ownerLessGpus;
+            LOG.error("GPU:"+ Long.toBinaryString(ownerLessGpus)+ " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
+
+          } else {
+            LOG.error("GPU: "+ Long.toBinaryString(ownerLessGpus)+ " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
           }
+        }
+        numGPUs = Long.bitCount(gpuAttributeCapacity);
+        this.gpuAttributeCapacity = gpuAttributeCapacity;
+        this.gpuAttributeUsed = gpuAttributeUsed;
+
       } catch (Exception e) {
         LOG.warn("error get GPU status info:" + e.toString());
       }
@@ -611,8 +619,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
       plugin.getCumulativeCpuTime());
-    System.out.println("Number of GPUs : " + plugin.getNumGPUs());
-    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity());
+    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true));
+    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true));
     System.out.println("used Ports : " + plugin.getPortsUsage());
 
     try {

@@ -37,6 +37,7 @@ message NodeStatusProto {
   optional NodeHealthStatusProto nodeHealthStatus = 4;
   repeated ApplicationIdProto keep_alive_applications = 5;
   optional ValueRangesProto local_used_ports_snapshot = 6;
+  optional ResourceProto resource = 7;
 }
 
 message MasterKeyProto {

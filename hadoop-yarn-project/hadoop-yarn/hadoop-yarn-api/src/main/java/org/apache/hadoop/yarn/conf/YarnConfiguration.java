@@ -186,6 +186,7 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "scheduler.maximum-allocation-gpus";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS = 8;
 
+
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "scheduler.client.thread-count";
@@ -1250,6 +1251,17 @@ public class YarnConfiguration extends Configuration {
   public static final String PORTS_BITSET_STORE_ENABLE = YARN_PREFIX
       + "ports_bitset_store.enable";
   public static final boolean DEFAULT_PORTS_BITSET_STORE_ENABLE = false;
+
+
+
+  /**
+   * Whether to exclude the Gpus which is using by unknown process. usually, these
+   * process is zombie process which is still occupy some memory.
+   */
+  public static final String GPU_EXCLUDE_OWNERLESS_GPUS = YARN_PREFIX
+    + "gpu_exclude_ownerless_gpu.enable";
+  public static final boolean DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS = true;
+
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH

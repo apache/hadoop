@@ -19,11 +19,8 @@ package org.apache.hadoop.yarn.server.api.records;
 
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 public abstract class NodeStatus {
   
@@ -59,4 +56,8 @@ public abstract class NodeStatus {
   public abstract ValueRanges getLocalUsedPortsSnapshot();
 
   public abstract void setLocalUsedPortsSnapshot(ValueRanges ports);
+
+  public abstract Resource getResource();
+
+  public abstract void setResource(Resource resource);
 }

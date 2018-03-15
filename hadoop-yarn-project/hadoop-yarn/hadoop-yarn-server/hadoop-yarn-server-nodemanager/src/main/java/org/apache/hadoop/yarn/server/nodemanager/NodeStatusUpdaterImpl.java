@@ -127,6 +127,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
   private boolean enablePortsAsResource;
   private boolean enablePortsBitSetStore;
+
+  // Exclude the Gpus are being used by un-know program.
+  // Usually, the Gpu memory status is non-zero, but the process of this GPU is empty.
+  private boolean excludeOwnerlessUsingGpus;
+
   /**
    * this parameter is circle controller for updating local allocated ports
    * info, since the ports info is big. we can control the update frequency to
@@ -162,16 +167,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         conf.getInt(
              YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
 
-    /*
-    int GPUs =
-        conf.getInt(
-            YarnConfiguration.NM_GPUS, YarnConfiguration.DEFAULT_NM_GPUS);
-    */
-    
-    resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
-    int GPUs = resourceCalculatorPlugin.getNumGPUs();    
-    long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
-
     numOfRoundsToUpdatePorts =
         conf.getInt(YarnConfiguration.NM_PORTS_UPDATE_ROUNDS,
             YarnConfiguration.DEFAULT_NM_PORTS_UPDATE_ROUNDS);
@@ -183,6 +178,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     enablePortsBitSetStore =
         conf.getBoolean(YarnConfiguration.PORTS_BITSET_STORE_ENABLE,
             YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
+
+    excludeOwnerlessUsingGpus =
+      conf.getBoolean(YarnConfiguration.GPU_EXCLUDE_OWNERLESS_GPUS,
+        YarnConfiguration.DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS);
+
+    resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
+    int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus);
+    long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus);
 
     ValueRanges ports = null;
 
@@ -636,8 +639,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           // Send heartbeat
           try {
             NodeHeartbeatResponse response = null;
+            ValueRanges lastUpdatePorts = null;
+            int rounds = 0;
+
             NodeStatus nodeStatus = getNodeStatus(lastHeartBeatID);
-            
+            if (enablePortsAsResource) {
+              if (rounds++ >= numOfRoundsToUpdatePorts) {
+                ValueRanges ports =
+                  new PortsInfo().GetAllocatedPorts(enablePortsBitSetStore);
+                if (lastUpdatePorts == null || !lastUpdatePorts.equals(ports)) {
+                  nodeStatus.setLocalUsedPortsSnapshot(ports);
+                  lastUpdatePorts = ports;
+                }
+                rounds = 0;
+              }
+            }
+
+            int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus);
+            long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus);
+            totalResource.setGPUAttribute(GPUAttribute);
+            totalResource.setGPUs(GPUs);
+            nodeStatus.setResource(totalResource);
+
             NodeHeartbeatRequest request =
                 NodeHeartbeatRequest.newInstance(nodeStatus,
                   NodeStatusUpdaterImpl.this.context
