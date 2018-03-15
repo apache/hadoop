@@ -308,7 +308,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
         blockChooserImpl);
-    asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
+    asyncDiskService = new FsDatasetAsyncDiskService(datanode, this,
+        new Configuration(conf));
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
 
