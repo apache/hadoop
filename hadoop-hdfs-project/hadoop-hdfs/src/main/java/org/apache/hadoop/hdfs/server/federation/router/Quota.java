@@ -94,8 +94,8 @@ public class Quota {
     final List<RemoteLocation> quotaLocs = getValidQuotaLocations(path);
     RemoteMethod method = new RemoteMethod("getQuotaUsage",
         new Class<?>[] {String.class}, new RemoteParam());
-    Map<RemoteLocation, Object> results = rpcClient.invokeConcurrent(quotaLocs,
-        method, true, false);
+    Map<RemoteLocation, QuotaUsage> results = rpcClient.invokeConcurrent(
+        quotaLocs, method, true, false, QuotaUsage.class);
 
     return aggregateQuota(results);
   }
@@ -151,14 +151,14 @@ public class Quota {
    * @param results Quota query result.
    * @return Aggregated Quota.
    */
-  private QuotaUsage aggregateQuota(Map<RemoteLocation, Object> results) {
+  private QuotaUsage aggregateQuota(Map<RemoteLocation, QuotaUsage> results) {
     long nsCount = 0;
     long ssCount = 0;
     boolean hasQuotaUnSet = false;
 
-    for (Map.Entry<RemoteLocation, Object> entry : results.entrySet()) {
+    for (Map.Entry<RemoteLocation, QuotaUsage> entry : results.entrySet()) {
       RemoteLocation loc = entry.getKey();
-      QuotaUsage usage = (QuotaUsage) entry.getValue();
+      QuotaUsage usage = entry.getValue();
       if (usage != null) {
         // If quota is not set in real FileSystem, the usage
         // value will return -1.
