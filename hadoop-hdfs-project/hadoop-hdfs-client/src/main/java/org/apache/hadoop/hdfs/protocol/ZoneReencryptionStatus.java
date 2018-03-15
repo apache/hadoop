@@ -223,7 +223,7 @@ public class ZoneReencryptionStatus {
    * a listReencryptionStatus call, for the crypto admin to consume.
    */
   public void setZoneName(final String name) {
-    Preconditions.checkNotNull(name == null);
+    Preconditions.checkNotNull(name, "zone name cannot be null");
     zoneName = name;
   }
 
