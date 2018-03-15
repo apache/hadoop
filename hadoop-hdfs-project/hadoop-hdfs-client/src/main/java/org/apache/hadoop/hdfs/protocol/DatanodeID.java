@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -54,6 +54,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private String xferAddr;
   private int containerPort; // container Stand_alone Rpc port.
   private int ratisPort; // Container Ratis RPC Port.
+  private int ozoneRestPort;
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
@@ -75,6 +76,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         from.getInfoPort(),
         from.getInfoSecurePort(),
         from.getIpcPort());
+    this.ozoneRestPort = from.getOzoneRestPort();
     this.peerHostName = from.getPeerHostName();
   }
 
@@ -267,6 +269,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
     infoPort = nodeReg.getInfoPort();
     infoSecurePort = nodeReg.getInfoSecurePort();
     ipcPort = nodeReg.getIpcPort();
+    ratisPort = nodeReg.getRatisPort();
+    ozoneRestPort = nodeReg.getOzoneRestPort();
   }
 
   /**
@@ -313,6 +317,24 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   /**
+   * Ozone rest port.
+   *
+   * @return rest port.
+   */
+  public int getOzoneRestPort() {
+    return ozoneRestPort;
+  }
+
+  /**
+   * Set the ozone rest port.
+   *
+   * @param ozoneRestPort
+   */
+  public void setOzoneRestPort(int ozoneRestPort) {
+    this.ozoneRestPort = ozoneRestPort;
+  }
+
+  /**
    * Returns a DataNode ID from the protocol buffers.
    *
    * @param datanodeIDProto - protoBuf Message
@@ -326,6 +348,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         datanodeIDProto.getInfoSecurePort(), datanodeIDProto.getIpcPort());
     id.setContainerPort(datanodeIDProto.getContainerPort());
     id.setRatisPort(datanodeIDProto.getRatisPort());
+    id.setOzoneRestPort(datanodeIDProto.getOzoneRestPort());
     return id;
   }
 
@@ -345,6 +368,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         .setIpcPort(this.getIpcPort())
         .setContainerPort(this.getContainerPort())
         .setRatisPort(this.getRatisPort())
+        .setOzoneRestPort(this.getOzoneRestPort())
         .build();
   }
 

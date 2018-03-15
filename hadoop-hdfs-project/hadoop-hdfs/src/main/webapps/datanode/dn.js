@@ -18,37 +18,17 @@
 (function () {
   "use strict";
 
-  var data = {ozone: {enabled: false}};
+  var data = {};
 
   dust.loadSource(dust.compile($('#tmpl-dn').html(), 'dn'));
 
-  function loadDatanodeInfo() {
+  function load() {
     $.get('/jmx?qry=Hadoop:service=DataNode,name=DataNodeInfo', function(resp) {
       data.dn = workaround(resp.beans[0]);
       data.dn.HostName = resp.beans[0]['DatanodeHostname'];
       render();
     }).fail(show_err_msg);
   }
-
-  function loadOzoneScmInfo() {
-        $.get('/jmx?qry=Hadoop:service=OzoneDataNode,name=SCMConnectionManager', function (resp) {
-            if (resp.beans.length > 0) {
-                data.ozone.SCMServers = resp.beans[0].SCMServers;
-                data.ozone.enabled = true;
-                render();
-            }
-        }).fail(show_err_msg);
-  }
-
-  function loadOzoneStorageInfo() {
-        $.get('/jmx?qry=Hadoop:service=OzoneDataNode,name=ContainerLocationManager', function (resp) {
-            if (resp.beans.length > 0) {
-                data.ozone.LocationReport = resp.beans[0].LocationReport;
-                data.ozone.enabled = true;
-                render();
-            }
-        }).fail(show_err_msg);
-    }
 
   function workaround(dn) {
     function node_map_to_array(nodes) {
@@ -85,8 +65,6 @@
     $('#alert-panel').show();
   }
 
-    loadDatanodeInfo();
-    loadOzoneScmInfo();
-    loadOzoneStorageInfo();
+  load();
 
 })();

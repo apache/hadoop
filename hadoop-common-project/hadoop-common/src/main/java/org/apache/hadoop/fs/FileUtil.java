@@ -18,24 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.collections.map.CaseInsensitiveMap;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -71,8 +53,26 @@ import java.util.zip.CheckedOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
+import com.google.common.base.Preconditions;
+import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A collection of file-processing util methods.
@@ -91,9 +91,9 @@ public class FileUtil {
   public static final int SYMLINK_NO_PRIVILEGE = 2;
 
   /**
-   * Buffer size used while zipping and unzipping zip-ed archives.
+   * Buffer size for copy the content of compressed file to new file.
    */
-  private static final int BUFFER_SIZE = 8192;
+  private static final int BUFFER_SIZE = 8_192;
 
   /**
    * convert an array of FileStatus to an array of Path
@@ -613,7 +613,6 @@ public class FileUtil {
   }
 
   /**
-<<<<<<< HEAD
    * creates zip archieve of the source dir and writes a zip file.
    *
    * @param sourceDir - The directory to zip.
@@ -673,7 +672,7 @@ public class FileUtil {
   }
 
   /**
-   * Given a File input it will unzip the file in a the unzip directory
+   * Given a stream input it will unzip the it in the unzip directory.
    * passed as the second parameter
    * @param inputStream The zip file as input
    * @param toDir The unzip directory where to unzip the zip file.
@@ -731,12 +730,12 @@ public class FileUtil {
             if (!file.getParentFile().mkdirs()) {
               if (!file.getParentFile().isDirectory()) {
                 throw new IOException("Mkdirs failed to create " +
-                    file.getParentFile().toString());
+                                      file.getParentFile().toString());
               }
             }
             OutputStream out = new FileOutputStream(file);
             try {
-              byte[] buffer = new byte[BUFFER_SIZE];
+              byte[] buffer = new byte[8192];
               int i;
               while ((i = in.read(buffer)) != -1) {
                 out.write(buffer, 0, i);

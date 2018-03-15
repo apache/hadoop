@@ -38,10 +38,7 @@
     'fmt_percentage': function (v) {
       return Math.round(v * 100) / 100 + '%';
     },
-    'elapsed': function(v) {
-      //elapsed sec from epoch sec
-      return Date.now() - v * 1000;
-    },
+
     'fmt_time': function (v) {
       var s = Math.floor(v / 1000), h = Math.floor(s / 3600);
       s -= h * 3600;

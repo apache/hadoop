@@ -814,7 +814,7 @@ public class RPC {
 
     static String serverNameFromClass(Class<?> clazz) {
       //The basic idea here is to handle names like
-      //org.apache.hadoop.ozone.protocol.proto.
+      //org.apache.hadoop.hdsl.protocol.proto.
       //
       // StorageDatanodeProtocolProtos$StorageContainerDatanodeProtocolService$2
       //where the getSimpleName is also empty

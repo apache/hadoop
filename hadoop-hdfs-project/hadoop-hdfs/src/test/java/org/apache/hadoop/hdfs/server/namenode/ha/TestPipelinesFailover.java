@@ -442,13 +442,13 @@ public class TestPipelinesFailover {
     };
 
     for (String[] scmd: scmds) {
-      String scmdStr = StringUtils.join(" ", scmd);
+      String scmd_str = StringUtils.join(" ", scmd);
       try {
         ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
         sce.execute();
-        LOG.info("'" + scmdStr + "' output:\n" + sce.getOutput());
+        LOG.info("'" + scmd_str + "' output:\n" + sce.getOutput());
       } catch (IOException e) {
-        LOG.warn("Error when running '" + scmdStr + "'", e);
+        LOG.warn("Error when running '" + scmd_str + "'", e);
       }
     }
 

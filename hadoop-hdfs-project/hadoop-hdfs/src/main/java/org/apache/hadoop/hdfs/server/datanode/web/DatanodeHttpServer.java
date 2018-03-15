@@ -51,11 +51,9 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.web.webhdfs.DataNodeUGIProvider;
-import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -93,18 +91,10 @@ public class DatanodeHttpServer implements Closeable {
 
   public DatanodeHttpServer(final Configuration conf,
       final DataNode datanode,
-      final ServerSocketChannel externalHttpChannel,
-      final ObjectStoreHandler objectStoreHandler)
+      final ServerSocketChannel externalHttpChannel)
     throws IOException {
     this.restCsrfPreventionFilter = createRestCsrfPreventionFilter(conf);
     this.conf = conf;
-
-    final ObjectStoreJerseyContainer finalContainer;
-    if (objectStoreHandler != null) {
-      finalContainer = objectStoreHandler.getObjectStoreJerseyContainer();
-    } else {
-      finalContainer = null;
-    }
 
     Configuration confForInfoServer = new Configuration(conf);
     confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
@@ -160,8 +150,7 @@ public class DatanodeHttpServer implements Closeable {
           }
           p.addLast(
               new ChunkedWriteHandler(),
-              new URLDispatcher(jettyAddr, conf, confForCreate,
-                  finalContainer));
+              new URLDispatcher(jettyAddr, conf, confForCreate));
         }
       });
 
@@ -218,8 +207,7 @@ public class DatanodeHttpServer implements Closeable {
             }
             p.addLast(
                 new ChunkedWriteHandler(),
-                new URLDispatcher(jettyAddr, conf, confForCreate,
-                  finalContainer));
+                new URLDispatcher(jettyAddr, conf, confForCreate));
           }
         });
     } else {
@@ -386,4 +374,3 @@ public class DatanodeHttpServer implements Closeable {
     }
   }
 }
-

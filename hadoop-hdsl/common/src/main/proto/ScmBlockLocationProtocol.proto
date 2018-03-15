@@ -1,0 +1,166 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdsl.protocol.proto";
+option java_outer_classname = "ScmBlockLocationProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.hdsl;
+
+import "hdfs.proto";
+import "hdsl.proto";
+
+
+// SCM Block protocol
+/**
+ * keys - batch of block keys to find
+ */
+message GetScmBlockLocationsRequestProto {
+  repeated string keys = 1;
+}
+
+/**
+ * locatedBlocks - for each requested hash, nodes that currently host the
+ *     container for that object key hash
+ */
+message GetScmBlockLocationsResponseProto {
+  repeated ScmLocatedBlockProto locatedBlocks = 1;
+}
+
+/**
+ * Holds the nodes that currently host the blocks for a key.
+ */
+message ScmLocatedBlockProto {
+  required string key = 1;
+  required hadoop.hdsl.Pipeline pipeline = 2;
+}
+
+/**
+* Request send to SCM asking allocate block of specified size.
+*/
+message AllocateScmBlockRequestProto {
+  required uint64 size = 1;
+  required ReplicationType type = 2;
+  required hadoop.hdsl.ReplicationFactor factor = 3;
+  required string owner = 4;
+
+}
+
+/**
+ * A delete key request sent by KSM to SCM, it contains
+ * multiple number of keys (and their blocks).
+ */
+message DeleteScmKeyBlocksRequestProto {
+  repeated KeyBlocks keyBlocks = 1;
+}
+
+/**
+ * A object key and all its associated blocks.
+ * We need to encapsulate object key name plus the blocks in this potocol
+ * because SCM needs to response KSM with the keys it has deleted.
+ * If the response only contains blocks, it will be very expensive for
+ * KSM to figure out what keys have been deleted.
+ */
+message KeyBlocks {
+  required string key = 1;
+  repeated string blocks = 2;
+}
+
+/**
+ * A delete key response from SCM to KSM, it contains multiple child-results.
+ * Each child-result represents a key deletion result, only if all blocks of
+ * a key are successfully deleted, this key result is considered as succeed.
+ */
+message DeleteScmKeyBlocksResponseProto {
+  repeated DeleteKeyBlocksResultProto results = 1;
+}
+
+/**
+ * A key deletion result. It contains all the block deletion results.
+ */
+message DeleteKeyBlocksResultProto {
+  required string objectKey = 1;
+  repeated DeleteScmBlockResult blockResults = 2;
+}
+
+message DeleteScmBlockResult {
+  enum Result {
+    success = 1;
+    chillMode = 2;
+    errorNotFound = 3;
+    unknownFailure = 4;
+  }
+  required Result result = 1;
+  required string key = 2;
+}
+
+/**
+ * Reply from SCM indicating that the container.
+ */
+message AllocateScmBlockResponseProto {
+  enum Error {
+    success = 1;
+    errorNotEnoughSpace = 2;
+    errorSizeTooBig = 3;
+    unknownFailure = 4;
+  }
+  required Error errorCode = 1;
+  required string key = 2;
+  required hadoop.hdsl.Pipeline pipeline = 3;
+  required bool createContainer = 4;
+  optional string errorMessage = 5;
+}
+
+/**
+ * Protocol used from KeySpaceManager to StorageContainerManager.
+ * See request and response messages for details of the RPC calls.
+ */
+service ScmBlockLocationProtocolService {
+
+  /**
+   * Find the set of nodes that currently host the block, as
+   * identified by the key.  This method supports batch lookup by
+   * passing multiple keys.
+   */
+  rpc getScmBlockLocations(GetScmBlockLocationsRequestProto)
+      returns (GetScmBlockLocationsResponseProto);
+
+  /**
+   * Creates a block entry in SCM.
+   */
+  rpc allocateScmBlock(AllocateScmBlockRequestProto)
+      returns (AllocateScmBlockResponseProto);
+
+  /**
+   * Deletes blocks for a set of object keys from SCM.
+   */
+  rpc deleteScmKeyBlocks(DeleteScmKeyBlocksRequestProto)
+      returns (DeleteScmKeyBlocksResponseProto);
+
+  /**
+   * Gets the scmInfo from SCM.
+   */
+  rpc getScmInfo(hadoop.hdsl.GetScmInfoRequestProto)
+      returns (hadoop.hdsl.GetScmInfoRespsonseProto);
+}

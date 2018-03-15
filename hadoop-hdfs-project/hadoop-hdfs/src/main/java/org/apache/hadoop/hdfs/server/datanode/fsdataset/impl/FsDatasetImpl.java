@@ -1745,7 +1745,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       assert newReplicaInfo.getState() == ReplicaState.FINALIZED
           : "Replica should be finalized";
-      
+
       volumeMap.add(bpid, newReplicaInfo);
       return newReplicaInfo;
     }

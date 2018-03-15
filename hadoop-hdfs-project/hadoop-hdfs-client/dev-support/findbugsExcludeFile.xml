@@ -63,13 +63,6 @@
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
-  <Match>
-    <Package name="org.apache.hadoop.ozone.protocol.proto" />
-  </Match>
-  <Match>
-    <Package name="org.apache.hadoop.hdfs.ozone.protocol.proto" />
-  </Match>
-
   <!-- BlockLocations are user-facing, but LocatedBlocks are not. -->
   <Match>
     <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
@@ -98,4 +91,5 @@
     <Method name="getSymlinkInBytes" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
+
 </FindBugsFilter>

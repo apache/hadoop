@@ -1,0 +1,367 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These .proto interfaces are private and unstable.
+ * Please see http://wiki.apache.org/hadoop/Compatibility
+ * for what changes are allowed for a *unstable* .proto interface.
+ */
+
+option java_package = "org.apache.hadoop.hdsl.protocol.proto";
+
+option java_outer_classname = "StorageContainerDatanodeProtocolProtos";
+
+option java_generic_services = true;
+
+option java_generate_equals_and_hash = true;
+
+package hadoop.hdsl;
+
+import "hdfs.proto";
+
+import "HdfsServer.proto";
+
+import "DatanodeProtocol.proto";
+
+import "hdsl.proto";
+
+
+/**
+* This message is send by data node to indicate that it is alive or it is
+* registering with the node manager.
+*/
+message SCMHeartbeatRequestProto {
+  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  optional SCMNodeReport nodeReport = 2;
+  optional ReportState containerReportState = 3;
+}
+
+enum DatanodeContainerState {
+  closed = 0;
+  open = 1;
+}
+
+/**
+NodeState contains messages from datanode to SCM saying that it has
+some information that SCM might be interested in.*/
+message ReportState {
+  enum states {
+    noContainerReports = 0;
+    completeContinerReport = 1;
+    deltaContainerReport = 2;
+  }
+  required states state = 1;
+  required int64 count = 2 [default = 0];
+}
+
+
+/**
+This message is used to persist the information about a container in the
+SCM database, This information allows SCM to startup faster and avoid having
+all container info in memory all the time.
+  */
+message ContainerPersistanceProto {
+  required DatanodeContainerState state = 1;
+  required hadoop.hdsl.Pipeline pipeline = 2;
+  required ContainerInfo info = 3;
+}
+
+/**
+This message is used to do a quick look up of which containers are effected
+if a node goes down
+*/
+message NodeContianerMapping {
+  repeated string contianerName = 1;
+}
+
+/**
+A container report contains the following information.
+*/
+message ContainerInfo {
+  required string containerName = 1;
+  optional string finalhash = 2;
+  optional int64 size = 3;
+  optional int64 used = 4;
+  optional int64 keyCount = 5;
+  // TODO: move the io count to separate message
+  optional int64 readCount = 6;
+  optional int64 writeCount = 7;
+  optional int64 readBytes = 8;
+  optional int64 writeBytes = 9;
+  required int64 containerID = 10;
+  optional hadoop.hdsl.LifeCycleState state = 11;
+}
+
+// The deleted blocks which are stored in deletedBlock.db of scm.
+message DeletedBlocksTransaction {
+  required int64 txID = 1;
+  required string containerName = 2;
+  repeated string blockID = 3;
+  // the retry time of sending deleting command to datanode.
+  required int32 count = 4;
+}
+
+/**
+A set of container reports, max count is generally set to
+8192 since that keeps the size of the reports under 1 MB.
+*/
+message ContainerReportsRequestProto {
+  enum reportType {
+    fullReport = 0;
+    deltaReport = 1;
+  }
+  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  repeated ContainerInfo reports = 2;
+  required reportType type = 3;
+}
+
+message ContainerReportsResponseProto {
+}
+
+/**
+* This message is send along with the heart beat to report datanode
+* storage utilization by SCM.
+*/
+message SCMNodeReport {
+  repeated SCMStorageReport storageReport = 1;
+}
+
+message SCMStorageReport {
+  required string storageUuid = 1;
+  optional uint64 capacity = 2 [default = 0];
+  optional uint64 scmUsed = 3 [default = 0];
+  optional uint64 remaining = 4 [default = 0];
+  optional hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
+}
+
+message SCMRegisterRequestProto {
+  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  optional SCMNodeAddressList addressList = 2;
+}
+
+/**
+ * Request for version info of the software stack on the server.
+ */
+message SCMVersionRequestProto {
+
+}
+
+/**
+* Generic response that is send to a version request. This allows keys to be
+* added on the fly and protocol to remain stable.
+*/
+message SCMVersionResponseProto {
+  required uint32 softwareVersion = 1;
+  repeated hadoop.hdsl.KeyValue keys = 2;
+}
+
+message SCMNodeAddressList {
+  repeated string addressList = 1;
+}
+
+/**
+ * Datanode ID returned by the SCM. This is similar to name node
+ * registeration of a datanode.
+ */
+message SCMRegisteredCmdResponseProto {
+  enum ErrorCode {
+    success = 1;
+    errorNodeNotPermitted = 2;
+  }
+  required ErrorCode errorCode = 2;
+  optional string datanodeUUID = 3;
+  optional string clusterID = 4;
+  optional SCMNodeAddressList addressList = 5;
+}
+
+/**
+ * SCM informs a datanode to register itself again.
+ * With recieving this command, datanode will transit to REGISTER state.
+ */
+message SCMReregisterCmdResponseProto {}
+
+/**
+ * Container ID maintains the container's Identity along with cluster ID
+ * after the registration is done.
+ */
+message ContainerNodeIDProto {
+  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  optional string clusterID = 2;
+}
+
+
+
+/**
+This command tells the data node to send in the container report when possible
+*/
+message SendContainerReportProto {
+}
+
+/**
+This command asks the datanode to close a specific container.
+*/
+message SCMCloseContainerCmdResponseProto {
+  required string containerName = 1;
+}
+
+/**
+Type of commands supported by SCM to datanode protocol.
+*/
+enum SCMCmdType {
+  versionCommand = 2;
+  registeredCommand = 3;
+  sendContainerReport = 4;
+  reregisterCommand = 5;
+  deleteBlocksCommand = 6;
+  closeContainerCommand = 7;
+}
+
+/*
+ * These are commands returned by SCM for to the datanode to execute.
+ */
+message SCMCommandResponseProto {
+  required SCMCmdType cmdType = 2; // Type of the command
+  optional SCMRegisteredCmdResponseProto registeredProto = 3;
+  optional SCMVersionResponseProto versionProto = 4;
+  optional SendContainerReportProto sendReport = 5;
+  optional SCMReregisterCmdResponseProto reregisterProto = 6;
+  optional SCMDeleteBlocksCmdResponseProto deleteBlocksProto = 7;
+  required string datanodeUUID = 8;
+  optional SCMCloseContainerCmdResponseProto closeContainerProto = 9;
+}
+
+
+/*
+ * A group of commands for the datanode to execute
+ */
+message SCMHeartbeatResponseProto {
+  repeated SCMCommandResponseProto commands = 1;
+}
+
+// HB response from SCM, contains a list of block deletion transactions.
+message SCMDeleteBlocksCmdResponseProto {
+  repeated DeletedBlocksTransaction deletedBlocksTransactions = 1;
+}
+
+// SendACK response returned by datanode to SCM, currently empty.
+message ContainerBlocksDeletionACKResponseProto {
+}
+
+// ACK message datanode sent to SCM, contains the result of
+// block deletion transactions.
+message ContainerBlocksDeletionACKProto {
+  message DeleteBlockTransactionResult {
+    required int64 txID = 1;
+    required bool success = 2;
+  }
+  repeated DeleteBlockTransactionResult results = 1;
+}
+
+/**
+ * Protocol used from a datanode to StorageContainerManager.
+ *
+ * Please see the request and response messages for details of the RPC calls.
+ *
+ * Here is a simple state diagram that shows how a datanode would boot up and
+ * communicate with SCM.
+ *
+ *           -----------------------
+ *          |         Start         |
+ *           ---------- ------------
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *                     |
+ *           ----------v-------------
+ *          |   Searching for  SCM    ------------
+ *           ---------- -------------             |
+ *                     |                          |
+ *                     |                          |
+ *                     |                ----------v-------------
+ *                     |               | Register if needed     |
+ *                     |                ----------- ------------
+ *                     |                           |
+ *                     v                           |
+ *            ----------- ----------------         |
+ *  ---------   Heartbeat state           <--------
+ * |          --------^-------------------
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ * |                  |
+ *  ------------------
+ *
+ *
+ *
+ * Here is how this protocol is used by the datanode. When a datanode boots up
+ * it moves into a stated called SEARCHING_SCM. In this state datanode is
+ * trying to establish communication with the SCM. The address of the SCMs are
+ * retrieved from the configuration information.
+ *
+ * In the SEARCHING_SCM state, only rpc call made by datanode is a getVersion
+ * call to SCM. Once any of the SCMs reply, datanode checks if it has a local
+ * persisted datanode ID. If it has this means that this datanode is already
+ * registered with some SCM. If this file is not found, datanode assumes that
+ * it needs to do a registration.
+ *
+ * If registration is need datanode moves into REGISTER state. It will
+ * send a register call with datanodeID data structure and presist that info.
+ *
+ * The response to the command contains clusterID. This information is
+ * also persisted by the datanode and moves into heartbeat state.
+ *
+ * Once in the heartbeat state, datanode sends heartbeats and container reports
+ * to SCM and process commands issued by SCM until it is shutdown.
+ *
+ */
+service StorageContainerDatanodeProtocolService {
+
+  /**
+  * Gets the version information from the SCM.
+  */
+  rpc getVersion (SCMVersionRequestProto) returns (SCMVersionResponseProto);
+
+  /**
+  * Registers a data node with SCM.
+  */
+  rpc register (SCMRegisterRequestProto) returns (SCMRegisteredCmdResponseProto);
+
+  /**
+   * Send heartbeat from datanode to SCM. HB's under SCM looks more
+   * like life line protocol than HB's under HDFS. In other words, it is
+   * extremely light weight and contains no data payload.
+   */
+  rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
+
+  /**
+    send container reports sends the container report to SCM. This will
+    return a null command as response.
+  */
+  rpc sendContainerReport(ContainerReportsRequestProto) returns (ContainerReportsResponseProto);
+
+  /**
+   * Sends the block deletion ACK to SCM.
+   */
+  rpc sendContainerBlocksDeletionACK (ContainerBlocksDeletionACKProto) returns (ContainerBlocksDeletionACKResponseProto);
+}

@@ -17,7 +17,7 @@
 version: "3"
 services:
    namenode:
-      image: elek/hadoop-runner:latest
+      image: elek/hadoop-runner:o3-refactor
       hostname: namenode
       volumes:
          - ../..//hadoop-${VERSION}:/opt/hadoop
@@ -29,36 +29,38 @@ services:
          - ./docker-config
       command: ["/opt/hadoop/bin/hdfs","namenode"]
    datanode:
-      image: elek/hadoop-runner:latest
+      image: elek/hadoop-runner:o3-refactor
       volumes:
         - ../..//hadoop-${VERSION}:/opt/hadoop
       ports:
         - 9864
-      command: ["/opt/hadoop/bin/hdfs","datanode"]
+      command: ["/opt/hadoop/bin/oz","datanode"]
+      env_file:
+         - ./docker-config
    jscsi:
-      image: elek/hadoop-runner:latest
+      image: elek/hadoop-runner:o3-refactor
       ports:
         - 3260:3260
       volumes:
          - ../..//hadoop-${VERSION}:/opt/hadoop
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","jscsi"]
+      command: ["/opt/hadoop/bin/oz","jscsi"]
    cblock:
-      image: elek/hadoop-runner:latest
+      image: elek/hadoop-runner:o3-refactor
       volumes:
          - ../..//hadoop-${VERSION}:/opt/hadoop
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","cblockserver"]
+      command: ["/opt/hadoop/bin/oz","cblockserver"]
    scm:
-      image: elek/hadoop-runner:latest
+      image: elek/hadoop-runner:o3-refactor
       volumes:
          - ../..//hadoop-${VERSION}:/opt/hadoop
       ports:
          - 9876:9876
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/hdfs","scm"]
+      command: ["/opt/hadoop/bin/oz","scm"]
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION

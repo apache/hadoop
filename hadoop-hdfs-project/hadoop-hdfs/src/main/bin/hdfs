@@ -32,11 +32,8 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
-
   hadoop_add_subcommand "balancer" daemon "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" admin "configure the HDFS cache"
-  hadoop_add_subcommand "cblock" admin "cblock CLI"
-  hadoop_add_subcommand "cblockserver" daemon "run cblock server"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "crypto" admin "configure HDFS encryption zones"
   hadoop_add_subcommand "datanode" daemon "run a DFS datanode"
@@ -49,15 +46,12 @@ function hadoop_usage
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
-  hadoop_add_subcommand "freon" client "runs an ozone data generator"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
   hadoop_add_subcommand "groups" client "get the groups which users belong to"
   hadoop_add_subcommand "haadmin" admin "run a DFS HA admin client"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
   hadoop_add_subcommand "journalnode" daemon "run the DFS journalnode"
-  hadoop_add_subcommand "jscsi" daemon "run cblock jscsi server"
-  hadoop_add_subcommand "ksm" daemon "Ozone keyspace manager"
   hadoop_add_subcommand "lsSnapshottableDir" client "list all snapshottable dirs owned by the current user"
   hadoop_add_subcommand "mover" daemon "run a utility to move block replicas across storage types"
   hadoop_add_subcommand "namenode" daemon "run the DFS namenode"
@@ -65,17 +59,12 @@ function hadoop_usage
   hadoop_add_subcommand "oev" admin "apply the offline edits viewer to an edits file"
   hadoop_add_subcommand "oiv" admin "apply the offline fsimage viewer to an fsimage"
   hadoop_add_subcommand "oiv_legacy" admin "apply the offline fsimage viewer to a legacy fsimage"
-  hadoop_add_subcommand "oz" client "command line interface for ozone"
-  hadoop_add_subcommand "oz_debug" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "portmap" daemon "run a portmap service"
-  hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
-  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager "
   hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
   hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "zkfc" daemon "run the ZK Failover Controller daemon"
-
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
 
@@ -96,13 +85,6 @@ function hdfscmd_case
     ;;
     cacheadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CacheAdmin
-    ;;
-    cblock)
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.cli.CBlockCli
-    ;;
-    cblockserver)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.CBlockManager
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -157,9 +139,6 @@ function hdfscmd_case
     fetchdt)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
     ;;
-    freon)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Freon
-    ;;
     fsck)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck
     ;;
@@ -176,16 +155,8 @@ function hdfscmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
     ;;
-    jscsi)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.jscsiHelper.SCSITargetDaemon
-    ;;
     jmxget)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet
-    ;;
-    ksm)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.ksm.KeySpaceManager
     ;;
     lsSnapshottableDir)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
@@ -215,27 +186,9 @@ function hdfscmd_case
     oiv_legacy)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
     ;;
-    oz)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
-    ;;
-    oz_debug)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SQLCLI
-    ;;
     portmap)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
-    ;;
-    scmcli)
-       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
-    ;;
-    scm)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
-      hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
-    ;;
-    scmcli)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
     ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

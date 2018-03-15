@@ -17,15 +17,9 @@
  */
 package org.apache.hadoop.conf;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.Writer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -38,8 +32,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer2;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A servlet to print out the running configuration data.
@@ -51,12 +43,6 @@ public class ConfServlet extends HttpServlet {
 
   protected static final String FORMAT_JSON = "json";
   protected static final String FORMAT_XML = "xml";
-  private static final String COMMAND = "cmd";
-  private static final Logger LOG = LoggerFactory.getLogger(ConfServlet.class);
-  private transient static final Configuration OZONE_CONFIG = new
-      OzoneConfiguration();
-  private transient Map<String, OzoneConfiguration.Property> propertyMap = null;
-
 
   /**
    * Return the Configuration of the daemon hosting this servlet.
@@ -79,94 +65,27 @@ public class ConfServlet extends HttpServlet {
     final ServletContext servletContext = getServletContext();
     if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
         !HttpServer2.isInstrumentationAccessAllowed(servletContext,
-            request, response)) {
+                                                   request, response)) {
       return;
     }
 
     String format = parseAcceptHeader(request);
-    String cmd = request.getParameter(COMMAND);
+    if (FORMAT_XML.equals(format)) {
+      response.setContentType("text/xml; charset=utf-8");
+    } else if (FORMAT_JSON.equals(format)) {
+      response.setContentType("application/json; charset=utf-8");
+    }
+
+    String name = request.getParameter("name");
     Writer out = response.getWriter();
-
     try {
-      if (cmd == null) {
-        if (FORMAT_XML.equals(format)) {
-          response.setContentType("text/xml; charset=utf-8");
-        } else if (FORMAT_JSON.equals(format)) {
-          response.setContentType("application/json; charset=utf-8");
-        }
-
-        String name = request.getParameter("name");
-        writeResponse(getConfFromContext(), out, format, name);
-      } else {
-        processConfigTagRequest(request, out);
-      }
+      writeResponse(getConfFromContext(), out, format, name);
     } catch (BadFormatException bfe) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, bfe.getMessage());
     } catch (IllegalArgumentException iae) {
       response.sendError(HttpServletResponse.SC_NOT_FOUND, iae.getMessage());
     }
     out.close();
-  }
-
-  private void processConfigTagRequest(HttpServletRequest request,
-      Writer out) throws IOException {
-    String cmd = request.getParameter(COMMAND);
-    Gson gson = new Gson();
-    Configuration config = getOzoneConfig();
-
-    config.get("ozone.enabled");
-    switch (cmd) {
-    case "getPropertyByTag":
-      String tags = request.getParameter("tags");
-      String tagGroup = request.getParameter("group");
-      LOG.debug("Getting all properties for tags:" + tags + " group:" +
-          tagGroup);
-      List<String> tagList = new ArrayList<>();
-      for (String tag : tags.split(",")) {
-        if (config.isPropertyTag(tag)) {
-          tagList.add(tag);
-        }
-      }
-
-      Properties properties = config.getAllPropertiesByTags(tagList);
-      if (propertyMap == null) {
-        loadDescriptions();
-      }
-
-      List<OzoneConfiguration.Property> filteredProperties = new ArrayList<>();
-
-      properties.stringPropertyNames().stream().forEach(key -> {
-        if (config.get(key) != null) {
-          propertyMap.get(key).setValue(config.get(key));
-          filteredProperties.add(propertyMap.get(key));
-        }
-      });
-      out.write(gson.toJsonTree(filteredProperties).toString());
-      break;
-    default:
-      throw new IllegalArgumentException(cmd + " is not a valid command.");
-    }
-
-  }
-
-  private void loadDescriptions() {
-    OzoneConfiguration config = (OzoneConfiguration) getOzoneConfig();
-    List<OzoneConfiguration.Property> propList = null;
-    propertyMap = new HashMap<>();
-    try {
-      propList = config.readPropertyFromXml(config.getResource("ozone-site"
-          + ".xml"));
-      propList.stream().map(p -> propertyMap.put(p.getName(), p));
-      propList = config.readPropertyFromXml(config.getResource("ozone-default"
-          + ".xml"));
-      propList.stream().forEach(p -> {
-        if (!propertyMap.containsKey(p.getName().trim())) {
-          propertyMap.put(p.getName().trim(), p);
-        }
-      });
-    } catch (Exception e) {
-      LOG.error("Error while reading description from xml files", e);
-    }
   }
 
   @VisibleForTesting
@@ -202,10 +121,6 @@ public class ConfServlet extends HttpServlet {
     public BadFormatException(String msg) {
       super(msg);
     }
-  }
-
-  private static Configuration getOzoneConfig() {
-    return OZONE_CONFIG;
   }
 
 }

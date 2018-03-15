@@ -3,9 +3,6 @@
        <Package name="org.apache.hadoop.record.compiler.generated" />
      </Match>
      <Match>
-       <Package name="org.apache.hadoop.hdfs.ozone.protocol.proto" />
-     </Match>
-     <Match>
        <Package name="org.apache.hadoop.hdfs.protocol.proto" />
      </Match>
      <Match>
@@ -16,12 +13,6 @@
      </Match>
      <Match>
        <Package name="org.apache.hadoop.hdfs.qjournal.protocol" />
-     </Match>
-     <Match>
-       <Package name="org.apache.hadoop.ozone.protocol.proto" />
-     </Match>
-     <Match>
-       <Package name ="org.apache.hadoop.cblock.protocol.proto" />
      </Match>
      <Match>
        <Package name="org.apache.hadoop.hdfs.federation.protocol.proto" />

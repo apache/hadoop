@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Collection;
 import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -36,8 +35,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
-import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -81,10 +78,6 @@ public class GetConf extends Configured implements Tool {
         "gets the exclude file path that defines the datanodes " +
         "that need to decommissioned."),
     NNRPCADDRESSES("-nnRpcAddresses", "gets the namenode rpc addresses"),
-    KEYSPACEMANAGER("-keyspacemanagers",
-        "gets list of ozone key space manager nodes in the cluster"),
-    STORAGECONTAINERMANAGER("-storagecontainermanagers",
-        "gets list of ozone storage container manager nodes in the cluster"),
     CONFKEY("-confKey [key]", "gets a specific key from the configuration");
 
     private static final Map<String, CommandHandler> map;
@@ -104,10 +97,6 @@ public class GetConf extends Configured implements Tool {
           new CommandHandler(DFSConfigKeys.DFS_HOSTS_EXCLUDE));
       map.put(StringUtils.toLowerCase(NNRPCADDRESSES.getName()),
           new NNRpcAddressesCommandHandler());
-      map.put(StringUtils.toLowerCase(KEYSPACEMANAGER.getName()),
-          new KeySpaceManagersCommandHandler());
-      map.put(StringUtils.toLowerCase(STORAGECONTAINERMANAGER.getName()),
-          new StorageContainerManagersCommandHandler());
       map.put(StringUtils.toLowerCase(CONFKEY.getName()),
           new PrintConfKeyCommandHandler());
     }
@@ -235,36 +224,9 @@ public class GetConf extends Configured implements Tool {
    * Handler for {@link Command#SECONDARY}
    */
   static class SecondaryNameNodesCommandHandler extends CommandHandler {
-    @Override public int doWorkInternal(GetConf tool, String[] args)
-        throws IOException {
+    @Override
+    public int doWorkInternal(GetConf tool, String []args) throws IOException {
       tool.printMap(DFSUtil.getSecondaryNameNodeAddresses(tool.getConf()));
-      return 0;
-    }
-  }
-
-  /**
-   * Handler for {@link Command#STORAGECONTAINERMANAGER}.
-   */
-  static class StorageContainerManagersCommandHandler extends CommandHandler {
-    @Override
-    public int doWorkInternal(GetConf tool, String[] args) throws IOException {
-      Collection<InetSocketAddress> addresses =
-          OzoneClientUtils.getSCMAddresses(tool.getConf());
-      for (InetSocketAddress addr : addresses) {
-        tool.printOut(addr.getHostName());
-      }
-      return 0;
-    }
-  }
-
-  /**
-   * Handler for {@link Command#KEYSPACEMANAGER}.
-   */
-  static class KeySpaceManagersCommandHandler extends CommandHandler {
-    @Override
-    public int doWorkInternal(GetConf tool, String[] args) throws IOException {
-      tool.printOut(OzoneClientUtils.getKsmAddress(tool.getConf())
-          .getHostName());
       return 0;
     }
   }
@@ -395,11 +357,8 @@ public class GetConf extends Configured implements Tool {
     if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
       System.exit(0);
     }
-
-    Configuration conf = new Configuration();
-    conf.addResource(new HdfsConfiguration());
-    conf.addResource(new OzoneConfiguration());
-    int res = ToolRunner.run(new GetConf(conf), args);
+    
+    int res = ToolRunner.run(new GetConf(new HdfsConfiguration()), args);
     System.exit(res);
   }
 }

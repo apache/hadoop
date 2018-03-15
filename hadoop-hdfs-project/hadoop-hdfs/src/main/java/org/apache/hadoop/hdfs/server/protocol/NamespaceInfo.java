@@ -34,9 +34,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * NamespaceInfo is returned by the name-node in reply
+ * NamespaceInfo is returned by the name-node in reply 
  * to a data-node handshake.
- *
+ * 
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -110,7 +110,7 @@ public class NamespaceInfo extends StorageInfo {
     this.capabilities = capabilities;
   }
 
-  public NamespaceInfo(int nsID, String clusterID, String bpID,
+  public NamespaceInfo(int nsID, String clusterID, String bpID, 
       long cT) {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
         VersionInfo.getVersion());
@@ -122,7 +122,7 @@ public class NamespaceInfo extends StorageInfo {
         VersionInfo.getVersion());
     this.state = st;
   }
-
+  
   public long getCapabilities() {
     return capabilities;
   }
@@ -151,7 +151,7 @@ public class NamespaceInfo extends StorageInfo {
   public String getBlockPoolID() {
     return blockPoolID;
   }
-
+  
   public String getSoftwareVersion() {
     return softwareVersion;
   }

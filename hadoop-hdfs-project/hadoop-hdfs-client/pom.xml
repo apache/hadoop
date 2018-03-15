@@ -64,6 +64,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.mock-server</groupId>
       <artifactId>mockserver-netty</artifactId>
       <scope>test</scope>
@@ -100,36 +105,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-    </dependency>
+      <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+      </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-    </dependency>
-
-    <dependency>
-      <artifactId>ratis-server</artifactId>
-      <groupId>org.apache.ratis</groupId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-netty</artifactId>
-      <groupId>org.apache.ratis</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-grpc</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
   </dependencies>
 
@@ -177,11 +159,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>inotify.proto</include>
                   <include>erasurecoding.proto</include>
                   <include>ReconfigurationProtocol.proto</include>
-                  <include>StorageContainerLocationProtocol.proto</include>
-                  <include>DatanodeContainerProtocol.proto</include>
-                  <include>Ozone.proto</include>
-                  <include>KeySpaceManagerProtocol.proto</include>
-                  <include>ScmBlockLocationProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

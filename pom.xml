@@ -121,6 +121,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop-maven-plugins</module>
     <module>hadoop-common-project</module>
     <module>hadoop-hdfs-project</module>
+    <module>hadoop-hdsl</module>
+    <module>hadoop-ozone</module>
+    <module>hadoop-cblock</module>
     <module>hadoop-yarn-project</module>
     <module>hadoop-mapreduce-project</module>
     <module>hadoop-tools</module>

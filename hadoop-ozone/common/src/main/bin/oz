@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="oz"
+MYNAME="${BASH_SOURCE-$0}"
+
+## @description  build up the hdfs command's usage text.
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function hadoop_usage
+{
+  hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
+  hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in worker mode"
+  hadoop_add_option "--loglevel level" "set the log4j level for this command"
+  hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
+  hadoop_add_option "--workers" "turn on worker mode"
+
+
+  hadoop_add_subcommand "balancer" daemon "run a cluster balancing utility"
+  hadoop_add_subcommand "cacheadmin" admin "configure the HDFS cache"
+  hadoop_add_subcommand "cblock" admin "cblock CLI"
+  hadoop_add_subcommand "cblockserver" daemon "run cblock server"
+  hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "crypto" admin "configure HDFS encryption zones"
+  hadoop_add_subcommand "datanode" daemon "run a DFS datanode"
+  hadoop_add_subcommand "debug" admin "run a Debug Admin to execute HDFS debug commands"
+  hadoop_add_subcommand "dfs" client "run a filesystem command on the file system"
+  hadoop_add_subcommand "dfsadmin" admin "run a DFS admin client"
+  hadoop_add_subcommand "dfsrouter" daemon "run the DFS router"
+  hadoop_add_subcommand "dfsrouteradmin" admin "manage Router-based federation"
+  hadoop_add_subcommand "diskbalancer" daemon "Distributes data evenly among disks on a given node"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
+  hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
+  hadoop_add_subcommand "freon" client "runs an ozone data generator"
+  hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
+  hadoop_add_subcommand "getconf" client "get config values from configuration"
+  hadoop_add_subcommand "getozoneconf" client "get ozone config values from
+  configuration"
+  hadoop_add_subcommand "groups" client "get the groups which users belong to"
+  hadoop_add_subcommand "haadmin" admin "run a DFS HA admin client"
+  hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
+  hadoop_add_subcommand "journalnode" daemon "run the DFS journalnode"
+  hadoop_add_subcommand "jscsi" daemon "run cblock jscsi server"
+  hadoop_add_subcommand "ksm" daemon "Ozone keyspace manager"
+  hadoop_add_subcommand "lsSnapshottableDir" client "list all snapshottable dirs owned by the current user"
+  hadoop_add_subcommand "mover" daemon "run a utility to move block replicas across storage types"
+  hadoop_add_subcommand "namenode" daemon "run the DFS namenode"
+  hadoop_add_subcommand "nfs3" daemon "run an NFS version 3 gateway"
+  hadoop_add_subcommand "oev" admin "apply the offline edits viewer to an edits file"
+  hadoop_add_subcommand "oiv" admin "apply the offline fsimage viewer to an fsimage"
+  hadoop_add_subcommand "oiv_legacy" admin "apply the offline fsimage viewer to a legacy fsimage"
+  hadoop_add_subcommand "oz" client "command line interface for ozone"
+  hadoop_add_subcommand "oz_debug" client "ozone debug tool, convert ozone metadata into relational data"
+  hadoop_add_subcommand "portmap" daemon "run a portmap service"
+  hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
+  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager "
+  hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
+  hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
+  hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
+  hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "zkfc" daemon "run the ZK Failover Controller daemon"
+
+  hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
+}
+
+## @description  Default command handler for hadoop command
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        CLI arguments
+function ozonecmd_case
+{
+  subcmd=$1
+  shift
+
+  case ${subcmd} in
+    balancer)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.balancer.Balancer
+    ;;
+    cacheadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CacheAdmin
+    ;;
+    cblock)
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.cli.CBlockCli
+    ;;
+    cblockserver)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.CBlockManager
+    ;;
+    classpath)
+      hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
+    ;;
+    crypto)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.CryptoAdmin
+    ;;
+    datanode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME="org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.datanode.DataNode'
+      hadoop_deprecate_envvar HADOOP_SECURE_DN_PID_DIR HADOOP_SECURE_PID_DIR
+      hadoop_deprecate_envvar HADOOP_SECURE_DN_LOG_DIR HADOOP_SECURE_LOG_DIR
+    ;;
+    debug)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.DebugAdmin'
+    ;;
+    dfs)
+      HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
+    ;;
+    dfsadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
+    ;;
+    dfsrouter)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
+    ;;
+    dfsrouteradmin)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
+    ;;
+    diskbalancer)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancerCLI
+    ;;
+    envvars)
+      echo "JAVA_HOME='${JAVA_HOME}'"
+      echo "HADOOP_HDFS_HOME='${HADOOP_HDFS_HOME}'"
+      echo "HDFS_DIR='${HDFS_DIR}'"
+      echo "HDFS_LIB_JARS_DIR='${HDFS_LIB_JARS_DIR}'"
+      echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+      echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+      echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+      echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      if [[ -n "${QATESTMODE}" ]]; then
+        echo "MYNAME=${MYNAME}"
+        echo "HADOOP_SHELL_EXECNAME=${HADOOP_SHELL_EXECNAME}"
+      fi
+      exit 0
+    ;;
+    ec)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.ECAdmin
+    ;;
+    fetchdt)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
+    ;;
+    freon)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Freon
+    ;;
+    fsck)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSck
+    ;;
+    getconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.GetConf
+    ;;
+    getozoneconf)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.OzoneGetConf
+    ;;
+    groups)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.GetGroups
+    ;;
+    haadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSHAAdmin
+    ;;
+    journalnode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+    ;;
+    jscsi)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.cblock.jscsiHelper.SCSITargetDaemon
+    ;;
+    jmxget)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet
+    ;;
+    ksm)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.ksm.KeySpaceManager
+    ;;
+    lsSnapshottableDir)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+    ;;
+    mover)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.server.mover.Mover
+    ;;
+    namenode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.NameNode'
+      hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+    ;;
+    nfs3)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      # shellcheck disable=SC2034
+      HADOOP_SECURE_CLASSNAME=org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
+      hadoop_deprecate_envvar HADOOP_SECURE_NFS3_LOG_DIR HADOOP_SECURE_LOG_DIR
+      hadoop_deprecate_envvar HADOOP_SECURE_NFS3_PID_DIR HADOOP_SECURE_PID_DIR
+    ;;
+    oev)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
+    ;;
+    oiv)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewerPB
+    ;;
+    oiv_legacy)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+    ;;
+    oz)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+    ;;
+    oz_debug)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SQLCLI
+    ;;
+    portmap)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
+    ;;
+    scmcli)
+       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
+    ;;
+    scm)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
+      hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
+    ;;
+    scmcli)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
+    ;;
+    secondarynamenode)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+      hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+    ;;
+    snapshotDiff)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
+    ;;
+    storagepolicies)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
+    ;;
+    version)
+      HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    zkfc)
+      # shellcheck disable=SC2034
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
+    ;;
+    *)
+      HADOOP_CLASSNAME="${subcmd}"
+      if ! hadoop_validate_classname "${HADOOP_CLASSNAME}"; then
+        hadoop_exit_with_usage 1
+      fi
+    ;;
+  esac
+}
+
+# let's locate libexec...
+if [[ -n "${HADOOP_HOME}" ]]; then
+  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
+else
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
+  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
+
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
+  # shellcheck source=./hadoop-hdfs-project/hadoop-hdfs/src/main/bin/hdfs-config.sh
+  . "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
+  exit 1
+fi
+
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
+
+if [[ $# = 0 ]]; then
+  hadoop_exit_with_usage 1
+fi
+
+HADOOP_SUBCMD=$1
+shift
+
+if hadoop_need_reexec ozone "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su ozone "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_verify_user_perm "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
+HADOOP_SUBCMD_ARGS=("$@")
+
+if declare -f ozone_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: ozone_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[*]}"
+  "ozone_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+else
+  ozonecmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+fi
+
+hadoop_add_client_opts
+
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_OZONE_HOME}/bin/oz" "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
+# everything is in globals at this point, so call the generic handler
+hadoop_generic_java_subcmd_handler

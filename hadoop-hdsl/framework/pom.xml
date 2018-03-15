@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-hdsl</artifactId>
+    <version>3.2.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>hadoop-hdsl-server-framework</artifactId>
+  <version>3.2.0-SNAPSHOT</version>
+  <description>Apache Hadoop HDSL Common utilities for server side
+    components
+  </description>
+  <name>Apache Hadoop HDSL Server Common</name>
+  <packaging>jar</packaging>
+
+  <properties>
+    <hadoop.component>hdsl</hadoop.component>
+    <is.hadoop.component>true</is.hadoop.component>
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdsl-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>.gitattributes</exclude>
+            <exclude>.idea/**</exclude>
+            <exclude>src/main/conf/*</exclude>
+            <exclude>src/main/webapps/static/angular-1.6.4.min.js</exclude>
+            <exclude>src/main/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
+            <exclude>src/main/webapps/static/angular-route-1.6.4.min.js</exclude>
+            <exclude>src/main/webapps/static/d3-3.5.17.min.js</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css.map</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js</exclude>
+            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js.map</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy web resources</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy toDir="${project.build.directory}/webapps">
+                  <fileset dir="${basedir}/src/main/webapps">
+                    <exclude name="**/proto-web.xml"/>
+                  </fileset>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

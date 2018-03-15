@@ -59,12 +59,12 @@ public class TestQueueManagementDynamicEditPolicy extends
       //submit app1 as USER1
       ApplicationId user1AppId = submitApp(mockRM, parentQueue, USER1, USER1, 1,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f);
+      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
       ApplicationId user2AppId = submitApp(mockRM, parentQueue, USER2, USER2, 2,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f);
+      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
 
       //validate total activated abs capacity
       assertEquals(0.2f, autoCreatedQueueManagementPolicy

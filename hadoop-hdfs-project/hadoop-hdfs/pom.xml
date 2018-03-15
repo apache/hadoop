@@ -169,6 +169,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
     </dependency>
@@ -187,17 +192,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.rocksdb</groupId>
-      <artifactId>rocksdbjni</artifactId>
-      <version>5.8.0</version>
-    </dependency>
-    <dependency>
-      <groupId>io.swagger</groupId>
-      <artifactId>swagger-annotations</artifactId>
-      <version>1.5.9</version>
-      <scope>provided</scope>
-    </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
@@ -209,67 +203,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jscsi</groupId>
-      <artifactId>target</artifactId>
-      <version>2.6.0</version>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>ch.qos.logback</groupId>
-          <artifactId>logback-classic</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.jctools</groupId>
-      <artifactId>jctools-core</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.xerial</groupId>
-      <artifactId>sqlite-jdbc</artifactId>
-      <version>3.8.7</version>
-    </dependency>
-    <dependency>
-      <groupId>io.kubernetes</groupId>
-      <artifactId>client-java</artifactId>
-      <version>1.0.0-beta1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>io.swagger</groupId>
-          <artifactId>swagger-annotations</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.github.stefanbirkner</groupId>
-          <artifactId>system-rules</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>io.dropwizard.metrics</groupId>
-          <artifactId>metrics-core</artifactId>
-      </dependency>
     <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openjdk.jmh</groupId>
-      <artifactId>jmh-core</artifactId>
-      <version>1.19</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openjdk.jmh</groupId>
-      <artifactId>jmh-generator-annprocess</artifactId>
-      <version>1.19</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -366,7 +307,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <tasks>
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
-                <copy file="src/main/resources/ozone-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
             </configuration>
@@ -403,9 +343,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>QJournalProtocol.proto</include>
                   <include>editlog.proto</include>
                   <include>fsimage.proto</include>
-                  <include>StorageContainerDatanodeProtocol.proto</include>
-                  <include>CBlockServiceProtocol.proto</include>
-                  <include>CBlockClientServerProtocol.proto</include>
                   <include>FederationProtocol.proto</include>
                   <include>RouterProtocol.proto</include>
                   <include>AliasMapProtocol.proto</include>
@@ -472,14 +409,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/static/dataTables.bootstrap.js</exclude>
             <exclude>src/main/webapps/static/d3-v4.1.1.min.js</exclude>
             <exclude>src/test/resources/diskBalancer/data-cluster-3node-3disk.json</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css.map</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js</exclude>
-            <exclude>src/main/webapps/static/angular-route-1.6.4.min.js</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css</exclude>
-            <exclude>src/main/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js.map</exclude>
-            <exclude>src/main/webapps/static/angular-1.6.4.min.js</exclude>
-            <exclude>src/main/webapps/static/d3-3.5.17.min.js</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -492,53 +421,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <includes>
                 <include>configuration.xsl</include>
                 <include>hdfs-default.xml</include>
-                <include>ozone-default.xml</include>
               </includes>
               <followSymlinks>false</followSymlinks>
             </fileset>
           </filesets>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.github.kongchen</groupId>
-        <artifactId>swagger-maven-plugin</artifactId>
-        <version>3.1.5</version>
-        <executions>
-          <execution>
-            <phase>compile</phase>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <apiSources>
-            <apiSource>
-              <springmvc>false</springmvc>
-              <swaggerDirectory>target/webapps/static</swaggerDirectory>
-              <swaggerFileName>ozone.swagger</swaggerFileName>
-              <schemes>
-                <scheme>http</scheme>
-              </schemes>
-              <host>localhost:9864</host>
-              <basePath>/</basePath>
-              <locations>
-                <location>org.apache.hadoop.ozone.web.interfaces</location>
-              </locations>
-              <info>
-                <title>HDFS Ozone REST Api</title>
-                <version>${project.version}</version>
-                <contact>
-                  <name>Apache Hadoop project</name>
-                  <url>https://hadoop.apache.org</url>
-                </contact>
-                <license>
-                  <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-                  <name>Apache 2.0</name>
-                </license>
-              </info>
-            </apiSource>
-          </apiSources>
         </configuration>
       </plugin>
     </plugins>

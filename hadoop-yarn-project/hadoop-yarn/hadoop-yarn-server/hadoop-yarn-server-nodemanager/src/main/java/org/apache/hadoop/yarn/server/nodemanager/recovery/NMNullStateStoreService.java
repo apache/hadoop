@@ -120,6 +120,11 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public void storeContainerRestartTimes(ContainerId containerId,
+      List<Long> restartTimes) throws IOException {
+  }
+
+  @Override
   public void storeContainerWorkDir(ContainerId containerId,
       String workDir) throws IOException {
   }
