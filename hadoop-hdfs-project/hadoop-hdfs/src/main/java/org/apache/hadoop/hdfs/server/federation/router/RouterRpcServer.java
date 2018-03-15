@@ -1187,29 +1187,54 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       DatanodeReportType type) throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
 
-    Map<String, DatanodeStorageReport> datanodesMap = new HashMap<>();
-    RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
-        new Class<?>[] {DatanodeReportType.class}, type);
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
-        rpcClient.invokeConcurrent(
-            nss, method, true, false, DatanodeStorageReport[].class);
-    for (DatanodeStorageReport[] result : results.values()) {
-      for (DatanodeStorageReport node : result) {
-        String nodeId = node.getDatanodeInfo().getXferAddr();
+    Map<String, DatanodeStorageReport[]> dnSubcluster =
+        getDatanodeStorageReportMap(type);
+
+    // Avoid repeating machines in multiple subclusters
+    Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
+    for (DatanodeStorageReport[] dns : dnSubcluster.values()) {
+      for (DatanodeStorageReport dn : dns) {
+        DatanodeInfo dnInfo = dn.getDatanodeInfo();
+        String nodeId = dnInfo.getXferAddr();
         if (!datanodesMap.containsKey(nodeId)) {
-          datanodesMap.put(nodeId, node);
+          datanodesMap.put(nodeId, dn);
         }
         // TODO merge somehow, right now it just takes the first one
       }
     }
 
     Collection<DatanodeStorageReport> datanodes = datanodesMap.values();
-    // TODO sort somehow
     DatanodeStorageReport[] combinedData =
         new DatanodeStorageReport[datanodes.size()];
     combinedData = datanodes.toArray(combinedData);
     return combinedData;
+  }
+
+  /**
+   * Get the list of datanodes per subcluster.
+   *
+   * @param type Type of the datanodes to get.
+   * @return nsId -> datanode list.
+   * @throws IOException
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
+      DatanodeReportType type) throws IOException {
+
+    Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
+        new Class<?>[] {DatanodeReportType.class}, type);
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
+        rpcClient.invokeConcurrent(
+            nss, method, true, false, DatanodeStorageReport[].class);
+    for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
+        results.entrySet()) {
+      FederationNamespaceInfo ns = entry.getKey();
+      String nsId = ns.getNameserviceId();
+      DatanodeStorageReport[] result = entry.getValue();
+      ret.put(nsId, result);
+    }
+    return ret;
   }
 
   @Override // ClientProtocol
