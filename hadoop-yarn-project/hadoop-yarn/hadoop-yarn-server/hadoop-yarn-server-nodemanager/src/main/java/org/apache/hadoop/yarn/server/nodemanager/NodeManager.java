@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.logaggregation.tracker.NMLogAggregationStatusTracker;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
@@ -135,6 +136,7 @@ public class NodeManager extends CompositeService
   private boolean rmWorkPreservingRestartEnabled;
   private boolean shouldExitOnShutdownEvent = false;
 
+  private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
   /**
    * Default Container State transition listener.
    */
@@ -424,6 +426,12 @@ public class NodeManager extends CompositeService
     addService(containerManager);
     ((NMContext) context).setContainerManager(containerManager);
 
+    this.nmLogAggregationStatusTracker = createNMLogAggregationStatusTracker(
+        context);
+    addService(nmLogAggregationStatusTracker);
+    ((NMContext)context).setNMLogAggregationStatusTracker(
+        this.nmLogAggregationStatusTracker);
+
     WebServer webServer = createWebServer(context, containerManager
         .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
@@ -620,6 +628,8 @@ public class NodeManager extends CompositeService
     private ContainerStateTransitionListener containerStateTransitionListener;
 
     private ResourcePluginManager resourcePluginManager;
+
+    private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -862,6 +872,15 @@ public class NodeManager extends CompositeService
     public void setDeletionService(DeletionService deletionService) {
       this.deletionService = deletionService;
     }
+
+    public void setNMLogAggregationStatusTracker(
+        NMLogAggregationStatusTracker nmLogAggregationStatusTracker) {
+      this.nmLogAggregationStatusTracker = nmLogAggregationStatusTracker;
+    }
+    @Override
+    public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
+      return nmLogAggregationStatusTracker;
+    }
   }
 
   /**
@@ -964,5 +983,10 @@ public class NodeManager extends CompositeService
   @Private
   public NodeStatusUpdater getNodeStatusUpdater() {
     return nodeStatusUpdater;
+  }
+
+  private NMLogAggregationStatusTracker createNMLogAggregationStatusTracker(
+      Context ctxt) {
+    return new NMLogAggregationStatusTracker(ctxt);
   }
 }
