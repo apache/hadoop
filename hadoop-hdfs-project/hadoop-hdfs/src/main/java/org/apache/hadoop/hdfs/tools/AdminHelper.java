@@ -145,7 +145,7 @@ public class AdminHelper {
     private final Command[] commands;
 
     public HelpCommand(Command[] commands) {
-      Preconditions.checkNotNull(commands != null);
+      Preconditions.checkNotNull(commands, "commands cannot be null.");
       this.commands = commands;
     }
 
