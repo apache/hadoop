@@ -113,12 +113,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ozone-filesystem</artifactId>
-      <scope>compile</scope>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-sls</artifactId>
       <scope>compile</scope>
     </dependency>
@@ -197,6 +191,21 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+
+    <profile>
+      <id>hdsl</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-ozone-filesystem</artifactId>
+          <scope>compile</scope>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>

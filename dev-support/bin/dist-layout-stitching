@@ -141,10 +141,6 @@ run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
 run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${VERSION}" .
 run copy "${ROOT}/hadoop-cblock/server/target/hadoop-cblock-server-${VERSION}" .
 run copy "${ROOT}/hadoop-cblock/tools/target/hadoop-cblock-tools-${VERSION}" .
-run cp -r "${ROOT}/hadoop-hdsl/framework/target/hadoop-hdsl-server-framework-${VERSION}/share/hadoop/hdsl/webapps/static" share/hadoop/ozone/webapps/
-run cp -r "${ROOT}/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${VERSION}/share/hadoop/hdfs/webapps/static" share/hadoop/ozone/webapps/
-run cp -r "${ROOT}/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${VERSION}/share/hadoop/hdfs/webapps/static" share/hadoop/hdsl/webapps/
-
 
 run copy "${ROOT}/hadoop-yarn-project/target/hadoop-yarn-project-${VERSION}" .
 run copy "${ROOT}/hadoop-mapreduce-project/target/hadoop-mapreduce-${VERSION}" .

@@ -87,9 +87,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <target>
-                <copy toDir="${project.build.directory}/webapps">
-                  <fileset dir="${basedir}/src/main/webapps">
-                    <exclude name="**/proto-web.xml"/>
+                <copy toDir="${project.build.directory}/classes/webapps/static">
+                  <fileset
+                          dir="${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static">
                   </fileset>
                 </copy>
               </target>
