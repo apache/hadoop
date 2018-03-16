@@ -136,6 +136,30 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-common-html</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <artifactItems>
+            <artifactItem>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-hdsl-server-framework</artifactId>
+              <outputDirectory>${project.build.directory}/</outputDirectory>
+              <includes>webapps/static/**/*.*</includes>
+            </artifactItem>
+          </artifactItems>
+          <overWriteSnapshots>true</overWriteSnapshots>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
