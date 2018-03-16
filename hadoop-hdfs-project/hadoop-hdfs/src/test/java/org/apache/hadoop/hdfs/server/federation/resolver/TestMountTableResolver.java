@@ -497,9 +497,9 @@ public class TestMountTableResolver {
             map2);
     entries.add(entry2);
     mountTable.refreshEntries(entries);
-    assertEquals("1->/testlocationcache",
+    assertEquals("1->/testlocationcache/",
             mountTable.getDestinationForPath("/testlocationcache").toString());
-    assertEquals("2->/anothertestlocationcache",
+    assertEquals("2->/anothertestlocationcache/",
             mountTable.getDestinationForPath("/anothertestlocationcache")
                     .toString());
 
@@ -518,7 +518,7 @@ public class TestMountTableResolver {
     mountTable.refreshEntries(entries);
 
     // Ensure location cache update correctly
-    assertEquals("3->/testlocationcache",
+    assertEquals("3->/testlocationcache/",
             mountTable.getDestinationForPath("/testlocationcache").toString());
 
     // Cleanup before exit

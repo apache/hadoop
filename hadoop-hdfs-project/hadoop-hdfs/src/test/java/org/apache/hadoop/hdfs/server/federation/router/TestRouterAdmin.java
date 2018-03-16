@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
-import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.util.Time;
@@ -174,52 +172,6 @@ public class TestRouterAdmin {
     MountTable record = getMountTableEntry("/readonly");
     assertEquals("/readonly", record.getSourcePath());
     assertTrue(record.isReadOnly());
-
-    // Removing the new entry
-    RemoveMountTableEntryRequest removeRequest =
-        RemoveMountTableEntryRequest.newInstance("/readonly");
-    RemoveMountTableEntryResponse removeResponse =
-        mountTable.removeMountTableEntry(removeRequest);
-    assertTrue(removeResponse.getStatus());
-  }
-
-  @Test
-  public void testAddOrderMountTable() throws IOException {
-    testAddOrderMountTable(DestinationOrder.HASH);
-    testAddOrderMountTable(DestinationOrder.LOCAL);
-    testAddOrderMountTable(DestinationOrder.RANDOM);
-    testAddOrderMountTable(DestinationOrder.HASH_ALL);
-  }
-
-  private void testAddOrderMountTable(final DestinationOrder order)
-      throws IOException {
-    final String mnt = "/" + order;
-    MountTable newEntry = MountTable.newInstance(
-        mnt, Collections.singletonMap("ns0", "/testdir"),
-        Time.now(), Time.now());
-    newEntry.setDestOrder(order);
-
-    RouterClient client = routerContext.getAdminClient();
-    MountTableManager mountTable = client.getMountTableManager();
-
-    // Add
-    AddMountTableEntryRequest addRequest;
-    AddMountTableEntryResponse addResponse;
-    addRequest = AddMountTableEntryRequest.newInstance(newEntry);
-    addResponse = mountTable.addMountTableEntry(addRequest);
-    assertTrue(addResponse.getStatus());
-
-    // Check that we have the read only entry
-    MountTable record = getMountTableEntry(mnt);
-    assertEquals(mnt, record.getSourcePath());
-    assertEquals(order, record.getDestOrder());
-
-    // Removing the new entry
-    RemoveMountTableEntryRequest removeRequest =
-        RemoveMountTableEntryRequest.newInstance(mnt);
-    RemoveMountTableEntryResponse removeResponse =
-        mountTable.removeMountTableEntry(removeRequest);
-    assertTrue(removeResponse.getStatus());
   }
 
   @Test
