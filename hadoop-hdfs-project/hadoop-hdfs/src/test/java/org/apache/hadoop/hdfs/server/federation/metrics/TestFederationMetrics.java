@@ -86,9 +86,6 @@ public class TestFederationMetrics extends TestMetricsBase {
               json.getString("nameserviceId"));
           assertEquals(entry.getDefaultLocation().getDest(),
               json.getString("path"));
-          assertEquals(entry.getOwnerName(), json.getString("ownerName"));
-          assertEquals(entry.getGroupName(), json.getString("groupName"));
-          assertEquals(entry.getMode().toString(), json.getString("mode"));
           assertNotNullAndNotEmpty(json.getString("dateCreated"));
           assertNotNullAndNotEmpty(json.getString("dateModified"));
           match++;

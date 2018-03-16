@@ -24,9 +24,6 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
-import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
@@ -39,7 +36,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -56,15 +52,7 @@ public class MountTableStoreImpl extends MountTableStore {
   @Override
   public AddMountTableEntryResponse addMountTableEntry(
       AddMountTableEntryRequest request) throws IOException {
-    MountTable mountTable = request.getEntry();
-    if (mountTable != null) {
-      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
-      if (pc != null) {
-        pc.checkPermission(mountTable, FsAction.WRITE);
-      }
-    }
-
-    boolean status = getDriver().put(mountTable, false, true);
+    boolean status = getDriver().put(request.getEntry(), false, true);
     AddMountTableEntryResponse response =
         AddMountTableEntryResponse.newInstance();
     response.setStatus(status);
@@ -74,15 +62,8 @@ public class MountTableStoreImpl extends MountTableStore {
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-    MountTable mountTable = request.getEntry();
-    if (mountTable != null) {
-      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
-      if (pc != null) {
-        pc.checkPermission(mountTable, FsAction.WRITE);
-      }
-    }
-
-    boolean status = getDriver().put(mountTable, true, true);
+    MountTable entry = request.getEntry();
+    boolean status = getDriver().put(entry, true, true);
     UpdateMountTableEntryResponse response =
         UpdateMountTableEntryResponse.newInstance();
     response.setStatus(status);
@@ -96,17 +77,8 @@ public class MountTableStoreImpl extends MountTableStore {
     final MountTable partial = MountTable.newInstance();
     partial.setSourcePath(srcPath);
     final Query<MountTable> query = new Query<>(partial);
-    final MountTable deleteEntry = getDriver().get(getRecordClass(), query);
-
-    boolean status = false;
-    if (deleteEntry != null) {
-      RouterPermissionChecker pc = RouterAdminServer.getPermissionChecker();
-      if (pc != null) {
-        pc.checkPermission(deleteEntry, FsAction.WRITE);
-      }
-      status = getDriver().remove(deleteEntry);
-    }
-
+    int removedRecords = getDriver().remove(getRecordClass(), query);
+    boolean status = (removedRecords == 1);
     RemoveMountTableEntryResponse response =
         RemoveMountTableEntryResponse.newInstance();
     response.setStatus(status);
@@ -116,13 +88,12 @@ public class MountTableStoreImpl extends MountTableStore {
   @Override
   public GetMountTableEntriesResponse getMountTableEntries(
       GetMountTableEntriesRequest request) throws IOException {
-    RouterPermissionChecker pc =
-        RouterAdminServer.getPermissionChecker();
+
     // Get all values from the cache
     List<MountTable> records = getCachedRecords();
 
     // Sort and filter
-    Collections.sort(records, MountTable.SOURCE_COMPARATOR);
+    Collections.sort(records);
     String reqSrcPath = request.getSrcPath();
     if (reqSrcPath != null && !reqSrcPath.isEmpty()) {
       // Return only entries beneath this path
@@ -132,15 +103,6 @@ public class MountTableStoreImpl extends MountTableStore {
         String srcPath = record.getSourcePath();
         if (!srcPath.startsWith(reqSrcPath)) {
           it.remove();
-        } else if (pc != null) {
-          // do the READ permission check
-          try {
-            pc.checkPermission(record, FsAction.READ);
-          } catch (AccessControlException ignored) {
-            // Remove this mount table entry if it cannot
-            // be accessed by current user.
-            it.remove();
-          }
         }
       }
     }

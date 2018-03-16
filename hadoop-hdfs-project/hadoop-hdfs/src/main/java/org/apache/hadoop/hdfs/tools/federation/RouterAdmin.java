@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
@@ -78,7 +77,7 @@ public class RouterAdmin extends Configured implements Tool {
   public void printUsage() {
     String usage = "Federation Admin Tools:\n"
         + "\t[-add <source> <nameservice> <destination> "
-        + "[-readonly] -owner <owner> -group <group> -mode <mode>]\n"
+        + "[-readonly]\n"
         + "\t[-rm <source>]\n"
         + "\t[-ls <path>]\n";
     System.out.println(usage);
@@ -194,9 +193,6 @@ public class RouterAdmin extends Configured implements Tool {
 
     // Optional parameters
     boolean readOnly = false;
-    String owner = null;
-    String group = null;
-    FsPermission mode = null;
     DestinationOrder order = DestinationOrder.HASH;
     while (i < parameters.length) {
       if (parameters[i].equals("-readonly")) {
@@ -208,23 +204,11 @@ public class RouterAdmin extends Configured implements Tool {
         } catch(Exception e) {
           System.err.println("Cannot parse order: " + parameters[i]);
         }
-      } else if (parameters[i].equals("-owner")) {
-        i++;
-        owner = parameters[i];
-      } else if (parameters[i].equals("-group")) {
-        i++;
-        group = parameters[i];
-      } else if (parameters[i].equals("-mode")) {
-        i++;
-        short modeValue = Short.parseShort(parameters[i], 8);
-        mode = new FsPermission(modeValue);
       }
-
       i++;
     }
 
-    return addMount(mount, nss, dest, readOnly, order,
-        new ACLEntity(owner, group, mode));
+    return addMount(mount, nss, dest, readOnly, order);
   }
 
   /**
@@ -235,13 +219,11 @@ public class RouterAdmin extends Configured implements Tool {
    * @param dest Destination path.
    * @param readonly If the mount point is read only.
    * @param order Order of the destination locations.
-   * @param aclInfo the ACL info for mount point.
    * @return If the mount point was added.
    * @throws IOException Error adding the mount point.
    */
   public boolean addMount(String mount, String[] nss, String dest,
-      boolean readonly, DestinationOrder order, ACLEntity aclInfo)
-      throws IOException {
+      boolean readonly, DestinationOrder order) throws IOException {
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     GetMountTableEntriesRequest getRequest =
@@ -269,20 +251,6 @@ public class RouterAdmin extends Configured implements Tool {
       if (order != null) {
         newEntry.setDestOrder(order);
       }
-
-      // Set ACL info for mount table entry
-      if (aclInfo.getOwner() != null) {
-        newEntry.setOwnerName(aclInfo.getOwner());
-      }
-
-      if (aclInfo.getGroup() != null) {
-        newEntry.setGroupName(aclInfo.getGroup());
-      }
-
-      if (aclInfo.getMode() != null) {
-        newEntry.setMode(aclInfo.getMode());
-      }
-
       AddMountTableEntryRequest request =
           AddMountTableEntryRequest.newInstance(newEntry);
       AddMountTableEntryResponse addResponse =
@@ -305,20 +273,6 @@ public class RouterAdmin extends Configured implements Tool {
       if (order != null) {
         existingEntry.setDestOrder(order);
       }
-
-      // Update ACL info of mount table entry
-      if (aclInfo.getOwner() != null) {
-        existingEntry.setOwnerName(aclInfo.getOwner());
-      }
-
-      if (aclInfo.getGroup() != null) {
-        existingEntry.setGroupName(aclInfo.getGroup());
-      }
-
-      if (aclInfo.getMode() != null) {
-        existingEntry.setMode(aclInfo.getMode());
-      }
-
       UpdateMountTableEntryRequest updateRequest =
           UpdateMountTableEntryRequest.newInstance(existingEntry);
       UpdateMountTableEntryResponse updateResponse =
@@ -369,8 +323,8 @@ public class RouterAdmin extends Configured implements Tool {
   private static void printMounts(List<MountTable> entries) {
     System.out.println("Mount Table Entries:");
     System.out.println(String.format(
-        "%-25s %-25s %-25s %-25s %-25s",
-        "Source", "Destinations", "Owner", "Group", "Mode"));
+        "%-25s %-25s",
+        "Source", "Destinations"));
     for (MountTable entry : entries) {
       StringBuilder destBuilder = new StringBuilder();
       for (RemoteLocation location : entry.getDestinations()) {
@@ -380,38 +334,8 @@ public class RouterAdmin extends Configured implements Tool {
         destBuilder.append(String.format("%s->%s", location.getNameserviceId(),
             location.getDest()));
       }
-      System.out.print(String.format("%-25s %-25s", entry.getSourcePath(),
+      System.out.println(String.format("%-25s %-25s", entry.getSourcePath(),
           destBuilder.toString()));
-
-      System.out.println(String.format(" %-25s %-25s %-25s",
-          entry.getOwnerName(), entry.getGroupName(), entry.getMode()));
-    }
-  }
-
-  /**
-   * Inner class that stores ACL info of mount table.
-   */
-  static class ACLEntity {
-    private final String owner;
-    private final String group;
-    private final FsPermission mode;
-
-    ACLEntity(String owner, String group, FsPermission mode) {
-      this.owner = owner;
-      this.group = group;
-      this.mode = mode;
-    }
-
-    public String getOwner() {
-      return owner;
-    }
-
-    public String getGroup() {
-      return group;
-    }
-
-    public FsPermission getMode() {
-      return mode;
     }
   }
 }

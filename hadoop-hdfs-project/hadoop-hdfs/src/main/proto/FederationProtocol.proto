@@ -129,10 +129,6 @@ message MountTableRecordProto {
     RANDOM = 2;
   }
   optional DestOrder destOrder = 6 [default = HASH];
-
-  optional string ownerName = 10;
-  optional string groupName = 11;
-  optional int32 mode = 12;
 }
 
 message AddMountTableEntryRequestProto {
