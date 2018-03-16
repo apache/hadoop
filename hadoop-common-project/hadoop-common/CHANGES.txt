@@ -64,6 +64,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-12001. Fixed LdapGroupsMapping to include configurable Posix UID and
     GID attributes during the search. (Patrick White via vinodkv)
 
+    Revert HADOOP-13119. Add ability to secure log servlet using proxy users.
+    (Contribute by Yuanbo Liu via Eric Yang)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

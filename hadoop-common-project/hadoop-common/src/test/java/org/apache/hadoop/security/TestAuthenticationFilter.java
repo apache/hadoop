@@ -19,12 +19,16 @@ package org.apache.hadoop.security;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.Writer;
 import java.util.Map;
 
 public class TestAuthenticationFilter extends TestCase {
@@ -38,13 +42,15 @@ public class TestAuthenticationFilter extends TestCase {
     
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(
-        new Answer() {
+      new Answer() {
         @Override
         public Object answer(InvocationOnMock invocationOnMock)
           throws Throwable {
           Object[] args = invocationOnMock.getArguments();
 
           assertEquals("authentication", args[0]);
+
+          assertEquals(AuthenticationFilter.class.getName(), args[1]);
 
           Map<String, String> conf = (Map<String, String>) args[2];
           assertEquals("/", conf.get("cookie.path"));
@@ -60,8 +66,9 @@ public class TestAuthenticationFilter extends TestCase {
           assertEquals("bar", conf.get("foo"));
 
           return null;
-        }}
-        ).when(container).addFilter(Mockito.<String>anyObject(),
+        }
+      }
+    ).when(container).addFilter(Mockito.<String>anyObject(),
                                 Mockito.<String>anyObject(),
                                 Mockito.<Map<String, String>>anyObject());
 
