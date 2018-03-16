@@ -194,6 +194,14 @@ It also supports mount points that disallow writes:
 
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
+Mount table have UNIX-like *permissions*, which restrict which users and groups have access to the mount point. Write permissions allow users to add
+, update or remove mount point. Read permissions allow users to list mount point. Execute permissions are unused.
+
+Mount table permission can be set by following command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /tmp ns1 /tmp -owner root -group supergroup -mode 0755
+
+The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
 Client configuration
 --------------------
