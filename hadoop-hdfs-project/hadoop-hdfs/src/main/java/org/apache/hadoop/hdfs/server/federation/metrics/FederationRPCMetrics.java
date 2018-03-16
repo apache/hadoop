@@ -34,7 +34,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
  * Implementation of the RPC metrics collector.
  */
 @Metrics(name = "RouterRPCActivity", about = "Router RPC Activity",
-    context = "dfs")
+    context = "router")
 public class FederationRPCMetrics implements FederationRPCMBean {
 
   private final MetricsRegistry registry = new MetricsRegistry("router");
