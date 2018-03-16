@@ -496,7 +496,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
         long currentIndex = 0;
         while ((ln = input.readLine()) != null) {
-          LOG.info(ln);
           mat = GPU_INFO_FORMAT.matcher(ln);
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
@@ -506,7 +505,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
               if (errCode == 0) {
                 gpuAttributeCapacity |= (1L << index);
               } else {
-                LOG.error("ignored error: gpu " + index + " ECC code is 1, will make this gpu unavailable" );
+                LOG.error("ignored error: gpu " + index + " ECC code is 1, will make this gpu unavailable");
               }
             }
           }
@@ -514,7 +513,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               int usedMem = Integer.parseInt(mat.group(1));
-              if(usedMem == 0) {
+              if (usedMem == 0) {
                 gpuAttributeUsed |= (1L << currentIndex);
               }
             }
@@ -523,20 +522,20 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               long index = Long.parseLong(mat.group(1));
-              gpuAttributeProcess -=  (1 << index);
-              }
+              gpuAttributeProcess -= (1 << index);
             }
           }
-          input.close();
-          ir.close();
-          Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
-        if( (ownerLessGpus != 0)) {
+        }
+        input.close();
+        ir.close();
+        Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
+        if ((ownerLessGpus != 0)) {
           if (excludeOwnerlessUsingGpus) {
             gpuAttributeCapacity -= ownerLessGpus;
-            LOG.error("GPU:"+ Long.toBinaryString(ownerLessGpus)+ " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
+            LOG.error("GPU:" + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
 
           } else {
-            LOG.error("GPU: "+ Long.toBinaryString(ownerLessGpus)+ " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
+            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
           }
         }
         numGPUs = Long.bitCount(gpuAttributeCapacity);

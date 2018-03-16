@@ -523,6 +523,9 @@ public class ResourceTrackerService extends AbstractService implements
     }
     rmNode.getTotalCapability().setGPUs(remoteNodeStatus.getResource().getGPUs());
     rmNode.getTotalCapability().setGPUAttribute(remoteNodeStatus.getResource().getGPUAttribute());
+    //newCapacityPorts equals availablePorts + containerAllocatedPorts,
+    ValueRanges newCapacityPorts = ValueRanges.add(rmNode.getAvailablePorts(), rmNode.getContainerAllocatedPorts());
+    rmNode.getTotalCapability().setPorts(newCapacityPorts);
     return nodeHeartBeatResponse;
   }
 
