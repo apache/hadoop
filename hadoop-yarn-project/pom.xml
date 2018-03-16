@@ -76,6 +76,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-router</artifactId>
     </dependency>
   </dependencies>
@@ -159,43 +163,11 @@
               </execution>
             </executions>
           </plugin>
-          <!-- Remove duplicate dependencies which exist in both yarn/lib folder and yarn/timelineservice/lib folder -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>dist</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                   <echo file="${project.build.directory}/remove-duplicate-timelineservice-jars.sh">
-                      yarnjardir="${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/yarn"
-                      yarnlibdir="${yarnjardir}/lib/"
-                      cd "${yarnjardir}/timelineservice/lib"
-                      for jar in `ls`
-                      do
-                        if [ -f "${yarnlibdir}""${jar}" ];then
-                          rm -rf ${jar}
-                          echo "Removing duplicate jar $jar from share/hadoop/yarn/timelineservice/lib folder"
-                        fi
-                      done
-                    </echo>
-                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./remove-duplicate-timelineservice-jars.sh"/>
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
         </plugins>
       </build>
     </profile>
   </profiles>
+
 
   <reporting>
     <plugins>

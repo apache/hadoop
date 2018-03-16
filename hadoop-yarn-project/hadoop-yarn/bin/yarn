@@ -111,8 +111,6 @@ function yarncmd_case
     ;;
     nodemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
       # Backwards compatibility
       if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
@@ -132,8 +130,6 @@ function yarncmd_case
     ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
       # Backwards compatibility
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
@@ -159,8 +155,6 @@ function yarncmd_case
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
     timelineserver)
