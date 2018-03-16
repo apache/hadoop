@@ -57,7 +57,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   private static final String PROCFS = "/proc/";
 
-  private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern .compile(
+  private static final Pattern c = Pattern .compile(
     "^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s" +
     "([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)\\s([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)" +
     "(\\s[0-9-]+){15}");
@@ -561,7 +561,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
                 Long.parseLong(m.group(10)), Long.parseLong(m.group(11)));
       } else {
         LOG.warn("Unexpected: procfs stat file is not in the expected format"
-            + " for process with pid " + pinfo.getPid());
+            + " for process with pid " + pinfo.getPid() + " lineData:\"" + str + "\"");
         ret = null;
       }
     } catch (IOException io) {
