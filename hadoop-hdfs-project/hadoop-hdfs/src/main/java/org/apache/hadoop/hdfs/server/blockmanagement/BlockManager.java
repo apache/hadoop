@@ -994,6 +994,13 @@ public class BlockManager implements BlockStatsMXBean {
         addExpectedReplicasToPending(lastBlock);
       }
       completeBlock(lastBlock, iip, false);
+    } else if (pendingRecoveryBlocks.isUnderRecovery(lastBlock)) {
+      // We've just finished recovery for this block, complete
+      // the block forcibly disregarding number of replicas.
+      // This is to ignore minReplication, the block will be closed
+      // and then replicated out.
+      completeBlock(lastBlock, iip, true);
+      updateNeededReconstructions(lastBlock, 1, 0);
     }
     return committed;
   }
