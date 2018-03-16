@@ -28,6 +28,7 @@ import javax.servlet.ServletContextListener;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.CachingKeyProvider;
@@ -159,6 +160,11 @@ public class KMSWebApp implements ServletContextListener {
       }
       KeyProvider keyProvider =
           KeyProviderFactory.get(new URI(providerString), kmsConf);
+      Preconditions.checkNotNull(keyProvider, String.format("No" +
+              " KeyProvider has been initialized, please" +
+              " check whether %s '%s' is configured correctly in" +
+              " kms-site.xml.", KMSConfiguration.KEY_PROVIDER_URI,
+          providerString));
       if (kmsConf.getBoolean(KMSConfiguration.KEY_CACHE_ENABLE,
           KMSConfiguration.KEY_CACHE_ENABLE_DEFAULT)) {
         long keyTimeOutMillis =
