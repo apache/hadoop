@@ -23,8 +23,7 @@ package org.apache.hadoop.hdfs.server.federation.resolver.order;
  * this determines which location should be checked first.
  */
 public enum DestinationOrder {
-  HASH, // Follow consistent hashing in the first folder level
+  HASH, // Follow consistent hashing
   LOCAL, // Local first
-  RANDOM, // Random order
-  HASH_ALL // Follow consistent hashing
+  RANDOM // Random order
 }

@@ -240,7 +240,7 @@ public class MountTableResolver
       PathLocation loc = entry.getValue();
       String src = loc.getSourcePath();
       if (src != null) {
-        if (isParentEntry(src, path)) {
+        if(isParentEntry(src, path)) {
           LOG.debug("Removing {}", src);
           it.remove();
         }
@@ -306,7 +306,7 @@ public class MountTableResolver
                 existingEntry, entry);
             this.tree.put(srcPath, entry);
             invalidateLocationCache(srcPath);
-            LOG.info("Updated mount point {} in resolver", srcPath);
+            LOG.info("Updated mount point {} in resolver");
           }
         }
       }
@@ -515,7 +515,7 @@ public class MountTableResolver
       String nsId = oneDst.getNameserviceId();
       String dest = oneDst.getDest();
       String newPath = dest;
-      if (!newPath.endsWith(Path.SEPARATOR) && !remainingPath.isEmpty()) {
+      if (!newPath.endsWith(Path.SEPARATOR)) {
         newPath += Path.SEPARATOR;
       }
       newPath += remainingPath;

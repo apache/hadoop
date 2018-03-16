@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -32,9 +31,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
-import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -50,7 +47,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
-
 /**
  * Tests Router admin commands.
  */
@@ -142,36 +138,6 @@ public class TestRouterAdminCLI {
     assertEquals(nsId, mountTable.getDestinations().get(1).getNameserviceId());
     assertEquals(dest, mountTable.getDestinations().get(1).getDest());
     assertTrue(mountTable.isReadOnly());
-  }
-
-  @Test
-  public void testAddOrderMountTable() throws Exception {
-    testAddOrderMountTable(DestinationOrder.HASH);
-    testAddOrderMountTable(DestinationOrder.LOCAL);
-    testAddOrderMountTable(DestinationOrder.RANDOM);
-    testAddOrderMountTable(DestinationOrder.HASH_ALL);
-  }
-
-  private void testAddOrderMountTable(DestinationOrder order)
-      throws Exception {
-    final String mnt = "/" + order;
-    final String nsId = "ns0,ns1";
-    final String dest = "/";
-    String[] argv = new String[] {
-        "-add", mnt, nsId, dest, "-order", order.toString()};
-    assertEquals(0, ToolRunner.run(admin, argv));
-
-    // Check the state in the State Store
-    stateStore.loadCache(MountTableStoreImpl.class, true);
-    MountTableManager mountTable = client.getMountTableManager();
-    GetMountTableEntriesRequest request =
-        GetMountTableEntriesRequest.newInstance(mnt);
-    GetMountTableEntriesResponse response =
-        mountTable.getMountTableEntries(request);
-    List<MountTable> entries = response.getEntries();
-    assertEquals(1, entries.size());
-    assertEquals(2, entries.get(0).getDestinations().size());
-    assertEquals(order, response.getEntries().get(0).getDestOrder());
   }
 
   @Test
