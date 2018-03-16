@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -38,12 +35,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,14 +64,6 @@ public class RouterAdminServer extends AbstractService
   /** The Admin server that listens to requests from clients. */
   private final Server adminServer;
   private final InetSocketAddress adminAddress;
-
-  /**
-   * Permission related info used for constructing new router permission
-   * checker instance.
-   */
-  private static String routerOwner;
-  private static String superGroup;
-  private static boolean isPermissionEnabled;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -110,7 +96,6 @@ public class RouterAdminServer extends AbstractService
     LOG.info("Admin server binding to {}:{}",
         bindHost, confRpcAddress.getPort());
 
-    initializePermissionSettings(this.conf);
     this.adminServer = new RPC.Builder(this.conf)
         .setProtocol(RouterAdminProtocolPB.class)
         .setInstance(clientNNPbService)
@@ -125,22 +110,6 @@ public class RouterAdminServer extends AbstractService
     this.adminAddress = new InetSocketAddress(
         confRpcAddress.getHostName(), listenAddress.getPort());
     router.setAdminServerAddress(this.adminAddress);
-  }
-
-  /**
-   * Initialize permission related settings.
-   *
-   * @param routerConf
-   * @throws IOException
-   */
-  private static void initializePermissionSettings(Configuration routerConf)
-      throws IOException {
-    routerOwner = UserGroupInformation.getCurrentUser().getShortUserName();
-    superGroup = routerConf.get(
-        DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
-        DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
-    isPermissionEnabled = routerConf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
-        DFS_PERMISSIONS_ENABLED_DEFAULT);
   }
 
   /** Allow access to the client RPC server for testing. */
@@ -210,45 +179,5 @@ public class RouterAdminServer extends AbstractService
   public GetMountTableEntriesResponse getMountTableEntries(
       GetMountTableEntriesRequest request) throws IOException {
     return getMountTableStore().getMountTableEntries(request);
-  }
-
-  /**
-   * Get a new permission checker used for making mount table access
-   * control. This method will be invoked during each RPC call in router
-   * admin server.
-   *
-   * @return Router permission checker
-   * @throws AccessControlException
-   */
-  public static RouterPermissionChecker getPermissionChecker()
-      throws AccessControlException {
-    if (!isPermissionEnabled) {
-      return null;
-    }
-
-    try {
-      return new RouterPermissionChecker(routerOwner, superGroup,
-          NameNode.getRemoteUser());
-    } catch (IOException e) {
-      throw new AccessControlException(e);
-    }
-  }
-
-  /**
-   * Get super user name.
-   *
-   * @return String super user name.
-   */
-  public static String getSuperUser() {
-    return routerOwner;
-  }
-
-  /**
-   * Get super group name.
-   *
-   * @return String super group name.
-   */
-  public static String getSuperGroup(){
-    return superGroup;
   }
 }
