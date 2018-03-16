@@ -31,7 +31,7 @@ To build Ozone, please checkout the hadoop sources from github. Then
 checkout the ozone branch, HDFS-7240 and build it.
 
 - `git checkout HDFS-7240`
-- `mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Dtar -DskipShade`
+- `mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Phdsl -Dtar -DskipShade`
 
 skipShade is just to make compilation faster and not really required.
 
@@ -53,7 +53,7 @@ these following commands to see ozone in action.
  Go to the directory where the docker compose files exist.
 
 
- - `cd dev-support/compose/ozone`
+ - `cd hadoop-dist/target/compose/ozone`
 
 Tell docker to start ozone, this will start a KSM, SCM and a single datanode in
 the background.
@@ -66,13 +66,13 @@ Now let us run some work load against ozone, to do that we will run freon.
 This will log into the datanode and run bash.
 
  - `docker-compose exec datanode bash`
- - `cd hadoop/bin`
+ - `cd /opt/hadoop/bin`
 
 Now you can run the oz command shell or freon, the ozone load generator.
 
 This is the command to run freon.
 
- - `./hdfs freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
+ - `./oz freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
 
 You can checkout the KSM UI to see the requests information.
 
