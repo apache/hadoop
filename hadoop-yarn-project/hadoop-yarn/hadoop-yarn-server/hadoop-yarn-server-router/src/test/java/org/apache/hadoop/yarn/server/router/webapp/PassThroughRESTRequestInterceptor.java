@@ -69,6 +69,14 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
+  public Response checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr)
+      throws AuthorizationException {
+    return getNextInterceptor().checkUserAccessToQueue(queue, username,
+        queueAclType, hsr);
+  }
+
+  @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
     return getNextInterceptor().getAppAttempt(req, res, appId, appAttemptId);

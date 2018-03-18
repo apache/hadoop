@@ -114,7 +114,6 @@ public class QueueACLsManager {
     // version is added for the moving the application case. The check has
     // extra logging to distinguish between the queue not existing in the
     // application move request case and the real access denied case.
-
     if (scheduler instanceof CapacityScheduler) {
       CSQueue queue = ((CapacityScheduler) scheduler).getQueue(targetQueue);
       if (queue == null) {
