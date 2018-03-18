@@ -40,7 +40,7 @@ function getTimeLineV1URL(rmhost) {
 
 function updateConfigs(application) {
   var hostname = window.location.hostname;
-  var rmhost = hostname + (window.location.port ? ':' + window.location.port: '');
+  var rmhost = hostname + (window.location.port ? ':' + window.location.port: '') + skipTrailingSlash(window.location.pathname);
 
   if(!ENV.hosts.rmWebAddress) {
     ENV.hosts.rmWebAddress = rmhost;
@@ -126,4 +126,9 @@ export default {
   name: 'loader',
   before: 'env',
   initialize
+};
+
+const skipTrailingSlash = function(path) {
+  path = path.replace('ui2/', '');
+  return path.replace(/\/$/, '');
 };
