@@ -471,6 +471,15 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
+  public Response checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        Response.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.QUEUES + "/" + queue
+            + "/access", null, null);
+  }
+
+  @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
     return RouterWebServiceUtil.genericForward(webAppAddress, req,
