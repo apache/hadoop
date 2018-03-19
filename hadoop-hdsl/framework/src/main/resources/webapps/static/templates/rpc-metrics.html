@@ -1,0 +1,87 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<div ng-hide="$ctrl.metrics.percentiles" class="alert alert-info">
+    Please set <b>rpc.metrics.quantile.enable</b> to <b>true</b> and define the
+    intervals in seconds with setting <b>rpc.metrics.percentiles.intervals</b>
+    (eg. set to <b>60,300</b>) in your hdfs-site.xml
+    to display Hadoop RPC related graphs.
+</div>
+<div ng-repeat="(window,windowed) in $ctrl.metrics.percentiles">
+    <h2>{{window}} window</h2>
+    <p>Quantiles based on a fixed {{window}} window. Calculated once at every
+        {{window}}</p>
+
+    <div class="row">
+        <div class="col-md-6 col-lg-4"
+             ng-repeat="(metric,percentiles) in windowed">
+            <h3>{{metric}}</h3>
+            <p>{{percentiles.numOps}} sample</p>
+            <nvd3 options="$ctrl.percentileGraphOptions"
+                  data="percentiles.graphdata"></nvd3>
+        </div>
+    </div>
+
+</div>
+<div class="row">
+    <div ng-show="$ctrl.metrics.numavgs" class="col-md-6">
+        <h2>Number of ops / Averages</h2>
+
+        <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th>Metric name</th>
+                <th>Number of ops</th>
+                <th>Average time (ms)</th>
+            </tr>
+            </thead>
+            <tr ng-repeat="(key,metric) in $ctrl.metrics.numavgs">
+                <td>{{key}}</td>
+                <td>{{metric.numOps | number}}</td>
+                <td>{{metric.avgTime | number:2}}</td>
+            </tr>
+        </table>
+    </div>
+    <div ng-show="$ctrl.metrics.successfailures" class="col-md-6">
+        <h2>Success / Failures</h2>
+
+        <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th>Metric name</th>
+                <th>Success</th>
+                <th>Failures</th>
+            </tr>
+            </thead>
+
+            <tr ng-repeat="(key,metric) in $ctrl.metrics.successfailures">
+                <td>{{key}}</td>
+                <td>{{metric.success}}</td>
+                <td>{{metric.failures}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div ng-show="$ctrl.metrics.others">
+    <h2>Other JMX Metrics</h2>
+
+    <table class="table">
+        <tr ng-repeat="metric in $ctrl.metrics.others">
+            <td>{{metric.key}}</td>
+            <td>{{metric.value}}</td>
+        </tr>
+    </table>
+</div>
