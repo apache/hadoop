@@ -33,6 +33,8 @@ import java.io.IOException;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
@@ -130,6 +132,134 @@ public class TestAliyunOSSFileSystemContract
     } catch (FileNotFoundException e) {
       // expected
     }
+  }
+
+  @Test
+  public void testRenameDirectoryConcurrent() throws Exception {
+    assumeTrue(renameSupported());
+    Path src = this.path("/test/hadoop/file/");
+    Path child1 = this.path("/test/hadoop/file/1");
+    Path child2 = this.path("/test/hadoop/file/2");
+    Path child3 = this.path("/test/hadoop/file/3");
+    Path child4 = this.path("/test/hadoop/file/4");
+
+    this.createFile(child1);
+    this.createFile(child2);
+    this.createFile(child3);
+    this.createFile(child4);
+
+    Path dst = this.path("/test/new");
+    super.rename(src, dst, true, false, true);
+    assertEquals(4, this.fs.listStatus(dst).length);
+  }
+
+  @Test
+  public void testRenameDirectoryCopyTaskAllSucceed() throws Exception {
+    assumeTrue(renameSupported());
+    Path srcOne = this.path("/test/hadoop/file/1");
+    this.createFile(srcOne);
+
+    Path dstOne = this.path("/test/new/file/1");
+    Path dstTwo = this.path("/test/new/file/2");
+    AliyunOSSCopyFileContext copyFileContext = new AliyunOSSCopyFileContext();
+    AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
+    store.storeEmptyFile("test/new/file/");
+    AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstOne.toUri().getPath().substring(1), copyFileContext);
+    oneCopyFileTask.run();
+    assumeFalse(copyFileContext.isCopyFailure());
+
+    AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstTwo.toUri().getPath().substring(1), copyFileContext);
+    twoCopyFileTask.run();
+    assumeFalse(copyFileContext.isCopyFailure());
+
+    copyFileContext.lock();
+    try {
+      copyFileContext.awaitAllFinish(2);
+    } catch (InterruptedException e) {
+      throw new Exception(e);
+    } finally {
+      copyFileContext.unlock();
+    }
+    assumeFalse(copyFileContext.isCopyFailure());
+  }
+
+  @Test
+  public void testRenameDirectoryCopyTaskAllFailed() throws Exception {
+    assumeTrue(renameSupported());
+    Path srcOne = this.path("/test/hadoop/file/1");
+    this.createFile(srcOne);
+
+    Path dstOne = new Path("1");
+    Path dstTwo = new Path("2");
+    AliyunOSSCopyFileContext copyFileContext = new AliyunOSSCopyFileContext();
+    AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
+    //store.storeEmptyFile("test/new/file/");
+    AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstOne.toUri().getPath().substring(1), copyFileContext);
+    oneCopyFileTask.run();
+    assumeTrue(copyFileContext.isCopyFailure());
+
+    AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstTwo.toUri().getPath().substring(1), copyFileContext);
+    twoCopyFileTask.run();
+    assumeTrue(copyFileContext.isCopyFailure());
+
+    copyFileContext.lock();
+    try {
+      copyFileContext.awaitAllFinish(2);
+    } catch (InterruptedException e) {
+      throw new Exception(e);
+    } finally {
+      copyFileContext.unlock();
+    }
+    assumeTrue(copyFileContext.isCopyFailure());
+  }
+
+  @Test
+  public void testRenameDirectoryCopyTaskPartialFailed() throws Exception {
+    assumeTrue(renameSupported());
+    Path srcOne = this.path("/test/hadoop/file/1");
+    this.createFile(srcOne);
+
+    Path dstOne = new Path("1");
+    Path dstTwo = new Path("/test/new/file/2");
+    Path dstThree = new Path("3");
+    AliyunOSSCopyFileContext copyFileContext = new AliyunOSSCopyFileContext();
+    AliyunOSSFileSystemStore store = ((AliyunOSSFileSystem)this.fs).getStore();
+    //store.storeEmptyFile("test/new/file/");
+    AliyunOSSCopyFileTask oneCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstOne.toUri().getPath().substring(1), copyFileContext);
+    oneCopyFileTask.run();
+    assumeTrue(copyFileContext.isCopyFailure());
+
+    AliyunOSSCopyFileTask twoCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstTwo.toUri().getPath().substring(1), copyFileContext);
+    twoCopyFileTask.run();
+    assumeTrue(copyFileContext.isCopyFailure());
+
+    AliyunOSSCopyFileTask threeCopyFileTask = new AliyunOSSCopyFileTask(
+        store, srcOne.toUri().getPath().substring(1),
+        dstThree.toUri().getPath().substring(1), copyFileContext);
+    threeCopyFileTask.run();
+    assumeTrue(copyFileContext.isCopyFailure());
+
+    copyFileContext.lock();
+    try {
+      copyFileContext.awaitAllFinish(3);
+    } catch (InterruptedException e) {
+      throw new Exception(e);
+    } finally {
+      copyFileContext.unlock();
+    }
+    assumeTrue(copyFileContext.isCopyFailure());
   }
 
   @Test
