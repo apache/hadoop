@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
+
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,10 +37,6 @@ public class TargetApplications {
       Set<ApplicationId> allApplicationIds) {
     this.currentAppId = currentApplicationId;
     this.allAppIds = allApplicationIds;
-  }
-
-  public Set<ApplicationId> getAllApplicationIds() {
-    return this.allAppIds;
   }
 
   public ApplicationId getCurrentApplicationId() {

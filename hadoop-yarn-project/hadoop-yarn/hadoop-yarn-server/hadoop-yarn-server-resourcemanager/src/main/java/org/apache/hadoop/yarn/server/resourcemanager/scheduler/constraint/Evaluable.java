@@ -16,35 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
-import java.util.Set;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
- * Allocation tags under same namespace.
+ * A class implements Evaluable interface represents the internal state
+ * of the class can be changed against a given target.
+ * @param <T> a target to evaluate against
  */
-public class AllocationTags {
-
-  private AllocationTagNamespace ns;
-  private Set<String> tags;
-
-  public AllocationTags(AllocationTagNamespace namespace,
-      Set<String> allocationTags) {
-    this.ns = namespace;
-    this.tags = allocationTags;
-  }
+public interface Evaluable<T> {
 
   /**
-   * @return the namespace of these tags.
+   * Evaluate against a given target, this process changes the internal state
+   * of current class.
+   *
+   * @param target a generic type target that impacts this evaluation.
+   * @throws YarnException
    */
-  public AllocationTagNamespace getNamespace() {
-    return this.ns;
-  }
-
-  /**
-   * @return the allocation tags.
-   */
-  public Set<String> getTags() {
-    return this.tags;
-  }
+  void evaluate(T target) throws YarnException;
 }

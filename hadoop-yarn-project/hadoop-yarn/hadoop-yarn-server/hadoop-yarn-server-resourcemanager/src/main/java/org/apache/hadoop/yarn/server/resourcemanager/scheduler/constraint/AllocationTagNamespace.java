@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.exceptions.InvalidAllocationTagException;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.SELF;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.NOT_SELF;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.APP_LABEL;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.APP_ID;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.ALL;
-import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.fromString;
 
 /**
  * Class to describe the namespace of an allocation tag.
@@ -69,8 +71,6 @@ public abstract class AllocationTagNamespace implements
 
   /**
    * Get the scope of the namespace, in form of a set of applications.
-   * Before calling this method, {@link #evaluate(TargetApplications)}
-   * must be called in prior to ensure the scope is proper evaluated.
    *
    * @return a set of applications.
    */
@@ -83,51 +83,20 @@ public abstract class AllocationTagNamespace implements
     return this.nsScope;
   }
 
+  /**
+   * Evaluate the namespace against given target applications
+   * if it is necessary. Only self/not-self/app-label namespace types
+   * require this evaluation step, because they are not binding to a
+   * specific scope during initiating. So we do lazy binding for them
+   * in this method.
+   *
+   * @param target a generic type target that impacts this evaluation.
+   * @throws InvalidAllocationTagsQueryException
+   */
   @Override
-  public abstract void evaluate(TargetApplications target)
-      throws InvalidAllocationTagException;
-
-  /**
-   * @return true if the namespace is effective in all applications
-   * in this cluster. Specifically the namespace prefix should be
-   * "all".
-   */
-  public boolean isGlobal() {
-    return AllocationTagNamespaceType.ALL.equals(getNamespaceType());
-  }
-
-  /**
-   * @return true if the namespace is effective within a single application
-   * by its application ID, the namespace prefix should be "app-id";
-   * false otherwise.
-   */
-  public boolean isSingleInterApp() {
-    return AllocationTagNamespaceType.APP_ID.equals(getNamespaceType());
-  }
-
-  /**
-   * @return true if the namespace is effective to the application itself,
-   * the namespace prefix should be "self"; false otherwise.
-   */
-  public boolean isIntraApp() {
-    return AllocationTagNamespaceType.SELF.equals(getNamespaceType());
-  }
-
-  /**
-   * @return true if the namespace is effective to all applications except
-   * itself, the namespace prefix should be "not-self"; false otherwise.
-   */
-  public boolean isNotSelf() {
-    return AllocationTagNamespaceType.NOT_SELF.equals(getNamespaceType());
-  }
-
-  /**
-   * @return true if the namespace is effective to a group of applications
-   * identified by a application label, the namespace prefix should be
-   * "app-label"; false otherwise.
-   */
-  public boolean isAppLabel() {
-    return AllocationTagNamespaceType.APP_LABEL.equals(getNamespaceType());
+  public void evaluate(TargetApplications target)
+      throws InvalidAllocationTagsQueryException {
+    // Sub-class needs to override this when it requires the eval step.
   }
 
   @Override
@@ -146,9 +115,9 @@ public abstract class AllocationTagNamespace implements
 
     @Override
     public void evaluate(TargetApplications target)
-        throws InvalidAllocationTagException {
+        throws InvalidAllocationTagsQueryException {
       if (target == null || target.getCurrentApplicationId() == null) {
-        throw new InvalidAllocationTagException("Namespace Self must"
+        throw new InvalidAllocationTagsQueryException("Namespace Self must"
             + " be evaluated against a single application ID.");
       }
       ApplicationId applicationId = target.getCurrentApplicationId();
@@ -196,12 +165,6 @@ public abstract class AllocationTagNamespace implements
     public All() {
       super(ALL);
     }
-
-    @Override
-    public void evaluate(TargetApplications target) {
-      Set<ApplicationId> allAppIds = target.getAllApplicationIds();
-      setScopeIfNotNull(allAppIds);
-    }
   }
 
   /**
@@ -229,10 +192,6 @@ public abstract class AllocationTagNamespace implements
     public AppID(ApplicationId applicationId) {
       super(APP_ID);
       this.targetAppId = applicationId;
-    }
-
-    @Override
-    public void evaluate(TargetApplications target) {
       setScopeIfNotNull(ImmutableSet.of(targetAppId));
     }
 
@@ -248,11 +207,11 @@ public abstract class AllocationTagNamespace implements
    *
    * @param namespaceStr namespace string.
    * @return an instance of {@link AllocationTagNamespace}.
-   * @throws InvalidAllocationTagException
+   * @throws InvalidAllocationTagsQueryException
    * if given string is not in valid format
    */
   public static AllocationTagNamespace parse(String namespaceStr)
-      throws InvalidAllocationTagException {
+      throws InvalidAllocationTagsQueryException {
     // Return the default namespace if no valid string is given.
     if (Strings.isNullOrEmpty(namespaceStr)) {
       return new Self();
@@ -273,7 +232,7 @@ public abstract class AllocationTagNamespace implements
       return new All();
     case APP_ID:
       if (nsValues.size() != 2) {
-        throw new InvalidAllocationTagException(
+        throw new InvalidAllocationTagsQueryException(
             "Missing the application ID in the namespace string: "
                 + namespaceStr);
       }
@@ -282,18 +241,35 @@ public abstract class AllocationTagNamespace implements
     case APP_LABEL:
       return new AppLabel();
     default:
-      throw new InvalidAllocationTagException(
+      throw new InvalidAllocationTagsQueryException(
           "Invalid namespace string " + namespaceStr);
     }
   }
 
+  private static AllocationTagNamespaceType fromString(String prefix) throws
+      InvalidAllocationTagsQueryException {
+    for (AllocationTagNamespaceType type :
+        AllocationTagNamespaceType.values()) {
+      if(type.getTypeKeyword().equals(prefix)) {
+        return type;
+      }
+    }
+
+    Set<String> values = Arrays.stream(AllocationTagNamespaceType.values())
+        .map(AllocationTagNamespaceType::toString)
+        .collect(Collectors.toSet());
+    throw new InvalidAllocationTagsQueryException(
+        "Invalid namespace prefix: " + prefix
+            + ", valid values are: " + String.join(",", values));
+  }
+
   private static AllocationTagNamespace parseAppID(String appIDStr)
-      throws InvalidAllocationTagException {
+      throws InvalidAllocationTagsQueryException {
     try {
       ApplicationId applicationId = ApplicationId.fromString(appIDStr);
       return new AppID(applicationId);
     } catch (IllegalArgumentException e) {
-      throw new InvalidAllocationTagException(
+      throw new InvalidAllocationTagsQueryException(
           "Invalid application ID for "
               + APP_ID.getTypeKeyword() + ": " + appIDStr);
     }
@@ -307,11 +283,11 @@ public abstract class AllocationTagNamespace implements
    *
    * @param namespaceStr namespace string.
    * @return a list of parsed strings.
-   * @throws InvalidAllocationTagException
+   * @throws InvalidAllocationTagsQueryException
    * if namespace format is unexpected.
    */
   private static List<String> normalize(String namespaceStr)
-      throws InvalidAllocationTagException {
+      throws InvalidAllocationTagsQueryException {
     List<String> result = new ArrayList<>();
     if (namespaceStr == null) {
       return result;
@@ -326,7 +302,7 @@ public abstract class AllocationTagNamespace implements
 
     // Currently we only allow 1 or 2 values for a namespace string
     if (result.size() == 0 || result.size() > 2) {
-      throw new InvalidAllocationTagException("Invalid namespace string: "
+      throw new InvalidAllocationTagsQueryException("Invalid namespace string: "
           + namespaceStr + ", the syntax is <namespace_prefix> or"
           + " <namespace_prefix>/<namespace_value>");
     }
