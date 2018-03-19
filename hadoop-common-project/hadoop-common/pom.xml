@@ -839,6 +839,20 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>convert-ms-winutils</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\winutils</argument>
+                    <argument>${project.build.directory}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
                 <id>compile-ms-winutils</id>
                 <phase>compile</phase>
                 <goals>
@@ -854,6 +868,20 @@
                     <argument>/p:IntermediateOutputPath=${project.build.directory}/winutils/</argument>
                     <argument>/p:WsceConfigDir=${wsce.config.dir}</argument>
                     <argument>/p:WsceConfigFile=${wsce.config.file}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>convert-ms-native-dll</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\native</argument>
+                    <argument>${project.build.directory}</argument>
                   </arguments>
                 </configuration>
               </execution>
