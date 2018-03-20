@@ -263,9 +263,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/nfs3/WEB-INF/web.xml"
                       filtering="true"/>
-                <copy file="${basedir}/src/main/webapps/proto-web.xml"
-                      tofile="${project.build.directory}/webapps/router/WEB-INF/web.xml"
-                      filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
                     <exclude name="**/proto-web.xml"/>
@@ -343,8 +340,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>QJournalProtocol.proto</include>
                   <include>editlog.proto</include>
                   <include>fsimage.proto</include>
-                  <include>FederationProtocol.proto</include>
-                  <include>RouterProtocol.proto</include>
                   <include>AliasMapProtocol.proto</include>
                   <include>InterQJournalProtocol.proto</include>
                 </includes>
@@ -395,7 +390,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/hdfs/robots.txt</exclude>
             <exclude>src/main/webapps/journal/robots.txt</exclude>
             <exclude>src/main/webapps/secondary/robots.txt</exclude>
-            <exclude>src/main/webapps/router/robots.txt</exclude>
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/main/webapps/static/bootstrap-3.0.2/**</exclude>
