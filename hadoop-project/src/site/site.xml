@@ -104,7 +104,7 @@
       <item name="Disk Balancer" href="hadoop-project-dist/hadoop-hdfs/HDFSDiskbalancer.html"/>
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
-      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html"/>
+      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -194,6 +194,7 @@
     <menu name="Configuration" inherit="top">
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
+      <item name="hdfs-rbf-default.xml" href="hadoop-project-dist/hadoop-hdfs-rbf/hdfs-rbf-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
       <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>
