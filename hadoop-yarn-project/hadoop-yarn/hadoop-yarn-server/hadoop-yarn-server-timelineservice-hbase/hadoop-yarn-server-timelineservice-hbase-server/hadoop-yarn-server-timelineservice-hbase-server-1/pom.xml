@@ -22,13 +22,13 @@
   <parent>
     <artifactId>hadoop-yarn-server-timelineservice-hbase-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.1.0</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
   <name>Apache Hadoop YARN TimelineService HBase Server 1.2</name>
-  <version>3.1.0-SNAPSHOT</version>
+  <version>3.1.0</version>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
