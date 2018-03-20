@@ -17,9 +17,38 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+<<<<<<<< HEAD:hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/router/RouterClientProtocol.java
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
+========
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_QUEUE_SIZE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+
+>>>>>>>> c804b284628 (HDFS-13215. RBF: Move Router to its own module.):hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/router/RouterRpcServer.java
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -185,11 +214,90 @@ public class RouterClientProtocol implements ClientProtocol {
     this.superGroup = conf.get(
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+<<<<<<<< HEAD:hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/router/RouterClientProtocol.java
     this.erasureCoding = new ErasureCoding(rpcServer);
     this.storagePolicy = new RouterStoragePolicy(rpcServer);
     this.snapshotProto = new RouterSnapshot(rpcServer);
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
+========
+
+    // RPC server settings
+    int handlerCount = this.conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY,
+        DFS_ROUTER_HANDLER_COUNT_DEFAULT);
+
+    int readerCount = this.conf.getInt(DFS_ROUTER_READER_COUNT_KEY,
+        DFS_ROUTER_READER_COUNT_DEFAULT);
+
+    int handlerQueueSize = this.conf.getInt(DFS_ROUTER_HANDLER_QUEUE_SIZE_KEY,
+        DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT);
+
+    // Override Hadoop Common IPC setting
+    int readerQueueSize = this.conf.getInt(DFS_ROUTER_READER_QUEUE_SIZE_KEY,
+        DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT);
+    this.conf.setInt(
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
+        readerQueueSize);
+
+    RPC.setProtocolEngine(this.conf, ClientNamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+
+    ClientNamenodeProtocolServerSideTranslatorPB
+        clientProtocolServerTranslator =
+            new ClientNamenodeProtocolServerSideTranslatorPB(this);
+    BlockingService clientNNPbService = ClientNamenodeProtocol
+        .newReflectiveBlockingService(clientProtocolServerTranslator);
+
+    InetSocketAddress confRpcAddress = conf.getSocketAddr(
+        RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
+        RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_RPC_PORT_DEFAULT);
+    LOG.info("RPC server binding to {} with {} handlers for Router {}",
+        confRpcAddress, handlerCount, this.router.getRouterId());
+
+    this.rpcServer = new RPC.Builder(this.conf)
+        .setProtocol(ClientNamenodeProtocolPB.class)
+        .setInstance(clientNNPbService)
+        .setBindAddress(confRpcAddress.getHostName())
+        .setPort(confRpcAddress.getPort())
+        .setNumHandlers(handlerCount)
+        .setnumReaders(readerCount)
+        .setQueueSizePerHandler(handlerQueueSize)
+        .setVerbose(false)
+        .build();
+    // We don't want the server to log the full stack trace for some exceptions
+    this.rpcServer.addTerseExceptions(
+        RemoteException.class,
+        StandbyException.class,
+        SafeModeException.class,
+        FileNotFoundException.class,
+        FileAlreadyExistsException.class,
+        AccessControlException.class,
+        LeaseExpiredException.class,
+        NotReplicatedYetException.class,
+        IOException.class);
+
+    // The RPC-server port can be ephemeral... ensure we have the correct info
+    InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
+    this.rpcAddress = new InetSocketAddress(
+        confRpcAddress.getHostName(), listenAddress.getPort());
+
+    // Create metrics monitor
+    Class<? extends RouterRpcMonitor> rpcMonitorClass = this.conf.getClass(
+        RBFConfigKeys.DFS_ROUTER_METRICS_CLASS,
+        RBFConfigKeys.DFS_ROUTER_METRICS_CLASS_DEFAULT,
+        RouterRpcMonitor.class);
+    this.rpcMonitor = ReflectionUtils.newInstance(rpcMonitorClass, conf);
+
+    // Create the client
+    this.rpcClient = new RouterRpcClient(this.conf, this.router.getRouterId(),
+        this.namenodeResolver, this.rpcMonitor);
+
+    // Initialize modules
+    this.quotaCall = new Quota(this.router, this);
+    this.erasureCoding = new ErasureCoding(this);
+>>>>>>>> c804b284628 (HDFS-13215. RBF: Move Router to its own module.):hadoop-hdfs-project/hadoop-hdfs-rbf/src/main/java/org/apache/hadoop/hdfs/server/federation/router/RouterRpcServer.java
   }
 
   @Override
