@@ -456,6 +456,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         .setNumHandlers(handlerCount)
         .setVerbose(false)
         .setSecretManager(namesystem.getDelegationTokenSecretManager())
+        .setAlignmentContext(new GlobalStateIdContext(namesystem))
         .build();
 
     // Add all the RPC protocols that the namenode implements
