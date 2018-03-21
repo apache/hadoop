@@ -505,6 +505,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       throws IOException {
     checkOperation(OperationCategory.WRITE);
 
+    if (createParent && isPathAll(src)) {
+      int index = src.lastIndexOf(Path.SEPARATOR);
+      String parent = src.substring(0, index);
+      LOG.debug("Creating {} requires creating parent {}", src, parent);
+      FsPermission parentPermissions = getParentPermission(masked);
+      boolean success = mkdirs(parent, parentPermissions, createParent);
+      if (!success) {
+        // This shouldn't happen as mkdirs returns true or exception
+        LOG.error("Couldn't create parents for {}", src);
+      }
+    }
+
     RemoteLocation createLocation = getCreateLocation(src);
     RemoteMethod method = new RemoteMethod("create",
         new Class<?>[] {String.class, FsPermission.class, String.class,
@@ -514,6 +526,32 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
         createLocation.getDest(), masked, clientName, flag, createParent,
         replication, blockSize, supportedVersions, ecPolicyName);
     return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
+  }
+
+  /**
+   * Get the permissions for the parent of a child with given permissions. If
+   * the child has r--, we will set it to r-x.
+   * @param mask The permission mask of the child.
+   * @return The permission mask of the parent.
+   */
+  private static FsPermission getParentPermission(final FsPermission mask) {
+    FsPermission ret = new FsPermission(
+        applyExecute(mask.getUserAction()),
+        applyExecute(mask.getGroupAction()),
+        applyExecute(mask.getOtherAction()));
+    return ret;
+  }
+
+  /**
+   * Apply the execute permissions if it can be read.
+   * @param action Input permission.
+   * @return Output permission.
+   */
+  private static FsAction applyExecute(final FsAction action) {
+    if (action.and(FsAction.READ) == FsAction.READ) {
+      return action.or(FsAction.EXECUTE);
+    }
+    return action;
   }
 
   /**
@@ -575,7 +613,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("append",
         new Class<?>[] {String.class, String.class, EnumSetWritable.class},
         new RemoteParam(), clientName, flag);
-    return (LastBlockWithStatus) rpcClient.invokeSequential(
+    return rpcClient.invokeSequential(
         locations, method, LastBlockWithStatus.class, null);
   }
 
@@ -638,7 +676,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("setPermission",
         new Class<?>[] {String.class, FsPermission.class},
         new RemoteParam(), permissions);
-    rpcClient.invokeSequential(locations, method);
+    if (isPathAll(src)) {
+      rpcClient.invokeConcurrent(locations, method);
+    } else {
+      rpcClient.invokeSequential(locations, method);
+    }
   }
 
   @Override // ClientProtocol
@@ -650,7 +692,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("setOwner",
         new Class<?>[] {String.class, String.class, String.class},
         new RemoteParam(), username, groupname);
-    rpcClient.invokeSequential(locations, method);
+    if (isPathAll(src)) {
+      rpcClient.invokeConcurrent(locations, method);
+    } else {
+      rpcClient.invokeSequential(locations, method);
+    }
   }
 
   /**
@@ -928,8 +974,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("delete",
         new Class<?>[] {String.class, boolean.class}, new RemoteParam(),
         recursive);
-    return ((Boolean) rpcClient.invokeSequential(locations, method,
-        Boolean.class, Boolean.TRUE)).booleanValue();
+    if (isPathAll(src)) {
+      return rpcClient.invokeAll(locations, method);
+    } else {
+      return rpcClient.invokeSequential(locations, method,
+          Boolean.class, Boolean.TRUE).booleanValue();
+    }
   }
 
   @Override // ClientProtocol
@@ -938,6 +988,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     checkOperation(OperationCategory.WRITE);
 
     final List<RemoteLocation> locations = getLocationsForPath(src, true);
+    RemoteMethod method = new RemoteMethod("mkdirs",
+        new Class<?>[] {String.class, FsPermission.class, boolean.class},
+        new RemoteParam(), masked, createParent);
+
+    // Create in all locations
+    if (isPathAll(src)) {
+      return rpcClient.invokeAll(locations, method);
+    }
+
     if (locations.size() > 1) {
       // Check if this directory already exists
       try {
@@ -954,9 +1013,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     }
 
     RemoteLocation firstLocation = locations.get(0);
-    RemoteMethod method = new RemoteMethod("mkdirs",
-        new Class<?>[] {String.class, FsPermission.class, boolean.class},
-        new RemoteParam(), masked, createParent);
     return ((Boolean) rpcClient.invokeSingle(firstLocation, method))
         .booleanValue();
   }
@@ -1072,8 +1128,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     final List<RemoteLocation> locations = getLocationsForPath(src, false);
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
-    HdfsFileStatus ret = (HdfsFileStatus) rpcClient.invokeSequential(
-        locations, method, HdfsFileStatus.class, null);
+
+    HdfsFileStatus ret = null;
+    // If it's a directory, we check in all locations
+    if (isPathAll(src)) {
+      ret = getFileInfoAll(locations, method);
+    } else {
+      // Check for file information sequentially
+      ret = (HdfsFileStatus) rpcClient.invokeSequential(
+          locations, method, HdfsFileStatus.class, null);
+    }
 
     // If there is no real path, check mount points
     if (ret == null) {
@@ -1089,6 +1153,37 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     }
 
     return ret;
+  }
+
+  /**
+   * Get the file info from all the locations.
+   *
+   * @param locations Locations to check.
+   * @param method The file information method to run.
+   * @return The first file info if it's a file, the directory if it's
+   *         everywhere.
+   * @throws IOException If all the locations throw an exception.
+   */
+  private HdfsFileStatus getFileInfoAll(final List<RemoteLocation> locations,
+      final RemoteMethod method) throws IOException {
+
+    // Get the file info from everybody
+    Map<RemoteLocation, HdfsFileStatus> results =
+        rpcClient.invokeConcurrent(locations, method, HdfsFileStatus.class);
+
+    // We return the first file
+    HdfsFileStatus dirStatus = null;
+    for (RemoteLocation loc : locations) {
+      HdfsFileStatus fileStatus = results.get(loc);
+      if (fileStatus != null) {
+        if (!fileStatus.isDirectory()) {
+          return fileStatus;
+        } else if (dirStatus == null) {
+          dirStatus = fileStatus;
+        }
+      }
+    }
+    return dirStatus;
   }
 
   @Override // ClientProtocol
@@ -2042,6 +2137,27 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       }
       throw ioe;
     }
+  }
+
+  /**
+   * Check if a path should be in all subclusters.
+   *
+   * @param path Path to check.
+   * @return If a path should be in all subclusters.
+   */
+  private boolean isPathAll(final String path) {
+    if (subclusterResolver instanceof MountTableResolver) {
+      try {
+        MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
+        MountTable entry = mountTable.getMountPoint(path);
+        if (entry != null) {
+          return entry.isAll();
+        }
+      } catch (IOException e) {
+        LOG.error("Cannot get mount point: {}", e.getMessage());
+      }
+    }
+    return false;
   }
 
   /**
