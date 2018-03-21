@@ -140,7 +140,13 @@ public abstract class Server {
   private RpcSaslProto negotiateResponse;
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
-  
+
+  private AlignmentContext alignmentContext;
+  /**
+   * Logical name of the server used in metrics and monitor.
+   */
+  private final String serverName;
+
   /**
    * Add exception classes for which server won't log stack traces.
    *
@@ -157,6 +163,15 @@ public abstract class Server {
    */
   public void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
     exceptionsHandler.addSuppressedLoggingExceptions(exceptionClass);
+  }
+
+  /**
+   * Set alignment context to pass state info thru RPC.
+   *
+   * @param alignmentContext alignment state context
+   */
+  public void setAlignmentContext(AlignmentContext alignmentContext) {
+    this.alignmentContext = alignmentContext;
   }
 
   /**
@@ -2775,6 +2790,7 @@ public abstract class Server {
     this.rpcRequestClass = rpcRequestClass; 
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
+    this.serverName = serverName;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
@@ -2916,6 +2932,9 @@ public abstract class Server {
     headerBuilder.setRetryCount(call.retryCount);
     headerBuilder.setStatus(status);
     headerBuilder.setServerIpcVersionNum(CURRENT_VERSION);
+    if(alignmentContext != null) {
+      alignmentContext.updateResponseState(headerBuilder);
+    }
 
     if (status == RpcStatusProto.SUCCESS) {
       RpcResponseHeaderProto header = headerBuilder.build();

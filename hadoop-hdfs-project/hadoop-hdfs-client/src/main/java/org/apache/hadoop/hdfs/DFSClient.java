@@ -165,6 +165,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
+import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
@@ -218,6 +219,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   volatile long lastLeaseRenewal;
+  volatile long lastSeenStateId;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
   final String clientName;
@@ -395,6 +397,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+    Client.setAlignmentContext(new ClientGCIContext(this));
   }
 
   /**
