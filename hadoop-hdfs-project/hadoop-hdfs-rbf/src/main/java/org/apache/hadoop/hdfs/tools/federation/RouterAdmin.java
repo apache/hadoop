@@ -453,7 +453,8 @@ public class RouterAdmin extends Configured implements Tool {
         try {
           nsQuota = Long.parseLong(parameters[i]);
         } catch (Exception e) {
-          System.err.println("Cannot parse nsQuota: " + parameters[i]);
+          throw new IllegalArgumentException(
+              "Cannot parse nsQuota: " + parameters[i]);
         }
       } else if (parameters[i].equals("-ssQuota")) {
         i++;
@@ -461,7 +462,8 @@ public class RouterAdmin extends Configured implements Tool {
           ssQuota = StringUtils.TraditionalBinaryPrefix
               .string2long(parameters[i]);
         } catch (Exception e) {
-          System.err.println("Cannot parse ssQuota: " + parameters[i]);
+          throw new IllegalArgumentException(
+              "Cannot parse ssQuota: " + parameters[i]);
         }
       }
 
@@ -469,8 +471,14 @@ public class RouterAdmin extends Configured implements Tool {
     }
 
     if (nsQuota <= 0 || ssQuota <= 0) {
-      System.err.println("Input quota value should be a positive number.");
-      return false;
+      throw new IllegalArgumentException(
+          "Input quota value should be a positive number.");
+    }
+
+    if (nsQuota == HdfsConstants.QUOTA_DONT_SET &&
+        ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+      throw new IllegalArgumentException(
+          "Must specify at least one of -nsQuota and -ssQuota.");
     }
 
     return updateQuota(mount, nsQuota, ssQuota);
@@ -515,18 +523,23 @@ public class RouterAdmin extends Configured implements Tool {
     }
 
     if (existingEntry == null) {
-      return false;
+      throw new IOException(mount + " doesn't exist in mount table.");
     } else {
       long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
       long ssCount = existingEntry.getQuota().getSpaceConsumed();
-      // If nsQuota or ssQuota was unset, reset corresponding usage
-      // value to zero.
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+      // If nsQuota and ssQuota were unset, clear nsQuota and ssQuota.
+      if (nsQuota == HdfsConstants.QUOTA_DONT_SET &&
+          ssQuota == HdfsConstants.QUOTA_DONT_SET) {
         nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
-      }
-
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
         ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      } else {
+        // If nsQuota or ssQuota was unset, use the value in mount table.
+        if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+          nsQuota = existingEntry.getQuota().getQuota();
+        }
+        if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+          ssQuota = existingEntry.getQuota().getSpaceQuota();
+        }
       }
 
       RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
