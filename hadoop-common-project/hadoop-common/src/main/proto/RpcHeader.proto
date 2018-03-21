@@ -155,6 +155,7 @@ message RpcResponseHeaderProto {
   optional RpcErrorCodeProto errorDetail = 6; // in case of error
   optional bytes clientId = 7; // Globally unique client ID
   optional sint32 retryCount = 8 [default = -1];
+  optional int64 stateId = 9; // The last written Global State ID
 }
 
 message RpcSaslProto {
