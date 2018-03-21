@@ -57,7 +57,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   /**
    * The block source to use in the event of copy-on-write truncate.
    */
-  private Block truncateBlock;
+  private BlockInfoContiguous truncateBlock;
 
   /**
    * ReplicaUnderConstruction contains information about replicas while
@@ -233,11 +233,11 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   }
 
   /** Get recover block */
-  public Block getTruncateBlock() {
+  public BlockInfoContiguous getTruncateBlock() {
     return truncateBlock;
   }
 
-  public void setTruncateBlock(Block recoveryBlock) {
+  public void setTruncateBlock(BlockInfoContiguous recoveryBlock) {
     this.truncateBlock = recoveryBlock;
   }
 

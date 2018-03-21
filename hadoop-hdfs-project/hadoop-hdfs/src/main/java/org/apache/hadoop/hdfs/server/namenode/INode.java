@@ -879,14 +879,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       if(!(toDelete instanceof BlockInfoContiguousUnderConstruction)) {
         return;
       }
-      Block truncateBlock =
+      BlockInfoContiguous truncateBlock =
           ((BlockInfoContiguousUnderConstruction)toDelete).getTruncateBlock();
       if(truncateBlock == null || truncateBlock.equals(toDelete)) {
         return;
       }
-      assert truncateBlock instanceof BlockInfoContiguous :
-        "should be BlockInfoContiguous";
-      addDeleteBlock((BlockInfoContiguous) truncateBlock);
+      addDeleteBlock(truncateBlock);
     }
 
     public void removeDeleteBlock(Block block) {

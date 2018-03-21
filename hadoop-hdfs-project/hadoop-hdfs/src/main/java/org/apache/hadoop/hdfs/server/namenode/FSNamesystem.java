@@ -2192,7 +2192,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       oldBlock = file.getLastBlock();
       assert !oldBlock.isComplete() : "oldBlock should be under construction";
       truncatedBlockUC = (BlockInfoContiguousUnderConstruction) oldBlock;
-      truncatedBlockUC.setTruncateBlock(new Block(oldBlock));
+      truncatedBlockUC.setTruncateBlock(new BlockInfoContiguous(oldBlock,
+          file.getBlockReplication()));
       truncatedBlockUC.getTruncateBlock().setNumBytes(
           oldBlock.getNumBytes() - lastBlockDelta);
       truncatedBlockUC.getTruncateBlock().setGenerationStamp(
@@ -4069,7 +4070,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     case UNDER_RECOVERY:
       final BlockInfoContiguousUnderConstruction uc = (BlockInfoContiguousUnderConstruction)lastBlock;
       // determine if last block was intended to be truncated
-      Block recoveryBlock = uc.getTruncateBlock();
+      BlockInfoContiguous recoveryBlock = uc.getTruncateBlock();
       boolean truncateRecovery = recoveryBlock != null;
       boolean copyOnTruncate = truncateRecovery &&
           recoveryBlock.getBlockId() != uc.getBlockId();
