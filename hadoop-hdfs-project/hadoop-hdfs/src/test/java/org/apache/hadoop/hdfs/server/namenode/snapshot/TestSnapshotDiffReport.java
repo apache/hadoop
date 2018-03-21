@@ -194,30 +194,7 @@ public class TestSnapshotDiffReport {
    */
   private void verifyDiffReport(Path dir, String from, String to,
       DiffReportEntry... entries) throws IOException {
-    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(dir, from, to);
-    // reverse the order of from and to
-    SnapshotDiffReport inverseReport = hdfs
-        .getSnapshotDiffReport(dir, to, from);
-    LOG.info(report.toString());
-    LOG.info(inverseReport.toString() + "\n");
-
-    assertEquals(entries.length, report.getDiffList().size());
-    assertEquals(entries.length, inverseReport.getDiffList().size());
-
-    for (DiffReportEntry entry : entries) {
-      if (entry.getType() == DiffType.MODIFY) {
-        assertTrue(report.getDiffList().contains(entry));
-        assertTrue(inverseReport.getDiffList().contains(entry));
-      } else if (entry.getType() == DiffType.DELETE) {
-        assertTrue(report.getDiffList().contains(entry));
-        assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
-      } else if (entry.getType() == DiffType.CREATE) {
-        assertTrue(report.getDiffList().contains(entry));
-        assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
-      }
-    }
+    DFSTestUtil.verifySnapshotDiffReport(hdfs, dir, from, to, entries);
   }
 
   /**
