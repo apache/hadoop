@@ -337,11 +337,11 @@ public class ProtobufRpcEngine implements RpcEngine {
       String bindAddress, int port, int numHandlers, int numReaders,
       int queueSizePerHandler, boolean verbose, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      String portRangeConfig)
+      String portRangeConfig, AlignmentContext alignmentContext)
       throws IOException {
     return new Server(protocol, protocolImpl, conf, bindAddress, port,
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
-        portRangeConfig);
+        portRangeConfig, alignmentContext);
   }
   
   public static class Server extends RPC.Server {
@@ -410,18 +410,19 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
      * @param portRangeConfig A config parameter that can be used to restrict
-     * the range of ports used when port is 0 (an ephemeral port)
+     * @param alignmentContext provides server state info on client responses
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,
         int numReaders, int queueSizePerHandler, boolean verbose,
         SecretManager<? extends TokenIdentifier> secretManager, 
-        String portRangeConfig)
+        String portRangeConfig, AlignmentContext alignmentContext)
         throws IOException {
       super(bindAddress, port, null, numHandlers,
           numReaders, queueSizePerHandler, conf,
           serverNameFromClass(protocolImpl.getClass()), secretManager,
           portRangeConfig);
+      setAlignmentContext(alignmentContext);
       this.verbose = verbose;  
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
