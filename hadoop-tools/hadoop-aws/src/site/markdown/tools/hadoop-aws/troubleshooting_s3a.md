@@ -967,7 +967,7 @@ Again, this is due to the fact that the data is cached locally until the
 `close()` operation. The S3A filesystem cannot be used as a store of data
 if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
-This includes resilient logging, HBase-style journalling
+This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
 
 ## <a name="encryption"></a> S3 Server Side Encryption
