@@ -381,6 +381,8 @@ public class TestRouterAdminCLI {
         .getMountTableEntries(getRequest);
     mountTable = getResponse.getEntries().get(0);
     quotaUsage = mountTable.getQuota();
+    // verify if ns quota keeps quondam value
+    assertEquals(nsQuota, quotaUsage.getQuota());
     // verify if ss quota is correctly set
     assertEquals(2 * 1024 * 1024, quotaUsage.getSpaceQuota());
 
