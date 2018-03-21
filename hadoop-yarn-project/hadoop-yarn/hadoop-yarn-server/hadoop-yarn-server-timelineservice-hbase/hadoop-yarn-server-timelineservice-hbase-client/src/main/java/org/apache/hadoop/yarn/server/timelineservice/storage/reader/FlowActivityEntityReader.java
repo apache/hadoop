@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -98,8 +97,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected FilterList constructFilterListBasedOnFields(
-      Set<String> cfsInFields) {
+  protected FilterList constructFilterListBasedOnFields() {
     return null;
   }
 
