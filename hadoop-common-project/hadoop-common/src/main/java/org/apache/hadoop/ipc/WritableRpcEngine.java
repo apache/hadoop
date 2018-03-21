@@ -325,11 +325,11 @@ public class WritableRpcEngine implements RpcEngine {
                       int numHandlers, int numReaders, int queueSizePerHandler,
                       boolean verbose, Configuration conf,
                       SecretManager<? extends TokenIdentifier> secretManager,
-                      String portRangeConfig) 
+                      String portRangeConfig, AlignmentContext alignmentContext)
     throws IOException {
     return new Server(protocolClass, protocolImpl, conf, bindAddress, port,
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
-        portRangeConfig);
+        portRangeConfig, alignmentContext);
   }
 
 
@@ -398,18 +398,45 @@ public class WritableRpcEngine implements RpcEngine {
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
+     *
+     * @deprecated use Server#Server(Class, Object,
+     *      Configuration, String, int, int, int, int, boolean, SecretManager)
      */
+    @Deprecated
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress,  int port,
         int numHandlers, int numReaders, int queueSizePerHandler, 
         boolean verbose, SecretManager<? extends TokenIdentifier> secretManager,
         String portRangeConfig) 
         throws IOException {
+      this(null, protocolImpl,  conf,  bindAddress,   port,
+          numHandlers,  numReaders,  queueSizePerHandler,  verbose,
+          secretManager, null, null);
+    }
+
+    /**
+     * Construct an RPC server.
+     * @param protocolClass - the protocol being registered
+     *     can be null for compatibility with old usage (see below for details)
+     * @param protocolImpl the protocol impl that will be called
+     * @param conf the configuration to use
+     * @param bindAddress the address to bind on to listen for connection
+     * @param port the port to listen for connections on
+     * @param numHandlers the number of method handler threads to run
+     * @param verbose whether each call should be logged
+     * @param alignmentContext provides server state info on client responses
+     */
+    public Server(Class<?> protocolClass, Object protocolImpl,
+        Configuration conf, String bindAddress,  int port,
+        int numHandlers, int numReaders, int queueSizePerHandler,
+        boolean verbose, SecretManager<? extends TokenIdentifier> secretManager,
+        String portRangeConfig, AlignmentContext alignmentContext)
+        throws IOException {
       super(bindAddress, port, null, numHandlers, numReaders,
           queueSizePerHandler, conf,
           classNameBase(protocolImpl.getClass().getName()), secretManager,
           portRangeConfig);
-
+      setAlignmentContext(alignmentContext);
       this.verbose = verbose;
       
       

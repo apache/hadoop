@@ -439,7 +439,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         .setInstance(clientNNPbService).setBindAddress(bindHost)
         .setPort(rpcAddr.getPort()).setNumHandlers(handlerCount)
         .setVerbose(false)
-        .setSecretManager(namesystem.getDelegationTokenSecretManager()).build();
+        .setSecretManager(namesystem.getDelegationTokenSecretManager())
+        .setAlignmentContext(new GlobalStateIdContext(namesystem))
+        .build();
 
     // Add all the RPC protocols that the namenode implements
     DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,

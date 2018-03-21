@@ -104,6 +104,12 @@ public class Client implements AutoCloseable {
           return false;
         }
       };
+  private static AlignmentContext alignmentContext;
+
+  /** Set alignment context to use to fetch state alignment info from RPC. */
+  public static void setAlignmentContext(AlignmentContext ac) {
+    alignmentContext = ac;
+  }
 
   @SuppressWarnings("unchecked")
   @Unstable
@@ -1186,6 +1192,9 @@ public class Client implements AutoCloseable {
           Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
           call.setRpcResponse(value);
+        }
+        if (alignmentContext != null) {
+          alignmentContext.receiveResponseState(header);
         }
         // verify that packet length was correct
         if (packet.remaining() > 0) {

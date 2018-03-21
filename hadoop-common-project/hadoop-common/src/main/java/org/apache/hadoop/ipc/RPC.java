@@ -715,6 +715,7 @@ public class RPC {
     private final Configuration conf;    
     private SecretManager<? extends TokenIdentifier> secretManager = null;
     private String portRangeConfig = null;
+    private AlignmentContext alignmentContext = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -781,6 +782,12 @@ public class RPC {
       return this;
     }
     
+    /** Default: null */
+    public Builder setAlignmentContext(AlignmentContext alignmentContext) {
+      this.alignmentContext = alignmentContext;
+      return this;
+    }
+
     /**
      * Build the RPC Server. 
      * @throws IOException on error
@@ -800,7 +807,8 @@ public class RPC {
       return getProtocolEngine(this.protocol, this.conf).getServer(
           this.protocol, this.instance, this.bindAddress, this.port,
           this.numHandlers, this.numReaders, this.queueSizePerHandler,
-          this.verbose, this.conf, this.secretManager, this.portRangeConfig);
+          this.verbose, this.conf, this.secretManager, this.portRangeConfig,
+          this.alignmentContext);
     }
   }
   
