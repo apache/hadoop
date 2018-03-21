@@ -1163,7 +1163,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     for (RemoteLocation loc : locations) {
       HdfsFileStatus fileStatus = results.get(loc);
       if (fileStatus != null) {
-        if (!fileStatus.isDirectory()) {
+        if (fileStatus.isDir()) {
           return fileStatus;
         } else if (dirStatus == null) {
           dirStatus = fileStatus;
