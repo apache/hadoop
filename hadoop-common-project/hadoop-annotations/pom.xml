@@ -39,21 +39,6 @@
 
   <profiles>
     <profile>
-      <id>jdk1.7</id>
-      <activation>
-        <jdk>1.7</jdk>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>jdk.tools</groupId>
-          <artifactId>jdk.tools</artifactId>
-          <version>1.7</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
       <id>jdk1.8</id>
       <activation>
         <jdk>1.8</jdk>
