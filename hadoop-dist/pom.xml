@@ -142,43 +142,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-docker-compose</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>prepare-package</phase>
-            <configuration>
-              <outputDirectory>${project.build.directory}/compose</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>src/main/compose</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-dockerfile</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>prepare-package</phase>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>src/main/docker</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
@@ -299,6 +262,47 @@
           <artifactId>hadoop-cblock-tools</artifactId>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>copy-docker-compose</id>
+                  <goals>
+                    <goal>copy-resources</goal>
+                  </goals>
+                  <phase>prepare-package</phase>
+                  <configuration>
+                    <outputDirectory>${project.build.directory}/compose</outputDirectory>
+                    <resources>
+                      <resource>
+                        <directory>src/main/compose</directory>
+                        <filtering>true</filtering>
+                      </resource>
+                    </resources>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>copy-dockerfile</id>
+                  <goals>
+                    <goal>copy-resources</goal>
+                  </goals>
+                  <phase>prepare-package</phase>
+                  <configuration>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                    <resources>
+                      <resource>
+                        <directory>src/main/docker</directory>
+                        <filtering>true</filtering>
+                      </resource>
+                    </resources>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
