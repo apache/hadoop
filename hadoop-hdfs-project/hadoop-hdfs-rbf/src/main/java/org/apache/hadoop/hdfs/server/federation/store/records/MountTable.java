@@ -35,8 +35,6 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Data schema for
@@ -48,7 +46,6 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class MountTable extends BaseRecord {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MountTable.class);
   public static final String ERROR_MSG_NO_SOURCE_PATH =
       "Invalid entry, no source path specified ";
   public static final String ERROR_MSG_MUST_START_WITH_BACK_SLASH =
@@ -387,6 +384,16 @@ public abstract class MountTable extends BaseRecord {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Check if a mount table spans all locations.
+   * @return If the mount table spreads across all locations.
+   */
+  public boolean isAll() {
+    DestinationOrder order = getDestOrder();
+    return order == DestinationOrder.HASH_ALL ||
+        order == DestinationOrder.RANDOM;
   }
 
   /**
