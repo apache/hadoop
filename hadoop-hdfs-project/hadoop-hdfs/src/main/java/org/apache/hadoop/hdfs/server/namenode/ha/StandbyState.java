@@ -39,14 +39,26 @@ import org.apache.hadoop.ipc.StandbyException;
  */
 @InterfaceAudience.Private
 public class StandbyState extends HAState {
+  private final boolean isObserver;
+
   public StandbyState() {
+    this(false);
+  }
+
+  public StandbyState(boolean isObserver) {
     super(HAServiceState.STANDBY);
+    this.isObserver = isObserver;
   }
 
   @Override
   public void setState(HAContext context, HAState s) throws ServiceFailedException {
     if (s == NameNode.ACTIVE_STATE) {
       setStateInternal(context, s);
+      return;
+    }
+    if (isObserver && s == NameNode.STANDBY_STATE) {
+      // To guard against the exception in the following super call.
+      // The other case, standby -> observer, should not happen.
       return;
     }
     super.setState(context, s);
@@ -91,6 +103,11 @@ public class StandbyState extends HAState {
   @Override
   public boolean shouldPopulateReplQueues() {
     return false;
+  }
+
+  @Override
+  public String toString() {
+    return isObserver ? "observer" : "standby";
   }
 }
 

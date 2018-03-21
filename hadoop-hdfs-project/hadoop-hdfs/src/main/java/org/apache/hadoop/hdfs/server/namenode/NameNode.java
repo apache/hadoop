@@ -365,6 +365,7 @@ public class NameNode extends ReconfigurableBase implements
       LoggerFactory.getLogger("BlockStateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
+  public static final HAState OBSERVER_STATE = new StandbyState(true);
 
   private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
 
@@ -984,9 +985,11 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   protected HAState createHAState(StartupOption startOpt) {
-    if (!haEnabled || startOpt == StartupOption.UPGRADE 
+    if (!haEnabled || startOpt == StartupOption.UPGRADE
         || startOpt == StartupOption.UPGRADEONLY) {
       return ACTIVE_STATE;
+    } else if (startOpt == StartupOption.OBSERVER) {
+      return OBSERVER_STATE;
     } else {
       return STANDBY_STATE;
     }
@@ -1481,6 +1484,8 @@ public class NameNode extends ReconfigurableBase implements
         startOpt = StartupOption.BACKUP;
       } else if (StartupOption.CHECKPOINT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.CHECKPOINT;
+      } else if (StartupOption.OBSERVER.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.OBSERVER;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)
           || StartupOption.UPGRADEONLY.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd) ? 
@@ -1794,6 +1799,11 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
+    if (state == OBSERVER_STATE) {
+      // TODO: we may need to remove this when enabling failover for observer
+      throw new ServiceFailedException(
+          "Cannot transition from Observer to Active");
+    }
     state.setState(haContext, ACTIVE_STATE);
   }
   
@@ -1802,6 +1812,11 @@ public class NameNode extends ReconfigurableBase implements
     namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    if (state == OBSERVER_STATE) {
+      // TODO: we may need to remove this when enabling failover for observer
+      throw new ServiceFailedException(
+          "Cannot transition from Observer to Standby");
     }
     state.setState(haContext, STANDBY_STATE);
   }
@@ -1857,6 +1872,7 @@ public class NameNode extends ReconfigurableBase implements
 
   @Override // NameNodeStatusMXBean
   public String getState() {
+    // TODO: maybe we should return a different result for observer namenode?
     String servStateStr = "";
     HAServiceState servState = getServiceState();
     if (null != servState) {
@@ -1957,7 +1973,8 @@ public class NameNode extends ReconfigurableBase implements
     @Override
     public void startStandbyServices() throws IOException {
       try {
-        namesystem.startStandbyServices(getConf());
+        namesystem.startStandbyServices(getConf(),
+            state == NameNode.OBSERVER_STATE);
       } catch (Throwable t) {
         doImmediateShutdown(t);
       }
@@ -2004,6 +2021,9 @@ public class NameNode extends ReconfigurableBase implements
     
     @Override
     public boolean allowStaleReads() {
+      if (state == OBSERVER_STATE) {
+        return true;
+      }
       return allowStaleStandbyReads;
     }
 
@@ -2015,6 +2035,10 @@ public class NameNode extends ReconfigurableBase implements
   
   public boolean isActiveState() {
     return (state.equals(ACTIVE_STATE));
+  }
+
+  public boolean isObserverState() {
+    return state.equals(OBSERVER_STATE);
   }
 
   /**
