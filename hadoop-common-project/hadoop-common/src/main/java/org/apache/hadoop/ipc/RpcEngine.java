@@ -67,6 +67,7 @@ public interface RpcEngine {
    * @param secretManager The secret manager to use to validate incoming requests.
    * @param portRangeConfig A config parameter that can be used to restrict
    *        the range of ports used when port is 0 (an ephemeral port)
+   * @param alignmentContext provides server state info on client responses
    * @return The Server instance
    * @throws IOException on any error
    */
@@ -75,8 +76,8 @@ public interface RpcEngine {
                        int queueSizePerHandler, boolean verbose,
                        Configuration conf, 
                        SecretManager<? extends TokenIdentifier> secretManager,
-                       String portRangeConfig
-                       ) throws IOException;
+                       String portRangeConfig,
+                       AlignmentContext alignmentContext) throws IOException;
 
   /**
    * Returns a proxy for ProtocolMetaInfoPB, which uses the given connection
