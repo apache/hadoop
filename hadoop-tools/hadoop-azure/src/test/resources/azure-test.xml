@@ -19,27 +19,28 @@
   <!-- For tests against live azure, provide the following account information -->
 
   <!--
-  <property>
-    <name>fs.azure.test.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNTKEY}</value>
-  </property>
-  <property>
-    <name>fs.azure.secure.mode</name>
-    <value>false</value>
-  </property>
-  <property>
-    <name>fs.azure.local.sas.key.mode</name>
-    <value>false</value>
-  </property>
-  <property>
-    <name>fs.azure.cred.service.url</name>
-    <value>{CRED_SERIVCE_URL}</value>
-  </property>
+    <property>
+      <name>fs.azure.test.account.name</name>
+      <value>{ACCOUNTNAME}.blob.core.windows.net</value>
+    </property>
+    <property>
+      <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
+      <value>{ACCOUNTKEY}</value>
+    </property>
   -->
+
+  <!-- uncomment to test in Azure secure mode -->
+  <!--
+    <property>
+      <name>fs.azure.secure.mode</name>
+      <value>true</value>
+    </property>
+  -->
+
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>MSFT</value>
+  </property>
 
   <!-- Save the above configuration properties in a separate file named -->
   <!-- azure-auth-keys.xml in the same directory as this file. -->

@@ -18,10 +18,12 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
+import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
@@ -41,15 +43,13 @@ public class TestDataNodePeerMetrics {
     final int numOpsPerIteration = 1000;
 
     final Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_SIZE_KEY,
-        windowSize);
-    conf.setInt(DFSConfigKeys.DFS_METRICS_ROLLING_AVERAGES_WINDOW_NUMBERS_KEY,
-        numWindows);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
 
     final DataNodePeerMetrics peerMetrics = DataNodePeerMetrics.create(
-        conf,
         "Sample-DataNode");
+    MetricsTestHelper.replaceRollingAveragesScheduler(
+        peerMetrics.getSendPacketDownstreamRollingAverages(),
+        numWindows, windowSize, TimeUnit.SECONDS);
     final long start = Time.monotonicNow();
     for (int i = 1; i <= iterations; i++) {
       final String peerAddr = genPeerAddress();

@@ -32,7 +32,7 @@ public class HsSingleCounterPage extends HsView {
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.hs.webapp.HsView#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     setActiveNavColumnForTask();
     set(DATATABLES_ID, "singleCounter");

@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -69,6 +70,27 @@ public class NodeManagerMetrics {
   @Metric("# of running opportunistic containers")
       MutableGaugeInt runningOpportunisticContainers;
 
+  @Metric("Local cache size (public and private) before clean (Bytes)")
+  MutableGaugeLong cacheSizeBeforeClean;
+  @Metric("# of total bytes deleted from the public and private local cache")
+  MutableGaugeLong totalBytesDeleted;
+  @Metric("# of bytes deleted from the public local cache")
+  MutableGaugeLong publicBytesDeleted;
+  @Metric("# of bytes deleted from the private local cache")
+  MutableGaugeLong privateBytesDeleted;
+  @Metric("Current used physical memory by all containers in GB")
+  MutableGaugeInt containerUsedMemGB;
+  @Metric("Current used virtual memory by all containers in GB")
+  MutableGaugeInt containerUsedVMemGB;
+  @Metric("Aggregated CPU utilization of all containers")
+  MutableGaugeFloat containerCpuUtilization;
+  @Metric("Current used memory by this node in GB")
+  MutableGaugeInt nodeUsedMemGB;
+  @Metric("Current used virtual memory by this node in GB")
+  MutableGaugeInt nodeUsedVMemGB;
+  @Metric("Current CPU utilization")
+  MutableGaugeFloat nodeCpuUtilization;
+
   // CHECKSTYLE:ON:VisibilityModifier
 
   private JvmMetrics jvmMetrics = null;
@@ -77,7 +99,7 @@ public class NodeManagerMetrics {
   private long availableMB;
   private long allocatedOpportunisticMB;
 
-  public NodeManagerMetrics(JvmMetrics jvmMetrics) {
+  private NodeManagerMetrics(JvmMetrics jvmMetrics) {
     this.jvmMetrics = jvmMetrics;
   }
 
@@ -85,8 +107,8 @@ public class NodeManagerMetrics {
     return create(DefaultMetricsSystem.instance());
   }
 
-  static NodeManagerMetrics create(MetricsSystem ms) {
-    JvmMetrics jm = JvmMetrics.create("NodeManager", null, ms);
+  private static NodeManagerMetrics create(MetricsSystem ms) {
+    JvmMetrics jm = JvmMetrics.initSingleton("NodeManager", null);
     return ms.register(new NodeManagerMetrics(jm));
   }
 
@@ -189,7 +211,7 @@ public class NodeManagerMetrics {
 
   public void addResource(Resource res) {
     availableMB = availableMB + res.getMemorySize();
-    availableGB.incr((int)Math.floor(availableMB/1024d));
+    availableGB.set((int)Math.floor(availableMB/1024d));
     availableVCores.incr(res.getVirtualCores());
   }
 
@@ -213,6 +235,22 @@ public class NodeManagerMetrics {
   public void setGoodLogDirsDiskUtilizationPerc(
       int goodLogDirsDiskUtilizationPerc) {
     this.goodLogDirsDiskUtilizationPerc.set(goodLogDirsDiskUtilizationPerc);
+  }
+
+  public void setCacheSizeBeforeClean(long cacheSizeBeforeClean) {
+    this.cacheSizeBeforeClean.set(cacheSizeBeforeClean);
+  }
+
+  public void setTotalBytesDeleted(long totalBytesDeleted) {
+    this.totalBytesDeleted.set(totalBytesDeleted);
+  }
+
+  public void setPublicBytesDeleted(long publicBytesDeleted) {
+    this.publicBytesDeleted.set(publicBytesDeleted);
+  }
+
+  public void setPrivateBytesDeleted(long privateBytesDeleted) {
+    this.privateBytesDeleted.set(privateBytesDeleted);
   }
 
   public int getRunningContainers() {
@@ -274,5 +312,69 @@ public class NodeManagerMetrics {
 
   public int getRunningOpportunisticContainers() {
     return runningOpportunisticContainers.value();
+  }
+
+  public long getCacheSizeBeforeClean() {
+    return this.cacheSizeBeforeClean.value();
+  }
+
+  public long getTotalBytesDeleted() {
+    return this.totalBytesDeleted.value();
+  }
+
+  public long getPublicBytesDeleted() {
+    return this.publicBytesDeleted.value();
+  }
+
+  public long getPrivateBytesDeleted() {
+    return this.privateBytesDeleted.value();
+  }
+
+  public void setContainerUsedMemGB(long usedMem) {
+    this.containerUsedMemGB.set((int)Math.floor(usedMem/1024d));
+  }
+
+  public int getContainerUsedMemGB() {
+    return this.containerUsedMemGB.value();
+  }
+
+  public void setContainerUsedVMemGB(long usedVMem) {
+    this.containerUsedVMemGB.set((int)Math.floor(usedVMem/1024d));
+  }
+
+  public int getContainerUsedVMemGB() {
+    return this.containerUsedVMemGB.value();
+  }
+
+  public void setContainerCpuUtilization(float cpuUtilization) {
+    this.containerCpuUtilization.set(cpuUtilization);
+  }
+
+  public float getContainerCpuUtilization() {
+    return this.containerCpuUtilization.value();
+  }
+
+  public void setNodeUsedMemGB(long totalUsedMemGB) {
+    this.nodeUsedMemGB.set((int)Math.floor(totalUsedMemGB/1024d));
+  }
+
+  public int getNodeUsedMemGB() {
+    return nodeUsedMemGB.value();
+  }
+
+  public void setNodeUsedVMemGB(long totalUsedVMemGB) {
+    this.nodeUsedVMemGB.set((int)Math.floor(totalUsedVMemGB/1024d));
+  }
+
+  public int getNodeUsedVMemGB() {
+    return nodeUsedVMemGB.value();
+  }
+
+  public float getNodeCpuUtilization() {
+    return nodeCpuUtilization.value();
+  }
+
+  public void setNodeCpuUtilization(float cpuUtilization) {
+    this.nodeCpuUtilization.set(cpuUtilization);
   }
 }

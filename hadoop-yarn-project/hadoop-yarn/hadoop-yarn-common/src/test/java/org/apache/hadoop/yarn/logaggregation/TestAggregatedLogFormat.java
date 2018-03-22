@@ -140,44 +140,44 @@ public class TestAggregatedLogFormat {
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    LogWriter logWriter = new LogWriter(new Configuration(), remoteAppLogFile,
-        ugi);
+    try (LogWriter logWriter = new LogWriter()) {
+      logWriter.initialize(new Configuration(), remoteAppLogFile, ugi);
 
-    LogKey logKey = new LogKey(testContainerId);
-    LogValue logValue =
-        spy(new LogValue(Collections.singletonList(srcFileRoot.toString()),
-            testContainerId, ugi.getShortUserName()));
+      LogKey logKey = new LogKey(testContainerId);
+      LogValue logValue =
+          spy(new LogValue(Collections.singletonList(srcFileRoot.toString()),
+              testContainerId, ugi.getShortUserName()));
 
-    final CountDownLatch latch = new CountDownLatch(1);
+      final CountDownLatch latch = new CountDownLatch(1);
 
-    Thread t = new Thread() {
-      public void run() {
-        try {
-          for(int i=0; i < length/3; i++) {
+      Thread t = new Thread() {
+        public void run() {
+          try {
+            for (int i = 0; i < length / 3; i++) {
               osw.write(ch);
-          }
+            }
 
-          latch.countDown();
+            latch.countDown();
 
-          for(int i=0; i < (2*length)/3; i++) {
-            osw.write(ch);
+            for (int i = 0; i < (2 * length) / 3; i++) {
+              osw.write(ch);
+            }
+            osw.close();
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
           }
-          osw.close();
-        } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
         }
-      }
-    };
-    t.start();
+      };
+      t.start();
 
-    //Wait till the osw is partially written
-    //aggregation starts once the ows has completed 1/3rd of its work
-    latch.await();
+      //Wait till the osw is partially written
+      //aggregation starts once the ows has completed 1/3rd of its work
+      latch.await();
 
-    //Aggregate The Logs
-    logWriter.append(logKey, logValue);
-    logWriter.close();
+      //Aggregate The Logs
+      logWriter.append(logKey, logValue);
+    }
   }
 
   @Test
@@ -216,22 +216,23 @@ public class TestAggregatedLogFormat {
     writeSrcFile(srcFilePath, "stdout", numChars);
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    LogWriter logWriter = new LogWriter(conf, remoteAppLogFile, ugi);
+    try (LogWriter logWriter = new LogWriter()) {
+      logWriter.initialize(conf, remoteAppLogFile, ugi);
 
-    LogKey logKey = new LogKey(testContainerId);
-    LogValue logValue =
-        new LogValue(Collections.singletonList(srcFileRoot.toString()),
-            testContainerId, ugi.getShortUserName());
+      LogKey logKey = new LogKey(testContainerId);
+      LogValue logValue =
+          new LogValue(Collections.singletonList(srcFileRoot.toString()),
+              testContainerId, ugi.getShortUserName());
 
-    // When we try to open FileInputStream for stderr, it will throw out an IOException.
-    // Skip the log aggregation for stderr.
-    LogValue spyLogValue = spy(logValue);
-    File errorFile = new File((new Path(srcFilePath, "stderr")).toString());
-    doThrow(new IOException("Mock can not open FileInputStream")).when(
-      spyLogValue).secureOpenFile(errorFile);
+      // When we try to open FileInputStream for stderr, it will throw out an
+      // IOException. Skip the log aggregation for stderr.
+      LogValue spyLogValue = spy(logValue);
+      File errorFile = new File((new Path(srcFilePath, "stderr")).toString());
+      doThrow(new IOException("Mock can not open FileInputStream")).when(
+          spyLogValue).secureOpenFile(errorFile);
 
-    logWriter.append(logKey, spyLogValue);
-    logWriter.close();
+      logWriter.append(logKey, spyLogValue);
+    }
 
     // make sure permission are correct on the file
     FileStatus fsStatus =  fs.getFileStatus(remoteAppLogFile);
@@ -311,24 +312,24 @@ public class TestAggregatedLogFormat {
 
     UserGroupInformation ugi =
         UserGroupInformation.getCurrentUser();
-    LogWriter logWriter = new LogWriter(conf, remoteAppLogFile, ugi);
+    try (LogWriter logWriter = new LogWriter()) {
+      logWriter.initialize(conf, remoteAppLogFile, ugi);
 
-    LogKey logKey = new LogKey(testContainerId1);
-    String randomUser = "randomUser";
-    LogValue logValue =
-        spy(new LogValue(Collections.singletonList(srcFileRoot.toString()),
-            testContainerId1, randomUser));
-    
-    // It is trying simulate a situation where first log file is owned by
-    // different user (probably symlink) and second one by the user itself.
-    // The first file should not be aggregated. Because this log file has the invalid
-    // user name.
-    when(logValue.getUser()).thenReturn(randomUser).thenReturn(
-        ugi.getShortUserName());
-    logWriter.append(logKey, logValue);
+      LogKey logKey = new LogKey(testContainerId1);
+      String randomUser = "randomUser";
+      LogValue logValue =
+          spy(new LogValue(Collections.singletonList(srcFileRoot.toString()),
+              testContainerId1, randomUser));
 
-    logWriter.close();
-    
+      // It is trying simulate a situation where first log file is owned by
+      // different user (probably symlink) and second one by the user itself.
+      // The first file should not be aggregated. Because this log file has
+      // the invalid user name.
+      when(logValue.getUser()).thenReturn(randomUser).thenReturn(
+          ugi.getShortUserName());
+      logWriter.append(logKey, logValue);
+    }
+
     BufferedReader in =
         new BufferedReader(new FileReader(new File(remoteAppLogFile
             .toUri().getRawPath())));

@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * Inspects a FSImage storage directory in the "old" (pre-HDFS-1073) format.
+ * Inspects an FSImage storage directory in the "old" (pre-HDFS-1073) format.
  * This format has the following data files:
  *   - fsimage
  *   - fsimage.ckpt (when checkpoint is being uploaded)

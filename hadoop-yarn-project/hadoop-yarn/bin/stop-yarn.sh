@@ -15,13 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-MYNAME="${BASH_SOURCE-$0}"
-
+## @description  usage info
+## @audience     private
+## @stability    evolving
+## @replaceable  no
 function hadoop_usage
 {
   hadoop_generate_usage "${MYNAME}" false
 }
+
+MYNAME="${BASH_SOURCE-$0}"
 
 bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
 
@@ -42,11 +45,19 @@ else
   exit 1
 fi
 
+# stop nodemanager
+echo "Stopping nodemanagers"
+hadoop_uservar_su yarn nodemanager "${HADOOP_YARN_HOME}/bin/yarn" \
+    --config "${HADOOP_CONF_DIR}" \
+    --workers \
+    --daemon stop \
+    nodemanager
+
 # stop resourceManager
 HARM=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey yarn.resourcemanager.ha.enabled 2>&-)
 if [[ ${HARM} = "false" ]]; then
   echo "Stopping resourcemanager"
-  "${HADOOP_YARN_HOME}/bin/yarn" \
+  hadoop_uservar_su yarn resourcemanager "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --daemon stop \
       resourcemanager
@@ -59,7 +70,7 @@ else
       RMHOSTS="${RMHOSTS} ${rmhost}"
   done
   echo "Stopping resourcemanagers on [${RMHOSTS}]"
-  "${HADOOP_YARN_HOME}/bin/yarn" \
+  hadoop_uservar_su yarn resourcemanager "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --daemon stop \
       --workers \
@@ -67,19 +78,11 @@ else
       resourcemanager
 fi
 
-# stop nodemanager
-echo "Stopping nodemanagers"
-"${HADOOP_YARN_HOME}/bin/yarn" \
-    --config "${HADOOP_CONF_DIR}" \
-    --workers \
-    --daemon stop \
-    nodemanager
-
 # stop proxyserver
 PROXYSERVER=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey  yarn.web-proxy.address 2>&- | cut -f1 -d:)
 if [[ -n ${PROXYSERVER} ]]; then
   echo "Stopping proxy server [${PROXYSERVER}]"
-  "${HADOOP_YARN_HOME}/bin/yarn" \
+  hadoop_uservar_su yarn proxyserver "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --workers \
       --hostnames "${PROXYSERVER}" \

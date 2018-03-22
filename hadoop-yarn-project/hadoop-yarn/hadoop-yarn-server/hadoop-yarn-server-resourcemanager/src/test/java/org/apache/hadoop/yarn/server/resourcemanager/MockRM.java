@@ -20,12 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -64,7 +66,9 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -78,6 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -88,6 +93,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecommissioningEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -100,10 +106,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-
-
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -118,7 +123,7 @@ public class MockRM extends ResourceManager {
   private static final int SECOND = 1000;
   private static final int TIMEOUT_MS_FOR_ATTEMPT = 40 * SECOND;
   private static final int TIMEOUT_MS_FOR_APP_REMOVED = 40 * SECOND;
-  private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 10 * SECOND;
+  private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 20 * SECOND;
   private static final int WAIT_MS_PER_LOOP = 10;
 
   private final boolean useNullRMNodeLabelsManager;
@@ -150,6 +155,10 @@ public class MockRM extends ResourceManager {
   public MockRM(Configuration conf, RMStateStore store,
       boolean useNullRMNodeLabelsManager, boolean useRealElector) {
     super();
+    if (conf.getBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
     this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     this.useRealElector = useRealElector;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
@@ -158,7 +167,7 @@ public class MockRM extends ResourceManager {
     } else {
       Class storeClass = getRMContext().getStateStore().getClass();
       if (storeClass.equals(MemoryRMStateStore.class)) {
-        MockRMMemoryStateStore mockStateStore = new MockRMMemoryStateStore();
+        MockMemoryRMStateStore mockStateStore = new MockMemoryRMStateStore();
         mockStateStore.init(conf);
         setRMStateStore(mockStateStore);
       } else if (storeClass.equals(NullRMStateStore.class)) {
@@ -170,14 +179,6 @@ public class MockRM extends ResourceManager {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     disableDrainEventsImplicitly = false;
-  }
-
-  public class MockRMMemoryStateStore extends MemoryRMStateStore {
-    @SuppressWarnings("rawtypes")
-    @Override
-    protected EventHandler getRMStateStoreEventHandler() {
-      return rmStateStoreEventHandler;
-    }
   }
 
   public class MockRMNullStateStore extends NullRMStateStore {
@@ -521,6 +522,17 @@ public class MockRM extends ResourceManager {
         false, false, null, 0, null, true, priority);
   }
 
+  public RMApp submitApp(int masterMemory, Priority priority,
+      Credentials cred, ByteBuffer tokensConf) throws Exception {
+    Resource resource = Resource.newInstance(masterMemory, 0);
+    return submitApp(resource, "", UserGroupInformation.getCurrentUser()
+        .getShortUserName(), null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), cred, null, true,
+        false, false, null, 0, null, true, priority, null, null,
+        tokensConf);
+  }
+
   public RMApp submitApp(int masterMemory, boolean unmanaged)
       throws Exception {
     return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
@@ -563,7 +575,7 @@ public class MockRM extends ResourceManager {
     return submitApp(resource, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
-        false, null, 0, null, true, priority, amLabel, null);
+        false, null, 0, null, true, priority, amLabel, null, null);
   }
 
   public RMApp submitApp(Resource resource, String name, String user,
@@ -617,15 +629,15 @@ public class MockRM extends ResourceManager {
         false, null, 0, null, true, Priority.newInstance(0));
   }
 
-  public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval)
-      throws Exception {
+  public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval,
+      boolean keepContainers) throws Exception {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, keepContainers,
       false, null, attemptFailuresValidityInterval, null, true, priority);
   }
 
@@ -664,7 +676,28 @@ public class MockRM extends ResourceManager {
     return submitApp(capability, name, user, acls, unmanaged, queue,
       maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
       isAppIdProvided, applicationId, attemptFailuresValidityInterval,
-        logAggregationContext, cancelTokensWhenComplete, priority, "", null);
+        logAggregationContext, cancelTokensWhenComplete, priority, "", null,
+        null);
+  }
+
+  public RMApp submitApp(Credentials cred, ByteBuffer tokensConf)
+      throws Exception {
+    return submitApp(Resource.newInstance(200, 1), "app1", "user", null, false,
+        null, super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), cred, null, true,
+        false, false, null, 0, null, true, Priority.newInstance(0), null, null,
+        tokensConf);
+  }
+
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests)
+      throws Exception {
+    return submitApp(amResourceRequests, "app1",
+        "user", null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, false, null, 0, null, true,
+        amResourceRequests.get(0).getPriority(),
+        amResourceRequests.get(0).getNodeLabelExpression(), null, null);
   }
 
   public RMApp submitApp(Resource capability, String name, String user,
@@ -674,7 +707,32 @@ public class MockRM extends ResourceManager {
       ApplicationId applicationId, long attemptFailuresValidityInterval,
       LogAggregationContext logAggregationContext,
       boolean cancelTokensWhenComplete, Priority priority, String amLabel,
-      Map<ApplicationTimeoutType, Long> applicationTimeouts)
+      Map<ApplicationTimeoutType, Long> applicationTimeouts,
+      ByteBuffer tokensConf)
+      throws Exception {
+    priority = (priority == null) ? Priority.newInstance(0) : priority;
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        priority, ResourceRequest.ANY, capability, 1);
+    if (amLabel != null && !amLabel.isEmpty()) {
+      amResourceRequest.setNodeLabelExpression(amLabel.trim());
+    }
+    return submitApp(Collections.singletonList(amResourceRequest), name, user,
+        acls, unmanaged, queue, maxAppAttempts, ts, appType, waitForAccepted,
+        keepContainers, isAppIdProvided, applicationId,
+        attemptFailuresValidityInterval, logAggregationContext,
+        cancelTokensWhenComplete, priority, amLabel, applicationTimeouts,
+        tokensConf);
+  }
+
+  public RMApp submitApp(List<ResourceRequest> amResourceRequests, String name,
+      String user, Map<ApplicationAccessType, String> acls, boolean unmanaged,
+      String queue, int maxAppAttempts, Credentials ts, String appType,
+      boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
+      ApplicationId applicationId, long attemptFailuresValidityInterval,
+      LogAggregationContext logAggregationContext,
+      boolean cancelTokensWhenComplete, Priority priority, String amLabel,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts,
+      ByteBuffer tokensConf)
       throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
@@ -706,13 +764,13 @@ public class MockRM extends ResourceManager {
     sub.setApplicationType(appType);
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
-    sub.setResource(capability);
     clc.setApplicationACLs(acls);
     if (ts != null && UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
       ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
       clc.setTokens(securityTokens);
+      clc.setTokensConf(tokensConf);
     }
     sub.setAMContainerSpec(clc);
     sub.setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
@@ -720,31 +778,29 @@ public class MockRM extends ResourceManager {
       sub.setLogAggregationContext(logAggregationContext);
     }
     sub.setCancelTokensWhenComplete(cancelTokensWhenComplete);
-    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
-        Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
     if (amLabel != null && !amLabel.isEmpty()) {
-      amResourceRequest.setNodeLabelExpression(amLabel.trim());
+      for (ResourceRequest amResourceRequest : amResourceRequests) {
+        amResourceRequest.setNodeLabelExpression(amLabel.trim());
+      }
     }
-    sub.setAMContainerResourceRequest(amResourceRequest);
+    sub.setAMContainerResourceRequests(amResourceRequests);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
-    PrivilegedAction<SubmitApplicationResponse> action =
-      new PrivilegedAction<SubmitApplicationResponse>() {
+    PrivilegedExceptionAction<SubmitApplicationResponse> action =
+      new PrivilegedExceptionAction<SubmitApplicationResponse>() {
       ApplicationClientProtocol client;
       SubmitApplicationRequest req;
       @Override
-      public SubmitApplicationResponse run() {
+      public SubmitApplicationResponse run() throws IOException, YarnException {
         try {
           return client.submitApplication(req);
-        } catch (YarnException e) {
+        } catch (YarnException | IOException e) {
           e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
+          throw  e;
         }
-        return null;
       }
-      PrivilegedAction<SubmitApplicationResponse> setClientReq(
+      PrivilegedExceptionAction<SubmitApplicationResponse> setClientReq(
         ApplicationClientProtocol client, SubmitApplicationRequest req) {
         this.client = client;
         this.req = req;
@@ -764,7 +820,15 @@ public class MockRM extends ResourceManager {
           RMAppAttemptState.SCHEDULED);
     }
 
+    ((AbstractYarnScheduler)getResourceScheduler()).update();
+
     return rmApp;
+  }
+
+  public MockNM unRegisterNode(MockNM nm) throws Exception {
+    nm.unRegisterNode();
+    drainEventsImplicitly();
+    return nm;
   }
 
   public MockNM registerNode(String nodeIdStr, int memory) throws Exception {
@@ -793,6 +857,15 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
+  public MockNM registerNode(String nodeIdStr, Resource nodeCapability)
+      throws Exception {
+    MockNM nm = new MockNM(nodeIdStr, nodeCapability,
+        getResourceTrackerService());
+    nm.registerNode();
+    drainEventsImplicitly();
+    return nm;
+  }
+
   public void sendNodeStarted(MockNM nm) throws Exception {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
         nm.getNodeId());
@@ -807,9 +880,17 @@ public class MockRM extends ResourceManager {
     drainEventsImplicitly();
   }
 
+  private RMNode getRMNode(NodeId nodeId) {
+    RMNode node = getRMContext().getRMNodes().get(nodeId);
+    if (node == null) {
+      node = getRMContext().getInactiveRMNodes().get(nodeId);
+    }
+    return node;
+  }
+
   /**
    * Wait until a node has reached a specified state.
-   * The timeout is 10 seconds.
+   * The timeout is 20 seconds.
    * @param nodeId the id of a node
    * @param finalState the node state waited
    * @throws InterruptedException
@@ -818,12 +899,17 @@ public class MockRM extends ResourceManager {
   public void waitForState(NodeId nodeId, NodeState finalState)
       throws InterruptedException {
     drainEventsImplicitly();
-    RMNode node = getRMContext().getRMNodes().get(nodeId);
-    if (node == null) {
-      node = getRMContext().getInactiveRMNodes().get(nodeId);
-    }
-    Assert.assertNotNull("node shouldn't be null", node);
     int timeWaiting = 0;
+    RMNode node = getRMNode(nodeId);
+    while (node == null) {
+      if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
+        break;
+      }
+      node = getRMNode(nodeId);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+    Assert.assertNotNull("node shouldn't be null (timedout)", node);
     while (!finalState.equals(node.getState())) {
       if (timeWaiting >= TIMEOUT_MS_FOR_CONTAINER_AND_NODE) {
         break;
@@ -840,10 +926,24 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
 
+  public void sendNodeGracefulDecommission(
+      MockNM nm, int timeout) throws Exception {
+    RMNodeImpl node = (RMNodeImpl)
+        getRMContext().getRMNodes().get(nm.getNodeId());
+    Assert.assertNotNull("node shouldn't be null", node);
+    node.handle(new RMNodeDecommissioningEvent(nm.getNodeId(), timeout));
+  }
+
   public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
+    Assert.assertNotNull("node shouldn't be null", node);
     node.handle(new RMNodeEvent(nm.getNodeId(), event));
+  }
+
+  public Integer getDecommissioningTimeout(NodeId nodeid) {
+    return this.getRMContext().getRMNodes()
+        .get(nodeid).getDecommissioningTimeout();
   }
 
   public KillApplicationResponse killApp(ApplicationId appId) throws Exception {
@@ -874,6 +974,7 @@ public class MockRM extends ResourceManager {
   public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
       throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
+    ((AbstractYarnScheduler)scheduler).update();
     waitForState(appAttemptId, RMAppAttemptState.ALLOCATED);
     //create and set AMRMToken
     Token<AMRMTokenIdentifier> amrmToken =
@@ -996,7 +1097,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected AdminService createAdminService() {
-    return new AdminService(this, getRMContext()) {
+    return new AdminService(this) {
       @Override
       protected void startServer() {
         // override to not start rpc handler
@@ -1098,7 +1199,9 @@ public class MockRM extends ResourceManager {
     RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
+    nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
     return am;
@@ -1113,7 +1216,9 @@ public class MockRM extends ResourceManager {
     waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
+    nm.nodeHeartbeat(true);
     MockAM am = new MockAM(rm.getRMContext(), rm.masterService,
         attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
@@ -1132,6 +1237,18 @@ public class MockRM extends ResourceManager {
   public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
     MockAM am = launchAM(app, rm, nm);
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    return am;
+  }
+
+  public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm,
+      Map<Set<String>, PlacementConstraint> constraints) throws Exception {
+    MockAM am = launchAM(app, rm, nm);
+    for (Map.Entry<Set<String>, PlacementConstraint> e :
+        constraints.entrySet()) {
+      am.addPlacementConstraint(e.getKey(), e.getValue());
+    }
     am.registerAppAttempt();
     rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
     return am;
@@ -1224,6 +1341,19 @@ public class MockRM extends ResourceManager {
         null, false, null,
         super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
             YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
-        false, false, null, 0, null, true, priority, null, applicationTimeouts);
+        false, false, null, 0, null, true, priority, null, applicationTimeouts,
+        null);
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    if (getRmDispatcher() instanceof AsyncDispatcher) {
+      ((AsyncDispatcher) getRmDispatcher()).disableExitOnDispatchException();
+    }
+  }
+
+  public RMStateStore getRMStateStore() {
+    return getRMContext().getStateStore();
   }
 }

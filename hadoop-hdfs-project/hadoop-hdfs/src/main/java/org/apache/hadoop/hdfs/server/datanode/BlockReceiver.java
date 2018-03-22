@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodePeerMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -93,12 +94,13 @@ class BlockReceiver implements Closeable {
   protected final String inAddr;
   protected final String myAddr;
   private String mirrorAddr;
-  private String bracketedMirrorAddr;
+  private String mirrorNameForMetrics;
   private DataOutputStream mirrorOut;
   private Daemon responder = null;
   private DataTransferThrottler throttler;
   private ReplicaOutputStreams streams;
   private DatanodeInfo srcDataNode = null;
+  private DatanodeInfo[] downstreamDNs = DatanodeInfo.EMPTY_ARRAY;
   private final DataNode datanode;
   volatile private boolean mirrorError;
 
@@ -123,6 +125,8 @@ class BlockReceiver implements Closeable {
   private boolean isPenultimateNode = false;
 
   private boolean syncOnClose;
+  private volatile boolean dirSyncOnFinalize;
+  private boolean dirSyncOnHSyncDone = false;
   private long restartBudget;
   /** the reference of the volume where the block receiver writes to */
   private ReplicaHandler replicaHandler;
@@ -149,7 +153,8 @@ class BlockReceiver implements Closeable {
       final DataNode datanode, DataChecksum requestedChecksum,
       CachingStrategy cachingStrategy,
       final boolean allowLazyPersist,
-      final boolean pinning) throws IOException {
+      final boolean pinning,
+      final String storageId) throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -162,7 +167,8 @@ class BlockReceiver implements Closeable {
       this.isDatanode = clientname.length() == 0;
       this.isClient = !this.isDatanode;
       this.restartBudget = datanode.getDnConf().restartReplicaExpiry;
-      this.datanodeSlowLogThresholdMs = datanode.getDnConf().datanodeSlowIoWarningThresholdMs;
+      this.datanodeSlowLogThresholdMs =
+          datanode.getDnConf().getSlowIoWarningThresholdMs();
       // For replaceBlock() calls response should be sent to avoid socketTimeout
       // at clients. So sending with the interval of 0.5 * socketTimeout
       final long readTimeout = datanode.getDnConf().socketTimeout;
@@ -194,6 +200,7 @@ class BlockReceiver implements Closeable {
             + "\n allowLazyPersist=" + allowLazyPersist + ", pinning=" + pinning
             + ", isClient=" + isClient + ", isDatanode=" + isDatanode
             + ", responseInterval=" + responseInterval
+            + ", storageID=" + (storageId != null ? storageId : "null")
         );
       }
 
@@ -201,11 +208,13 @@ class BlockReceiver implements Closeable {
       // Open local disk out
       //
       if (isDatanode) { //replication or move
-        replicaHandler = datanode.data.createTemporary(storageType, block);
+        replicaHandler =
+            datanode.data.createTemporary(storageType, storageId, block, false);
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          replicaHandler = datanode.data.createRbw(storageType, block, allowLazyPersist);
+          replicaHandler = datanode.data.createRbw(storageType, storageId,
+              block, allowLazyPersist);
           datanode.notifyNamenodeReceivingBlock(
               block, replicaHandler.getReplica().getStorageUuid());
           break;
@@ -229,8 +238,8 @@ class BlockReceiver implements Closeable {
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
           // this is a transfer destination
-          replicaHandler =
-              datanode.data.createTemporary(storageType, block);
+          replicaHandler = datanode.data.createTemporary(storageType, storageId,
+              block, isTransfer);
           break;
         default: throw new IOException("Unsupported stage " + stage + 
               " while receiving block " + block + " from " + inAddr);
@@ -276,12 +285,12 @@ class BlockReceiver implements Closeable {
       
       // check if there is a disk error
       IOException cause = DatanodeUtil.getCauseIfDiskError(ioe);
-      DataNode.LOG.warn("IOException in BlockReceiver constructor"
+      DataNode.LOG
+          .warn("IOException in BlockReceiver constructor :" + ioe.getMessage()
           + (cause == null ? "" : ". Cause is "), cause);
-      
-      if (cause != null) { // possible disk error
+      if (cause != null) {
         ioe = cause;
-        datanode.checkDiskErrorAsync();
+        // Volume error check moved to FileIoProvider
       }
       
       throw ioe;
@@ -363,9 +372,8 @@ class BlockReceiver implements Closeable {
     if (measuredFlushTime) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
     }
-    // disk check
     if(ioe != null) {
-      datanode.checkDiskErrorAsync();
+      // Volume error check moved to FileIoProvider
       throw ioe;
     }
   }
@@ -417,6 +425,10 @@ class BlockReceiver implements Closeable {
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
     }
+    if (isSync && !dirSyncOnHSyncDone && replicaInfo instanceof LocalReplica) {
+      ((LocalReplica) replicaInfo).fsyncDirectory();
+      dirSyncOnHSyncDone = true;
+    }
     if (checksumOut != null || streams.getDataOut() != null) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
       if (isSync) {
@@ -424,10 +436,11 @@ class BlockReceiver implements Closeable {
       }
     }
     long duration = Time.monotonicNow() - begin;
-    if (duration > datanodeSlowLogThresholdMs) {
+    if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
       LOG.warn("Slow flushOrSync took " + duration + "ms (threshold="
           + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync + ", flushTotalNanos="
-          + flushTotalNanos + "ns");
+          + flushTotalNanos + "ns, volume=" + getVolumeBaseUri()
+          + ", blockId=" + replicaInfo.getBlockId());
     }
   }
 
@@ -542,6 +555,9 @@ class BlockReceiver implements Closeable {
     // avoid double sync'ing on close
     if (syncBlock && lastPacketInBlock) {
       this.syncOnClose = false;
+      // sync directory for finalize irrespective of syncOnClose config since
+      // sync is requested.
+      this.dirSyncOnFinalize = true;
     }
 
     // update received bytes
@@ -578,9 +594,11 @@ class BlockReceiver implements Closeable {
             mirrorAddr,
             duration);
         trackSendPacketToLastNodeInPipeline(duration);
-        if (duration > datanodeSlowLogThresholdMs) {
+        if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
           LOG.warn("Slow BlockReceiver write packet to mirror took " + duration
-              + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");
+              + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
+              + "downstream DNs=" + Arrays.toString(downstreamDNs)
+              + ", blockId=" + replicaInfo.getBlockId());
         }
       } catch (IOException e) {
         handleMirrorOutError(e);
@@ -711,6 +729,12 @@ class BlockReceiver implements Closeable {
           streams.writeDataToDisk(dataBuf.array(),
               startByteToDisk, numBytesToDisk);
           long duration = Time.monotonicNow() - begin;
+          if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
+            LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
+                + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
+                + "volume=" + getVolumeBaseUri()
+                + ", blockId=" + replicaInfo.getBlockId());
+          }
 
           if (duration > maxWriteToDiskMs) {
             maxWriteToDiskMs = duration;
@@ -792,7 +816,7 @@ class BlockReceiver implements Closeable {
           manageWriterOsCache(offsetInBlock);
         }
       } catch (IOException iex) {
-        datanode.checkDiskErrorAsync();
+        // Volume error check moved to FileIoProvider
         throw iex;
       }
     }
@@ -845,10 +869,9 @@ class BlockReceiver implements Closeable {
    * </p>
    */
   private void trackSendPacketToLastNodeInPipeline(final long elapsedMs) {
-    if (isPenultimateNode && mirrorAddr != null) {
-      datanode.getPeerMetrics().addSendPacketDownstream(
-          bracketedMirrorAddr,
-          elapsedMs);
+    final DataNodePeerMetrics peerMetrics = datanode.getPeerMetrics();
+    if (peerMetrics != null && isPenultimateNode) {
+      peerMetrics.addSendPacketDownstream(mirrorNameForMetrics, elapsedMs);
     }
   }
 
@@ -899,9 +922,11 @@ class BlockReceiver implements Closeable {
         }
         lastCacheManagementOffset = offsetInBlock;
         long duration = Time.monotonicNow() - begin;
-        if (duration > datanodeSlowLogThresholdMs) {
+        if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
           LOG.warn("Slow manageWriterOsCache took " + duration
-              + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");
+              + "ms (threshold=" + datanodeSlowLogThresholdMs
+              + "ms), volume=" + getVolumeBaseUri()
+              + ", blockId=" + replicaInfo.getBlockId());
         }
       }
     } catch (Throwable t) {
@@ -926,11 +951,11 @@ class BlockReceiver implements Closeable {
       boolean isReplaceBlock) throws IOException {
 
     syncOnClose = datanode.getDnConf().syncOnClose;
+    dirSyncOnFinalize = syncOnClose;
     boolean responderClosed = false;
     mirrorOut = mirrOut;
     mirrorAddr = mirrAddr;
-    bracketedMirrorAddr = "[" + mirrAddr + "]";
-    isPenultimateNode = ((downstreams != null) && (downstreams.length == 1));
+    initPerfMonitoring(downstreams);
     throttler = throttlerArg;
 
     this.replyOut = replyOut;
@@ -969,7 +994,7 @@ class BlockReceiver implements Closeable {
           } else {
             // for isDatnode or TRANSFER_FINALIZED
             // Finalize the block.
-            datanode.data.finalizeBlock(block);
+            datanode.data.finalizeBlock(block, dirSyncOnFinalize);
           }
         }
         datanode.metrics.incrBlocksWritten();
@@ -1048,6 +1073,39 @@ class BlockReceiver implements Closeable {
         responder = null;
       }
     }
+  }
+
+  /**
+   * If we have downstream DNs and peerMetrics are enabled, then initialize
+   * some state for monitoring the performance of downstream DNs.
+   *
+   * @param downstreams downstream DNs, or null if there are none.
+   */
+  private void initPerfMonitoring(DatanodeInfo[] downstreams) {
+    if (downstreams != null && downstreams.length > 0) {
+      downstreamDNs = downstreams;
+      isPenultimateNode = (downstreams.length == 1);
+      if (isPenultimateNode && datanode.getPeerMetrics() != null) {
+        mirrorNameForMetrics = (downstreams[0].getInfoSecurePort() != 0 ?
+            downstreams[0].getInfoSecureAddr() : downstreams[0].getInfoAddr());
+        LOG.debug("Will collect peer metrics for downstream node {}",
+            mirrorNameForMetrics);
+      }
+    }
+  }
+
+  /**
+   * Fetch the base URI of the volume on which this replica resides.
+   *
+   * @returns Volume base URI as string if available. Else returns the
+   *          the string "unavailable".
+   */
+  private String getVolumeBaseUri() {
+    final ReplicaInfo ri = replicaInfo.getReplicaInfo();
+    if (ri != null && ri.getVolume() != null) {
+      return ri.getVolume().getBaseURI().toString();
+    }
+    return "unavailable";
   }
 
   /** Cleanup a partial block 
@@ -1142,7 +1200,7 @@ class BlockReceiver implements Closeable {
     return handler;
   }
 
-  private static enum PacketResponderType {
+  private enum PacketResponderType {
     NON_PIPELINE, LAST_IN_PIPELINE, HAS_DOWNSTREAM_IN_PIPELINE
   }
 
@@ -1430,7 +1488,7 @@ class BlockReceiver implements Closeable {
         } catch (IOException e) {
           LOG.warn("IOException in BlockReceiver.run(): ", e);
           if (running) {
-            datanode.checkDiskErrorAsync();
+            // Volume error check moved to FileIoProvider
             LOG.info(myString, e);
             running = false;
             if (!Thread.interrupted()) { // failure not caused by interruption
@@ -1459,7 +1517,7 @@ class BlockReceiver implements Closeable {
         BlockReceiver.this.close();
         endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
         block.setNumBytes(replicaInfo.getNumBytes());
-        datanode.data.finalizeBlock(block);
+        datanode.data.finalizeBlock(block, dirSyncOnFinalize);
       }
 
       if (pinning) {
@@ -1580,7 +1638,9 @@ class BlockReceiver implements Closeable {
       if (duration > datanodeSlowLogThresholdMs) {
         LOG.warn("Slow PacketResponder send ack to upstream took " + duration
             + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), " + myString
-            + ", replyAck=" + replyAck);
+            + ", replyAck=" + replyAck
+            + ", downstream DNs=" + Arrays.toString(downstreamDNs)
+            + ", blockId=" + replicaInfo.getBlockId());
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(myString + ", replyAck=" + replyAck);
       }

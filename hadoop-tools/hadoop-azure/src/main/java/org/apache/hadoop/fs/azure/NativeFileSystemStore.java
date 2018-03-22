@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Date;
 
@@ -46,12 +46,13 @@ interface NativeFileSystemStore {
 
   FileMetadata retrieveMetadata(String key) throws IOException;
 
-  DataInputStream retrieve(String key) throws IOException;
+  InputStream retrieve(String key) throws IOException;
 
-  DataInputStream retrieve(String key, long byteRangeStart) throws IOException;
+  InputStream retrieve(String key, long byteRangeStart) throws IOException;
 
-  DataOutputStream storefile(String key, PermissionStatus permissionStatus)
-      throws AzureException;
+  DataOutputStream storefile(String keyEncoded,
+      PermissionStatus permissionStatus,
+      String key) throws AzureException;
 
   boolean isPageBlobKey(String key);
 
@@ -90,10 +91,15 @@ interface NativeFileSystemStore {
   void rename(String srcKey, String dstKey, boolean acquireLease, SelfRenewingLease existingLease)
       throws IOException;
 
+  void rename(String srcKey, String dstKey, boolean acquireLease,
+              SelfRenewingLease existingLease, boolean overwriteDestination)
+      throws IOException;
+
   /**
    * Delete all keys with the given prefix. Used for testing.
    *
-   * @throws IOException
+   * @param prefix prefix of objects to be deleted.
+   * @throws IOException Exception encountered while deleting keys.
    */
   @VisibleForTesting
   void purge(String prefix) throws IOException;
@@ -101,7 +107,7 @@ interface NativeFileSystemStore {
   /**
    * Diagnostic method to dump state to the console.
    *
-   * @throws IOException
+   * @throws IOException Exception encountered while dumping to console.
    */
   void dump() throws IOException;
 

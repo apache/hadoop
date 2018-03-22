@@ -68,6 +68,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT;
@@ -593,11 +595,16 @@ public class DfsClientConf {
     private final long shortCircuitStreamsCacheExpiryMs;
     private final int shortCircuitSharedMemoryWatcherInterruptCheckMs;
 
+    // Short Circuit Read Metrics
+    private final boolean scrMetricsEnabled;
+    private final int scrMetricsSamplingPercentage;
+
     private final boolean shortCircuitMmapEnabled;
     private final int shortCircuitMmapCacheSize;
     private final long shortCircuitMmapCacheExpiryMs;
     private final long shortCircuitMmapCacheRetryTimeout;
     private final long shortCircuitCacheStaleThresholdMs;
+    private final long domainSocketDisableIntervalSeconds;
 
     private final long keyProviderCacheExpiryMs;
 
@@ -615,6 +622,20 @@ public class DfsClientConf {
       shortCircuitLocalReads = conf.getBoolean(
           Read.ShortCircuit.KEY,
           Read.ShortCircuit.DEFAULT);
+      int scrSamplingPercentage = conf.getInt(
+          Read.ShortCircuit.METRICS_SAMPLING_PERCENTAGE_KEY,
+          Read.ShortCircuit.METRICS_SAMPLING_PERCENTAGE_DEFAULT);
+      if (scrSamplingPercentage <= 0) {
+        scrMetricsSamplingPercentage = 0;
+        scrMetricsEnabled = false;
+      } else if (scrSamplingPercentage > 100) {
+        scrMetricsSamplingPercentage = 100;
+        scrMetricsEnabled = true;
+      } else {
+        scrMetricsSamplingPercentage = scrSamplingPercentage;
+        scrMetricsEnabled = true;
+      }
+
       domainSocketDataTraffic = conf.getBoolean(
           DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
           DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT);
@@ -661,6 +682,11 @@ public class DfsClientConf {
       shortCircuitSharedMemoryWatcherInterruptCheckMs = conf.getInt(
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
+      domainSocketDisableIntervalSeconds = conf.getLong(
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY,
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT);
+      Preconditions.checkArgument(domainSocketDisableIntervalSeconds >= 0,
+          DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY + "can't be negative.");
 
       keyProviderCacheExpiryMs = conf.getLong(
           DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS,
@@ -691,6 +717,14 @@ public class DfsClientConf {
 
     public boolean isShortCircuitLocalReads() {
       return shortCircuitLocalReads;
+    }
+
+    public boolean isScrMetricsEnabled() {
+      return scrMetricsEnabled;
+    }
+
+    public int getScrMetricsSamplingPercentage() {
+      return scrMetricsSamplingPercentage;
     }
 
     public boolean isDomainSocketDataTraffic() {
@@ -768,6 +802,13 @@ public class DfsClientConf {
     }
 
     /**
+     * @return the domainSocketDisableIntervalSeconds
+     */
+    public long getDomainSocketDisableIntervalSeconds() {
+      return domainSocketDisableIntervalSeconds;
+    }
+
+    /**
      * @return the keyProviderCacheExpiryMs
      */
     public long getKeyProviderCacheExpiryMs() {
@@ -801,7 +842,9 @@ public class DfsClientConf {
           + ", shortCircuitSharedMemoryWatcherInterruptCheckMs = "
           + shortCircuitSharedMemoryWatcherInterruptCheckMs
           + ", keyProviderCacheExpiryMs = "
-          + keyProviderCacheExpiryMs;
+          + keyProviderCacheExpiryMs
+          + ", domainSocketDisableIntervalSeconds = "
+          + domainSocketDisableIntervalSeconds;
     }
   }
 }

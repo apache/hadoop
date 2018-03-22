@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 
@@ -32,9 +34,23 @@ public interface RequestInterceptor extends DistributedSchedulingAMProtocol,
    * This method is called for initializing the intercepter. This is guaranteed
    * to be called only once in the lifetime of this instance.
    *
-   * @param ctx
+   * @param ctx AMRMProxy application context
    */
   void init(AMRMProxyApplicationContext ctx);
+
+  /**
+   * Recover intercepter state when NM recovery is enabled. AMRMProxy will
+   * recover the data map into
+   * AMRMProxyApplicationContext.getRecoveredDataMap(). All intercepters should
+   * recover state from it.
+   *
+   * For example, registerRequest has to be saved by the last intercepter (i.e.
+   * the one that actually connects to RM), in order to re-register when RM
+   * fails over.
+   *
+   * @param recoveredDataMap states for all intercepters recovered from NMSS
+   */
+  void recover(Map<String, byte[]> recoveredDataMap);
 
   /**
    * This method is called to release the resources held by the intercepter.
@@ -51,7 +67,7 @@ public interface RequestInterceptor extends DistributedSchedulingAMProtocol,
    * send the messages to the resource manager service and so the last
    * intercepter will not receive this method call.
    *
-   * @param nextInterceptor
+   * @param nextInterceptor the next intercepter to set
    */
   void setNextInterceptor(RequestInterceptor nextInterceptor);
 

@@ -18,8 +18,14 @@
 
 import Ember from 'ember';
 import Converter from 'yarn-ui/utils/converter';
+import ColumnDef from 'em-table/utils/column-definition';
+import TableDefinition from 'em-table/utils/table-definition';
 
 export default Ember.Component.extend({
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+  }),
+
   canvas: {
     svg: undefined,
     h: 0,
@@ -29,8 +35,12 @@ export default Ember.Component.extend({
 
   clusterMetrics: undefined,
   modelArr: [],
+  containerIdArr: [],
   colors: d3.scale.category10().range(),
   _selected: undefined,
+  gridColumns: [],
+  gridRows: [],
+  serviceName: undefined,
 
   selected: function() {
     return this._selected;
@@ -41,13 +51,15 @@ export default Ember.Component.extend({
   }.property(),
 
   setSelected: function(d) {
-    if (this._selected == d) {
+    var dom;
+
+    if (this._selected === d) {
       return;
     }
 
     // restore color
     if (this._selected) {
-      var dom = d3.select("#timeline-bar-" + this._selected.get("id"));
+      dom = d3.select("#timeline-bar-" + this._selected.get("id"));
       dom.attr("fill", this.colors[0]);
     }
 
@@ -164,19 +176,19 @@ export default Ember.Component.extend({
       .attr("y", function(d, i) {
         return border + (gap + singleBarHeight) * i;
       })
-      .attr("x", function(d, i) {
+      .attr("x", function(d) {
         return border + textWidth + xScaler(d.get("startTs"));
       })
       .attr("height", singleBarHeight)
-      .attr("fill", function(d, i) {
+      .attr("fill", function() {
         return this.colors[0];
       }.bind(this))
-      .attr("width", function(d, i) {
+      .attr("width", function(d) {
         var finishedTs = xScaler(d.get("finishedTs"));
         finishedTs = finishedTs > 0 ? finishedTs : xScaler(end);
         return finishedTs - xScaler(d.get("startTs"));
       })
-      .attr("id", function(d, i) {
+      .attr("id", function(d) {
         return "timeline-bar-" + d.get("id");
       });
     bar.on("click", function(d) {
@@ -198,18 +210,18 @@ export default Ember.Component.extend({
   },
 
   bindTooltip: function(d) {
-    d.on("mouseover", function(d) {
+    d.on("mouseover", function() {
         this.tooltip
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
       .on("mousemove", function(d) {
-        this.tooltip.style("opacity", .9);
+        this.tooltip.style("opacity", 0.9);
         this.tooltip.html(d.get("tooltipLabel"))
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
-      .on("mouseout", function(d) {
+      .on("mouseout", function() {
         this.tooltip.style("opacity", 0);
       }.bind(this));
   },
@@ -226,25 +238,27 @@ export default Ember.Component.extend({
     // init tooltip
     this.initTooltip();
     this.modelArr = [];
+    this.containerIdArr = [];
 
     // init model
     if (this.get("rmModel")) {
       this.get("rmModel").forEach(function(o) {
         if(!this.modelArr.contains(o)) {
           this.modelArr.push(o);
+          this.containerIdArr.push(o.id);
         }
       }.bind(this));
     }
 
     if (this.get("tsModel")) {
       this.get("tsModel").forEach(function(o) {
-        if(!this.modelArr.contains(o)) {
+        if(!this.containerIdArr.contains(o.id)) {
           this.modelArr.push(o);
         }
       }.bind(this));
     }
 
-    if(this.modelArr.length == 0) {
+    if(this.modelArr.length === 0) {
       return;
     }
 
@@ -254,8 +268,9 @@ export default Ember.Component.extend({
 
       return tsA - tsB;
     });
+    var begin = 0;
     if (this.modelArr.length > 0) {
-      var begin = this.modelArr[0].get("startTs");
+      begin = this.modelArr[0].get("startTs");
     }
     var end = 0;
     for (var i = 0; i < this.modelArr.length; i++) {
@@ -273,5 +288,197 @@ export default Ember.Component.extend({
     if (this.modelArr.length > 0) {
       this.setSelected(this.modelArr[0]);
     }
+
+    if (this.get('attemptModel')) {
+      this.setAttemptsGridColumnsAndRows();
+    } else {
+      this.setContainersGridColumnsAndRows();
+    }
   },
+
+  setAttemptsGridColumnsAndRows: function() {
+    var self = this;
+    var columns = [];
+    var serviceName = this.get('serviceName');
+
+    columns.push({
+      id: 'id',
+      headerTitle: 'Attempt ID',
+      contentPath: 'id',
+      cellComponentName: 'em-table-linked-cell',
+      minWidth: '300px',
+      getCellContent: function(row) {
+        var attemptId = row.get('id');
+        var query = serviceName? '?service='+serviceName : '';
+        return {
+          displayText: attemptId,
+          href: `#/yarn-app-attempt/${attemptId}${query}`
+        };
+      }
+    }, {
+      id: 'attemptStartedTime',
+      headerTitle: 'Started Time',
+      contentPath: 'attemptStartedTime'
+    }, {
+      id: 'finishedTime',
+      headerTitle: 'Finished Time',
+      contentPath: 'finishedTime',
+      getCellContent: function(row) {
+        if (row.get('finishedTs')) {
+          return row.get('finishedTime');
+        }
+        return 'N/A';
+      }
+    }, {
+      id: 'elapsedTime',
+      headerTitle: 'Elapsed Time',
+      contentPath: 'elapsedTime'
+    }, {
+      id: 'appMasterContainerId',
+      headerTitle: 'AM Container ID',
+      contentPath: 'appMasterContainerId',
+      minWidth: '350px'
+    }, {
+      id: 'amNodeId',
+      headerTitle: 'AM Node ID',
+      contentPath: 'amNodeId'
+    }, {
+      id: 'attemptState',
+      headerTitle: 'State',
+      contentPath: 'attemptState',
+      getCellContent: function(row) {
+        var state = row.get('attemptState');
+        if (state) {
+          return state;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'nodeHttpAddress',
+      headerTitle: 'NodeManager Web UI',
+      contentPath: 'nodeHttpAddress',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        if (address) {
+          return `<a href="${address}" target="_blank">${address}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'logsLink',
+      headerTitle: 'Logs',
+      contentPath: 'logsLink',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var logUrl = self.checkHttpProtocol(row.get('logsLink'));
+        if (logUrl) {
+          return `<a href="${logUrl}" target="_blank">Link</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    });
+
+    var gridCols = ColumnDef.make(columns);
+    this.set('gridColumns', gridCols);
+    this.set('gridRows', this.modelArr);
+  },
+
+  setContainersGridColumnsAndRows: function() {
+    var self = this;
+    var columns = [];
+
+    columns.push({
+      id: 'id',
+      headerTitle: 'Container ID',
+      contentPath: 'id',
+      minWidth: '350px'
+    }, {
+      id: 'startedTime',
+      headerTitle: 'Started Time',
+      contentPath: 'startedTime'
+    }, {
+      id: 'finishedTime',
+      headerTitle: 'Finished Time',
+      contentPath: 'finishedTime',
+      getCellContent: function(row) {
+        if (row.get('finishedTs')) {
+          return row.get('finishedTime');
+        }
+        return 'N/A';
+      }
+    }, {
+      id: 'elapsedTime',
+      headerTitle: 'Elapsed Time',
+      contentPath: 'elapsedTime'
+    }, {
+      id: 'priority',
+      headerTitle: 'Priority',
+      contentPath: 'priority'
+    }, {
+      id: 'containerExitStatus',
+      headerTitle: 'Exit Status',
+      contentPath: 'containerExitStatus',
+      getCellContent: function(row) {
+        var status = row.get('containerExitStatus');
+        if (status) {
+          return status;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'containerState',
+      headerTitle: 'State',
+      contentPath: 'containerState',
+      getCellContent: function(row) {
+        var state = row.get('containerState');
+        if (state) {
+          return state;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'logUrl',
+      headerTitle: 'Logs',
+      contentPath: 'logUrl',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var url = self.checkHttpProtocol(row.get('logUrl'));
+        if (url) {
+          return `<a href="${url}" target="_blank">${url}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'nodeHttpAddress',
+      headerTitle: 'Node Manager UI',
+      contentPath: 'nodeHttpAddress',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        if (address) {
+          return `<a href="${address}" target="_blank">${address}</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    });
+
+    var gridCols = ColumnDef.make(columns);
+    this.set('gridColumns', gridCols);
+    this.set('gridRows', this.modelArr);
+  },
+
+  checkHttpProtocol: function(prop) {
+    if (prop && prop.indexOf('://') < 0) {
+      prop = 'http://' + prop;
+    }
+    return prop;
+  }
 });

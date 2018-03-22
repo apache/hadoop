@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
  */
 class PathFinder {
 
-  private static enum Type {
+  private enum Type {
     FILE, DIRECTORY
   }
 

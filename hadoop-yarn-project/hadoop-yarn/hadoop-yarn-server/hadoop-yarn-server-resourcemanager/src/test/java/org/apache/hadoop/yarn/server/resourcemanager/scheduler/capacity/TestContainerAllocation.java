@@ -20,14 +20,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -56,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -292,11 +296,13 @@ public class TestContainerAllocation {
             int containerVersion, NodeId nodeId, String appSubmitter,
             Resource capability, Priority priority, long createTime,
             LogAggregationContext logAggregationContext, String nodeLabelExp,
-            ContainerType containerType) {
+            ContainerType containerType, ExecutionType executionType,
+            long allocationRequestId, Set<String> allocationTags) {
           numRetries++;
           return super.createContainerToken(containerId, containerVersion,
               nodeId, appSubmitter, capability, priority, createTime,
-              logAggregationContext, nodeLabelExp, containerType);
+              logAggregationContext, nodeLabelExp, containerType,
+              executionType, allocationRequestId, allocationTags);
         }
       };
     }
@@ -638,6 +644,300 @@ public class TestContainerAllocation {
     // App1 will get 3 new container allocated (plus 2 previously allocated
     // container)
     Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
+
+    rm1.close();
+  }
+
+  @Test(timeout = 60000)
+  public void testContinuousReservationLookingWhenUsedEqualsMax() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    // Set maximum capacity of A to 10
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 10);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 90 * GB);
+
+    // launch an app to queue A, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch 2nd app to queue B, AM container should be launched in nm1
+    // Now usage of nm1 is 3G (2G + 1G)
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 4 * GB, 2, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    // Do node heartbeats twice, we expect one container allocated on nm1 and
+    // one container reserved on nm1.
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // App1 will get 2 container allocated (plus AM container)
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    // Do node heartbeats on nm2, we expect one container allocated on nm2 and
+    // one unreserved on nm1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
+    rm1.close();
+  }
+
+  @Test
+  public void testPendingResourcesConsideringUserLimit() throws Exception {
+    // Set maximum capacity of A to 10
+    CapacitySchedulerConfiguration newConf = new CapacitySchedulerConfiguration(
+        conf);
+    newConf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".default",
+        0.5f);
+    newConf.setMaximumAMResourcePercentPerPartition(
+        CapacitySchedulerConfiguration.ROOT + ".default", "", 1.0f);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
+
+    // launch an app to queue default, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "u1", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch 2nd app to queue default, AM container should be launched in nm1
+    RMApp app2 = rm1.submitApp(4 * GB, "app", "u2", null, "default");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // am1 asks 1 * 3G container
+    am1.allocate("*", 3 * GB, 1, null);
+
+    // am2 asks 4 * 5G container
+    am2.allocate("*", 5 * GB, 4, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    // Do node heartbeats one, we expect one container allocated reserved on nm1
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    // App1 will get 1 container reserved
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+
+    /*
+     * Note that the behavior of appAttemptResourceUsage is different from queue's
+     * For queue, used = actual-used + reserved
+     * For app, used = actual-used.
+     *
+     * TODO (wangda): Need to make behaviors of queue/app's resource usage
+     * consistent
+     */
+    Assert.assertEquals(2 * GB,
+        schedulerApp1.getAppAttemptResourceUsage().getUsed().getMemorySize());
+    Assert.assertEquals(3 * GB,
+        schedulerApp1.getAppAttemptResourceUsage().getReserved()
+            .getMemorySize());
+    Assert.assertEquals(3 * GB,
+        schedulerApp1.getAppAttemptResourceUsage().getPending()
+            .getMemorySize());
+
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+    Assert.assertEquals(4 * GB,
+        schedulerApp2.getAppAttemptResourceUsage().getUsed().getMemorySize());
+    Assert.assertEquals(0 * GB,
+        schedulerApp2.getAppAttemptResourceUsage().getReserved()
+            .getMemorySize());
+    Assert.assertEquals(5 * 4 * GB,
+        schedulerApp2.getAppAttemptResourceUsage().getPending()
+            .getMemorySize());
+
+    LeafQueue lq = (LeafQueue) cs.getQueue("default");
+
+    // UL = 8GB, so head room of u1 = 8GB - 2GB (AM) - 3GB (Reserved) = 3GB
+    //                           u2 = 8GB - 4GB = 4GB
+    // When not deduct reserved, total-pending = 3G (u1) + 4G (u2) = 7G
+    //          deduct reserved, total-pending = 0G (u1) + 4G = 4G
+    Assert.assertEquals(7 * GB, lq.getTotalPendingResourcesConsideringUserLimit(
+        Resources.createResource(20 * GB), "", false).getMemorySize());
+    Assert.assertEquals(4 * GB, lq.getTotalPendingResourcesConsideringUserLimit(
+        Resources.createResource(20 * GB), "", true).getMemorySize());
+    rm1.close();
+  }
+
+
+  @Test(timeout = 60000)
+  public void testQueuePriorityOrdering() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+
+    // Set ordering policy
+    newConf.setQueueOrderingPolicy(CapacitySchedulerConfiguration.ROOT,
+        CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY);
+
+    // Set maximum capacity of A to 20
+    newConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 20);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".b", 2);
+    newConf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".a", 3);
+
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 100 * GB);
+
+    // launch an app to queue A, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch an app to queue B, AM container should be launched in nm1
+    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "b");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // launch an app to queue C, AM container should be launched in nm1
+    RMApp app3 = rm1.submitApp(2 * GB, "app", "user", null, "c");
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
+
+    // Each application asks 10 * 5GB containers
+    am1.allocate("*", 5 * GB, 10, null);
+    am2.allocate("*", 5 * GB, 10, null);
+    am3.allocate("*", 5 * GB, 10, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp3 =
+        cs.getApplicationAttempt(am3.getApplicationAttemptId());
+
+    // container will be allocated to am1
+    // App1 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // container will be allocated to am1 again,
+    // App1 will get 3 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=2G, c=2G)
+
+    // container will be allocated to am2 (since app1 reaches its guaranteed
+    // capacity)
+    // App2 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // Do this 3 times
+    // container will be allocated to am2 (since app1 reaches its guaranteed
+    // capacity)
+    // App2 will get 2 container allocated (plus AM container)
+    for (int i = 0; i < 3; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(5, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=22G (satisfied), c=2G))
+
+    // Do this 10 times
+    for (int i = 0; i < 10; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(3, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(5, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(11, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=12G (satisfied), b=22G (satisfied),
+    // c=52G (satisfied and no pending))
+
+    // Do this 20 times, we can only allocate 3 containers, 1 to A and 3 to B
+    for (int i = 0; i < 20; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    Assert.assertEquals(4, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(6, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(11, schedulerApp3.getLiveContainers().size());
+
+    // (Now usages of queues: a=17G (satisfied), b=27G (satisfied), c=52G))
+
+    rm1.close();
+  }
+
+
+
+  @Test(timeout = 60000)
+  public void testUserLimitAllocationMultipleContainers() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setUserLimit("root.c", 50);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 1000 * GB);
+
+    // launch app from 1st user to queue C, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user1", null, "c");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch app from 2nd user to queue C, AM container should be launched in nm1
+    RMApp app2 = rm1.submitApp(2 * GB, "app", "user2", null, "c");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // Each application asks 1000 * 5GB containers
+    am1.allocate("*", 5 * GB, 1000, null);
+    am1.allocate("h1", 5 * GB, 1000, null);
+    am1.allocate(NetworkTopology.DEFAULT_RACK, 5 * GB, 1000, null);
+
+    // Each application asks 1000 * 5GB containers
+    am2.allocate("*", 5 * GB, 1000, null);
+    am2.allocate("h1", 5 * GB, 1000, null);
+    am2.allocate(NetworkTopology.DEFAULT_RACK, 5 * GB, 1000, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+
+    // container will be allocated to am1
+    // App1 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(101, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(100, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }

@@ -66,7 +66,7 @@ final class BlockChecksumHelper {
   }
 
   /**
-   * The abstract base block checksum computer.
+   * The abstract block checksum computer.
    */
   static abstract class AbstractBlockChecksumComputer {
     private final DataNode datanode;
@@ -139,7 +139,7 @@ final class BlockChecksumHelper {
   }
 
   /**
-   * The abstract base block checksum computer.
+   * The abstract base block checksum computer, mainly for replicated blocks.
    */
   static abstract class BlockChecksumComputer
       extends AbstractBlockChecksumComputer {

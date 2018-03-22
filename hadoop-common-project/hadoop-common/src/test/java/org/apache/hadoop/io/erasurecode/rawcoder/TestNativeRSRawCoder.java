@@ -30,8 +30,8 @@ public class TestNativeRSRawCoder extends TestRSRawCoderBase {
   @Before
   public void setup() {
     Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
-    this.encoderClass = NativeRSRawEncoder.class;
-    this.decoderClass = NativeRSRawDecoder.class;
+    this.encoderFactoryClass = NativeRSRawErasureCoderFactory.class;
+    this.decoderFactoryClass = NativeRSRawErasureCoderFactory.class;
     setAllowDump(true);
   }
 
@@ -117,5 +117,11 @@ public class TestNativeRSRawCoder extends TestRSRawCoderBase {
   public void testCoding_10x4_erasing_d0_p0() {
     prepare(null, 10, 4, new int[] {0}, new int[] {0});
     testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testAfterRelease63() throws Exception {
+    prepare(6, 3, null, null);
+    testAfterRelease();
   }
 }

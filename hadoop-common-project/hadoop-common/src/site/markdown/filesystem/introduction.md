@@ -29,11 +29,10 @@ return codes of Unix filesystem actions as a reference. Even so, there
 are places where HDFS diverges from the expected behaviour of a POSIX
 filesystem.
 
-The behaviour of other Hadoop filesystems are not as rigorously tested.
-The bundled S3N and S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
+The bundled S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
 accessible through the FileSystem API. The Swift FileSystem driver provides similar
-functionality for the OpenStack Swift blobstore. The Azure object storage
-FileSystem talks to Microsoft's Azure equivalent. All of these
+functionality for the OpenStack Swift blobstore. The Azure WASB and ADL object
+storage FileSystems talks to Microsoft's Azure storage. All of these
 bind to object stores, which do have different behaviors, especially regarding
 consistency guarantees, and atomicity of operations.
 
@@ -392,3 +391,88 @@ Object stores with these characteristics, can not be used as a direct replacemen
 for HDFS. In terms of this specification, their implementations of the
 specified operations do not match those required. They are considered supported
 by the Hadoop development community, but not to the same extent as HDFS.
+
+#### Timestamps
+
+
+`FileStatus` entries have a modification time and an access time.
+
+1. The exact behavior as to when these timestamps are set and whether or not they are valid
+varies between filesystems, and potentially between individual installations of a filesystem.
+1. The granularity of the timestamps is again, specific to both a filesystem
+and potentially individual installations.
+
+The HDFS filesystem does not update the modification time while it is being written to.
+
+Specifically
+
+* `FileSystem.create()` creation: a zero-byte file is listed; the modification time is
+  set to the current time as seen on the NameNode.
+* Writes to a file via the output stream returned in the `create()` call: the modification
+  time *does not change*.
+* When `OutputStream.close()` is called, all remaining data is written, the file closed and
+  the NameNode updated with the final size of the file. The modification time is set to
+  the time the file was closed.
+* Opening a file for appends via an `append()` operation does not change the modification
+  time of the file until the `close()` call is made on the output stream.
+* `FileSystem.setTimes()` can be used to explicitly set the time on a file.
+* When a file is renamed, its modification time is not changed, but the source
+  and destination directories have their modification times updated.
+* The rarely used operations:  `FileSystem.concat()`, `createSnapshot()`,
+ `createSymlink()` and `truncate()` all update the modification time.
+* The access time granularity is set in milliseconds `dfs.namenode.access.time.precision`;
+  the default granularity is 1 hour. If the precision is set to zero, access times
+  are not recorded.
+* If a modification or access time is not set, the value of that `FileStatus`
+field is 0.
+
+Other filesystems may have different behaviors. In particular,
+
+* Access times may or may not be supported; even if the underlying FS may support access times,
+  the option it is often disabled for performance reasons.
+* The granularity of the timestamps is an implementation-specific detail.
+
+
+Object stores have an even vaguer view of time, which can be summarized as
+"it varies".
+
+ * The timestamp granularity is likely to be 1 second, that being the granularity
+   of timestamps returned in HTTP HEAD and GET requests.
+ * Access times are likely to be unset. That is, `FileStatus.getAccessTime() == 0`.
+ * The modification timestamp for a newly created file MAY be that of the
+  `create()` call, or the actual time which the PUT request was initiated.
+   This may be in the  `FileSystem.create()` call, the final
+   `OutputStream.close()` operation, some period in between.
+ * The modification time may not be updated in the `close()` call.
+ * The timestamp is likely to be in UTC or the TZ of the object store. If the
+   client is in a different timezone, the timestamp of objects may be ahead or
+   behind that of the client.
+ * Object stores with cached metadata databases (for example: AWS S3 with
+   an in-memory or a DynamoDB metadata store) may have timestamps generated
+   from the local system clock, rather than that of the service.
+   This is an optimization to avoid round-trip calls to the object stores.
+ + A file's modification time is often the same as its creation time.
+ + The `FileSystem.setTimes()` operation to set file timestamps *may* be ignored.
+ * `FileSystem.chmod()` may update modification times (example: Azure `wasb://`).
+ * If `FileSystem.append()` is supported, the changes and modification time
+   are likely to only become visible after the output stream is closed.
+ * Out-of-band operations to data in object stores (that is: direct requests
+   to object stores which bypass the Hadoop FileSystem APIs), may result
+   in different timestamps being stored and/or returned.
+ * As the notion of a directory structure is often simulated, the timestamps
+   of directories *may* be artificially generated &mdash;perhaps using the current
+   system time.
+ * As `rename()` operations are often implemented as a COPY + DELETE, the
+   timestamps of renamed objects may become that of the time the rename of an
+   object was started, rather than the timestamp of the source object.
+ * The exact timestamp behavior may vary between different object store installations,
+   even with the same timestore client.
+
+Finally, note that the Apache Hadoop project cannot make any guarantees about
+whether the timestamp behavior of a remote object store will remain consistent
+over time: they are third-party services, usually accessed via third-party libraries.
+
+The best strategy here is "experiment with the exact endpoint you intend to work with".
+Furthermore, if you intend to use any caching/consistency layer, test with that
+feature enabled. Retest after updates to Hadoop releases, and endpoint object
+store updates.

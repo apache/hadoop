@@ -25,8 +25,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,7 +41,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 @InterfaceStability.Evolving
 public class TextSplitter extends BigDecimalSplitter {
 
-  private static final Log LOG = LogFactory.getLog(TextSplitter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TextSplitter.class);
 
   /**
    * This method needs to determine the splits between two user-provided strings.

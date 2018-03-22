@@ -50,11 +50,11 @@ public class TestGlobPattern {
   }
 
   @Test public void testValidPatterns() {
-    assertMatch(true, "*", "^$", "foo", "bar");
+    assertMatch(true, "*", "^$", "foo", "bar", "\n");
     assertMatch(true, "?", "?", "^", "[", "]", "$");
-    assertMatch(true, "foo*", "foo", "food", "fool");
-    assertMatch(true, "f*d", "fud", "food");
-    assertMatch(true, "*d", "good", "bad");
+    assertMatch(true, "foo*", "foo", "food", "fool", "foo\n", "foo\nbar");
+    assertMatch(true, "f*d", "fud", "food", "foo\nd");
+    assertMatch(true, "*d", "good", "bad", "\nd");
     assertMatch(true, "\\*\\?\\[\\{\\\\", "*?[{\\");
     assertMatch(true, "[]^-]", "]", "-", "^");
     assertMatch(true, "]", "]");
@@ -72,7 +72,7 @@ public class TestGlobPattern {
     shouldThrow("[", "[[]]", "{", "\\");
   }
 
-  @Test(timeout=1000) public void testPathologicalPatterns() {
+  @Test(timeout=10000) public void testPathologicalPatterns() {
     String badFilename = "job_1429571161900_4222-1430338332599-tda%2D%2D+******************************+++...%270%27%28Stage-1430338580443-39-2000-SUCCEEDED-production%2Dhigh-1430338340360.jhist";
     assertMatch(true, badFilename, badFilename);
   }

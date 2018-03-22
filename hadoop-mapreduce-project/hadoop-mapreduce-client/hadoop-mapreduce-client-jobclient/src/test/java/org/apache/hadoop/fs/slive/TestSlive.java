@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,13 +41,15 @@ import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Junit 4 test for slive
  */
 public class TestSlive {
 
-  private static final Log LOG = LogFactory.getLog(TestSlive.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSlive.class);
 
   private static final Random rnd = new Random(1L);
 
@@ -258,13 +258,13 @@ public class TestSlive {
     DataWriter writer = new DataWriter(rnd);
     FileOutputStream fs = new FileOutputStream(fn);
     GenerateOutput ostat = writer.writeSegment(byteAm, fs);
-    LOG.info(ostat);
+    LOG.info(ostat.toString());
     fs.close();
     assertTrue(ostat.getBytesWritten() == byteAm);
     DataVerifier vf = new DataVerifier();
     FileInputStream fin = new FileInputStream(fn);
     VerifyOutput vfout = vf.verifyFile(byteAm, new DataInputStream(fin));
-    LOG.info(vfout);
+    LOG.info(vfout.toString());
     fin.close();
     assertEquals(vfout.getBytesRead(), byteAm);
     assertTrue(vfout.getChunksDifferent() == 0);

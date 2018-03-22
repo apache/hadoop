@@ -68,6 +68,7 @@ enum CreateFlagProto {
   APPEND = 0x04;    // Append to a file
   LAZY_PERSIST = 0x10; // File with reduced durability guarantees.
   NEW_BLOCK = 0x20; // Write data to a new block when appending
+  SHOULD_REPLICATE = 0x80; // Enforce to create a replicate file
 }
 
 message CreateRequestProto {
@@ -80,6 +81,7 @@ message CreateRequestProto {
   required uint64 blockSize = 7;
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
   optional FsPermissionProto unmasked = 9;
+  optional string ecPolicyName = 10;
 }
 
 message CreateResponseProto {
@@ -295,6 +297,16 @@ message GetSnapshotDiffReportResponseProto {
   required SnapshotDiffReportProto diffReport = 1;
 }
 
+message GetSnapshotDiffReportListingRequestProto {
+  required string snapshotRoot = 1;
+  required string fromSnapshot = 2;
+  required string toSnapshot = 3;
+  optional SnapshotDiffReportCursorProto cursor = 4;
+}
+
+message GetSnapshotDiffReportListingResponseProto {
+  required SnapshotDiffReportListingProto diffReport = 1;
+}
 message RenewLeaseRequestProto {
   required string clientName = 1;
 }
@@ -325,11 +337,36 @@ message GetFsStatsResponseProto {
   optional uint64 pending_deletion_blocks = 9;
 }
 
+message GetFsReplicatedBlockStatsRequestProto { // no input paramters
+}
+
+message GetFsReplicatedBlockStatsResponseProto {
+  required uint64 low_redundancy = 1;
+  required uint64 corrupt_blocks = 2;
+  required uint64 missing_blocks = 3;
+  required uint64 missing_repl_one_blocks = 4;
+  required uint64 blocks_in_future = 5;
+  required uint64 pending_deletion_blocks = 6;
+}
+
+message GetFsECBlockGroupStatsRequestProto { // no input paramters
+}
+
+message GetFsECBlockGroupStatsResponseProto {
+  required uint64 low_redundancy = 1;
+  required uint64 corrupt_blocks = 2;
+  required uint64 missing_blocks = 3;
+  required uint64 blocks_in_future = 4;
+  required uint64 pending_deletion_blocks = 5;
+}
+
 enum DatanodeReportTypeProto {  // type of the datanode report
   ALL = 1;
   LIVE = 2;
   DEAD = 3;
   DECOMMISSIONING = 4;
+  ENTERING_MAINTENANCE = 5;
+  IN_MAINTENANCE = 6;
 }
 
 message GetDatanodeReportRequestProto {
@@ -455,6 +492,15 @@ message GetFileInfoRequestProto {
 }
 
 message GetFileInfoResponseProto {
+  optional HdfsFileStatusProto fs = 1;
+}
+
+message GetLocatedFileInfoRequestProto {
+  optional string src = 1;
+  optional bool needBlockToken = 2 [default = false];
+}
+
+message GetLocatedFileInfoResponseProto {
   optional HdfsFileStatusProto fs = 1;
 }
 
@@ -750,6 +796,30 @@ message GetEditsFromTxidResponseProto {
   required EventsListProto eventsList = 1;
 }
 
+enum OpenFilesTypeProto {
+  ALL_OPEN_FILES = 1;
+  BLOCKING_DECOMMISSION = 2;
+}
+
+message ListOpenFilesRequestProto {
+  required int64 id = 1;
+  repeated OpenFilesTypeProto types = 2;
+  optional string path = 3;
+}
+
+message OpenFilesBatchResponseProto {
+  required int64 id = 1;
+  required string path = 2;
+  required string clientName = 3;
+  required string clientMachine = 4;
+}
+
+message ListOpenFilesResponseProto {
+  repeated OpenFilesBatchResponseProto entries = 1;
+  required bool hasMore = 2;
+  repeated OpenFilesTypeProto types = 3;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -788,6 +858,10 @@ service ClientNamenodeProtocol {
   rpc recoverLease(RecoverLeaseRequestProto)
       returns(RecoverLeaseResponseProto);
   rpc getFsStats(GetFsStatusRequestProto) returns(GetFsStatsResponseProto);
+  rpc getFsReplicatedBlockStats(GetFsReplicatedBlockStatsRequestProto)
+      returns (GetFsReplicatedBlockStatsResponseProto);
+  rpc getFsECBlockGroupStats(GetFsECBlockGroupStatsRequestProto)
+      returns (GetFsECBlockGroupStatsResponseProto);
   rpc getDatanodeReport(GetDatanodeReportRequestProto)
       returns(GetDatanodeReportResponseProto);
   rpc getDatanodeStorageReport(GetDatanodeStorageReportRequestProto)
@@ -811,6 +885,8 @@ service ClientNamenodeProtocol {
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
+  rpc getLocatedFileInfo(GetLocatedFileInfoRequestProto)
+      returns(GetLocatedFileInfoResponseProto);
   rpc addCacheDirective(AddCacheDirectiveRequestProto)
       returns (AddCacheDirectiveResponseProto);
   rpc modifyCacheDirective(ModifyCacheDirectiveRequestProto)
@@ -866,6 +942,8 @@ service ClientNamenodeProtocol {
       returns(DeleteSnapshotResponseProto);
   rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)
       returns(GetSnapshotDiffReportResponseProto);
+  rpc getSnapshotDiffReportListing(GetSnapshotDiffReportListingRequestProto)
+      returns(GetSnapshotDiffReportListingResponseProto);
   rpc isFileClosed(IsFileClosedRequestProto)
       returns(IsFileClosedResponseProto);
   rpc modifyAclEntries(ModifyAclEntriesRequestProto)
@@ -894,18 +972,36 @@ service ClientNamenodeProtocol {
       returns(CreateEncryptionZoneResponseProto);
   rpc listEncryptionZones(ListEncryptionZonesRequestProto)
       returns(ListEncryptionZonesResponseProto);
+  rpc reencryptEncryptionZone(ReencryptEncryptionZoneRequestProto)
+      returns(ReencryptEncryptionZoneResponseProto);
+  rpc listReencryptionStatus(ListReencryptionStatusRequestProto)
+      returns(ListReencryptionStatusResponseProto);
   rpc getEZForPath(GetEZForPathRequestProto)
       returns(GetEZForPathResponseProto);
   rpc setErasureCodingPolicy(SetErasureCodingPolicyRequestProto)
       returns(SetErasureCodingPolicyResponseProto);
+  rpc unsetErasureCodingPolicy(UnsetErasureCodingPolicyRequestProto)
+      returns(UnsetErasureCodingPolicyResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
       returns(GetEditsFromTxidResponseProto);
   rpc getErasureCodingPolicies(GetErasureCodingPoliciesRequestProto)
       returns(GetErasureCodingPoliciesResponseProto);
+  rpc addErasureCodingPolicies(AddErasureCodingPoliciesRequestProto)
+      returns(AddErasureCodingPoliciesResponseProto);
+  rpc removeErasureCodingPolicy(RemoveErasureCodingPolicyRequestProto)
+      returns(RemoveErasureCodingPolicyResponseProto);
+  rpc enableErasureCodingPolicy(EnableErasureCodingPolicyRequestProto)
+      returns(EnableErasureCodingPolicyResponseProto);
+  rpc disableErasureCodingPolicy(DisableErasureCodingPolicyRequestProto)
+      returns(DisableErasureCodingPolicyResponseProto);
   rpc getErasureCodingPolicy(GetErasureCodingPolicyRequestProto)
       returns(GetErasureCodingPolicyResponseProto);
+  rpc getErasureCodingCodecs(GetErasureCodingCodecsRequestProto)
+      returns(GetErasureCodingCodecsResponseProto);
   rpc getQuotaUsage(GetQuotaUsageRequestProto)
       returns(GetQuotaUsageResponseProto);
+  rpc listOpenFiles(ListOpenFilesRequestProto)
+      returns(ListOpenFilesResponseProto);
 }

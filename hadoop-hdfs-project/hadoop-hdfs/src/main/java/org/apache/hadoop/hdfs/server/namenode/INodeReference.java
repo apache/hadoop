@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * An anonymous reference to an inode.
@@ -125,10 +126,6 @@ public abstract class INodeReference extends INode {
     return referred;
   }
 
-  public final void setReferredINode(INode referred) {
-    this.referred = referred;
-  }
-  
   @Override
   public final boolean isReference() {
     return true;
@@ -314,8 +311,7 @@ public abstract class INodeReference extends INode {
 
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
-      ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
+      ContentSummaryComputationContext summary) throws AccessControlException {
     return referred.computeContentSummary(snapshotId, summary);
   }
 
@@ -505,7 +501,6 @@ public abstract class INodeReference extends INode {
     @Override
     public final ContentSummaryComputationContext computeContentSummary(
         int snapshotId, ContentSummaryComputationContext summary) {
-      summary.nodeIncluded(this);
       final int s = snapshotId < lastSnapshotId ? snapshotId : lastSnapshotId;
       // only count storagespace for WithName
       final QuotaCounts q = computeQuotaUsage(

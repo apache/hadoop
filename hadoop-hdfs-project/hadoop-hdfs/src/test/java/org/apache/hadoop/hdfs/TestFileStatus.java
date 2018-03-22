@@ -33,22 +33,23 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the FileStatus API.
  */
 public class TestFileStatus {
   {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.TRACE);
   }
 
   static final long seed = 0xDEADBEEFL;
@@ -97,7 +98,8 @@ public class TestFileStatus {
     Path path = new Path("/");
     assertTrue("/ should be a directory", 
                fs.getFileStatus(path).isDirectory());
-    
+    ContractTestUtils.assertNotErasureCoded(fs, path);
+
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
     assertEquals("Non-existant file should result in null", null, fileInfo);
@@ -133,9 +135,13 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    assertEquals(file1.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
+    assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
+    assertTrue(file1 + " should have erasure coding unset in " +
+            "FileStatus#toString(): " + status,
+        status.toString().contains("isErasureCoded=false"));
   }
 
   /** Test the FileStatus obtained calling listStatus on a file */
@@ -148,10 +154,11 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    assertEquals(file1.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
+    assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
-    
+
     RemoteIterator<FileStatus> itor = fc.listStatus(file1);
     status = itor.next();
     assertEquals(stats[0], status);
@@ -196,7 +203,8 @@ public class TestFileStatus {
     FileStatus status = fs.getFileStatus(dir);
     assertTrue(dir + " should be a directory", status.isDirectory());
     assertTrue(dir + " should be zero size ", status.getLen() == 0);
-    assertEquals(dir.makeQualified(fs.getUri(), 
+    ContractTestUtils.assertNotErasureCoded(fs, dir);
+    assertEquals(dir.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
     
@@ -309,8 +317,31 @@ public class TestFileStatus {
     assertEquals(file3.toString(), itor.next().getPath().toString());
 
     assertFalse(itor.hasNext());
-      
 
-    fs.delete(dir, true);
+    itor = fs.listStatusIterator(dir);
+    assertEquals(dir3.toString(), itor.next().getPath().toString());
+    assertEquals(dir4.toString(), itor.next().getPath().toString());
+    fs.delete(dir.getParent(), true);
+    try {
+      itor.hasNext();
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+
+    fs.mkdirs(file2);
+    fs.mkdirs(dir3);
+    fs.mkdirs(dir4);
+    fs.mkdirs(dir5);
+    itor = fs.listStatusIterator(dir);
+    int count = 0;
+    try {
+      fs.delete(dir.getParent(), true);
+      while (itor.next() != null) {
+        count++;
+      }
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+    assertEquals(2, count);
   }
 }

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -64,6 +66,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.TraceScope;
 import org.slf4j.Logger;
@@ -89,7 +92,7 @@ import com.google.common.base.Preconditions;
  ****************************************************************/
 @InterfaceAudience.Private
 public class DFSOutputStream extends FSOutputSummer
-    implements Syncable, CanSetDropBehind {
+    implements Syncable, CanSetDropBehind, StreamCapabilities {
   static final Logger LOG = LoggerFactory.getLogger(DFSOutputStream.class);
   /**
    * Number of times to retry creating a file when there are transient
@@ -122,6 +125,7 @@ public class DFSOutputStream extends FSOutputSummer
   private final EnumSet<AddBlockFlag> addBlockFlags;
   protected final AtomicReference<CachingStrategy> cachingStrategy;
   private FileEncryptionInfo fileEncryptionInfo;
+  private int writePacketSize;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
@@ -202,6 +206,8 @@ public class DFSOutputStream extends FSOutputSummer
           +"{}", src);
     }
 
+    initWritePacketSize();
+
     this.bytesPerChecksum = checksum.getBytesPerChecksum();
     if (bytesPerChecksum <= 0) {
       throw new HadoopIllegalArgumentException(
@@ -214,6 +220,21 @@ public class DFSOutputStream extends FSOutputSummer
           blockSize + ").");
     }
     this.byteArrayManager = dfsClient.getClientContext().getByteArrayManager();
+  }
+
+  /**
+   * Ensures the configured writePacketSize never exceeds
+   * PacketReceiver.MAX_PACKET_SIZE.
+   */
+  private void initWritePacketSize() {
+    writePacketSize = dfsClient.getConf().getWritePacketSize();
+    if (writePacketSize > PacketReceiver.MAX_PACKET_SIZE) {
+      LOG.warn(
+          "Configured write packet exceeds {} bytes as max,"
+              + " using {} bytes.",
+          PacketReceiver.MAX_PACKET_SIZE, PacketReceiver.MAX_PACKET_SIZE);
+      writePacketSize = PacketReceiver.MAX_PACKET_SIZE;
+    }
   }
 
   /** Construct a new output stream for creating a file. */
@@ -236,7 +257,8 @@ public class DFSOutputStream extends FSOutputSummer
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress,
-      DataChecksum checksum, String[] favoredNodes) throws IOException {
+      DataChecksum checksum, String[] favoredNodes, String ecPolicyName)
+      throws IOException {
     try (TraceScope ignored =
              dfsClient.newPathTraceScope("newStreamForCreate", src)) {
       HdfsFileStatus stat = null;
@@ -250,7 +272,7 @@ public class DFSOutputStream extends FSOutputSummer
         try {
           stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
               new EnumSetWritable<>(flag), createParent, replication,
-              blockSize, SUPPORTED_CRYPTO_VERSIONS);
+              blockSize, SUPPORTED_CRYPTO_VERSIONS, ecPolicyName);
           break;
         } catch (RemoteException re) {
           IOException e = re.unwrapRemoteException(
@@ -489,10 +511,26 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     if (!getStreamer().getAppendChunk()) {
-      int psize = Math.min((int)(blockSize- getStreamer().getBytesCurBlock()),
-          dfsClient.getConf().getWritePacketSize());
+      final int psize = (int) Math
+          .min(blockSize - getStreamer().getBytesCurBlock(), writePacketSize);
       computePacketChunkSize(psize, bytesPerChecksum);
     }
+  }
+
+  /**
+   * Used in test only.
+   */
+  @VisibleForTesting
+  void setAppendChunk(final boolean appendChunk) {
+    getStreamer().setAppendChunk(appendChunk);
+  }
+
+  /**
+   * Used in test only.
+   */
+  @VisibleForTesting
+  void setBytesCurBlock(final long bytesCurBlock) {
+    getStreamer().setBytesCurBlock(bytesCurBlock);
   }
 
   /**
@@ -507,6 +545,17 @@ public class DFSOutputStream extends FSOutputSummer
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
       lastFlushOffset = 0;
+    }
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    switch (StringUtils.toLowerCase(capability)) {
+    case StreamCapabilities.HSYNC:
+    case StreamCapabilities.HFLUSH:
+      return true;
+    default:
+      return false;
     }
   }
 
@@ -803,7 +852,19 @@ public class DFSOutputStream extends FSOutputSummer
 
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      getStreamer().getLastException().check(true);
+      LOG.debug("Closing an already closed stream. [Stream:{}, streamer:{}]",
+          closed, getStreamer().streamerClosed());
+      try {
+        getStreamer().getLastException().check(true);
+      } catch (IOException ioe) {
+        cleanupAndRethrowIOException(ioe);
+      } finally {
+        if (!closed) {
+          // If stream is not closed but streamer closed, clean up the stream.
+          // Most importantly, end the file lease.
+          closeThreads(true);
+        }
+      }
       return;
     }
 
@@ -818,14 +879,12 @@ public class DFSOutputStream extends FSOutputSummer
         setCurrentPacketToEmpty();
       }
 
-      flushInternal();             // flush all data to Datanodes
-      // get last block before destroying the streamer
-      ExtendedBlock lastBlock = getStreamer().getBlock();
-
-      try (TraceScope ignored =
-               dfsClient.getTracer().newScope("completeFile")) {
-        completeFile(lastBlock);
+      try {
+        flushInternal();             // flush all data to Datanodes
+      } catch (IOException ioe) {
+        cleanupAndRethrowIOException(ioe);
       }
+      completeFile();
     } catch (ClosedChannelException ignored) {
     } finally {
       // Failures may happen when flushing data.
@@ -835,6 +894,43 @@ public class DFSOutputStream extends FSOutputSummer
       // calls setClosed() in the finally block.
       closeThreads(true);
     }
+  }
+
+  private void completeFile() throws IOException {
+    // get last block before destroying the streamer
+    ExtendedBlock lastBlock = getStreamer().getBlock();
+    try (TraceScope ignored =
+        dfsClient.getTracer().newScope("completeFile")) {
+      completeFile(lastBlock);
+    }
+  }
+
+  /**
+   * Determines whether an IOException thrown needs extra cleanup on the stream.
+   * Space quota exceptions will be thrown when getting new blocks, so the
+   * open HDFS file need to be closed.
+   *
+   * @param ioe the IOException
+   * @return whether the stream needs cleanup for the given IOException
+   */
+  private boolean exceptionNeedsCleanup(IOException ioe) {
+    return ioe instanceof DSQuotaExceededException
+        || ioe instanceof QuotaByStorageTypeExceededException;
+  }
+
+  private void cleanupAndRethrowIOException(IOException ioe)
+      throws IOException {
+    if (exceptionNeedsCleanup(ioe)) {
+      final MultipleIOException.Builder b = new MultipleIOException.Builder();
+      b.add(ioe);
+      try {
+        completeFile();
+      } catch (IOException e) {
+        b.add(e);
+        throw b.build();
+      }
+    }
+    throw ioe;
   }
 
   // should be called holding (this) lock since setTestFilename() may

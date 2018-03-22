@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -110,5 +111,7 @@ public class TryManyReservationAgents implements ReservationAgent {
     return plan.deleteReservation(reservationId);
 
   }
-
+  @Override
+  public void init(Configuration conf) {
+  }
 }

@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.oncrpc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple TCP based RPC client handler used by {@link SimpleTcpServer}.
  */
 public class SimpleTcpClientHandler extends SimpleChannelHandler {
-  public static final Log LOG = LogFactory.getLog(SimpleTcpClient.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleTcpClient.class);
   protected final XDR request;
 
   public SimpleTcpClientHandler(XDR request) {

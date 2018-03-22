@@ -26,8 +26,8 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
 
   @Before
   public void setup() {
-    this.encoderClass = RSRawEncoder.class;
-    this.decoderClass = RSRawDecoder.class;
+    this.encoderFactoryClass = RSRawErasureCoderFactory.class;
+    this.decoderFactoryClass = RSRawErasureCoderFactory.class;
     setAllowDump(false);
   }
 }

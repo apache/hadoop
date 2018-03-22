@@ -20,13 +20,12 @@ import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
-    internalNormalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
-      
+    internalNormalizeSingleResponse(store, primaryModelClass, payload) {
+
       if (payload.appAttempt) {
-        payload = payload.appAttempt;  
+        payload = payload.appAttempt;
       }
-      
+
       var fixedPayload = {
         id: payload.appAttemptId,
         type: primaryModelClass.modelName, // yarn-app
@@ -48,15 +47,13 @@ export default DS.JSONAPISerializer.extend({
       return fixedPayload;
     },
 
-    normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
-      var p = this.internalNormalizeSingleResponse(store, 
-        primaryModelClass, payload, id, requestType);
+    normalizeSingleResponse(store, primaryModelClass, payload/*, id, requestType*/) {
+      var p = this.internalNormalizeSingleResponse(store,
+        primaryModelClass, payload);
       return { data: p };
     },
 
-    normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
       // return expected is { data: [ {}, {} ] }
       var normalizedArrayResponse = {};
 
@@ -65,7 +62,7 @@ export default DS.JSONAPISerializer.extend({
         // need some error handling for ex apps or app may not be defined.
         normalizedArrayResponse.data = payload.appAttempts.appAttempt.map(singleApp => {
           return this.internalNormalizeSingleResponse(store, primaryModelClass,
-            singleApp, singleApp.id, requestType);
+            singleApp);
         }, this);
       } else {
         normalizedArrayResponse.data = [];

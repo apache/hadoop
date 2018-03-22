@@ -17,36 +17,34 @@
  */
 
 import Ember from 'ember';
-
 import AbstractRoute from './abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend({
-  model(param) {
+export default AbstractRoute.extend(AppAttemptMixin, {
+  model(param, transition) {
+    const {service} = transition.queryParams;
+    transition.send('updateBreadcrumbs', param.app_id, service);
+
     return Ember.RSVP.hash({
-      app: this.store.find('yarn-app', param.app_id),
+      appId: param.app_id,
+      serviceName: service,
+      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
 
-      rmContainers: this.store.find('yarn-app', param.app_id).then(function(app) {
-        return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
-          if (attempts && attempts.get('firstObject')) {
-            var appAttemptId = attempts.get('firstObject').get('appAttemptId');
-            var rmContainers = this.store.query('yarn-container',
-              {
-                app_attempt_id: appAttemptId,
-                is_rm: true
-              });
-            return rmContainers;
-          }
-        }.bind(this));
-      }.bind(this)),
-
-      nodes: this.store.findAll('yarn-rm-node'),
+      quicklinks: this.store.queryRecord('yarn-service-info', { appId: param.app_id }).then(function (info) {
+        if (info && info.get('quicklinks')) {
+          return info.get('quicklinks');
+        }
+        return [];
+      }, function () {
+        return [];
+      })
     });
   },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-container');
-    this.store.unloadAll('yarn-rm-node');
+  actions: {
+    updateBreadcrumbs(appId, serviceName, tailCrumbs) {
+      var controller = this.controllerFor('yarn-app');
+      controller.setProperties({appId: appId, serviceName: serviceName});
+      controller.updateBreadcrumbs(appId, serviceName, tailCrumbs);
+    }
   }
 });

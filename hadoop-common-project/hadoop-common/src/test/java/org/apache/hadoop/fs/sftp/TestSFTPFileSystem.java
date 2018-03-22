@@ -19,6 +19,8 @@ package org.apache.hadoop.fs.sftp;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,19 +30,20 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.apache.sshd.SshServer;
+import org.apache.sshd.server.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
-import org.apache.sshd.server.PasswordAuthenticator;
-import org.apache.sshd.server.UserAuth;
-import org.apache.sshd.server.auth.UserAuthPassword;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.sftp.SftpSubsystem;
 
+import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -73,7 +76,7 @@ public class TestSFTPFileSystem {
 
     List<NamedFactory<UserAuth>> userAuthFactories =
         new ArrayList<NamedFactory<UserAuth>>();
-    userAuthFactories.add(new UserAuthPassword.Factory());
+    userAuthFactories.add(new UserAuthPasswordFactory());
 
     sshd.setUserAuthFactories(userAuthFactories);
 
@@ -89,7 +92,7 @@ public class TestSFTPFileSystem {
     });
 
     sshd.setSubsystemFactories(
-        Arrays.<NamedFactory<Command>>asList(new SftpSubsystem.Factory()));
+        Arrays.<NamedFactory<Command>>asList(new SftpSubsystemFactory()));
 
     sshd.start();
     port = sshd.getPort();
@@ -137,7 +140,7 @@ public class TestSFTPFileSystem {
     if (sshd != null) {
       try {
         sshd.stop(true);
-      } catch (InterruptedException e) {
+      } catch (IOException e) {
         // ignore
       }
     }
@@ -303,6 +306,27 @@ public class TestSFTPFileSystem {
     Path file1 = touch(localFs, name.getMethodName().toLowerCase() + "1");
     Path file2 = touch(localFs, name.getMethodName().toLowerCase() + "2");
     sftpFs.rename(file1, file2);
+  }
+
+  @Test
+  public void testGetAccessTime() throws IOException {
+    Path file = touch(localFs, name.getMethodName().toLowerCase());
+    LocalFileSystem local = (LocalFileSystem)localFs;
+    java.nio.file.Path path = (local).pathToFile(file).toPath();
+    long accessTime1 = Files.readAttributes(path, BasicFileAttributes.class)
+        .lastAccessTime().toMillis();
+    accessTime1 = (accessTime1 / 1000) * 1000;
+    long accessTime2 = sftpFs.getFileStatus(file).getAccessTime();
+    assertEquals(accessTime1, accessTime2);
+  }
+
+  @Test
+  public void testGetModifyTime() throws IOException {
+    Path file = touch(localFs, name.getMethodName().toLowerCase() + "1");
+    java.io.File localFile = ((LocalFileSystem) localFs).pathToFile(file);
+    long modifyTime1 = localFile.lastModified();
+    long modifyTime2 = sftpFs.getFileStatus(file).getModificationTime();
+    assertEquals(modifyTime1, modifyTime2);
   }
 
 }

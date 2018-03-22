@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTypeProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -77,7 +78,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import com.google.common.base.Preconditions;
@@ -120,7 +120,7 @@ public class FSImageFormatPBSnapshot {
     }
 
     private INodeReference loadINodeReference(
-        INodeReferenceSection.INodeReference r) throws IOException {
+        INodeReferenceSection.INodeReference r) {
       long referredId = r.getReferredId();
       INode referred = fsDir.getInode(referredId);
       WithCount withCount = (WithCount) referred.getParentReference();
@@ -154,7 +154,8 @@ public class FSImageFormatPBSnapshot {
           dir.addSnapshottableFeature();
         } else {
           // dir is root, and admin set root to snapshottable before
-          dir.setSnapshotQuota(DirectorySnapshottableFeature.SNAPSHOT_LIMIT);
+          dir.setSnapshotQuota(
+              DirectorySnapshottableFeature.SNAPSHOT_QUOTA_DEFAULT);
         }
         sm.addSnapshottable(dir);
       }
@@ -232,12 +233,18 @@ public class FSImageFormatPBSnapshot {
                 fileInPb.getXAttrs(), state.getStringTable()));
           }
 
+          boolean isStriped =
+              (fileInPb.getBlockType() == BlockTypeProto .STRIPED);
+          Short replication =
+              (!isStriped ? (short)fileInPb.getReplication() : null);
+          Byte ecPolicyID =
+              (isStriped ? (byte)fileInPb.getErasureCodingPolicyID() : null);
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
-              fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
+              fileInPb.getAccessTime(), replication, ecPolicyID,
               fileInPb.getPreferredBlockSize(),
               (byte)fileInPb.getStoragePolicyID(), xAttrs,
-              fileInPb.getIsStriped());
+              PBHelperClient.convert(fileInPb.getBlockType()));
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,
@@ -515,7 +522,7 @@ public class FSImageFormatPBSnapshot {
         throws IOException {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       if (sf != null) {
-        List<FileDiff> diffList = sf.getDiffs().asList();
+        DiffList<FileDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
             .newBuilder().setInodeId(file.getId()).setType(Type.FILEDIFF)
             .setNumOfDiff(diffList.size()).build();
@@ -555,7 +562,7 @@ public class FSImageFormatPBSnapshot {
         throws IOException {
       DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
       if (sf != null) {
-        List<DirectoryDiff> diffList = sf.getDiffs().asList();
+        DiffList<DirectoryDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
             .newBuilder().setInodeId(dir.getId()).setType(Type.DIRECTORYDIFF)
             .setNumOfDiff(diffList.size()).build();
@@ -573,10 +580,9 @@ public class FSImageFormatPBSnapshot {
                     buildINodeDirectory(copy, parent.getSaverContext()));
           }
           // process created list and deleted list
-          List<INode> created = diff.getChildrenDiff()
-              .getList(ListType.CREATED);
+          List<INode> created = diff.getChildrenDiff().getCreatedUnmodifiable();
           db.setCreatedListSize(created.size());
-          List<INode> deleted = diff.getChildrenDiff().getList(ListType.DELETED);
+          List<INode> deleted = diff.getChildrenDiff().getDeletedUnmodifiable();
           for (INode d : deleted) {
             if (d.isReference()) {
               refList.add(d.asReference());

@@ -55,6 +55,8 @@ import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo.Capability;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -70,6 +72,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
+import javax.annotation.Nonnull;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -132,7 +136,9 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xmitsInProgress, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
-      boolean requestFullBlockReportLease) throws IOException {
+      boolean requestFullBlockReportLease,
+      @Nonnull SlowPeerReports slowPeers,
+      @Nonnull SlowDiskReports slowDisks) throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
@@ -148,6 +154,12 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     if (volumeFailureSummary != null) {
       builder.setVolumeFailureSummary(PBHelper.convertVolumeFailureSummary(
           volumeFailureSummary));
+    }
+    if (slowPeers.haveSlowPeers()) {
+      builder.addAllSlowPeers(PBHelper.convertSlowPeerInfo(slowPeers));
+    }
+    if (slowDisks.haveSlowDisks()) {
+      builder.addAllSlowDisks(PBHelper.convertSlowDiskInfo(slowDisks));
     }
     HeartbeatResponseProto resp;
     try {

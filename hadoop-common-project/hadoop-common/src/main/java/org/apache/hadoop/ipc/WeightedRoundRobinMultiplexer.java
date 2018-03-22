@@ -20,9 +20,9 @@ package org.apache.hadoop.ipc;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Determines which queue to start reading from, occasionally drawing from
@@ -43,8 +43,8 @@ public class WeightedRoundRobinMultiplexer implements RpcMultiplexer {
   public static final String IPC_CALLQUEUE_WRRMUX_WEIGHTS_KEY =
     "faircallqueue.multiplexer.weights";
 
-  public static final Log LOG =
-    LogFactory.getLog(WeightedRoundRobinMultiplexer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(WeightedRoundRobinMultiplexer.class);
 
   private final int numQueues; // The number of queues under our provisioning
 

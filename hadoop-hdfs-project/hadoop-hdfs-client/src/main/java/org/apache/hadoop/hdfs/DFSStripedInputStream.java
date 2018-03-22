@@ -68,7 +68,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   private ByteBuffer curStripeBuf;
   private ByteBuffer parityBuf;
   private final ErasureCodingPolicy ecPolicy;
-  private final RawErasureDecoder decoder;
+  private RawErasureDecoder decoder;
 
   /**
    * Indicate the start/end offset of the current buffered stripe in the
@@ -177,14 +177,21 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   @Override
   public synchronized void close() throws IOException {
-    super.close();
-    if (curStripeBuf != null) {
-      BUFFER_POOL.putBuffer(curStripeBuf);
-      curStripeBuf = null;
-    }
-    if (parityBuf != null) {
-      BUFFER_POOL.putBuffer(parityBuf);
-      parityBuf = null;
+    try {
+      super.close();
+    } finally {
+      if (curStripeBuf != null) {
+        BUFFER_POOL.putBuffer(curStripeBuf);
+        curStripeBuf = null;
+      }
+      if (parityBuf != null) {
+        BUFFER_POOL.putBuffer(parityBuf);
+        parityBuf = null;
+      }
+      if (decoder != null) {
+        decoder.release();
+        decoder = null;
+      }
     }
   }
 
@@ -232,7 +239,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     BlockReader reader = null;
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
     DFSInputStream.DNAddrPair dnInfo =
-        new DFSInputStream.DNAddrPair(null, null, null);
+        new DFSInputStream.DNAddrPair(null, null, null, null);
 
     while (true) {
       try {
@@ -390,7 +397,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         return result;
       } finally {
         // Check if need to report block replicas corruption either read
-        // was successful or ChecksumException occured.
+        // was successful or ChecksumException occurred.
         reportCheckSumFailure(corruptedBlocks,
             currentLocatedBlock.getLocations().length, true);
       }

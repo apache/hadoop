@@ -60,8 +60,13 @@ import org.apache.hadoop.io.Text;
 public class FieldSelectionHelper {
 
   public static Text emptyText = new Text("");
-  public static final String DATA_FIELD_SEPERATOR = 
+  public static final String DATA_FIELD_SEPARATOR =
     "mapreduce.fieldsel.data.field.separator";
+  /**
+   * @deprecated Use {@link #DATA_FIELD_SEPARATOR}
+   */
+  @Deprecated
+  public static final String DATA_FIELD_SEPERATOR = DATA_FIELD_SEPARATOR;
   public static final String MAP_OUTPUT_KEY_VALUE_SPEC = 
     "mapreduce.fieldsel.map.output.key.value.fields.spec";
   public static final String REDUCE_OUTPUT_KEY_VALUE_SPEC = 

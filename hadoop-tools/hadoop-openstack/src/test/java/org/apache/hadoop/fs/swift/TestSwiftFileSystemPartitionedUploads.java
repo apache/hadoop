@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -28,6 +27,7 @@ import org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
 import org.apache.hadoop.fs.swift.util.SwiftUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.http.Header;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
 
@@ -126,7 +126,7 @@ public class TestSwiftFileSystemPartitionedUploads extends
       SwiftTestUtils.compareByteArrays(src, dest, len);
       FileStatus status;
 
-      final Path qualifiedPath = path.makeQualified(fs);
+      final Path qualifiedPath = fs.makeQualified(path);
       status = fs.getFileStatus(qualifiedPath);
       //now see what block location info comes back.
       //This will vary depending on the Swift version, so the results
@@ -216,7 +216,7 @@ public class TestSwiftFileSystemPartitionedUploads extends
 
   private FileStatus validatePathLen(Path path, int len) throws IOException {
     //verify that the length is what was written in a direct status check
-    final Path qualifiedPath = path.makeQualified(fs);
+    final Path qualifiedPath = fs.makeQualified(path);
     FileStatus[] parentDirListing = fs.listStatus(qualifiedPath.getParent());
     StringBuilder listing = lsToString(parentDirListing);
     String parentDirLS = listing.toString();
@@ -228,7 +228,7 @@ public class TestSwiftFileSystemPartitionedUploads extends
                  status.getLen());
     String fileInfo = qualifiedPath + "  " + status;
     assertFalse("File claims to be a directory " + fileInfo,
-                status.isDir());
+                status.isDirectory());
 
     FileStatus listedFileStat = resolveChild(parentDirListing, qualifiedPath);
     assertNotNull("Did not find " + path + " in " + parentDirLS,

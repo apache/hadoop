@@ -27,7 +27,7 @@ import org.apache.hadoop.oncrpc.XDR;
  */
 public interface MountInterface {
   /** Mount procedures */
-  public static enum MNTPROC {
+  public enum MNTPROC {
     // the order of the values below are significant.
     NULL,
     MNT,

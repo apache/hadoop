@@ -74,7 +74,7 @@ public class LayoutVersion {
    * </li>
    * </ul>
    */
-  public static enum Feature implements LayoutFeature {
+  public enum Feature implements LayoutFeature {
     NAMESPACE_QUOTA(-16, "Support for namespace quotas"),
     FILE_ACCESS_TIME(-17, "Support for access time on files"),
     DISKSPACE_QUOTA(-18, "Support for disk space quotas"),

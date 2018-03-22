@@ -413,11 +413,13 @@ public class TestDistCpViewFs {
 
   private void runTest(Path listFile, Path target, boolean targetExists, 
       boolean sync) throws IOException {
-    DistCpOptions options = new DistCpOptions(listFile, target);
-    options.setSyncFolder(sync);
-    options.setTargetPathExists(targetExists);
+    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+        .withSyncFolder(sync)
+        .build();
     try {
-      new DistCp(getConf(), options).execute();
+      final DistCp distcp = new DistCp(getConf(), options);
+      distcp.context.setTargetPathExists(targetExists);
+      distcp.execute();
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       throw new IOException(e);

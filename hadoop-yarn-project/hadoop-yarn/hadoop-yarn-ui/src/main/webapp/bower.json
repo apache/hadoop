@@ -12,6 +12,8 @@
     "loader.js": "3.3.0",
     "qunit": "1.19.0",
     "jquery-ui": "1.11.4",
+    "moment": "2.12.0",
+    "moment-timezone": "0.5.0",
     "more-js": "0.8.2",
     "bootstrap": "3.3.6",
     "d3": "~3.5.6",
@@ -19,6 +21,8 @@
     "spin.js": "~2.3.2",
     "momentjs": "~2.10.6",
     "select2": "4.0.0",
-    "snippet-ss": "~1.11.0"
+    "snippet-ss": "~1.11.0",
+    "alasql": "^0.4.3",
+    "abdmob/x2js": "1.2.0"
   }
 }

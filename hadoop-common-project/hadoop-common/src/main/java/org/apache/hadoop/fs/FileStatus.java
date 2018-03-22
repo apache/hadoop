@@ -20,22 +20,32 @@ package org.apache.hadoop.fs;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputValidation;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 
+import org.apache.hadoop.fs.FSProtos.FileStatusProto;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.fs.protocolPB.PBHelper;
 import org.apache.hadoop.io.Writable;
 
 /** Interface that represents the client side information for a file.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileStatus implements Writable, Comparable<FileStatus> {
+public class FileStatus implements Writable, Comparable<Object>,
+    Serializable, ObjectInputValidation {
+
+  private static final long serialVersionUID = 0x13caeae8;
 
   private Path path;
   private long length;
-  private boolean isdir;
+  private Boolean isdir;
   private short block_replication;
   private long blocksize;
   private long modification_time;
@@ -44,7 +54,56 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
   private String owner;
   private String group;
   private Path symlink;
-  
+  private Set<AttrFlags> attr;
+
+  /**
+   * Flags for entity attributes.
+   */
+  public enum AttrFlags {
+    /** ACL information available for this entity. */
+    HAS_ACL,
+    /** Entity is encrypted. */
+    HAS_CRYPT,
+    /** Entity is stored erasure-coded. */
+    HAS_EC,
+    /** Snapshot capability enabled. */
+    SNAPSHOT_ENABLED,
+  }
+
+  /**
+   * Shared, empty set of attributes (a common case for FileStatus).
+   */
+  public static final Set<AttrFlags> NONE = Collections.<AttrFlags>emptySet();
+
+  /**
+   * Convert boolean attributes to a set of flags.
+   * @param acl   See {@link AttrFlags#HAS_ACL}.
+   * @param crypt See {@link AttrFlags#HAS_CRYPT}.
+   * @param ec    See {@link AttrFlags#HAS_EC}.
+   * @param sn    See {@link AttrFlags#SNAPSHOT_ENABLED}.
+   * @return converted set of flags.
+   */
+  public static Set<AttrFlags> attributes(boolean acl, boolean crypt,
+                                          boolean ec, boolean sn) {
+    if (!(acl || crypt || ec || sn)) {
+      return NONE;
+    }
+    EnumSet<AttrFlags> ret = EnumSet.noneOf(AttrFlags.class);
+    if (acl) {
+      ret.add(AttrFlags.HAS_ACL);
+    }
+    if (crypt) {
+      ret.add(AttrFlags.HAS_CRYPT);
+    }
+    if (ec) {
+      ret.add(AttrFlags.HAS_EC);
+    }
+    if (sn) {
+      ret.add(AttrFlags.SNAPSHOT_ENABLED);
+    }
+    return ret;
+  }
+
   public FileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
   
   //We should deprecate this soon?
@@ -73,6 +132,24 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
                     FsPermission permission, String owner, String group, 
                     Path symlink,
                     Path path) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+        access_time, permission, owner, group, symlink, path,
+        false, false, false);
+  }
+
+  public FileStatus(long length, boolean isdir, int block_replication,
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, Path symlink,
+      Path path, boolean hasAcl, boolean isEncrypted, boolean isErasureCoded) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+        access_time, permission, owner, group, symlink, path,
+        attributes(hasAcl, isEncrypted, isErasureCoded, false));
+  }
+
+  public FileStatus(long length, boolean isdir, int block_replication,
+      long blocksize, long modification_time, long access_time,
+      FsPermission permission, String owner, String group, Path symlink,
+      Path path, Set<AttrFlags> attr) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -83,7 +160,7 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
       this.permission = permission;
     } else if (isdir) {
       this.permission = FsPermission.getDirDefault();
-    } else if (symlink!=null) {
+    } else if (symlink != null) {
       this.permission = FsPermission.getDefault();
     } else {
       this.permission = FsPermission.getFileDefault();
@@ -92,6 +169,8 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
     this.path = path;
+    this.attr = attr;
+
     // The variables isdir and symlink indicate the type:
     // 1. isdir implies directory, in which case symlink must be null.
     // 2. !isdir implies a file or symlink, symlink != null implies a
@@ -127,7 +206,7 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
    * @return true if this is a file
    */
   public boolean isFile() {
-    return !isdir && !isSymlink();
+    return !isDirectory() && !isSymlink();
   }
 
   /**
@@ -137,20 +216,20 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
   public boolean isDirectory() {
     return isdir;
   }
-  
+
   /**
-   * Old interface, instead use the explicit {@link FileStatus#isFile()}, 
-   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * Old interface, instead use the explicit {@link FileStatus#isFile()},
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()}
    * @return true if this is a directory.
-   * @deprecated Use {@link FileStatus#isFile()},  
-   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * @deprecated Use {@link FileStatus#isFile()},
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()}
    * instead.
    */
   @Deprecated
-  public boolean isDir() {
-    return isdir;
+  public final boolean isDir() {
+    return isDirectory();
   }
-  
+
   /**
    * Is this a symbolic link?
    * @return true if this is a symbolic link
@@ -202,14 +281,41 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
   }
 
   /**
+   * Tell whether the underlying file or directory has ACLs set.
+   *
+   * @return true if the underlying file or directory has ACLs set.
+   */
+  public boolean hasAcl() {
+    return attr.contains(AttrFlags.HAS_ACL);
+  }
+
+  /**
    * Tell whether the underlying file or directory is encrypted or not.
    *
    * @return true if the underlying file is encrypted.
    */
   public boolean isEncrypted() {
-    return permission.getEncryptedBit();
+    return attr.contains(AttrFlags.HAS_CRYPT);
   }
-  
+
+  /**
+   * Tell whether the underlying file or directory is erasure coded or not.
+   *
+   * @return true if the underlying file or directory is erasure coded.
+   */
+  public boolean isErasureCoded() {
+    return attr.contains(AttrFlags.HAS_EC);
+  }
+
+  /**
+   * Check if directory is Snapshot enabled or not.
+   *
+   * @return true if directory is snapshot enabled
+   */
+  public boolean isSnapshotEnabled() {
+    return attr.contains(AttrFlags.SNAPSHOT_ENABLED);
+  }
+
   /**
    * Get the owner of the file.
    * @return owner of the file. The string could be empty if there is no
@@ -280,47 +386,6 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
   public void setSymlink(final Path p) {
     symlink = p;
   }
-  
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, getPath().toString(), Text.DEFAULT_MAX_LEN);
-    out.writeLong(getLen());
-    out.writeBoolean(isDirectory());
-    out.writeShort(getReplication());
-    out.writeLong(getBlockSize());
-    out.writeLong(getModificationTime());
-    out.writeLong(getAccessTime());
-    getPermission().write(out);
-    Text.writeString(out, getOwner(), Text.DEFAULT_MAX_LEN);
-    Text.writeString(out, getGroup(), Text.DEFAULT_MAX_LEN);
-    out.writeBoolean(isSymlink());
-    if (isSymlink()) {
-      Text.writeString(out, getSymlink().toString(), Text.DEFAULT_MAX_LEN);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    String strPath = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    this.path = new Path(strPath);
-    this.length = in.readLong();
-    this.isdir = in.readBoolean();
-    this.block_replication = in.readShort();
-    blocksize = in.readLong();
-    modification_time = in.readLong();
-    access_time = in.readLong();
-    permission.readFields(in);
-    owner = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    group = Text.readString(in, Text.DEFAULT_MAX_LEN);
-    if (in.readBoolean()) {
-      this.symlink = new Path(Text.readString(in, Text.DEFAULT_MAX_LEN));
-    } else {
-      this.symlink = null;
-    }
-  }
 
   /**
    * Compare this FileStatus to another FileStatus
@@ -328,25 +393,36 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
    * @return  a negative integer, zero, or a positive integer as this object
    *   is less than, equal to, or greater than the specified object.
    */
-  @Override
   public int compareTo(FileStatus o) {
     return this.getPath().compareTo(o.getPath());
   }
-  
+
+  /**
+   * Compare this FileStatus to another FileStatus.
+   * This method was added back by HADOOP-14683 to keep binary compatibility.
+   *
+   * @param   o the FileStatus to be compared.
+   * @return  a negative integer, zero, or a positive integer as this object
+   *   is less than, equal to, or greater than the specified object.
+   * @throws ClassCastException if the specified object is not FileStatus
+   */
+  @Override
+  public int compareTo(Object o) {
+    FileStatus other = (FileStatus) o;
+    return compareTo(other);
+  }
+
   /** Compare if this object is equal to another object
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
    */
   @Override
   public boolean equals(Object o) {
-    if (o == null) {
+    if (!(o instanceof FileStatus)) {
       return false;
     }
     if (this == o) {
       return true;
-    }
-    if (!(o instanceof FileStatus)) {
-      return false;
     }
     FileStatus other = (FileStatus)o;
     return this.getPath().equals(other.getPath());
@@ -382,9 +458,78 @@ public class FileStatus implements Writable, Comparable<FileStatus> {
     sb.append("; permission=" + permission);
     sb.append("; isSymlink=" + isSymlink());
     if(isSymlink()) {
-      sb.append("; symlink=" + symlink);
+      try {
+        sb.append("; symlink=" + getSymlink());
+      } catch (IOException e) {
+        throw new RuntimeException("Unexpected exception", e);
+      }
     }
+    sb.append("; hasAcl=" + hasAcl());
+    sb.append("; isEncrypted=" + isEncrypted());
+    sb.append("; isErasureCoded=" + isErasureCoded());
     sb.append("}");
     return sb.toString();
   }
+
+  /**
+   * Read instance encoded as protobuf from stream.
+   * @param in Input stream
+   * @see PBHelper#convert(FileStatus)
+   * @deprecated Use the {@link PBHelper} and protobuf serialization directly.
+   */
+  @Override
+  @Deprecated
+  public void readFields(DataInput in) throws IOException {
+    int size = in.readInt();
+    if (size < 0) {
+      throw new IOException("Can't read FileStatusProto with negative " +
+          "size of " + size);
+    }
+    byte[] buf = new byte[size];
+    in.readFully(buf);
+    FileStatusProto proto = FileStatusProto.parseFrom(buf);
+    FileStatus other = PBHelper.convert(proto);
+    isdir = other.isDirectory();
+    length = other.getLen();
+    block_replication = other.getReplication();
+    blocksize = other.getBlockSize();
+    modification_time = other.getModificationTime();
+    access_time = other.getAccessTime();
+    setPermission(other.getPermission());
+    setOwner(other.getOwner());
+    setGroup(other.getGroup());
+    setSymlink((other.isSymlink() ? other.getSymlink() : null));
+    setPath(other.getPath());
+    attr = attributes(other.hasAcl(), other.isEncrypted(),
+        other.isErasureCoded(), other.isSnapshotEnabled());
+    assert !(isDirectory() && isSymlink()) : "A directory cannot be a symlink";
+  }
+
+  /**
+   * Write instance encoded as protobuf to stream.
+   * @param out Output stream
+   * @see PBHelper#convert(FileStatus)
+   * @deprecated Use the {@link PBHelper} and protobuf serialization directly.
+   */
+  @Override
+  @Deprecated
+  public void write(DataOutput out) throws IOException {
+    FileStatusProto proto = PBHelper.convert(this);
+    int size = proto.getSerializedSize();
+    out.writeInt(size);
+    out.write(proto.toByteArray());
+  }
+
+  @Override
+  public void validateObject() throws InvalidObjectException {
+    if (null == path) {
+      throw new InvalidObjectException("No Path in deserialized FileStatus");
+    }
+    if (null == isdir) {
+      throw new InvalidObjectException("No type in deserialized FileStatus");
+    }
+  }
+
+
+
 }

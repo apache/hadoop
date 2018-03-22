@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Rule;
@@ -35,7 +35,7 @@ import java.io.IOException;
 
 public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -79,12 +79,14 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     }
 
     cluster = new MiniDFSCluster.Builder(conf)
-        .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+        .nameNodePort(ServerSocketUtil.getPort(18020, 100))
         .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
         .numDataNodes(numDNs)
         .build();
-    cluster.getFileSystem().getClient()
-        .setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     try {
       cluster.waitActive();
       doTestRead(conf, cluster, true);

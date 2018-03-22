@@ -53,9 +53,27 @@ message ContainerIdProto {
   optional int64 id = 3;
 }
 
+enum ResourceTypesProto {
+  COUNTABLE = 0;
+}
+
+message ResourceInformationProto {
+  required string key = 1;
+  optional int64 value = 2;
+  optional string units = 3;
+  optional ResourceTypesProto type = 4;
+}
+
+message ResourceTypeInfoProto {
+  required string name = 1;
+  optional string units = 2;
+  optional ResourceTypesProto type = 3;
+}
+
 message ResourceProto {
   optional int64 memory = 1;
   optional int32 virtual_cores = 2;
+  repeated ResourceInformationProto resource_value_map = 3;
 }
 
 message ResourceUtilizationProto {
@@ -67,6 +85,15 @@ message ResourceUtilizationProto {
 message ResourceOptionProto {
   optional ResourceProto resource = 1;
   optional int32 over_commit_timeout = 2;
+}
+
+message ResourceProfileEntry {
+  required string name = 1;
+  required ResourceProto resources = 2;
+}
+
+message ResourceProfilesProto {
+  repeated ResourceProfileEntry resource_profiles_map = 1;
 }
 
 message NodeResourceMapProto {
@@ -82,7 +109,37 @@ enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
-  C_SCHEDULED = 4;
+}
+
+enum ContainerSubStateProto {
+ /**
+  * NEW, LOCALIZING, SCHEDULED,
+  * REINITIALIZING_AWAITING_KILL, RELAUNCHING,
+  */
+  CSS_SCHEDULED = 1;
+
+ /**
+  * RUNNING, REINITIALIZING, PAUSING, KILLING
+  */
+  CSS_RUNNING = 2;
+
+ /**
+  * PAUSED, RESUMING
+  */
+  CSS_PAUSED = 3;
+
+ /**
+  * LOCALIZATION_FAILED, EXITED_WITH_SUCCESS,
+  * EXITED_WITH_FAILURE,
+  * CONTAINER_CLEANEDUP_AFTER_KILL,
+  * CONTAINER_RESOURCES_CLEANINGUP
+  */
+  CSS_COMPLETING = 4;
+
+ /**
+  * DONE
+  */
+  CSS_DONE = 5;
 }
 
 message ContainerProto {
@@ -95,6 +152,7 @@ message ContainerProto {
   optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
+  repeated string allocation_tags = 10;
 }
 
 message ContainerReportProto {
@@ -109,6 +167,7 @@ message ContainerReportProto {
   optional int32 container_exit_status = 9;
   optional ContainerStateProto container_state = 10;
   optional string node_http_address = 11;
+  optional ExecutionTypeProto executionType = 12 [default = GUARANTEED];
 }
 
 enum YarnApplicationStateProto {
@@ -174,6 +233,11 @@ message LocalResourceProto {
   optional bool should_be_uploaded_to_shared_cache = 7;
 }
 
+message StringLongMapProto {
+  required string key  = 1;
+  required int64 value = 2;
+}
+
 message ApplicationResourceUsageReportProto {
   optional int32 num_used_containers = 1;
   optional int32 num_reserved_containers = 2;
@@ -186,6 +250,8 @@ message ApplicationResourceUsageReportProto {
   optional float cluster_usage_percentage = 9;
   optional int64 preempted_memory_seconds = 10;
   optional int64 preempted_vcore_seconds = 11;
+  repeated StringLongMapProto application_resource_usage_map = 12;
+  repeated StringLongMapProto application_preempted_resource_usage_map = 13;
 }
 
 message ApplicationReportProto {
@@ -267,6 +333,12 @@ message NodeIdProto {
   optional int32 port = 2;
 }
 
+enum NodeUpdateTypeProto {
+  NODE_USABLE = 0;
+  NODE_UNUSABLE = 1;
+  NODE_DECOMMISSIONING = 2;
+}
+
 message NodeReportProto {
   optional NodeIdProto nodeId = 1;
   optional string httpAddress = 2;
@@ -280,15 +352,17 @@ message NodeReportProto {
   repeated string node_labels = 10;
   optional ResourceUtilizationProto containers_utilization = 11;
   optional ResourceUtilizationProto node_utilization = 12;
+  optional uint32 decommissioning_timeout = 13;
+  optional NodeUpdateTypeProto node_update_type = 14;
 }
 
-message NodeIdToLabelsInfoProto {
+message NodeIdToLabelsProto {
   optional NodeIdProto nodeId = 1;
-  repeated NodeLabelProto nodeLabels = 2;
+  repeated string nodeLabels = 2;
 }
 
 message LabelsToNodeIdsProto {
-  optional NodeLabelProto nodeLabels = 1;
+  optional string nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;
 }
 
@@ -318,7 +392,7 @@ message ResourceRequestProto {
   optional bool relax_locality = 5 [default = true];
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
-  optional int64 allocation_request_id = 8 [default = 0];
+  optional int64 allocation_request_id = 8 [default = -1];
 }
 
 message ExecutionTypeRequestProto {
@@ -326,9 +400,33 @@ message ExecutionTypeRequestProto {
   optional bool enforce_execution_type = 2 [default = false];
 }
 
+message SchedulingRequestProto {
+  optional int64 allocationRequestId = 1 [default = 0];
+  optional PriorityProto priority = 2;
+  optional ExecutionTypeRequestProto executionType = 3;
+  repeated string allocationTags = 4;
+  optional ResourceSizingProto resourceSizing = 5;
+  optional PlacementConstraintProto placementConstraint = 6;
+}
+
+message ResourceSizingProto {
+  optional int32 numAllocations = 1;
+  optional ResourceProto resources = 2;
+}
+
 enum AMCommandProto {
   AM_RESYNC = 1;
   AM_SHUTDOWN = 2;
+}
+
+enum RejectionReasonProto {
+  RRP_COULD_NOT_PLACE_ON_NODE = 1;
+  RRP_COULD_NOT_SCHEDULE_ON_NODE = 2;
+}
+
+message RejectedSchedulingRequestProto {
+  required RejectionReasonProto reason = 1;
+  required SchedulingRequestProto request = 2;
 }
 
 message PreemptionMessageProto {
@@ -378,8 +476,9 @@ message ApplicationSubmissionContextProto {
   optional LogAggregationContextProto log_aggregation_context = 14;
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
-  optional ResourceRequestProto am_container_resource_request = 17;
+  repeated ResourceRequestProto am_container_resource_request = 17;
   repeated ApplicationTimeoutMapProto application_timeouts = 18;
+  repeated StringStringMapProto application_scheduling_properties = 19;
 }
 
 enum ApplicationTimeoutTypeProto {
@@ -427,6 +526,7 @@ message YarnClusterMetricsProto {
 enum QueueStateProto {
   Q_STOPPED = 1;
   Q_RUNNING = 2;
+  Q_DRAINING = 3;
 }
 
 message QueueStatisticsProto {
@@ -462,6 +562,25 @@ message QueueInfoProto {
   optional string defaultNodeLabelExpression = 9;
   optional QueueStatisticsProto queueStatistics = 10;
   optional bool preemptionDisabled = 11;
+  repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
+  optional bool intraQueuePreemptionDisabled = 13;
+}
+
+message QueueConfigurationsProto {
+    optional float capacity = 1;
+    optional float absoluteCapacity = 2;
+    optional float maxCapacity = 3;
+    optional float absoluteMaxCapacity = 4;
+    optional float maxAMPercentage = 5;
+    optional ResourceProto effectiveMinCapacity = 6;
+    optional ResourceProto effectiveMaxCapacity = 7;
+    optional ResourceProto configuredMinCapacity = 8;
+    optional ResourceProto configuredMaxCapacity = 9;
+}
+
+message QueueConfigurationsMapProto {
+    required string partitionName = 1;
+    optional QueueConfigurationsProto queueConfigurations = 2;
 }
 
 enum QueueACLProto {
@@ -480,6 +599,67 @@ enum SignalContainerCommandProto {
   FORCEFUL_SHUTDOWN = 3;
 }
 
+////////////////////////////////////////////////////////////////////////
+////// Placement constraints ///////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+message PlacementConstraintProto {
+  optional SimplePlacementConstraintProto simpleConstraint = 1;
+  optional CompositePlacementConstraintProto compositeConstraint = 2;
+}
+
+message SimplePlacementConstraintProto {
+  required string scope = 1;
+  repeated PlacementConstraintTargetProto targetExpressions = 2;
+  optional int32 minCardinality = 3;
+  optional int32 maxCardinality = 4;
+}
+
+message PlacementConstraintTargetProto {
+  enum TargetType {
+    NODE_ATTRIBUTE = 1;
+    ALLOCATION_TAG = 2;
+    SELF = 3;
+  }
+
+  required TargetType targetType = 1;
+  optional string targetKey = 2;
+  repeated string targetValues = 3;
+}
+
+message TimedPlacementConstraintProto {
+  enum DelayUnit {
+    MILLISECONDS = 1;
+    OPPORTUNITIES = 2;
+  }
+
+  required PlacementConstraintProto placementConstraint = 1;
+  required int64 schedulingDelay = 2;
+  optional DelayUnit delayUnit = 3 [ default = MILLISECONDS ];
+}
+
+message CompositePlacementConstraintProto {
+  enum CompositeType {
+    // All children constraints have to be satisfied.
+    AND = 1;
+    // One of the children constraints has to be satisfied.
+    OR = 2;
+    // Attempt to satisfy the first child constraint for delays[0] units (e.g.,
+    // millisec or heartbeats). If this fails, try to satisfy the second child
+    // constraint for delays[1] units and so on.
+    DELAYED_OR = 3;
+  }
+
+  required CompositeType compositeType = 1;
+  repeated PlacementConstraintProto childConstraints = 2;
+  repeated TimedPlacementConstraintProto timedChildConstraints = 3;
+}
+
+// This associates a set of allocation tags to a Placement Constraint.
+message PlacementConstraintMapEntryProto {
+  repeated string allocation_tags = 1;
+  optional PlacementConstraintProto placement_constraint = 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From reservation_protocol /////////////////////////////////////
@@ -547,6 +727,8 @@ message ContainerLaunchContextProto {
   repeated string command = 5;
   repeated ApplicationACLMapProto application_ACLs = 6;
   optional ContainerRetryContextProto container_retry_context = 7;
+  optional bytes tokens_conf = 8;
+
 }
 
 message ContainerStatusProto {
@@ -557,6 +739,7 @@ message ContainerStatusProto {
   optional ResourceProto capability = 5;
   optional ExecutionTypeProto executionType = 6 [default = GUARANTEED];
   repeated StringStringMapProto container_attributes = 7;
+  optional ContainerSubStateProto container_sub_state = 8;
 }
 
 enum ContainerExitStatusProto {
@@ -571,6 +754,7 @@ message ContainerRetryContextProto {
   repeated int32 error_codes = 2;
   optional int32 max_retries = 3 [default = 0];
   optional int32 retry_interval = 4 [default = 0];
+  optional int64 failures_validity_interval = 5 [default = -1];
 }
 
 enum ContainerRetryPolicyProto {
@@ -595,4 +779,9 @@ message StringStringMapProto {
 message StringBytesMapProto {
   optional string key = 1;
   optional bytes value = 2;
+}
+
+message CollectorInfoProto {
+  optional string collector_addr = 1;
+  optional hadoop.common.TokenProto collector_token = 2;
 }

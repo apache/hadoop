@@ -45,7 +45,8 @@ public class TestDatanodeDeath {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(InterDatanodeProtocol.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(InterDatanodeProtocol.LOG, org.slf4j
+        .event.Level.TRACE);
   }
 
   static final int blockSize = 8192;

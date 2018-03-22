@@ -23,7 +23,7 @@ import org.apache.hadoop.cli.util.CLITestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.ErasureCodingCliCmdExecutor;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.tools.erasurecode.ECCli;
+import org.apache.hadoop.hdfs.tools.ECAdmin;
 
 public class CLITestCmdErasureCoding extends CLITestCmd {
   public CLITestCmdErasureCoding(String str, CLICommandTypes type) {
@@ -33,7 +33,7 @@ public class CLITestCmdErasureCoding extends CLITestCmd {
   @Override
   public CommandExecutor getExecutor(String tag, Configuration conf) throws IllegalArgumentException {
     if (getType() instanceof CLICommandErasureCodingCli)
-      return new ErasureCodingCliCmdExecutor(tag, new ECCli());
+      return new ErasureCodingCliCmdExecutor(tag, new ECAdmin(conf));
     return super.getExecutor(tag, conf);
   }
 }

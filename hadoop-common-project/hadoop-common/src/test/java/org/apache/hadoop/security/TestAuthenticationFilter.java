@@ -17,11 +17,12 @@
 package org.apache.hadoop.security;
 
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -31,9 +32,10 @@ import java.io.FileWriter;
 import java.io.Writer;
 import java.util.Map;
 
-public class TestAuthenticationFilter extends TestCase {
+public class TestAuthenticationFilter {
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testConfiguration() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.http.authentication.foo", "bar");

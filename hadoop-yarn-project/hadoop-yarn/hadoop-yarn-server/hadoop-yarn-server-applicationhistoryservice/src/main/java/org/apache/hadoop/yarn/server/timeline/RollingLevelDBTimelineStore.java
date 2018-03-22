@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,8 +38,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -74,6 +73,9 @@ import org.iq80.leveldb.Options;
 import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.WriteBatch;
 import org.nustaq.serialization.FSTConfiguration;
+import org.nustaq.serialization.FSTClazzNameRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -166,13 +168,26 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 @InterfaceStability.Unstable
 public class RollingLevelDBTimelineStore extends AbstractService implements
     TimelineStore {
-  private static final Log LOG = LogFactory
-      .getLog(RollingLevelDBTimelineStore.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RollingLevelDBTimelineStore.class);
   private static FSTConfiguration fstConf =
       FSTConfiguration.createDefaultConfiguration();
+  // Fall back to 2.24 parsing if 2.50 parsing fails
+  private static FSTConfiguration fstConf224 =
+      FSTConfiguration.createDefaultConfiguration();
+  // Static class code for 2.24
+  private static final int LINKED_HASH_MAP_224_CODE = 83;
 
   static {
     fstConf.setShareReferences(false);
+    fstConf224.setShareReferences(false);
+    // YARN-6654 unable to find class for code 83 (LinkedHashMap)
+    // The linked hash map was changed between 2.24 and 2.50 so that
+    // the static code for LinkedHashMap (83) was changed to a dynamic
+    // code.
+    FSTClazzNameRegistry registry = fstConf224.getClassRegistry();
+    registry.registerClass(
+        LinkedHashMap.class, LINKED_HASH_MAP_224_CODE, fstConf224);
   }
 
   @Private
@@ -275,9 +290,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     Path domainDBPath = new Path(dbPath, DOMAIN);
     Path starttimeDBPath = new Path(dbPath, STARTTIME);
     Path ownerDBPath = new Path(dbPath, OWNER);
-    FileSystem localFS = null;
-    try {
-      localFS = FileSystem.getLocal(conf);
+    try (FileSystem localFS = FileSystem.getLocal(conf)) {
       if (!localFS.exists(dbPath)) {
         if (!localFS.mkdirs(dbPath)) {
           throw new IOException("Couldn't create directory for leveldb "
@@ -306,8 +319,6 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         }
         localFS.setPermission(ownerDBPath, LEVELDB_DIR_UMASK);
       }
-    } finally {
-      IOUtils.cleanup(LOG, localFS);
     }
     options.maxOpenFiles(conf.getInt(
         TIMELINE_SERVICE_LEVELDB_MAX_OPEN_FILES,
@@ -343,7 +354,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       deletionThread.start();
     }
     super.serviceStart();
-   }
+  }
 
   @Override
   protected void serviceStop() throws Exception {
@@ -357,9 +368,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
             + " closing db now", e);
       }
     }
-    IOUtils.cleanup(LOG, domaindb);
-    IOUtils.cleanup(LOG, starttimedb);
-    IOUtils.cleanup(LOG, ownerdb);
+    IOUtils.cleanupWithLogger(LOG, domaindb);
+    IOUtils.cleanupWithLogger(LOG, starttimedb);
+    IOUtils.cleanupWithLogger(LOG, ownerdb);
     entitydb.stop();
     indexdb.stop();
     super.serviceStop();
@@ -369,7 +380,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     private final long ttl;
     private final long ttlInterval;
 
-    public EntityDeletionThread(Configuration conf) {
+    EntityDeletionThread(Configuration conf) {
       ttl = conf.getLong(TIMELINE_SERVICE_TTL_MS,
           DEFAULT_TIMELINE_SERVICE_TTL_MS);
       ttlInterval = conf.getLong(
@@ -388,7 +399,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           discardOldEntities(timestamp);
           Thread.sleep(ttlInterval);
         } catch (IOException e) {
-          LOG.error(e);
+          LOG.error(e.toString());
         } catch (InterruptedException e) {
           LOG.info("Deletion thread received interrupt, exiting");
           break;
@@ -408,19 +419,15 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         .add(writeReverseOrderedLong(revStartTime)).add(entityId)
         .getBytesForLookup();
 
-    DBIterator iterator = null;
-    try {
-      DB db = entitydb.getDBForStartTime(revStartTime);
-      if (db == null) {
-        return null;
-      }
-      iterator = db.iterator();
+    DB db = entitydb.getDBForStartTime(revStartTime);
+    if (db == null) {
+      return null;
+    }
+    try (DBIterator iterator = db.iterator()) {
       iterator.seek(prefix);
 
       return getEntity(entityId, entityType, revStartTime, fields, iterator,
           prefix, prefix.length);
-    } finally {
-      IOUtils.cleanup(LOG, iterator);
     }
   }
 
@@ -481,9 +488,22 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         }
       } else if (key[prefixlen] == OTHER_INFO_COLUMN[0]) {
         if (otherInfo) {
-          entity.addOtherInfo(
-              parseRemainingKey(key, prefixlen + OTHER_INFO_COLUMN.length),
-              fstConf.asObject(iterator.peekNext().getValue()));
+          Object o = null;
+          String keyStr = parseRemainingKey(key,
+              prefixlen + OTHER_INFO_COLUMN.length);
+          try {
+            o = fstConf.asObject(iterator.peekNext().getValue());
+            entity.addOtherInfo(keyStr, o);
+          } catch (Exception ignore) {
+            try {
+              // Fall back to 2.24 parser
+              o = fstConf224.asObject(iterator.peekNext().getValue());
+              entity.addOtherInfo(keyStr, o);
+            } catch (Exception e) {
+              LOG.warn("Error while decoding "
+                  + entityId + ":otherInfo:" + keyStr, e);
+            }
+          }
         }
       } else if (key[prefixlen] == RELATED_ENTITIES_COLUMN[0]) {
         if (relatedEntities) {
@@ -533,62 +553,61 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                 o2.length);
           }
         });
-    DBIterator iterator = null;
-    try {
+
       // look up start times for the specified entities
       // skip entities with no start time
-      for (String entityId : entityIds) {
-        byte[] startTime = getStartTime(entityId, entityType);
-        if (startTime != null) {
-          List<EntityIdentifier> entities = startTimeMap.get(startTime);
-          if (entities == null) {
-            entities = new ArrayList<EntityIdentifier>();
-            startTimeMap.put(startTime, entities);
-          }
-          entities.add(new EntityIdentifier(entityId, entityType));
+    for (String entityId : entityIds) {
+      byte[] startTime = getStartTime(entityId, entityType);
+      if (startTime != null) {
+        List<EntityIdentifier> entities = startTimeMap.get(startTime);
+        if (entities == null) {
+          entities = new ArrayList<EntityIdentifier>();
+          startTimeMap.put(startTime, entities);
         }
+        entities.add(new EntityIdentifier(entityId, entityType));
       }
-      for (Entry<byte[], List<EntityIdentifier>> entry : startTimeMap
+    }
+    for (Entry<byte[], List<EntityIdentifier>> entry : startTimeMap
           .entrySet()) {
-        // look up the events matching the given parameters (limit,
-        // start time, end time, event types) for entities whose start times
-        // were found and add the entities to the return list
-        byte[] revStartTime = entry.getKey();
-        for (EntityIdentifier entityIdentifier : entry.getValue()) {
-          EventsOfOneEntity entity = new EventsOfOneEntity();
-          entity.setEntityId(entityIdentifier.getId());
-          entity.setEntityType(entityType);
-          events.addEvent(entity);
-          KeyBuilder kb = KeyBuilder.newInstance().add(entityType)
-              .add(revStartTime).add(entityIdentifier.getId())
-              .add(EVENTS_COLUMN);
-          byte[] prefix = kb.getBytesForLookup();
-          if (windowEnd == null) {
-            windowEnd = Long.MAX_VALUE;
-          }
-          byte[] revts = writeReverseOrderedLong(windowEnd);
-          kb.add(revts);
-          byte[] first = kb.getBytesForLookup();
-          byte[] last = null;
-          if (windowStart != null) {
-            last = KeyBuilder.newInstance().add(prefix)
-                .add(writeReverseOrderedLong(windowStart)).getBytesForLookup();
-          }
-          if (limit == null) {
-            limit = DEFAULT_LIMIT;
-          }
-          DB db = entitydb.getDBForStartTime(readReverseOrderedLong(
-              revStartTime, 0));
-          if (db == null) {
-            continue;
-          }
-          iterator = db.iterator();
+      // look up the events matching the given parameters (limit,
+      // start time, end time, event types) for entities whose start times
+      // were found and add the entities to the return list
+      byte[] revStartTime = entry.getKey();
+      for (EntityIdentifier entityIdentifier : entry.getValue()) {
+        EventsOfOneEntity entity = new EventsOfOneEntity();
+        entity.setEntityId(entityIdentifier.getId());
+        entity.setEntityType(entityType);
+        events.addEvent(entity);
+        KeyBuilder kb = KeyBuilder.newInstance().add(entityType)
+            .add(revStartTime).add(entityIdentifier.getId())
+            .add(EVENTS_COLUMN);
+        byte[] prefix = kb.getBytesForLookup();
+        if (windowEnd == null) {
+          windowEnd = Long.MAX_VALUE;
+        }
+        byte[] revts = writeReverseOrderedLong(windowEnd);
+        kb.add(revts);
+        byte[] first = kb.getBytesForLookup();
+        byte[] last = null;
+        if (windowStart != null) {
+          last = KeyBuilder.newInstance().add(prefix)
+              .add(writeReverseOrderedLong(windowStart)).getBytesForLookup();
+        }
+        if (limit == null) {
+          limit = DEFAULT_LIMIT;
+        }
+        DB db = entitydb.getDBForStartTime(readReverseOrderedLong(
+            revStartTime, 0));
+        if (db == null) {
+          continue;
+        }
+        try (DBIterator iterator = db.iterator()) {
           for (iterator.seek(first); entity.getEvents().size() < limit
               && iterator.hasNext(); iterator.next()) {
             byte[] key = iterator.peekNext().getKey();
             if (!prefixMatches(prefix, prefix.length, key)
                 || (last != null && WritableComparator.compareBytes(key, 0,
-                    key.length, last, 0, last.length) > 0)) {
+                key.length, last, 0, last.length) > 0)) {
               break;
             }
             TimelineEvent event = getEntityEvent(eventType, key, prefix.length,
@@ -599,8 +618,6 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           }
         }
       }
-    } finally {
-      IOUtils.cleanup(LOG, iterator);
     }
     return events;
   }
@@ -657,66 +674,64 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       Long limit, Long starttime, Long endtime, String fromId, Long fromTs,
       Collection<NameValuePair> secondaryFilters, EnumSet<Field> fields,
       CheckAcl checkAcl, boolean usingPrimaryFilter) throws IOException {
-    DBIterator iterator = null;
-    try {
-      KeyBuilder kb = KeyBuilder.newInstance().add(base).add(entityType);
-      // only db keys matching the prefix (base + entity type) will be parsed
-      byte[] prefix = kb.getBytesForLookup();
-      if (endtime == null) {
-        // if end time is null, place no restriction on end time
-        endtime = Long.MAX_VALUE;
-      }
+    KeyBuilder kb = KeyBuilder.newInstance().add(base).add(entityType);
+    // only db keys matching the prefix (base + entity type) will be parsed
+    byte[] prefix = kb.getBytesForLookup();
+    if (endtime == null) {
+      // if end time is null, place no restriction on end time
+      endtime = Long.MAX_VALUE;
+    }
 
-      // Sanitize the fields parameter
-      if (fields == null) {
-        fields = EnumSet.allOf(Field.class);
-      }
+    // Sanitize the fields parameter
+    if (fields == null) {
+      fields = EnumSet.allOf(Field.class);
+    }
 
-      // construct a first key that will be seeked to using end time or fromId
-      long firstStartTime = Long.MAX_VALUE;
-      byte[] first = null;
-      if (fromId != null) {
-        Long fromIdStartTime = getStartTimeLong(fromId, entityType);
-        if (fromIdStartTime == null) {
-          // no start time for provided id, so return empty entities
-          return new TimelineEntities();
-        }
-        if (fromIdStartTime <= endtime) {
-          // if provided id's start time falls before the end of the window,
-          // use it to construct the seek key
-          firstStartTime = fromIdStartTime;
-          first = kb.add(writeReverseOrderedLong(fromIdStartTime)).add(fromId)
-              .getBytesForLookup();
-        }
+    // construct a first key that will be seeked to using end time or fromId
+    long firstStartTime = Long.MAX_VALUE;
+    byte[] first = null;
+    if (fromId != null) {
+      Long fromIdStartTime = getStartTimeLong(fromId, entityType);
+      if (fromIdStartTime == null) {
+        // no start time for provided id, so return empty entities
+        return new TimelineEntities();
       }
-      // if seek key wasn't constructed using fromId, construct it using end ts
-      if (first == null) {
-        firstStartTime = endtime;
-        first = kb.add(writeReverseOrderedLong(endtime)).getBytesForLookup();
+      if (fromIdStartTime <= endtime) {
+        // if provided id's start time falls before the end of the window,
+        // use it to construct the seek key
+        firstStartTime = fromIdStartTime;
+        first = kb.add(writeReverseOrderedLong(fromIdStartTime)).add(fromId)
+            .getBytesForLookup();
       }
-      byte[] last = null;
-      if (starttime != null) {
-        // if start time is not null, set a last key that will not be
-        // iterated past
-        last = KeyBuilder.newInstance().add(base).add(entityType)
-            .add(writeReverseOrderedLong(starttime)).getBytesForLookup();
-      }
-      if (limit == null) {
-        // if limit is not specified, use the default
-        limit = DEFAULT_LIMIT;
-      }
+    }
+    // if seek key wasn't constructed using fromId, construct it using end ts
+    if (first == null) {
+      firstStartTime = endtime;
+      first = kb.add(writeReverseOrderedLong(endtime)).getBytesForLookup();
+    }
+    byte[] last = null;
+    if (starttime != null) {
+      // if start time is not null, set a last key that will not be
+      // iterated past
+      last = KeyBuilder.newInstance().add(base).add(entityType)
+          .add(writeReverseOrderedLong(starttime)).getBytesForLookup();
+    }
+    if (limit == null) {
+      // if limit is not specified, use the default
+      limit = DEFAULT_LIMIT;
+    }
 
-      TimelineEntities entities = new TimelineEntities();
-      RollingLevelDB rollingdb = null;
-      if (usingPrimaryFilter) {
-        rollingdb = indexdb;
-      } else {
-        rollingdb = entitydb;
-      }
+    TimelineEntities entities = new TimelineEntities();
+    RollingLevelDB rollingdb = null;
+    if (usingPrimaryFilter) {
+      rollingdb = indexdb;
+    } else {
+      rollingdb = entitydb;
+    }
 
-      DB db = rollingdb.getDBForStartTime(firstStartTime);
-      while (entities.getEntities().size() < limit && db != null) {
-        iterator = db.iterator();
+    DB db = rollingdb.getDBForStartTime(firstStartTime);
+    while (entities.getEntities().size() < limit && db != null) {
+      try (DBIterator iterator = db.iterator()) {
         iterator.seek(first);
 
         // iterate until one of the following conditions is met: limit is
@@ -726,7 +741,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           byte[] key = iterator.peekNext().getKey();
           if (!prefixMatches(prefix, prefix.length, key)
               || (last != null && WritableComparator.compareBytes(key, 0,
-                  key.length, last, 0, last.length) > 0)) {
+              key.length, last, 0, last.length) > 0)) {
             break;
           }
           // read the start time and entity id from the current key
@@ -814,10 +829,8 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         }
         db = rollingdb.getPreviousDB(db);
       }
-      return entities;
-    } finally {
-      IOUtils.cleanup(LOG, iterator);
     }
+    return entities;
   }
 
   /**
@@ -1353,7 +1366,17 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       TimelineEvent event = new TimelineEvent();
       event.setTimestamp(ts);
       event.setEventType(tstype);
-      Object o = fstConf.asObject(value);
+      Object o = null;
+      try {
+        o = fstConf.asObject(value);
+      } catch (Exception ignore) {
+        try {
+          // Fall back to 2.24 parser
+          o = fstConf224.asObject(value);
+        } catch (Exception e) {
+          LOG.warn("Error while decoding " + tstype, e);
+        }
+      }
       if (o == null) {
         event.setEventInfo(null);
       } else if (o instanceof Map) {
@@ -1377,8 +1400,19 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     KeyParser kp = new KeyParser(key, offset);
     String name = kp.getNextString();
     byte[] bytes = kp.getRemainingBytes();
-    Object value = fstConf.asObject(bytes);
-    entity.addPrimaryFilter(name, value);
+    Object value = null;
+    try {
+      value = fstConf.asObject(bytes);
+      entity.addPrimaryFilter(name, value);
+    } catch (Exception ignore) {
+      try {
+        // Fall back to 2.24 parser
+        value = fstConf224.asObject(bytes);
+        entity.addPrimaryFilter(name, value);
+      } catch (Exception e) {
+        LOG.warn("Error while decoding " + name, e);
+      }
+    }
   }
 
   /**
@@ -1459,15 +1493,14 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     long startTimesCount = 0;
 
     WriteBatch writeBatch = null;
-    DBIterator iterator = null;
 
-    try {
-      writeBatch = starttimedb.createWriteBatch();
-      ReadOptions readOptions = new ReadOptions();
-      readOptions.fillCache(false);
-      iterator = starttimedb.iterator(readOptions);
+    ReadOptions readOptions = new ReadOptions();
+    readOptions.fillCache(false);
+    try (DBIterator iterator = starttimedb.iterator(readOptions)) {
+
       // seek to the first start time entry
       iterator.seekToFirst();
+      writeBatch = starttimedb.createWriteBatch();
 
       // evaluate each start time entry to see if it needs to be evicted or not
       while (iterator.hasNext()) {
@@ -1492,7 +1525,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                   + ". Total start times deleted so far this cycle: "
                   + startTimesCount);
             }
-            IOUtils.cleanup(LOG, writeBatch);
+            IOUtils.cleanupWithLogger(LOG, writeBatch);
             writeBatch = starttimedb.createWriteBatch();
             batchSize = 0;
           }
@@ -1512,8 +1545,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       LOG.info("Deleted " + startTimesCount + "/" + totalCount
           + " start time entities earlier than " + minStartTime);
     } finally {
-      IOUtils.cleanup(LOG, writeBatch);
-      IOUtils.cleanup(LOG, iterator);
+      IOUtils.cleanupWithLogger(LOG, writeBatch);
     }
     return startTimesCount;
   }
@@ -1590,7 +1622,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       String incompatibleMessage = "Incompatible version for timeline store: "
           + "expecting version " + getCurrentVersion()
           + ", but loading version " + loadedVersion;
-      LOG.fatal(incompatibleMessage);
+      LOG.error(incompatibleMessage);
       throw new IOException(incompatibleMessage);
     }
   }
@@ -1598,11 +1630,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
   // TODO: make data retention work with the domain data as well
   @Override
   public void put(TimelineDomain domain) throws IOException {
-    WriteBatch domainWriteBatch = null;
-    WriteBatch ownerWriteBatch = null;
-    try {
-      domainWriteBatch = domaindb.createWriteBatch();
-      ownerWriteBatch = ownerdb.createWriteBatch();
+    try (WriteBatch domainWriteBatch = domaindb.createWriteBatch();
+         WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
+
       if (domain.getId() == null || domain.getId().length() == 0) {
         throw new IllegalArgumentException("Domain doesn't have an ID");
       }
@@ -1682,9 +1712,6 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       ownerWriteBatch.put(ownerLookupEntryKey, timestamps);
       domaindb.write(domainWriteBatch);
       ownerdb.write(ownerWriteBatch);
-    } finally {
-      IOUtils.cleanup(LOG, domainWriteBatch);
-      IOUtils.cleanup(LOG, ownerWriteBatch);
     }
   }
 
@@ -1709,26 +1736,21 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
   @Override
   public TimelineDomain getDomain(String domainId) throws IOException {
-    DBIterator iterator = null;
-    try {
+    try (DBIterator iterator = domaindb.iterator()) {
       byte[] prefix = KeyBuilder.newInstance().add(domainId)
           .getBytesForLookup();
-      iterator = domaindb.iterator();
       iterator.seek(prefix);
       return getTimelineDomain(iterator, domainId, prefix);
-    } finally {
-      IOUtils.cleanup(LOG, iterator);
     }
   }
 
   @Override
   public TimelineDomains getDomains(String owner) throws IOException {
-    DBIterator iterator = null;
-    try {
+    try (DBIterator iterator = ownerdb.iterator()) {
       byte[] prefix = KeyBuilder.newInstance().add(owner).getBytesForLookup();
+      iterator.seek(prefix);
       List<TimelineDomain> domains = new ArrayList<TimelineDomain>();
-      for (iterator = ownerdb.iterator(), iterator.seek(prefix); iterator
-          .hasNext();) {
+      while (iterator.hasNext()) {
         byte[] key = iterator.peekNext().getKey();
         if (!prefixMatches(prefix, prefix.length, key)) {
           break;
@@ -1761,8 +1783,6 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       TimelineDomains domainsToReturn = new TimelineDomains();
       domainsToReturn.addDomains(domains);
       return domainsToReturn;
-    } finally {
-      IOUtils.cleanup(LOG, iterator);
     }
   }
 

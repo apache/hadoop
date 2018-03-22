@@ -19,13 +19,14 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -40,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.junit.Assert.*;
 
 /**
@@ -67,6 +69,42 @@ public class ITestS3AAWSCredentialsProvider {
   }
 
   /**
+   * A bad CredentialsProvider which has no suitable constructor.
+   *
+   * This class does not provide a public constructor accepting Configuration,
+   * or a public factory method named getInstance that accepts no arguments,
+   * or a public default constructor.
+   */
+  static class BadCredentialsProviderConstructor
+      implements AWSCredentialsProvider {
+
+    @SuppressWarnings("unused")
+    public BadCredentialsProviderConstructor(String fsUri, Configuration conf) {
+    }
+
+    @Override
+    public AWSCredentials getCredentials() {
+      return new BasicAWSCredentials("dummy_key", "dummy_secret");
+    }
+
+    @Override
+    public void refresh() {
+    }
+  }
+
+  @Test
+  public void testBadCredentialsConstructor() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(AWS_CREDENTIALS_PROVIDER,
+        BadCredentialsProviderConstructor.class.getName());
+    try {
+      createFailingFS(conf);
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(CONSTRUCTOR_EXCEPTION, e);
+    }
+  }
+
+  /**
    * Create a filesystem, expect it to fail by raising an IOException.
    * Raises an assertion exception if in fact the FS does get instantiated.
    * @param conf configuration
@@ -81,7 +119,7 @@ public class ITestS3AAWSCredentialsProvider {
   static class BadCredentialsProvider implements AWSCredentialsProvider {
 
     @SuppressWarnings("unused")
-    public BadCredentialsProvider(URI name, Configuration conf) {
+    public BadCredentialsProvider(Configuration conf) {
     }
 
     @Override
@@ -102,13 +140,17 @@ public class ITestS3AAWSCredentialsProvider {
       createFailingFS(conf);
     } catch (AccessDeniedException e) {
       // expected
+    } catch (AWSServiceIOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "UnrecognizedClientException", e);
+      // expected
     }
   }
 
   static class GoodCredentialsProvider extends AWSCredentialsProviderChain {
 
     @SuppressWarnings("unused")
-    public GoodCredentialsProvider(URI name, Configuration conf) {
+    public GoodCredentialsProvider(Configuration conf) {
       super(new BasicAWSCredentialsProvider(conf.get(ACCESS_KEY),
           conf.get(SECRET_KEY)),
           InstanceProfileCredentialsProvider.getInstance());
@@ -129,7 +171,6 @@ public class ITestS3AAWSCredentialsProvider {
         AnonymousAWSCredentialsProvider.class.getName());
     Path testFile = new Path(
         conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    S3ATestUtils.useCSVDataEndpoint(conf);
     FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);
     assertNotNull(fs);
     assertTrue(fs instanceof S3AFileSystem);

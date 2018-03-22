@@ -7203,7 +7203,130 @@
         </comparator>
       </comparators>
     </test>
-  
+
+    <test> <!-- TESTED -->
+      <description>stat: Test for hdfs:// path - user/group name for directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///dirtest</command>
+        <command>-fs NAMENODE -chown hadoop:hadoopgrp hdfs:///dirtest</command>
+        <command>-fs NAMENODE -stat "%u-%g" hdfs:///dirtest</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r hdfs:///dirtest</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hadoop-hadoopgrp</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>stat: Test for hdfs:// path - user/group name for file</description>
+      <test-commands>
+        <command>-fs NAMENODE -put CLITEST_DATA/data60bytes hdfs:///data60bytes</command>
+        <command>-fs NAMENODE -chown hadoop:hadoopgrp hdfs:////data60bytes</command>
+        <command>-fs NAMENODE -stat "%u-%g" hdfs:////data60bytes</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r hdfs:///data60bytes</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hadoop-hadoopgrp</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>stat: Test for hdfs:// path - user/group name for multiple files</description>
+      <test-commands>
+        <command>-fs NAMENODE -put CLITEST_DATA/data60bytes hdfs:///data60bytes</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data30bytes hdfs:///data30bytes</command>
+        <command>-fs NAMENODE -chown hadoop:hadoopgrp hdfs:///data60bytes</command>
+        <command>-fs NAMENODE -chown hdfs:hdfs hdfs:///data30bytes</command>
+        <command>-fs NAMENODE -stat "%u-%g" hdfs:///data*</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r hdfs:///data60bytes</command>
+        <command>-fs NAMENODE -rm -r hdfs:////data30bytes</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hadoop-hadoopgrp</expected-output>
+        </comparator>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hdfs-hdfs</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>stat: Test for Namenode's path - user/group name for directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
+        <command>-fs NAMENODE -chown hadoop:hadoopgrp NAMENODE/dir0/</command>
+        <command>-fs NAMENODE -stat "%u-%g" NAMENODE/dir0/</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r NAMENODE/dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hadoop-hadoopgrp</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+    <description>stat: Test for Namenode's path - user/group name for file </description>
+    <test-commands>
+    <command>-fs NAMENODE -mkdir /dir0</command>
+    <command>-fs NAMENODE -put CLITEST_DATA/data15bytes NAMENODE/dir0/data15bytes</command>
+    <command>-fs NAMENODE -chown hadoop:hadoopgrp NAMENODE/dir0/data15bytes</command>
+    <command>-fs NAMENODE -stat "%u-%g" NAMENODE/dir0/data15bytes</command>
+    </test-commands>
+    <cleanup-commands>
+      <command>-fs NAMENODE -rm -r NAMENODE/dir0</command>
+    </cleanup-commands>
+    <comparators>
+      <comparator>
+        <type>TokenComparator</type>
+        <expected-output>hadoop-hadoopgrp</expected-output>
+      </comparator>
+    </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>stat: Test for Namenode's path - user/group name for multiple files </description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data15bytes NAMENODE/dir0/data15bytes</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data30bytes NAMENODE/dir0/data30bytes</command>
+        <command>-fs NAMENODE -chown hadoop:hadoopgrp NAMENODE/dir0/data15bytes</command>
+        <command>-fs NAMENODE -chown hdfs:hdfs NAMENODE/dir0/data30bytes</command>
+        <command>-fs NAMENODE -stat "%u-%g" NAMENODE/dir0/data*</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r NAMENODE/dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hadoop-hadoopgrp</expected-output>
+        </comparator>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>hdfs-hdfs</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Tests for tail -->
     <test> <!-- TESTED -->
       <description>tail: contents of file(absolute path)</description>
@@ -15665,7 +15788,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-report \[-live\] \[-dead\] \[-decommissioning\]:(.)*</expected-output>
+          <expected-output>^-report \[-live\] \[-dead\] \[-decommissioning\] \[-enteringmaintenance\] \[-inmaintenance\]:(.)*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16428,6 +16551,10 @@
           <expected-output>Last contact: [a-zA-Z]+ [a-zA-Z]+ [0-9]+ [0-9:]+ [A-Z\-\+\:0-9]+ [0-9]+</expected-output>
         </comparator>
         <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>Num of Blocks: [0-9]+</expected-output>
+        </comparator>
+        <comparator>
           <type>TokenComparator</type>
           <expected-output>Live datanodes</expected-output>
         </comparator>
@@ -16740,7 +16867,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Allowing snaphot on /user/USERNAME/dir1 succeeded</expected-output>
+          <expected-output>Allowing snapshot on /user/USERNAME/dir1 succeeded</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16758,7 +16885,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Disallowing snaphot on /user/USERNAME/dir1 succeeded</expected-output>
+          <expected-output>Disallowing snapshot on /user/USERNAME/dir1 succeeded</expected-output>
         </comparator>
       </comparators>
     </test>

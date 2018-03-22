@@ -22,12 +22,14 @@ import static org.junit.Assert.assertFalse;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.File;
@@ -36,6 +38,7 @@ import java.io.IOException;
 import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -62,10 +65,12 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
@@ -152,7 +157,8 @@ public class TestNonAggregatingLogHandler {
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
 
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
@@ -192,7 +198,8 @@ public class TestNonAggregatingLogHandler {
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
 
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
@@ -361,7 +368,8 @@ public class TestNonAggregatingLogHandler {
     logHandler.start();
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
     // simulate a restart and verify deletion is rescheduled
@@ -531,8 +539,8 @@ public class TestNonAggregatingLogHandler {
     boolean matched = false;
     while (!matched && System.currentTimeMillis() < verifyStartTime + timeout) {
       try {
-        verify(delService).delete(eq(user), (Path) eq(null),
-          Mockito.argThat(new DeletePathsMatcher(matchPaths)));
+        verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+            delService, user, null, Arrays.asList(matchPaths))));
         matched = true;
       } catch (WantedButNotInvoked e) {
         notInvokedException = e;

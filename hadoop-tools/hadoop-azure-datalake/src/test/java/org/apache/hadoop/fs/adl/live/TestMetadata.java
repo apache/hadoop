@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.adl.AdlFileSystem;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -31,6 +32,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.UUID;
+
+import static org.junit.Assert.fail;
 
 /**
  * This class is responsible for testing ContentSummary, ListStatus on
@@ -106,6 +109,36 @@ public class TestMetadata {
     Assert
         .assertEquals(path.makeQualified(fs.getUri(), fs.getWorkingDirectory()),
             statuses[0].getPath());
+  }
+
+  @Test
+  public void testUserRepresentationConfiguration() throws IOException {
+    // Validating actual user/group OID or friendly name is outside scope of
+    // this test.
+    Path path = new Path(parent, "a.txt");
+    AdlFileSystem fs = (AdlFileSystem) adlStore;
+
+    // When set to true, User/Group information should be user friendly name.
+    // That is non GUID value.
+    fs.setUserGroupRepresentationAsUPN(false);
+    fs.createNewFile(path);
+    Assert.assertTrue(fs.isFile(path));
+    FileStatus fileStatus = fs.getFileStatus(path);
+    UUID.fromString(fileStatus.getGroup());
+    UUID.fromString(fileStatus.getOwner());
+
+    // When set to false, User/Group information should be AAD represented
+    // unique OID. That is GUID value.
+    // Majority of the cases, user friendly name would not be GUID value.
+    fs.setUserGroupRepresentationAsUPN(true);
+    fileStatus = fs.getFileStatus(path);
+    try {
+      UUID.fromString(fileStatus.getGroup());
+      UUID.fromString(fileStatus.getOwner());
+      fail("Expected user friendly name to be non guid value.");
+    } catch (IllegalArgumentException e) {
+      // expected to fail since
+    }
   }
 }
 

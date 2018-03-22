@@ -20,17 +20,21 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.sax.SAXTransformerFactory;
+import javax.xml.transform.sax.TransformerHandler;
+import javax.xml.transform.stream.StreamResult;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
+
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
 
-import org.apache.xml.serialize.OutputFormat;
-import org.apache.xml.serialize.XMLSerializer;
 
 /**
  * An XmlEditsVisitor walks over an EditLog structure and writes out
@@ -41,26 +45,37 @@ import org.apache.xml.serialize.XMLSerializer;
 public class XmlEditsVisitor implements OfflineEditsVisitor {
   private final OutputStream out;
   private ContentHandler contentHandler;
+  private final SAXTransformerFactory factory;
+  private final static String XML_INDENTATION_PROP ="{http://xml.apache.org/" +
+          "xslt}indent-amount";
+  private final static String XML_INDENTATION_NUM ="2";
 
   /**
    * Create a processor that writes to the file named and may or may not
    * also output to the screen, as specified.
    *
-   * @param filename Name of file to write output to
-   * @param printToScreen Mirror output to screen?
+   * @param out output stream to write
+   * @throws IOException on any error
    */
   public XmlEditsVisitor(OutputStream out)
       throws IOException {
     this.out = out;
-    OutputFormat outFormat = new OutputFormat("XML", "UTF-8", true);
-    outFormat.setIndenting(true);
-    outFormat.setIndent(2);
-    outFormat.setDoctype(null, null);
-    XMLSerializer serializer = new XMLSerializer(out, outFormat);
-    contentHandler = serializer.asContentHandler();
+    factory =(SAXTransformerFactory)SAXTransformerFactory.newInstance();
     try {
+      TransformerHandler handler = factory.newTransformerHandler();
+      handler.getTransformer().setOutputProperty(OutputKeys.METHOD, "xml");
+      handler.getTransformer().setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+      handler.getTransformer().setOutputProperty(OutputKeys.INDENT, "yes");
+      handler.getTransformer().setOutputProperty(XML_INDENTATION_PROP,
+              XML_INDENTATION_NUM);
+      handler.getTransformer().setOutputProperty(OutputKeys.STANDALONE, "yes");
+      handler.setResult(new StreamResult(out));
+      contentHandler = handler;
+      
       contentHandler.startDocument();
       contentHandler.startElement("", "", "EDITS", new AttributesImpl());
+    } catch (TransformerConfigurationException e) {
+      throw new IOException("SAXTransformer error: " + e.getMessage());
     } catch (SAXException e) {
       throw new IOException("SAX error: " + e.getMessage());
     }

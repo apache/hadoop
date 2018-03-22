@@ -91,8 +91,12 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
     return applicationId;
   }
 
+  public String getUser() {
+    return this.app.getUser();
+  }
+
   public void deductActuallyToBePreempted(ResourceCalculator resourceCalculator,
-      Resource cluster, Resource toBeDeduct, String partition) {
+      Resource cluster, Resource toBeDeduct) {
     if (Resources.greaterThan(resourceCalculator, cluster,
         getActuallyToBePreempted(), toBeDeduct)) {
       Resources.subtractFrom(getActuallyToBePreempted(), toBeDeduct);

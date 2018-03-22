@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,10 +39,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
-import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -75,6 +83,9 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.nodemanager.logaggregation.tracker.NMLogAggregationStatusTracker;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -82,9 +93,8 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerIn
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-
-import static org.mockito.Mockito.spy;
 
 public abstract class BaseContainerManagerTest {
 
@@ -113,8 +123,8 @@ public abstract class BaseContainerManagerTest {
     tmpDir = new File("target", this.getClass().getSimpleName() + "-tmpDir");
   }
 
-  protected static Log LOG = LogFactory
-      .getLog(BaseContainerManagerTest.class);
+  protected static Logger LOG =
+       LoggerFactory.getLogger(BaseContainerManagerTest.class);
 
   protected static final int HTTP_PORT = 5412;
   protected Configuration conf = new YarnConfiguration();
@@ -128,6 +138,16 @@ public abstract class BaseContainerManagerTest {
     @Override
     public ContainerExecutor getContainerExecutor() {
       return exec;
+    }
+
+    @Override
+    public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
+      NMLogAggregationStatusTracker mock = mock(
+          NMLogAggregationStatusTracker.class);
+      doNothing().when(mock).updateLogAggregationStatus(
+          any(ApplicationId.class), any(LogAggregationStatus.class),
+          anyLong(), anyString(), anyBoolean());
+      return mock;
     }
   };
   protected ContainerExecutor exec;
@@ -207,6 +227,8 @@ public abstract class BaseContainerManagerTest {
     containerManager.init(conf);
     nodeStatusUpdater.start();
     ((NMContext)context).setNodeStatusUpdater(nodeStatusUpdater);
+    ((NMContext)context).setContainerStateTransitionListener(
+        new NodeManager.DefaultContainerStateListener());
   }
 
   protected ContainerManagerImpl
@@ -214,11 +236,6 @@ public abstract class BaseContainerManagerTest {
     
     return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
       metrics, dirsHandler) {
-      @Override
-      public void
-          setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-        // do nothing
-      }
 
       @Override
         protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
@@ -265,10 +282,10 @@ public abstract class BaseContainerManagerTest {
   protected DeletionService createDeletionService() {
     return new DeletionService(exec) {
       @Override
-      public void delete(String user, Path subDir, Path... baseDirs) {
+      public void delete(DeletionTask deletionTask) {
         // Don't do any deletions.
-        LOG.info("Psuedo delete: user - " + user + ", subDir - " + subDir
-            + ", baseDirs - " + Arrays.asList(baseDirs));
+        LOG.info("Psuedo delete: user - " + user
+            + ", type - " + deletionTask.getDeletionTaskType());
       };
     };
   }
@@ -314,13 +331,13 @@ public abstract class BaseContainerManagerTest {
         new HashSet<>(finalStates);
     int timeoutSecs = 0;
     do {
-      Thread.sleep(2000);
+      Thread.sleep(1000);
       containerStatus =
           containerManager.getContainerStatuses(request)
               .getContainerStatuses().get(0);
       LOG.info("Waiting for container to get into one of states " + fStates
           + ". Current state is " + containerStatus.getState());
-      timeoutSecs += 2;
+      timeoutSecs += 1;
     } while (!fStates.contains(containerStatus.getState())
         && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + containerStatus.getState());
@@ -375,7 +392,7 @@ public abstract class BaseContainerManagerTest {
         .containermanager.container.ContainerState currentState = null;
     int timeoutSecs = 0;
     do {
-      Thread.sleep(2000);
+      Thread.sleep(1000);
       container =
           containerManager.getContext().getContainers().get(containerID);
       if (container != null) {
@@ -385,9 +402,9 @@ public abstract class BaseContainerManagerTest {
         LOG.info("Waiting for NM container to get into one of the following " +
             "states: " + finalStates + ". Current state is " + currentState);
       }
-      timeoutSecs += 2;
+      timeoutSecs += 1;
     } while (!finalStates.contains(currentState)
-        && timeoutSecs++ < timeOutMax);
+        && timeoutSecs < timeOutMax);
     LOG.info("Container state is " + currentState);
     Assert.assertTrue("ContainerState is not correct (timedout)",
         finalStates.contains(currentState));
@@ -425,6 +442,20 @@ public abstract class BaseContainerManagerTest {
             containerTokenIdentifier);
   }
 
+  public static Token createContainerToken(ContainerId cId, int version,
+      long rmIdentifier, NodeId nodeId, String user, Resource resource,
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      LogAggregationContext logAggregationContext) throws IOException {
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, version, nodeId.toString(), user,
+            resource, System.currentTimeMillis() + 100000L, 123, rmIdentifier,
+            Priority.newInstance(0), 0, logAggregationContext, null,
+            ContainerType.TASK, ExecutionType.GUARANTEED);
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
+        containerTokenIdentifier);
+  }
+
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,
       NodeId nodeId, String user, Resource resource,
       NMContainerTokenSecretManager containerTokenSecretManager,
@@ -435,8 +466,23 @@ public abstract class BaseContainerManagerTest {
             System.currentTimeMillis() + 100000L, 123, rmIdentifier,
             Priority.newInstance(0), 0, logAggregationContext, null,
             ContainerType.TASK, executionType);
-    return BuilderUtils.newContainerToken(nodeId, containerTokenSecretManager
-            .retrievePassword(containerTokenIdentifier),
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
+        containerTokenIdentifier);
+  }
+
+  public static Token createContainerToken(ContainerId cId, int version,
+      long rmIdentifier, NodeId nodeId, String user, Resource resource,
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      LogAggregationContext logAggregationContext, ExecutionType executionType)
+      throws IOException {
+    ContainerTokenIdentifier containerTokenIdentifier =
+        new ContainerTokenIdentifier(cId, version, nodeId.toString(), user,
+            resource, System.currentTimeMillis() + 100000L, 123, rmIdentifier,
+            Priority.newInstance(0), 0, logAggregationContext, null,
+            ContainerType.TASK, executionType);
+    return BuilderUtils.newContainerToken(nodeId,
+        containerTokenSecretManager.retrievePassword(containerTokenIdentifier),
         containerTokenIdentifier);
   }
 

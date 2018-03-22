@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -34,10 +35,12 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.records.impl.pb.CollectorInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
@@ -45,9 +48,12 @@ import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.api.records.impl.pb.RejectedSchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdatedContainerPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos;
+import org.apache.hadoop.yarn.proto.YarnProtos.CollectorInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
@@ -71,15 +77,18 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   Resource limit;
 
   private List<Container> allocatedContainers = null;
+  private List<Container> containersFromPreviousAttempts = null;
   private List<NMToken> nmTokens = null;
   private List<ContainerStatus> completedContainersStatuses = null;
   private List<UpdatedContainer> updatedContainers = null;
 
   private List<NodeReport> updatedNodes = null;
   private List<UpdateContainerError> updateErrors = null;
+  private List<RejectedSchedulingRequest> rejectedRequests = null;
   private PreemptionMessage preempt;
   private Token amrmToken = null;
   private Priority appPriority = null;
+  private CollectorInfo collectorInfo = null;
 
   public AllocateResponsePBImpl() {
     builder = AllocateResponseProto.newBuilder();
@@ -135,6 +144,13 @@ public class AllocateResponsePBImpl extends AllocateResponse {
           getContainerStatusProtoIterable(this.completedContainersStatuses);
       builder.addAllCompletedContainerStatuses(iterable);
     }
+    if (this.rejectedRequests != null) {
+      builder.clearRejectedSchedulingRequests();
+      Iterable<YarnProtos.RejectedSchedulingRequestProto> iterable =
+          getRejectedSchedulingRequestsProtoIterable(
+              this.rejectedRequests);
+      builder.addAllRejectedSchedulingRequests(iterable);
+    }
     if (this.updatedNodes != null) {
       builder.clearUpdatedNodes();
       Iterable<NodeReportProto> iterable =
@@ -162,8 +178,17 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (this.amrmToken != null) {
       builder.setAmRmToken(convertToProtoFormat(this.amrmToken));
     }
+    if (this.collectorInfo != null) {
+      builder.setCollectorInfo(convertToProtoFormat(this.collectorInfo));
+    }
     if (this.appPriority != null) {
       builder.setApplicationPriority(convertToProtoFormat(this.appPriority));
+    }
+    if (this.containersFromPreviousAttempts != null) {
+      builder.clearContainersFromPreviousAttempts();
+      Iterable<ContainerProto> iterable =
+          getContainerProtoIterable(this.containersFromPreviousAttempts);
+      builder.addAllContainersFromPreviousAttempts(iterable);
     }
   }
 
@@ -282,8 +307,8 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       final List<Container> containers) {
     if (containers == null)
       return;
-    // this looks like a bug because it results in append and not set
     initLocalNewContainerList();
+    allocatedContainers.clear();
     allocatedContainers.addAll(containers);
   }
 
@@ -299,6 +324,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (containers == null)
       return;
     initLocalUpdatedContainerList();
+    updatedContainers.clear();
     updatedContainers.addAll(containers);
   }
 
@@ -315,6 +341,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (containers == null)
       return;
     initLocalFinishedContainerList();
+    completedContainersStatuses.clear();
     completedContainersStatuses.addAll(containers);
   }
 
@@ -396,19 +423,25 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
 
   @Override
-  public synchronized String getCollectorAddr() {
+  public synchronized CollectorInfo getCollectorInfo() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getCollectorAddr();
+    if (this.collectorInfo != null) {
+      return this.collectorInfo;
+    }
+    if (!p.hasCollectorInfo()) {
+      return null;
+    }
+    this.collectorInfo = convertFromProtoFormat(p.getCollectorInfo());
+    return this.collectorInfo;
   }
 
   @Override
-  public synchronized void setCollectorAddr(String collectorAddr) {
+  public synchronized void setCollectorInfo(CollectorInfo info) {
     maybeInitBuilder();
-    if (collectorAddr == null) {
-      builder.clearCollectorAddr();
-      return;
+    if (info == null) {
+      builder.clearCollectorInfo();
     }
-    builder.setCollectorAddr(collectorAddr);
+    this.collectorInfo = info;
   }
 
   @Override
@@ -430,6 +463,41 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     if (priority == null)
       builder.clearApplicationPriority();
     this.appPriority = priority;
+  }
+
+  @Override
+  public synchronized List<Container> getContainersFromPreviousAttempts() {
+    initContainersFromPreviousAttemptsList();
+    return this.containersFromPreviousAttempts;
+  }
+
+  @Override
+  public synchronized void setContainersFromPreviousAttempts(
+      final List<Container> containers) {
+    if (containers == null) {
+      return;
+    }
+    initContainersFromPreviousAttemptsList();
+    containersFromPreviousAttempts.clear();
+    containersFromPreviousAttempts.addAll(containers);
+  }
+
+  @Override
+  public synchronized List<RejectedSchedulingRequest>
+      getRejectedSchedulingRequests() {
+    initRejectedRequestsList();
+    return this.rejectedRequests;
+  }
+
+  @Override
+  public synchronized void setRejectedSchedulingRequests(
+      List<RejectedSchedulingRequest> rejectedReqs) {
+    if (rejectedReqs == null) {
+      return;
+    }
+    initRejectedRequestsList();
+    this.rejectedRequests.clear();
+    this.rejectedRequests.addAll(rejectedReqs);
   }
 
   private synchronized void initLocalUpdatedContainerList() {
@@ -473,6 +541,33 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
     for (ContainerProto c : list) {
       allocatedContainers.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private synchronized void initContainersFromPreviousAttemptsList() {
+    if (this.containersFromPreviousAttempts != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getContainersFromPreviousAttemptsList();
+    containersFromPreviousAttempts = new ArrayList<>();
+
+    for (ContainerProto c : list) {
+      containersFromPreviousAttempts.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private synchronized void initRejectedRequestsList() {
+    if (this.rejectedRequests != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<YarnProtos.RejectedSchedulingRequestProto> list =
+        p.getRejectedSchedulingRequestsList();
+    rejectedRequests = new ArrayList<>();
+
+    for (YarnProtos.RejectedSchedulingRequestProto c : list) {
+      rejectedRequests.add(convertFromProtoFormat(c));
     }
   }
 
@@ -660,6 +755,38 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       }
     };
   }
+
+  private synchronized Iterable<YarnProtos.RejectedSchedulingRequestProto>
+      getRejectedSchedulingRequestsProtoIterable(
+      final List<RejectedSchedulingRequest> rejectedReqsList) {
+    maybeInitBuilder();
+    return new Iterable<YarnProtos.RejectedSchedulingRequestProto>() {
+      @Override
+      public Iterator<YarnProtos.RejectedSchedulingRequestProto> iterator() {
+        return new Iterator<YarnProtos.RejectedSchedulingRequestProto>() {
+
+          private Iterator<RejectedSchedulingRequest> iter =
+              rejectedReqsList.iterator();
+
+          @Override
+          public synchronized boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public synchronized YarnProtos.RejectedSchedulingRequestProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public synchronized void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+      }
+    };
+  }
   
   private synchronized Iterable<NodeReportProto>
   getNodeReportProtoIterable(
@@ -716,6 +843,16 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     return ((NodeReportPBImpl)t).getProto();
   }
 
+  private synchronized CollectorInfoPBImpl convertFromProtoFormat(
+      CollectorInfoProto p) {
+    return new CollectorInfoPBImpl(p);
+  }
+
+  private synchronized CollectorInfoProto convertToProtoFormat(
+      CollectorInfo t) {
+    return ((CollectorInfoPBImpl)t).getProto();
+  }
+
   private synchronized ContainerPBImpl convertFromProtoFormat(
       ContainerProto p) {
     return new ContainerPBImpl(p);
@@ -746,12 +883,22 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     return ((ContainerStatusPBImpl)t).getProto();
   }
 
+  private synchronized RejectedSchedulingRequestPBImpl convertFromProtoFormat(
+      YarnProtos.RejectedSchedulingRequestProto p) {
+    return new RejectedSchedulingRequestPBImpl(p);
+  }
+
+  private synchronized YarnProtos.RejectedSchedulingRequestProto
+      convertToProtoFormat(RejectedSchedulingRequest t) {
+    return ((RejectedSchedulingRequestPBImpl)t).getProto();
+  }
+
   private synchronized ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
   }
 
   private synchronized ResourceProto convertToProtoFormat(Resource r) {
-    return ((ResourcePBImpl) r).getProto();
+    return ProtoUtils.convertToProtoFormat(r);
   }
 
   private synchronized PreemptionMessagePBImpl convertFromProtoFormat(PreemptionMessageProto p) {

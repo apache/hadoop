@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.fs.swift;
 
-import junit.framework.AssertionFailedError;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -44,8 +47,8 @@ import java.net.URISyntaxException;
  */
 public class TestSwiftFileSystemContract
         extends FileSystemContractBaseTest {
-  private static final Log LOG =
-          LogFactory.getLog(TestSwiftFileSystemContract.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftFileSystemContract.class);
 
   /**
    * Override this if the filesystem is not case sensitive
@@ -55,8 +58,8 @@ public class TestSwiftFileSystemContract
     return false;
   }
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     final URI uri = getFilesystemURI();
     final Configuration conf = new Configuration();
     fs = createSwiftFS();
@@ -68,7 +71,6 @@ public class TestSwiftFileSystemContract
       fs = null;
       throw e;
     }
-    super.setUp();
   }
 
   protected URI getFilesystemURI() throws URISyntaxException, IOException {
@@ -81,7 +83,7 @@ public class TestSwiftFileSystemContract
     return swiftNativeFileSystem;
   }
 
-  @Override
+  @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = path("/test/hadoop");
     assertFalse(fs.exists(testDir));
@@ -115,20 +117,21 @@ public class TestSwiftFileSystemContract
 
   }
 
-  @Override
+  @Test
   public void testWriteReadAndDeleteEmptyFile() throws Exception {
     try {
       super.testWriteReadAndDeleteEmptyFile();
-    } catch (AssertionFailedError e) {
+    } catch (AssertionError e) {
       SwiftTestUtils.downgrade("empty files get mistaken for directories", e);
     }
   }
 
-  @Override
+  @Test
   public void testMkdirsWithUmask() throws Exception {
     //unsupported
   }
 
+  @Test
   public void testZeroByteFilesAreFiles() throws Exception {
 //    SwiftTestUtils.unsupported("testZeroByteFilesAreFiles");
   }

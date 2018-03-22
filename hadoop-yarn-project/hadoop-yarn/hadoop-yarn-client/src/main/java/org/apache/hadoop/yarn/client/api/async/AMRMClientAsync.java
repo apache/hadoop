@@ -18,38 +18,46 @@
 
 package org.apache.hadoop.yarn.client.api.async;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.async.impl.AMRMClientAsyncImpl;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>AMRMClientAsync</code> handles communication with the ResourceManager
@@ -104,7 +112,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Stable
 public abstract class AMRMClientAsync<T extends ContainerRequest> 
 extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(AMRMClientAsync.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClientAsync.class);
   
   protected final AMRMClient<T> client;
   protected final CallbackHandler handler;
@@ -202,6 +211,19 @@ extends AbstractService {
                                                    Resource capability);
 
   /**
+   * Add a Collection of SchedulingRequests. The AMRMClient will ensure that
+   * all requests in the same batch are sent in the same allocate call.
+   * @param schedulingRequests Collection of Scheduling Requests.
+   */
+  @Public
+  @Unstable
+  public void addSchedulingRequests(
+      Collection<SchedulingRequest> schedulingRequests) {
+
+  }
+
+
+  /**
    * Returns all matching ContainerRequests that match the given Priority,
    * ResourceName, ExecutionType and Capability.
    *
@@ -246,6 +268,26 @@ extends AbstractService {
       throws YarnException, IOException;
 
   /**
+   * Register the application master. This must be called before any
+   * other interaction
+   * @param appHostName Name of the host on which master is running
+   * @param appHostPort Port master is listening on
+   * @param appTrackingUrl URL at which the master info can be seen
+   * @param placementConstraints Placement Constraints mappings.
+   * @return <code>RegisterApplicationMasterResponse</code>
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public RegisterApplicationMasterResponse registerApplicationMaster(
+      String appHostName, int appHostPort, String appTrackingUrl,
+      Map<Set<String>, PlacementConstraint> placementConstraints)
+      throws YarnException, IOException {
+    throw new YarnException("Not supported");
+  }
+
+  /**
    * Unregister the application master. This must be called in the end.
    * @param appStatus Success/Failure status of the master
    * @param appMessage Diagnostics message on failure
@@ -284,12 +326,38 @@ extends AbstractService {
    * ResourceManager to change the existing resource allocation to the target
    * resource allocation.
    *
+   * @deprecated use
+   * {@link #requestContainerUpdate(Container, UpdateContainerRequest)}
+   *
    * @param container The container returned from the last successful resource
    *                  allocation or resource change
    * @param capability  The target resource capability of the container
    */
-  public abstract void requestContainerResourceChange(
-      Container container, Resource capability);
+  @Deprecated
+  public void requestContainerResourceChange(
+      Container container, Resource capability) {
+    Preconditions.checkNotNull(container, "Container cannot be null!!");
+    Preconditions.checkNotNull(capability,
+        "UpdateContainerRequest cannot be null!!");
+    requestContainerUpdate(container, UpdateContainerRequest.newInstance(
+        container.getVersion(), container.getId(),
+        Resources.fitsIn(capability, container.getResource()) ?
+            ContainerUpdateType.DECREASE_RESOURCE :
+            ContainerUpdateType.INCREASE_RESOURCE,
+        capability, null));
+  }
+
+  /**
+   * Request a container update before calling <code>allocate</code>.
+   * Any previous pending update request of the same container will be
+   * removed.
+   *
+   * @param container The container returned from the last successful resource
+   *                  allocation or update
+   * @param updateContainerRequest The <code>UpdateContainerRequest</code>.
+   */
+  public abstract void requestContainerUpdate(
+      Container container, UpdateContainerRequest updateContainerRequest);
 
   /**
    * Release containers assigned by the Resource Manager. If the app cannot use
@@ -317,17 +385,20 @@ extends AbstractService {
   /**
    * Register TimelineClient to AMRMClient.
    * @param timelineClient
+   * @throws YarnException when this method is invoked even when ATS V2 is not
+   *           configured.
    */
-  public void registerTimelineClient(TimelineClient timelineClient) {
-    client.registerTimelineClient(timelineClient);
+  public void registerTimelineV2Client(TimelineV2Client timelineClient)
+      throws YarnException {
+    client.registerTimelineV2Client(timelineClient);
   }
 
   /**
    * Get registered timeline client.
    * @return the registered timeline client
    */
-  public TimelineClient getRegisteredTimelineClient() {
-    return client.getRegisteredTimelineClient();
+  public TimelineV2Client getRegisteredTimelineV2Client() {
+    return client.getRegisteredTimelineV2Client();
   }
 
   /**
@@ -343,8 +414,8 @@ extends AbstractService {
 
   /**
    * Wait for <code>check</code> to return true for each 1000 ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int)}
-   * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int)}
+   * and {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
@@ -354,7 +425,7 @@ extends AbstractService {
   /**
    * Wait for <code>check</code> to return true for each
    * <code>checkEveryMillis</code> ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check user defined checker
    * @param checkEveryMillis interval to call <code>check</code>
    */
@@ -453,6 +524,24 @@ extends AbstractService {
      * stop() is the recommended action.
      */
     public abstract void onError(Throwable e);
+
+    /**
+     * Called when the ResourceManager responds to a heartbeat with containers
+     * from previous attempt.
+     */
+    public void onContainersReceivedFromPreviousAttempts(
+        List<Container> containers) {
+    }
+
+    /**
+     * Called when the RM has rejected Scheduling Requests.
+     * @param rejectedSchedulingRequests Rejected Scheduling Requests.
+     */
+    @Public
+    @Unstable
+    public void onRequestsRejected(
+        List<RejectedSchedulingRequest> rejectedSchedulingRequests) {
+    }
   }
 
   /**

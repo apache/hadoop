@@ -236,9 +236,26 @@ public class KMSACLs implements Runnable, KeyACLs {
    */
   public boolean hasAccess(Type type, UserGroupInformation ugi) {
     boolean access = acls.get(type).isUserAllowed(ugi);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Checking user [{}] for: {} {} ", ugi.getShortUserName(),
+          type.toString(), acls.get(type).getAclString());
+    }
     if (access) {
       AccessControlList blacklist = blacklistedAcls.get(type);
       access = (blacklist == null) || !blacklist.isUserInList(ugi);
+      if (LOG.isDebugEnabled()) {
+        if (blacklist == null) {
+          LOG.debug("No blacklist for {}", type.toString());
+        } else if (access) {
+          LOG.debug("user is in {}" , blacklist.getAclString());
+        } else {
+          LOG.debug("user is not in {}" , blacklist.getAclString());
+        }
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("User: [{}], Type: {} Result: {}", ugi.getShortUserName(),
+          type.toString(), access);
     }
     return access;
   }
@@ -259,8 +276,12 @@ public class KMSACLs implements Runnable, KeyACLs {
   @Override
   public boolean hasAccessToKey(String keyName, UserGroupInformation ugi,
       KeyOpType opType) {
-    return checkKeyAccess(keyName, ugi, opType)
+    boolean access = checkKeyAccess(keyName, ugi, opType)
         || checkKeyAccess(whitelistKeyAcls, ugi, opType);
+    if (!access) {
+      KMSWebApp.getKMSAudit().unauthorized(ugi, opType, keyName);
+    }
+    return access;
   }
 
   private boolean checkKeyAccess(String keyName, UserGroupInformation ugi,
@@ -269,9 +290,15 @@ public class KMSACLs implements Runnable, KeyACLs {
     if (keyAcl == null) {
       // If No key acl defined for this key, check to see if
       // there are key defaults configured for this operation
+      LOG.debug("Key: {} has no ACLs defined, using defaults.", keyName);
       keyAcl = defaultKeyAcls;
     }
-    return checkKeyAccess(keyAcl, ugi, opType);
+    boolean access = checkKeyAccess(keyAcl, ugi, opType);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("User: [{}], OpType: {}, KeyName: {} Result: {}",
+          ugi.getShortUserName(), opType.toString(), keyName, access);
+    }
+    return access;
   }
 
   private boolean checkKeyAccess(Map<KeyOpType, AccessControlList> keyAcl,
@@ -280,8 +307,13 @@ public class KMSACLs implements Runnable, KeyACLs {
     if (acl == null) {
       // If no acl is specified for this operation,
       // deny access
+      LOG.debug("No ACL available for key, denying access for {}", opType);
       return false;
     } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Checking user [{}] for: {}: {}" + ugi.getShortUserName(),
+            opType.toString(), acl.getAclString());
+      }
       return acl.isUserAllowed(ugi);
     }
   }
@@ -294,4 +326,8 @@ public class KMSACLs implements Runnable, KeyACLs {
         || whitelistKeyAcls.containsKey(opType));
   }
 
+  @VisibleForTesting
+  void forceNextReloadForTesting() {
+    lastReload = 0;
+  }
 }

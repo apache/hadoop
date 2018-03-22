@@ -24,8 +24,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -53,7 +51,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
-import org.apache.log4j.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  * A map/reduce job configuration.
@@ -116,7 +115,7 @@ import org.apache.log4j.Level;
 @InterfaceStability.Stable
 public class JobConf extends Configuration {
 
-  private static final Log LOG = LogFactory.getLog(JobConf.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobConf.class);
   private static final Pattern JAVA_OPTS_XMX_PATTERN =
           Pattern.compile(".*(?:^|\\s)-Xmx(\\d+)([gGmMkK]?)(?:$|\\s).*");
 
@@ -333,7 +332,7 @@ public class JobConf extends Configuration {
   private Credentials credentials = new Credentials();
   
   /**
-   * Configuration key to set the logging {@link Level} for the map task.
+   * Configuration key to set the logging level for the map task.
    *
    * The allowed logging levels are:
    * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
@@ -342,7 +341,7 @@ public class JobConf extends Configuration {
     JobContext.MAP_LOG_LEVEL;
   
   /**
-   * Configuration key to set the logging {@link Level} for the reduce task.
+   * Configuration key to set the logging level for the reduce task.
    *
    * The allowed logging levels are:
    * OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE and ALL.
@@ -353,7 +352,7 @@ public class JobConf extends Configuration {
   /**
    * Default logging level for map/reduce tasks.
    */
-  public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
+  public static final String DEFAULT_LOG_LEVEL = JobContext.DEFAULT_LOG_LEVEL;
 
   /**
    * The variable is kept for M/R 1.x applications, M/R 2.x applications should
@@ -1286,10 +1285,10 @@ public class JobConf extends Configuration {
   }
 
   /**
-   * Get configured the number of reduce tasks for this job.
+   * Get the configured number of map tasks for this job.
    * Defaults to <code>1</code>.
    * 
-   * @return the number of reduce tasks for this job.
+   * @return the number of map tasks for this job.
    */
   public int getNumMapTasks() { return getInt(JobContext.NUM_MAPS, 1); }
   
@@ -1334,9 +1333,9 @@ public class JobConf extends Configuration {
   public void setNumMapTasks(int n) { setInt(JobContext.NUM_MAPS, n); }
 
   /**
-   * Get configured the number of reduce tasks for this job. Defaults to 
+   * Get the configured number of reduce tasks for this job. Defaults to
    * <code>1</code>.
-   * 
+   *
    * @return the number of reduce tasks for this job.
    */
   public int getNumReduceTasks() { return getInt(JobContext.NUM_REDUCES, 1); }

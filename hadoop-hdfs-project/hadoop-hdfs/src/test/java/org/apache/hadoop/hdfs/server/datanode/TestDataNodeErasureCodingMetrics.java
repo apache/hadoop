@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
@@ -55,7 +54,7 @@ public class TestDataNodeErasureCodingMetrics {
   public static final Log LOG = LogFactory.
       getLog(TestDataNodeErasureCodingMetrics.class);
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
   private final int parityBlocks = ecPolicy.getNumParityUnits();
   private final int cellSize = ecPolicy.getCellSize();
@@ -75,8 +74,11 @@ public class TestDataNodeErasureCodingMetrics {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
   @After
@@ -88,6 +90,10 @@ public class TestDataNodeErasureCodingMetrics {
 
   @Test(timeout = 120000)
   public void testFullBlock() throws Exception {
+    Assert.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillis"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillis"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillis"));
+
     doTest("/testEcMetrics", blockGroupSize, 0);
 
     Assert.assertEquals("EcReconstructionTasks should be ",
@@ -101,6 +107,9 @@ public class TestDataNodeErasureCodingMetrics {
         blockSize, getLongMetric("EcReconstructionBytesWritten"));
     Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
         0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
+    Assert.assertTrue(getLongMetric("EcReconstructionReadTimeMillis") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillis") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionWriteTimeMillis") > 0);
   }
 
   // A partial block, reconstruct the partial block

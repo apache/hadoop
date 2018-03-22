@@ -12,21 +12,10 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-ResourceManger Restart
+ResourceManager Restart
 ======================
 
-* [Overview](#Overview)
-* [Feature](#Feature)
-* [Configurations](#Configurations)
-    * [Enable RM Restart](#Enable_RM_Restart)
-    * [Configure the state-store for persisting the RM state](#Configure_the_state-store_for_persisting_the_RM_state)
-    * [How to choose the state-store implementation](#How_to_choose_the_state-store_implementation)
-    * [Configurations for Hadoop FileSystem based state-store implementation](#Configurations_for_Hadoop_FileSystem_based_state-store_implementation)
-    * [Configurations for ZooKeeper based state-store implementation](#Configurations_for_ZooKeeper_based_state-store_implementation)
-    * [Configurations for LevelDB based state-store implementation](#Configurations_for_LevelDB_based_state-store_implementation)
-    * [Configurations for work-preserving RM recovery](#Configurations_for_work-preserving_RM_recovery)
-* [Notes](#Notes)
-* [Sample Configurations](#Sample_Configurations)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -104,22 +93,22 @@ This section describes the configurations involved to enable RM Restart feature.
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.resourcemanager.zk-address` | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
+| `hadoop.zk.address` | Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state. |
 | `yarn.resourcemanager.zk-state-store.parent-path` | The full path of the root znode where RM state will be stored. Default value is /rmstore. |
 
 * Configure the retry policy state-store client uses to connect with the ZooKeeper server.
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.resourcemanager.zk-num-retries` | Number of times RM tries to connect to ZooKeeper server if the connection is lost. Default value is 500. |
-| `yarn.resourcemanager.zk-retry-interval-ms` | The interval in milliseconds between retries when connecting to a ZooKeeper server. Default value is 2 seconds. |
-| `yarn.resourcemanager.zk-timeout-ms` | ZooKeeper session timeout in milliseconds. This configuration is used by the ZooKeeper server to determine when the session expires. Session expiration happens when the server does not hear from the client (i.e. no heartbeat) within the session timeout period specified by this configuration. Default value is 10 seconds |
+| `hadoop.zk.num-retries` | Number of times RM tries to connect to ZooKeeper server if the connection is lost. Default value is 500. |
+| `hadoop.zk.retry-interval-ms` | The interval in milliseconds between retries when connecting to a ZooKeeper server. Default value is 2 seconds. |
+| `hadoop.zk.timeout-ms` | ZooKeeper session timeout in milliseconds. This configuration is used by the ZooKeeper server to determine when the session expires. Session expiration happens when the server does not hear from the client (i.e. no heartbeat) within the session timeout period specified by this configuration. Default value is 10 seconds |
 
 * Configure the ACLs to be used for setting permissions on ZooKeeper znodes.
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.resourcemanager.zk-acl` | ACLs to be used for setting permissions on ZooKeeper znodes. Default value is `world:anyone:rwcda` |
+| `hadoop.zk.acl` | ACLs to be used for setting permissions on ZooKeeper znodes. Default value is `world:anyone:rwcda` |
 
 ### Configurations for LevelDB based state-store implementation
 
@@ -168,7 +157,7 @@ Below is a minimum set of configurations for enabling RM work-preserving restart
        (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state.
        This must be supplied when using org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
        as the value for yarn.resourcemanager.store.class</description>
-       <name>yarn.resourcemanager.zk-address</name>
+       <name>hadoop.zk.address</name>
        <value>127.0.0.1:2181</value>
      </property>
 

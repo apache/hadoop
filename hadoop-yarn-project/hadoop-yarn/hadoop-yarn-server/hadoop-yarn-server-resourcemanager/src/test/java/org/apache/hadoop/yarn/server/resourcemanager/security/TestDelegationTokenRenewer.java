@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -392,7 +393,8 @@ public class TestDelegationTokenRenewer {
     // register the tokens for renewal
     ApplicationId applicationId_0 = 
         BuilderUtils.newApplicationId(0, 0);
-    delegationTokenRenewer.addApplicationAsync(applicationId_0, ts, true, "user");
+    delegationTokenRenewer.addApplicationAsync(applicationId_0, ts, true, "user",
+        new Configuration());
     waitForEventsToGetProcessed(delegationTokenRenewer);
 
     // first 3 initial renewals + 1 real
@@ -432,7 +434,8 @@ public class TestDelegationTokenRenewer {
     
 
     ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
-    delegationTokenRenewer.addApplicationAsync(applicationId_1, ts, true, "user");
+    delegationTokenRenewer.addApplicationAsync(applicationId_1, ts, true, "user",
+        new Configuration());
     waitForEventsToGetProcessed(delegationTokenRenewer);
     delegationTokenRenewer.applicationFinished(applicationId_1);
     waitForEventsToGetProcessed(delegationTokenRenewer);
@@ -468,7 +471,8 @@ public class TestDelegationTokenRenewer {
     
     // register the tokens for renewal
     ApplicationId appId =  BuilderUtils.newApplicationId(0, 0);
-    delegationTokenRenewer.addApplicationAsync(appId, ts, true, "user");
+    delegationTokenRenewer.addApplicationAsync(appId, ts, true, "user",
+        new Configuration());
     int waitCnt = 20;
     while (waitCnt-- >0) {
       if (!eventQueue.isEmpty()) {
@@ -531,7 +535,8 @@ public class TestDelegationTokenRenewer {
     
 
     ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
-    delegationTokenRenewer.addApplicationAsync(applicationId_1, ts, false, "user");
+    delegationTokenRenewer.addApplicationAsync(applicationId_1, ts, false, "user",
+        new Configuration());
     waitForEventsToGetProcessed(delegationTokenRenewer);
     delegationTokenRenewer.applicationFinished(applicationId_1);
     waitForEventsToGetProcessed(delegationTokenRenewer);
@@ -600,7 +605,8 @@ public class TestDelegationTokenRenewer {
 
     // register the tokens for renewal
     ApplicationId applicationId_0 =  BuilderUtils.newApplicationId(0, 0);
-    localDtr.addApplicationAsync(applicationId_0, ts, true, "user");
+    localDtr.addApplicationAsync(applicationId_0, ts, true, "user",
+        new Configuration());
     waitForEventsToGetProcessed(localDtr);
     if (!eventQueue.isEmpty()){
       Event evt = eventQueue.take();
@@ -679,7 +685,8 @@ public class TestDelegationTokenRenewer {
 
     // register the tokens for renewal
     ApplicationId applicationId_0 =  BuilderUtils.newApplicationId(0, 0);
-    localDtr.addApplicationAsync(applicationId_0, ts, true, "user");
+    localDtr.addApplicationAsync(applicationId_0, ts, true, "user",
+        new Configuration());
     localDtr.applicationFinished(applicationId_0);
     waitForEventsToGetProcessed(delegationTokenRenewer);
     //Send another keep alive.
@@ -831,14 +838,16 @@ public class TestDelegationTokenRenewer {
     Thread submitThread = new Thread() {                                       
       @Override                                                                
       public void run() {
-        dtr.addApplicationAsync(mock(ApplicationId.class), creds1, false, "user");
+        dtr.addApplicationAsync(mock(ApplicationId.class), creds1, false, "user",
+            new Configuration());
       }                                                                        
     };                                                                         
     submitThread.start();                                                      
                                                                                
     // wait till 1st submit blocks, then submit another
     startBarrier.await();                           
-    dtr.addApplicationAsync(mock(ApplicationId.class), creds2, false, "user");
+    dtr.addApplicationAsync(mock(ApplicationId.class), creds2, false, "user",
+        new Configuration());
     // signal 1st to complete                                                  
     endBarrier.await();                                                        
     submitThread.join(); 
@@ -997,9 +1006,8 @@ public class TestDelegationTokenRenewer {
     Credentials credentials = new Credentials();
     credentials.addToken(userText1, originalToken);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(yarnConf);
-    MockRM rm1 = new TestSecurityMockRM(yarnConf, memStore);
+    MockRM rm1 = new TestSecurityMockRM(yarnConf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
     RMApp app = rm1.submitApp(200, "name", "user",
         new HashMap<ApplicationAccessType, String>(), false, "default", 1,
@@ -1254,9 +1262,27 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(Renewer.cancelled);
 
     finishAMAndWaitForComplete(app3, rm, nm1, am3, dttr);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return !renewer.getAllTokens().containsKey(token1);
+      }
+    }, 10, 5000);
     Assert.assertFalse(renewer.getAllTokens().containsKey(token1));
     Assert.assertTrue(dttr.referringAppIds.isEmpty());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return dttr.isTimerCancelled();
+      }
+    }, 10, 5000);
     Assert.assertTrue(dttr.isTimerCancelled());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return Renewer.cancelled;
+      }
+    }, 10, 5000);
     Assert.assertTrue(Renewer.cancelled);
 
     // make sure the token also has been removed from appTokens
@@ -1272,5 +1298,107 @@ public class TestDelegationTokenRenewer {
         return !dttr.referringAppIds.contains(app.getApplicationId());
       }
     }, 10, 10000);
+  }
+
+  // Test DelegationTokenRenewer uses the tokenConf provided by application
+  // for token renewal.
+  @Test
+  public void testRenewTokenUsingTokenConfProvidedByApp() throws Exception{
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm.start();
+    final MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create a token
+    Text userText1 = new Text("user1");
+    DelegationTokenIdentifier dtId1 =
+        new DelegationTokenIdentifier(userText1, new Text("renewer1"),
+            userText1);
+    final Token<DelegationTokenIdentifier> token1 =
+        new Token<DelegationTokenIdentifier>(dtId1.getBytes(),
+            "password1".getBytes(), dtId1.getKind(), new Text("service1"));
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText1, token1);
+
+    // create token conf for renewal
+    Configuration appConf = new Configuration(false);
+    appConf.set("dfs.nameservices", "mycluster1,mycluster2");
+    appConf.set("dfs.namenode.rpc-address.mycluster2.nn1", "123.0.0.1");
+    appConf.set("dfs.namenode.rpc-address.mycluster2.nn2", "123.0.0.2");
+    appConf.set("dfs.ha.namenodes.mycluster2", "nn1,nn2");
+    appConf.set("dfs.client.failover.proxy.provider.mycluster2", "provider");
+    DataOutputBuffer dob = new DataOutputBuffer();
+    appConf.write(dob);
+    ByteBuffer tokenConf = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    final int confSize = appConf.size();
+
+    // submit app
+    RMApp app = rm.submitApp(credentials, tokenConf);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        DelegationTokenToRenew toRenew =
+            rm.getRMContext().getDelegationTokenRenewer().getAllTokens()
+                .get(token1);
+        // check app conf size equals to original size and it does contain
+        // the specific config we added.
+        return toRenew != null && toRenew.conf != null
+            && toRenew.conf.size() == confSize && toRenew.conf
+            .get("dfs.namenode.rpc-address.mycluster2.nn1").equals("123.0.0.1");
+      }
+    }, 200, 10000);
+  }
+
+  // Test if app's token conf exceeds RM_DELEGATION_TOKEN_MAX_CONF_SIZE,
+  // app should fail
+  @Test
+  public void testTokensConfExceedLimit() throws Exception {
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    // limit 100 bytes
+    conf.setInt(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE, 100);
+    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm.start();
+    final MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create a token
+    Text userText1 = new Text("user1");
+    DelegationTokenIdentifier dtId1 =
+        new DelegationTokenIdentifier(userText1, new Text("renewer1"),
+            userText1);
+    final Token<DelegationTokenIdentifier> token1 =
+        new Token<DelegationTokenIdentifier>(dtId1.getBytes(),
+            "password1".getBytes(), dtId1.getKind(), new Text("service1"));
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText1, token1);
+
+    // create token conf for renewal, total size (512 bytes) > limit (100 bytes)
+    // By experiment, it's roughly 128 bytes per key-value pair.
+    Configuration appConf = new Configuration(false);
+    appConf.clear();
+    appConf.set("dfs.nameservices", "mycluster1,mycluster2"); // 128 bytes
+    appConf.set("dfs.namenode.rpc-address.mycluster2.nn1", "123.0.0.1"); //128 bytes
+    appConf.set("dfs.namenode.rpc-address.mycluster3.nn2", "123.0.0.2"); // 128 bytes
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    appConf.write(dob);
+    ByteBuffer tokenConf = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+
+    try {
+      rm.submitApp(credentials, tokenConf);
+      Assert.fail();
+    } catch (Exception e) {
+      e.printStackTrace();
+      Assert.assertTrue(e.getCause().getMessage()
+          .contains(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_CONF_SIZE));
+    }
   }
 }

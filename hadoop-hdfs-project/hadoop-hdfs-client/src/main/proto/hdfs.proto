@@ -32,6 +32,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
 import "Security.proto";
+import "acl.proto";
 
 /**
  * Extended block idenfies a block
@@ -42,6 +43,20 @@ message ExtendedBlockProto {
   required uint64 generationStamp = 3;
   optional uint64 numBytes = 4 [default = 0];  // len does not belong in ebid 
                                                // here for historical reasons
+}
+
+
+/**
+* ProvidedStorageLocation will contain the exact location in the provided
+  storage. The path, offset and length will result in ranged read. The nonce
+  is there to verify that you receive what you expect.
+*/
+
+message ProvidedStorageLocationProto {
+  required string path = 1;
+  required int64 offset = 2;
+  required int64 length = 3;
+  required bytes nonce = 4;
 }
 
 /**
@@ -70,6 +85,19 @@ message DatanodeLocalInfoProto {
 }
 
 /**
+ * Datanode volume information
+ */
+message DatanodeVolumeInfoProto {
+  required string path = 1;
+  required StorageTypeProto storageType = 2;
+  required uint64 usedSpace = 3;
+  required uint64 freeSpace = 4;
+  required uint64 reservedSpace = 5;
+  required uint64 reservedSpaceForReplicas = 6;
+  required uint64 numBlocks = 7;
+}
+
+/**
  * DatanodeInfo array
  */
 message DatanodeInfosProto {
@@ -88,6 +116,7 @@ message DatanodeInfoProto {
   optional uint64 lastUpdate = 6 [default = 0];
   optional uint32 xceiverCount = 7 [default = 0];
   optional string location = 8;
+  optional uint64 nonDfsUsed = 9;
   enum AdminState {
     NORMAL = 0;
     DECOMMISSION_INPROGRESS = 1;
@@ -101,7 +130,9 @@ message DatanodeInfoProto {
   optional uint64 cacheUsed = 12 [default = 0];
   optional uint64 lastUpdateMonotonic = 13 [default = 0];
   optional string upgradeDomain = 14;
-  optional uint64 nonDfsUsed = 15;
+  optional uint64 lastBlockReportTime = 15 [default = 0];
+  optional uint64 lastBlockReportMonotonic = 16 [default = 0];
+  optional uint32 numBlocks = 17 [default = 0];
 }
 
 /**
@@ -144,6 +175,7 @@ message ContentSummaryProto {
   optional uint64 snapshotFileCount = 9;
   optional uint64 snapshotDirectoryCount = 10;
   optional uint64 snapshotSpaceConsumed = 11;
+  optional string erasureCodingPolicy = 12;
 }
 
 /**
@@ -181,13 +213,6 @@ message CorruptFileBlocksProto {
 }
 
 /**
- * File or Directory permision - same spec as posix
- */
-message FsPermissionProto {
-  required uint32 perm = 1;       // Actually a short - only 16bits used
-}
-
-/**
  * Types of recognized storage media.
  */
 enum StorageTypeProto {
@@ -195,6 +220,15 @@ enum StorageTypeProto {
   SSD = 2;
   ARCHIVE = 3;
   RAM_DISK = 4;
+  PROVIDED = 5;
+}
+
+/**
+ * Types of recognized blocks.
+ */
+enum BlockTypeProto {
+  CONTIGUOUS = 0;
+  STRIPED = 1;
 }
 
 /**
@@ -295,6 +329,20 @@ message ZoneEncryptionInfoProto {
   required CipherSuiteProto suite = 1;
   required CryptoProtocolVersionProto cryptoProtocolVersion = 2;
   required string keyName = 3;
+  optional ReencryptionInfoProto reencryptionProto = 4;
+}
+
+/**
+ * Re-encryption information for an encryption zone
+ */
+message ReencryptionInfoProto {
+  required string ezKeyVersionName = 1;
+  required uint64 submissionTime = 2;
+  required bool canceled = 3;
+  required int64 numReencrypted = 4;
+  required int64 numFailures = 5;
+  optional uint64 completionTime = 6;
+  optional string lastFile = 7;
 }
 
 /**
@@ -341,11 +389,36 @@ message ECSchemaProto {
   repeated ECSchemaOptionEntryProto options = 4;
 }
 
+/**
+ * EC policy state.
+ */
+enum ErasureCodingPolicyState {
+  DISABLED = 1;
+  ENABLED = 2;
+  REMOVED = 3;
+}
+
 message ErasureCodingPolicyProto {
-  required string name = 1;
-  required ECSchemaProto schema = 2;
-  required uint32 cellSize = 3;
+  optional string name = 1;
+  optional ECSchemaProto schema = 2;
+  optional uint32 cellSize = 3;
   required uint32 id = 4; // Actually a byte - only 8 bits used
+  optional ErasureCodingPolicyState state = 5 [default = ENABLED];
+}
+
+message AddErasureCodingPolicyResponseProto {
+  required ErasureCodingPolicyProto policy = 1;
+  required bool succeed = 2;
+  optional string errorMsg = 3;
+}
+
+/**
+ * Placeholder type for consistent HDFS operations.
+ */
+message HdfsPathHandleProto {
+  optional uint64 inodeId = 1;
+  optional uint64 mtime = 2;
+  optional string path = 3;
 }
 
 /**
@@ -357,6 +430,12 @@ message HdfsFileStatusProto {
     IS_DIR = 1;
     IS_FILE = 2;
     IS_SYMLINK = 3;
+  }
+  enum Flags {
+    HAS_ACL   = 0x01; // has ACLs
+    HAS_CRYPT = 0x02; // encrypted
+    HAS_EC    = 0x04; // erasure coded
+    SNAPSHOT_ENABLED    = 0x08; // SNAPSHOT ENABLED
   }
   required FileType fileType = 1;
   required bytes path = 2;          // local name of inode encoded java UTF8
@@ -385,6 +464,9 @@ message HdfsFileStatusProto {
 
   // Optional field for erasure coding
   optional ErasureCodingPolicyProto ecPolicy = 17;
+
+  // Set of flags
+  optional uint32 flags = 18 [default = 0];
 }
 
 /**
@@ -410,6 +492,8 @@ message FsServerDefaultsProto {
   optional bool encryptDataTransfer = 6 [default = false];
   optional uint64 trashInterval = 7 [default = 0];
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
+  optional string keyProviderUri = 9;
+  optional uint32 policyId = 10 [default = 0];
 }
 
 
@@ -463,6 +547,32 @@ message SnapshotDiffReportProto {
 }
 
 /**
+ * Snapshot diff report listing entry
+ */
+message SnapshotDiffReportListingEntryProto {
+  required bytes fullpath = 1;
+  required uint64 dirId = 2;
+  required bool isReference = 3;
+  optional bytes targetPath = 4;
+  optional uint64 fileId = 5;
+}
+
+message SnapshotDiffReportCursorProto {
+  required bytes startPath = 1;
+  required int32 index = 2 [default = -1];
+}
+/**
+ * Snapshot diff report listing
+ */
+message SnapshotDiffReportListingProto {
+  // full path of the directory where snapshots were taken
+  repeated SnapshotDiffReportListingEntryProto modifiedEntries = 1;
+  repeated SnapshotDiffReportListingEntryProto createdEntries = 2;
+  repeated SnapshotDiffReportListingEntryProto deletedEntries = 3;
+  required bool isFromEarlier = 4;
+  optional SnapshotDiffReportCursorProto cursor = 5;
+}
+/**
  * Block information
  *
  * Please be wary of adding additional fields here, since INodeFiles
@@ -505,4 +615,39 @@ message RollingUpgradeStatusProto {
  */
 message StorageUuidsProto {
   repeated string storageUuids = 1;
+}
+
+/**
+ * File access permissions mode.
+ */
+enum AccessModeProto {
+    READ = 1;
+    WRITE = 2;
+    COPY = 3;
+    REPLACE = 4;
+}
+
+/**
+ * Secret information for the BlockKeyProto. This is not sent on the wire as
+ * such but is used to pack a byte array and encrypted and put in
+ * BlockKeyProto.bytes
+ * When adding further fields, make sure they are optional as they would
+ * otherwise not be backwards compatible.
+ *
+ * Note: As part of the migration from WritableUtils based tokens (aka "legacy")
+ * to Protocol Buffers, we use the first byte to determine the type. If the
+ * first byte is <=0 then it is a legacy token. This means that when using
+ * protobuf tokens, the the first field sent must have a `field_number` less
+ * than 16 to make sure that the first byte is positive. Otherwise it could be
+ * parsed as a legacy token. See HDFS-11026 for more discussion.
+ */
+message BlockTokenSecretProto {
+  optional uint64 expiryDate = 1;
+  optional uint32 keyId = 2;
+  optional string userId = 3;
+  optional string blockPoolId = 4;
+  optional uint64 blockId = 5;
+  repeated AccessModeProto modes = 6;
+  repeated StorageTypeProto storageTypes = 7;
+  repeated string storageIds = 8;
 }

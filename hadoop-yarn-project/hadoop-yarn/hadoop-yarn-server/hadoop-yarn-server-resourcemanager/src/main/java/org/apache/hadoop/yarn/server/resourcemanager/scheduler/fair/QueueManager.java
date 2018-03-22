@@ -35,17 +35,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.xml.sax.SAXException;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
-import org.apache.hadoop.yarn.api.records.Resource;
+
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
  * such as guaranteed share allocations, from the fair scheduler config file.
- * 
  */
 @Private
 @Unstable
@@ -72,14 +71,18 @@ public class QueueManager {
 
   public void initialize(Configuration conf) throws IOException,
       SAXException, AllocationConfigurationException, ParserConfigurationException {
+    // Policies of root and default queue are set to
+    // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
+    // loaded yet.
     rootQueue = new FSParentQueue("root", scheduler, null);
-    rootQueue.init();
     queues.put(rootQueue.getName(), rootQueue);
 
     // Create the default queue
     getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
+    // Recursively reinitialize to propagate queue properties
+    rootQueue.reinit(true);
   }
-  
+
   /**
    * Get a leaf queue by name, creating it if the create param is true and is necessary.
    * If the queue is not or can not be a leaf queue, i.e. it already exists as a
@@ -271,21 +274,32 @@ public class QueueManager {
       FSParentQueue newParent = null;
       String queueName = i.next();
 
+      // Check if child policy is allowed
+      SchedulingPolicy childPolicy = scheduler.getAllocationConfiguration().
+          getSchedulingPolicy(queueName);
+      if (!parent.getPolicy().isChildPolicyAllowed(childPolicy)) {
+        LOG.error("Can't create queue '" + queueName + "'.");
+        return null;
+      }
+
       // Only create a leaf queue at the very end
       if (!i.hasNext() && (queueType != FSQueueType.PARENT)) {
         FSLeafQueue leafQueue = new FSLeafQueue(queueName, scheduler, parent);
         leafQueues.add(leafQueue);
         queue = leafQueue;
       } else {
+        if (childPolicy instanceof FifoPolicy) {
+          LOG.error("Can't create queue '" + queueName + "', since "
+              + FifoPolicy.NAME + " is only for leaf queues.");
+          return null;
+        }
         newParent = new FSParentQueue(queueName, scheduler, parent);
         queue = newParent;
       }
 
-      queue.init();
       parent.addChildQueue(queue);
       setChildResourceLimits(parent, queue, queueConf);
       queues.put(queue.getName(), queue);
-      queue.updatePreemptionVariables();
 
       // If we just created a leaf node, the newParent is null, but that's OK
       // because we only create a leaf node in the very last iteration.
@@ -315,7 +329,7 @@ public class QueueManager {
         !configuredQueues.get(FSQueueType.PARENT).contains(child.getName())) {
       // For ad hoc queues, set their max reource allocations based on
       // their parents' default child settings.
-      Resource maxChild = parent.getMaxChildQueueResource();
+      ConfigurableResource maxChild = parent.getMaxChildQueueResource();
 
       if (maxChild != null) {
         child.setMaxShare(maxChild);
@@ -480,6 +494,13 @@ public class QueueManager {
   public void updateAllocationConfiguration(AllocationConfiguration queueConf) {
     // Create leaf queues and the parent queues in a leaf's ancestry if they do not exist
     synchronized (queues) {
+      // Verify and set scheduling policies for existing queues before creating
+      // any queue, since we need parent policies to determine if we can create
+      // its children.
+      if (!rootQueue.verifyAndSetPolicyFromConf(queueConf)) {
+        LOG.error("Setting scheduling policies for existing queues failed!");
+      }
+
       for (String name : queueConf.getConfiguredQueues().get(
               FSQueueType.LEAF)) {
         if (removeEmptyIncompatibleQueues(name, FSQueueType.LEAF)) {
@@ -496,17 +517,11 @@ public class QueueManager {
         }
       }
     }
-    rootQueue.recomputeSteadyShares();
 
-    for (FSQueue queue : queues.values()) {
-      queue.init();
-    }
-
+    // Initialize all queues recursively
+    rootQueue.reinit(true);
     // Update steady fair shares for all queues
     rootQueue.recomputeSteadyShares();
-    // Update the fair share preemption timeouts and preemption for all queues
-    // recursively
-    rootQueue.updatePreemptionVariables();
   }
 
   /**
@@ -516,8 +531,9 @@ public class QueueManager {
   @VisibleForTesting
   boolean isQueueNameValid(String node) {
     // use the same white space trim as in QueueMetrics() otherwise things fail
-    // guava uses a different definition for whitespace than java.
+    // This needs to trim additional Unicode whitespace characters beyond what
+    // the built-in JDK methods consider whitespace. See YARN-5272.
     return !node.isEmpty() &&
-        node.equals(CharMatcher.WHITESPACE.trimFrom(node));
+        node.equals(FairSchedulerUtilities.trimQueueName(node));
   }
 }

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -351,6 +352,40 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testUserGroupOkAfterAlteringAclPattern() {
+    // Preserve default pattern value
+    AclPermissionParam.Domain oldDomain =
+        AclPermissionParam.getAclPermissionPattern();
+
+    // Override the pattern with one that accepts '@' and numbers
+    // in the first character of usernames/groupnames
+    String newPattern =
+        "^(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?" +
+            "(,(default:)?(user|group|mask|other):" +
+            "[[0-9A-Za-z_][@A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
+
+    try {
+      AclPermissionParam.setAclPermissionPattern(newPattern);
+
+      String numericUserSpec = "user:110201:rwx";
+      AclPermissionParam aclNumericUserParam =
+          new AclPermissionParam(numericUserSpec);
+      Assert.assertEquals(numericUserSpec, aclNumericUserParam.getValue());
+
+      String oddGroupSpec = "group:foo@bar:rwx";
+      AclPermissionParam aclGroupWithDomainParam =
+          new AclPermissionParam(oddGroupSpec);
+      Assert.assertEquals(oddGroupSpec, aclGroupWithDomainParam.getValue());
+
+    } finally {
+      // Revert back to the default rules for remainder of tests
+      AclPermissionParam.setAclPermissionPattern(oldDomain);
+    }
+
+  }
  
   @Test
   public void testXAttrNameParam() {
@@ -468,5 +503,45 @@ public class TestParam {
     Assert.assertEquals(null, p.getValue());
     p = new StoragePolicyParam("COLD");
     Assert.assertEquals("COLD", p.getValue());
+  }
+
+  @Test
+  public void testHttpOpParams() {
+    try {
+      new PostOpParam("TEST");
+      Assert
+          .fail("Construct the PostOpParam with param value 'TEST' should be"
+              + " failed.");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "TEST is not a valid POST operation.", e);
+    }
+    try {
+      new PutOpParam("TEST");
+      Assert
+          .fail("Construct the PutOpParam with param value 'TEST' should be"
+              + " failed.");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "TEST is not a valid PUT operation.", e);
+    }
+    try {
+      new DeleteOpParam("TEST");
+      Assert
+          .fail("Construct the DeleteOpParam with param value 'TEST' should be"
+              + " failed.");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "TEST is not a valid DELETE operation.", e);
+    }
+    try {
+      new GetOpParam("TEST");
+      Assert
+          .fail("Construct the GetOpParam with param value 'TEST' should be"
+              + " failed.");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "TEST is not a valid GET operation.", e);
+    }
   }
 }

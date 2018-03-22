@@ -75,7 +75,7 @@ public class DoubleWritable implements WritableComparable<DoubleWritable> {
   
   @Override
   public int compareTo(DoubleWritable o) {
-    return (value < o.value ? -1 : (value == o.value ? 0 : 1));
+    return Double.compare(value, o.value);
   }
   
   @Override
@@ -94,7 +94,7 @@ public class DoubleWritable implements WritableComparable<DoubleWritable> {
                        byte[] b2, int s2, int l2) {
       double thisValue = readDouble(b1, s1);
       double thatValue = readDouble(b2, s2);
-      return (thisValue < thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
+      return Double.compare(thisValue, thatValue);
     }
   }
 

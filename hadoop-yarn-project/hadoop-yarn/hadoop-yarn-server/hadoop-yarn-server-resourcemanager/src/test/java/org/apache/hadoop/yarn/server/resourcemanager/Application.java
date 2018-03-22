@@ -58,10 +58,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
@@ -330,8 +331,8 @@ public class Application {
     
     // Get resources from the ResourceManager
     Allocation allocation = resourceManager.getResourceScheduler().allocate(
-        applicationAttemptId, new ArrayList<ResourceRequest>(ask),
-        new ArrayList<ContainerId>(), null, null, null, null);
+        applicationAttemptId, new ArrayList<ResourceRequest>(ask), null, new ArrayList<ContainerId>(), null, null,
+        new ContainerUpdates());
 
     if (LOG.isInfoEnabled()) {
       LOG.info("-=======" + applicationAttemptId + System.lineSeparator() +
@@ -346,7 +347,7 @@ public class Application {
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("getResources() for " + applicationId + ":"
-        + " ask=" + ask.size() + " recieved=" + containers.size());
+        + " ask=" + ask.size() + " received=" + containers.size());
     }
     
     return containers;
@@ -429,7 +430,7 @@ public class Application {
     if (type == NodeType.NODE_LOCAL) {
       for (String host : task.getHosts()) {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+          LOG.debug("updateResourceDemands:" + " application=" + applicationId
             + " type=" + type + " host=" + host
             + " request=" + ((requests == null) ? "null" : requests.get(host)));
         }
@@ -440,7 +441,7 @@ public class Application {
     if (type == NodeType.NODE_LOCAL || type == NodeType.RACK_LOCAL) {
       for (String rack : task.getRacks()) {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+          LOG.debug("updateResourceDemands:" + " application=" + applicationId
             + " type=" + type + " rack=" + rack
             + " request=" + ((requests == null) ? "null" : requests.get(rack)));
         }
@@ -451,7 +452,7 @@ public class Application {
     updateResourceRequest(requests.get(ResourceRequest.ANY));
     
     if(LOG.isDebugEnabled()) {
-      LOG.debug("updateResourceRequests:" + " application=" + applicationId
+      LOG.debug("updateResourceDemands:" + " application=" + applicationId
         + " #asks=" + ask.size());
     }
   }

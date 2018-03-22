@@ -21,8 +21,6 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.Date;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -30,6 +28,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapred.JobConf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This program executes a specified operation that applies load to 
@@ -45,8 +45,8 @@ import org.apache.hadoop.mapred.JobConf;
  */
 public class NNBenchWithoutMR {
   
-  private static final Log LOG = LogFactory.getLog(
-                                            "org.apache.hadoop.hdfs.NNBench");
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NNBenchWithoutMR.class);
   
   // variable initialzed from command line arguments
   private static long startTime = 0;
@@ -93,7 +93,7 @@ public class NNBenchWithoutMR {
   
   /**
    * Create and write to a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */
@@ -178,7 +178,7 @@ public class NNBenchWithoutMR {
     
   /**
    * Rename a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */
@@ -208,7 +208,7 @@ public class NNBenchWithoutMR {
     
   /**
    * Delete a given number of files.  Repeat each remote
-   * operation until is suceeds (does not throw an exception).
+   * operation until is succeeds (does not throw an exception).
    *
    * @return the number of exceptions caught
    */

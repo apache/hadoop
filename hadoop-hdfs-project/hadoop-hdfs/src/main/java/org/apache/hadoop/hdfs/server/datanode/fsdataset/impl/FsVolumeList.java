@@ -81,10 +81,11 @@ class FsVolumeList {
     return Collections.unmodifiableList(volumes);
   }
 
-  private FsVolumeReference chooseVolume(List<FsVolumeImpl> list, long blockSize)
-      throws IOException {
+  private FsVolumeReference chooseVolume(List<FsVolumeImpl> list,
+      long blockSize, String storageId) throws IOException {
     while (true) {
-      FsVolumeImpl volume = blockChooser.chooseVolume(list, blockSize);
+      FsVolumeImpl volume = blockChooser.chooseVolume(list, blockSize,
+          storageId);
       try {
         return volume.obtainReference();
       } catch (ClosedChannelException e) {
@@ -100,18 +101,20 @@ class FsVolumeList {
    * Get next volume.
    *
    * @param blockSize free space needed on the volume
-   * @param storageType the desired {@link StorageType} 
+   * @param storageType the desired {@link StorageType}
+   * @param storageId the storage id which may or may not be used by
+   *                  the VolumeChoosingPolicy.
    * @return next volume to store the block in.
    */
-  FsVolumeReference getNextVolume(StorageType storageType, long blockSize)
-      throws IOException {
+  FsVolumeReference getNextVolume(StorageType storageType, String storageId,
+      long blockSize) throws IOException {
     final List<FsVolumeImpl> list = new ArrayList<>(volumes.size());
     for(FsVolumeImpl v : volumes) {
       if (v.getStorageType() == storageType) {
         list.add(v);
       }
     }
-    return chooseVolume(list, blockSize);
+    return chooseVolume(list, blockSize, storageId);
   }
 
   /**
@@ -129,7 +132,7 @@ class FsVolumeList {
         list.add(v);
       }
     }
-    return chooseVolume(list, blockSize);
+    return chooseVolume(list, blockSize, null);
   }
 
   long getDfsUsed() throws IOException {
@@ -371,8 +374,15 @@ class FsVolumeList {
   }
 
   void addVolumeFailureInfo(VolumeFailureInfo volumeFailureInfo) {
-    volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
-        volumeFailureInfo);
+    // There could be redundant requests for adding the same failed
+    // volume because of repeated DataNode reconfigure with same list
+    // of volumes. Ignoring update on failed volume so as to preserve
+    // old failed capacity details in the map.
+    if (!volumeFailureInfos.containsKey(volumeFailureInfo
+        .getFailedStorageLocation())) {
+      volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
+          volumeFailureInfo);
+    }
   }
 
   private void addVolumeFailureInfo(FsVolumeImpl vol) {
@@ -382,7 +392,7 @@ class FsVolumeList {
         vol.getCapacity()));
   }
 
-  private void removeVolumeFailureInfo(StorageLocation location) {
+  void removeVolumeFailureInfo(StorageLocation location) {
     volumeFailureInfos.remove(location);
   }
 

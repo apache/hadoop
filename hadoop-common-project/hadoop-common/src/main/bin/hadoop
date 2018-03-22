@@ -15,8 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="hadoop"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
 ## @description  build up the hadoop command's usage text.
 ## @audience     public
@@ -30,20 +31,21 @@ function hadoop_usage
   hadoop_add_option "hosts filename" "list of hosts to use in slave mode"
   hadoop_add_option "workers" "turn on worker mode"
 
-  hadoop_add_subcommand "checknative" "check native Hadoop and compression libraries availability"
-  hadoop_add_subcommand "classpath" "prints the class path needed to get the Hadoop jar and the required libraries"
-  hadoop_add_subcommand "conftest" "validate configuration XML files"
-  hadoop_add_subcommand "credential" "interact with credential providers"
-  hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
-  hadoop_add_subcommand "dtutil" "operations related to delegation tokens"
-  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "fs" "run a generic filesystem user client"
-  hadoop_add_subcommand "jar <jar>" "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
-  hadoop_add_subcommand "jnipath" "prints the java.library.path"
-  hadoop_add_subcommand "kerbname" "show auth_to_local principal conversion"
-  hadoop_add_subcommand "key" "manage keys via the KeyProvider"
-  hadoop_add_subcommand "trace" "view and modify Hadoop tracing settings"
-  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "checknative" client "check native Hadoop and compression libraries availability"
+  hadoop_add_subcommand "classpath" client "prints the class path needed to get the Hadoop jar and the required libraries"
+  hadoop_add_subcommand "conftest" client "validate configuration XML files"
+  hadoop_add_subcommand "credential" client "interact with credential providers"
+  hadoop_add_subcommand "daemonlog" admin "get/set the log level for each daemon"
+  hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "fs" client "run a generic filesystem user client"
+  hadoop_add_subcommand "jar <jar>" client "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
+  hadoop_add_subcommand "jnipath" client "prints the java.library.path"
+  hadoop_add_subcommand "kerbname" client "show auth_to_local principal conversion"
+  hadoop_add_subcommand "key" client "manage keys via the KeyProvider"
+  hadoop_add_subcommand "trace" client "view and modify Hadoop tracing settings"
+  hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -67,13 +69,11 @@ function hadoopcmd_case
       hadoop_error ""
       #try to locate hdfs and if present, delegate to it.
       if [[ -f "${HADOOP_HDFS_HOME}/bin/hdfs" ]]; then
-        # shellcheck disable=SC2086
         exec "${HADOOP_HDFS_HOME}/bin/hdfs" \
-        --config "${HADOOP_CONF_DIR}" "${subcmd}"  "$@"
+          --config "${HADOOP_CONF_DIR}" "${subcmd}"  "$@"
       elif [[ -f "${HADOOP_HOME}/bin/hdfs" ]]; then
-        # shellcheck disable=SC2086
         exec "${HADOOP_HOME}/bin/hdfs" \
-        --config "${HADOOP_CONF_DIR}" "${subcmd}" "$@"
+          --config "${HADOOP_CONF_DIR}" "${subcmd}" "$@"
       else
         hadoop_error "HADOOP_HDFS_HOME not found!"
         exit 1
@@ -126,6 +126,10 @@ function hadoopcmd_case
       echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
       echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
       echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      if [[ -n "${QATESTMODE}" ]]; then
+        echo "MYNAME=${MYNAME}"
+        echo "HADOOP_SHELL_EXECNAME=${HADOOP_SHELL_EXECNAME}"
+      fi
       exit 0
     ;;
     fs)
@@ -144,6 +148,9 @@ function hadoopcmd_case
     ;;
     kerbname)
       HADOOP_CLASSNAME=org.apache.hadoop.security.HadoopKerberosName
+    ;;
+    kdiag)
+      HADOOP_CLASSNAME=org.apache.hadoop.security.KDiag
     ;;
     key)
       HADOOP_CLASSNAME=org.apache.hadoop.crypto.key.KeyShell
@@ -174,23 +181,34 @@ else
 fi
 
 HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
   exit 1
 fi
 
-if [ $# = 0 ]; then
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
+
+if [[ $# = 0 ]]; then
   hadoop_exit_with_usage 1
 fi
 
 HADOOP_SUBCMD=$1
 shift
 
-hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+if hadoop_need_reexec hadoop "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su hadoop "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_verify_user_perm "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
 HADOOP_SUBCMD_ARGS=("$@")
 
@@ -210,60 +228,5 @@ fi
 
 hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
-if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
-
-  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
-
-  hadoop_verify_secure_prereq
-  hadoop_setup_secure_service
-  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
-  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-else
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-fi
-
-if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
-  # shellcheck disable=SC2034
-  HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-    # shellcheck disable=SC2034
-    HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
-  else
-    # shellcheck disable=SC2034
-    HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
-  fi
-fi
-
-hadoop_finalize
-
-if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
-  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-    hadoop_secure_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${priv_pidfile}" \
-      "${priv_outfile}" \
-      "${priv_errfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  else
-    hadoop_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  fi
-  exit $?
-else
-  # shellcheck disable=SC2086
-  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
-fi
+# everything is in globals at this point, so call the generic handler
+hadoop_generic_java_subcmd_handler

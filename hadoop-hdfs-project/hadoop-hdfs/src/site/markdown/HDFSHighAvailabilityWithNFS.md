@@ -15,29 +15,7 @@
 HDFS High Availability
 ======================
 
-* [HDFS High Availability](#HDFS_High_Availability)
-    * [Purpose](#Purpose)
-    * [Note: Using the Quorum Journal Manager or Conventional Shared Storage](#Note:_Using_the_Quorum_Journal_Manager_or_Conventional_Shared_Storage)
-    * [Background](#Background)
-    * [Architecture](#Architecture)
-    * [Hardware resources](#Hardware_resources)
-    * [Deployment](#Deployment)
-        * [Configuration overview](#Configuration_overview)
-        * [Configuration details](#Configuration_details)
-        * [Deployment details](#Deployment_details)
-        * [Administrative commands](#Administrative_commands)
-    * [Automatic Failover](#Automatic_Failover)
-        * [Introduction](#Introduction)
-        * [Components](#Components)
-        * [Deploying ZooKeeper](#Deploying_ZooKeeper)
-        * [Before you begin](#Before_you_begin)
-        * [Configuring automatic failover](#Configuring_automatic_failover)
-        * [Initializing HA state in ZooKeeper](#Initializing_HA_state_in_ZooKeeper)
-        * [Starting the cluster with start-dfs.sh](#Starting_the_cluster_with_start-dfs.sh)
-        * [Starting the cluster manually](#Starting_the_cluster_manually)
-        * [Securing access to ZooKeeper](#Securing_access_to_ZooKeeper)
-        * [Verifying automatic failover](#Verifying_automatic_failover)
-    * [Automatic Failover FAQ](#Automatic_Failover_FAQ)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Purpose
 -------
@@ -141,15 +119,15 @@ The order in which you set these configurations is unimportant, but the values y
 
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn1</name>
-          <value>machine1.example.com:9820</value>
+          <value>machine1.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn2</name>
-          <value>machine2.example.com:9820</value>
+          <value>machine2.example.com:8020</value>
         </property>
         <property>
           <name>dfs.namenode.rpc-address.mycluster.nn3</name>
-          <value>machine3.example.com:9820</value>
+          <value>machine3.example.com:8020</value>
         </property>
 
     **Note:** You may similarly configure the "**servicerpc-address**" setting if
@@ -350,6 +328,7 @@ Now that your HA NameNodes are configured and started, you will have access to s
         [-transitionToStandby <serviceId>]
         [-failover [--forcefence] [--forceactive] <serviceId> <serviceId>]
         [-getServiceState <serviceId>]
+        [-getAllServiceState]
         [-checkHealth <serviceId>]
         [-help <command>]
 
@@ -380,6 +359,11 @@ This guide describes high-level uses of each of these subcommands. For specific 
     either "standby" or "active" to STDOUT appropriately. This subcommand might be
     used by cron jobs or monitoring scripts which need to behave differently based
     on whether the NameNode is currently Active or Standby.
+
+*   **getAllServiceState** - returns the state of all the NameNodes
+
+    Connect to the configured NameNodes to determine the current state, print
+    either "standby" or "active" to STDOUT appropriately.
 
 *   **checkHealth** - check the health of the given NameNode
 
@@ -503,7 +487,7 @@ In order to secure the information in ZooKeeper, first add the following to your
        <value>@/path/to/zk-acl.txt</value>
      </property>
 
-Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk.
+Please note the '@' character in these values -- this specifies that the configurations are not inline, but rather point to a file on disk. The authentication info may also be read via a CredentialProvider (pls see the CredentialProviderAPI Guide in the hadoop-common project).
 
 The first configured file specifies a list of ZooKeeper authentications, in the same format as used by the ZK CLI. For example, you may specify something like:
 

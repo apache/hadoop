@@ -23,8 +23,6 @@ import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +31,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A global compressor/decompressor pool used to save and reuse 
@@ -41,7 +41,7 @@ import com.google.common.cache.LoadingCache;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CodecPool {
-  private static final Log LOG = LogFactory.getLog(CodecPool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CodecPool.class);
   
   /**
    * A global compressor pool used to save the expensive 
@@ -157,7 +157,10 @@ public class CodecPool {
         LOG.debug("Got recycled compressor");
       }
     }
-    updateLeaseCount(compressorCounts, compressor, 1);
+    if (compressor != null &&
+        !compressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      updateLeaseCount(compressorCounts, compressor, 1);
+    }
     return compressor;
   }
   
@@ -184,7 +187,10 @@ public class CodecPool {
         LOG.debug("Got recycled decompressor");
       }
     }
-    updateLeaseCount(decompressorCounts, decompressor, 1);
+    if (decompressor != null &&
+        !decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      updateLeaseCount(decompressorCounts, decompressor, 1);
+    }
     return decompressor;
   }
   

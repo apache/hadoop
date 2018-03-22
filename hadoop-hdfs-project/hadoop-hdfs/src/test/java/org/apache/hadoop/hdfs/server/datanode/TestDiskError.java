@@ -167,7 +167,8 @@ public class TestDiskError {
         BlockTokenSecretManager.DUMMY_TOKEN, "",
         new DatanodeInfo[0], new StorageType[0], null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
-        checksum, CachingStrategy.newDefaultStrategy(), false, false, null);
+        checksum, CachingStrategy.newDefaultStrategy(), false, false,
+        null, null, new String[0]);
     out.flush();
 
     // close the connection before sending the content of the block
@@ -274,7 +275,7 @@ public class TestDiskError {
             dn1.getDatanodeId());
 
     dn0.transferBlock(block, new DatanodeInfo[]{dnd1},
-        new StorageType[]{StorageType.DISK});
+        new StorageType[]{StorageType.DISK}, new String[0]);
     // Sleep for 1 second so the DataTrasnfer daemon can start transfer.
     try {
       Thread.sleep(1000);

@@ -59,6 +59,22 @@ public abstract class UpdateContainerError {
   public abstract void setReason(String reason);
 
   /**
+   * Get current container version.
+   * @return Current container Version.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public abstract int getCurrentContainerVersion();
+
+  /**
+   * Set current container version.
+   * @param currentVersion Current container version.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public abstract void setCurrentContainerVersion(int currentVersion);
+
+  /**
    * Get the {@code UpdateContainerRequest} that was not satisfiable.
    * @return UpdateContainerRequest
    */
@@ -84,6 +100,13 @@ public abstract class UpdateContainerError {
     result = prime * result + ((reason == null) ? 0 : reason.hashCode());
     result = prime * result + ((updateReq == null) ? 0 : updateReq.hashCode());
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "UpdateContainerError{reason=" + getReason() + ", "
+        + "currentVersion=" + getCurrentContainerVersion() + ", "
+        + "req=" + getUpdateContainerRequest() + "}";
   }
 
   @Override
@@ -114,6 +137,6 @@ public abstract class UpdateContainerError {
     } else if (!req.equals(other.getUpdateContainerRequest())) {
       return false;
     }
-    return true;
+    return getCurrentContainerVersion() == other.getCurrentContainerVersion();
   }
 }

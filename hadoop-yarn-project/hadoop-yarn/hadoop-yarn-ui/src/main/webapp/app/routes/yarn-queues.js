@@ -22,21 +22,55 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model(param) {
+    var queueName = param.queue_name? param.queue_name.split('!')[0] : 'root';
+    if (param.queue_name && param.queue_name.split('!').length > 1) {
+      this.controllerFor('yarn-queues').set('showLoading', false);
+    } else {
+      this.controllerFor('yarn-queues').set('showLoading', true);
+    }
     return Ember.RSVP.hash({
-      selected : param.queue_name,
-      queues: this.store.query('yarn-queue', {}),
-      selectedQueue : undefined,
-      apps: undefined, // apps of selected queue
+      selected : queueName,
+      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
+        let type = model.get('firstObject').get('type');
+        return this.store.query("yarn-queue." + type + "-queue", {});
+      }),
+      selectedQueue : undefined
     });
   },
 
   afterModel(model) {
-    model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-    model.apps = this.store.findAll('yarn-app');
+    var type = model.queues.get('firstObject').constructor.modelName;
+    model.selectedQueue = this.store.peekRecord(type, model.selected);
   },
 
   unloadAll() {
-    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-queue.capacity-queue');
+    this.store.unloadAll('yarn-queue.fair-queue');
+    this.store.unloadAll('yarn-queue.fifo-queue');
     this.store.unloadAll('yarn-app');
+  },
+
+  refreshModel() {
+    var param = this.paramsFor('yarn-queues');
+    var queueName = param.queue_name? param.queue_name.split('!')[0] : 'root';
+    if (queueName !== param.queue_name) {
+      this.transitionTo('yarn-queues', queueName);
+    } else {
+      this.refresh();
+    }
+  },
+
+  actions: {
+    refresh: function () {
+      this.unloadAll();
+      this.refreshModel();
+    },
+
+    loading() {
+      if (!this.controllerFor('yarn-queues').get('showLoading')) {
+        return false;
+      }
+      return true;
+    }
   }
 });

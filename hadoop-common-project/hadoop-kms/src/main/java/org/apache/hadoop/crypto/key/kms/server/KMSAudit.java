@@ -23,6 +23,8 @@ import static org.apache.hadoop.crypto.key.kms.server.KMSAuditLogger.OpStatus;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.kms.server.KMSACLs.Type;
+import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider.KeyOpType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
@@ -168,7 +170,25 @@ public class KMSAudit {
     }
   }
 
-  private void op(final OpStatus opStatus, final KMS.KMSOp op,
+  /**
+   * Logs to the audit service a single operation on the KMS or on a key.
+   *
+   * @param opStatus
+   *          The outcome of the audited event
+   * @param op
+   *          The operation being audited (either {@link KMS.KMSOp} or
+   *          {@link Type} N.B this is passed as an {@link Object} to allow
+   *          either enum to be passed in.
+   * @param ugi
+   *          The user's security context
+   * @param key
+   *          The String name of the key if applicable
+   * @param remoteHost
+   *          The hostname of the requesting service
+   * @param extraMsg
+   *          Any extra details for auditing
+   */
+  private void op(final OpStatus opStatus, final Object op,
       final UserGroupInformation ugi, final String key, final String remoteHost,
       final String extraMsg) {
     final String user = ugi == null ? null: ugi.getShortUserName();
@@ -215,6 +235,12 @@ public class KMSAudit {
     op(OpStatus.UNAUTHORIZED, op, user, key, "Unknown", "");
   }
 
+  public void unauthorized(UserGroupInformation user, KeyOpType op,
+      String key) {
+    op(OpStatus.UNAUTHORIZED, op, user, key, "Unknown", "");
+
+  }
+
   public void error(UserGroupInformation user, String method, String url,
       String extraMsg) {
     op(OpStatus.ERROR, null, user, null, "Unknown", "Method:'" + method
@@ -228,7 +254,7 @@ public class KMSAudit {
         + " URL:" + url + " ErrorMsg:'" + extraMsg + "'");
   }
 
-  private static String createCacheKey(String user, String key, KMS.KMSOp op) {
+  private static String createCacheKey(String user, String key, Object op) {
     return user + "#" + key + "#" + op;
   }
 

@@ -25,7 +25,8 @@ export default AbstractRoute.extend({
     return Ember.RSVP.hash({
       nodeApp: this.store.queryRecord('yarn-node-app',
           { nodeAddr : param.node_addr, appId: param.app_id }),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
+      nodeInfo: { id: param.node_id, addr: param.node_addr, appId: param.app_id }
     });
   },
 

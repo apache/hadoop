@@ -50,7 +50,7 @@ public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
   }
 
   @Override
-  public V chooseVolume(final List<V> volumes, long blockSize)
+  public V chooseVolume(final List<V> volumes, long blockSize, String storageId)
       throws IOException {
 
     if (volumes.size() < 1) {

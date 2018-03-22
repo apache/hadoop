@@ -18,9 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,24 +46,62 @@ public class INodesInPath {
         Arrays.equals(HdfsServerConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
   }
 
-  static INodesInPath fromINode(INode inode) {
+  private static INode[] getINodes(final INode inode) {
     int depth = 0, index;
     INode tmp = inode;
     while (tmp != null) {
       depth++;
       tmp = tmp.getParent();
     }
-    final byte[][] path = new byte[depth][];
-    final INode[] inodes = new INode[depth];
+    INode[] inodes = new INode[depth];
     tmp = inode;
     index = depth;
     while (tmp != null) {
       index--;
-      path[index] = tmp.getKey();
       inodes[index] = tmp;
       tmp = tmp.getParent();
     }
-    return new INodesInPath(inodes, path);
+    return inodes;
+  }
+
+  private static byte[][] getPaths(final INode[] inodes) {
+    byte[][] paths = new byte[inodes.length][];
+    for (int i = 0; i < inodes.length; i++) {
+      paths[i] = inodes[i].getKey();
+    }
+    return paths;
+  }
+
+  /**
+   * Construct {@link INodesInPath} from {@link INode}.
+   *
+   * @param inode to construct from
+   * @return INodesInPath
+   */
+  static INodesInPath fromINode(INode inode) {
+    INode[] inodes = getINodes(inode);
+    byte[][] paths = getPaths(inodes);
+    return new INodesInPath(inodes, paths);
+  }
+
+  /**
+   * Construct {@link INodesInPath} from {@link INode} and its root
+   * {@link INodeDirectory}. INodesInPath constructed this way will
+   * each have its snapshot and latest snapshot id filled in.
+   *
+   * This routine is specifically for
+   * {@link LeaseManager#getINodeWithLeases(INodeDirectory)} to get
+   * open files along with their snapshot details which is used during
+   * new snapshot creation to capture their meta data.
+   *
+   * @param rootDir the root {@link INodeDirectory} under which inode
+   *                needs to be resolved
+   * @param inode the {@link INode} to be resolved
+   * @return INodesInPath
+   */
+  static INodesInPath fromINode(final INodeDirectory rootDir, INode inode) {
+    byte[][] paths = getPaths(getINodes(inode));
+    return resolve(rootDir, paths);
   }
 
   static INodesInPath fromComponents(byte[][] components) {
@@ -238,7 +273,7 @@ public class INodesInPath {
   }
 
   private final byte[][] path;
-  private final String pathname;
+  private volatile String pathname;
 
   /**
    * Array with the specified number of INodes resolved for a given path.
@@ -268,7 +303,6 @@ public class INodesInPath {
     Preconditions.checkArgument(inodes != null && path != null);
     this.inodes = inodes;
     this.path = path;
-    this.pathname = DFSUtil.byteArray2PathString(path);
     this.isRaw = isRaw;
     this.isSnapshot = isSnapshot;
     this.snapshotId = snapshotId;
@@ -299,17 +333,9 @@ public class INodesInPath {
    *         otherwise, i < 0, return the (length + i)-th inode.
    */
   public INode getINode(int i) {
-    if (inodes == null || inodes.length == 0) {
-      throw new NoSuchElementException("inodes is null or empty");
-    }
-    int index = i >= 0 ? i : inodes.length + i;
-    if (index < inodes.length && index >= 0) {
-      return inodes[index];
-    } else {
-      throw new NoSuchElementException("inodes.length == " + inodes.length);
-    }
+    return inodes[(i < 0) ? inodes.length + i : i];
   }
-  
+
   /** @return the last inode. */
   public INode getLastINode() {
     return getINode(-1);
@@ -329,6 +355,9 @@ public class INodesInPath {
 
   /** @return the full path in string form */
   public String getPath() {
+    if (pathname == null) {
+      pathname = DFSUtil.byteArray2PathString(path);
+    }
     return pathname;
   }
 
@@ -342,10 +371,6 @@ public class INodesInPath {
 
   public int length() {
     return inodes.length;
-  }
-
-  public List<INode> getReadOnlyINodes() {
-    return Collections.unmodifiableList(Arrays.asList(inodes));
   }
 
   public INode[] getINodesArray() {
@@ -378,6 +403,36 @@ public class INodesInPath {
     return inodes.length > 1 ? getAncestorINodesInPath(inodes.length - 1) :
         null;
   }
+
+  /**
+   * Verify if this {@link INodesInPath} is a descendant of the
+   * requested {@link INodeDirectory}.
+   *
+   * @param inodeDirectory the ancestor directory
+   * @return true if this INodesInPath is a descendant of inodeDirectory
+   */
+  public boolean isDescendant(final INodeDirectory inodeDirectory) {
+    final INodesInPath dirIIP = fromINode(inodeDirectory);
+    return isDescendant(dirIIP);
+  }
+
+  private boolean isDescendant(final INodesInPath ancestorDirIIP) {
+    int ancestorDirINodesLength = ancestorDirIIP.length();
+    int myParentINodesLength = length() - 1;
+    if (myParentINodesLength < ancestorDirINodesLength) {
+      return false;
+    }
+
+    int index = 0;
+    while (index < ancestorDirINodesLength) {
+      if (inodes[index] != ancestorDirIIP.getINode(index)) {
+        return false;
+      }
+      index++;
+    }
+    return true;
+  }
+
 
   /**
    * @return a new INodesInPath instance that only contains existing INodes.

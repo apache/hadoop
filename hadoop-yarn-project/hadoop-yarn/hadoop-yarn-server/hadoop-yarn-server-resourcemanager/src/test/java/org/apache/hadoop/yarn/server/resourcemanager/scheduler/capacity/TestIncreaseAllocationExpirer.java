@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -130,7 +132,7 @@ public class TestIncreaseAllocationExpirer {
     Assert.assertEquals(RMContainerState.RUNNING,
         rm1.getResourceScheduler().getRMContainer(containerId2).getState());
     // Verify container size is 3G
-    Assert.assertEquals(
+      Assert.assertEquals(
         3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
     // Verify total resource usage
@@ -155,7 +157,13 @@ public class TestIncreaseAllocationExpirer {
      */
     // Set the allocation expiration to 5 seconds
     conf.setLong(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS, 5000);
-    MockRM rm1 = new MockRM(conf);
+    final DrainDispatcher disp = new DrainDispatcher();
+    MockRM rm1 = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return disp;
+      }
+    };
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 20 * GB);
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
@@ -200,9 +208,11 @@ public class TestIncreaseAllocationExpirer {
     // back action to complete
     Thread.sleep(10000);
     // Verify container size is 1G
+    am1.allocate(null, null);
     Assert.assertEquals(
         1 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
+    disp.waitForEventThreadToWait();
     // Verify total resource usage is 2G
     checkUsedResource(rm1, "default", 2 * GB, null);
     Assert.assertEquals(2 * GB,
@@ -275,8 +285,10 @@ public class TestIncreaseAllocationExpirer {
             Resources.createResource(5 * GB), null)));
     List<UpdateContainerError> updateErrors = response.getUpdateErrors();
     Assert.assertEquals(1, updateErrors.size());
-    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR|0|1",
+    Assert.assertEquals("INCORRECT_CONTAINER_VERSION_ERROR",
         updateErrors.get(0).getReason());
+    Assert.assertEquals(1,
+        updateErrors.get(0).getCurrentContainerVersion());
 
     // am1 asks to change containerId2 from 3GB to 5GB
     am1.sendContainerResizingRequest(Collections.singletonList(
@@ -302,6 +314,8 @@ public class TestIncreaseAllocationExpirer {
     // Wait long enough for the second token (5G) to expire, and verify that
     // the roll back action is completed as expected
     Thread.sleep(10000);
+    am1.allocate(null, null);
+    Thread.sleep(2000);
     // Verify container size is rolled back to 3G
     Assert.assertEquals(
         3 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
@@ -314,7 +328,7 @@ public class TestIncreaseAllocationExpirer {
     verifyAvailableResourceOfSchedulerNode(rm1, nm1.getNodeId(), 16 * GB);
     // Verify NM receives the decrease message (3G)
     List<Container> containersToDecrease =
-        nm1.nodeHeartbeat(true).getContainersToDecrease();
+        nm1.nodeHeartbeat(true).getContainersToUpdate();
     Assert.assertEquals(1, containersToDecrease.size());
     Assert.assertEquals(
         3 * GB, containersToDecrease.get(0).getResource().getMemorySize());
@@ -398,13 +412,13 @@ public class TestIncreaseAllocationExpirer {
     // Decrease containers
     List<UpdateContainerRequest> decreaseRequests = new ArrayList<>();
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId2,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(2 * GB), null));
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId3,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(4 * GB), null));
     decreaseRequests.add(UpdateContainerRequest.newInstance(1, containerId4,
-        ContainerUpdateType.INCREASE_RESOURCE,
+        ContainerUpdateType.DECREASE_RESOURCE,
         Resources.createResource(4 * GB), null));
     AllocateResponse response =
         am1.sendContainerResizingRequest(decreaseRequests);
@@ -415,7 +429,10 @@ public class TestIncreaseAllocationExpirer {
     nm1.containerIncreaseStatus(getContainer(
         rm1, containerId4, Resources.createResource(6 * GB)));
     // Wait for containerId3 token to expire,
-    Thread.sleep(10000);
+    Thread.sleep(12000);
+
+    am1.allocate(null, null);
+
     Assert.assertEquals(
         2 * GB, rm1.getResourceScheduler().getRMContainer(containerId2)
             .getAllocatedResource().getMemorySize());
@@ -427,14 +444,22 @@ public class TestIncreaseAllocationExpirer {
             .getAllocatedResource().getMemorySize());
     // Verify NM receives 2 decrease message
     List<Container> containersToDecrease =
-        nm1.nodeHeartbeat(true).getContainersToDecrease();
-    Assert.assertEquals(2, containersToDecrease.size());
+        nm1.nodeHeartbeat(true).getContainersToUpdate();
+    // NOTE: Can be more that 2 depending on which event arrives first.
+    // What is important is the final size of the containers.
+    Assert.assertTrue(containersToDecrease.size() >= 2);
+
     // Sort the list to make sure containerId3 is the first
     Collections.sort(containersToDecrease);
+    int i = 0;
+    if (containersToDecrease.size() > 2) {
+      Assert.assertEquals(
+          2 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
+    }
     Assert.assertEquals(
-        3 * GB, containersToDecrease.get(0).getResource().getMemorySize());
+        3 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
     Assert.assertEquals(
-        4 * GB, containersToDecrease.get(1).getResource().getMemorySize());
+        4 * GB, containersToDecrease.get(i++).getResource().getMemorySize());
     rm1.stop();
   }
 

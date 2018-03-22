@@ -30,19 +30,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestRpcServerHandoff {
 
-  public static final Log LOG =
-      LogFactory.getLog(TestRpcServerHandoff.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestRpcServerHandoff.class);
 
   private static final String BIND_ADDRESS = "0.0.0.0";
   private static final Configuration conf = new Configuration();

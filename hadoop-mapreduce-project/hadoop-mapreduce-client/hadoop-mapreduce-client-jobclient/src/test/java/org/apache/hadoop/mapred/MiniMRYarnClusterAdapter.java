@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An adapter for MiniMRYarnCluster providing a MiniMRClientCluster interface.
@@ -34,7 +34,8 @@ public class MiniMRYarnClusterAdapter implements MiniMRClientCluster {
 
   private MiniMRYarnCluster miniMRYarnCluster;
 
-  private static final Log LOG = LogFactory.getLog(MiniMRYarnClusterAdapter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniMRYarnClusterAdapter.class);
 
   public MiniMRYarnClusterAdapter(MiniMRYarnCluster miniMRYarnCluster) {
     this.miniMRYarnCluster = miniMRYarnCluster;

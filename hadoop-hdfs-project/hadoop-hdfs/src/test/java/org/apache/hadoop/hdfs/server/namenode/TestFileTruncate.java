@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -642,7 +643,7 @@ public class TestFileTruncate {
       String leaseHolder =
           NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(),
           p.toUri().getPath());
-      if(leaseHolder.equals(HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
+      if(leaseHolder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
         recoveryTriggered = true;
         break;
       }
@@ -681,13 +682,7 @@ public class TestFileTruncate {
     int toTruncateLength = 1;
     int newLength = startingFileSize - toTruncateLength;
     cluster.getDataNodes().get(dn).shutdown();
-    try {
-      boolean isReady = fs.truncate(p, newLength);
-      assertFalse(isReady);
-    } finally {
-      cluster.restartDataNode(dn, true, true);
-      cluster.waitActive();
-    }
+    truncateAndRestartDN(p, dn, newLength);
     checkBlockRecovery(p);
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
@@ -740,13 +735,7 @@ public class TestFileTruncate {
     int toTruncateLength = 1;
     int newLength = startingFileSize - toTruncateLength;
     cluster.getDataNodes().get(dn).shutdown();
-    try {
-      boolean isReady = fs.truncate(p, newLength);
-      assertFalse(isReady);
-    } finally {
-      cluster.restartDataNode(dn, true, true);
-      cluster.waitActive();
-    }
+    truncateAndRestartDN(p, dn, newLength);
     checkBlockRecovery(p);
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
@@ -800,8 +789,8 @@ public class TestFileTruncate {
     boolean isReady = fs.truncate(p, newLength);
     assertFalse(isReady);
 
-    cluster.restartDataNode(dn0, true, true);
-    cluster.restartDataNode(dn1, true, true);
+    cluster.restartDataNode(dn0, false, true);
+    cluster.restartDataNode(dn1, false, true);
     cluster.waitActive();
     checkBlockRecovery(p);
 
@@ -1167,6 +1156,46 @@ public class TestFileTruncate {
     fs.delete(parent, true);
   }
 
+  /**
+   * While rolling upgrade is in-progress the test truncates a file
+   * such that copy-on-truncate is triggered, then deletes the file,
+   * and makes sure that no blocks involved in truncate are hanging around.
+   */
+  @Test
+  public void testTruncateWithRollingUpgrade() throws Exception {
+    final DFSAdmin dfsadmin = new DFSAdmin(cluster.getConfiguration(0));
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    //start rolling upgrade
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    int status = dfsadmin.run(new String[]{"-rollingUpgrade", "prepare"});
+    assertEquals("could not prepare for rolling upgrade", 0, status);
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    Path dir = new Path("/testTruncateWithRollingUpgrade");
+    fs.mkdirs(dir);
+    final Path p = new Path(dir, "file");
+    final byte[] data = new byte[3];
+    ThreadLocalRandom.current().nextBytes(data);
+    writeContents(data, data.length, p);
+
+    assertEquals("block num should 1", 1,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+
+    final boolean isReady = fs.truncate(p, 2);
+    assertFalse("should be copy-on-truncate", isReady);
+    assertEquals("block num should 2", 2,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+    fs.delete(p, true);
+
+    assertEquals("block num should 0", 0,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+    status = dfsadmin.run(new String[]{"-rollingUpgrade", "finalize"});
+    assertEquals("could not finalize rolling upgrade", 0, status);
+  }
+
   static void writeContents(byte[] contents, int fileLength, Path p)
       throws IOException {
     FSDataOutputStream out = fs.create(p, true, BLOCK_SIZE, REPLICATION,
@@ -1241,5 +1270,16 @@ public class TestFileTruncate {
         .dnStartupOption(o!=StartupOption.ROLLBACK ? StartupOption.REGULAR : o)
         .build();
     fs = cluster.getFileSystem();
+  }
+
+  private void truncateAndRestartDN(Path p, int dn, int newLength)
+      throws IOException {
+    try {
+      boolean isReady = fs.truncate(p, newLength);
+      assertFalse(isReady);
+    } finally {
+      cluster.restartDataNode(dn, false, true);
+      cluster.waitActive();
+    }
   }
 }

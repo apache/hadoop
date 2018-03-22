@@ -72,11 +72,6 @@ public class DecommissioningNodesWatcher {
 
   private final RMContext rmContext;
 
-  // Default timeout value in mills.
-  // Negative value indicates no timeout. 0 means immediate.
-  private long defaultTimeoutMs =
-      1000L * YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT;
-
   // Once a RMNode is observed in DECOMMISSIONING state,
   // All its ContainerStatus update are tracked inside DecomNodeContext.
   class DecommissioningNodeContext {
@@ -105,16 +100,15 @@ public class DecommissioningNodesWatcher {
 
     private long lastUpdateTime;
 
-    public DecommissioningNodeContext(NodeId nodeId) {
+    public DecommissioningNodeContext(NodeId nodeId, int timeoutSec) {
       this.nodeId = nodeId;
       this.appIds = new HashSet<ApplicationId>();
       this.decommissioningStartTime = mclock.getTime();
-      this.timeoutMs = defaultTimeoutMs;
+      this.timeoutMs = 1000L * timeoutSec;
     }
 
-    void updateTimeout(Integer timeoutSec) {
-      this.timeoutMs = (timeoutSec == null)?
-          defaultTimeoutMs : (1000L * timeoutSec);
+    void updateTimeout(int timeoutSec) {
+      this.timeoutMs = 1000L * timeoutSec;
     }
   }
 
@@ -132,7 +126,6 @@ public class DecommissioningNodesWatcher {
   }
 
   public void init(Configuration conf) {
-    readDecommissioningTimeout(conf);
     int v = conf.getInt(
         YarnConfiguration.RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL,
         YarnConfiguration
@@ -162,7 +155,8 @@ public class DecommissioningNodesWatcher {
       }
     } else if (rmNode.getState() == NodeState.DECOMMISSIONING) {
       if (context == null) {
-        context = new DecommissioningNodeContext(rmNode.getNodeID());
+        context = new DecommissioningNodeContext(rmNode.getNodeID(),
+            rmNode.getDecommissioningTimeout());
         decomNodes.put(rmNode.getNodeID(), context);
         context.nodeState = rmNode.getState();
         context.decommissionedTime = 0;
@@ -385,9 +379,9 @@ public class DecommissioningNodesWatcher {
     if (!LOG.isDebugEnabled() || decomNodes.size() == 0) {
       return;
     }
-    StringBuilder sb = new StringBuilder();
     long now = mclock.getTime();
     for (DecommissioningNodeContext d : decomNodes.values()) {
+      StringBuilder sb = new StringBuilder();
       DecommissioningNodeStatus s = checkDecommissioningStatus(d.nodeId);
       sb.append(String.format(
           "%n  %-34s %4ds fresh:%3ds containers:%2d %14s",
@@ -413,27 +407,7 @@ public class DecommissioningNodesWatcher {
               (mclock.getTime() - rmApp.getStartTime()) / 1000));
         }
       }
-    }
-    LOG.info("Decommissioning Nodes: " + sb.toString());
-  }
-
-  // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
-  // This enables DecommissioningNodesWatcher to pick up new value
-  // without ResourceManager restart.
-  private void readDecommissioningTimeout(Configuration conf) {
-    try {
-      if (conf == null) {
-        conf = new YarnConfiguration();
-      }
-      int v = conf.getInt(
-          YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
-          YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
-      if (defaultTimeoutMs != 1000L * v) {
-        defaultTimeoutMs = 1000L * v;
-        LOG.info("Use new decommissioningTimeoutMs: " + defaultTimeoutMs);
-      }
-    } catch (Exception e) {
-      LOG.info("Error readDecommissioningTimeout ", e);
+      LOG.debug("Decommissioning node: " + sb.toString());
     }
   }
 }

@@ -355,7 +355,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
     }
 
     protected AsyncDispatcher createDispatcher() {
-      return new AsyncDispatcher();
+      return new AsyncDispatcher("RM ApplicationHistory dispatcher");
     }
 
   }

@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
@@ -39,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Supplier;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -47,10 +51,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -74,37 +78,45 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
-import org.apache.hadoop.yarn.server.nodemanager.CMgrDecreaseContainersResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrSignalContainersEvent;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerStateTransitionListener;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
+import org.slf4j.LoggerFactory;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -113,25 +125,71 @@ public class TestContainerManager extends BaseContainerManagerTest {
   }
 
   static {
-    LOG = LogFactory.getLog(TestContainerManager.class);
+    LOG = LoggerFactory.getLogger(TestContainerManager.class);
   }
-  
+
+  private static class Listener implements ContainerStateTransitionListener {
+
+    private final Map<ContainerId,
+        List<org.apache.hadoop.yarn.server.nodemanager.containermanager.
+            container.ContainerState>> states = new HashMap<>();
+    private final Map<ContainerId, List<ContainerEventType>> events =
+        new HashMap<>();
+
+    @Override
+    public void init(Context context) {}
+
+    @Override
+    public void preTransition(ContainerImpl op,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState beforeState,
+        ContainerEvent eventToBeProcessed) {
+      if (!states.containsKey(op.getContainerId())) {
+        states.put(op.getContainerId(), new ArrayList<>());
+        states.get(op.getContainerId()).add(beforeState);
+        events.put(op.getContainerId(), new ArrayList<>());
+      }
+    }
+
+    @Override
+    public void postTransition(ContainerImpl op,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState beforeState,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState afterState,
+        ContainerEvent processedEvent) {
+      states.get(op.getContainerId()).add(afterState);
+      events.get(op.getContainerId()).add(processedEvent.getType());
+    }
+  }
+
+  private boolean delayContainers = false;
+
   @Override
-  @Before
-  public void setup() throws IOException {
-    super.setup();
+  protected ContainerExecutor createContainerExecutor() {
+    DefaultContainerExecutor exec = new DefaultContainerExecutor() {
+      @Override
+      public int launchContainer(ContainerStartContext ctx)
+          throws IOException, ConfigurationException {
+        if (delayContainers) {
+          try {
+            Thread.sleep(10000);
+          } catch (InterruptedException e) {
+            // Nothing..
+          }
+        }
+        return super.launchContainer(ctx);
+      }
+    };
+    exec.setConf(conf);
+    return spy(exec);
   }
   
   @Override
   protected ContainerManagerImpl
       createContainerManager(DeletionService delSrvc) {
-    return new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+    return  new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
       metrics, dirsHandler) {
-      @Override
-      public void
-          setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-        // do nothing
-      }
 
       @Override
       protected UserGroupInformation getRemoteUgi() throws YarnException {
@@ -258,6 +316,41 @@ public class TestContainerManager extends BaseContainerManagerTest {
     BufferedReader reader = new BufferedReader(new FileReader(targetFile));
     Assert.assertEquals("Hello World!", reader.readLine());
     Assert.assertEquals(null, reader.readLine());
+  }
+
+  @Test (timeout = 10000L)
+  public void testAuxPathHandler() throws Exception {
+    File testDir = GenericTestUtils.getTestDir(GenericTestUtils.getTestDir(
+        TestContainerManager.class.getSimpleName() + "LocDir").
+        getAbsolutePath());
+    testDir.mkdirs();
+    File testFile = new File(testDir, "test");
+    testFile.createNewFile();
+    YarnConfiguration configuration = new YarnConfiguration();
+    configuration.set(YarnConfiguration.NM_LOCAL_DIRS,
+        testDir.getAbsolutePath());
+    LocalDirsHandlerService spyDirHandlerService =
+        Mockito.spy(new LocalDirsHandlerService());
+    spyDirHandlerService.init(configuration);
+    when(spyDirHandlerService.getConfig()).thenReturn(configuration);
+    AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
+        new ContainerManagerImpl.AuxiliaryLocalPathHandlerImpl(
+            spyDirHandlerService);
+    Path p = auxiliaryLocalPathHandler.getLocalPathForRead("test");
+    assertTrue(p != null &&
+        !spyDirHandlerService.getLocalDirsForRead().isEmpty());
+
+    when(spyDirHandlerService.getLocalDirsForRead()).thenReturn(
+        new ArrayList<String>());
+    try {
+      auxiliaryLocalPathHandler.getLocalPathForRead("test");
+      fail("Should not have passed!");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("Could not find"));
+    } finally {
+      testFile.delete();
+      testDir.delete();
+    }
   }
 
   //@Test
@@ -442,7 +535,15 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     File newStartFile = new File(tmpDir, "start_file_n.txt").getAbsoluteFile();
 
+    ResourceUtilization beforeUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
     prepareContainerUpgrade(autoCommit, false, false, cId, newStartFile);
+    ResourceUtilization afterUpgrade =
+        ResourceUtilization.newInstance(
+            containerManager.getContainerScheduler().getCurrentUtilization());
+    Assert.assertEquals("Possible resource leak detected !!",
+        beforeUpgrade, afterUpgrade);
 
     // Assert that the First process is not alive anymore
     Assert.assertFalse("Process is still alive!",
@@ -474,6 +575,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerUpgradeSuccessAutoCommit() throws IOException,
       InterruptedException, YarnException {
+    Listener listener = new Listener();
+    ((NodeManager.DefaultContainerStateListener)containerManager.context.
+        getContainerStateTransitionListener()).addListener(listener);
     testContainerReInitSuccess(true);
     // Should not be able to Commit (since already auto committed)
     try {
@@ -482,6 +586,41 @@ public class TestContainerManager extends BaseContainerManagerTest {
     } catch (Exception e) {
       Assert.assertTrue(e.getMessage().contains("Nothing to Commit"));
     }
+
+    List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+        ContainerState> containerStates =
+        listener.states.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.NEW,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.LOCALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING), containerStates);
+
+    List<ContainerEventType> containerEventTypes =
+        listener.events.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        ContainerEventType.INIT_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.REINITIALIZE_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        ContainerEventType.CONTAINER_LAUNCHED), containerEventTypes);
   }
 
   @Test
@@ -502,6 +641,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
       InterruptedException, YarnException {
+    Listener listener = new Listener();
+    ((NodeManager.DefaultContainerStateListener)containerManager.context.
+        getContainerStateTransitionListener()).addListener(listener);
     String[] pids = testContainerReInitSuccess(false);
 
     // Test that the container can be Restarted after the successful upgrrade.
@@ -553,6 +695,67 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     Assert.assertNotEquals("The Rolled-back process should be a different pid",
         pids[0], rolledBackPid);
+
+    List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+        ContainerState> containerStates =
+        listener.states.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.NEW,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.LOCALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        // This is the successful restart
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        // This is the rollback
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING), containerStates);
+
+    List<ContainerEventType> containerEventTypes =
+        listener.events.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        ContainerEventType.INIT_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.REINITIALIZE_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.REINITIALIZE_CONTAINER,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.ROLLBACK_REINIT,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        ContainerEventType.CONTAINER_LAUNCHED), containerEventTypes);
   }
 
   @Test
@@ -562,6 +765,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
       return;
     }
     containerManager.start();
+    Listener listener = new Listener();
+    ((NodeManager.DefaultContainerStateListener)containerManager.context.
+        getContainerStateTransitionListener()).addListener(listener);
     // ////// Construct the Container-id
     ContainerId cId = createContainerId(0);
     File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
@@ -576,6 +782,32 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // since upgrade was terminated..
     Assert.assertTrue("Process is NOT alive!",
         DefaultContainerExecutor.containerIsAlive(pid));
+
+    List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+        ContainerState> containerStates =
+        listener.states.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.NEW,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.LOCALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING), containerStates);
+
+    List<ContainerEventType> containerEventTypes =
+        listener.events.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        ContainerEventType.INIT_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.REINITIALIZE_CONTAINER,
+        ContainerEventType.RESOURCE_FAILED), containerEventTypes);
   }
 
   @Test
@@ -610,6 +842,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
       return;
     }
     containerManager.start();
+    Listener listener = new Listener();
+    ((NodeManager.DefaultContainerStateListener)containerManager.context.
+        getContainerStateTransitionListener()).addListener(listener);
     // ////// Construct the Container-id
     ContainerId cId = createContainerId(0);
     File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
@@ -644,6 +879,50 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     Assert.assertNotEquals("The Rolled-back process should be a different pid",
         pid, rolledBackPid);
+
+    List<org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+        ContainerState> containerStates =
+        listener.states.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.NEW,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.LOCALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.REINITIALIZING_AWAITING_KILL,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.SCHEDULED,
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
+            ContainerState.RUNNING), containerStates);
+
+    List<ContainerEventType> containerEventTypes =
+        listener.events.get(createContainerId(0));
+    Assert.assertEquals(Arrays.asList(
+        ContainerEventType.INIT_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.REINITIALIZE_CONTAINER,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+        ContainerEventType.CONTAINER_LAUNCHED), containerEventTypes);
   }
 
   /**
@@ -1464,7 +1743,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(strExceptionMsg,
         ContainerManagerImpl.INVALID_NMTOKEN_MSG);
 
-    ContainerManagerImpl spyContainerMgr = Mockito.spy(cMgrImpl);
+    ContainerManagerImpl spyContainerMgr = spy(cMgrImpl);
     UserGroupInformation ugInfo = UserGroupInformation.createRemoteUser("a");
     Mockito.when(spyContainerMgr.getRemoteUgi()).thenReturn(ugInfo);
     Mockito.when(spyContainerMgr.
@@ -1539,7 +1818,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // container will have exited, and won't be in RUNNING state
     ContainerId cId0 = createContainerId(0);
     Token containerToken =
-        createContainerToken(cId0, DUMMY_RM_IDENTIFIER,
+        createContainerToken(cId0, 1, DUMMY_RM_IDENTIFIER,
             context.getNodeId(), user,
                 Resource.newInstance(1234, 3),
                     context.getContainerTokenSecretManager(), null);
@@ -1554,110 +1833,21 @@ public class TestContainerManager extends BaseContainerManagerTest {
             context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
 
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest
-          .newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
     // Check response
     Assert.assertEquals(
-        0, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertEquals(2, increaseResponse.getFailedRequests().size());
-    for (Map.Entry<ContainerId, SerializedException> entry : increaseResponse
+        1, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertEquals(1, updateResponse.getFailedRequests().size());
+    for (Map.Entry<ContainerId, SerializedException> entry : updateResponse
         .getFailedRequests().entrySet()) {
       Assert.assertNotNull("Failed message", entry.getValue().getMessage());
-      if (cId0.equals(entry.getKey())) {
-        Assert.assertTrue(entry.getValue().getMessage()
-          .contains("Resource can only be changed when a "
-              + "container is in RUNNING state"));
-      } else if (cId7.equals(entry.getKey())) {
+      if (cId7.equals(entry.getKey())) {
         Assert.assertTrue(entry.getValue().getMessage()
             .contains("Container " + cId7.toString()
                 + " is not handled by this NodeManager"));
-      } else {
-        throw new YarnException("Received failed request from wrong"
-            + " container: " + entry.getKey().toString());
-      }
-    }
-  }
-
-  @Test
-  public void testIncreaseContainerResourceWithInvalidResource() throws Exception {
-    containerManager.start();
-    File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
-    PrintWriter fileWriter = new PrintWriter(scriptFile);
-    // Construct the Container-id
-    ContainerId cId = createContainerId(0);
-    if (Shell.WINDOWS) {
-      fileWriter.println("@ping -n 100 127.0.0.1 >nul");
-    } else {
-      fileWriter.write("\numask 0");
-      fileWriter.write("\nexec sleep 100");
-    }
-    fileWriter.close();
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    URL resource_alpha =
-        URL.fromPath(localFS
-            .makeQualified(new Path(scriptFile.getAbsolutePath())));
-    LocalResource rsrc_alpha =
-        recordFactory.newRecordInstance(LocalResource.class);
-    rsrc_alpha.setResource(resource_alpha);
-    rsrc_alpha.setSize(-1);
-    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
-    rsrc_alpha.setType(LocalResourceType.FILE);
-    rsrc_alpha.setTimestamp(scriptFile.lastModified());
-    String destinationFile = "dest_file";
-    Map<String, LocalResource> localResources =
-        new HashMap<String, LocalResource>();
-    localResources.put(destinationFile, rsrc_alpha);
-    containerLaunchContext.setLocalResources(localResources);
-    List<String> commands =
-        Arrays.asList(Shell.getRunScriptCommand(scriptFile));
-    containerLaunchContext.setCommands(commands);
-
-    StartContainerRequest scRequest =
-        StartContainerRequest.newInstance(
-            containerLaunchContext,
-            createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
-            user, context.getContainerTokenSecretManager()));
-    List<StartContainerRequest> list = new ArrayList<>();
-    list.add(scRequest);
-    StartContainersRequest allRequests =
-        StartContainersRequest.newInstance(list);
-    containerManager.startContainers(allRequests);
-    // Make sure the container reaches RUNNING state
-    BaseContainerManagerTest.waitForNMContainerState(containerManager, cId,
-        org.apache.hadoop.yarn.server.nodemanager.
-            containermanager.container.ContainerState.RUNNING);
-    // Construct container resource increase request,
-    List<Token> increaseTokens = new ArrayList<>();
-    // Add increase request. The increase request should fail
-    // as the current resource does not fit in the target resource
-    Token containerToken =
-        createContainerToken(cId, DUMMY_RM_IDENTIFIER,
-            context.getNodeId(), user,
-            Resource.newInstance(512, 1),
-            context.getContainerTokenSecretManager(), null);
-    increaseTokens.add(containerToken);
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest
-            .newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
-    // Check response
-    Assert.assertEquals(
-        0, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertEquals(1, increaseResponse.getFailedRequests().size());
-    for (Map.Entry<ContainerId, SerializedException> entry : increaseResponse
-        .getFailedRequests().entrySet()) {
-      if (cId.equals(entry.getKey())) {
-        Assert.assertNotNull("Failed message", entry.getValue().getMessage());
-        Assert.assertTrue(entry.getValue().getMessage()
-            .contains("The target resource "
-                + Resource.newInstance(512, 1).toString()
-                + " is smaller than the current resource "
-                + Resource.newInstance(1024, 1)));
       } else {
         throw new YarnException("Received failed request from wrong"
             + " container: " + entry.getKey().toString());
@@ -1718,17 +1908,17 @@ public class TestContainerManager extends BaseContainerManagerTest {
     List<Token> increaseTokens = new ArrayList<>();
     // Add increase request.
     Resource targetResource = Resource.newInstance(4096, 2);
-    Token containerToken = createContainerToken(cId, DUMMY_RM_IDENTIFIER,
+    Token containerToken = createContainerToken(cId, 1, DUMMY_RM_IDENTIFIER,
         context.getNodeId(), user, targetResource,
             context.getContainerTokenSecretManager(), null);
     increaseTokens.add(containerToken);
-    IncreaseContainersResourceRequest increaseRequest =
-        IncreaseContainersResourceRequest.newInstance(increaseTokens);
-    IncreaseContainersResourceResponse increaseResponse =
-        containerManager.increaseContainersResource(increaseRequest);
+    ContainerUpdateRequest updateRequest =
+        ContainerUpdateRequest.newInstance(increaseTokens);
+    ContainerUpdateResponse updateResponse =
+        containerManager.updateContainer(updateRequest);
     Assert.assertEquals(
-        1, increaseResponse.getSuccessfullyIncreasedContainers().size());
-    Assert.assertTrue(increaseResponse.getFailedRequests().isEmpty());
+        1, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
     // Check status
     List<ContainerId> containerIds = new ArrayList<>();
     containerIds.add(cId);
@@ -1739,15 +1929,19 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Check status immediately as resource increase is blocking
     assertEquals(targetResource, containerStatus.getCapability());
     // Simulate a decrease request
-    List<org.apache.hadoop.yarn.api.records.Container> containersToDecrease
-        = new ArrayList<>();
+    List<Token> decreaseTokens = new ArrayList<>();
     targetResource = Resource.newInstance(2048, 2);
-    org.apache.hadoop.yarn.api.records.Container decreasedContainer =
-        org.apache.hadoop.yarn.api.records.Container
-            .newInstance(cId, null, null, targetResource, null, null);
-    containersToDecrease.add(decreasedContainer);
-    containerManager.handle(
-        new CMgrDecreaseContainersResourceEvent(containersToDecrease));
+    Token token = createContainerToken(cId, 2, DUMMY_RM_IDENTIFIER,
+        context.getNodeId(), user, targetResource,
+        context.getContainerTokenSecretManager(), null);
+    decreaseTokens.add(token);
+    updateRequest = ContainerUpdateRequest.newInstance(decreaseTokens);
+    updateResponse = containerManager.updateContainer(updateRequest);
+
+    Assert.assertEquals(
+        1, updateResponse.getSuccessfullyUpdatedContainers().size());
+    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
+
     // Check status with retry
     containerStatus = containerManager
         .getContainerStatuses(gcsRequest).getContainerStatuses().get(0);
@@ -1858,5 +2052,140 @@ public class TestContainerManager extends BaseContainerManagerTest {
       Assert.assertEquals(cId, signalContext.getContainer().getContainerId());
       Assert.assertEquals(signal, signalContext.getSignal());
     }
+  }
+
+  @Test
+  public void testStartContainerFailureWithInvalidLocalResource()
+      throws Exception {
+    containerManager.start();
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(null);
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(System.currentTimeMillis());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("invalid_resource", rsrc_alpha);
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext spyContainerLaunchContext =
+        spy(containerLaunchContext);
+    Mockito.when(spyContainerLaunchContext.getLocalResources())
+        .thenReturn(localResources);
+
+    ContainerId cId = createContainerId(0);
+    String user = "start_container_fail";
+    Token containerToken =
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+    StartContainerRequest request = StartContainerRequest
+        .newInstance(spyContainerLaunchContext, containerToken);
+
+    // start containers
+    List<StartContainerRequest> startRequest =
+        new ArrayList<StartContainerRequest>();
+    startRequest.add(request);
+    StartContainersRequest requestList =
+        StartContainersRequest.newInstance(startRequest);
+
+    StartContainersResponse response =
+        containerManager.startContainers(requestList);
+    Assert.assertTrue(response.getFailedRequests().size() == 1);
+    Assert.assertTrue(response.getSuccessfullyStartedContainers().size() == 0);
+    Assert.assertTrue(response.getFailedRequests().containsKey(cId));
+    Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
+        .contains("Null resource URL for local resource"));
+  }
+
+  @Test
+  public void testStartContainerFailureWithNullTypeLocalResource()
+      throws Exception {
+    containerManager.start();
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(URL.fromPath(new Path("./")));
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(null);
+    rsrc_alpha.setTimestamp(System.currentTimeMillis());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("null_type_resource", rsrc_alpha);
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext spyContainerLaunchContext =
+        spy(containerLaunchContext);
+    Mockito.when(spyContainerLaunchContext.getLocalResources())
+        .thenReturn(localResources);
+
+    ContainerId cId = createContainerId(0);
+    String user = "start_container_fail";
+    Token containerToken =
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+    StartContainerRequest request = StartContainerRequest
+        .newInstance(spyContainerLaunchContext, containerToken);
+
+    // start containers
+    List<StartContainerRequest> startRequest =
+        new ArrayList<StartContainerRequest>();
+    startRequest.add(request);
+    StartContainersRequest requestList =
+        StartContainersRequest.newInstance(startRequest);
+
+    StartContainersResponse response =
+        containerManager.startContainers(requestList);
+    Assert.assertTrue(response.getFailedRequests().size() == 1);
+    Assert.assertTrue(response.getSuccessfullyStartedContainers().size() == 0);
+    Assert.assertTrue(response.getFailedRequests().containsKey(cId));
+    Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
+        .contains("Null resource type for local resource"));
+  }
+
+  @Test
+  public void testStartContainerFailureWithNullVisibilityLocalResource()
+      throws Exception {
+    containerManager.start();
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(URL.fromPath(new Path("./")));
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(null);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(System.currentTimeMillis());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put("null_visibility_resource", rsrc_alpha);
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext spyContainerLaunchContext =
+        spy(containerLaunchContext);
+    Mockito.when(spyContainerLaunchContext.getLocalResources())
+        .thenReturn(localResources);
+
+    ContainerId cId = createContainerId(0);
+    String user = "start_container_fail";
+    Token containerToken =
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager());
+    StartContainerRequest request = StartContainerRequest
+        .newInstance(spyContainerLaunchContext, containerToken);
+
+    // start containers
+    List<StartContainerRequest> startRequest =
+        new ArrayList<StartContainerRequest>();
+    startRequest.add(request);
+    StartContainersRequest requestList =
+        StartContainersRequest.newInstance(startRequest);
+
+    StartContainersResponse response =
+        containerManager.startContainers(requestList);
+    Assert.assertTrue(response.getFailedRequests().size() == 1);
+    Assert.assertTrue(response.getSuccessfullyStartedContainers().size() == 0);
+    Assert.assertTrue(response.getFailedRequests().containsKey(cId));
+    Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
+        .contains("Null resource visibility for local resource"));
   }
 }

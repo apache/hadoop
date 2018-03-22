@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -57,6 +56,8 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   private Resource fairShare = Resources.createResource(0, 0);
   private Resource steadyFairShare = Resources.createResource(0, 0);
+  private Resource reservedResource = Resources.createResource(0, 0);
+  private final Resource resourceUsage = Resource.newInstance(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final YarnAuthorizationProvider authorizer;
@@ -69,11 +70,11 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
-  protected ResourceWeights weights;
+  protected float weights;
   protected Resource minShare;
-  protected Resource maxShare;
+  private ConfigurableResource maxShare;
   protected int maxRunningApps;
-  protected Resource maxChildQueueResource;
+  private ConfigurableResource maxChildQueueResource;
 
   // maxAMShare is a value between 0 and 1.
   protected float maxAMShare;
@@ -91,17 +92,30 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, name);
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     this.parent = parent;
+    setPolicy(scheduler.getAllocationConfiguration().getSchedulingPolicy(name));
+    reinit(false);
   }
 
   /**
    * Initialize a queue by setting its queue-specific properties and its
-   * metrics.
-   * This function is invoked when a new queue is created or reloading the
-   * allocation configuration.
+   * metrics. This method is invoked when creating a new queue or reloading
+   * the allocation file.
+   * This method does not set policies for queues when reloading the allocation
+   * file since we need to either set all new policies or nothing, which is
+   * handled by method {@link #verifyAndSetPolicyFromConf}.
+   *
+   * @param recursive whether child queues should be reinitialized recursively
    */
-  public void init() {
+  public final void reinit(boolean recursive) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
-    allocConf.initFSQueue(this, scheduler);
+    allocConf.initFSQueue(this);
+    updatePreemptionVariables();
+
+    if (recursive) {
+      for (FSQueue child : getChildQueues()) {
+        child.reinit(recursive);
+      }
+    }
   }
 
   public String getName() {
@@ -121,21 +135,17 @@ public abstract class FSQueue implements Queue, Schedulable {
     return parent;
   }
 
-  protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
-      throws AllocationConfigurationException {
-    throw new AllocationConfigurationException("SchedulingPolicy " + policy
-        + " does not apply to queue " + getName());
+  public void setPolicy(SchedulingPolicy policy) {
+    policy.initialize(scheduler.getContext());
+    this.policy = policy;
   }
 
-  public abstract void setPolicy(SchedulingPolicy policy)
-      throws AllocationConfigurationException;
-
-  public void setWeights(ResourceWeights weights){
+  public void setWeights(float weights) {
     this.weights = weights;
   }
 
   @Override
-  public ResourceWeights getWeights() {
+  public float getWeight() {
     return weights;
   }
 
@@ -148,20 +158,35 @@ public abstract class FSQueue implements Queue, Schedulable {
     return minShare;
   }
 
-  public void setMaxShare(Resource maxShare){
+  public void setMaxShare(ConfigurableResource maxShare){
     this.maxShare = maxShare;
   }
 
   @Override
   public Resource getMaxShare() {
-    return maxShare;
+    Resource maxResource = maxShare.getResource(scheduler.getClusterResource());
+
+    // Max resource should be greater than or equal to min resource
+    Resource result = Resources.componentwiseMax(maxResource, minShare);
+
+    if (!Resources.equals(maxResource, result)) {
+      LOG.warn(String.format("Queue %s has max resources %s less than "
+          + "min resources %s", getName(), maxResource, minShare));
+    }
+    return result;
   }
 
-  public void setMaxChildQueueResource(Resource maxChildShare){
+  public Resource getReservedResource() {
+    reservedResource.setMemorySize(metrics.getReservedMB());
+    reservedResource.setVirtualCores(metrics.getReservedVirtualCores());
+    return reservedResource;
+  }
+
+  public void setMaxChildQueueResource(ConfigurableResource maxChildShare){
     this.maxChildQueueResource = maxChildShare;
   }
 
-  public Resource getMaxChildQueueResource() {
+  public ConfigurableResource getMaxChildQueueResource() {
     return maxChildQueueResource;
   }
 
@@ -244,6 +269,9 @@ public abstract class FSQueue implements Queue, Schedulable {
     stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
     stats.setPendingVCores(getMetrics().getPendingVirtualCores());
     stats.setReservedVCores(getMetrics().getReservedVirtualCores());
+    stats.setAllocatedContainers(getMetrics().getAllocatedContainers());
+    stats.setPendingContainers(getMetrics().getPendingContainers());
+    stats.setReservedContainers(getMetrics().getReservedContainers());
     return stats;
   }
   
@@ -307,29 +335,37 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.fairSharePreemptionThreshold = fairSharePreemptionThreshold;
   }
 
+  @Override
   public boolean isPreemptable() {
     return preemptable;
   }
 
   /**
    * Recomputes the shares for all child queues and applications based on this
-   * queue's current share, and checks for starvation.
+   * queue's current share.
    *
-   * @param checkStarvation whether to check for fairshare or minshare
-   *                        starvation on update
+   * To be called holding the scheduler writelock.
    */
-  abstract void updateInternal(boolean checkStarvation);
+  abstract void updateInternal();
 
-  public void update(Resource fairShare, boolean checkStarvation) {
+  /**
+   * Set the queue's fairshare and update the demand/fairshare of child
+   * queues/applications.
+   *
+   * To be called holding the scheduler writelock.
+   *
+   * @param fairShare
+   */
+  public void update(Resource fairShare) {
     setFairShare(fairShare);
-    updateInternal(checkStarvation);
+    updateInternal();
   }
 
   /**
    * Update the min/fair share preemption timeouts, threshold and preemption
    * disabled flag for this queue.
    */
-  public void updatePreemptionVariables() {
+  private void updatePreemptionVariables() {
     // For min share timeout
     minSharePreemptionTimeout = scheduler.getAllocationConfiguration()
         .getMinSharePreemptionTimeout(getName());
@@ -348,9 +384,15 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (fairSharePreemptionThreshold < 0 && parent != null) {
       fairSharePreemptionThreshold = parent.getFairSharePreemptionThreshold();
     }
-    // For option whether allow preemption from this queue
-    preemptable = scheduler.getAllocationConfiguration()
-        .isPreemptable(getName());
+    // For option whether allow preemption from this queue.
+    // If the parent is non-preemptable, this queue is non-preemptable as well,
+    // otherwise get the value from the allocation file.
+    if (parent != null && !parent.isPreemptable()) {
+      preemptable = false;
+    } else {
+      preemptable = scheduler.getAllocationConfiguration()
+          .isPreemptable(getName());
+    }
   }
 
   /**
@@ -377,11 +419,22 @@ public abstract class FSQueue implements Queue, Schedulable {
    * @return true if check passes (can assign) or false otherwise
    */
   boolean assignContainerPreCheck(FSSchedulerNode node) {
-    if (!Resources.fitsIn(getResourceUsage(), maxShare)
-        || node.getReservedContainer() != null) {
+    if (node.getReservedContainer() != null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Assigning container failed on node '" + node.getNodeName()
+            + " because it has reserved containers.");
+      }
       return false;
+    } else if (!Resources.fitsIn(getResourceUsage(), getMaxShare())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Assigning container failed on node '" + node.getNodeName()
+            + " because queue resource usage is larger than MaxShare: "
+            + dumpState());
+      }
+      return false;
+    } else {
+      return true;
     }
-    return true;
   }
 
   /**
@@ -395,7 +448,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeight());
   }
   
   @Override
@@ -427,6 +480,39 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   @Override
+  public Resource getResourceUsage() {
+    return resourceUsage;
+  }
+
+  /**
+   * Increase resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to increase
+   */
+  protected void incUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.addTo(resourceUsage, res);
+      if (parent != null) {
+        parent.incUsedResource(res);
+      }
+    }
+  }
+
+  /**
+   * Decrease resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to decrease
+   */
+  protected void decUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.subtractFrom(resourceUsage, res);
+      if (parent != null) {
+        parent.decUsedResource(res);
+      }
+    }
+  }
+
+  @Override
   public Priority getDefaultApplicationPriority() {
     // TODO add implementation for FSParentQueue
     return null;
@@ -437,6 +523,11 @@ public abstract class FSQueue implements Queue, Schedulable {
         Resources.add(getResourceUsage(), additionalResource);
 
     if (!Resources.fitsIn(usagePlusAddition, getMaxShare())) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Resource usage plus resource request: " + usagePlusAddition
+            + " exceeds maximum resource allowed:" + getMaxShare()
+            + " in queue " + getName());
+      }
       return false;
     }
 
@@ -446,4 +537,52 @@ public abstract class FSQueue implements Queue, Schedulable {
     }
     return true;
   }
+
+  /**
+   * Recursively check policies for queues in pre-order. Get queue policies
+   * from the allocation file instead of properties of {@link FSQueue} objects.
+   * Set the policy for current queue if there is no policy violation for its
+   * children. This method is invoked while reloading the allocation file.
+   *
+   * @param queueConf allocation configuration
+   * @return true if no policy violation and successfully set polices
+   *         for queues; false otherwise
+   */
+  public boolean verifyAndSetPolicyFromConf(AllocationConfiguration queueConf) {
+    SchedulingPolicy queuePolicy = queueConf.getSchedulingPolicy(getName());
+
+    for (FSQueue child : getChildQueues()) {
+      if (!queuePolicy.isChildPolicyAllowed(
+          queueConf.getSchedulingPolicy(child.getName()))) {
+        return false;
+      }
+      boolean success = child.verifyAndSetPolicyFromConf(queueConf);
+      if (!success) {
+        return false;
+      }
+    }
+
+    // Set the policy if no policy violation for all children
+    setPolicy(queuePolicy);
+    return true;
+  }
+
+  /**
+   * Recursively dump states of all queues.
+   *
+   * @return a string which holds all queue states
+   */
+  public String dumpState() {
+    StringBuilder sb = new StringBuilder();
+    dumpStateInternal(sb);
+    return sb.toString();
+  }
+
+
+  /**
+   * Recursively dump states of all queues.
+   *
+   * @param sb the {code StringBuilder} which holds queue states
+   */
+  protected abstract void dumpStateInternal(StringBuilder sb);
 }

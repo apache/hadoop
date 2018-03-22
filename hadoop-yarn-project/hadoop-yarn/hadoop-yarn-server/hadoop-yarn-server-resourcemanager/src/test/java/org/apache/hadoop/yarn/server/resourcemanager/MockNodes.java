@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -48,6 +49,10 @@ import com.google.common.collect.Lists;
 public class MockNodes {
   private static int NODE_ID = 0;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+
+  public static void resetHostIds() {
+    NODE_ID = 0;
+  }
 
   public static List<RMNode> newNodes(int racks, int nodesPerRack,
                                         Resource perNode) {
@@ -201,7 +206,8 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
+    public void setAndUpdateNodeHeartbeatResponse(
+        NodeHeartbeatResponse response) {
     }
 
     @Override
@@ -242,12 +248,6 @@ public class MockNodes {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
-        NodeHeartbeatResponse response) {
-      
-    }
-
-    @Override
     public List<Container> pullNewlyIncreasedContainers() {
       return Collections.emptyList();
     }
@@ -263,7 +263,7 @@ public class MockNodes {
     }
 
     public OpportunisticContainersStatus getOpportunisticContainersStatus() {
-      return null;
+      return OpportunisticContainersStatus.newInstance();
     }
 
     @Override
@@ -277,6 +277,11 @@ public class MockNodes {
 
     @Override
     public Integer getDecommissioningTimeout() {
+      return null;
+    }
+
+    @Override
+    public Map<String, Long> getAllocationTagsWithCount() {
       return null;
     }
 

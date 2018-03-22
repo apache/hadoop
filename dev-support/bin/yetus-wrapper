@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# you must be this high to ride the ride
+if [[ -z "${BASH_VERSINFO[0]}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+  echo "bash v3.2+ is required. Sorry."
+  exit 1
+fi
+
 set -o pipefail
 
 ## @description  Print a message to stderr
@@ -39,6 +47,7 @@ function yetus_abs
   declare obj=$1
   declare dir
   declare fn
+  declare dirret
 
   if [[ ! -e ${obj} ]]; then
     return 1
@@ -51,7 +60,8 @@ function yetus_abs
   fi
 
   dir=$(cd -P -- "${dir}" >/dev/null 2>/dev/null && pwd -P)
-  if [[ $? = 0 ]]; then
+  dirret=$?
+  if [[ ${dirret} = 0 ]]; then
     echo "${dir}${fn}"
     return 0
   fi
@@ -63,7 +73,7 @@ WANTED="$1"
 shift
 ARGV=("$@")
 
-HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.3.0}
+HADOOP_YETUS_VERSION=${HADOOP_YETUS_VERSION:-0.4.0}
 BIN=$(yetus_abs "${BASH_SOURCE-$0}")
 BINDIR=$(dirname "${BIN}")
 
@@ -85,7 +95,8 @@ if [[ ! -d "${HADOOP_PATCHPROCESS}" ]]; then
 fi
 
 mytmpdir=$(yetus_abs "${HADOOP_PATCHPROCESS}")
-if [[ $? != 0 ]]; then
+ret=$?
+if [[ ${ret} != 0 ]]; then
   yetus_error "yetus-dl: Unable to cwd to ${HADOOP_PATCHPROCESS}"
   exit 1
 fi
@@ -108,15 +119,13 @@ TARBALL="yetus-${HADOOP_YETUS_VERSION}-bin.tar"
 GPGBIN=$(command -v gpg)
 CURLBIN=$(command -v curl)
 
-pushd "${HADOOP_PATCHPROCESS}" >/dev/null
-if [[ $? != 0 ]]; then
+if ! pushd "${HADOOP_PATCHPROCESS}" >/dev/null; then
   yetus_error "ERROR: yetus-dl: Cannot pushd to ${HADOOP_PATCHPROCESS}"
   exit 1
 fi
 
 if [[ -n "${CURLBIN}" ]]; then
-  "${CURLBIN}" -f -s -L -O "${BASEURL}/${TARBALL}.gz"
-  if [[ $? != 0 ]]; then
+  if ! "${CURLBIN}" -f -s -L -O "${BASEURL}/${TARBALL}.gz"; then
     yetus_error "ERROR: yetus-dl: unable to download ${BASEURL}/${TARBALL}.gz"
     exit 1
   fi
@@ -126,40 +135,33 @@ else
 fi
 
 if [[ -n "${GPGBIN}" ]]; then
-  mkdir -p .gpg
-  if [[ $? != 0 ]]; then
+  if ! mkdir -p .gpg; then
     yetus_error "ERROR: yetus-dl: Unable to create ${HADOOP_PATCHPROCESS}/.gpg"
     exit 1
   fi
-  chmod -R 700 .gpg
-  if [[ $? != 0 ]]; then
+  if ! chmod -R 700 .gpg; then
     yetus_error "ERROR: yetus-dl: Unable to chmod ${HADOOP_PATCHPROCESS}/.gpg"
     exit 1
   fi
-  "${CURLBIN}" -s -L -o KEYS_YETUS https://dist.apache.org/repos/dist/release/yetus/KEYS
-  if [[ $? != 0 ]]; then
+  if ! "${CURLBIN}" -s -L -o KEYS_YETUS https://dist.apache.org/repos/dist/release/yetus/KEYS; then
     yetus_error "ERROR: yetus-dl: unable to fetch https://dist.apache.org/repos/dist/release/yetus/KEYS"
     exit 1
   fi
-  "${CURLBIN}" -s -L -O "${BASEURL}/${TARBALL}.gz.asc"
-  if [[ $? != 0 ]]; then
+  if ! "${CURLBIN}" -s -L -O "${BASEURL}/${TARBALL}.gz.asc"; then
     yetus_error "ERROR: yetus-dl: unable to fetch ${BASEURL}/${TARBALL}.gz.asc"
     exit 1
   fi
-  "${GPGBIN}" --homedir "${HADOOP_PATCHPROCESS}/.gpg" --import "${HADOOP_PATCHPROCESS}/KEYS_YETUS" >/dev/null 2>&1
-  if [[ $? != 0 ]]; then
+  if ! "${GPGBIN}" --homedir "${HADOOP_PATCHPROCESS}/.gpg" --import "${HADOOP_PATCHPROCESS}/KEYS_YETUS" >/dev/null 2>&1; then
     yetus_error "ERROR: yetus-dl: gpg unable to import ${HADOOP_PATCHPROCESS}/KEYS_YETUS"
     exit 1
   fi
-  "${GPGBIN}" --homedir "${HADOOP_PATCHPROCESS}/.gpg" --verify "${TARBALL}.gz.asc" >/dev/null 2>&1
-   if [[ $? != 0 ]]; then
+  if ! "${GPGBIN}" --homedir "${HADOOP_PATCHPROCESS}/.gpg" --verify "${TARBALL}.gz.asc" >/dev/null 2>&1; then
      yetus_error "ERROR: yetus-dl: gpg verify of tarball in ${HADOOP_PATCHPROCESS} failed"
      exit 1
    fi
 fi
 
-gunzip -c "${TARBALL}.gz" | tar xpf -
-if [[ $? != 0 ]]; then
+if ! (gunzip -c "${TARBALL}.gz" | tar xpf -); then
   yetus_error "ERROR: ${TARBALL}.gz is corrupt. Investigate and then remove ${HADOOP_PATCHPROCESS} to try again."
   exit 1
 fi

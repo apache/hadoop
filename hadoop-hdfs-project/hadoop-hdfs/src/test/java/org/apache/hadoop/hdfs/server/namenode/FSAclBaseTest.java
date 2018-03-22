@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -50,6 +51,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -120,10 +122,16 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, OTHER, NONE),
       aclEntry(DEFAULT, USER, "foo", ALL));
     fs.setAcl(path, aclSpec);
+    Assert.assertTrue(path + " should have ACLs in FileStatus!",
+        fs.getFileStatus(path).hasAcl());
+
     aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
       aclEntry(DEFAULT, USER, "foo", READ_EXECUTE));
     fs.modifyAclEntries(path, aclSpec);
+    Assert.assertTrue(path + " should have ACLs in FileStatus!",
+        fs.getFileStatus(path).hasAcl());
+
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
@@ -561,8 +569,18 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE),
       aclEntry(ACCESS, OTHER, NONE),
       aclEntry(DEFAULT, USER, "foo", ALL));
+
     fs.setAcl(path, aclSpec);
+    Assert.assertTrue(path + " should have ACLs in FileStatus!",
+        fs.getFileStatus(path).hasAcl());
+    Assert.assertTrue(path + " should have ACLs in FileStatus#toString()!",
+        fs.getFileStatus(path).toString().contains("hasAcl=true"));
     fs.removeAcl(path);
+    Assert.assertFalse(path + " should not have ACLs in FileStatus!",
+        fs.getFileStatus(path).hasAcl());
+    Assert.assertTrue(path + " should not have ACLs in FileStatus#toString()!",
+        fs.getFileStatus(path).toString().contains("hasAcl=false"));
+
     AclStatus s = fs.getAclStatus(path);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] { }, returned);
@@ -862,13 +880,18 @@ public abstract class FSAclBaseTest {
     assertPermission((short)0700);
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
-          createImmutable((short)0755), true, true));
+          createImmutable((short)0755), true, true, true));
     INode inode = cluster.getNamesystem().getFSDirectory()
         .getINode(path.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
     assertEquals(0755, perm.toShort());
+    FileStatus stat = fs.getFileStatus(path);
+    assertFalse(stat.hasAcl());
+    assertFalse(stat.isEncrypted());
+    assertFalse(stat.isErasureCoded());
+    // backwards-compat check
     assertEquals(0755, perm.toExtendedShort());
     assertAclFeature(false);
   }
@@ -886,7 +909,7 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] {
       aclEntry(ACCESS, USER, "foo", ALL),
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
-    assertPermission(filePath, (short)010640);
+    assertPermission(filePath, (short)010660);
     assertAclFeature(filePath, true);
   }
 
@@ -968,8 +991,14 @@ public abstract class FSAclBaseTest {
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "foo", ALL));
     fs.setAcl(path, aclSpec);
+    Assert.assertTrue(path + " should have ACLs in FileStatus!",
+        fs.getFileStatus(path).hasAcl());
+
     Path dirPath = new Path(path, "dir1");
     fs.mkdirs(dirPath);
+    Assert.assertTrue(dirPath + " should have ACLs in FileStatus!",
+        fs.getFileStatus(dirPath).hasAcl());
+
     AclStatus s = fs.getAclStatus(dirPath);
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] {
@@ -980,7 +1009,7 @@ public abstract class FSAclBaseTest {
       aclEntry(DEFAULT, GROUP, READ_EXECUTE),
       aclEntry(DEFAULT, MASK, ALL),
       aclEntry(DEFAULT, OTHER, NONE) }, returned);
-    assertPermission(dirPath, (short)010750);
+    assertPermission(dirPath, (short)010770);
     assertAclFeature(dirPath, true);
   }
 
@@ -1097,7 +1126,7 @@ public abstract class FSAclBaseTest {
     s = fs.getAclStatus(filePath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission(filePath, (short)010640);
+    assertPermission(filePath, (short)010660);
     assertAclFeature(filePath, true);
   }
 
@@ -1126,7 +1155,7 @@ public abstract class FSAclBaseTest {
     s = fs.getAclStatus(subdirPath);
     returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
-    assertPermission(subdirPath, (short)010750);
+    assertPermission(subdirPath, (short)010770);
     assertAclFeature(subdirPath, true);
   }
 

@@ -8,6 +8,7 @@
 *.sdf
 *.suo
 *.vcxproj.user
+*.patch
 .idea
 .svn
 .classpath
@@ -17,6 +18,10 @@ target
 build
 dependency-reduced-pom.xml
 
+# Filesystem contract test options and credentials
+auth-keys.xml
+azure-auth-keys.xml
+
 # External tool builders
 */.externalToolBuilders
 */maven-eclipse.xml
@@ -24,8 +29,6 @@ dependency-reduced-pom.xml
 hadoop-common-project/hadoop-kms/downloads/
 hadoop-hdfs-project/hadoop-hdfs/downloads
 hadoop-hdfs-project/hadoop-hdfs-httpfs/downloads
-hadoop-common-project/hadoop-common/src/test/resources/contract-test-options.xml
-hadoop-tools/hadoop-openstack/src/test/resources/contract-test-options.xml
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/src/main/tla/yarnregistry.toolbox
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/dist
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/tmp
@@ -41,10 +44,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/testem.log
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/dist
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/tmp
 yarnregistry.pdf
-hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml
-hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml
-hadoop-tools/hadoop-azure/src/test/resources/azure-auth-keys.xml
-hadoop-tools/hadoop-openstack/src/test/resources/auth-keys.xml
 patchprocess/
-hadoop-tools/hadoop-aliyun/src/test/resources/auth-keys.xml
-hadoop-tools/hadoop-aliyun/src/test/resources/contract-test-options.xml
+.history/
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/package-lock.json
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/yarn-error.log

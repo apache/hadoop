@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.event;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -44,7 +44,7 @@ public class EventDispatcher<T extends Event> extends
       new LinkedBlockingDeque<>();
   private final Thread eventProcessor;
   private volatile boolean stopped = false;
-  private boolean shouldExitOnError = false;
+  private boolean shouldExitOnError = true;
 
   private static final Log LOG = LogFactory.getLog(EventDispatcher.class);
 
@@ -92,14 +92,6 @@ public class EventDispatcher<T extends Event> extends
   }
 
   @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    this.shouldExitOnError =
-        conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
-            Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-    super.serviceInit(conf);
-  }
-
-  @Override
   protected void serviceStart() throws Exception {
     this.eventProcessor.start();
     super.serviceStart();
@@ -133,5 +125,10 @@ public class EventDispatcher<T extends Event> extends
     } catch (InterruptedException e) {
       LOG.info("Interrupted. Trying to exit gracefully.");
     }
+  }
+
+  @VisibleForTesting
+  public void disableExitOnError() {
+    shouldExitOnError = false;
   }
 }

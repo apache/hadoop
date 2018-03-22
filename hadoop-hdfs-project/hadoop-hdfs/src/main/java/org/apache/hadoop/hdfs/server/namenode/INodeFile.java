@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
+import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -31,10 +33,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -49,7 +52,10 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
+import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.io.erasurecode.ErasureCodeConstants.REPLICATION_POLICY_ID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -58,6 +64,11 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class INodeFile extends INodeWithAdditionalFields
     implements INodeFileAttributes, BlockCollection {
+
+  /**
+   * Erasure Coded striped blocks have replication factor of 1.
+   */
+  public static final short DEFAULT_REPL_FOR_STRIPED_BLOCKS = 1;
 
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
@@ -93,6 +104,10 @@ public class INodeFile extends INodeWithAdditionalFields
    * stores the EC policy ID, and in the future, we may further divide these
    * 11 bits to store both the EC policy ID and replication factor for erasure
    * coded blocks. The layout of this section is demonstrated as below.
+   *
+   * Another possible future extension is for future block types, in which case
+   * the 'Replica or EC' bit may be extended into the 11 bit field.
+   *
    * +---------------+-------------------------------+
    * |     1 bit     |             11 bit            |
    * +---------------+-------------------------------+
@@ -119,7 +134,6 @@ public class INodeFile extends INodeWithAdditionalFields
      * Different types can be replica or EC
      */
     private static final int LAYOUT_BIT_WIDTH = 1;
-
     private static final int MAX_REDUNDANCY = (1 << 11) - 1;
 
     HeaderFormat(LongBitFormat previous, int length, long min) {
@@ -127,8 +141,13 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     static short getReplication(long header) {
-      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
-      return (short) (layoutRedundancy & MAX_REDUNDANCY);
+      if (isStriped(header)) {
+        return DEFAULT_REPL_FOR_STRIPED_BLOCKS;
+      } else {
+        long layoutRedundancy =
+            BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+        return (short) (layoutRedundancy & MAX_REDUNDANCY);
+      }
     }
 
     static byte getECPolicyID(long header) {
@@ -144,27 +163,84 @@ public class INodeFile extends INodeWithAdditionalFields
       return (byte)STORAGE_POLICY_ID.BITS.retrieve(header);
     }
 
+    // Union of all the block type masks. Currently there is only
+    // BLOCK_TYPE_MASK_STRIPED
+    static final long BLOCK_TYPE_MASK = 1 << 11;
+    // Mask to determine if the block type is striped.
+    static final long BLOCK_TYPE_MASK_STRIPED = 1 << 11;
+
     static boolean isStriped(long header) {
-      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
-      return (layoutRedundancy & (1 << 11)) != 0;
+      return getBlockType(header) == STRIPED;
     }
 
-    static long toLong(long preferredBlockSize, short replication,
-        boolean isStriped, byte storagePolicyID) {
-      Preconditions.checkArgument(replication >= 0 &&
-          replication <= MAX_REDUNDANCY);
+    static BlockType getBlockType(long header) {
+      long layoutRedundancy = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.retrieve(header);
+      long blockType = layoutRedundancy & BLOCK_TYPE_MASK;
+      if (blockType == BLOCK_TYPE_MASK_STRIPED) {
+        return STRIPED;
+      } else {
+        return CONTIGUOUS;
+      }
+    }
+
+    /**
+     * Construct block layout redundancy based on the given BlockType,
+     * replication factor and EC PolicyID.
+     */
+    static long getBlockLayoutRedundancy(BlockType blockType,
+        Short replication, Byte erasureCodingPolicyID) {
+      if (null == erasureCodingPolicyID) {
+        erasureCodingPolicyID = REPLICATION_POLICY_ID;
+      }
+      long layoutRedundancy = 0xFF & erasureCodingPolicyID;
+      switch (blockType) {
+      case STRIPED:
+        if (replication != null) {
+          throw new IllegalArgumentException(
+              "Illegal replication for STRIPED block type");
+        }
+        if (erasureCodingPolicyID == REPLICATION_POLICY_ID) {
+          throw new IllegalArgumentException(
+              "Illegal REPLICATION policy for STRIPED block type");
+        }
+        if (null == ErasureCodingPolicyManager.getInstance()
+            .getByID(erasureCodingPolicyID)) {
+          throw new IllegalArgumentException(String.format(
+                "Could not find EC policy with ID 0x%02x",
+                erasureCodingPolicyID));
+        }
+
+        // valid parameters for STRIPED
+        layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
+        break;
+      case CONTIGUOUS:
+        if (erasureCodingPolicyID != REPLICATION_POLICY_ID) {
+          throw new IllegalArgumentException(String.format(
+              "Illegal EC policy 0x%02x for CONTIGUOUS block type",
+              erasureCodingPolicyID));
+        }
+        if (null == replication ||
+            replication < 0 || replication > MAX_REDUNDANCY) {
+          throw new IllegalArgumentException("Invalid replication value "
+              + replication);
+        }
+
+        // valid parameters for CONTIGUOUS
+        layoutRedundancy |= replication;
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown blockType: " + blockType);
+      }
+      return layoutRedundancy;
+    }
+
+    static long toLong(long preferredBlockSize, long layoutRedundancy,
+        byte storagePolicyID) {
       long h = 0;
       if (preferredBlockSize == 0) {
         preferredBlockSize = PREFERRED_BLOCK_SIZE.BITS.getMin();
       }
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
-      // For erasure coded files, replication is used to store ec policy id
-      // TODO: this is hacky. Add some utility to generate the layoutRedundancy
-      long layoutRedundancy = 0;
-      if (isStriped) {
-        layoutRedundancy |= 1 << 11;
-      }
-      layoutRedundancy |= replication;
       h = BLOCK_LAYOUT_AND_REDUNDANCY.BITS.combine(layoutRedundancy, h);
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
       return h;
@@ -179,19 +255,21 @@ public class INodeFile extends INodeWithAdditionalFields
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
             long atime, BlockInfo[] blklist, short replication,
             long preferredBlockSize) {
-    this(id, name, permissions, mtime, atime, blklist, replication,
-        preferredBlockSize, (byte) 0, false);
+    this(id, name, permissions, mtime, atime, blklist, replication, null,
+        preferredBlockSize, (byte) 0, CONTIGUOUS);
   }
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-      long atime, BlockInfo[] blklist, short replication,
-      long preferredBlockSize, byte storagePolicyID, boolean isStriped) {
+      long atime, BlockInfo[] blklist, Short replication, Byte ecPolicyID,
+      long preferredBlockSize, byte storagePolicyID, BlockType blockType) {
     super(id, name, permissions, mtime, atime);
-    header = HeaderFormat.toLong(preferredBlockSize, replication, isStriped,
+    final long layoutRedundancy = HeaderFormat.getBlockLayoutRedundancy(
+        blockType, replication, ecPolicyID);
+    header = HeaderFormat.toLong(preferredBlockSize, layoutRedundancy,
         storagePolicyID);
     if (blklist != null && blklist.length > 0) {
       for (BlockInfo b : blklist) {
-        Preconditions.checkArgument(b.isStriped() == isStriped);
+        Preconditions.checkArgument(b.getBlockType() == blockType);
       }
     }
     setBlocks(blklist);
@@ -274,9 +352,11 @@ public class INodeFile extends INodeWithAdditionalFields
     for (int i = 0; i < blocks.length; i++) {
       final String err = checkBlockComplete(blocks, i, numCommittedAllowed,
           minReplication);
-      Preconditions.checkState(err == null,
-          "Unexpected block state: %s, file=%s (%s), blocks=%s (i=%s)",
-          err, this, getClass().getSimpleName(), Arrays.asList(blocks), i);
+      if(err != null) {
+        throw new IllegalStateException(String.format("Unexpected block state: " +
+            "%s, file=%s (%s), blocks=%s (i=%s)", err, this,
+            getClass().getSimpleName(), Arrays.asList(blocks), i));
+      }
     }
   }
 
@@ -439,6 +519,9 @@ public class INodeFile extends INodeWithAdditionalFields
    * */
   @Override // INodeFileAttributes
   public final short getFileReplication() {
+    if (isStriped()) {
+      return DEFAULT_REPL_FOR_STRIPED_BLOCKS;
+    }
     return getFileReplication(CURRENT_STATE_ID);
   }
 
@@ -456,12 +539,10 @@ public class INodeFile extends INodeWithAdditionalFields
       return max;
     }
 
-    ErasureCodingPolicy ecPolicy =
-        ErasureCodingPolicyManager.getPolicyByPolicyID(
-            getErasureCodingPolicyID());
-    if (ecPolicy == null){
-      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    }
+    ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager.getInstance()
+        .getByID(getErasureCodingPolicyID());
+    Preconditions.checkNotNull(ecPolicy, "Could not find EC policy with ID 0x"
+        + StringUtils.byteToHexString(getErasureCodingPolicyID()));
     return (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
   }
 
@@ -531,10 +612,8 @@ public class INodeFile extends INodeWithAdditionalFields
     setStoragePolicyID(storagePolicyId);
   }
 
-
   /**
-   * @return The ID of the erasure coding policy on the file. -1 represents no
-   *          EC policy.
+   * @return The ID of the erasure coding policy on the file.
    */
   @VisibleForTesting
   @Override
@@ -542,7 +621,7 @@ public class INodeFile extends INodeWithAdditionalFields
     if (isStriped()) {
       return HeaderFormat.getECPolicyID(header);
     }
-    return -1;
+    return REPLICATION_POLICY_ID;
   }
 
   /**
@@ -552,6 +631,15 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public boolean isStriped() {
     return HeaderFormat.isStriped(header);
+  }
+
+  /**
+   * @return The type of the INodeFile based on block id.
+   */
+  @VisibleForTesting
+  @Override
+  public BlockType getBlockType() {
+    return HeaderFormat.getBlockType(header);
   }
 
   @Override // INodeFileAttributes
@@ -640,6 +728,13 @@ public class INodeFile extends INodeWithAdditionalFields
     this.blocks = BlockInfo.EMPTY_ARRAY;
   }
 
+  private void updateRemovedUnderConstructionFiles(
+      ReclaimContext reclaimContext) {
+    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
+      reclaimContext.removedUCFiles.add(getId());
+    }
+  }
+
   @Override
   public void cleanSubtree(ReclaimContext reclaimContext,
       final int snapshot, int priorSnapshotId) {
@@ -648,6 +743,7 @@ public class INodeFile extends INodeWithAdditionalFields
       // TODO: avoid calling getStoragePolicyID
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
+      updateRemovedUnderConstructionFiles(reclaimContext);
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
@@ -660,9 +756,7 @@ public class INodeFile extends INodeWithAdditionalFields
           // clean the 0-sized block if the file is UC
           if (uc != null) {
             uc.cleanZeroSizeBlock(this, reclaimContext.collectedBlocks);
-            if (reclaimContext.removedUCFiles != null) {
-              reclaimContext.removedUCFiles.add(getId());
-            }
+            updateRemovedUnderConstructionFiles(reclaimContext);
           }
         }
       }
@@ -681,9 +775,7 @@ public class INodeFile extends INodeWithAdditionalFields
           reclaimContext.collectedBlocks);
       sf.clearDiffs();
     }
-    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
-      reclaimContext.removedUCFiles.add(getId());
-    }
+    updateRemovedUnderConstructionFiles(reclaimContext);
   }
 
   public void clearFile(ReclaimContext reclaimContext) {
@@ -774,7 +866,6 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
       int snapshotId, final ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
     final ContentCounts counts = summary.getCounts();
     counts.addContent(Content.FILE, 1);
     final long fileLen = computeFileSize(snapshotId);
@@ -898,7 +989,7 @@ public class INodeFile extends INodeWithAdditionalFields
     } else {
       // Collect all distinct blocks
       Set<BlockInfo> allBlocks = new HashSet<>(Arrays.asList(getBlocks()));
-      List<FileDiff> diffs = sf.getDiffs().asList();
+      DiffList<FileDiff> diffs = sf.getDiffs().asList();
       for(FileDiff diff : diffs) {
         BlockInfo[] diffBlocks = diff.getBlocks();
         if (diffBlocks != null) {

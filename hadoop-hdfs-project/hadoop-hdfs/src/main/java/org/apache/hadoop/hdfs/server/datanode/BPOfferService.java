@@ -70,7 +70,9 @@ class BPOfferService {
    * handshake.
    */
   volatile DatanodeRegistration bpRegistration;
-  
+
+  private final String nameserviceId;
+  private volatile String bpId;
   private final DataNode dn;
 
   /**
@@ -120,12 +122,16 @@ class BPOfferService {
     mWriteLock.unlock();
   }
 
-  BPOfferService(List<InetSocketAddress> nnAddrs,
-      List<InetSocketAddress> lifelineNnAddrs, DataNode dn) {
+  BPOfferService(
+      final String nameserviceId,
+      List<InetSocketAddress> nnAddrs,
+      List<InetSocketAddress> lifelineNnAddrs,
+      DataNode dn) {
     Preconditions.checkArgument(!nnAddrs.isEmpty(),
         "Must pass at least one NN.");
     Preconditions.checkArgument(nnAddrs.size() == lifelineNnAddrs.size(),
         "Must pass same number of NN addresses and lifeline addresses.");
+    this.nameserviceId = nameserviceId;
     this.dn = dn;
 
     for (int i = 0; i < nnAddrs.size(); ++i) {
@@ -142,11 +148,25 @@ class BPOfferService {
     }
     Set<InetSocketAddress> newAddrs = Sets.newHashSet(addrs);
     
-    if (!Sets.symmetricDifference(oldAddrs, newAddrs).isEmpty()) {
-      // Keep things simple for now -- we can implement this at a later date.
-      throw new IOException(
-          "HA does not currently support adding a new standby to a running DN. " +
-          "Please do a rolling restart of DNs to reconfigure the list of NNs.");
+    // Process added NNs
+    Set<InetSocketAddress> addedNNs = Sets.difference(newAddrs, oldAddrs);
+    for (InetSocketAddress addedNN : addedNNs) {
+      BPServiceActor actor = new BPServiceActor(addedNN,
+          lifelineAddrs.get(addrs.indexOf(addedNN)), this);
+      actor.start();
+      bpServices.add(actor);
+    }
+
+    // Process removed NNs
+    Set<InetSocketAddress> removedNNs = Sets.difference(oldAddrs, newAddrs);
+    for (InetSocketAddress removedNN : removedNNs) {
+      for (BPServiceActor actor : bpServices) {
+        if (actor.getNNSocketAddress().equals(removedNN)) {
+          actor.stop();
+          shutdownActor(actor);
+          break;
+        }
+      }
     }
   }
 
@@ -170,14 +190,29 @@ class BPOfferService {
     return false;
   }
 
-  String getBlockPoolId() {
+  /**
+   * Gets nameservice id to which this {@link BPOfferService} maps to.
+   * @return nameservice id, which can be null.
+   */
+  String getNameserviceId() {
+    return nameserviceId;
+  }
+
+  String getBlockPoolId(boolean quiet) {
+    // avoid lock contention unless the registration hasn't completed.
+    String id = bpId;
+    if (id != null) {
+      return id;
+    }
     readLock();
     try {
       if (bpNSInfo != null) {
         return bpNSInfo.getBlockPoolID();
       } else {
-        LOG.warn("Block pool ID needed, but service not yet registered with NN",
-            new Exception("trace"));
+        if (!quiet) {
+          LOG.warn("Block pool ID needed, but service not yet registered with "
+              + "NN, trace:", new Exception());
+        }
         return null;
       }
     } finally {
@@ -185,8 +220,12 @@ class BPOfferService {
     }
   }
 
+  String getBlockPoolId() {
+    return getBlockPoolId(false);
+  }
+
   boolean hasBlockPoolId() {
-    return getNamespaceInfo() != null;
+    return getBlockPoolId(true) != null;
   }
 
   NamespaceInfo getNamespaceInfo() {
@@ -195,6 +234,28 @@ class BPOfferService {
       return bpNSInfo;
     } finally {
       readUnlock();
+    }
+  }
+
+  @VisibleForTesting
+  NamespaceInfo setNamespaceInfo(NamespaceInfo nsInfo) throws IOException {
+    writeLock();
+    try {
+      NamespaceInfo old = bpNSInfo;
+      if (bpNSInfo != null && nsInfo != null) {
+        checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
+            "Blockpool ID");
+        checkNSEquality(bpNSInfo.getNamespaceID(), nsInfo.getNamespaceID(),
+            "Namespace ID");
+        checkNSEquality(bpNSInfo.getClusterID(), nsInfo.getClusterID(),
+            "Cluster ID");
+      }
+      bpNSInfo = nsInfo;
+      // cache the block pool id for lock-free access.
+      bpId = (nsInfo != null) ? nsInfo.getBlockPoolID() : null;
+      return old;
+    } finally {
+      writeUnlock();
     }
   }
 
@@ -270,9 +331,10 @@ class BPOfferService {
   private void checkBlock(ExtendedBlock block) {
     Preconditions.checkArgument(block != null,
         "block is null");
-    Preconditions.checkArgument(block.getBlockPoolId().equals(getBlockPoolId()),
+    final String bpId = getBlockPoolId();
+    Preconditions.checkArgument(block.getBlockPoolId().equals(bpId),
         "block belongs to BP %s instead of BP %s",
-        block.getBlockPoolId(), getBlockPoolId());
+        block.getBlockPoolId(), bpId);
   }
 
   //This must be called only by blockPoolManager
@@ -318,8 +380,7 @@ class BPOfferService {
     }
 
     try {
-      if (this.bpNSInfo == null) {
-        this.bpNSInfo = nsInfo;
+      if (setNamespaceInfo(nsInfo) == null) {
         boolean success = false;
 
         // Now that we know the namespace ID, etc, we can pass this to the DN.
@@ -333,16 +394,9 @@ class BPOfferService {
             // The datanode failed to initialize the BP. We need to reset
             // the namespace info so that other BPService actors still have
             // a chance to set it, and re-initialize the datanode.
-            this.bpNSInfo = null;
+            setNamespaceInfo(null);
           }
         }
-      } else {
-        checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
-            "Blockpool ID");
-        checkNSEquality(bpNSInfo.getNamespaceID(), nsInfo.getNamespaceID(),
-            "Namespace ID");
-        checkNSEquality(bpNSInfo.getClusterID(), nsInfo.getClusterID(),
-            "Cluster ID");
       }
     } finally {
       writeUnlock();
@@ -666,7 +720,8 @@ class BPOfferService {
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
       dn.transferBlocks(bcmd.getBlockPoolId(), bcmd.getBlocks(),
-          bcmd.getTargets(), bcmd.getTargetStorageTypes());
+          bcmd.getTargets(), bcmd.getTargetStorageTypes(),
+          bcmd.getTargetStorageIDs());
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
       //

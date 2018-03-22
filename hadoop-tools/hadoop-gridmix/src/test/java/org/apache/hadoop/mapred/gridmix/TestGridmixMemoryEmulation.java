@@ -58,7 +58,7 @@ public class TestGridmixMemoryEmulation {
     
     // Get the total number of 1mb objects stored within
     long getHeapUsageInMB() {
-      return heapSpace.size();
+      return getHeapSpaceSize();
     }
     
     @Override

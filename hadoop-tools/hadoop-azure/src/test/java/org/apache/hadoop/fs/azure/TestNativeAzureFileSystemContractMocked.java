@@ -19,13 +19,18 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Test;
 
+/**
+ * Mocked testing of FileSystemContractBaseTest.
+ */
 public class TestNativeAzureFileSystemContractMocked extends
     FileSystemContractBaseTest {
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     fs = AzureBlobStorageTestAccount.createMock().getFileSystem();
   }
   
@@ -35,22 +40,27 @@ public class TestNativeAzureFileSystemContractMocked extends
    * A separate work item has been opened for this.
    */
   @Ignore
+  @Test
   public void testMoveFileUnderParent() throws Throwable {
   }
 
   @Ignore
+  @Test
   public void testRenameFileToSelf() throws Throwable {
   }
   
   @Ignore
+  @Test
   public void testRenameChildDirForbidden() throws Exception {
   }
   
   @Ignore
+  @Test
   public void testMoveDirUnderParent() throws Throwable {
   }
   
   @Ignore
+  @Test
   public void testRenameDirToSelf() throws Throwable {
   }
 }

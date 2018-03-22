@@ -1,17 +1,3 @@
-// Code source of this file: 
-//   http://grepcode.com/file/repo1.maven.org/maven2/
-//     org.apache.maven/maven-artifact/3.1.1/
-//       org/apache/maven/artifact/versioning/ComparableVersion.java/
-//
-// Modifications made on top of the source:
-//   1. Changed
-//        package org.apache.maven.artifact.versioning;
-//      to
-//        package org.apache.hadoop.util;
-//   2. Removed author tags to clear hadoop author tag warning
-//
-package org.apache.hadoop.util;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,6 +16,21 @@ package org.apache.hadoop.util;
  * specific language governing permissions and limitations
  * under the License.
  */
+
+// Code source of this file:
+//   http://grepcode.com/file/repo1.maven.org/maven2/
+//     org.apache.maven/maven-artifact/3.1.1/
+//       org/apache/maven/artifact/versioning/ComparableVersion.java/
+//
+// Modifications made on top of the source:
+//   1. Changed
+//        package org.apache.maven.artifact.versioning;
+//      to
+//        package org.apache.hadoop.util;
+//   2. Removed author tags to clear hadoop author tag warning
+//
+package org.apache.hadoop.util;
+
 
 import java.math.BigInteger;
 import java.util.ArrayList;

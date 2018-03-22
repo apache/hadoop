@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import com.google.common.collect.ImmutableMap;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
@@ -24,7 +25,19 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_CELL_SIZE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_STATE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -48,15 +61,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-
-import com.google.common.io.Files;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -69,12 +84,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.BlockType;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
@@ -85,9 +106,12 @@ import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -101,11 +125,12 @@ public class TestOfflineImageViewer {
   private static final int FILES_PER_DIR = 4;
   private static final String TEST_RENEWER = "JobTracker";
   private static File originalFsimage = null;
+  private static int filesECCount = 0;
+  private static String addedErasureCodingPolicyName = null;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
   static int dirCount = 0;
-
   private static File tempDir;
 
   // Create a populated namespace for later testing. Save its contents to a
@@ -114,9 +139,15 @@ public class TestOfflineImageViewer {
   // multiple tests.
   @BeforeClass
   public static void createOriginalFSImage() throws IOException {
-    tempDir = Files.createTempDir();
+    File[] nnDirs = MiniDFSCluster.getNameNodeDirectory(
+        MiniDFSCluster.getBaseDirectory(), 0, 0);
+    tempDir = nnDirs[0];
+
     MiniDFSCluster cluster = null;
     try {
+      final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+          .getByID(SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+
       Configuration conf = new Configuration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
@@ -127,9 +158,19 @@ public class TestOfflineImageViewer {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
+      hdfs.enableErasureCodingPolicy(ecPolicy.getName());
+
+      Map<String, String> options = ImmutableMap.of("k1", "v1", "k2", "v2");
+      ECSchema schema = new ECSchema(ErasureCodeConstants.RS_CODEC_NAME,
+          10, 4, options);
+      ErasureCodingPolicy policy = new ErasureCodingPolicy(schema, 1024);
+      AddErasureCodingPolicyResponse[] responses =
+          hdfs.addErasureCodingPolicies(new ErasureCodingPolicy[]{policy});
+      addedErasureCodingPolicyName = responses[0].getPolicy().getName();
+      hdfs.enableErasureCodingPolicy(addedErasureCodingPolicyName);
 
       // Create a reasonable namespace
       for (int i = 0; i < NUM_DIRS; i++, dirCount++) {
@@ -158,6 +199,15 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(invalidXMLDir);
       dirCount++;
 
+      //Create a directory with sticky bits
+      Path stickyBitDir = new Path("/stickyBit");
+      hdfs.mkdirs(stickyBitDir);
+      hdfs.setPermission(stickyBitDir, new FsPermission(FsAction.ALL,
+          FsAction.ALL, FsAction.ALL, true));
+      dirCount++;
+      writtenFiles.put(stickyBitDir.toString(),
+          hdfs.getFileStatus(stickyBitDir));
+
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
           .addDelegationTokens(TEST_RENEWER, null);
@@ -170,14 +220,27 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(src);
       dirCount++;
       writtenFiles.put(src.toString(), hdfs.getFileStatus(src));
+
+      // Create snapshot and snapshotDiff.
       final Path orig = new Path("/src/orig");
       hdfs.mkdirs(orig);
+      final Path file1 = new Path("/src/file");
+      FSDataOutputStream o = hdfs.create(file1);
+      o.write(23);
+      o.write(45);
+      o.close();
       hdfs.allowSnapshot(src);
       hdfs.createSnapshot(src, "snapshot");
       final Path dst = new Path("/dst");
+      // Rename a directory in the snapshot directory to add snapshotCopy
+      // field to the dirDiff entry.
       hdfs.rename(orig, dst);
       dirCount++;
       writtenFiles.put(dst.toString(), hdfs.getFileStatus(dst));
+      // Truncate a file in the snapshot directory to add snapshotCopy and
+      // blocks fields to the fileDiff entry.
+      hdfs.truncate(file1, 1);
+      writtenFiles.put(file1.toString(), hdfs.getFileStatus(file1));
 
       // Set XAttrs so the fsimage contains XAttr ops
       final Path xattr = new Path("/xattr");
@@ -200,9 +263,36 @@ public class TestOfflineImageViewer {
               aclEntry(ACCESS, GROUP, "bar", READ_EXECUTE),
               aclEntry(ACCESS, OTHER, EXECUTE)));
 
+      // Create an Erasure Coded dir
+      Path ecDir = new Path("/ec");
+      hdfs.mkdirs(ecDir);
+      dirCount++;
+      hdfs.getClient().setErasureCodingPolicy(ecDir.toString(),
+          ecPolicy.getName());
+      writtenFiles.put(ecDir.toString(), hdfs.getFileStatus(ecDir));
+
+      // Create an empty Erasure Coded file
+      Path emptyECFile = new Path(ecDir, "EmptyECFile.txt");
+      hdfs.create(emptyECFile).close();
+      writtenFiles.put(emptyECFile.toString(),
+          pathToFileEntry(hdfs, emptyECFile.toString()));
+      filesECCount++;
+
+      // Create a small Erasure Coded file
+      Path smallECFile = new Path(ecDir, "SmallECFile.txt");
+      FSDataOutputStream out = hdfs.create(smallECFile);
+      Random r = new Random();
+      byte[] bytes = new byte[1024 * 10];
+      r.nextBytes(bytes);
+      out.write(bytes);
+      writtenFiles.put(smallECFile.toString(),
+          pathToFileEntry(hdfs, smallECFile.toString()));
+      filesECCount++;
+
       // Write results to the fsimage file
       hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       hdfs.saveNamespace();
+      hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -212,8 +302,9 @@ public class TestOfflineImageViewer {
       }
       LOG.debug("original FS image file is " + originalFsimage);
     } finally {
-      if (cluster != null)
+      if (cluster != null) {
         cluster.shutdown();
+      }
     }
   }
 
@@ -249,9 +340,11 @@ public class TestOfflineImageViewer {
       in = new FileInputStream(src);
       out = new FileOutputStream(dest);
       in.getChannel().transferTo(0, MAX_BYTES, out.getChannel());
+      out.close();
+      out = null;
     } finally {
-      IOUtils.cleanup(null, in);
-      IOUtils.cleanup(null, out);
+      IOUtils.closeStream(in);
+      IOUtils.closeStream(out);
     }
   }
 
@@ -268,7 +361,7 @@ public class TestOfflineImageViewer {
     Matcher matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(NUM_DIRS * FILES_PER_DIR, totalFiles);
+    assertEquals(NUM_DIRS * FILES_PER_DIR + filesECCount + 1, totalFiles);
 
     p = Pattern.compile("totalDirectories = (\\d+)\n");
     matcher = p.matcher(outputString);
@@ -299,6 +392,95 @@ public class TestOfflineImageViewer {
     assertEquals(0, status);
   }
 
+  /**
+   *  SAX handler to verify EC Files and their policies.
+   */
+  class ECXMLHandler extends DefaultHandler {
+
+    private boolean isInode = false;
+    private boolean isAttrRepl = false;
+    private boolean isAttrName = false;
+    private boolean isXAttrs = false;
+    private boolean isAttrECPolicy = false;
+    private boolean isAttrBlockType = false;
+    private String currentInodeName;
+    private String currentECPolicy;
+    private String currentBlockType;
+    private String currentRepl;
+
+    @Override
+    public void startElement(String uri, String localName, String qName,
+        Attributes attributes) throws SAXException {
+      super.startElement(uri, localName, qName, attributes);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        isInode = true;
+      } else if (isInode && !isXAttrs && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_NAME)) {
+        isAttrName = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.SECTION_REPLICATION)) {
+        isAttrRepl = true;
+      } else if (isInode &&
+          qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_EC_POLICY_ID)) {
+        isAttrECPolicy = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_BLOCK_TYPE)) {
+        isAttrBlockType = true;
+      } else if (isInode && qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = true;
+      }
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName)
+        throws SAXException {
+      super.endElement(uri, localName, qName);
+      if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
+        if (currentInodeName != null && currentInodeName.length() > 0) {
+          if (currentBlockType != null && currentBlockType.equalsIgnoreCase(
+              BlockType.STRIPED.name())) {
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected EC Policy!",
+                Byte.parseByte(currentECPolicy),
+                SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
+            Assert.assertEquals("INode '"
+                    + currentInodeName + "' has unexpected replication!",
+                currentRepl,
+                Short.toString(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS));
+          }
+        }
+        isInode = false;
+        currentInodeName = "";
+        currentECPolicy = "";
+        currentRepl = "";
+      } else if (qName.equalsIgnoreCase(
+          PBImageXmlWriter.INODE_SECTION_XATTRS)) {
+        isXAttrs = false;
+      }
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length)
+        throws SAXException {
+      super.characters(ch, start, length);
+      String value = new String(ch, start, length);
+      if (isAttrName) {
+        currentInodeName = value;
+        isAttrName = false;
+      } else if (isAttrRepl) {
+        currentRepl = value;
+        isAttrRepl = false;
+      } else if (isAttrECPolicy) {
+        currentECPolicy = value;
+        isAttrECPolicy = false;
+      } else if (isAttrBlockType) {
+        currentBlockType = value;
+        isAttrBlockType = false;
+      }
+    }
+  }
+
   @Test
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
@@ -309,7 +491,8 @@ public class TestOfflineImageViewer {
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
-    parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
+    ECXMLHandler ecxmlHandler = new ECXMLHandler();
+    parser.parse(new InputSource(new StringReader(xml)), ecxmlHandler);
   }
 
   @Test
@@ -350,6 +533,24 @@ public class TestOfflineImageViewer {
       // LISTSTATUS operation to a invalid prefix
       url = new URL("http://localhost:" + port + "/foo");
       verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // Verify the Erasure Coded empty file status
+      Path emptyECFilePath = new Path("/ec/EmptyECFile.txt");
+      FileStatus actualEmptyECFileStatus =
+          webhdfs.getFileStatus(new Path(emptyECFilePath.toString()));
+      FileStatus expectedEmptyECFileStatus = writtenFiles.get(
+          emptyECFilePath.toString());
+      System.out.println(webhdfs.getFileStatus(new Path(emptyECFilePath
+              .toString())));
+      compareFile(expectedEmptyECFileStatus, actualEmptyECFileStatus);
+
+      // Verify the Erasure Coded small file status
+      Path smallECFilePath = new Path("/ec/SmallECFile.txt");
+      FileStatus actualSmallECFileStatus =
+          webhdfs.getFileStatus(new Path(smallECFilePath.toString()));
+      FileStatus expectedSmallECFileStatus = writtenFiles.get(
+          smallECFilePath.toString());
+      compareFile(expectedSmallECFileStatus, actualSmallECFileStatus);
 
       // GETFILESTATUS operation
       status = webhdfs.getFileStatus(new Path("/dir0/file0"));
@@ -417,6 +618,7 @@ public class TestOfflineImageViewer {
       IOUtils.closeStream(out);
     }
   }
+
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";
@@ -638,6 +840,73 @@ public class TestOfflineImageViewer {
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
+    }
+  }
+
+  private static String getXmlString(Element element, String name) {
+    NodeList id = element.getElementsByTagName(name);
+    Element line = (Element) id.item(0);
+    if (line == null) {
+      return "";
+    }
+    Node first = line.getFirstChild();
+    // handle empty <key></key>
+    if (first == null) {
+      return "";
+    }
+    String val = first.getNodeValue();
+    if (val == null) {
+      return "";
+    }
+    return val;
+  }
+
+  @Test
+  public void testOfflineImageViewerForECPolicies() throws Exception {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream o = new PrintStream(output);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    final String xml = output.toString();
+
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList ecSection = dom.getElementsByTagName(ERASURE_CODING_SECTION_NAME);
+    assertEquals(1, ecSection.getLength());
+    NodeList policies =
+        dom.getElementsByTagName(ERASURE_CODING_SECTION_POLICY);
+    assertEquals(1 + SystemErasureCodingPolicies.getPolicies().size(),
+        policies.getLength());
+    for (int i = 0; i < policies.getLength(); i++) {
+      Element policy = (Element) policies.item(i);
+      String name = getXmlString(policy, ERASURE_CODING_SECTION_POLICY_NAME);
+      if (name.equals(addedErasureCodingPolicyName)) {
+        String cellSize =
+            getXmlString(policy, ERASURE_CODING_SECTION_POLICY_CELL_SIZE);
+        assertEquals("1024", cellSize);
+        String state =
+            getXmlString(policy, ERASURE_CODING_SECTION_POLICY_STATE);
+        assertEquals(ErasureCodingPolicyState.ENABLED.toString(), state);
+
+        Element schema = (Element) policy
+            .getElementsByTagName(ERASURE_CODING_SECTION_SCHEMA).item(0);
+        String codecName =
+            getXmlString(schema, ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME);
+        assertEquals(ErasureCodeConstants.RS_CODEC_NAME, codecName);
+
+        NodeList options =
+            schema.getElementsByTagName(ERASURE_CODING_SECTION_SCHEMA_OPTION);
+        assertEquals(2, options.getLength());
+        Element option1 = (Element) options.item(0);
+        assertEquals("k1", getXmlString(option1, "key"));
+        assertEquals("v1", getXmlString(option1, "value"));
+        Element option2 = (Element) options.item(1);
+        assertEquals("k2", getXmlString(option2, "key"));
+        assertEquals("v2", getXmlString(option2, "value"));
+      }
     }
   }
 }

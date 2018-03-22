@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.IOException;
+
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 /**
@@ -38,17 +43,35 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
     return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
   @Override
   protected Configuration createConfiguration() {
     Configuration newConf = super.createConfiguration();
     newConf.setLong(MULTIPART_SIZE, MULTIPART_SETTING);
-    newConf.setBoolean(FAST_UPLOAD, true);
     newConf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
+    // patch in S3Guard options
+    maybeEnableS3Guard(newConf);
     return newConf;
   }
 
   @Override
   protected S3AContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * Always inject the delay path in, so if the destination is inconsistent,
+   * and uses this key, inconsistency triggered.
+   * @param filepath path string in
+   * @return path on the remote FS for distcp
+   * @throws IOException IO failure
+   */
+  @Override
+  protected Path path(final String filepath) throws IOException {
+    Path path = super.path(filepath);
+    return new Path(path, FailureInjectionPolicy.DEFAULT_DELAY_KEY_SUBSTRING);
   }
 }

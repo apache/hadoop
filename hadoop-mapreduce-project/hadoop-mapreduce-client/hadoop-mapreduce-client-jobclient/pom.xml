@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce JobClient</name>
 
   <properties>
@@ -143,17 +143,15 @@
               <excludes>
                 <exclude>**/hdfs-site.xml</exclude>
               </excludes>
+              <archive>
+                <manifest>
+                  <mainClass>org.apache.hadoop.test.MapredTestDriver</mainClass>
+                </manifest>
+              </archive>
             </configuration>
             <phase>test-compile</phase>
           </execution>
         </executions>
-        <configuration>       
-         <archive>
-          <manifest>
-           <mainClass>org.apache.hadoop.test.MapredTestDriver</mainClass>
-         </manifest>
-         </archive>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

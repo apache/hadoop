@@ -32,7 +32,7 @@ public class Nfs3Constant {
   public final static int VERSION = 3;
   
   // The procedures
-  public static enum NFSPROC3 {
+  public enum NFSPROC3 {
     // the order of the values below are significant.
     NULL,
     GETATTR,

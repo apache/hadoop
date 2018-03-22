@@ -28,7 +28,7 @@ export default StackedBarchart.extend({
       {
         used: Number(n.get("usedMemoryMB")),
         avail: Number(n.get("availMemoryMB"))
-      }
+      };
     });
 
     containers.forEach(function(c) {
@@ -74,7 +74,7 @@ export default StackedBarchart.extend({
   didInsertElement: function() {
     this.initChart(true);
 
-    this.colors = ["Orange", "Grey", "LimeGreen"];
+    this.colors = ["lightsalmon", "Grey", "mediumaquamarine"];
 
     var containers = this.get("rmContainers");
     var nodes = this.get("nodes");
@@ -85,4 +85,4 @@ export default StackedBarchart.extend({
       data, this.get("title"), ["Used by this app", "Used by other apps",
         "Available"]);
   },
-})
+});

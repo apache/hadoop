@@ -77,6 +77,10 @@ public interface ContainerRuntime {
 
   /**
    * Return the host and ip of the container
+   *
+   * @param container the {@link Container}
+   * @throws ContainerExecutionException if an error occurs while getting the ip
+   * and hostname
    */
-  String[] getIpAndHost(Container container);
+  String[] getIpAndHost(Container container) throws ContainerExecutionException;
 }

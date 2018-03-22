@@ -163,6 +163,24 @@ struct hdfsFile_internal;
     ret = -errno; \
     } while (ret == -EINTR);
 
+#define EXPECT_STR_CONTAINS(str, substr) \
+    do { \
+        char *_my_ret_ = (str); \
+        int _my_errno_ = errno; \
+        if ((str) == NULL) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with NULL return " \
+              "return value (errno: %d): expected substring: %s\n", \
+              __FILE__, __LINE__, _my_errno_, (substr)); \
+            return -1; \
+        } \
+        if (strstr((str), (substr)) == NULL) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d with return " \
+              "value %s (errno: %d): expected substring: %s\n", \
+              __FILE__, __LINE__, _my_ret_, _my_errno_, (substr)); \
+            return -1; \
+        } \
+    } while (0);
+
 /**
  * Test that an HDFS file has the given statistics.
  *

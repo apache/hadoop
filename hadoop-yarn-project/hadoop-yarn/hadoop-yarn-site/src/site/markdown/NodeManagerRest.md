@@ -15,13 +15,7 @@
 NodeManager REST API's
 =======================
 
-* [Overview](#Overview)
-* [Enabling CORS support](#Enabling_CORS_support)
-* [NodeManager Information API](#NodeManager_Information_API)
-* [Applications API](#Applications_API)
-* [Application API](#Application_API)
-* [Containers API](#Containers_API)
-* [Container API](#Container_API)
+<!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
 Overview
 --------
@@ -44,8 +38,8 @@ The node information resource provides overall information about that particular
 
 Both of the following URI's give you the cluster information.
 
-      * http://<nm http address:port>/ws/v1/node
-      * http://<nm http address:port>/ws/v1/node/info
+      * http://nm-http-address:port/ws/v1/node
+      * http://nm-http-address:port/ws/v1/node/info
 
 ### HTTP Operations Supported
 
@@ -64,7 +58,10 @@ Both of the following URI's give you the cluster information.
 | totalPmemAllocatedContainersMB | long | The amount of physical memory allocated for use by containers in MB |
 | totalVmemAllocatedContainersMB | long | The amount of virtual memory allocated for use by containers in MB |
 | totalVCoresAllocatedContainers | long | The number of virtual cores allocated for use by containers |
+| vmemCheckEnabled | boolean | Whether virtual memory checking is enabled for preemption |
+| pmemCheckEnabled | boolean | Whether physical memory checking is enabled for preemption |
 | lastNodeUpdateTime | long | The last timestamp at which the health report was received (in ms since epoch) |
+| nmStartupTime | long | The timestamp at which the node was started (in ms since epoch) |
 | healthReport | string | The diagnostic health report of the node |
 | nodeHealthy | boolean | true/false indicator of if the node is healthy |
 | nodeManagerVersion | string | Version of the NodeManager |
@@ -80,7 +77,7 @@ Both of the following URI's give you the cluster information.
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/info
+      GET http://nm-http-address:port/ws/v1/node/info
 
 Response Header:
 
@@ -93,23 +90,27 @@ Response Body:
 
 ```json
 {
-   "nodeInfo" : {
-      "hadoopVersionBuiltOn" : "Mon Jan  9 14:58:42 UTC 2012",
-      "nodeManagerBuildVersion" : "0.23.1-SNAPSHOT from 1228355 by user1 source checksum 20647f76c36430e888cc7204826a445c",
-      "lastNodeUpdateTime" : 1326222266126,
-      "totalVmemAllocatedContainersMB" : 17203,
-      "totalVCoresAllocatedContainers" : 8,
-      "nodeHealthy" : true,
-      "healthReport" : "",
-      "totalPmemAllocatedContainersMB" : 8192,
-      "nodeManagerVersionBuiltOn" : "Mon Jan  9 15:01:59 UTC 2012",
-      "nodeManagerVersion" : "0.23.1-SNAPSHOT",
-      "id" : "host.domain.com:8041",
-      "hadoopBuildVersion" : "0.23.1-SNAPSHOT from 1228292 by user1 source checksum 3eba233f2248a089e9b28841a784dd00",
-      "nodeHostName" : "host.domain.com",
-      "hadoopVersion" : "0.23.1-SNAPSHOT"
-   }
+  "nodeInfo": {
+    "healthReport": "",
+    "totalVmemAllocatedContainersMB": 17203,
+    "totalPmemAllocatedContainersMB": 8192,
+    "totalVCoresAllocatedContainers": 8,
+    "vmemCheckEnabled": false,
+    "pmemCheckEnabled": true,
+    "lastNodeUpdateTime": 1485814574224,
+    "nodeHealthy": true,
+    "nodeManagerVersion": "3.0.0",
+    "nodeManagerBuildVersion": "3.0.0",
+    "nodeManagerVersionBuiltOn": "2017-01-30T17:42Z",
+    "hadoopVersion": "3.0.0",
+    "hadoopBuildVersion": "3.0.0",
+    "hadoopVersionBuiltOn": "2017-01-30T17:39Z",
+    "id": "host.domain.com:46077",
+    "nodeHostName": "host.domain.com",
+    "nmStartupTime": 1485800887841
+  }
 }
+
 ```
 
 **XML response**
@@ -117,7 +118,7 @@ Response Body:
 HTTP Request:
 
       Accept: application/xml
-      GET http://<nm http address:port>/ws/v1/node/info
+      GET http://nm-http-address:port/ws/v1/node/info
 
 Response Header:
 
@@ -131,20 +132,23 @@ Response Body:
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <nodeInfo>
-  <healthReport/>
-  <totalVmemAllocatedContainersMB>17203</totalVmemAllocatedContainersMB>
-  <totalPmemAllocatedContainersMB>8192</totalPmemAllocatedContainersMB>
-  <totalVCoresAllocatedContainers>8</totalVCoresAllocatedContainers>
-  <lastNodeUpdateTime>1326222386134</lastNodeUpdateTime>
-  <nodeHealthy>true</nodeHealthy>
-  <nodeManagerVersion>0.23.1-SNAPSHOT</nodeManagerVersion>
-  <nodeManagerBuildVersion>0.23.1-SNAPSHOT from 1228355 by user1 source checksum 20647f76c36430e888cc7204826a445c</nodeManagerBuildVersion>
-  <nodeManagerVersionBuiltOn>Mon Jan  9 15:01:59 UTC 2012</nodeManagerVersionBuiltOn>
-  <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
-  <hadoopBuildVersion>0.23.1-SNAPSHOT from 1228292 by user1 source checksum 3eba233f2248a089e9b28841a784dd00</hadoopBuildVersion>
-  <hadoopVersionBuiltOn>Mon Jan  9 14:58:42 UTC 2012</hadoopVersionBuiltOn>
-  <id>host.domain.com:8041</id>
-  <nodeHostName>host.domain.com</nodeHostName>
+    <healthReport></healthReport>
+    <totalVmemAllocatedContainersMB>17203</totalVmemAllocatedContainersMB>
+    <totalPmemAllocatedContainersMB>8192</totalPmemAllocatedContainersMB>
+    <totalVCoresAllocatedContainers>8</totalVCoresAllocatedContainers>
+    <vmemCheckEnabled>false</vmemCheckEnabled>
+    <pmemCheckEnabled>true</pmemCheckEnabled>
+    <lastNodeUpdateTime>1485815774203</lastNodeUpdateTime>
+    <nodeHealthy>true</nodeHealthy>
+    <nodeManagerVersion>3.0.0</nodeManagerVersion>
+    <nodeManagerBuildVersion>3.0.0</nodeManagerBuildVersion>
+    <nodeManagerVersionBuiltOn>2017-01-30T17:42Z</nodeManagerVersionBuiltOn>
+    <hadoopVersion>3.0.0</hadoopVersion>
+    <hadoopBuildVersion>3.0.0</hadoopBuildVersion>
+    <hadoopVersionBuiltOn>2017-01-30T17:39Z</hadoopVersionBuiltOn>
+    <id>host.domain.com:46077</id>
+    <nodeHostName>host.domain.com</nodeHostName>
+    <nmStartupTime>1485800887841</nmStartupTime>
 </nodeInfo>
 ```
 
@@ -155,7 +159,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 ### URI
 
-      * http://<nm http address:port>/ws/v1/node/apps
+      * http://nm-http-address:port/ws/v1/node/apps
 
 ### HTTP Operations Supported
 
@@ -165,7 +169,7 @@ With the Applications API, you can obtain a collection of resources, each of whi
 
 Multiple parameters can be specified.
 
-      * state - application state 
+      * state - application state
       * user - user name
 
 ### Elements of the *apps* (Applications) object
@@ -182,7 +186,7 @@ When you make a request for the list of applications, the information will be re
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps
+      GET http://nm-http-address:port/ws/v1/node/apps
 
 Response Header:
 
@@ -220,7 +224,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps
+      GET http://nm-http-address:port/ws/v1/node/apps
       Accept: application/xml
 
 Response Header:
@@ -259,7 +263,7 @@ An application resource contains information about a particular application that
 
 Use the following URI to obtain an app Object, for a application identified by the appid value.
 
-      * http://<nm http address:port>/ws/v1/node/apps/{appid}
+      * http://nm-http-address:port/ws/v1/node/apps/{appid}
 
 ### HTTP Operations Supported
 
@@ -284,7 +288,7 @@ Use the following URI to obtain an app Object, for a application identified by t
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps/application_1326121700862_0005
+      GET http://nm-http-address:port/ws/v1/node/apps/application_1326121700862_0005
 
 Response Header:
 
@@ -313,14 +317,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/apps/application_1326121700862_0005
+      GET http://nm-http-address:port/ws/v1/node/apps/application_1326121700862_0005
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 281 
+      Content-Length: 281
       Server: Jetty(6.1.26)
 
 Response Body:
@@ -343,7 +347,7 @@ With the containers API, you can obtain a collection of resources, each of which
 
 ### URI
 
-      * http://<nm http address:port>/ws/v1/node/containers
+      * http://nm-http-address:port/ws/v1/node/containers
 
 ### HTTP Operations Supported
 
@@ -367,7 +371,7 @@ When you make a request for the list of containers, the information will be retu
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers
+      GET http://nm-http-address:port/ws/v1/node/containers
 
 Response Header:
 
@@ -391,7 +395,13 @@ Response Body:
             "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000001/user1",
             "user" : "user1",
             "id" : "container_1326121700862_0006_01_000001",
-            "exitCode" : -1000
+            "exitCode" : -1000,
+            "executionType": "GUARANTEED",
+            "containerLogFiles": [
+              "stdout",
+              "stderr",
+              "syslog"
+            ]
          },
          {
             "nodeId" : "host.domain.com:8041",
@@ -402,7 +412,13 @@ Response Body:
             "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000003/user1",
             "user" : "user1",
             "id" : "container_1326121700862_0006_01_000003",
-            "exitCode" : -1000
+            "exitCode" : -1000,
+            "executionType": "GUARANTEED",
+            "containerLogFiles": [
+              "stdout",
+              "stderr",
+              "syslog"
+            ]
          }
       ]
    }
@@ -413,7 +429,7 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers
+      GET http://nm-http-address:port/ws/v1/node/containers
       Accept: application/xml
 
 Response Header:
@@ -438,6 +454,10 @@ Response Body:
     <totalVCoresNeeded>1</totalVCoresNeeded>
     <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000001/user1</containerLogsLink>
     <nodeId>host.domain.com:8041</nodeId>
+    <executionType>GUARANTEED</executionType>
+    <containerLogFiles>stdout</containerLogFiles>
+    <containerLogFiles>stderr</containerLogFiles>
+    <containerLogFiles>syslog</containerLogFiles>
   </container>
   <container>
     <id>container_1326121700862_0006_01_000003</id>
@@ -449,6 +469,10 @@ Response Body:
     <totalVCoresNeeded>2</totalVCoresNeeded>
     <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000003/user1</containerLogsLink>
     <nodeId>host.domain.com:8041</nodeId>
+    <executionType>GUARANTEED</executionType>
+    <containerLogFiles>stdout</containerLogFiles>
+    <containerLogFiles>stderr</containerLogFiles>
+    <containerLogFiles>syslog</containerLogFiles>
   </container>
 </containers>
 ```
@@ -462,7 +486,7 @@ A container resource contains information about a particular container that is r
 
 Use the following URI to obtain a Container Object, from a container identified by the containerid value.
 
-      * http://<nm http address:port>/ws/v1/node/containers/{containerid}
+      * http://nm-http-address:port/ws/v1/node/containers/{containerid}
 
 ### HTTP Operations Supported
 
@@ -485,6 +509,8 @@ Use the following URI to obtain a Container Object, from a container identified 
 | diagnostics | string | A diagnostic message for failed containers |
 | totalMemoryNeededMB | long | Total amout of memory needed by the container (in MB) |
 | totalVCoresNeeded | long | Total number of virtual cores needed by the container |
+| executionType | string | Container type of GUARANTEED or OPPORTUNISTIC |
+| containerLogFiles | array of strings | Container log file names |
 
 ### Response Examples
 
@@ -492,7 +518,7 @@ Use the following URI to obtain a Container Object, from a container identified 
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
 
 Response Header:
 
@@ -514,7 +540,13 @@ Response Body:
       "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0007_01_000001/user1",
       "user" : "user1",
       "id" : "container_1326121700862_0007_01_000001",
-      "exitCode" : -1000
+      "exitCode" : -1000,
+      "executionType": "GUARANTEED",
+      "containerLogFiles": [
+        "stdout",
+        "stderr",
+        "syslog"
+      ]
    }
 }
 ```
@@ -523,14 +555,14 @@ Response Body:
 
 HTTP Request:
 
-      GET http://<nm http address:port>/ws/v1/node/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/node/containers/container_1326121700862_0007_01_000001
       Accept: application/xml
 
 Response Header:
 
       HTTP/1.1 200 OK
       Content-Type: application/xml
-      Content-Length: 491 
+      Content-Length: 491
       Server: Jetty(6.1.26)
 
 Response Body:
@@ -547,5 +579,9 @@ Response Body:
   <totalVCoresNeeded>1</totalVCoresNeeded>
   <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0007_01_000001/user1</containerLogsLink>
   <nodeId>host.domain.com:8041</nodeId>
+  <executionType>GUARANTEED</executionType>
+  <containerLogFiles>stdout</containerLogFiles>
+  <containerLogFiles>stderr</containerLogFiles>
+  <containerLogFiles>syslog</containerLogFiles>
 </container>
 ```

@@ -41,12 +41,13 @@ class SetReplication extends FsCommand {
   public static final String NAME = "setrep";
   public static final String USAGE = "[-R] [-w] <rep> <path> ...";
   public static final String DESCRIPTION =
-    "Set the replication level of a file. If <path> is a directory " +
-    "then the command recursively changes the replication factor of " +
-    "all files under the directory tree rooted at <path>.\n" +
-    "-w: It requests that the command waits for the replication " +
-    "to complete. This can potentially take a very long time.\n" +
-    "-R: It is accepted for backwards compatibility. It has no effect.";
+      "Set the replication level of a file. If <path> is a directory " +
+      "then the command recursively changes the replication factor of " +
+      "all files under the directory tree rooted at <path>. " +
+      "The EC files will be ignored here.\n" +
+      "-w: It requests that the command waits for the replication " +
+      "to complete. This can potentially take a very long time.\n" +
+      "-R: It is accepted for backwards compatibility. It has no effect.";
   
   protected short newRep = 0;
   protected List<PathData> waitList = new LinkedList<PathData>();
@@ -84,11 +85,20 @@ class SetReplication extends FsCommand {
     }
     
     if (item.stat.isFile()) {
-      if (!item.fs.setReplication(item.path, newRep)) {
-        throw new IOException("Could not set replication for: " + item);
+      // Do the checking if the file is erasure coded since
+      // replication factor for an EC file is meaningless.
+      if (!item.stat.isErasureCoded()) {
+        if (!item.fs.setReplication(item.path, newRep)) {
+          throw new IOException("Could not set replication for: " + item);
+        }
+        out.println("Replication " + newRep + " set: " + item);
+        if (waitOpt) {
+          waitList.add(item);
+        }
+      } else {
+        out.println("Did not set replication for: " + item
+            + ", because it's an erasure coded file.");
       }
-      out.println("Replication " + newRep + " set: " + item);
-      if (waitOpt) waitList.add(item);
     } 
   }
 

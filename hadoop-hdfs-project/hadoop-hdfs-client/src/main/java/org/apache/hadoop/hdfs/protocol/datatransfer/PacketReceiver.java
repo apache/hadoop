@@ -45,7 +45,7 @@ public class PacketReceiver implements Closeable {
    * The max size of any single packet. This prevents OOMEs when
    * invalid data is sent.
    */
-  private static final int MAX_PACKET_SIZE = 16 * 1024 * 1024;
+  public static final int MAX_PACKET_SIZE = 16 * 1024 * 1024;
 
   static final Logger LOG = LoggerFactory.getLogger(PacketReceiver.class);
 

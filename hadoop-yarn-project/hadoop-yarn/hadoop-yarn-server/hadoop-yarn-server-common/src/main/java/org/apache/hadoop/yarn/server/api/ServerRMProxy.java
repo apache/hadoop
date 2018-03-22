@@ -21,18 +21,18 @@ package org.apache.hadoop.yarn.server.api;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.client.RMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ServerRMProxy<T> extends RMProxy<T> {
-  private static final Log LOG = LogFactory.getLog(ServerRMProxy.class);
-  private static final ServerRMProxy INSTANCE = new ServerRMProxy();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ServerRMProxy.class);
 
   private ServerRMProxy() {
     super();
@@ -65,13 +65,14 @@ public class ServerRMProxy<T> extends RMProxy<T> {
         configuration.getLong(
             YarnConfiguration.NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
                 rmRetryInterval);
-    return createRMProxy(configuration, protocol, INSTANCE,
+    ServerRMProxy<T> serverRMProxy = new ServerRMProxy<>();
+    return createRMProxy(configuration, protocol, serverRMProxy,
         nmRmConnectWait, nmRmRetryInterval);
   }
 
   @InterfaceAudience.Private
   @Override
-  protected InetSocketAddress getRMAddress(YarnConfiguration conf,
+  public InetSocketAddress getRMAddress(YarnConfiguration conf,
                                            Class<?> protocol) {
     if (protocol == ResourceTracker.class) {
       return conf.getSocketAddr(
@@ -93,7 +94,7 @@ public class ServerRMProxy<T> extends RMProxy<T> {
 
   @InterfaceAudience.Private
   @Override
-  protected void checkAllowedProtocols(Class<?> protocol) {
+  public void checkAllowedProtocols(Class<?> protocol) {
     Preconditions.checkArgument(
         protocol.isAssignableFrom(ResourceTracker.class),
         "ResourceManager does not support this protocol");

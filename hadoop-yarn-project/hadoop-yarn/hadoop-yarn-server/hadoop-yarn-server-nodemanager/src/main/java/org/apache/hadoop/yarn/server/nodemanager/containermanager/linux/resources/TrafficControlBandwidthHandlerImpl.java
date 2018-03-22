@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +29,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.apache.hadoop.yarn.util.SystemClock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,8 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrafficControlBandwidthHandlerImpl
     implements OutboundBandwidthResourceHandler {
 
-  private static final Log LOG = LogFactory
-      .getLog(TrafficControlBandwidthHandlerImpl.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TrafficControlBandwidthHandlerImpl.class);
   //In the absence of 'scheduling' support, we'll 'infer' the guaranteed
   //outbound bandwidth for each container based on this number. This will
   //likely go away once we add support on the RM for this resource type.
@@ -88,7 +87,7 @@ public class TrafficControlBandwidthHandlerImpl
     //operation. At some point, LCE code can be refactored to batch mount
     //operations across multiple controllers - cpu, net_cls, blkio etc
     cGroupsHandler
-        .mountCGroupController(CGroupsHandler.CGroupController.NET_CLS);
+        .initializeCGroupController(CGroupsHandler.CGroupController.NET_CLS);
     device = conf.get(YarnConfiguration.NM_NETWORK_RESOURCE_INTERFACE,
         YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_INTERFACE);
     strictMode = configuration.getBoolean(YarnConfiguration
@@ -118,7 +117,7 @@ public class TrafficControlBandwidthHandlerImpl
         .append("containerBandwidthMbit soft limit (in mbit/sec) is set to : ")
         .append(containerBandwidthMbit);
 
-    LOG.info(logLine);
+    LOG.info(logLine.toString());
     trafficController.bootstrap(device, rootBandwidthMbit, yarnBandwidthMbit);
 
     return null;

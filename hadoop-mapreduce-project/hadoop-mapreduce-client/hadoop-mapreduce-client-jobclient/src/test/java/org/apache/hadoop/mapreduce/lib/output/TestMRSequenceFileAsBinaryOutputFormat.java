@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +42,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Random;
@@ -53,8 +53,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestMRSequenceFileAsBinaryOutputFormat {
-  private static final Log LOG =
-    LogFactory.getLog(TestMRSequenceFileAsBinaryOutputFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRSequenceFileAsBinaryOutputFormat.class);
 
   private static final int RECORDS = 10000;
 

@@ -25,6 +25,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestEditsDoubleBuffer {
@@ -80,5 +82,57 @@ public class TestEditsDoubleBuffer {
         throw ioe;
       }
     }
+  }
+
+  @Test
+  public void testDumpEdits() throws IOException {
+    final int defaultBufferSize = 256;
+    EditsDoubleBuffer buffer = new EditsDoubleBuffer(defaultBufferSize);
+    FSEditLogOp.OpInstanceCache cache = new FSEditLogOp.OpInstanceCache();
+
+    String src = "/testdumpedits";
+    short replication = 1;
+
+    FSEditLogOp.SetReplicationOp op =
+        FSEditLogOp.SetReplicationOp.getInstance(cache.get())
+        .setPath(src)
+        .setReplication(replication);
+    op.setTransactionId(1);
+    buffer.writeOp(op);
+
+    src = "/testdumpedits2";
+
+    FSEditLogOp.DeleteOp op2 =
+        FSEditLogOp.DeleteOp.getInstance(cache.get())
+            .setPath(src)
+            .setTimestamp(0);
+    op2.setTransactionId(2);
+    buffer.writeOp(op2);
+
+    FSEditLogOp.AllocateBlockIdOp op3 =
+        FSEditLogOp.AllocateBlockIdOp.getInstance(cache.get())
+            .setBlockId(0);
+    op3.setTransactionId(3);
+    buffer.writeOp(op3);
+
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(EditsDoubleBuffer.LOG);
+    try {
+      buffer.close();
+      fail();
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "bytes still to be flushed and cannot be closed.",
+          ioe);
+      EditsDoubleBuffer.LOG.info("Exception expected: ", ioe);
+    }
+    logs.stopCapturing();
+    // Make sure ops are dumped into log in human readable format.
+    Assert.assertTrue("expected " + op.toString() + " in the log",
+        logs.getOutput().contains(op.toString()));
+    Assert.assertTrue("expected " + op2.toString() + " in the log",
+        logs.getOutput().contains(op2.toString()));
+    Assert.assertTrue("expected " + op3.toString() + " in the log",
+        logs.getOutput().contains(op3.toString()));
   }
 }

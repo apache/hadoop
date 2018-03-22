@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
@@ -177,7 +178,7 @@ public class TestDefaultContainerExecutor {
     FileContext lfs = FileContext.getLocalFSFileContext(conf);
     DefaultContainerExecutor executor = new DefaultContainerExecutor(lfs);
     executor.setConf(conf);
-    executor.init();
+    executor.init(null);
 
     try {
       executor.createUserLocalDirs(localDirs, user);
@@ -226,7 +227,7 @@ public class TestDefaultContainerExecutor {
 
   @Test
   public void testContainerLaunchError()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, ConfigurationException {
 
     if (Shell.WINDOWS) {
       BASE_TMP_PATH =
@@ -316,7 +317,7 @@ public class TestDefaultContainerExecutor {
       Path workDir = localDir;
       Path pidFile = new Path(workDir, "pid.txt");
 
-      mockExec.init();
+      mockExec.init(null);
       mockExec.activateContainer(cId, pidFile);
       int ret = mockExec.launchContainer(new ContainerStartContext.Builder()
           .setContainer(container)

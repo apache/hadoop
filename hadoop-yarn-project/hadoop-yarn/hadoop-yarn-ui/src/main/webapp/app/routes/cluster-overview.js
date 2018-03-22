@@ -23,12 +23,15 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
-      clusterMetrics: this.store.findAll('ClusterMetric'),
+      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
       apps: this.store.query('yarn-app',
         {
           state: "RUNNING"
         }),
-      queues: this.store.query('yarn-queue', {}),
+      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
+        let type = model.get('firstObject').get('type');
+        return this.store.query("yarn-queue." + type + "-queue", {});
+      })
     });
   },
 
@@ -39,6 +42,6 @@ export default AbstractRoute.extend({
   unloadAll() {
     this.store.unloadAll('ClusterMetric');
     this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-queue.yarn-queue');
   }
 });

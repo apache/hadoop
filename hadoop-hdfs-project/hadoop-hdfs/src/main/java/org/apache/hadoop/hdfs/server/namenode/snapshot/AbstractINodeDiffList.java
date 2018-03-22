@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 
 /**
  * A list of snapshot diffs for storing snapshot data.
@@ -35,17 +35,20 @@ abstract class AbstractINodeDiffList<N extends INode,
                                      A extends INodeAttributes,
                                      D extends AbstractINodeDiff<N, A, D>> 
     implements Iterable<D> {
-  /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
-  private final List<D> diffs = new ArrayList<D>();
+
+  /** Diff list sorted by snapshot IDs, i.e. in chronological order.
+    * Created lazily to avoid wasting memory by empty lists. */
+  private DiffList<D> diffs;
 
   /** @return this list as a unmodifiable {@link List}. */
-  public final List<D> asList() {
-    return Collections.unmodifiableList(diffs);
+  public final DiffList<D> asList() {
+    return diffs != null ?
+        DiffList.unmodifiableList(diffs) : DiffList.emptyList();
   }
   
-  /** Get the size of the list and then clear it. */
+  /** Clear the list. */
   public void clear() {
-    diffs.clear();
+    diffs = null;
   }
 
   /** @return an {@link AbstractINodeDiff}. */
@@ -66,7 +69,10 @@ abstract class AbstractINodeDiffList<N extends INode,
    */
   public final void deleteSnapshotDiff(INode.ReclaimContext reclaimContext,
       final int snapshot, final int prior, final N currentINode) {
-    int snapshotIndex = Collections.binarySearch(diffs, snapshot);
+    if (diffs == null) {
+      return;
+    }
+    int snapshotIndex = diffs.binarySearch(snapshot);
 
     D removed;
     if (snapshotIndex == 0) {
@@ -75,6 +81,9 @@ abstract class AbstractINodeDiffList<N extends INode,
         diffs.get(snapshotIndex).setSnapshotId(prior);
       } else { // there is no snapshot before
         removed = diffs.remove(0);
+        if (diffs.isEmpty()) {
+          diffs = null;
+        }
         removed.destroyDiffAndCollectBlocks(reclaimContext, currentINode);
       }
     } else if (snapshotIndex > 0) {
@@ -103,8 +112,9 @@ abstract class AbstractINodeDiffList<N extends INode,
 
   /** Append the diff at the end of the list. */
   private D addLast(D diff) {
+    createDiffsIfNeeded();
     final D last = getLast();
-    diffs.add(diff);
+    diffs.addLast(diff);
     if (last != null) {
       last.setPosterior(diff);
     }
@@ -113,15 +123,30 @@ abstract class AbstractINodeDiffList<N extends INode,
   
   /** Add the diff to the beginning of the list. */
   final void addFirst(D diff) {
-    final D first = diffs.isEmpty()? null: diffs.get(0);
-    diffs.add(0, diff);
+    createDiffsIfNeeded();
+    final D first = diffs.isEmpty()? null : diffs.get(0);
+    diffs.addFirst(diff);
     diff.setPosterior(first);
   }
 
   /** @return the last diff. */
   public final D getLast() {
-    final int n = diffs.size();
-    return n == 0? null: diffs.get(n - 1);
+    if (diffs == null) {
+      return null;
+    }
+    int n = diffs.size();
+    return n == 0 ? null : diffs.get(n - 1);
+  }
+
+  DiffList<D> newDiffs() {
+    return new DiffListByArrayList<>(
+        INodeDirectory.DEFAULT_FILES_PER_DIRECTORY);
+  }
+
+  private void createDiffsIfNeeded() {
+    if (diffs == null) {
+      diffs = newDiffs();
+    }
   }
 
   /** @return the id of the last snapshot. */
@@ -139,13 +164,17 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @return The id of the latest snapshot before the given snapshot.
    */
   public final int getPrior(int anchorId, boolean exclusive) {
+    if (diffs == null) {
+      return Snapshot.NO_SNAPSHOT_ID;
+    }
     if (anchorId == Snapshot.CURRENT_STATE_ID) {
       int last = getLastSnapshotId();
-      if(exclusive && last == anchorId)
+      if (exclusive && last == anchorId) {
         return Snapshot.NO_SNAPSHOT_ID;
+      }
       return last;
     }
-    final int i = Collections.binarySearch(diffs, anchorId);
+    final int i = diffs.binarySearch(anchorId);
     if (exclusive) { // must be the one before
       if (i == -1 || i == 0) {
         return Snapshot.NO_SNAPSHOT_ID;
@@ -181,10 +210,10 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
   
   public final D getDiffById(final int snapshotId) {
-    if (snapshotId == Snapshot.CURRENT_STATE_ID) {
+    if (snapshotId == Snapshot.CURRENT_STATE_ID || diffs == null) {
       return null;
     }
-    final int i = Collections.binarySearch(diffs, snapshotId);
+    final int i = diffs.binarySearch(snapshotId);
     if (i >= 0) {
       // exact match
       return diffs.get(i);
@@ -193,7 +222,7 @@ abstract class AbstractINodeDiffList<N extends INode,
       // given snapshot and the next state so that the diff for the given
       // snapshot was not recorded. Thus, return the next state.
       final int j = -i - 1;
-      return j < diffs.size()? diffs.get(j): null;
+      return j < diffs.size() ? diffs.get(j) : null;
     }
   }
   
@@ -206,7 +235,16 @@ abstract class AbstractINodeDiffList<N extends INode,
     return diff == null ? Snapshot.CURRENT_STATE_ID : diff.getSnapshotId();
   }
 
+  public final int getDiffIndexById(final int snapshotId) {
+    int diffIndex = diffs.binarySearch(snapshotId);
+    diffIndex = diffIndex < 0 ? (-diffIndex - 1) : diffIndex;
+    return diffIndex;
+  }
+
   final int[] changedBetweenSnapshots(Snapshot from, Snapshot to) {
+    if (diffs == null) {
+      return null;
+    }
     Snapshot earlier = from;
     Snapshot later = to;
     if (Snapshot.ID_COMPARATOR.compare(from, to) > 0) {
@@ -215,10 +253,10 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
 
     final int size = diffs.size();
-    int earlierDiffIndex = Collections.binarySearch(diffs, earlier.getId());
-    int laterDiffIndex = later == null ? size : Collections
-        .binarySearch(diffs, later.getId());
-    if (-earlierDiffIndex - 1 == size) {
+    int earlierDiffIndex = getDiffIndexById(earlier.getId());
+    int laterDiffIndex = later == null ? size
+        : getDiffIndexById(later.getId());
+    if (earlierDiffIndex == size) {
       // if the earlierSnapshot is after the latest SnapshotDiff stored in
       // diffs, no modification happened after the earlierSnapshot
       return null;
@@ -228,10 +266,6 @@ abstract class AbstractINodeDiffList<N extends INode,
       // before it, no modification happened before the laterSnapshot
       return null;
     }
-    earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
-        : earlierDiffIndex;
-    laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
-        : laterDiffIndex;
     return new int[]{earlierDiffIndex, laterDiffIndex};
   }
 
@@ -272,14 +306,14 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
     return diff;
   }
-  
+
   @Override
   public Iterator<D> iterator() {
-    return diffs.iterator();
+    return diffs != null ? diffs.iterator() : Collections.emptyIterator();
   }
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + ": " + diffs;
+    return getClass().getSimpleName() + ": " + (diffs != null ? diffs : "[]");
   }
 }

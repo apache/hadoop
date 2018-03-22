@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -72,7 +71,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   private Thread eventHandlingThread;
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
-  private boolean exitOnDispatchException;
+  private boolean exitOnDispatchException = true;
+
+  /**
+   * The thread name for dispatcher.
+   */
+  private String dispatcherThreadName = "AsyncDispatcher event handler";
 
   public AsyncDispatcher() {
     this(new LinkedBlockingQueue<Event>());
@@ -82,6 +86,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     super("Dispatcher");
     this.eventQueue = eventQueue;
     this.eventDispatchers = new HashMap<Class<? extends Enum>, EventHandler>();
+  }
+
+  /**
+   * Set a name for this dispatcher thread.
+   * @param dispatcherName name of the dispatcher thread
+   */
+  public AsyncDispatcher(String dispatcherName) {
+    this();
+    dispatcherThreadName = dispatcherName;
   }
 
   Runnable createThread() {
@@ -117,12 +130,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     };
   }
 
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    this.exitOnDispatchException =
-        conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
-          Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
-    super.serviceInit(conf);
+  @VisibleForTesting
+  public void disableExitOnDispatchException() {
+    exitOnDispatchException = false;
   }
 
   @Override
@@ -130,7 +140,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     //start all the components
     super.serviceStart();
     eventHandlingThread = new Thread(createThread());
-    eventHandlingThread.setName("AsyncDispatcher event handler");
+    eventHandlingThread.setName(dispatcherThreadName);
     eventHandlingThread.start();
   }
 

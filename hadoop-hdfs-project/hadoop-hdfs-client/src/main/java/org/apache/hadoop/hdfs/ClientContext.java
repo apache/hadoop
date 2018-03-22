@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED_DEFAULT;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -238,7 +239,7 @@ public class ClientContext {
     return byteArrayManager;
   }
 
-  public int getNetworkDistance(DatanodeInfo datanodeInfo) {
+  public int getNetworkDistance(DatanodeInfo datanodeInfo) throws IOException {
     // If applications disable the feature or the client machine can't
     // resolve its network location, clientNode will be set to null.
     if (clientNode == null) {

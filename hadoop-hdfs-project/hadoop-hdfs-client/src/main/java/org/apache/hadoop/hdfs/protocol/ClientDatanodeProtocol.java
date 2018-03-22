@@ -166,6 +166,11 @@ public interface ClientDatanodeProtocol {
   long getBalancerBandwidth() throws IOException;
 
   /**
+   * Get volume report of datanode.
+   */
+  List<DatanodeVolumeInfo> getVolumeReport() throws IOException;
+
+  /**
    * Submit a disk balancer plan for execution.
    */
   void submitDiskBalancerPlan(String planID, long planVersion, String planFile,

@@ -43,7 +43,7 @@ public class TestCodecPool {
     this.codec.setConf(new Configuration());
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCompressorPoolCounts() {
     // Get two compressors and return them
     Compressor comp1 = CodecPool.getCompressor(codec);
@@ -64,7 +64,7 @@ public class TestCodecPool {
         CodecPool.getLeasedCompressorsCount(codec));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testCompressorNotReturnSameInstance() {
     Compressor comp = CodecPool.getCompressor(codec);
     CodecPool.returnCompressor(comp);
@@ -79,7 +79,7 @@ public class TestCodecPool {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testDecompressorPoolCounts() {
     // Get two decompressors and return them
     Decompressor decomp1 = CodecPool.getDecompressor(codec);
@@ -100,7 +100,7 @@ public class TestCodecPool {
         CodecPool.getLeasedCompressorsCount(codec));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testMultiThreadedCompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -137,7 +137,7 @@ public class TestCodecPool {
     assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testMultiThreadedDecompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -175,7 +175,7 @@ public class TestCodecPool {
         CodecPool.getLeasedDecompressorsCount(codec));
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testDecompressorNotReturnSameInstance() {
     Decompressor decomp = CodecPool.getDecompressor(codec);
     CodecPool.returnDecompressor(decomp);

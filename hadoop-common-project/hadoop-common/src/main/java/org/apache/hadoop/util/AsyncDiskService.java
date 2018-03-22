@@ -26,10 +26,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * This class is a container of multiple thread pools, each for a volume,
@@ -43,7 +43,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class AsyncDiskService {
   
-  public static final Log LOG = LogFactory.getLog(AsyncDiskService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AsyncDiskService.class);
   
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;

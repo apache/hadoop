@@ -33,14 +33,17 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -53,14 +56,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
@@ -111,7 +119,14 @@ public class TestUserGroupInformation {
       throw new RuntimeException("UGI is not using its own security conf!");
     } 
   }
-  
+
+  // must be set immediately to avoid inconsistent testing issues.
+  static {
+    // fake the realm is kerberos is enabled
+    System.setProperty("java.security.krb5.kdc", "");
+    System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
+  }
+
   /** configure ugi */
   @BeforeClass
   public static void setup() {
@@ -122,9 +137,6 @@ public class TestUserGroupInformation {
     // that finds winutils.exe
     String home = System.getenv("HADOOP_HOME");
     System.setProperty("hadoop.home.dir", (home != null ? home : "."));
-    // fake the realm is kerberos is enabled
-    System.setProperty("java.security.krb5.kdc", "");
-    System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
   }
   
   @Before
@@ -877,7 +889,7 @@ public class TestUserGroupInformation {
     method.setAccessible(false);
   }
   
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSetLoginUser() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
     UserGroupInformation.setLoginUser(ugi);
@@ -1031,6 +1043,7 @@ public class TestUserGroupInformation {
     KeyTab keytab = KeyTab.getInstance();
     subject.getPrivateCredentials().add(keytab);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws IOException {
@@ -1121,5 +1134,81 @@ public class TestUserGroupInformation {
         + ", retry:" + lastRetry);
     LOG.info(str);
     assertTrue(str, lower <= lastRetry && lastRetry < upper);
+  }
+
+  // verify that getCurrentUser on the same and different subjects can be
+  // concurrent.  Ie. no synchronization.
+  @Test(timeout=8000)
+  public void testConcurrentGetCurrentUser() throws Exception {
+    final CyclicBarrier barrier = new CyclicBarrier(2);
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    final UserGroupInformation testUgi1 =
+        UserGroupInformation.createRemoteUser("testUgi1");
+
+    final UserGroupInformation testUgi2 =
+        UserGroupInformation.createRemoteUser("testUgi2");
+
+    // swap the User with a spy to allow getCurrentUser to block when the
+    // spy is called for the user name.
+    Set<Principal> principals = testUgi1.getSubject().getPrincipals();
+    User user =
+        testUgi1.getSubject().getPrincipals(User.class).iterator().next();
+    final User spyUser = Mockito.spy(user);
+    principals.remove(user);
+    principals.add(spyUser);
+    when(spyUser.getName()).thenAnswer(new Answer<String>(){
+      @Override
+      public String answer(InvocationOnMock invocation) throws Throwable {
+        latch.countDown();
+        barrier.await();
+        return (String)invocation.callRealMethod();
+      }
+    });
+    // wait for the thread to block on the barrier in getCurrentUser.
+    Future<UserGroupInformation> blockingLookup =
+        Executors.newSingleThreadExecutor().submit(
+            new Callable<UserGroupInformation>(){
+              @Override
+              public UserGroupInformation call() throws Exception {
+                return testUgi1.doAs(
+                    new PrivilegedExceptionAction<UserGroupInformation>() {
+                      @Override
+                      public UserGroupInformation run() throws Exception {
+                        return UserGroupInformation.getCurrentUser();
+                      }
+                    });
+              }
+            });
+    latch.await();
+
+    // old versions of mockito synchronize on returning mocked answers so
+    // the blocked getCurrentUser will block all other calls to getName.
+    // workaround this by swapping out the spy with the original User.
+    principals.remove(spyUser);
+    principals.add(user);
+    // concurrent getCurrentUser on ugi1 should not be blocked.
+    UserGroupInformation ugi;
+    ugi = testUgi1.doAs(
+        new PrivilegedExceptionAction<UserGroupInformation>() {
+          @Override
+          public UserGroupInformation run() throws Exception {
+            return UserGroupInformation.getCurrentUser();
+          }
+        });
+    assertSame(testUgi1.getSubject(), ugi.getSubject());
+    // concurrent getCurrentUser on ugi2 should not be blocked.
+    ugi = testUgi2.doAs(
+        new PrivilegedExceptionAction<UserGroupInformation>() {
+          @Override
+          public UserGroupInformation run() throws Exception {
+            return UserGroupInformation.getCurrentUser();
+          }
+        });
+    assertSame(testUgi2.getSubject(), ugi.getSubject());
+
+    // unblock the original call.
+    barrier.await();
+    assertSame(testUgi1.getSubject(), blockingLookup.get().getSubject());
   }
 }

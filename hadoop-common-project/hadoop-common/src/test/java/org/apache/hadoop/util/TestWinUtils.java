@@ -29,13 +29,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.hamcrest.CoreMatchers.*;
 
@@ -44,7 +44,7 @@ import static org.hamcrest.CoreMatchers.*;
  */
 public class TestWinUtils {
 
-  private static final Log LOG = LogFactory.getLog(TestWinUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWinUtils.class);
   private static File TEST_DIR = GenericTestUtils.getTestDir(
       TestWinUtils.class.getSimpleName());
 

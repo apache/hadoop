@@ -86,4 +86,10 @@ public class NfsConfigKeys {
    */
   public static final String  NFS_SUPERUSER_KEY = "nfs.superuser";
   public static final String  NFS_SUPERUSER_DEFAULT = "";
+  /*
+   * Timeout value in millisecond for rpc connection to portmap
+   */
+  public static final String NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_KEY =
+                                      "nfs.udp.client.portmap.timeout.millis";
+  public static final int NFS_UDP_CLIENT_PORTMAP_TIMEOUT_MILLIS_DEFAULT = 500;
 }

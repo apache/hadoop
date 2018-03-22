@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -58,11 +58,6 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-math3</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>xmlenc</groupId>
-      <artifactId>xmlenc</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -157,11 +152,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>net.java.dev.jets3t</groupId>
-      <artifactId>jets3t</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -182,6 +172,11 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <scope>compile</scope>
@@ -189,7 +184,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <scope>runtime</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -273,10 +268,6 @@
       <artifactId>zookeeper</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>jline</groupId>
-          <artifactId>jline</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.jboss.netty</groupId>
           <artifactId>netty</artifactId>
         </exclusion>
@@ -317,6 +308,21 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>stax2-api</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>mockwebserver</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -392,6 +398,7 @@
                   <include>RefreshUserMappingsProtocol.proto</include>
                   <include>RefreshCallQueueProtocol.proto</include>
                   <include>GenericRefreshProtocol.proto</include>
+                  <include>FSProtos.proto</include>
                 </includes>
               </source>
             </configuration>
@@ -595,6 +602,10 @@
         <snappy.lib></snappy.lib>
         <snappy.include></snappy.include>
         <require.snappy>false</require.snappy>
+        <zstd.prefix></zstd.prefix>
+        <zstd.lib></zstd.lib>
+        <zstd.include></zstd.include>
+        <require.zstd>false</require.zstd>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -652,6 +663,8 @@
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
@@ -685,9 +698,13 @@
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
                     <REQUIRE_BZIP2>${require.bzip2}</REQUIRE_BZIP2>
                     <REQUIRE_SNAPPY>${require.snappy}</REQUIRE_SNAPPY>
+                    <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
                     <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
                     <CUSTOM_SNAPPY_LIB>${snappy.lib} </CUSTOM_SNAPPY_LIB>
                     <CUSTOM_SNAPPY_INCLUDE>${snappy.include} </CUSTOM_SNAPPY_INCLUDE>
+                    <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
+                    <CUSTOM_ZSTD_LIB>${zstd.lib} </CUSTOM_ZSTD_LIB>
+                    <CUSTOM_ZSTD_INCLUDE>${zstd.include} </CUSTOM_ZSTD_INCLUDE>
                     <REQUIRE_ISAL>${require.isal} </REQUIRE_ISAL>
                     <CUSTOM_ISAL_PREFIX>${isal.prefix} </CUSTOM_ISAL_PREFIX>
                     <CUSTOM_ISAL_LIB>${isal.lib} </CUSTOM_ISAL_LIB>
@@ -745,6 +762,11 @@
         <isal.lib></isal.lib>
         <require.snappy>false</require.snappy>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <zstd.prefix></zstd.prefix>
+        <zstd.lib></zstd.lib>
+        <zstd.include></zstd.include>
+        <require.ztsd>false</require.ztsd>
+        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
         <openssl.include></openssl.include>
@@ -794,6 +816,8 @@
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zstd.ZStandardDecompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
@@ -815,6 +839,20 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>convert-ms-winutils</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\winutils</argument>
+                    <argument>${project.build.directory}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
                 <id>compile-ms-winutils</id>
                 <phase>compile</phase>
                 <goals>
@@ -830,6 +868,20 @@
                     <argument>/p:IntermediateOutputPath=${project.build.directory}/winutils/</argument>
                     <argument>/p:WsceConfigDir=${wsce.config.dir}</argument>
                     <argument>/p:WsceConfigFile=${wsce.config.file}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>convert-ms-native-dll</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\native</argument>
+                    <argument>${project.build.directory}</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -850,6 +902,10 @@
                     <argument>/p:CustomSnappyLib=${snappy.lib}</argument>
                     <argument>/p:CustomSnappyInclude=${snappy.include}</argument>
                     <argument>/p:RequireSnappy=${require.snappy}</argument>
+                    <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
+                    <argument>/p:CustomZstdLib=${zstd.lib}</argument>
+                    <argument>/p:CustomZstdInclude=${zstd.include}</argument>
+                    <argument>/p:RequireZstd=${require.ztsd}</argument>
                     <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
                     <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
                     <argument>/p:CustomOpensslInclude=${openssl.include}</argument>
@@ -951,30 +1007,13 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>
-                <phase>test-compile</phase>
-                <configuration>
-                  <target>
-                    <script language="javascript"><![CDATA[
-                      var baseDirs = [
-                          "${test.build.data}",
-                          "${test.build.dir}",
-                          "${hadoop.tmp.dir}" ];
-                      for (var i in baseDirs) {
-                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
-                          var mkdir = project.createTask("mkdir");
-                          mkdir.setDir(new java.io.File(baseDirs[i], j));
-                          mkdir.perform();
-                        }
-                      }
-                    ]]></script>
-                  </target>
-                </configuration>
+                <id>parallel-tests-createdir</id>
                 <goals>
-                  <goal>run</goal>
+                  <goal>parallel-tests-createdir</goal>
                 </goals>
               </execution>
             </executions>
@@ -987,6 +1026,7 @@
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
+                <testsThreadCount>${testsThreadCount}</testsThreadCount>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
                 <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
@@ -1037,7 +1077,7 @@
                             <argument>--project</argument>
                             <argument>YARN</argument>
                             <argument>--projecttitle</argument>
-                            <argument>"Apache Hadoop"</argument>
+                            <argument>Apache Hadoop</argument>
                             <argument>--usetoday</argument>
                             <argument>--version</argument>
                             <argument>${project.version}</argument>

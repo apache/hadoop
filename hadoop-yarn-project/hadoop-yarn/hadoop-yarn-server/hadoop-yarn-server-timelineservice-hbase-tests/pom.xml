@@ -22,12 +22,12 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-timelineservice-hbase-tests</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
-  <name>Apache Hadoop YARN Timeline Service HBase tests</name>
+  <version>3.2.0-SNAPSHOT</version>
+  <name>Apache Hadoop YARN TimelineService HBase tests</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
@@ -49,6 +49,30 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-timelineservice-hbase-common</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -129,6 +153,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>${hbase-compatible-guava.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -209,6 +234,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -241,6 +270,10 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -357,6 +390,88 @@
           </additionnalDependencies>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <configuration>
+              <!-- disable dependency convergence check -->
+              <skip>true</skip>
+            </configuration>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase/>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>hbase1</id>
+      <activation>
+        <property>
+          <name>!hbase.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-1</artifactId>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-common</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>hbase2</id>
+      <activation>
+        <property>
+          <name>hbase.profile</name>
+          <value>2.0</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-common</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <!-- 'mvn dependency:analyze' fails to detect use of this direct
+             dependency -->
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+          <version>${hbase-compatible-hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <!-- 'mvn dependency:analyze' fails to detect use of this direct
+             dependency -->
+        <!-- This is needed by HBaseTestingUtility -->
+        <dependency>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-all</artifactId>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+  </profiles>
 </project>

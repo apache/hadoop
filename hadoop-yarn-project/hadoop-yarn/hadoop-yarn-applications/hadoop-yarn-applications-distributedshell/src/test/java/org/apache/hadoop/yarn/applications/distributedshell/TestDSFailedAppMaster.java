@@ -20,13 +20,14 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDSFailedAppMaster extends ApplicationMaster {
 
-  private static final Log LOG = LogFactory.getLog(TestDSFailedAppMaster.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestDSFailedAppMaster.class);
 
   @Override
   public void run() throws YarnException, IOException, InterruptedException {

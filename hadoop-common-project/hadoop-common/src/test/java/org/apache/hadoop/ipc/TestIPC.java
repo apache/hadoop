@@ -39,9 +39,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,9 +61,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -79,13 +79,13 @@ import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -98,11 +98,13 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /** Unit tests for IPC. */
 public class TestIPC {
-  public static final Log LOG =
-    LogFactory.getLog(TestIPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestIPC.class);
   
   private static Configuration conf;
   final static int PING_INTERVAL = 1000;
@@ -231,12 +233,12 @@ public class TestIPC {
           final long param = RANDOM.nextLong();
           LongWritable value = call(client, param, server, conf);
           if (value.get() != param) {
-            LOG.fatal("Call failed!");
+            LOG.error("Call failed!");
             failed = true;
             break;
           }
         } catch (Exception e) {
-          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
+          LOG.error("Caught: " + StringUtils.stringifyException(e));
           failed = true;
         }
       }
@@ -785,7 +787,7 @@ public class TestIPC {
             call(client, new LongWritable(Thread.currentThread().getId()),
                 addr, 60000, conf);
           } catch (Throwable e) {
-            LOG.error(e);
+            LOG.error(e.toString());
             failures.incrementAndGet();
             return;
           } finally {
@@ -807,7 +809,7 @@ public class TestIPC {
       }
       // wait until reader put a call to callQueue, to make sure all readers
       // are blocking on the queue after initialClients threads are started.
-      verify(spy, timeout(100).times(i + 1)).put(Mockito.<Call>anyObject());
+      verify(spy, timeout(5000).times(i + 1)).put(Mockito.<Call>anyObject());
     }
 
     try {
@@ -864,7 +866,7 @@ public class TestIPC {
 
   @Test(timeout=30000)
   public void testConnectionIdleTimeouts() throws Exception {
-    ((Log4JLogger)Server.LOG).getLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.DEBUG);
     final int maxIdle = 1000;
     final int cleanupInterval = maxIdle*3/4; // stagger cleanups
     final int killMax = 3;
@@ -896,7 +898,7 @@ public class TestIPC {
               callBarrier.await();
             }
           } catch (Throwable t) {
-            LOG.error(t);
+            LOG.error(t.toString());
             error.set(true); 
           } 
         }
@@ -918,7 +920,7 @@ public class TestIPC {
               callReturned.countDown();
               Thread.sleep(10000);
             } catch (IOException e) {
-              LOG.error(e);
+              LOG.error(e.toString());
             } catch (InterruptedException e) {
             } finally {
               client.stop();
@@ -1339,7 +1341,7 @@ public class TestIPC {
 
   @Test
   public void testMaxConnections() throws Exception {
-    conf.setInt("ipc.server.max.connections", 5);
+    conf.setInt("ipc.server.max.connections", 6);
     Server server = null;
     Thread connectors[] = new Thread[10];
 
@@ -1374,8 +1376,10 @@ public class TestIPC {
       }
 
       Thread.sleep(1000);
-      // server should only accept up to 5 connections
-      assertEquals(5, server.getNumOpenConnections());
+      // server should only accept up to 6 connections
+      assertEquals(6, server.getNumOpenConnections());
+      // server should drop the other 4 connections
+      assertEquals(4, server.getNumDroppedConnections());
 
       for (int i = 0; i < 10; i++) {
         connectors[i].join();
@@ -1423,7 +1427,7 @@ public class TestIPC {
   }
 
   private void checkVersionMismatch() throws IOException {
-    try (final ServerSocket listenSocket = new ServerSocket()) {
+    try (ServerSocket listenSocket = new ServerSocket()) {
       listenSocket.bind(null);
       InetSocketAddress addr =
           (InetSocketAddress) listenSocket.getLocalSocketAddress();
@@ -1482,6 +1486,78 @@ public class TestIPC {
       return;
     }
     Assert.fail("didn't get limit exceeded");
+  }
+
+  @Test
+  public void testUserBinding() throws Exception {
+    checkUserBinding(false);
+  }
+
+  @Test
+  public void testProxyUserBinding() throws Exception {
+    checkUserBinding(true);
+  }
+
+  private void checkUserBinding(boolean asProxy) throws Exception {
+    Socket s;
+    // don't attempt bind with no service host.
+    s = checkConnect(null, asProxy);
+    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+
+    // don't attempt bind with service host not belonging to this host.
+    s = checkConnect("1.2.3.4", asProxy);
+    Mockito.verify(s, Mockito.never()).bind(Mockito.any(SocketAddress.class));
+
+    // do attempt bind when service host is this host.
+    InetAddress addr = InetAddress.getLocalHost();
+    s = checkConnect(addr.getHostAddress(), asProxy);
+    Mockito.verify(s).bind(new InetSocketAddress(addr, 0));
+  }
+
+  // dummy protocol that claims to support kerberos.
+  @KerberosInfo(serverPrincipal = "server@REALM")
+  private static class TestBindingProtocol {
+  }
+
+  private Socket checkConnect(String addr, boolean asProxy) throws Exception {
+    // create a fake ugi that claims to have kerberos credentials.
+    StringBuilder principal = new StringBuilder();
+    principal.append("client");
+    if (addr != null) {
+      principal.append("/").append(addr);
+    }
+    principal.append("@REALM");
+    UserGroupInformation ugi =
+        spy(UserGroupInformation.createRemoteUser(principal.toString()));
+    Mockito.doReturn(true).when(ugi).hasKerberosCredentials();
+    if (asProxy) {
+      ugi = UserGroupInformation.createProxyUser("proxy", ugi);
+    }
+
+    // create a mock socket that throws on connect.
+    SocketException expectedConnectEx =
+        new SocketException("Expected connect failure");
+    Socket s = Mockito.mock(Socket.class);
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    Mockito.doReturn(s).when(mockFactory).createSocket();
+    doThrow(expectedConnectEx).when(s).connect(
+        Mockito.any(SocketAddress.class), Mockito.anyInt());
+
+    // do a dummy call and expect it to throw an exception on connect.
+    // tests should verify if/how a bind occurred.
+    try (Client client = new Client(LongWritable.class, conf, mockFactory)) {
+      final InetSocketAddress sockAddr = new InetSocketAddress(0);
+      final LongWritable param = new LongWritable(RANDOM.nextLong());
+      final ConnectionId remoteId = new ConnectionId(
+          sockAddr, TestBindingProtocol.class, ugi, 0,
+          RetryPolicies.TRY_ONCE_THEN_FAIL, conf);
+      client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, null);
+      fail("call didn't throw connect exception");
+    } catch (SocketException se) {
+      // ipc layer re-wraps exceptions, so check the cause.
+      Assert.assertSame(expectedConnectEx, se.getCause());
+    }
+    return s;
   }
 
   private void doIpcVersionTest(

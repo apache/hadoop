@@ -286,6 +286,7 @@ public final class DataTransferSaslUtil {
           codec.generateSecureRandom(inIv);
           codec.generateSecureRandom(outKey);
           codec.generateSecureRandom(outIv);
+          codec.close();
           return new CipherOption(suite, inKey, inIv, outKey, outIv);
         }
       }

@@ -23,9 +23,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
  */
 public enum NodeType {
   NODE_LOCAL(0), RACK_LOCAL(1), OFF_SWITCH(2);
-  public int index;
 
-  private NodeType(int index) {
+  private final int index;
+
+  NodeType(int index) {
     this.index = index;
+  }
+
+  /**
+   * @return the index of the node type
+   */
+  public int getIndex() {
+    return index;
   }
 }

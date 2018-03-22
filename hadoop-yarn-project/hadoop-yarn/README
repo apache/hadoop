@@ -55,7 +55,7 @@ Modules
 -------
 YARN consists of multiple modules. The modules are listed below as per the directory structure:
 
-hadoop-yarn-api - Yarn's cross platform external interface
+hadoop-yarn-api - YARN's cross platform external interface
 
 hadoop-yarn-common - Utilities which can be used by yarn clients and server
 

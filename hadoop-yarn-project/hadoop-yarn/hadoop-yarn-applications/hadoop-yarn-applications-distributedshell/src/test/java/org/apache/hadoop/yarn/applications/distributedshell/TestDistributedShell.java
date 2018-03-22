@@ -38,9 +38,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -56,31 +55,38 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster.DSEvent;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.impl.DirectTimelineWriter;
 import org.apache.hadoop.yarn.client.api.impl.TestTimelineClient;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.client.api.impl.TimelineWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.timeline.PluginStoreTestUtils;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersion;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersionWatcher;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -88,16 +94,19 @@ import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDistributedShell {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestDistributedShell.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDistributedShell.class);
 
   protected MiniYARNCluster yarnCluster = null;
   protected MiniDFSCluster hdfsCluster = null;
@@ -109,6 +118,7 @@ public class TestDistributedShell {
   private static final int NUM_NMS = 1;
   private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
+  private static final int MIN_ALLOCATION_MB = 128;
 
   protected final static String APPMASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
@@ -135,7 +145,8 @@ public class TestDistributedShell {
     LOG.info("Starting up YARN cluster");
 
     conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        MIN_ALLOCATION_MB);
     // reduce the teardown waiting time
     conf.setLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 1000);
     conf.set("yarn.log.dir", "target");
@@ -146,7 +157,6 @@ public class TestDistributedShell {
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
     conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
-    conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
         "0.0.0.0:" + ServerSocketUtil.getPort(10021, 10));
@@ -523,15 +533,31 @@ public class TestDistributedShell {
           "appattempt_" + appId.getClusterTimestamp() + "_000" + appId.getId()
               + "_000001"
               + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      verifyEntityTypeFileExists(basePath, "DS_APP_ATTEMPT",
-          appTimestampFileName);
+      File dsAppAttemptEntityFile = verifyEntityTypeFileExists(basePath,
+          "DS_APP_ATTEMPT", appTimestampFileName);
+      // Check if required events are published and same idprefix is sent for
+      // on each publish.
+      verifyEntityForTimelineV2(dsAppAttemptEntityFile,
+          DSEvent.DS_APP_ATTEMPT_START.toString(), 1, 1, 0, true);
+      // to avoid race condition of testcase, atleast check 40 times with sleep
+      // of 50ms
+      verifyEntityForTimelineV2(dsAppAttemptEntityFile,
+          DSEvent.DS_APP_ATTEMPT_END.toString(), 1, 40, 50, true);
 
-      // Verify DS_CONTAINER entities posted by the client
+      // Verify DS_CONTAINER entities posted by the client.
       String containerTimestampFileName =
           "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
               + "_01_000002.thist";
-      verifyEntityTypeFileExists(basePath, "DS_CONTAINER",
-          containerTimestampFileName);
+      File dsContainerEntityFile = verifyEntityTypeFileExists(basePath,
+          "DS_CONTAINER", containerTimestampFileName);
+      // Check if required events are published and same idprefix is sent for
+      // on each publish.
+      verifyEntityForTimelineV2(dsContainerEntityFile,
+          DSEvent.DS_CONTAINER_START.toString(), 1, 1, 0, true);
+      // to avoid race condition of testcase, atleast check 40 times with sleep
+      // of 50ms
+      verifyEntityForTimelineV2(dsContainerEntityFile,
+          DSEvent.DS_CONTAINER_END.toString(), 1, 40, 50, true);
 
       // Verify NM posting container metrics info.
       String containerMetricsTimestampFileName =
@@ -541,29 +567,13 @@ public class TestDistributedShell {
       File containerEntityFile = verifyEntityTypeFileExists(basePath,
           TimelineEntityType.YARN_CONTAINER.toString(),
           containerMetricsTimestampFileName);
-      Assert.assertEquals(
-          "Container created event needs to be published atleast once",
-          1,
-          getNumOfStringOccurences(containerEntityFile,
-              ContainerMetricsConstants.CREATED_EVENT_TYPE));
+      verifyEntityForTimelineV2(containerEntityFile,
+          ContainerMetricsConstants.CREATED_EVENT_TYPE, 1, 1, 0, true);
 
-      // to avoid race condition of testcase, atleast check 4 times with sleep
-      // of 500ms
-      long numOfContainerFinishedOccurences = 0;
-      for (int i = 0; i < 4; i++) {
-        numOfContainerFinishedOccurences =
-            getNumOfStringOccurences(containerEntityFile,
-                ContainerMetricsConstants.FINISHED_EVENT_TYPE);
-        if (numOfContainerFinishedOccurences > 0) {
-          break;
-        } else {
-          Thread.sleep(500L);
-        }
-      }
-      Assert.assertEquals(
-          "Container finished event needs to be published atleast once",
-          1,
-          numOfContainerFinishedOccurences);
+      // to avoid race condition of testcase, atleast check 40 times with sleep
+      // of 50ms
+      verifyEntityForTimelineV2(containerEntityFile,
+          ContainerMetricsConstants.FINISHED_EVENT_TYPE, 1, 40, 50, true);
 
       // Verify RM posting Application life cycle Events are getting published
       String appMetricsTimestampFileName =
@@ -573,29 +583,14 @@ public class TestDistributedShell {
           verifyEntityTypeFileExists(basePath,
               TimelineEntityType.YARN_APPLICATION.toString(),
               appMetricsTimestampFileName);
-      Assert.assertEquals(
-          "Application created event should be published atleast once",
-          1,
-          getNumOfStringOccurences(appEntityFile,
-              ApplicationMetricsConstants.CREATED_EVENT_TYPE));
+      // No need to check idprefix for app.
+      verifyEntityForTimelineV2(appEntityFile,
+          ApplicationMetricsConstants.CREATED_EVENT_TYPE, 1, 1, 0, false);
 
-      // to avoid race condition of testcase, atleast check 4 times with sleep
-      // of 500ms
-      long numOfStringOccurences = 0;
-      for (int i = 0; i < 4; i++) {
-        numOfStringOccurences =
-            getNumOfStringOccurences(appEntityFile,
-                ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-        if (numOfStringOccurences > 0) {
-          break;
-        } else {
-          Thread.sleep(500L);
-        }
-      }
-      Assert.assertEquals(
-          "Application finished event should be published atleast once",
-          1,
-          numOfStringOccurences);
+      // to avoid race condition of testcase, atleast check 40 times with sleep
+      // of 50ms
+      verifyEntityForTimelineV2(appEntityFile,
+          ApplicationMetricsConstants.FINISHED_EVENT_TYPE, 1, 40, 50, false);
 
       // Verify RM posting AppAttempt life cycle Events are getting published
       String appAttemptMetricsTimestampFileName =
@@ -606,17 +601,10 @@ public class TestDistributedShell {
           verifyEntityTypeFileExists(basePath,
               TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
               appAttemptMetricsTimestampFileName);
-      Assert.assertEquals(
-          "AppAttempt register event should be published atleast once",
-          1,
-          getNumOfStringOccurences(appAttemptEntityFile,
-              AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE));
-
-      Assert.assertEquals(
-          "AppAttempt finished event should be published atleast once",
-          1,
-          getNumOfStringOccurences(appAttemptEntityFile,
-              AppAttemptMetricsConstants.FINISHED_EVENT_TYPE));
+      verifyEntityForTimelineV2(appAttemptEntityFile,
+          AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE, 1, 1, 0, true);
+      verifyEntityForTimelineV2(appAttemptEntityFile,
+          AppAttemptMetricsConstants.FINISHED_EVENT_TYPE, 1, 1, 0, true);
     } finally {
       FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
     }
@@ -636,22 +624,64 @@ public class TestDistributedShell {
     return entityFile;
   }
 
-  private long getNumOfStringOccurences(File entityFile, String searchString)
-      throws IOException {
-    BufferedReader reader = null;
-    String strLine;
+  /**
+   * Checks the events and idprefix published for an entity.
+   *
+   * @param entityFile Entity file.
+   * @param expectedEvent Expected event Id.
+   * @param numOfExpectedEvent Number of expected occurences of expected event
+   *     id.
+   * @param checkTimes Number of times to check.
+   * @param sleepTime Sleep time for each iteration.
+   * @param checkIdPrefix Whether to check idprefix.
+   * @throws IOException if entity file reading fails.
+   * @throws InterruptedException if sleep is interrupted.
+   */
+  private void verifyEntityForTimelineV2(File entityFile, String expectedEvent,
+      long numOfExpectedEvent, int checkTimes, long sleepTime,
+      boolean checkIdPrefix) throws IOException, InterruptedException {
     long actualCount = 0;
-    try {
-      reader = new BufferedReader(new FileReader(entityFile));
-      while ((strLine = reader.readLine()) != null) {
-        if (strLine.trim().contains(searchString)) {
-          actualCount++;
+    for (int i = 0; i < checkTimes; i++) {
+      BufferedReader reader = null;
+      String strLine = null;
+      actualCount = 0;
+      try {
+        reader = new BufferedReader(new FileReader(entityFile));
+        long idPrefix = -1;
+        while ((strLine = reader.readLine()) != null) {
+          String entityLine = strLine.trim();
+          if (entityLine.isEmpty()) {
+            continue;
+          }
+          if (entityLine.contains(expectedEvent)) {
+            actualCount++;
+          }
+          if (checkIdPrefix) {
+            TimelineEntity entity = FileSystemTimelineReaderImpl.
+                getTimelineRecordFromJSON(entityLine, TimelineEntity.class);
+            Assert.assertTrue("Entity ID prefix expected to be > 0",
+                entity.getIdPrefix() > 0);
+            if (idPrefix == -1) {
+              idPrefix = entity.getIdPrefix();
+            } else {
+              Assert.assertEquals("Entity ID prefix should be same across " +
+                  "each publish of same entity",
+                      idPrefix, entity.getIdPrefix());
+            }
+          }
         }
+      } finally {
+        reader.close();
       }
-    } finally {
-      reader.close();
+      if (numOfExpectedEvent == actualCount) {
+        break;
+      }
+      if (sleepTime > 0 && i < checkTimes - 1) {
+        Thread.sleep(sleepTime);
+      }
     }
-    return actualCount;
+    Assert.assertEquals("Unexpected number of " +  expectedEvent +
+        " event published.", numOfExpectedEvent, actualCount);
   }
 
   /**
@@ -870,11 +900,11 @@ public class TestDistributedShell {
     };
 
     //Before run the DS, the default the log level is INFO
-    final Log LOG_Client =
-        LogFactory.getLog(Client.class);
+    final Logger LOG_Client =
+        LoggerFactory.getLogger(Client.class);
     Assert.assertTrue(LOG_Client.isInfoEnabled());
     Assert.assertFalse(LOG_Client.isDebugEnabled());
-    final Log LOG_AM = LogFactory.getLog(ApplicationMaster.class);
+    final Logger LOG_AM = LoggerFactory.getLogger(ApplicationMaster.class);
     Assert.assertTrue(LOG_AM.isInfoEnabled());
     Assert.assertFalse(LOG_AM.isDebugEnabled());
 
@@ -1099,6 +1129,7 @@ public class TestDistributedShell {
           "1"
       };
       client.init(args);
+      client.run();
       Assert.fail("Exception is expected");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue("The throw exception is not expected",
@@ -1155,6 +1186,33 @@ public class TestDistributedShell {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("No shell command or shell script specified " +
           "to be executed by application master"));
+    }
+
+    LOG.info("Initializing DS Client with invalid container_type argument");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_command",
+          "date",
+          "--container_type",
+          "UNSUPPORTED_TYPE"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Invalid container_type: UNSUPPORTED_TYPE"));
     }
   }
 
@@ -1325,5 +1383,225 @@ public class TestDistributedShell {
       }
     }
     return numOfWords;
+  }
+
+  @Test
+  public void testDistributedShellResourceProfiles() throws Exception {
+    String[][] args = {
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--container_resource_profile",
+            "maximum" },
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
+            "default" },
+        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+            Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
+            "default", "--container_resource_profile", "maximum" }
+        };
+
+    for (int i = 0; i < args.length; ++i) {
+      LOG.info("Initializing DS Client");
+      Client client = new Client(new Configuration(yarnCluster.getConfig()));
+      Assert.assertTrue(client.init(args[i]));
+      LOG.info("Running DS Client");
+      try {
+        client.run();
+        Assert.fail("Client run should throw error");
+      } catch (Exception e) {
+        continue;
+      }
+    }
+  }
+
+  @Test
+  public void testDSShellWithOpportunisticContainers() throws Exception {
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_command",
+          "date",
+          "--container_type",
+          "OPPORTUNISTIC"
+      };
+      client.init(args);
+      client.run();
+    } catch (Exception e) {
+      Assert.fail("Job execution with opportunistic containers failed.");
+    }
+  }
+
+  @Test
+  @TimelineVersion(2.0f)
+  public void testDistributedShellWithResources() throws Exception {
+    doTestDistributedShellWithResources(false);
+  }
+
+  @Test
+  @TimelineVersion(2.0f)
+  public void testDistributedShellWithResourcesWithLargeContainers()
+      throws Exception {
+    doTestDistributedShellWithResources(true);
+  }
+
+  public void doTestDistributedShellWithResources(boolean largeContainers)
+      throws Exception {
+    Resource clusterResource = yarnCluster.getResourceManager()
+        .getResourceScheduler().getClusterResource();
+    String masterMemoryString = "1 Gi";
+    String containerMemoryString = "512 Mi";
+    long masterMemory = 1024;
+    long containerMemory = 512;
+    Assume.assumeTrue("The cluster doesn't have enough memory for this test",
+        clusterResource.getMemorySize() >= masterMemory + containerMemory);
+    Assume.assumeTrue("The cluster doesn't have enough cores for this test",
+        clusterResource.getVirtualCores() >= 2);
+    if (largeContainers) {
+      masterMemory = clusterResource.getMemorySize() * 2 / 3;
+      masterMemory = masterMemory - masterMemory % MIN_ALLOCATION_MB;
+      masterMemoryString = masterMemory + "Mi";
+      containerMemory = clusterResource.getMemorySize() / 3;
+      containerMemory = containerMemory - containerMemory % MIN_ALLOCATION_MB;
+      containerMemoryString = String.valueOf(containerMemory);
+    }
+
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "2",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--master_resources",
+        "memory=" + masterMemoryString + ",vcores=1",
+        "--container_resources",
+        "memory=" + containerMemoryString + ",vcores=1",
+    };
+
+    LOG.info("Initializing DS Client");
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    Assert.assertTrue(client.init(args));
+    LOG.info("Running DS Client");
+    final AtomicBoolean result = new AtomicBoolean(false);
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          result.set(client.run());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    t.start();
+
+    YarnClient yarnClient = YarnClient.createYarnClient();
+    yarnClient.init(new Configuration(yarnCluster.getConfig()));
+    yarnClient.start();
+
+    while (true) {
+      List<ApplicationReport> apps = yarnClient.getApplications();
+      if (apps.isEmpty()) {
+        Thread.sleep(10);
+        continue;
+      }
+      ApplicationReport appReport = apps.get(0);
+      ApplicationId appId = appReport.getApplicationId();
+      List<ApplicationAttemptReport> appAttempts =
+          yarnClient.getApplicationAttempts(appId);
+      if (appAttempts.isEmpty()) {
+        Thread.sleep(10);
+        continue;
+      }
+      ApplicationAttemptReport appAttemptReport = appAttempts.get(0);
+      ContainerId amContainerId = appAttemptReport.getAMContainerId();
+
+      if (amContainerId == null) {
+        Thread.sleep(10);
+        continue;
+      }
+      ContainerReport report = yarnClient.getContainerReport(amContainerId);
+      Resource masterResource = report.getAllocatedResource();
+      Assert.assertEquals(masterMemory, masterResource.getMemorySize());
+      Assert.assertEquals(1, masterResource.getVirtualCores());
+
+      List<ContainerReport> containers =
+          yarnClient.getContainers(appAttemptReport.getApplicationAttemptId());
+      if (containers.size() < 2) {
+        Thread.sleep(10);
+        continue;
+      }
+      for (ContainerReport container : containers) {
+        if (!container.getContainerId().equals(amContainerId)) {
+          Resource containerResource = container.getAllocatedResource();
+          Assert.assertEquals(containerMemory,
+              containerResource.getMemorySize());
+          Assert.assertEquals(1, containerResource.getVirtualCores());
+        }
+      }
+
+      return;
+    }
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testDistributedShellAMResourcesWithIllegalArguments()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--master_resources",
+        "memory-mb=invalid"
+    };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+  }
+
+  @Test(expected=MissingArgumentException.class)
+  public void testDistributedShellAMResourcesWithMissingArgumentValue()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--master_resources"
+    };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+  }
+
+  @Test(expected=ResourceNotFoundException.class)
+  public void testDistributedShellAMResourcesWithUnknownResource()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--master_resources",
+        "unknown-resource=5"
+    };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    client.run();
   }
 }

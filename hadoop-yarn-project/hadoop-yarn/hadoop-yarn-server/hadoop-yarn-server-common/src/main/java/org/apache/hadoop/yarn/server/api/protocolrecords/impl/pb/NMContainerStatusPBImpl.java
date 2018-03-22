@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
@@ -27,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
@@ -34,6 +36,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NMContainerStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class NMContainerStatusPBImpl extends NMContainerStatus {
 
@@ -45,6 +50,7 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
   private ContainerId containerId = null;
   private Resource resource = null;
   private Priority priority = null;
+  private Set<String> allocationTags = null;
 
   public NMContainerStatusPBImpl() {
     builder = NMContainerStatusProto.newBuilder();
@@ -89,7 +95,11 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
         .append("Diagnostics: ").append(getDiagnostics()).append(", ")
         .append("ExitStatus: ").append(getContainerExitStatus()).append(", ")
         .append("NodeLabelExpression: ").append(getNodeLabelExpression())
-        .append("Priority: ").append(getPriority())
+        .append(", ")
+        .append("Priority: ").append(getPriority()).append(", ")
+        .append("AllocationRequestId: ").append(getAllocationRequestId())
+        .append(", ")
+        .append("AllocationTags: ").append(getAllocationTags()).append(", ")
         .append("]");
     return sb.toString();
   }
@@ -249,6 +259,59 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
     builder.setNodeLabelExpression(nodeLabelExpression);
   }
 
+  @Override
+  public synchronized ExecutionType getExecutionType() {
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasExecutionType()) {
+      return ExecutionType.GUARANTEED;
+    }
+    return convertFromProtoFormat(p.getExecutionType());
+  }
+
+  @Override
+  public synchronized void setExecutionType(ExecutionType executionType) {
+    maybeInitBuilder();
+    if (executionType == null) {
+      builder.clearExecutionType();
+      return;
+    }
+    builder.setExecutionType(convertToProtoFormat(executionType));
+  }
+
+  @Override
+  public long getAllocationRequestId() {
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getAllocationRequestId());
+  }
+
+  @Override
+  public void setAllocationRequestId(long allocationRequestId) {
+    maybeInitBuilder();
+    builder.setAllocationRequestId(allocationRequestId);
+  }
+
+  private void initAllocationTags() {
+    if (this.allocationTags != null) {
+      return;
+    }
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    this.allocationTags = new HashSet<>();
+    this.allocationTags.addAll(p.getAllocationTagsList());
+  }
+
+  @Override
+  public Set<String> getAllocationTags() {
+    initAllocationTags();
+    return this.allocationTags;
+  }
+
+  @Override
+  public void setAllocationTags(Set<String> allocationTags) {
+    maybeInitBuilder();
+    builder.clearAllocationTags();
+    this.allocationTags = allocationTags;
+  }
+
   private void mergeLocalToBuilder() {
     if (this.containerId != null
         && !((ContainerIdPBImpl) containerId).getProto().equals(
@@ -256,14 +319,16 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
 
-    if (this.resource != null
-        && !((ResourcePBImpl) this.resource).getProto().equals(
-          builder.getResource())) {
+    if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
 
     if (this.priority != null) {
       builder.setPriority(convertToProtoFormat(this.priority));
+    }
+    if (this.allocationTags != null) {
+      builder.clearAllocationTags();
+      builder.addAllAllocationTags(this.allocationTags);
     }
   }
 
@@ -295,7 +360,7 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl) t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private ContainerStateProto
@@ -314,5 +379,14 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
 
   private PriorityProto convertToProtoFormat(Priority t) {
     return ((PriorityPBImpl)t).getProto();
+  }
+
+  private ExecutionType convertFromProtoFormat(
+      YarnProtos.ExecutionTypeProto e) {
+    return ProtoUtils.convertFromProtoFormat(e);
+  }
+
+  private YarnProtos.ExecutionTypeProto convertToProtoFormat(ExecutionType e) {
+    return ProtoUtils.convertToProtoFormat(e);
   }
 }

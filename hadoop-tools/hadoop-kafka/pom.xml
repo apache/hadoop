@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-kafka</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop Kafka Library support</name>
   <description>
     This module contains code to support integration with Kafka.
@@ -36,32 +36,6 @@
     <downloadSources>true</downloadSources>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>tests-off</id>
-      <activation>
-        <file>
-          <missing>src/test/resources/auth-keys.xml</missing>
-        </file>
-      </activation>
-      <properties>
-        <maven.test.skip>true</maven.test.skip>
-      </properties>
-    </profile>
-    <profile>
-      <id>tests-on</id>
-      <activation>
-        <file>
-          <exists>src/test/resources/auth-keys.xml</exists>
-        </file>
-      </activation>
-      <properties>
-        <maven.test.skip>false</maven.test.skip>
-      </properties>
-    </profile>
-
-  </profiles>
-
   <build>
     <plugins>
       <plugin>
@@ -71,14 +45,6 @@
           <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <effort>Max</effort>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <configuration>
-          <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
-          <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
       </plugin>
       <plugin>

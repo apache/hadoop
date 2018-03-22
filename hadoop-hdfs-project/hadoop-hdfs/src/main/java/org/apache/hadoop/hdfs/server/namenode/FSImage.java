@@ -98,6 +98,16 @@ public class FSImage implements Closeable {
 
   protected NNStorageRetentionManager archivalManager;
 
+  /**
+   * The collection of newly added storage directories. These are partially
+   * formatted then later fully populated along with a VERSION file.
+   * For HA, the second part is done when the next checkpoint is saved.
+   * This set will be cleared once a VERSION file is created.
+   * For non-HA, a new fsimage will be locally generated along with a new
+   * VERSION file. This set is not used for non-HA mode.
+   */
+  private Set<StorageDirectory> newDirs = null;
+
   /* Used to make sure there are no concurrent checkpoints for a given txid
    * The checkpoint here could be one of the following operations.
    * a. checkpoint when NN is in standby.
@@ -261,9 +271,26 @@ public class FSImage implements Closeable {
         throw new IOException(StorageState.NON_EXISTENT + 
                               " state cannot be here");
       case NOT_FORMATTED:
+        // Create a dir structure, but not the VERSION file. The presence of
+        // VERSION is checked in the inspector's needToSave() method and
+        // saveNamespace is triggered if it is absent. This will bring
+        // the storage state uptodate along with a new VERSION file.
+        // If HA is enabled, NNs start up as standby so saveNamespace is not
+        // triggered.
         LOG.info("Storage directory " + sd.getRoot() + " is not formatted.");
         LOG.info("Formatting ...");
         sd.clearDirectory(); // create empty currrent dir
+        // For non-HA, no further action is needed here, as saveNamespace will
+        // take care of the rest.
+        if (!target.isHaEnabled()) {
+          continue;
+        }
+        // If HA is enabled, save the dirs to create a version file later when
+        // a checkpoint image is saved.
+        if (newDirs == null) {
+          newDirs = new HashSet<StorageDirectory>();
+        }
+        newDirs.add(sd);
         break;
       default:
         break;
@@ -289,7 +316,27 @@ public class FSImage implements Closeable {
     
     return loadFSImage(target, startOpt, recovery);
   }
-  
+
+  /**
+   * Create a VERSION file in the newly added storage directories.
+   */
+  private void initNewDirs() {
+    if (newDirs == null) {
+      return;
+    }
+    for (StorageDirectory sd : newDirs) {
+      try {
+        storage.writeProperties(sd);
+        LOG.info("Wrote VERSION in the new storage, " + sd.getCurrentDir());
+      } catch (IOException e) {
+        // Failed to create a VERSION file. Report the error.
+        storage.reportErrorOnFile(sd.getVersionFile());
+      }
+    }
+    newDirs.clear();
+    newDirs = null;
+  }
+
   /**
    * For each storage directory, performs recovery of incomplete transitions
    * (eg. upgrade, rollback, checkpoint) and inserts the directory's storage
@@ -539,7 +586,7 @@ public class FSImage implements Closeable {
 
     // and save it but keep the same checkpointTime
     saveNamespace(target);
-    getStorage().writeAll();
+    updateStorageVersion();
   }
   
   void finalizeUpgrade(boolean finalizeEditLog) throws IOException {
@@ -1052,7 +1099,7 @@ public class FSImage implements Closeable {
       try {
         saveFSImageInAllDirs(source, nnf, imageTxId, canceler);
         if (!source.isRollingUpgrade()) {
-          storage.writeAll();
+          updateStorageVersion();
         }
       } finally {
         if (editLogWasOpen) {
@@ -1350,6 +1397,9 @@ public class FSImage implements Closeable {
     if (txid > storage.getMostRecentCheckpointTxId()) {
       storage.setMostRecentCheckpointInfo(txid, Time.now());
     }
+
+    // Create a version file in any new storage directory.
+    initNewDirs();
   }
 
   @Override

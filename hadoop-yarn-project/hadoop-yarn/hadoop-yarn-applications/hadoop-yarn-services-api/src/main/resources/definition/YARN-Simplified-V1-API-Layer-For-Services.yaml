@@ -1,0 +1,510 @@
+# Hadoop YARN REST APIs for services v1 spec in YAML
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+swagger: '2.0'
+info:
+  title: "YARN Simplified API layer for services"
+  description: |
+    Bringing a new service on YARN today is not a simple experience. The APIs of existing
+    frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
+    or writing a complex spec (for declarative frameworks).
+
+    This simplified REST API can be used to create and manage the lifecycle of YARN services.
+    In most cases, the application owner will not be forced to make any changes to their applications.
+    This is primarily true if the application is packaged with containerization technologies like Docker.
+
+    This document describes the API specifications (aka. YarnFile) for deploying/managing
+    containerized services on YARN. The same JSON spec can be used for both REST API
+    and CLI to manage the services.
+
+  version: "1.0.0"
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+# the domain of the service
+host: host.mycompany.com
+port: 9191(default)
+# array of all schemes that your API supports
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /app/v1/services/version:
+    get:
+      summary: Get current version of the API server.
+      description: Get current version of the API server.
+      responses:
+        200:
+          description: Successful request
+
+  /app/v1/services:
+    get:
+      summary: (TBD) List of services running in the cluster.
+      description: Get a list of all currently running services (response includes a minimal projection of the service info). For more details do a GET on a specific service name.
+      responses:
+        200:
+          description: An array of services
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Service'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+    post:
+      summary: Create a service
+      description: Create a service. The request JSON is a service object with details required for creation. If the request is successful it returns 202 Accepted. A success of this API only confirms success in submission of the service creation request. There is no guarantee that the service will actually reach a RUNNING state. Resource availability and several other factors determines if the service will be deployed in the cluster. It is expected that clients would subsequently call the GET API to get details of the service and determine its state.
+      parameters:
+        - name: Service
+          in: body
+          description: Service request object
+          required: true
+          schema:
+            $ref: '#/definitions/Service'
+      responses:
+        202:
+          description: The request to create a service is accepted
+        400:
+          description: Invalid service definition provided in the request body
+        500:
+          description: Failed to create a service
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+
+  /app/v1/services/{service_name}:
+    put:
+      summary: Update a service or upgrade the binary version of the components of a running service
+      description: Update the runtime properties of a service. Currently the following operations are supported - update lifetime, stop/start a service.
+                   The PUT operation is also used to orchestrate an upgrade of the service containers to a newer version of their artifacts (TBD).
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: Service
+          in: body
+          description: The updated service definition. It can contain the updated lifetime of a service or the desired state (STOPPED/STARTED) of a service to initiate a start/stop operation against the specified service
+          required: true
+          schema:
+            $ref: '#/definitions/Service'
+      responses:
+        204:
+          description: Update or upgrade was successful
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+    delete:
+      summary: Destroy a service
+      description: Destroy a service and release all resources. This API might have to return JSON data providing location of logs (TBD), etc.
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+      responses:
+        204:
+          description: Destroy was successful
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+    get:
+      summary: Get details of a service.
+      description: Return the details (including containers) of a running service
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+      responses:
+        200:
+          description: a service object
+          schema:
+            type: object
+            items:
+              $ref: '#/definitions/Service'
+          examples:
+            service_name: logsearch
+            artifact:
+              id: logsearch:latest
+              type: docker
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+  /app/v1/services/{service_name}/components/{component_name}:
+    put:
+      summary: Flex a component's number of instances.
+      description: Set a component's desired number of instanes
+      parameters:
+        - name: service_name
+          in: path
+          description: Service name
+          required: true
+          type: string
+        - name: component_name
+          in: path
+          description: Component name
+          required: true
+          type: string
+        - name: Component
+          in: body
+          description: The definition of a component which contains the updated number of instances.
+          required: true
+          schema:
+            $ref: '#/definitions/Component'
+      responses:
+        200:
+          description: Flex was successful
+        404:
+          description: Service does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ServiceStatus'
+definitions:
+  Service:
+    description: a service resource has the following attributes.
+    required:
+      - name
+      - version
+    properties:
+      name:
+        type: string
+        description: A unique service name. If Registry DNS is enabled, the max length is 63 characters.
+      version:
+        type: string
+        description: Version of the service.
+      description:
+        type: string
+        description: Description of the service.
+      id:
+        type: string
+        description: A unique service id.
+      artifact:
+        description: The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).
+        $ref: '#/definitions/Artifact'
+      resource:
+        description: The default resource for all components of the service (optional).
+        $ref: '#/definitions/Resource'
+      launch_time:
+        type: string
+        format: date
+        description: The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.
+      number_of_running_containers:
+        type: integer
+        format: int64
+        description: In get response this provides the total number of running containers for this service (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.
+      lifetime:
+        type: integer
+        format: int64
+        description: Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.
+      placement_policy:
+        description: (TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.
+        $ref: '#/definitions/PlacementPolicy'
+      components:
+        description: Components of a service.
+        type: array
+        items:
+          $ref: '#/definitions/Component'
+      configuration:
+        description: Config properties of a service. Configurations provided at the service/global level are available to all the components. Specific properties can be overridden at the component level.
+        $ref: '#/definitions/Configuration'
+      state:
+        description: State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.
+        $ref: '#/definitions/ServiceState'
+      quicklinks:
+        type: object
+        description: A blob of key-value pairs of quicklinks to be exported for a service.
+        additionalProperties:
+          type: string
+      queue:
+        type: string
+        description: The YARN queue that this service should be submitted to.
+      kerberos_principal:
+        description: The Kerberos Principal of the service
+        $ref: '#/definitions/KerberosPrincipal'
+  ResourceInformation:
+    description:
+      ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object
+    properties:
+      value:
+        type: integer
+        format: int64
+        description: Integer value of the resource.
+      unit:
+        type: string
+        description:
+          Unit of the resource, acceptable values are: p/n/u/m/k/M/G/T/P/Ki/Mi/Gi/Ti/Pi. By default it is empty means no unit
+  Resource:
+    description:
+      Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.
+    properties:
+      profile:
+        type: string
+        description: Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.
+      cpus:
+        type: integer
+        format: int32
+        description: Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).
+      memory:
+        type: string
+        description: Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.
+      additional:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/ResourceInformation'
+        description: Map of resource name to ResourceInformation
+  PlacementPolicy:
+    description: Placement policy of an instance of a service. This feature is in the works in YARN-6592.
+    properties:
+      label:
+        type: string
+        description: Assigns a service to a named partition of the cluster where the service desires to run (optional). If not specified all services are submitted to a default label of the service owner. One or more labels can be setup for each service owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.
+  Artifact:
+    description: Artifact of a service component. If not specified, component will just run the bare launch command and no artifact will be localized.
+    required:
+    - id
+    properties:
+      id:
+        type: string
+        description: Artifact id. Examples are package location uri for tarball based services, image name for docker, name of service, etc.
+      type:
+        type: string
+        description: Artifact type, like docker, tarball, etc. (optional). For TARBALL type, the specified tarball will be localized to the container local working directory under a folder named lib. For SERVICE type, the service specified will be read and its components will be added into this service. The original component with artifact type SERVICE will be removed (any properties specified in the original component will be ignored).
+        enum:
+          - DOCKER
+          - TARBALL
+          - SERVICE
+        default: DOCKER
+      uri:
+        type: string
+        description: Artifact location to support multiple artifact stores (optional).
+  Component:
+    description: One or more components of the service. If the service is HBase say, then the component can be a simple role like master or regionserver. If the service is a complex business webapp then a component can be other services say Kafka or Storm. Thereby it opens up the support for complex and nested services.
+    required:
+    - name
+    properties:
+      name:
+        type: string
+        description: Name of the service component (mandatory). If Registry DNS is enabled, the max length is 63 characters. If unique component support is enabled, the max length is lowered to 44 characters.
+      state:
+        description: The state of the component
+        $ref: "#/definitions/ComponentState"
+      dependencies:
+        type: array
+        items:
+          type: string
+        description: An array of service components which should be in READY state (as defined by readiness check), before this component can be started. The dependencies across all components of a service should be represented as a DAG.
+      readiness_check:
+        description: Readiness check for this component.
+        $ref: '#/definitions/ReadinessCheck'
+      artifact:
+        description: Artifact of the component (optional). If not specified, the service level global artifact takes effect.
+        $ref: '#/definitions/Artifact'
+      launch_command:
+        type: string
+        description: The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any).
+      resource:
+        description: Resource of this component (optional). If not specified, the service level global resource takes effect.
+        $ref: '#/definitions/Resource'
+      number_of_containers:
+        type: integer
+        format: int64
+        description: Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.
+      run_privileged_container:
+        type: boolean
+        description: Run all containers of this component in privileged mode (YARN-4262).
+      placement_policy:
+        description: Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the service level placement_policy takes effect. Refer to the description at the global level for more details.
+        $ref: '#/definitions/PlacementPolicy'
+      configuration:
+        description: Config properties for this component.
+        $ref: '#/definitions/Configuration'
+      quicklinks:
+        type: array
+        items:
+          type: string
+        description: A list of quicklink keys defined at the service level, and to be resolved by this component.
+  ReadinessCheck:
+    description: A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.
+    required:
+    - type
+    properties:
+      type:
+        type: string
+        description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
+        enum:
+          - HTTP
+          - PORT
+      properties:
+        type: object
+        description: A blob of key value pairs that will be used to configure the check.
+        additionalProperties:
+          type: string
+      artifact:
+        description: Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits service owners who can run services without any packaging modifications. Note, artifacts of type docker only is supported for now. NOT IMPLEMENTED YET
+        $ref: '#/definitions/Artifact'
+  Configuration:
+    description: Set of configuration properties that can be injected into the service components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.
+    properties:
+      properties:
+        type: object
+        description: A blob of key-value pairs for configuring the YARN service AM
+        additionalProperties:
+          type: string
+      env:
+        type: object
+        description: A blob of key-value pairs which will be appended to the default system properties and handed off to the service at start time. All placeholder references to properties will be substituted before injection.
+        additionalProperties:
+          type: string
+      files:
+        description: Array of list of files that needs to be created and made available as volumes in the service component containers.
+        type: array
+        items:
+          $ref: '#/definitions/ConfigFile'
+  ConfigFile:
+    description: A config file that needs to be created and made available as a volume in a service component container.
+    properties:
+      type:
+        type: string
+        description: Config file in the standard format like xml, properties, json, yaml, template.
+        enum:
+          - XML
+          - PROPERTIES
+          - JSON
+          - YAML
+          - TEMPLATE
+          - ENV
+          - HADOOP_XML
+      dest_file:
+        type: string
+        description: The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.
+      src_file:
+        type: string
+        description: This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.
+      properties:
+        type: object
+        description: A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.
+  Container:
+    description: An instance of a running service container.
+    properties:
+      id:
+        type: string
+        description: Unique container id of a running service, e.g. container_e3751_1458061340047_0008_01_000002.
+      launch_time:
+        type: string
+        format: date
+        description: The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.
+      ip:
+        type: string
+        description: IP address of a running container, e.g. 172.31.42.141. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.
+      hostname:
+        type: string
+        description: Fully qualified hostname of a running container, e.g. ctr-e3751-1458061340047-0008-01-000002.examplestg.site. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.
+      bare_host:
+        type: string
+        description: The bare node or host in which the container is running, e.g. cn008.example.com.
+      state:
+        description: State of the container of a service.
+        $ref: '#/definitions/ContainerState'
+      component_instance_name:
+        type: string
+        description: Name of the component instance that this container instance belongs to. Component instance name is named as $COMPONENT_NAME-i, where i is a
+                     monotonically increasing integer. E.g. A componet called nginx can have multiple component instances named as nginx-0, nginx-1 etc.
+                     Each component instance is backed by a container instance.
+      resource:
+        description: Resource used for this container.
+        $ref: '#/definitions/Resource'
+      artifact:
+        description: Artifact used for this container.
+        $ref: '#/definitions/Artifact'
+      privileged_container:
+        type: boolean
+        description: Container running in privileged mode or not.
+  ServiceState:
+    description: The current state of a service.
+    properties:
+      state:
+        type: string
+        description: enum of the state of the service
+        enum:
+          - ACCEPTED
+          - STARTED
+          - STABLE
+          - STOPPED
+          - FAILED
+  ContainerState:
+    description: The current state of the container of a service.
+    properties:
+      state:
+        type: string
+        description: enum of the state of the container
+        enum:
+          - INIT
+          - STARTED
+          - READY
+  ComponentState:
+    description: The state of the component
+    properties:
+      state:
+        type: string
+        description: enum of the state of the component
+        enum:
+          - FLEXING
+          - STABLE
+  ServiceStatus:
+    description: The current status of a submitted service, returned as a response to the GET API.
+    properties:
+      diagnostics:
+        type: string
+        description: Diagnostic information (if any) for the reason of the current state of the service. It typically has a non-null value, if the service is in a non-running state.
+      state:
+        description: Service state.
+        $ref: '#/definitions/ServiceState'
+      code:
+        type: integer
+        format: int32
+        description: An error code specific to a scenario which service owners should be able to use to understand the failure in addition to the diagnostic information.
+  KerberosPrincipal:
+    description: The kerberos principal info of the user who launches the service.
+    properties:
+      principal_name:
+        type: string
+        description: The principal name of the user who launches the service.
+      keytab:
+        type: string
+        description: |
+          The URI of the kerberos keytab. It supports two modes:
+          URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host.
+          URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.

@@ -27,11 +27,11 @@
           <div class="panel-heading">
             Cluster Resource Usage By Applications
           </div>
-          <div class="container-fluid" id="appusage-donut-chart">
+          <div class="container-fluid donut-chart" id="appusage-donut-chart">
             {{app-usage-donut-chart data=model.apps
             showLabels=true
             parentId="appusage-donut-chart"
-            ratio=0.6
+            ratio=0.5
             maxHeight=400}}
           </div>
         </div>
@@ -42,11 +42,11 @@
           <div class="panel-heading">
             Cluster Resource Usage By Leaf Queues
           </div>
-          <div class="container-fluid" id="queueusage-donut-chart">
+          <div class="container-fluid donut-chart" id="queueusage-donut-chart">
             {{queue-usage-donut-chart data=model.queues
             showLabels=true
             parentId="queueusage-donut-chart"
-            ratio=0.6
+            ratio=0.5
             maxHeight=400}}
           </div>
         </div>
@@ -86,8 +86,78 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="col-lg-4 container-fluid">
+  <hr>
+  <div class="row">
+    <!-- When getAllResourceTypesDonutChart is not null, use it to show per-resource-type usages. Otherwise only show
+         vcore/memory usage from metrics -->
+    {{#if model.clusterMetrics.firstObject.getAllResourceTypesDonutChart}}
+      {{#each
+        model.clusterMetrics.firstObject.getAllResourceTypesDonutChart as |perTypeUsage|}}
+        <div class="col-lg-4 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              {{perTypeUsage.name}} - Usages
+            </div>
+            <div class="container-fluid" id="resource-type-{{perTypeUsage.id}}">
+              {{donut-chart
+                data=perTypeUsage.data
+                showLabels=true
+                parentIdPrefix="resource-type-"
+                id=perTypeUsage.id
+                ratio=0.6
+                unit=perTypeUsage.unit
+                type="resource"
+                maxHeight=350
+                colorTargets="good"
+                colorTargetReverse=true}}
+            </div>
+          </div>
+        </div>
+      {{/each}}
+    {{else}}
+      <div class="col-lg-4 container-fluid">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            Resource - Memory
+          </div>
+          <div class="container-fluid" id="mem-donut-chart">
+            {{donut-chart
+              data=model.clusterMetrics.firstObject.getMemoryDataForDonutChart
+              showLabels=true
+              parentId="mem-donut-chart"
+              ratio=0.6
+              maxHeight=350
+              colorTargets="good"
+              colorTargetReverse=true
+              type="memory"}}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 container-fluid">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            Resource - VCores
+          </div>
+          <div class="container-fluid" id="vcore-donut-chart">
+            {{donut-chart
+              data=model.clusterMetrics.firstObject.getVCoreDataForDonutChart
+              showLabels=true
+              parentId="vcore-donut-chart"
+              ratio=0.6
+              maxHeight=350
+              colorTargets="good"
+              colorTargetReverse=true}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+
+  </div>
+  <div class="row">
+    <div class="col-lg-6 container-fluid">
       <div class="panel panel-default">
         <div class="panel-heading">
           Node Managers
@@ -99,45 +169,6 @@
           ratio=0.6
           maxHeight=350
           colorTargets="good error warn"}}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <hr>
-  <div class="row">
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Resource - Memory
-        </div>
-        <div class="container-fluid" id="mem-donut-chart">
-          {{donut-chart data=model.clusterMetrics.firstObject.getMemoryDataForDonutChart
-          showLabels=true
-          parentId="mem-donut-chart"
-          ratio=0.6
-          maxHeight=350
-          colorTargets="good"
-          colorTargetReverse=true
-          type="memory"}}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Resource - VCores
-        </div>
-        <div class="container-fluid" id="vcore-donut-chart">
-          {{donut-chart data=model.clusterMetrics.firstObject.getVCoreDataForDonutChart
-          showLabels=true
-          parentId="vcore-donut-chart"
-          ratio=0.6
-          maxHeight=350
-          colorTargets="good"
-          colorTargetReverse=true}}
         </div>
       </div>
     </div>

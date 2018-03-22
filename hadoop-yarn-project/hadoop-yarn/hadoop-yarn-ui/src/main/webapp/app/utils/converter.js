@@ -17,12 +17,13 @@
  */
 
 import Constants from 'yarn-ui/constants';
+import { convertTimestampWithTz } from "./date-utils";
 
 export default {
   containerIdToAttemptId: function(containerId) {
     if (containerId) {
       var arr = containerId.split('_');
-      var attemptId = ["appattempt", arr[1], 
+      var attemptId = ["appattempt", arr[1],
         arr[2], this.padding(arr[3], 6)];
       return attemptId.join('_');
     }
@@ -30,7 +31,7 @@ export default {
   attemptIdToAppId: function(attemptId) {
     if (attemptId) {
       var arr = attemptId.split('_');
-      var appId = ["application", arr[1], 
+      var appId = ["application", arr[1],
         arr[2]].join('_');
       return appId;
     }
@@ -82,8 +83,10 @@ export default {
     return total * 1000;
   },
   timeStampToDate: function(timeStamp) {
-    var dateTimeString = moment(parseInt(timeStamp)).format("YYYY/MM/DD HH:mm:ss");
-    return dateTimeString;
+    return convertTimestampWithTz(timeStamp, "YYYY/MM/DD HH:mm:ss");
+  },
+  timeStampToDateOnly: function(timeStamp) {
+    return convertTimestampWithTz(timeStamp, "YYYY/MM/DD");
   },
   dateToTimeStamp: function(date) {
     if (date) {
@@ -110,7 +113,7 @@ export default {
     }
   },
   memoryToSimpliedUnit: function(mb) {
-    var unit = "MB"
+    var unit = "MB";
     var value = mb;
     if (value / 1024 >= 0.9) {
       value = value / 1024;
@@ -125,5 +128,98 @@ export default {
       unit = "PB";
     }
     return value.toFixed(1) + " " + unit;
+  },
+  resourceToSimplifiedUnit: function (value, unit) {
+    // First convert unit to base unit ("").
+    var normalizedValue = value;
+    if (unit === "Ki") {
+      normalizedValue = normalizedValue * 1024;
+    } else if (unit === "Mi") {
+      normalizedValue = normalizedValue * 1024 * 1024;
+    } else if (unit === "Gi") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024;
+    } else if (unit === "Ti") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024 * 1024;
+    } else if (unit === "Pi") {
+      normalizedValue = normalizedValue * 1024 * 1024 * 1024 * 1024 * 1024;
+    } else if (unit === "K" || unit === "k") {
+      normalizedValue = normalizedValue * 1000;
+    } else if (unit === "M" || unit === "m") {
+      normalizedValue = normalizedValue * 1000 * 1000;
+    } else if (unit === "G" || unit === "g") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000;
+    } else if (unit === "T" || unit === "t") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000 * 1000;
+    } else if (unit === "P" || unit === "p") {
+      normalizedValue = normalizedValue * 1000 * 1000 * 1000 * 1000 * 1000;
+    }
+
+    // From baseunit ("") convert to most human readable unit
+    // (which value < 1024 * 0.9).
+    var finalUnit = "";
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Ki";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Mi";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Gi";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Ti";
+    }
+    if (normalizedValue / 1024 >= 0.9) {
+      normalizedValue = normalizedValue / 1024;
+      finalUnit = "Pi";
+    }
+
+    return normalizedValue.toFixed(1) + " " + finalUnit;
+  },
+  msToElapsedTimeUnit: function(millisecs, short) {
+    var seconds = Math.floor(millisecs / 1000);
+    var days = Math.floor(seconds / (3600 * 24));
+    var hours = Math.floor(seconds / 3600) - (days * 24);
+    var mins = Math.floor((seconds - (hours * 3600) - (days * 24 * 3600)) / 60);
+    var secs = seconds - (days * 24 * 3600) - (hours * 3600) - (mins * 60);
+    var timeStrArr = [];
+    var pluralize = "";
+    if (days > 0) {
+      pluralize = days > 1? " Days" : " Day";
+      timeStrArr.push(days + pluralize);
+    }
+    if (hours > 0) {
+      pluralize = hours > 1? " Hrs" : " Hour";
+      timeStrArr.push(hours + pluralize);
+    }
+    if (mins > 0) {
+      pluralize = mins > 1? " Mins" : " Min";
+      timeStrArr.push(mins + pluralize);
+    }
+    pluralize = secs > 1? " Secs" : " Sec";
+    timeStrArr.push(secs + pluralize);
+    if (short) {
+      return timeStrArr[0] + (timeStrArr[1]? " : " + timeStrArr[1] : "");
+    }
+    return timeStrArr.join(" : ");
+  },
+  memoryBytesToMB: function(mem) {
+    var unit = "MB";
+    var value = mem / (1024 * 1024);
+    if (value / 1024 >= 0.9) {
+      value = value / 1024;
+      unit = "GB";
+    }
+    return value.toFixed(1) + " " + unit;
+  },
+  floatToFixed: function(value, fixed=2) {
+    if (value && value.toFixed) {
+      return parseFloat(value.toFixed(fixed));
+    }
+    return value;
   }
 };

@@ -451,5 +451,13 @@ public class JobContextImpl implements JobContext {
   public Credentials getCredentials() {
     return credentials;
   }
-  
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "JobContextImpl{");
+    sb.append("jobId=").append(jobId);
+    sb.append('}');
+    return sb.toString();
+  }
 }

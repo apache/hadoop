@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -64,6 +65,11 @@ public abstract class YARNDelegationTokenIdentifier extends
     setMasterKeyId(builder.getMasterKeyId());
   }
 
+  public synchronized void readFieldsInOldFormat(DataInput in)
+      throws IOException {
+    super.readFields(in);
+  }
+
   private void setBuilderFields() {
     if (builder.getOwner() != null &&
         !builder.getOwner().equals(getOwner().toString())) {
@@ -95,6 +101,11 @@ public abstract class YARNDelegationTokenIdentifier extends
   public synchronized void write(DataOutput out) throws IOException {
     setBuilderFields();
     builder.build().writeTo((DataOutputStream) out);
+  }
+
+  @VisibleForTesting
+  public synchronized void writeInOldFormat(DataOutput out) throws IOException {
+    super.write(out);
   }
 
   public YARNDelegationTokenIdentifierProto getProto() {

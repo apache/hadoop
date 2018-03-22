@@ -61,11 +61,9 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 
 
 public class TestQJMWithFaults {
@@ -402,7 +400,7 @@ public class TestQJMWithFaults {
 
     @Override
     protected ExecutorService createSingleThreadExecutor() {
-      return MoreExecutors.sameThreadExecutor();
+      return new DirectExecutorService();
     }
   }
 
@@ -441,9 +439,14 @@ public class TestQJMWithFaults {
           new WrapEveryCall<Object>(realProxy) {
             void beforeCall(InvocationOnMock invocation) throws Exception {
               rpcCount++;
+
+              String param="";
+              for (Object val : invocation.getArguments()) {
+                param += val +",";
+              }
               String callStr = "[" + addr + "] " + 
                   invocation.getMethod().getName() + "(" +
-                  Joiner.on(", ").join(invocation.getArguments()) + ")";
+                  param + ")";
  
               Callable<Void> inject = injections.get(rpcCount);
               if (inject != null) {
@@ -506,7 +509,7 @@ public class TestQJMWithFaults {
     AsyncLogger.Factory spyFactory = new AsyncLogger.Factory() {
       @Override
       public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-          String journalId, InetSocketAddress addr) {
+          String journalId, String nameserviceId, InetSocketAddress addr) {
         return new InvocationCountingChannel(conf, nsInfo, journalId, addr);
       }
     };
@@ -521,7 +524,7 @@ public class TestQJMWithFaults {
     AsyncLogger.Factory spyFactory = new AsyncLogger.Factory() {
       @Override
       public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-          String journalId, InetSocketAddress addr) {
+          String journalId, String nameServiceId, InetSocketAddress addr) {
         return new RandomFaultyChannel(conf, nsInfo, journalId, addr,
             seedGenerator.nextLong());
       }

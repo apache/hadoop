@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -95,11 +96,13 @@ final class FileChecksumHelper {
       this.client = client;
 
       this.remaining = length;
-      if (src.contains(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR)) {
-        this.remaining = Math.min(length, blockLocations.getFileLength());
-      }
 
-      this.locatedBlocks = blockLocations.getLocatedBlocks();
+      if (blockLocations != null) {
+        if (src.contains(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR)) {
+          this.remaining = Math.min(length, blockLocations.getFileLength());
+        }
+        this.locatedBlocks = blockLocations.getLocatedBlocks();
+      }
     }
 
     String getSrc() {
@@ -203,9 +206,23 @@ final class FileChecksumHelper {
      * @throws IOException
      */
     void compute() throws IOException {
-      checksumBlocks();
-
-      fileChecksum = makeFinalResult();
+      /**
+       * request length is 0 or the file is empty, return one with the
+       * magic entry that matches what previous hdfs versions return.
+       */
+      if (locatedBlocks == null || locatedBlocks.isEmpty()) {
+        // Explicitly specified here in case the default DataOutputBuffer
+        // buffer length value is changed in future. This matters because the
+        // fixed value 32 has to be used to repeat the magic value for previous
+        // HDFS version.
+        final int lenOfZeroBytes = 32;
+        byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
+        MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
+        fileChecksum =  new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+      } else {
+        checksumBlocks();
+        fileChecksum = makeFinalResult();
+      }
     }
 
     /**
@@ -228,15 +245,7 @@ final class FileChecksumHelper {
         return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
             crcPerBlock, fileMD5);
       default:
-        // If there is no block allocated for the file,
-        // return one with the magic entry that matches what previous
-        // hdfs versions return.
-        if (locatedBlocks.isEmpty()) {
-          return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
-        }
-
-        // we should never get here since the validity was checked
-        // when getCrcType() was called above.
+        // we will get here when crcType is "NULL".
         return null;
       }
     }
@@ -295,8 +304,7 @@ final class FileChecksumHelper {
      * Return true when sounds good to continue or retry, false when severe
      * condition or totally failed.
      */
-    private boolean checksumBlock(
-        LocatedBlock locatedBlock) throws IOException {
+    private boolean checksumBlock(LocatedBlock locatedBlock) {
       ExtendedBlock block = locatedBlock.getBlock();
       if (getRemaining() < block.getNumBytes()) {
         block.setNumBytes(getRemaining());
@@ -325,6 +333,17 @@ final class FileChecksumHelper {
             done = true; // actually it's not done; but we'll retry
             blockIdx--; // repeat at blockIdx-th block
             setRefetchBlocks(true);
+          }
+        } catch (InvalidEncryptionKeyException iee) {
+          if (blockIdx > getLastRetriedIndex()) {
+            LOG.debug("Got invalid encryption key error in response to "
+                    + "OP_BLOCK_CHECKSUM for file {} for block {} from "
+                    + "datanode {}. Will retry " + "the block once.",
+                  getSrc(), block, datanodes[j]);
+            setLastRetriedIndex(blockIdx);
+            done = true; // actually it's not done; but we'll retry
+            blockIdx--; // repeat at i-th block
+            getClient().clearDataEncryptionKey();
           }
         } catch (IOException ie) {
           LOG.warn("src={}" + ", datanodes[{}]={}",
@@ -412,7 +431,7 @@ final class FileChecksumHelper {
   }
 
   /**
-   * Striped file checksum computing.
+   * Non-striped checksum computing for striped files.
    */
   static class StripedFileNonStripedChecksumComputer
       extends FileChecksumComputer {

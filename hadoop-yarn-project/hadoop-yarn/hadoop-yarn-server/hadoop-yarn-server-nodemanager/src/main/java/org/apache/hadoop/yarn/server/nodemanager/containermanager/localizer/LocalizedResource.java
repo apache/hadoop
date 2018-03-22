@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -53,7 +53,8 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
  */
 public class LocalizedResource implements EventHandler<ResourceEvent> {
 
-  private static final Log LOG = LogFactory.getLog(LocalizedResource.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LocalizedResource.class);
 
   volatile Path localPath;
   volatile long size = -1;
@@ -200,7 +201,7 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       } catch (InvalidStateTransitionException e) {
         LOG.warn("Can't handle this event at current state", e);
       }
-      if (oldState != newState) {
+      if (newState != null && oldState != newState) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Resource " + resourcePath + (localPath != null ?
               "(->" + localPath + ")": "") + " transitioned from " + oldState

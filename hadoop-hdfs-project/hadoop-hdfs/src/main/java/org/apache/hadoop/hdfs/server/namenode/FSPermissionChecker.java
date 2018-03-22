@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Stack;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -42,7 +46,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * 
  * Some of the helper methods are gaurded by {@link FSNamesystem#readLock()}.
  */
-class FSPermissionChecker implements AccessControlEnforcer {
+public class FSPermissionChecker implements AccessControlEnforcer {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
   private static String getPath(byte[][] components, int start, int end) {
@@ -82,7 +86,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
   private final INodeAttributeProvider attributeProvider;
 
 
-  FSPermissionChecker(String fsOwner, String supergroup,
+  protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider) {
     this.fsOwner = fsOwner;
@@ -191,6 +195,38 @@ class FSPermissionChecker implements AccessControlEnforcer {
         ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
   }
 
+  /**
+   * Check permission only for the given inode (not checking the children's
+   * access).
+   *
+   * @param inode the inode to check.
+   * @param snapshotId the snapshot id.
+   * @param access the target access.
+   * @throws AccessControlException
+   */
+  void checkPermission(INode inode, int snapshotId, FsAction access)
+      throws AccessControlException {
+    try {
+      byte[][] localComponents = {inode.getLocalNameBytes()};
+      INodeAttributes[] iNodeAttr = {inode.getSnapshotINode(snapshotId)};
+      AccessControlEnforcer enforcer = getAccessControlEnforcer();
+      enforcer.checkPermission(
+          fsOwner, supergroup, callerUgi,
+          iNodeAttr, // single inode attr in the array
+          new INode[]{inode}, // single inode in the array
+          localComponents, snapshotId,
+          null, -1, // this will skip checkTraverse() because
+          // not checking ancestor here
+          false, null, null,
+          access, // the target access to be checked against the inode
+          null, // passing null sub access avoids checking children
+          false);
+    } catch (AccessControlException ace) {
+      throw new AccessControlException(
+          toAccessControlString(inode, inode.getFullPathName(), access));
+    }
+  }
+
   @Override
   public void checkPermission(String fsOwner, String supergroup,
       UserGroupInformation callerUgi, INodeAttributes[] inodeAttrs,
@@ -239,8 +275,16 @@ class FSPermissionChecker implements AccessControlEnforcer {
     INodeAttributes inodeAttrs = inode.getSnapshotINode(snapshotId);
     if (getAttributesProvider() != null) {
       String[] elements = new String[pathIdx + 1];
-      for (int i = 0; i < elements.length; i++) {
-        elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+      /**
+       * {@link INode#getPathComponents(String)} returns a null component
+       * for the root only path "/". Assign an empty string if so.
+       */
+      if (pathByNameArr.length == 1 && pathByNameArr[0] == null) {
+        elements[0] = "";
+      } else {
+        for (int i = 0; i < elements.length; i++) {
+          elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+        }
       }
       inodeAttrs = getAttributesProvider().getAttributes(elements, inodeAttrs);
     }
@@ -280,9 +324,20 @@ class FSPermissionChecker implements AccessControlEnforcer {
       return;
     }
 
+    // Each inode in the subtree has a level. The root inode has level 0.
+    // List subINodePath tracks the inode path in the subtree during
+    // traversal. The root inode is not stored because it is already in array
+    // components. The list index is (level - 1).
+    ArrayList<INodeDirectory> subINodePath = new ArrayList<>();
+
+    // The stack of levels matches the stack of directory inodes.
+    Stack<Integer> levels = new Stack<>();
+    levels.push(0);    // Level 0 is the root
+
     Stack<INodeDirectory> directories = new Stack<INodeDirectory>();
     for(directories.push(inode.asDirectory()); !directories.isEmpty(); ) {
       INodeDirectory d = directories.pop();
+      int level = levels.pop();
       ReadOnlyList<INode> cList = d.getChildrenList(snapshotId);
       if (!(cList.isEmpty() && ignoreEmptyDir)) {
         //TODO have to figure this out with inodeattribute provider
@@ -292,11 +347,44 @@ class FSPermissionChecker implements AccessControlEnforcer {
           throw new AccessControlException(
               toAccessControlString(inodeAttr, d.getFullPathName(), access));
         }
+
+        if (level > 0) {
+          if (level - 1 < subINodePath.size()) {
+            subINodePath.set(level - 1, d);
+          } else {
+            Preconditions.checkState(level - 1 == subINodePath.size());
+            subINodePath.add(d);
+          }
+        }
+
+        if (inodeAttr.getFsPermission().getStickyBit()) {
+          for (INode child : cList) {
+            INodeAttributes childInodeAttr =
+                getINodeAttrs(components, pathIdx, child, snapshotId);
+            if (isStickyBitViolated(inodeAttr, childInodeAttr)) {
+              List<byte[]> allComponentList = new ArrayList<>();
+              for (int i = 0; i <= pathIdx; ++i) {
+                allComponentList.add(components[i]);
+              }
+              for (int i = 0; i < level; ++i) {
+                allComponentList.add(subINodePath.get(i).getLocalNameBytes());
+              }
+              allComponentList.add(child.getLocalNameBytes());
+              int index = pathIdx + level;
+              byte[][] allComponents =
+                  allComponentList.toArray(new byte[][]{});
+              throwStickyBitException(
+                  getPath(allComponents, 0, index + 1), child,
+                  getPath(allComponents, 0, index), inode);
+            }
+          }
+        }
       }
 
       for(INode child : cList) {
         if (child.isDirectory()) {
           directories.push(child.asDirectory());
+          levels.push(level + 1);
         }
       }
     }
@@ -425,26 +513,43 @@ class FSPermissionChecker implements AccessControlEnforcer {
       return;
     }
 
+    INodeAttributes inode = inodes[index + 1];
+    if (!isStickyBitViolated(parent, inode)) {
+      return;
+    }
+
+    throwStickyBitException(getPath(components, 0, index + 1), inode,
+        getPath(components, 0, index), parent);
+  }
+
+  /** Return true when sticky bit is violated. */
+  private boolean isStickyBitViolated(INodeAttributes parent,
+                                      INodeAttributes inode) {
     // If this user is the directory owner, return
     if (parent.getUserName().equals(getUser())) {
-      return;
+      return false;
     }
 
-    INodeAttributes inode = inodes[index + 1];
     // if this user is the file owner, return
     if (inode.getUserName().equals(getUser())) {
-      return;
+      return false;
     }
 
+    return true;
+  }
+
+  private void throwStickyBitException(
+      String inodePath, INodeAttributes inode,
+      String parentPath, INodeAttributes parent)
+      throws AccessControlException {
     throw new AccessControlException(String.format(
-        "Permission denied by sticky bit: user=%s, path=\"%s\":%s:%s:%s%s, " +
-        "parent=\"%s\":%s:%s:%s%s", user,
-        getPath(components, 0, index + 1),
-        inode.getUserName(), inode.getGroupName(),
-        inode.isDirectory() ? "d" : "-", inode.getFsPermission().toString(),
-        getPath(components, 0, index),
-        parent.getUserName(), parent.getGroupName(),
-        parent.isDirectory() ? "d" : "-", parent.getFsPermission().toString()));
+        FSExceptionMessages.PERMISSION_DENIED_BY_STICKY_BIT +
+            ": user=%s, path=\"%s\":%s:%s:%s%s, " +
+            "parent=\"%s\":%s:%s:%s%s", user, inodePath, inode.getUserName(),
+        inode.getGroupName(), inode.isDirectory() ? "d" : "-",
+        inode.getFsPermission().toString(), parentPath, parent.getUserName(),
+        parent.getGroupName(), parent.isDirectory() ? "d" : "-",
+        parent.getFsPermission().toString()));
   }
 
   /**
@@ -468,7 +573,9 @@ class FSPermissionChecker implements AccessControlEnforcer {
         && mode.getGroupAction().implies(access)) {
       return;
     }
-    if (mode.getOtherAction().implies(access)) {
+    if (!getUser().equals(pool.getOwnerName())
+        && !isMemberOfGroup(pool.getGroupName())
+        && mode.getOtherAction().implies(access)) {
       return;
     }
     throw new AccessControlException("Permission denied while accessing pool "

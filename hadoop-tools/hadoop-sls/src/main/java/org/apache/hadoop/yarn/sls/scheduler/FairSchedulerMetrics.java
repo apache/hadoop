@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.yarn.sls.scheduler;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-    .FSAppAttempt;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 
 import com.codahale.metrics.Gauge;
-import org.apache.hadoop.yarn.sls.SLSRunner;
 
 @Private
 @Unstable
@@ -37,184 +38,159 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
   private int totalVCores = Integer.MAX_VALUE;
   private boolean maxReset = false;
 
+  @VisibleForTesting
+  public enum Metric {
+    DEMAND("demand"),
+    USAGE("usage"),
+    MINSHARE("minshare"),
+    MAXSHARE("maxshare"),
+    FAIRSHARE("fairshare");
+
+    private String value;
+
+    Metric(String value) {
+      this.value = value;
+    }
+
+    @VisibleForTesting
+    public String getValue() {
+      return value;
+    }
+  }
+
   public FairSchedulerMetrics() {
     super();
-    appTrackedMetrics.add("demand.memory");
-    appTrackedMetrics.add("demand.vcores");
-    appTrackedMetrics.add("usage.memory");
-    appTrackedMetrics.add("usage.vcores");
-    appTrackedMetrics.add("minshare.memory");
-    appTrackedMetrics.add("minshare.vcores");
-    appTrackedMetrics.add("maxshare.memory");
-    appTrackedMetrics.add("maxshare.vcores");
-    appTrackedMetrics.add("fairshare.memory");
-    appTrackedMetrics.add("fairshare.vcores");
-    queueTrackedMetrics.add("demand.memory");
-    queueTrackedMetrics.add("demand.vcores");
-    queueTrackedMetrics.add("usage.memory");
-    queueTrackedMetrics.add("usage.vcores");
-    queueTrackedMetrics.add("minshare.memory");
-    queueTrackedMetrics.add("minshare.vcores");
-    queueTrackedMetrics.add("maxshare.memory");
-    queueTrackedMetrics.add("maxshare.vcores");
-    queueTrackedMetrics.add("fairshare.memory");
-    queueTrackedMetrics.add("fairshare.vcores");
+
+    for (Metric metric: Metric.values()) {
+      appTrackedMetrics.add(metric.value + ".memory");
+      appTrackedMetrics.add(metric.value + ".vcores");
+      queueTrackedMetrics.add(metric.value + ".memory");
+      queueTrackedMetrics.add(metric.value + ".vcores");
+    }
   }
-  
-  @Override
-  public void trackApp(ApplicationAttemptId appAttemptId, String oldAppId) {
-    super.trackApp(appAttemptId, oldAppId);
-    FairScheduler fair = (FairScheduler) scheduler;
-    final FSAppAttempt app = fair.getSchedulerApp(appAttemptId);
-    metrics.register("variable.app." + oldAppId + ".demand.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return app.getDemand().getMemorySize();
-        }
+
+  private long getMemorySize(Schedulable schedulable, Metric metric) {
+    if (schedulable != null) {
+      switch (metric) {
+      case DEMAND:
+        return schedulable.getDemand().getMemorySize();
+      case USAGE:
+        return schedulable.getResourceUsage().getMemorySize();
+      case MINSHARE:
+        return schedulable.getMinShare().getMemorySize();
+      case MAXSHARE:
+        return schedulable.getMaxShare().getMemorySize();
+      case FAIRSHARE:
+        return schedulable.getFairShare().getMemorySize();
+      default:
+        return 0L;
       }
+    }
+
+    return 0L;
+  }
+
+  private int getVirtualCores(Schedulable schedulable, Metric metric) {
+    if (schedulable != null) {
+      switch (metric) {
+      case DEMAND:
+        return schedulable.getDemand().getVirtualCores();
+      case USAGE:
+        return schedulable.getResourceUsage().getVirtualCores();
+      case MINSHARE:
+        return schedulable.getMinShare().getVirtualCores();
+      case MAXSHARE:
+        return schedulable.getMaxShare().getVirtualCores();
+      case FAIRSHARE:
+        return schedulable.getFairShare().getVirtualCores();
+      default:
+        return 0;
+      }
+    }
+
+    return 0;
+  }
+
+  private void registerAppMetrics(ApplicationId appId, String oldAppId,
+      Metric metric) {
+    metrics.register(
+        "variable.app." + oldAppId + "." + metric.value + ".memory",
+        new Gauge<Long>() {
+          @Override
+          public Long getValue() {
+            return getMemorySize((FSAppAttempt)getSchedulerAppAttempt(appId),
+                metric);
+          }
+        }
     );
-    metrics.register("variable.app." + oldAppId + ".demand.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return app.getDemand().getVirtualCores();
+
+    metrics.register(
+        "variable.app." + oldAppId + "." + metric.value + ".vcores",
+        new Gauge<Integer>() {
+          @Override
+          public Integer getValue() {
+            return getVirtualCores((FSAppAttempt)getSchedulerAppAttempt(appId),
+                metric);
+          }
         }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".usage.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return app.getResourceUsage().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".usage.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return app.getResourceUsage().getVirtualCores();
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".minshare.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return app.getMinShare().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".minshare.vcores",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return app.getMinShare().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".maxshare.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return Math.min(app.getMaxShare().getMemorySize(), totalMemoryMB);
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".maxshare.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return Math.min(app.getMaxShare().getVirtualCores(), totalVCores);
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".fairshare.memory",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return app.getFairShare().getVirtualCores();
-        }
-      }
-    );
-    metrics.register("variable.app." + oldAppId + ".fairshare.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return app.getFairShare().getVirtualCores();
-        }
-      }
     );
   }
 
   @Override
-  public void trackQueue(String queueName) {
-    trackedQueues.add(queueName);
+  public void trackApp(ApplicationId appId, String oldAppId) {
+    super.trackApp(appId, oldAppId);
+
+    for (Metric metric: Metric.values()) {
+      registerAppMetrics(appId, oldAppId, metric);
+    }
+  }
+
+  private void registerQueueMetrics(FSQueue queue, Metric metric) {
+    metrics.register(
+        "variable.queue." + queue.getName() + "." + metric.value + ".memory",
+        new Gauge<Long>() {
+          @Override
+          public Long getValue() {
+            return getMemorySize(queue, metric);
+          }
+        }
+    );
+    metrics.register(
+        "variable.queue." + queue.getName() + "." + metric.value + ".vcores",
+        new Gauge<Integer>() {
+          @Override
+          public Integer getValue() {
+            return getVirtualCores(queue, metric);
+          }
+        }
+    );
+  }
+
+  @Override
+  protected void registerQueueMetrics(String queueName) {
+    super.registerQueueMetrics(queueName);
+
     FairScheduler fair = (FairScheduler) scheduler;
     final FSQueue queue = fair.getQueueManager().getQueue(queueName);
-    metrics.register("variable.queue." + queueName + ".demand.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return queue.getDemand().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".demand.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return queue.getDemand().getVirtualCores();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".usage.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return queue.getResourceUsage().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".usage.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return queue.getResourceUsage().getVirtualCores();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".minshare.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return queue.getMinShare().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".minshare.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return queue.getMinShare().getVirtualCores();
-        }
-      }
-    );
+    registerQueueMetrics(queue, Metric.DEMAND);
+    registerQueueMetrics(queue, Metric.USAGE);
+    registerQueueMetrics(queue, Metric.MINSHARE);
+    registerQueueMetrics(queue, Metric.FAIRSHARE);
+
     metrics.register("variable.queue." + queueName + ".maxshare.memory",
       new Gauge<Long>() {
         @Override
         public Long getValue() {
-          if (! maxReset &&
-                  SLSRunner.simulateInfoMap.containsKey("Number of nodes") &&
-                  SLSRunner.simulateInfoMap.containsKey("Node memory (MB)") &&
-                  SLSRunner.simulateInfoMap.containsKey("Node VCores")) {
-            int numNMs = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Number of nodes").toString());
-            int numMemoryMB = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Node memory (MB)").toString());
-            int numVCores = Integer.parseInt(
-                  SLSRunner.simulateInfoMap.get("Node VCores").toString());
+          if (! maxReset
+              && SLSRunner.getSimulateInfoMap().containsKey("Number of nodes")
+              && SLSRunner.getSimulateInfoMap().containsKey("Node memory (MB)")
+              && SLSRunner.getSimulateInfoMap().containsKey("Node VCores")) {
+            int numNMs = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Number of nodes").toString());
+            int numMemoryMB = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Node memory (MB)").toString());
+            int numVCores = Integer.parseInt(SLSRunner.getSimulateInfoMap()
+                .get("Node VCores").toString());
 
             totalMemoryMB = numNMs * numMemoryMB;
             totalVCores = numNMs * numVCores;
@@ -233,36 +209,5 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
         }
       }
     );
-    metrics.register("variable.queue." + queueName + ".fairshare.memory",
-      new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return queue.getFairShare().getMemorySize();
-        }
-      }
-    );
-    metrics.register("variable.queue." + queueName + ".fairshare.vcores",
-      new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return queue.getFairShare().getVirtualCores();
-        }
-      }
-    );
-  }
-
-  @Override
-  public void untrackQueue(String queueName) {
-    trackedQueues.remove(queueName);
-    metrics.remove("variable.queue." + queueName + ".demand.memory");
-    metrics.remove("variable.queue." + queueName + ".demand.vcores");
-    metrics.remove("variable.queue." + queueName + ".usage.memory");
-    metrics.remove("variable.queue." + queueName + ".usage.vcores");
-    metrics.remove("variable.queue." + queueName + ".minshare.memory");
-    metrics.remove("variable.queue." + queueName + ".minshare.vcores");
-    metrics.remove("variable.queue." + queueName + ".maxshare.memory");
-    metrics.remove("variable.queue." + queueName + ".maxshare.vcores");
-    metrics.remove("variable.queue." + queueName + ".fairshare.memory");
-    metrics.remove("variable.queue." + queueName + ".fairshare.vcores");
   }
 }

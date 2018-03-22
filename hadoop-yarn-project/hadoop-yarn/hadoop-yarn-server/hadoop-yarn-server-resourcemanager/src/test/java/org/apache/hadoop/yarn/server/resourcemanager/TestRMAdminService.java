@@ -26,7 +26,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
@@ -46,12 +49,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -62,10 +70,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
@@ -78,6 +88,11 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestRMAdminService {
 
@@ -96,6 +111,9 @@ public class TestRMAdminService {
 
   @Before
   public void setup() throws IOException {
+    QueueMetrics.clearQueueMetrics();
+    DefaultMetricsSystem.setMiniClusterMode(true);
+
     configuration = new YarnConfiguration();
     configuration.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
@@ -177,6 +195,29 @@ public class TestRMAdminService {
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
     Assert.assertEquals(maxAppsAfter, 5000);
     Assert.assertTrue(maxAppsAfter != maxAppsBefore);
+  }
+
+  @Test
+  public void testAdminRefreshQueuesWithMutableSchedulerConfiguration() {
+    configuration.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    try {
+      rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
+      fail("Expected exception while calling refreshQueues when scheduler" +
+          " configuration is mutable.");
+    } catch (Exception ex) {
+      assertTrue(ex.getMessage().endsWith("Scheduler configuration is " +
+          "mutable. refreshQueues is not allowed in this scenario."));
+    }
   }
 
   @Test
@@ -770,20 +811,7 @@ public class TestRMAdminService {
       YarnException {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
-    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
-    int base = 100;
-    for (String confKey : YarnConfiguration
-        .getServiceAddressConfKeys(configuration)) {
-      configuration.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
-          + (base + 20));
-      configuration.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:"
-          + (base + 40));
-      base = base * 2;
-    }
+    updateConfigurationForRMHA();
     Configuration conf1 = new Configuration(configuration);
     conf1.set(YarnConfiguration.RM_HA_ID, "rm1");
     Configuration conf2 = new Configuration(configuration);
@@ -852,6 +880,78 @@ public class TestRMAdminService {
         rm2.stop();
       }
     }
+  }
+
+  /**
+   * Test that a configuration with no leader election configured fails.
+   */
+  @Test
+  public void testHAConfWithoutLeaderElection() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, false);
+    conf.setBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR, false);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    int base = 100;
+
+    for (String confKey :
+        YarnConfiguration.getServiceAddressConfKeys(configuration)) {
+      conf.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
+          + (base + 20));
+      conf.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:"
+          + (base + 40));
+      base = base * 2;
+    }
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
+  }
+
+  /**
+   * Test that a configuration with a single RM fails.
+   */
+  @Test
+  public void testHAConfWithSingleRMID() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1");
+
+    int base = 100;
+
+    for (String confKey :
+        YarnConfiguration.getServiceAddressConfKeys(configuration)) {
+      conf.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
+          + (base + 20));
+      base = base * 2;
+    }
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
+  }
+
+  /**
+   * Test that a configuration with no service information fails.
+   */
+  @Test
+  public void testHAConfWithoutServiceInfo() {
+    Configuration conf = new Configuration(configuration);
+
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    checkBadConfiguration(conf);
   }
 
   @Test
@@ -1340,4 +1440,114 @@ public class TestRMAdminService {
     }
   }
 
+  @Test
+  public void testSecureRMBecomeActive() throws IOException,
+      YarnException {
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    updateConfigurationForRMHA();
+    configuration.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    configuration.set(YarnConfiguration.RM_HA_ID, "rm1");
+    // upload default configurations
+    uploadDefaultConfiguration();
+
+    ResourceManager resourceManager = new ResourceManager();
+    try {
+      resourceManager.init(configuration);
+      resourceManager.start();
+      Assert.assertTrue(resourceManager.getRMContext().getHAServiceState()
+          == HAServiceState.STANDBY);
+      resourceManager.adminService.transitionToActive(requestInfo);
+    } finally {
+        resourceManager.close();
+    }
+  }
+
+  private void updateConfigurationForRMHA() {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+
+    int base = 1500;
+    for (String confKey : YarnConfiguration
+        .getServiceAddressConfKeys(configuration)) {
+      configuration.set(HAUtil.addSuffix(confKey, "rm1"),
+          "0.0.0.0:" + (base + 20));
+      configuration.set(HAUtil.addSuffix(confKey, "rm2"),
+          "0.0.0.1:" + (base + 40));
+      base = base * 2;
+    }
+  }
+
+  /**
+   * This method initializes an RM with the given configuration and expects it
+   * to fail with a configuration error.
+   *
+   * @param conf the {@link Configuration} to use
+   */
+  private void checkBadConfiguration(Configuration conf) {
+    MockRM rm1 = null;
+
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    try {
+      rm1 = new MockRM(conf);
+      rm1.init(conf);
+      fail("The RM allowed an invalid configuration");
+    } catch (YarnRuntimeException e) {
+      assertTrue("The RM initialization threw an unexpected exception",
+          e.getMessage().startsWith(HAUtil.BAD_CONFIG_MESSAGE_PREFIX));
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testAdminAddToClusterNodeLabelsWithDeprecatedAPIs()
+      throws Exception, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    uploadDefaultConfiguration();
+
+    rm = new MockRM(configuration) {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
+            this.applicationACLsManager, this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.init(configuration);
+    rm.start();
+
+    try {
+      List<String> list = new ArrayList<String>();
+      list.add("a");
+      list.add("b");
+      AddToClusterNodeLabelsRequestProto proto = AddToClusterNodeLabelsRequestProto
+          .newBuilder().addAllDeprecatedNodeLabels(list).build();
+      AddToClusterNodeLabelsRequestPBImpl protoImpl = new AddToClusterNodeLabelsRequestPBImpl(
+          proto);
+      rm.adminService
+          .addToClusterNodeLabels((AddToClusterNodeLabelsRequest) protoImpl);
+    } catch (Exception ex) {
+      fail("Could not update node labels." + ex);
+    }
+
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    ApplicationClientProtocol client = (ApplicationClientProtocol) rpc
+        .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Get node labels collection
+    GetClusterNodeLabelsResponse response = client
+        .getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
+    NodeLabel labelX = NodeLabel.newInstance("a");
+    NodeLabel labelY = NodeLabel.newInstance("b");
+    Assert.assertTrue(
+        response.getNodeLabelList().containsAll(Arrays.asList(labelX, labelY)));
+  }
 }

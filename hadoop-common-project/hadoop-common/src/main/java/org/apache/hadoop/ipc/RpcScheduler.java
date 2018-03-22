@@ -32,4 +32,6 @@ public interface RpcScheduler {
 
   void addResponseTime(String name, int priorityLevel, int queueTime,
       int processingTime);
+
+  void stop();
 }

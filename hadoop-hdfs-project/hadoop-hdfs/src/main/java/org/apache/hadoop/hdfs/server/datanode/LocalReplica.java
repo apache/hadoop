@@ -510,4 +510,17 @@ abstract public class LocalReplica extends ReplicaInfo {
       metaRAF.write(b, 0, checksumsize);
     }
   }
+
+  /**
+   * Sync the parent directory changes to durable device.
+   * @throws IOException
+   */
+  public void fsyncDirectory() throws IOException {
+    File dir = getDir();
+    try {
+      getFileIoProvider().dirSync(getVolume(), getDir());
+    } catch (IOException e) {
+      throw new IOException("Failed to sync " + dir, e);
+    }
+  }
 }

@@ -54,7 +54,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-ls \[-C\] \[-d\] \[-h\] \[-q\] \[-R\] \[-t\] \[-S\] \[-r\] \[-u\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
+          <expected-output>^-ls \[-C\] \[-d\] \[-h\] \[-q\] \[-R\] \[-t\] \[-S\] \[-r\] \[-u\] \[-e\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -136,6 +136,10 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*display and sorting\.</expected-output>
         </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-e\s+Display the erasure coding policy of files and directories\.</expected-output>
+        </comparator>
       </comparators>
     </test>
 
@@ -200,7 +204,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-du \[-s\] \[-h\] \[-x\] &lt;path&gt; \.\.\. :\s*</expected-output>
+          <expected-output>^-du \[-s\] \[-h\] \[-v\] \[-x\] &lt;path&gt; \.\.\. :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -278,7 +282,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] \[-e\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -543,11 +547,51 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*Identical to the -put command\.\s*</expected-output>
+          <expected-output>^\s*Copy files from the local file system into fs.( )*Copying fails if the file already( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*exists, unless the -f flag is given.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*Flags:( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-p                 Preserves access and modification times, ownership and the( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*mode.( )*</expected-output>
+        </comparator>
+        <comparator>
+           <type>RegexpComparator</type>
+           <expected-output>^\s*-f                 Overwrites the destination if it already exists.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-t &lt;thread count&gt;  Number of threads to be used, default is 1.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-l                 Allow DataNode to lazily persist the file to disk. Forces( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*replication factor of 1. This flag will result in reduced( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*durability. Use with care.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-d                 Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -778,7 +822,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*rooted at &lt;path&gt;\.( )*</expected-output>
+          <expected-output>^\s*rooted at &lt;path&gt;\. The EC files will be ignored here\.( )*</expected-output>
         </comparator>
         <comparator>
             <type>RegexpComparator</type>
@@ -867,7 +911,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*blocks \(%b\), type \(%F\), group name of owner \(%g\),( )*</expected-output>
+          <expected-output>^( |\t)*bytes \(%b\), type \(%F\), group name of owner \(%g\),( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -875,15 +919,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*of owner \(%u\), modification date \(%y, %Y\).( )*</expected-output>
+          <expected-output>^( |\t)*of owner \(%u\), access date \(%x, %X\).( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*%y shows UTC date as "yyyy-MM-dd HH:mm:ss" and( )*</expected-output>
+          <expected-output>^( |\t)*modification date \(%y, %Y\).( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*%Y shows milliseconds since January 1, 1970 UTC.( )*</expected-output>
+          <expected-output>^( |\t)*%x and %y show UTC date as "yyyy-MM-dd HH:mm:ss" and( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*%X and %Y show milliseconds since January 1, 1970 UTC.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

@@ -22,28 +22,41 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
 
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.ObjectMetadata;
 
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
@@ -58,6 +71,17 @@ public class AliyunOSSFileSystem extends FileSystem {
   private Path workingDir;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
+  private int maxReadAheadPartNumber;
+  private int maxConcurrentCopyTasksPerDir;
+  private ListeningExecutorService boundedThreadPool;
+  private ListeningExecutorService boundedCopyThreadPool;
+
+  private static final PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+  };
 
   @Override
   public FSDataOutputStream append(Path path, int bufferSize,
@@ -69,6 +93,8 @@ public class AliyunOSSFileSystem extends FileSystem {
   public void close() throws IOException {
     try {
       store.close();
+      boundedThreadPool.shutdown();
+      boundedCopyThreadPool.shutdown();
     } finally {
       super.close();
     }
@@ -101,6 +127,31 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     return new FSDataOutputStream(new AliyunOSSOutputStream(getConf(),
         store, key, progress, statistics), (Statistics)(null));
+  }
+
+  /**
+   * {@inheritDoc}
+   * @throws FileNotFoundException if the parent directory is not present -or
+   * is not a directory.
+   */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path path,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      // expect this to raise an exception if there is no parent
+      if (!getFileStatus(parent).isDirectory()) {
+        throw new FileAlreadyExistsException("Not a directory: " + parent);
+      }
+    }
+    return create(path, permission,
+      flags.contains(CreateFlag.OVERWRITE), bufferSize,
+      replication, blockSize, progress);
   }
 
   @Override
@@ -218,7 +269,8 @@ public class AliyunOSSFileSystem extends FileSystem {
         throw new FileNotFoundException(path + ": No such file or directory!");
       }
     } else if (objectRepresentsDirectory(key, meta.getContentLength())) {
-      return new FileStatus(0, true, 1, 0, 0, qualifiedPath);
+      return new FileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
+           qualifiedPath);
     } else {
       return new FileStatus(meta.getContentLength(), false, 1,
           getDefaultBlockSize(path), meta.getLastModified().getTime(),
@@ -270,22 +322,41 @@ public class AliyunOSSFileSystem extends FileSystem {
     store = new AliyunOSSFileSystemStore();
     store.initialize(name, conf, statistics);
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
+
+    int threadNum = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MULTIPART_DOWNLOAD_THREAD_NUMBER_KEY,
+        Constants.MULTIPART_DOWNLOAD_THREAD_NUMBER_DEFAULT);
+
+    int totalTasks = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MAX_TOTAL_TASKS_KEY, Constants.MAX_TOTAL_TASKS_DEFAULT);
+
+    maxReadAheadPartNumber = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_KEY,
+        Constants.MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT);
+
+    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+        threadNum, totalTasks, 60L, TimeUnit.SECONDS, "oss-read-shared");
+
+    maxConcurrentCopyTasksPerDir = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MAX_CONCURRENT_COPY_TASKS_PER_DIR_KEY,
+        Constants.MAX_CONCURRENT_COPY_TASKS_PER_DIR_DEFAULT);
+
+    int maxCopyThreads = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MAX_COPY_THREADS_NUM_KEY,
+        Constants.MAX_COPY_THREADS_DEFAULT);
+
+    int maxCopyTasks = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MAX_COPY_TASKS_KEY,
+        Constants.MAX_COPY_TASKS_DEFAULT);
+
+    this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
+        maxCopyThreads, maxCopyTasks, 60L,
+        TimeUnit.SECONDS, "oss-copy-unbounded");
+
     setConf(conf);
   }
 
-  /**
-   * Check if OSS object represents a directory.
-   *
-   * @param name object key
-   * @param size object content length
-   * @return true if object represents a directory
-   */
-  private boolean objectRepresentsDirectory(final String name,
-      final long size) {
-    return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
-  }
-
-  /**
+/**
    * Turn a path (relative or otherwise) into an OSS key.
    *
    * @param path the path of the file.
@@ -351,7 +422,7 @@ public class AliyunOSSFileSystem extends FileSystem {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: rd: " + keyPath);
             }
-            result.add(new FileStatus(0, true, 1, 0, 0, keyPath));
+            result.add(getFileStatus(keyPath));
           }
         }
 
@@ -374,6 +445,58 @@ public class AliyunOSSFileSystem extends FileSystem {
     }
 
     return result.toArray(new FileStatus[result.size()]);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listFiles(
+      final Path f, final boolean recursive) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    final FileStatus status = getFileStatus(qualifiedPath);
+    PathFilter filter = new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        return status.isFile() || !path.equals(f);
+      }
+    };
+    FileStatusAcceptor acceptor =
+        new FileStatusAcceptor.AcceptFilesOnly(qualifiedPath);
+    return innerList(f, status, filter, acceptor, recursive);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+      throws IOException {
+    return listLocatedStatus(f, DEFAULT_FILTER);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      final PathFilter filter) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    final FileStatus status = getFileStatus(qualifiedPath);
+    FileStatusAcceptor acceptor =
+        new FileStatusAcceptor.AcceptAllButSelf(qualifiedPath);
+    return innerList(f, status, filter, acceptor, false);
+  }
+
+  private RemoteIterator<LocatedFileStatus> innerList(final Path f,
+      final FileStatus status,
+      final PathFilter filter,
+      final FileStatusAcceptor acceptor,
+      final boolean recursive) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    String key = pathToKey(qualifiedPath);
+
+    if (status.isFile()) {
+      LOG.debug("{} is a File", qualifiedPath);
+      final BlockLocation[] locations = getFileBlockLocations(status,
+        0, status.getLen());
+      return store.singleStatusRemoteIterator(filter.accept(f) ? status : null,
+        locations);
+    } else {
+      return store.createLocatedFileStatusIterator(key, maxKeys, this, filter,
+        acceptor, recursive ? null : "/");
+    }
   }
 
   /**
@@ -444,8 +567,11 @@ public class AliyunOSSFileSystem extends FileSystem {
           " because it is a directory");
     }
 
-    return new FSDataInputStream(new AliyunOSSInputStream(getConf(), store,
-        pathToKey(path), fileStatus.getLen(), statistics));
+    return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
+        new SemaphoredDelegatingExecutor(
+            boundedThreadPool, maxReadAheadPartNumber, true),
+        maxReadAheadPartNumber, store, pathToKey(path), fileStatus.getLen(),
+        statistics));
   }
 
   @Override
@@ -549,14 +675,30 @@ public class AliyunOSSFileSystem extends FileSystem {
     }
 
     store.storeEmptyFile(dstKey);
+    AliyunOSSCopyFileContext copyFileContext = new AliyunOSSCopyFileContext();
+    ExecutorService executorService = MoreExecutors.listeningDecorator(
+        new SemaphoredDelegatingExecutor(boundedCopyThreadPool,
+            maxConcurrentCopyTasksPerDir, true));
     ObjectListing objects = store.listObjects(srcKey, maxKeys, null, true);
     statistics.incrementReadOps(1);
     // Copy files from src folder to dst
+    int copiesToFinish = 0;
     while (true) {
       for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
         String newKey =
             dstKey.concat(objectSummary.getKey().substring(srcKey.length()));
-        store.copyFile(objectSummary.getKey(), newKey);
+
+        //copy operation just copies metadata, oss will support shallow copy
+        executorService.execute(new AliyunOSSCopyFileTask(
+            store, objectSummary.getKey(), newKey, copyFileContext));
+        copiesToFinish++;
+        // No need to call lock() here.
+        // It's ok to copy one more file if the rename operation failed
+        // Reduce the call of lock() can also improve our performance
+        if (copyFileContext.isCopyFailure()) {
+          //some error occurs, break
+          break;
+        }
       }
       if (objects.isTruncated()) {
         String nextMarker = objects.getNextMarker();
@@ -566,7 +708,16 @@ public class AliyunOSSFileSystem extends FileSystem {
         break;
       }
     }
-    return true;
+    //wait operations in progress to finish
+    copyFileContext.lock();
+    try {
+      copyFileContext.awaitAllFinish(copiesToFinish);
+    } catch (InterruptedException e) {
+      LOG.warn("interrupted when wait copies to finish");
+    } finally {
+      copyFileContext.unlock();
+    }
+    return !copyFileContext.isCopyFailure();
   }
 
   @Override

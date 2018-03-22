@@ -101,7 +101,7 @@ public class Server {
    * Enumeration that defines the server status.
    */
   @InterfaceAudience.Private
-  public static enum Status {
+  public enum Status {
     UNDEF(false, false),
     BOOTING(false, true),
     HALTED(true, true),

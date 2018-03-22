@@ -39,6 +39,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.security.sasl.SaslException;
+
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -325,5 +327,25 @@ public class TestRetryProxy {
     assertEquals("Retry interrupted", e.getMessage());
     assertEquals(InterruptedException.class, e.getCause().getClass());
     assertEquals("sleep interrupted", e.getCause().getMessage());
+  }
+
+  @Test
+  public void testNoRetryOnSaslError() throws Exception {
+    RetryPolicy policy = mock(RetryPolicy.class);
+    RetryPolicy realPolicy = RetryPolicies.failoverOnNetworkException(5);
+    setupMockPolicy(policy, realPolicy);
+
+    UnreliableInterface unreliable = (UnreliableInterface) RetryProxy.create(
+        UnreliableInterface.class, unreliableImpl, policy);
+
+    try {
+      unreliable.failsWithSASLExceptionTenTimes();
+      fail("Should fail");
+    } catch (SaslException e) {
+      // expected
+      verify(policy, times(1)).shouldRetry(any(Exception.class), anyInt(),
+          anyInt(), anyBoolean());
+      assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
+    }
   }
 }

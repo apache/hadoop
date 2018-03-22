@@ -19,10 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -34,7 +31,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 public class AssignmentInformation {
 
   public enum Operation {
-    ALLOCATION, RESERVATION
+    ALLOCATION, RESERVATION;
+    private static int SIZE = Operation.values().length;
+    static int size() {
+      return SIZE;
+    }
   }
 
   public static class AssignmentDetails {
@@ -49,23 +50,25 @@ public class AssignmentInformation {
     }
   }
 
-  private final Map<Operation, Integer> operationCounts;
-  private final Map<Operation, Resource> operationResources;
-  private final Map<Operation, List<AssignmentDetails>> operationDetails;
+  private final int[] operationCounts;
+  private final Resource[] operationResources;
+  private final List<AssignmentDetails>[] operationDetails;
 
+  @SuppressWarnings("unchecked")
   public AssignmentInformation() {
-    this.operationCounts = new HashMap<>();
-    this.operationResources = new HashMap<>();
-    this.operationDetails = new HashMap<>();
-    for (Operation op : Operation.values()) {
-      operationCounts.put(op, 0);
-      operationResources.put(op, Resource.newInstance(0, 0));
-      operationDetails.put(op, new ArrayList<>());
+    int numOps = Operation.size();
+    this.operationCounts = new int[numOps];
+    this.operationResources = new Resource[numOps];
+    this.operationDetails = new List[numOps];
+    for (int i=0; i < numOps; i++) {
+      operationCounts[i] = 0;
+      operationResources[i] = Resource.newInstance(0, 0);
+      operationDetails[i] = new ArrayList<>();
     }
   }
 
   public int getNumAllocations() {
-    return operationCounts.get(Operation.ALLOCATION);
+    return operationCounts[Operation.ALLOCATION.ordinal()];
   }
 
   public void incrAllocations() {
@@ -77,7 +80,7 @@ public class AssignmentInformation {
   }
 
   public int getNumReservations() {
-    return operationCounts.get(Operation.RESERVATION);
+    return operationCounts[Operation.RESERVATION.ordinal()];
   }
 
   public void incrReservations() {
@@ -89,20 +92,20 @@ public class AssignmentInformation {
   }
 
   private void increment(Operation op, int by) {
-    operationCounts.put(op, operationCounts.get(op) + by);
+    operationCounts[op.ordinal()] += by;
   }
 
   public Resource getAllocated() {
-    return operationResources.get(Operation.ALLOCATION);
+    return operationResources[Operation.ALLOCATION.ordinal()];
   }
 
   public Resource getReserved() {
-    return operationResources.get(Operation.RESERVATION);
+    return operationResources[Operation.RESERVATION.ordinal()];
   }
 
   private void addAssignmentDetails(Operation op, RMContainer rmContainer,
       String queue) {
-    operationDetails.get(op).add(new AssignmentDetails(rmContainer, queue));
+    getDetails(op).add(new AssignmentDetails(rmContainer, queue));
   }
 
   public void addAllocationDetails(RMContainer rmContainer, String queue) {
@@ -113,21 +116,22 @@ public class AssignmentInformation {
     addAssignmentDetails(Operation.RESERVATION, rmContainer, queue);
   }
 
+  private List<AssignmentDetails> getDetails(Operation op) {
+    return operationDetails[op.ordinal()];
+  }
+
   public List<AssignmentDetails> getAllocationDetails() {
-    return operationDetails.get(Operation.ALLOCATION);
+    return getDetails(Operation.ALLOCATION);
   }
 
   public List<AssignmentDetails> getReservationDetails() {
-    return operationDetails.get(Operation.RESERVATION);
+    return getDetails(Operation.RESERVATION);
   }
 
   private RMContainer getFirstRMContainerFromOperation(Operation op) {
-    if (null != operationDetails.get(op)) {
-      List<AssignmentDetails> assignDetails =
-          operationDetails.get(op);
-      if (!assignDetails.isEmpty()) {
-        return assignDetails.get(0).rmContainer;
-      }
+    List<AssignmentDetails> assignDetails = getDetails(op);
+    if (assignDetails != null && !assignDetails.isEmpty()) {
+      return assignDetails.get(0).rmContainer;
     }
     return null;
   }

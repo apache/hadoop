@@ -83,41 +83,46 @@ public class TestCryptoStreamsNormal extends CryptoStreamsTestBase {
   
   @Ignore("Wrapped stream doesn't support Syncable")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSyncable() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support PositionedRead")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testPositionedRead() throws IOException {}
 
   @Ignore("Wrapped stream doesn't support ReadFully")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testReadFully() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support Seek")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSeek() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support ByteBufferRead")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testByteBufferRead() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support ByteBufferRead, Seek")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testCombinedOp() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support SeekToNewSource")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testSeekToNewSource() throws IOException {}
   
   @Ignore("Wrapped stream doesn't support HasEnhancedByteBufferAccess")
   @Override
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   public void testHasEnhancedByteBufferAccess() throws IOException {}
+
+  @Ignore("ByteArrayInputStream does not support unbuffer")
+  @Override
+  @Test
+  public void testUnbuffer() throws Exception {}
 }

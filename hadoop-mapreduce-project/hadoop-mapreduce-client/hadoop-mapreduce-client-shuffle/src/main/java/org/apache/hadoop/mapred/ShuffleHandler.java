@@ -54,10 +54,7 @@ import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -80,10 +77,10 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -104,6 +101,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -126,8 +124,15 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import org.jboss.netty.handler.timeout.IdleState;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
+import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.CharsetUtil;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -142,9 +147,10 @@ import com.google.protobuf.ByteString;
 
 public class ShuffleHandler extends AuxiliaryService {
 
-  private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
-  private static final Log AUDITLOG =
-      LogFactory.getLog(ShuffleHandler.class.getName()+".audit");
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(ShuffleHandler.class);
+  private static final org.slf4j.Logger AUDITLOG =
+      LoggerFactory.getLogger(ShuffleHandler.class.getName()+".audit");
   public static final String SHUFFLE_MANAGE_OS_CACHE = "mapreduce.shuffle.manage.os.cache";
   public static final boolean DEFAULT_SHUFFLE_MANAGE_OS_CACHE = true;
 
@@ -240,6 +246,7 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final boolean DEFAULT_SHUFFLE_TRANSFERTO_ALLOWED = true;
   public static final boolean WINDOWS_DEFAULT_SHUFFLE_TRANSFERTO_ALLOWED = 
       false;
+  private static final String TIMEOUT_HANDLER = "timeout";
 
   /* the maximum number of files a single GET request can
    open simultaneously during shuffle
@@ -249,8 +256,9 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final int DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES = 3;
 
   boolean connectionKeepAliveEnabled = false;
-  int connectionKeepAliveTimeOut;
-  int mapOutputMetaInfoCacheSize;
+  private int connectionKeepAliveTimeOut;
+  private int mapOutputMetaInfoCacheSize;
+  private Timer timer;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -293,7 +301,15 @@ public class ShuffleHandler extends AuxiliaryService {
       int waitCount = this.reduceContext.getMapsToWait().decrementAndGet();
       if (waitCount == 0) {
         metrics.operationComplete(future);
-        future.getChannel().close();
+        // Let the idle timer handler close keep-alive connections
+        if (reduceContext.getKeepAlive()) {
+          ChannelPipeline pipeline = future.getChannel().getPipeline();
+          TimeoutHandler timeoutHandler =
+              (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
+          timeoutHandler.setEnabledTimeout(true);
+        } else {
+          future.getChannel().close();
+        }
       } else {
         pipelineFact.getSHUFFLE().sendMap(reduceContext);
       }
@@ -314,11 +330,12 @@ public class ShuffleHandler extends AuxiliaryService {
     private String user;
     private Map<String, Shuffle.MapOutputInfo> infoMap;
     private String jobId;
+    private final boolean keepAlive;
 
     public ReduceContext(List<String> mapIds, int rId,
                          ChannelHandlerContext context, String usr,
                          Map<String, Shuffle.MapOutputInfo> mapOutputInfoMap,
-                         String jobId) {
+                         String jobId, boolean keepAlive) {
 
       this.mapIds = mapIds;
       this.reduceId = rId;
@@ -339,6 +356,7 @@ public class ShuffleHandler extends AuxiliaryService {
       this.user = usr;
       this.infoMap = mapOutputInfoMap;
       this.jobId = jobId;
+      this.keepAlive = keepAlive;
     }
 
     public int getReduceId() {
@@ -371,6 +389,10 @@ public class ShuffleHandler extends AuxiliaryService {
 
     public AtomicInteger getMapsToWait() {
       return mapsToWait;
+    }
+
+    public boolean getKeepAlive() {
+      return keepAlive;
     }
   }
 
@@ -508,8 +530,10 @@ public class ShuffleHandler extends AuxiliaryService {
     secretManager = new JobTokenSecretManager();
     recoverState(conf);
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
+    // Timer is shared across entire factory and must be released separately
+    timer = new HashedWheelTimer();
     try {
-      pipelineFact = new HttpPipelineFactory(conf);
+      pipelineFact = new HttpPipelineFactory(conf, timer);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
@@ -548,6 +572,10 @@ public class ShuffleHandler extends AuxiliaryService {
     }
     if (pipelineFact != null) {
       pipelineFact.destroy();
+    }
+    if (timer != null) {
+      // Release this shared timer resource
+      timer.stop();
     }
     if (stateDb != null) {
       stateDb.close();
@@ -747,7 +775,8 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   private static class LevelDBLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LevelDBLogger.class);
+    private static final org.slf4j.Logger LOG =
+        LoggerFactory.getLogger(LevelDBLogger.class);
 
     @Override
     public void log(String message) {
@@ -755,12 +784,29 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  static class TimeoutHandler extends IdleStateAwareChannelHandler {
+
+    private boolean enabledTimeout;
+
+    void setEnabledTimeout(boolean enabledTimeout) {
+      this.enabledTimeout = enabledTimeout;
+    }
+
+    @Override
+    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
+      if (e.getState() == IdleState.WRITER_IDLE && enabledTimeout) {
+        e.getChannel().close();
+      }
+    }
+  }
+
   class HttpPipelineFactory implements ChannelPipelineFactory {
 
     final Shuffle SHUFFLE;
     private SSLFactory sslFactory;
+    private final ChannelHandler idleStateHandler;
 
-    public HttpPipelineFactory(Configuration conf) throws Exception {
+    public HttpPipelineFactory(Configuration conf, Timer timer) throws Exception {
       SHUFFLE = getShuffle(conf);
       if (conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
                           MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT)) {
@@ -768,6 +814,7 @@ public class ShuffleHandler extends AuxiliaryService {
         sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
         sslFactory.init();
       }
+      this.idleStateHandler = new IdleStateHandler(timer, 0, connectionKeepAliveTimeOut, 0);
     }
 
     public Shuffle getSHUFFLE() {
@@ -791,6 +838,8 @@ public class ShuffleHandler extends AuxiliaryService {
       pipeline.addLast("encoder", new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
+      pipeline.addLast("idle", idleStateHandler);
+      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
       return pipeline;
       // TODO factor security manager into pipeline
       // TODO factor out encode/decode to permit binary shuffle
@@ -805,8 +854,6 @@ public class ShuffleHandler extends AuxiliaryService {
     private static final int ALLOWED_CONCURRENCY = 16;
     private final Configuration conf;
     private final IndexCache indexCache;
-    private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     private int port;
     private final LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache =
       CacheBuilder.newBuilder().expireAfterAccess(EXPIRE_AFTER_ACCESS_MINUTES,
@@ -839,10 +886,10 @@ public class ShuffleHandler extends AuxiliaryService {
             Exception {
           String base = getBaseLocation(key.jobId, key.user);
           String attemptBase = base + key.attemptId;
-          Path indexFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + INDEX_FILE_NAME, conf);
-          Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + DATA_FILE_NAME, conf);
+          Path indexFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + INDEX_FILE_NAME);
+          Path mapOutputFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + DATA_FILE_NAME);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loaded : " + key + " via loader");
@@ -943,13 +990,6 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
 
-      // this audit log is disabled by default,
-      // to turn it on please enable this audit log
-      // on log4j.properties by uncommenting the setting
-      if (AUDITLOG.isDebugEnabled()) {
-        AUDITLOG.debug("shuffle for " + jobQ.get(0) +
-                         " reducer " + reduceQ.get(0));
-      }
       int reduceId;
       String jobId;
       try {
@@ -981,6 +1021,10 @@ public class ShuffleHandler extends AuxiliaryService {
       Map<String, MapOutputInfo> mapOutputInfoMap =
           new HashMap<String, MapOutputInfo>();
       Channel ch = evt.getChannel();
+      ChannelPipeline pipeline = ch.getPipeline();
+      TimeoutHandler timeoutHandler =
+          (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
+      timeoutHandler.setEnabledTimeout(false);
       String user = userRsrc.get(jobId);
 
       try {
@@ -995,8 +1039,9 @@ public class ShuffleHandler extends AuxiliaryService {
       }
       ch.write(response);
       //Initialize one ReduceContext object per messageReceived call
+      boolean keepAlive = keepAliveParam || connectionKeepAliveEnabled;
       ReduceContext reduceContext = new ReduceContext(mapIds, reduceId, ctx,
-          user, mapOutputInfoMap, jobId);
+          user, mapOutputInfoMap, jobId, keepAlive);
       for (int i = 0; i < Math.min(maxSessionOpenFiles, mapIds.size()); i++) {
         ChannelFuture nextMap = sendMap(reduceContext);
         if(nextMap == null) {
@@ -1041,7 +1086,11 @@ public class ShuffleHandler extends AuxiliaryService {
           }
           nextMap.addListener(new ReduceMapFileCount(reduceContext));
         } catch (IOException e) {
-          LOG.error("Shuffle error :", e);
+          if (e instanceof DiskChecker.DiskErrorException) {
+            LOG.error("Shuffle error :" + e);
+          } else {
+            LOG.error("Shuffle error :", e);
+          }
           String errorMessage = getErrorMessage(e);
           sendError(reduceContext.getCtx(), errorMessage,
               INTERNAL_SERVER_ERROR);
@@ -1129,6 +1178,17 @@ public class ShuffleHandler extends AuxiliaryService {
 
       // Now set the response headers.
       setResponseHeaders(response, keepAliveParam, contentLength);
+
+      // this audit log is disabled by default,
+      // to turn it on please enable this audit log
+      // on log4j.properties by uncommenting the setting
+      if (AUDITLOG.isDebugEnabled()) {
+        StringBuilder sb = new StringBuilder("shuffle for ");
+        sb.append(jobId).append(" reducer ").append(reduce);
+        sb.append(" length ").append(contentLength);
+        sb.append(" mappers: ").append(mapIds);
+        AUDITLOG.debug(sb.toString());
+      }
     }
 
     protected void setResponseHeaders(HttpResponse response,

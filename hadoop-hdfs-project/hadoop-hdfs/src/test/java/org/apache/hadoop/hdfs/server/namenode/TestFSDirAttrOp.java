@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -36,10 +38,15 @@ public class TestFSDirAttrOp {
 
   private boolean unprotectedSetTimes(long atime, long atime0, long precision,
       long mtime, boolean force) throws QuotaExceededException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    SnapshotManager ssMgr = Mockito.mock(SnapshotManager.class);
     FSDirectory fsd = Mockito.mock(FSDirectory.class);
     INodesInPath iip = Mockito.mock(INodesInPath.class);
     INode inode = Mockito.mock(INode.class);
 
+    when(fsd.getFSNamesystem()).thenReturn(fsn);
+    when(fsn.getSnapshotManager()).thenReturn(ssMgr);
+    when(ssMgr.getSkipCaptureAccessTimeOnlyChange()).thenReturn(false);
     when(fsd.getAccessTimePrecision()).thenReturn(precision);
     when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
     when(iip.getLastINode()).thenReturn(inode);
@@ -52,25 +59,25 @@ public class TestFSDirAttrOp {
   @Test
   public void testUnprotectedSetTimes() throws Exception {
     // atime < access time + precision
-    assertFalse("SetTimes should not update access time"
+    assertFalse("SetTimes should not update access time "
           + "because it's within the last precision interval",
         unprotectedSetTimes(100, 0, 1000, -1, false));
 
     // atime = access time + precision
-    assertFalse("SetTimes should not update access time"
+    assertFalse("SetTimes should not update access time "
           + "because it's within the last precision interval",
         unprotectedSetTimes(1000, 0, 1000, -1, false));
 
     // atime > access time + precision
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(1011, 10, 1000, -1, false));
 
     // atime < access time + precision, but force is set
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(100, 0, 1000, -1, true));
 
     // atime < access time + precision, but mtime is set
-    assertTrue("SetTimes should store access time",
+    assertTrue("SetTimes should update access time",
         unprotectedSetTimes(100, 0, 1000, 1, false));
   }
 }

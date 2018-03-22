@@ -133,7 +133,7 @@ public class TestDataTransferProtocol {
       LOG.info("Expected: " + expected);
       
       if (eofExpected) {
-        throw new IOException("Did not recieve IOException when an exception " +
+        throw new IOException("Did not receive IOException when an exception " +
                               "is expected while reading from " + datanode); 
       }
       assertEquals(expected, received);
@@ -559,6 +559,7 @@ public class TestDataTransferProtocol {
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], new StorageType[1], null, stage,
         0, block.getNumBytes(), block.getNumBytes(), newGS,
-        checksum, CachingStrategy.newDefaultStrategy(), false, false, null);
+        checksum, CachingStrategy.newDefaultStrategy(), false, false,
+        null, null, new String[0]);
   }
 }

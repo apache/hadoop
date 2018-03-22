@@ -26,7 +26,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,8 +46,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -56,6 +60,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -136,8 +141,8 @@ import org.junit.Test;
  * </ol>
  */
 public class TestLinuxContainerExecutor {
-  private static final Log LOG = LogFactory
-    .getLog(TestLinuxContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestLinuxContainerExecutor.class);
 
   private static File workSpace;
   static {
@@ -305,11 +310,13 @@ public class TestLinuxContainerExecutor {
     return cId;
   }
 
-  private int runAndBlock(String... cmd) throws IOException {
+  private int runAndBlock(String... cmd)
+      throws IOException, ConfigurationException {
     return runAndBlock(getNextContainerId(), cmd);
   }
 
-  private int runAndBlock(ContainerId cId, String... cmd) throws IOException {
+  private int runAndBlock(ContainerId cId, String... cmd)
+      throws IOException, ConfigurationException {
     String appId = "APP_" + getNextId();
     Container container = mock(Container.class);
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
@@ -448,7 +455,7 @@ public class TestLinuxContainerExecutor {
       public void run() {
         try {
           runAndBlock(sleepId, "sleep", "100");
-        } catch (IOException e) {
+        } catch (IOException|ConfigurationException e) {
           LOG.warn("Caught exception while running sleep", e);
         }
       };
@@ -625,7 +632,7 @@ public class TestLinuxContainerExecutor {
     LinuxContainerExecutor lce = new LinuxContainerExecutor();
     lce.setConf(conf);
     try {
-      lce.init();
+      lce.init(null);
     } catch (IOException e) {
       // expected if LCE isn't setup right, but not necessary for this test
     }
@@ -644,6 +651,28 @@ public class TestLinuxContainerExecutor {
         .build());
     assertTrue("postExec not called after reacquisition",
         TestResourceHandler.postExecContainers.contains(cid));
+  }
+
+  @Test
+  public void testRemoveDockerContainer() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(12345, 67890);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 54321);
+    String cid = ContainerId.newContainerId(attemptId, 9876).toString();
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    lce.removeDockerContainer(cid);
+    verify(lce, times(1)).removeDockerContainer(cid);
+  }
+
+  @Test
+  public void testReapContainer() throws Exception {
+    Container container = mock(Container.class);
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
+    builder.setContainer(container).setUser("foo");
+    ContainerReapContext ctx = builder.build();
+    lce.reapContainer(ctx);
+    verify(lce, times(1)).reapContainer(ctx);
   }
 
   private static class TestResourceHandler implements LCEResourcesHandler {

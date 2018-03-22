@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
 import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
@@ -35,32 +34,32 @@ export default DS.JSONAPISerializer.extend({
         nodeHostName: payload.nodeHostName,
         nodeHTTPAddress: payload.nodeHTTPAddress,
         lastHealthUpdate: Converter.timeStampToDate(payload.lastHealthUpdate),
-        healthReport: payload.healthReport,
+        healthReport: payload.healthReport || 'N/A',
         numContainers: payload.numContainers,
         usedMemoryMB: payload.usedMemoryMB,
         availMemoryMB: payload.availMemoryMB,
         usedVirtualCores: payload.usedVirtualCores,
         availableVirtualCores: payload.availableVirtualCores,
         version: payload.version,
-        nodeLabels: payload.nodeLabels
+        nodeLabels: payload.nodeLabels,
+        usedResource: payload.usedResource,
+        availableResource: payload.availableResource
       }
     };
     return fixedPayload;
   },
 
-  normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
     // payload is of the form {"nodeInfo":{}}
     var p = this.internalNormalizeSingleResponse(store,
         primaryModelClass, payload, id);
     return { data: p };
   },
 
-  normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+  normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
     // expected response is of the form { data: [ {}, {} ] }
     var normalizedArrayResponse = {};
-    if (payload.nodes) {
+    if (payload.nodes && payload.nodes.node) {
       // payload is of the form { "nodes": { "node": [ {},{},{} ]  } }
       normalizedArrayResponse.data = payload.nodes.node.map(singleNode => {
         return this.internalNormalizeSingleResponse(store, primaryModelClass,

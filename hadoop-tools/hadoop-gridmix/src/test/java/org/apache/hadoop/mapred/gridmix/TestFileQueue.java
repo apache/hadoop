@@ -48,8 +48,8 @@ public class TestFileQueue {
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
-    final Path p = new Path(System.getProperty("test.build.data", "/tmp"),
-        "testFileQueue").makeQualified(fs);
+    final Path p = fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp"), "testFileQueue"));
     fs.delete(p, true);
     final byte[] b = new byte[BLOCK];
     for (int i = 0; i < NFILES; ++i) {
@@ -71,8 +71,8 @@ public class TestFileQueue {
   public static void cleanup() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.getLocal(conf).getRaw();
-    final Path p = new Path(System.getProperty("test.build.data", "/tmp"),
-        "testFileQueue").makeQualified(fs);
+    final Path p = fs.makeQualified(new Path(
+        System.getProperty("test.build.data", "/tmp"), "testFileQueue"));
     fs.delete(p, true);
   }
 

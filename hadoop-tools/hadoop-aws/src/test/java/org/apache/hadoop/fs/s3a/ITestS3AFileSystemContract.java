@@ -20,12 +20,16 @@ package org.apache.hadoop.fs.s3a;
 
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
+
+import static org.junit.Assume.*;
+import static org.junit.Assert.*;
 
 /**
  *  Tests a live S3 system. If your keys and bucket aren't specified, all tests
@@ -46,73 +50,54 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   @Rule
   public TestName methodName = new TestName();
 
-  @Before
-  public void nameThread() {
+  private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
-  @Override
+  @Before
   public void setUp() throws Exception {
+    nameThread();
     Configuration conf = new Configuration();
 
     fs = S3ATestUtils.createTestFileSystem(conf);
+    assumeNotNull(fs);
     basePath = fs.makeQualified(
-        S3ATestUtils.createTestPath(new Path("/s3afilesystemcontract")));
-    super.setUp();
-  }
-
-  /**
-   * This path explicitly places all absolute paths under the per-test suite
-   * path directory; this allows the test to run in parallel.
-   * @param pathString path string as input
-   * @return a qualified path string.
-   */
-  protected Path path(String pathString) {
-    if (pathString.startsWith("/")) {
-      return fs.makeQualified(new Path(basePath, pathString));
-    } else {
-      return super.path(pathString);
-    }
+        S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
   }
 
   @Override
-  protected void tearDown() throws Exception {
-    if (fs != null) {
-      fs.delete(basePath, true);
-    }
-    super.tearDown();
+  public Path getTestBaseDir() {
+    return basePath;
   }
 
-  @Override
+  @Test
   public void testMkdirsWithUmask() throws Exception {
     // not supported
   }
 
-  @Override
+  @Test
   public void testRenameDirectoryAsExistingDirectory() throws Exception {
-    if (!renameSupported()) {
-      return;
-    }
+    assumeTrue(renameSupported());
 
-    Path src = path("/test/hadoop/dir");
+    Path src = path("testRenameDirectoryAsExisting/dir");
     fs.mkdirs(src);
-    createFile(path("/test/hadoop/dir/file1"));
-    createFile(path("/test/hadoop/dir/subdir/file2"));
+    createFile(path(src + "/file1"));
+    createFile(path(src + "/subdir/file2"));
 
-    Path dst = path("/test/new/newdir");
+    Path dst = path("testRenameDirectoryAsExistingNew/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
     assertFalse("Nested file1 exists",
-                fs.exists(path("/test/hadoop/dir/file1")));
+        fs.exists(path(src + "/file1")));
     assertFalse("Nested file2 exists",
-                fs.exists(path("/test/hadoop/dir/subdir/file2")));
+        fs.exists(path(src + "/subdir/file2")));
     assertTrue("Renamed nested file1 exists",
-               fs.exists(path("/test/new/newdir/file1")));
+        fs.exists(path(dst + "/file1")));
     assertTrue("Renamed nested exists",
-               fs.exists(path("/test/new/newdir/subdir/file2")));
+        fs.exists(path(dst + "/subdir/file2")));
   }
 
-//  @Override
+  @Test
   public void testMoveDirUnderParent() throws Throwable {
     // not support because
     // Fails if dst is a directory that is not empty.

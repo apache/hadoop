@@ -141,6 +141,12 @@ public class EagerKeyGeneratorKeyProviderCryptoExtension
         throws IOException, GeneralSecurityException {
       return keyProviderCryptoExtension.reencryptEncryptedKey(ekv);
     }
+
+    @Override
+    public void reencryptEncryptedKeys(List<EncryptedKeyVersion> ekvs)
+        throws IOException, GeneralSecurityException {
+      keyProviderCryptoExtension.reencryptEncryptedKeys(ekvs);
+    }
   }
 
   /**
@@ -182,5 +188,11 @@ public class EagerKeyGeneratorKeyProviderCryptoExtension
     KeyVersion keyVersion = super.rollNewVersion(name, material);
     getExtension().drain(name);
     return keyVersion;
+  }
+
+  @Override
+  public void invalidateCache(String name) throws IOException {
+    super.invalidateCache(name);
+    getExtension().drain(name);
   }
 }

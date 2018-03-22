@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.IOException;
 
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 /**
  * A JUnit test to test {@link YarnVersionInfo}
@@ -38,9 +38,12 @@ public class TestYarnVersionInfo {
 
     // can't easily know what the correct values are going to be so just
     // make sure they aren't Unknown
-    assertTrue("getVersion returned Unknown", !YarnVersionInfo.getVersion().equals("Unknown"));
-    assertTrue("getUser returned Unknown", !YarnVersionInfo.getUser().equals("Unknown"));
-    assertTrue("getSrcChecksum returned Unknown", !YarnVersionInfo.getSrcChecksum().equals("Unknown"));
+    assertNotEquals("getVersion returned Unknown",
+        "Unknown", YarnVersionInfo.getVersion());
+    assertNotEquals("getUser returned Unknown",
+        "Unknown", YarnVersionInfo.getUser());
+    assertNotEquals("getSrcChecksum returned Unknown",
+        "Unknown", YarnVersionInfo.getSrcChecksum());
 
     // these could be Unknown if the VersionInfo generated from code not in svn or git
     // so just check that they return something

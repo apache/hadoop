@@ -75,8 +75,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -762,12 +760,12 @@ public class TestSchedulerUtils {
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler, rmContext);
-      Assert.assertTrue(resReq.getNodeLabelExpression().equals("x"));
+      Assert.assertEquals("x", resReq.getNodeLabelExpression());
       
       resReq.setNodeLabelExpression(" y ");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler, rmContext);
-      Assert.assertTrue(resReq.getNodeLabelExpression().equals("y"));
+      Assert.assertEquals("y", resReq.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when request labels is a subset of queue labels");
@@ -777,9 +775,11 @@ public class TestSchedulerUtils {
     }
   }
 
-  public static void waitSchedulerApplicationAttemptStopped(CapacityScheduler cs,
+  public static void waitSchedulerApplicationAttemptStopped(
+      AbstractYarnScheduler ys,
       ApplicationAttemptId attemptId) throws InterruptedException {
-    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(attemptId);
+    SchedulerApplicationAttempt schedulerApp =
+        ys.getApplicationAttempt(attemptId);
     if (null == schedulerApp) {
       return;
     }
@@ -803,6 +803,7 @@ public class TestSchedulerUtils {
           Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
           EventHandler<SchedulerEvent> handler, String queueName)
           throws Exception {
+
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =

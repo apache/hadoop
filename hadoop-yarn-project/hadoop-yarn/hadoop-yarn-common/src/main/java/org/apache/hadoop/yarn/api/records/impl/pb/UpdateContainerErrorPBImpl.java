@@ -74,6 +74,22 @@ public class UpdateContainerErrorPBImpl extends UpdateContainerError {
   }
 
   @Override
+  public int getCurrentContainerVersion() {
+    YarnServiceProtos.UpdateContainerErrorProtoOrBuilder p =
+        viaProto ? proto : builder;
+    if (!p.hasCurrentContainerVersion()) {
+      return 0;
+    }
+    return p.getCurrentContainerVersion();
+  }
+
+  @Override
+  public void setCurrentContainerVersion(int containerVersion) {
+    maybeInitBuilder();
+    builder.setCurrentContainerVersion(containerVersion);
+  }
+
+  @Override
   public UpdateContainerRequest getUpdateContainerRequest() {
     YarnServiceProtos.UpdateContainerErrorProtoOrBuilder p = viaProto ? proto
         : builder;

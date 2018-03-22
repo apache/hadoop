@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
@@ -41,16 +41,16 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
   private static final Log LOG =
       LogFactory.getLog(RMTimelineCollectorManager.class);
 
-  private RMContext rmContext;
+  private ResourceManager rm;
 
-  public RMTimelineCollectorManager(RMContext rmContext) {
+  public RMTimelineCollectorManager(ResourceManager resourceManager) {
     super(RMTimelineCollectorManager.class.getName());
-    this.rmContext = rmContext;
+    this.rm = resourceManager;
   }
 
   @Override
   protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
-    RMApp app = rmContext.getRMApps().get(appId);
+    RMApp app = rm.getRMContext().getRMApps().get(appId);
     if (app == null) {
       throw new YarnRuntimeException(
           "Unable to get the timeline collector context info for a " +

@@ -24,14 +24,13 @@ import java.util.Arrays;
 import java.util.LinkedList;
 
 import org.apache.commons.lang.WordUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -39,12 +38,14 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Provide command line access to a FileSystem. */
 @InterfaceAudience.Private
 public class FsShell extends Configured implements Tool {
   
-  static final Log LOG = LogFactory.getLog(FsShell.class);
+  static final Logger LOG = LoggerFactory.getLogger(FsShell.class);
 
   private static final int MAX_LINE_WIDTH = 80;
 
@@ -99,6 +100,7 @@ public class FsShell extends Configured implements Tool {
   
   protected void init() throws IOException {
     getConf().setQuietMode(true);
+    UserGroupInformation.setConfiguration(getConf());
     if (commandFactory == null) {
       commandFactory = new CommandFactory(getConf());
       commandFactory.addObject(new Help(), "-help");

@@ -218,8 +218,8 @@ public class TestNMWebServer {
       Context context = mock(Context.class);
       Container container =
           new ContainerImpl(conf, dispatcher, launchContext,
-            null, metrics,
-            BuilderUtils.newContainerTokenIdentifier(containerToken), context) {
+            null, metrics, BuilderUtils.newContainerTokenIdentifier(
+                containerToken), context) {
 
             @Override
             public ContainerState getContainerState() {

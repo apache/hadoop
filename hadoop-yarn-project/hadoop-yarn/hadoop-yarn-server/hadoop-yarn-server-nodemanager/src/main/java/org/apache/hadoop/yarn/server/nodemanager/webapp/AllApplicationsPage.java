@@ -31,17 +31,17 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.BODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.BODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 
 public class AllApplicationsPage extends NMView {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     setTitle("Applications running on this node");
     set(DATATABLES_ID, "applications");
@@ -88,22 +88,22 @@ public class AllApplicationsPage extends NMView {
             .table("#applications")
               .thead()
                 .tr()
-                  .td()._("ApplicationId")._()
-                  .td()._("ApplicationState")._()
-                ._()
-               ._()
+                  .td().__("ApplicationId").__()
+                  .td().__("ApplicationState").__()
+                .__()
+               .__()
                .tbody();
       for (Entry<ApplicationId, Application> entry : this.nmContext
           .getApplications().entrySet()) {
         AppInfo info = new AppInfo(entry.getValue());
         tableBody
           .tr()
-            .td().a(url("application", info.getId()), info.getId())._()
-            .td()._(info.getState())
-            ._()
-          ._();
+            .td().a(url("application", info.getId()), info.getId()).__()
+            .td().__(info.getState())
+            .__()
+          .__();
       }
-      tableBody._()._()._();
+      tableBody.__().__().__();
     }
   }
 }

@@ -48,7 +48,6 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Stable
 public class ClientRMProxy<T> extends RMProxy<T>  {
   private static final Log LOG = LogFactory.getLog(ClientRMProxy.class);
-  private static final ClientRMProxy INSTANCE = new ClientRMProxy();
 
   private interface ClientRMProtocols extends ApplicationClientProtocol,
       ApplicationMasterProtocol, ResourceManagerAdministrationProtocol {
@@ -69,7 +68,8 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
    */
   public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {
-    return createRMProxy(configuration, protocol, INSTANCE);
+    ClientRMProxy<T> clientRMProxy = new ClientRMProxy<>();
+    return createRMProxy(configuration, protocol, clientRMProxy);
   }
 
   private static void setAMRMTokenService(final Configuration conf)
@@ -84,7 +84,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
 
   @Private
   @Override
-  protected InetSocketAddress getRMAddress(YarnConfiguration conf,
+  public InetSocketAddress getRMAddress(YarnConfiguration conf,
       Class<?> protocol) throws IOException {
     if (protocol == ApplicationClientProtocol.class) {
       return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
@@ -111,7 +111,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
 
   @Private
   @Override
-  protected void checkAllowedProtocols(Class<?> protocol) {
+  public void checkAllowedProtocols(Class<?> protocol) {
     Preconditions.checkArgument(
         protocol.isAssignableFrom(ClientRMProtocols.class),
         "RM does not support this client protocol");

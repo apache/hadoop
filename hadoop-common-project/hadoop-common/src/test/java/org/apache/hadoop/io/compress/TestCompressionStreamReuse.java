@@ -24,8 +24,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -36,11 +34,15 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class TestCompressionStreamReuse {
-  private static final Log LOG = LogFactory
-      .getLog(TestCompressionStreamReuse.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestCompressionStreamReuse.class);
 
   private Configuration conf = new Configuration();
   private int count = 10000;
@@ -56,6 +58,13 @@ public class TestCompressionStreamReuse {
   public void testGzipCompressStreamReuse() throws IOException {
     resetStateTest(conf, seed, count,
         "org.apache.hadoop.io.compress.GzipCodec");
+  }
+
+  @Test
+  public void testZStandardCompressStreamReuse() throws IOException {
+    assumeTrue(ZStandardCodec.isNativeCodeLoaded());
+    resetStateTest(conf, seed, count,
+        "org.apache.hadoop.io.compress.ZStandardCodec");
   }
 
   @Test

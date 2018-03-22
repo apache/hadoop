@@ -33,6 +33,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationAttemptEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
@@ -43,7 +44,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.QueueEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.UserEntity;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
@@ -80,7 +81,7 @@ public class TestTimelineServiceClientIntegration {
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager, conf);
-      auxService.addApplication(ApplicationId.newInstance(0, 1));
+      auxService.addApplication(ApplicationId.newInstance(0, 1), "user");
     } catch (ExitUtil.ExitException e) {
       fail();
     }
@@ -96,12 +97,12 @@ public class TestTimelineServiceClientIntegration {
 
   @Test
   public void testPutEntities() throws Exception {
-    TimelineClient client =
-        TimelineClient.createTimelineClient(ApplicationId.newInstance(0, 1));
+    TimelineV2Client client =
+        TimelineV2Client.createTimelineClient(ApplicationId.newInstance(0, 1));
     try {
-      // set the timeline service address manually
-      client.setTimelineServiceAddress(
-          collectorManager.getRestServerBindAddress());
+      // Set the timeline service address manually.
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(
+          collectorManager.getRestServerBindAddress()));
       client.init(conf);
       client.start();
       TimelineEntity entity = new TimelineEntity();
@@ -123,12 +124,12 @@ public class TestTimelineServiceClientIntegration {
   @Test
   public void testPutExtendedEntities() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    TimelineClient client =
-        TimelineClient.createTimelineClient(appId);
+    TimelineV2Client client =
+        TimelineV2Client.createTimelineClient(appId);
     try {
-      // set the timeline service address manually
-      client.setTimelineServiceAddress(
-          collectorManager.getRestServerBindAddress());
+      // Set the timeline service address manually.
+      client.setTimelineCollectorInfo(CollectorInfo.newInstance(
+          collectorManager.getRestServerBindAddress()));
       client.init(conf);
       client.start();
       ClusterEntity cluster = new ClusterEntity();

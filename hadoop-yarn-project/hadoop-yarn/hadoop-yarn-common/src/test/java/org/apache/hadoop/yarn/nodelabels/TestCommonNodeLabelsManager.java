@@ -155,7 +155,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       caught = true;
     }
-    Assert.assertTrue("invalid label charactor should not add to repo", caught);
+    Assert.assertTrue("invalid label character should not add to repo", caught);
 
     caught = false;
     try {

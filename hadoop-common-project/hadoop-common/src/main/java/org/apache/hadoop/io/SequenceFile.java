@@ -25,7 +25,6 @@ import java.rmi.server.UID;
 import java.security.MessageDigest;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -51,6 +50,8 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -203,7 +204,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SequenceFile {
-  private static final Log LOG = LogFactory.getLog(SequenceFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SequenceFile.class);
 
   private SequenceFile() {}                         // no public ctor
 
@@ -230,7 +231,7 @@ public class SequenceFile {
    * 
    * @see SequenceFile.Writer
    */
-  public static enum CompressionType {
+  public enum CompressionType {
     /** Do not compress records. */
     NONE, 
     /** Compress values only, each separately. */
@@ -1882,7 +1883,7 @@ public class SequenceFile {
     @Deprecated
     public Reader(FileSystem fs, Path file, 
                   Configuration conf) throws IOException {
-      this(conf, file(file.makeQualified(fs)));
+      this(conf, file(fs.makeQualified(file)));
     }
 
     /**
@@ -1923,7 +1924,7 @@ public class SequenceFile {
         succeeded = true;
       } finally {
         if (!succeeded) {
-          IOUtils.cleanup(LOG, this.in);
+          IOUtils.cleanupWithLogger(LOG, this.in);
         }
       }
     }
@@ -2816,14 +2817,30 @@ public class SequenceFile {
     }
 
     /** Sort and merge using an arbitrary {@link RawComparator}. */
+    @SuppressWarnings("deprecation")
     public Sorter(FileSystem fs, RawComparator comparator, Class keyClass,
                   Class valClass, Configuration conf, Metadata metadata) {
       this.fs = fs;
       this.comparator = comparator;
       this.keyClass = keyClass;
       this.valClass = valClass;
-      this.memory = conf.getInt("io.sort.mb", 100) * 1024 * 1024;
-      this.factor = conf.getInt("io.sort.factor", 100);
+      // Remember to fall-back on the deprecated MB and Factor keys
+      // until they are removed away permanently.
+      if (conf.get(CommonConfigurationKeys.IO_SORT_MB_KEY) != null) {
+        this.memory = conf.getInt(CommonConfigurationKeys.IO_SORT_MB_KEY,
+          CommonConfigurationKeys.SEQ_IO_SORT_MB_DEFAULT) * 1024 * 1024;
+      } else {
+        this.memory = conf.getInt(CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY,
+          CommonConfigurationKeys.SEQ_IO_SORT_MB_DEFAULT) * 1024 * 1024;
+      }
+      if (conf.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY) != null) {
+        this.factor = conf.getInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY,
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_DEFAULT);
+      } else {
+        this.factor = conf.getInt(
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY,
+            CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_DEFAULT);
+      }
       this.conf = conf;
       this.metadata = metadata;
     }

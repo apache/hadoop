@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -25,7 +28,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 
 import java.io.IOException;
@@ -33,12 +35,11 @@ import java.util.Collections;
 import java.util.List;
 
 class FSDirAclOp {
-  static HdfsFileStatus modifyAclEntries(
-      FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
-      throws IOException {
+  static FileStatus modifyAclEntries(
+      FSDirectory fsd, FSPermissionChecker pc, final String srcArg,
+      List<AclEntry> aclSpec) throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -58,12 +59,11 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeAclEntries(
-      FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
-      throws IOException {
+  static FileStatus removeAclEntries(
+      FSDirectory fsd, FSPermissionChecker pc, final String srcArg,
+      List<AclEntry> aclSpec) throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -83,11 +83,10 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeDefaultAcl(FSDirectory fsd, final String srcArg)
-      throws IOException {
+  static FileStatus removeDefaultAcl(FSDirectory fsd, FSPermissionChecker pc,
+      final String srcArg) throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -107,11 +106,10 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus removeAcl(FSDirectory fsd, final String srcArg)
-      throws IOException {
+  static FileStatus removeAcl(FSDirectory fsd, FSPermissionChecker pc,
+      final String srcArg) throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -126,12 +124,11 @@ class FSDirAclOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus setAcl(
-      FSDirectory fsd, final String srcArg, List<AclEntry> aclSpec)
-      throws IOException {
+  static FileStatus setAcl(
+      FSDirectory fsd, FSPermissionChecker pc, final String srcArg,
+      List<AclEntry> aclSpec) throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -146,9 +143,8 @@ class FSDirAclOp {
   }
 
   static AclStatus getAclStatus(
-      FSDirectory fsd, String src) throws IOException {
+      FSDirectory fsd, FSPermissionChecker pc, String src) throws IOException {
     checkAclsConfigFlag(fsd);
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
@@ -221,7 +217,10 @@ class FSDirAclOp {
       int groupEntryIndex = Collections.binarySearch(
           featureEntries, groupEntryKey,
           AclTransformation.ACL_ENTRY_COMPARATOR);
-      assert groupEntryIndex >= 0;
+      Preconditions.checkPositionIndex(groupEntryIndex, featureEntries.size(),
+          "Invalid group entry index after binary-searching inode: " +
+              inode.getFullPathName() + "(" + inode.getId() + ") "
+              + "with featureEntries:" + featureEntries);
       FsAction groupPerm = featureEntries.get(groupEntryIndex).getPermission();
       FsPermission newPerm = new FsPermission(perm.getUserAction(), groupPerm,
           perm.getOtherAction(), perm.getStickyBit());

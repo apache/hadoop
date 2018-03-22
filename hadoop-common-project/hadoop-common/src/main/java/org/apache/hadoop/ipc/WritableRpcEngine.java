@@ -28,8 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
-
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
@@ -43,12 +41,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
 @Deprecated
 public class WritableRpcEngine implements RpcEngine {
-  private static final Log LOG = LogFactory.getLog(RPC.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RPC.class);
   
   //writableRpcVersion should be updated if there is a change
   //in format of the rpc messages.
@@ -231,7 +231,7 @@ public class WritableRpcEngine implements RpcEngine {
       throws Throwable {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = Time.now();
+        startTime = Time.monotonicNow();
       }
 
       // if Tracing is on then start a new span for this rpc.
@@ -251,7 +251,7 @@ public class WritableRpcEngine implements RpcEngine {
         if (traceScope != null) traceScope.close();
       }
       if (LOG.isDebugEnabled()) {
-        long callTime = Time.now() - startTime;
+        long callTime = Time.monotonicNow() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
       }
       return value.get();

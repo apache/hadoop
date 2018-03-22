@@ -38,6 +38,9 @@ public enum SchedulerEventType {
   // Source: ContainerAllocationExpirer
   CONTAINER_EXPIRED,
 
+  // Source: SchedulerAppAttempt::pullNewlyUpdatedContainer.
+  RELEASE_CONTAINER,
+
   /* Source: SchedulingEditPolicy */
   KILL_RESERVED_CONTAINER,
 
@@ -48,5 +51,8 @@ public enum SchedulerEventType {
   MARK_CONTAINER_FOR_KILLABLE,
 
   // Cancel a killable container
-  MARK_CONTAINER_FOR_NONKILLABLE
+  MARK_CONTAINER_FOR_NONKILLABLE,
+
+  //Queue Management Change
+  MANAGE_QUEUE
 }

@@ -71,6 +71,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         init(conf);
         Assert.assertNull(fs);
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
+        dispatcher.disableExitOnDispatchException();
         start();
         Assert.assertNotNull(fs);
       }
@@ -116,6 +117,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 8);
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
               900L);
+      conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
       if (adminCheckEnable) {
         conf.setBoolean(
           YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION, true);

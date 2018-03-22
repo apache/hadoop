@@ -51,10 +51,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private long lastUpdate;
   private long lastUpdateMonotonic;
   private int xceiverCount;
-  private String location = NetworkTopology.DEFAULT_RACK;
+  private volatile String location = NetworkTopology.DEFAULT_RACK;
   private String softwareVersion;
   private List<String> dependentHostNames = new LinkedList<>();
   private String upgradeDomain;
+  public static final DatanodeInfo[] EMPTY_ARRAY = {};
+  private int numBlocks;
 
   // Datanode administrative states
   public enum AdminStates {
@@ -85,6 +87,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   protected AdminStates adminState;
   private long maintenanceExpireTimeInMS;
+  private long lastBlockReportTime;
+  private long lastBlockReportMonotonic;
 
   protected DatanodeInfo(DatanodeInfo from) {
     super(from);
@@ -101,6 +105,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.location = from.getNetworkLocation();
     this.adminState = from.getAdminState();
     this.upgradeDomain = from.getUpgradeDomain();
+    this.lastBlockReportTime = from.getLastBlockReportTime();
+    this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
+    this.numBlocks = from.getNumBlocks();
   }
 
   protected DatanodeInfo(DatanodeID nodeID) {
@@ -116,6 +123,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdateMonotonic = 0L;
     this.xceiverCount = 0;
     this.adminState = null;
+    this.lastBlockReportTime = 0L;
+    this.lastBlockReportMonotonic = 0L;
+    this.numBlocks = 0;
   }
 
   protected DatanodeInfo(DatanodeID nodeID, String location) {
@@ -131,7 +141,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
       final long lastUpdate, final long lastUpdateMonotonic,
       final int xceiverCount, final String networkLocation,
-      final AdminStates adminState, final String upgradeDomain) {
+      final AdminStates adminState, final String upgradeDomain,
+      final long lastBlockReportTime, final long lastBlockReportMonotonic,
+                       final int blockCount) {
     super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
         ipcPort);
     this.capacity = capacity;
@@ -147,6 +159,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.location = networkLocation;
     this.adminState = adminState;
     this.upgradeDomain = upgradeDomain;
+    this.lastBlockReportTime = lastBlockReportTime;
+    this.lastBlockReportMonotonic = lastBlockReportMonotonic;
+    this.numBlocks = blockCount;
   }
 
   /** Network location name. */
@@ -237,6 +252,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public long getLastUpdateMonotonic() { return lastUpdateMonotonic;}
 
   /**
+   * @return Num of Blocks
+   */
+  public int getNumBlocks() {
+    return numBlocks;
+  }
+
+  /**
    * Set lastUpdate monotonic time
    */
   public void setLastUpdateMonotonic(long lastUpdateMonotonic) {
@@ -291,13 +313,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = xceiverCount;
   }
 
+  /** Sets number of blocks. */
+  public void setNumBlocks(int blockCount) {
+    this.numBlocks = blockCount;
+  }
+
   /** network location */
   @Override
-  public synchronized String getNetworkLocation() {return location;}
+  public String getNetworkLocation() {return location;}
 
   /** Sets the network location */
   @Override
-  public synchronized void setNetworkLocation(String location) {
+  public void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
 
@@ -341,6 +368,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     float cacheUsedPercent = getCacheUsedPercent();
     float cacheRemainingPercent = getCacheRemainingPercent();
     String lookupName = NetUtils.getHostNameOfIP(getName());
+    int blockCount = getNumBlocks();
 
     buffer.append("Name: ").append(getName());
     if (lookupName != null) {
@@ -391,6 +419,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
         .append(percent2String(cacheRemainingPercent)).append("\n");
     buffer.append("Xceivers: ").append(getXceiverCount()).append("\n");
     buffer.append("Last contact: ").append(new Date(lastUpdate)).append("\n");
+    buffer
+        .append("Last Block Report: ")
+        .append(
+            lastBlockReportTime != 0 ? new Date(lastBlockReportTime) : "Never")
+        .append("\n");
+    buffer.append("Num of Blocks: ").append(blockCount).append("\n");
     return buffer.toString();
   }
 
@@ -503,6 +537,26 @@ public class DatanodeInfo extends DatanodeID implements Node {
     return this.maintenanceExpireTimeInMS;
   }
 
+  /** Sets the last block report time. */
+  public void setLastBlockReportTime(long lastBlockReportTime) {
+    this.lastBlockReportTime = lastBlockReportTime;
+  }
+
+  /** Sets the last block report monotonic time. */
+  public void setLastBlockReportMonotonic(long lastBlockReportMonotonic) {
+    this.lastBlockReportMonotonic = lastBlockReportMonotonic;
+  }
+
+  /** Last block report time. */
+  public long getLastBlockReportTime() {
+    return lastBlockReportTime;
+  }
+
+  /** Last block report monotonic time. */
+  public long getLastBlockReportMonotonic() {
+    return lastBlockReportMonotonic;
+  }
+
   /**
    * Take the node out of maintenance mode.
    */
@@ -511,7 +565,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   public static boolean maintenanceNotExpired(long maintenanceExpireTimeInMS) {
-    return Time.monotonicNow() < maintenanceExpireTimeInMS;
+    return Time.now() < maintenanceExpireTimeInMS;
   }
   /**
    * Returns true if the node is is entering_maintenance
@@ -643,6 +697,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
     private int infoSecurePort;
     private int ipcPort;
     private long nonDfsUsed = 0L;
+    private long lastBlockReportTime = 0L;
+    private long lastBlockReportMonotonic = 0L;
+    private int numBlocks;
+
 
     public DatanodeInfoBuilder setFrom(DatanodeInfo from) {
       this.capacity = from.getCapacity();
@@ -658,6 +716,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.location = from.getNetworkLocation();
       this.adminState = from.getAdminState();
       this.upgradeDomain = from.getUpgradeDomain();
+      this.lastBlockReportTime = from.getLastBlockReportTime();
+      this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
+      this.numBlocks = from.getNumBlocks();
       setNodeID(from);
       return this;
     }
@@ -775,12 +836,27 @@ public class DatanodeInfo extends DatanodeID implements Node {
       return this;
     }
 
+    public DatanodeInfoBuilder setLastBlockReportTime(long time) {
+      this.lastBlockReportTime = time;
+      return this;
+    }
+
+    public DatanodeInfoBuilder setLastBlockReportMonotonic(long time) {
+      this.lastBlockReportMonotonic = time;
+      return this;
+    }
+    public DatanodeInfoBuilder setNumBlocks(int blockCount) {
+      this.numBlocks = blockCount;
+      return this;
+    }
+
     public DatanodeInfo build() {
       return new DatanodeInfo(ipAddr, hostName, datanodeUuid, xferPort,
           infoPort, infoSecurePort, ipcPort, capacity, dfsUsed, nonDfsUsed,
           remaining, blockPoolUsed, cacheCapacity, cacheUsed, lastUpdate,
           lastUpdateMonotonic, xceiverCount, location, adminState,
-          upgradeDomain);
+          upgradeDomain, lastBlockReportTime, lastBlockReportMonotonic,
+          numBlocks);
     }
   }
 }

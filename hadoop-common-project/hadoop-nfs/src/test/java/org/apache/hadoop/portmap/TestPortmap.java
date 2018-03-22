@@ -53,7 +53,7 @@ public class TestPortmap {
     pm.shutdown();
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testIdle() throws InterruptedException, IOException {
     Socket s = new Socket();
     try {
@@ -75,7 +75,7 @@ public class TestPortmap {
     }
   }
 
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   public void testRegistration() throws IOException, InterruptedException {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,

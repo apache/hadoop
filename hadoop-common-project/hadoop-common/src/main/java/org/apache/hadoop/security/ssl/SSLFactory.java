@@ -39,7 +39,6 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -58,29 +57,52 @@ public class SSLFactory implements ConnectionConfigurator {
   static final Logger LOG = LoggerFactory.getLogger(SSLFactory.class);
 
   @InterfaceAudience.Private
-  public static enum Mode { CLIENT, SERVER }
+  public enum Mode { CLIENT, SERVER }
+
+  public static final String SSL_CLIENT_CONF_KEY = "hadoop.ssl.client.conf";
+  public static final String SSL_CLIENT_CONF_DEFAULT = "ssl-client.xml";
+  public static final String SSL_SERVER_CONF_KEY = "hadoop.ssl.server.conf";
+  public static final String SSL_SERVER_CONF_DEFAULT = "ssl-server.xml";
 
   public static final String SSL_REQUIRE_CLIENT_CERT_KEY =
-    "hadoop.ssl.require.client.cert";
+      "hadoop.ssl.require.client.cert";
+  public static final boolean SSL_REQUIRE_CLIENT_CERT_DEFAULT = false;
   public static final String SSL_HOSTNAME_VERIFIER_KEY =
-    "hadoop.ssl.hostname.verifier";
-  public static final String SSL_CLIENT_CONF_KEY =
-    "hadoop.ssl.client.conf";
-  public static final String SSL_SERVER_CONF_KEY =
-    "hadoop.ssl.server.conf";
-  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
+      "hadoop.ssl.hostname.verifier";
+  public static final String SSL_ENABLED_PROTOCOLS_KEY =
+      "hadoop.ssl.enabled.protocols";
+  public static final String SSL_ENABLED_PROTOCOLS_DEFAULT =
+      "TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2";
 
-  public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT = false;
+  public static final String SSL_SERVER_NEED_CLIENT_AUTH =
+      "ssl.server.need.client.auth";
+  public static final boolean SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT = false;
+
+  public static final String SSL_SERVER_KEYSTORE_LOCATION =
+      "ssl.server.keystore.location";
+  public static final String SSL_SERVER_KEYSTORE_PASSWORD =
+      "ssl.server.keystore.password";
+  public static final String SSL_SERVER_KEYSTORE_TYPE =
+      "ssl.server.keystore.type";
+  public static final String SSL_SERVER_KEYSTORE_TYPE_DEFAULT = "jks";
+  public static final String SSL_SERVER_KEYSTORE_KEYPASSWORD =
+      "ssl.server.keystore.keypassword";
+
+  public static final String SSL_SERVER_TRUSTSTORE_LOCATION =
+      "ssl.server.truststore.location";
+  public static final String SSL_SERVER_TRUSTSTORE_PASSWORD =
+      "ssl.server.truststore.password";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE =
+      "ssl.server.truststore.type";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT = "jks";
+
+  public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
+      "ssl.server.exclude.cipher.list";
+
+  public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
     "hadoop.ssl.keystores.factory.class";
-
-  public static final String SSL_ENABLED_PROTOCOLS =
-      "hadoop.ssl.enabled.protocols";
-  public static final String DEFAULT_SSL_ENABLED_PROTOCOLS =
-      "TLSv1,SSLv2Hello,TLSv1.1,TLSv1.2";
-  public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
-      "ssl.server.exclude.cipher.list";
 
   private Configuration conf;
   private Mode mode;
@@ -105,35 +127,38 @@ public class SSLFactory implements ConnectionConfigurator {
       throw new IllegalArgumentException("mode cannot be NULL");
     }
     this.mode = mode;
-    requireClientCert = conf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
-                                        DEFAULT_SSL_REQUIRE_CLIENT_CERT);
-    Configuration sslConf = readSSLConfiguration(mode);
+    Configuration sslConf = readSSLConfiguration(conf, mode);
+
+    requireClientCert = sslConf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
+        SSL_REQUIRE_CLIENT_CERT_DEFAULT);
 
     Class<? extends KeyStoresFactory> klass
       = conf.getClass(KEYSTORES_FACTORY_CLASS_KEY,
                       FileBasedKeyStoresFactory.class, KeyStoresFactory.class);
     keystoresFactory = ReflectionUtils.newInstance(klass, sslConf);
 
-    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS,
-        DEFAULT_SSL_ENABLED_PROTOCOLS);
-    String excludeCiphersConf =
-        sslConf.get(SSL_SERVER_EXCLUDE_CIPHER_LIST, "");
-    if (excludeCiphersConf.isEmpty()) {
-      excludeCiphers = new LinkedList<String>();
-    } else {
-      LOG.debug("will exclude cipher suites: {}", excludeCiphersConf);
-      excludeCiphers = Arrays.asList(excludeCiphersConf.split(","));
+    enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS_KEY,
+        SSL_ENABLED_PROTOCOLS_DEFAULT);
+    excludeCiphers = Arrays.asList(
+        sslConf.getTrimmedStrings(SSL_SERVER_EXCLUDE_CIPHER_LIST));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("will exclude cipher suites: {}",
+          StringUtils.join(",", excludeCiphers));
     }
   }
 
-  private Configuration readSSLConfiguration(Mode mode) {
+  public static Configuration readSSLConfiguration(Configuration conf,
+                                                   Mode mode) {
     Configuration sslConf = new Configuration(false);
-    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, requireClientCert);
+    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, conf.getBoolean(
+        SSL_REQUIRE_CLIENT_CERT_KEY, SSL_REQUIRE_CLIENT_CERT_DEFAULT));
     String sslConfResource;
     if (mode == Mode.CLIENT) {
-      sslConfResource = conf.get(SSL_CLIENT_CONF_KEY, "ssl-client.xml");
+      sslConfResource = conf.get(SSL_CLIENT_CONF_KEY,
+          SSL_CLIENT_CONF_DEFAULT);
     } else {
-      sslConfResource = conf.get(SSL_SERVER_CONF_KEY, "ssl-server.xml");
+      sslConfResource = conf.get(SSL_SERVER_CONF_KEY,
+          SSL_SERVER_CONF_DEFAULT);
     }
     sslConf.addResource(sslConfResource);
     return sslConf;

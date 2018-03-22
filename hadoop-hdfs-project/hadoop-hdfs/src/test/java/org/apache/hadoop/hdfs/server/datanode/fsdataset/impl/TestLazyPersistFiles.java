@@ -118,7 +118,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     assertThat(cluster.getNameNode()
                       .getNamesystem()
                       .getBlockManager()
-                      .getUnderReplicatedBlocksCount(),
+                      .getLowRedundancyBlocksCount(),
                is(0L));
   }
 

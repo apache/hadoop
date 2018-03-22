@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -55,6 +56,21 @@ public class BlockManagerTestUtil {
     }
   }
 
+  public static Iterator<BlockInfo> getBlockIterator(final FSNamesystem ns,
+      final String storageID, final int startBlock) {
+    ns.readLock();
+    try {
+      DatanodeDescriptor dn =
+          ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
+      return dn.getBlockIterator(startBlock);
+    } finally {
+      ns.readUnlock();
+    }
+  }
+
+  public static Iterator<BlockInfo> getBlockIterator(DatanodeStorageInfo s) {
+    return s.getBlockIterator();
+  }
 
   /**
    * Refresh block queue counts on the name-node.
@@ -126,6 +142,11 @@ public class BlockManagerTestUtil {
     }
   }
 
+  public static HeartbeatManager getHeartbeatManager(
+      final BlockManager blockManager) {
+    return blockManager.getDatanodeManager().getHeartbeatManager();
+  }
+
   /**
    * @return corruptReplicas from block manager
    */
@@ -147,7 +168,17 @@ public class BlockManagerTestUtil {
   public static int computeInvalidationWork(BlockManager bm) {
     return bm.computeInvalidateWork(Integer.MAX_VALUE);
   }
-  
+
+  /**
+   * Check the redundancy of blocks and trigger replication if needed.
+   * @param blockManager
+   */
+  public static void checkRedundancy(final BlockManager blockManager) {
+    blockManager.computeDatanodeWork();
+    blockManager.processPendingReconstructions();
+    blockManager.rescanPostponedMisreplicatedBlocks();
+  }
+
   /**
    * Compute all the replication and invalidation work for the
    * given BlockManager.
@@ -307,7 +338,7 @@ public class BlockManagerTestUtil {
    */
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
-    dm.getDecomManager().runMonitorForTest();
+    dm.getDatanodeAdminManager().runMonitorForTest();
   }
 
   /**

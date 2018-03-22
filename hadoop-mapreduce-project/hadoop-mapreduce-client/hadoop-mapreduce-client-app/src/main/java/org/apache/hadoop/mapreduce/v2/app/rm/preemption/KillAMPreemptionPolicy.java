@@ -17,8 +17,6 @@
 */
 package org.apache.hadoop.mapreduce.v2.app.rm.preemption;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -33,14 +31,16 @@ import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sample policy that aggressively kills tasks when requested.
  */
 public class KillAMPreemptionPolicy implements AMPreemptionPolicy {
 
-  private static final Log LOG =
-      LogFactory.getLog(KillAMPreemptionPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(KillAMPreemptionPolicy.class);
 
   @SuppressWarnings("rawtypes")
   private EventHandler dispatcher = null;

@@ -20,8 +20,7 @@ import DS from 'ember-data';
 import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
-    internalNormalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    internalNormalizeSingleResponse(store, primaryModelClass, payload, id) {
       if (payload.app) {
         payload = payload.app;
       }
@@ -44,21 +43,22 @@ export default DS.JSONAPISerializer.extend({
           queue: payload.queue,
           state: payload.state,
           startTime: Converter.timeStampToDate(payload.startedTime),
-          elapsedTime: Converter.msToElapsedTime(payload.elapsedTime),
+          elapsedTime: payload.elapsedTime,
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           finalStatus: payload.finalStatus,
           progress: payload.progress,
           applicationType: payload.applicationType,
-          diagnostics: payload.diagnostics,
-          amContainerLogs: payload.amContainerLogs,
+          diagnostics: (payload.diagnostics && payload.diagnostics !== 'null')? payload.diagnostics : '',
           amHostHttpAddress: payload.amHostHttpAddress,
+          masterNodeId: payload.masterNodeId,
           logAggregationStatus: payload.logAggregationStatus,
           unmanagedApplication: payload.unmanagedApplication,
           amNodeLabelExpression: payload.amNodeLabelExpression,
-          priority: payload.priority,
+          priority: (payload.priority !== undefined)? payload.priority : 'N/A',
           allocatedMB: payload.allocatedMB,
           allocatedVCores: payload.allocatedVCores,
           runningContainers: payload.runningContainers,
+          resourceRequests: payload.resourceRequests,
           memorySeconds: payload.memorySeconds,
           vcoreSeconds: payload.vcoreSeconds,
           preemptedResourceMB: payload.preemptedResourceMB,
@@ -76,15 +76,13 @@ export default DS.JSONAPISerializer.extend({
       return fixedPayload;
     },
 
-    normalizeSingleResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
       var p = this.internalNormalizeSingleResponse(store,
-        primaryModelClass, payload, id, requestType);
+        primaryModelClass, payload, id);
       return { data: p };
     },
 
-    normalizeArrayResponse(store, primaryModelClass, payload, id,
-      requestType) {
+    normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
       // return expected is { data: [ {}, {} ] }
       var normalizedArrayResponse = {};
 
@@ -93,7 +91,7 @@ export default DS.JSONAPISerializer.extend({
       if(payload.apps && payload.apps.app) {
         normalizedArrayResponse.data = payload.apps.app.map(singleApp => {
           return this.internalNormalizeSingleResponse(store, primaryModelClass,
-          singleApp, singleApp.id, requestType);
+            singleApp, singleApp.id);
           }, this);
       } else {
         normalizedArrayResponse.data = [];

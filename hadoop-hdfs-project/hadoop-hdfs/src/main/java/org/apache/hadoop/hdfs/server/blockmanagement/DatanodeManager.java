@@ -33,11 +33,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -50,7 +52,10 @@ import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Timer;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -70,7 +75,7 @@ public class DatanodeManager {
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
-  private final DecommissionManager decomManager;
+  private final DatanodeAdminManager datanodeAdminManager;
   private final HeartbeatManager heartbeatManager;
   private final FSClusterStats fsClusterStats;
 
@@ -172,6 +177,25 @@ public class DatanodeManager {
    */
   private final HashMap<String, Integer> datanodesSoftwareVersions =
     new HashMap<>(4, 0.75f);
+
+  /**
+   * True if we should process latency metrics from downstream peers.
+   */
+  private final boolean dataNodePeerStatsEnabled;
+  /**
+   *  True if we should process latency metrics from individual DN disks.
+   */
+  private final boolean dataNodeDiskStatsEnabled;
+
+  /**
+   * If we use DfsNetworkTopology to choose nodes for placing replicas.
+   */
+  private final boolean useDfsNetworkTopology;
+
+  @Nullable
+  private final SlowPeerTracker slowPeerTracker;
+  @Nullable
+  private final SlowDiskTracker slowDiskTracker;
   
   /**
    * The minimum time between resending caching directives to Datanodes,
@@ -187,13 +211,35 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-     
-    networktopology = NetworkTopology.getInstance(conf);
 
-    this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
-    this.decomManager = new DecommissionManager(namesystem, blockManager,
-        heartbeatManager);
+    this.useDfsNetworkTopology = conf.getBoolean(
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
+        DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
+    if (useDfsNetworkTopology) {
+      networktopology = DFSNetworkTopology.getInstance(conf);
+    } else {
+      networktopology = NetworkTopology.getInstance(conf);
+    }
+
+    this.heartbeatManager = new HeartbeatManager(namesystem,
+        blockManager, conf);
+    this.datanodeAdminManager = new DatanodeAdminManager(namesystem,
+        blockManager, heartbeatManager);
     this.fsClusterStats = newFSClusterStats();
+    this.dataNodePeerStatsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+    this.dataNodeDiskStatsEnabled = Util.isDiskStatsEnabled(conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        DFSConfigKeys.
+            DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT));
+
+    final Timer timer = new Timer();
+    this.slowPeerTracker = dataNodePeerStatsEnabled ?
+        new SlowPeerTracker(conf, timer) : null;
+
+    this.slowDiskTracker = dataNodeDiskStatsEnabled ?
+        new SlowDiskTracker(conf, timer) : null;
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
@@ -243,12 +289,19 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval
         + 10 * 1000 * heartbeatIntervalSeconds;
-    final int blockInvalidateLimit = Math.max(20*(int)(heartbeatIntervalSeconds),
+
+    // Effected block invalidate limit is the bigger value between
+    // value configured in hdfs-site.xml, and 20 * HB interval.
+    final int configuredBlockInvalidateLimit = conf.getInt(
+        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY,
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
-    this.blockInvalidateLimit = conf.getInt(
-        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, blockInvalidateLimit);
+    final int countedBlockInvalidateLimit = 20*(int)(heartbeatIntervalSeconds);
+    this.blockInvalidateLimit = Math.max(countedBlockInvalidateLimit,
+        configuredBlockInvalidateLimit);
     LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
-        + "=" + this.blockInvalidateLimit);
+        + ": configured=" + configuredBlockInvalidateLimit
+        + ", counted=" + countedBlockInvalidateLimit
+        + ", effected=" + blockInvalidateLimit);
 
     this.checkIpHostnameInRegistration = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
@@ -318,12 +371,12 @@ public class DatanodeManager {
   }
   
   void activate(final Configuration conf) {
-    decomManager.activate(conf);
+    datanodeAdminManager.activate(conf);
     heartbeatManager.activate();
   }
 
   void close() {
-    decomManager.close();
+    datanodeAdminManager.close();
     heartbeatManager.close();
   }
 
@@ -338,8 +391,8 @@ public class DatanodeManager {
   }
 
   @VisibleForTesting
-  public DecommissionManager getDecomManager() {
-    return decomManager;
+  public DatanodeAdminManager getDatanodeAdminManager() {
+    return datanodeAdminManager;
   }
 
   public HostConfigManager getHostConfigManager() {
@@ -356,7 +409,8 @@ public class DatanodeManager {
     return fsClusterStats;
   }
 
-  int getBlockInvalidateLimit() {
+  @VisibleForTesting
+  public int getBlockInvalidateLimit() {
     return blockInvalidateLimit;
   }
 
@@ -478,6 +532,8 @@ public class DatanodeManager {
     } else {
       networktopology.sortByDistance(client, lb.getLocations(), activeLen);
     }
+    // move PROVIDED storage to the end to prefer local replicas.
+    lb.moveProvidedToEnd(activeLen);
     // must update cache since we modified locations array
     lb.updateCachedStorageInfo();
   }
@@ -595,10 +651,11 @@ public class DatanodeManager {
       String format, Object... args) throws UnregisteredNodeException {
     storageIDs = storageIDs == null ? new String[0] : storageIDs;
     if (datanodeID.length != storageIDs.length) {
+      // Error for pre-2.0.0-alpha clients.
       final String err = (storageIDs.length == 0?
           "Missing storageIDs: It is likely that the HDFS client,"
           + " who made this call, is running in an older version of Hadoop"
-          + " which does not support storageIDs."
+          + "(pre-2.0.0-alpha)  which does not support storageIDs."
           : "Length mismatched: storageIDs.length=" + storageIDs.length + " != "
           ) + " datanodeID.length=" + datanodeID.length;
       throw new HadoopIllegalArgumentException(
@@ -935,9 +992,9 @@ public class DatanodeManager {
         hostConfigManager.getMaintenanceExpirationTimeInMS(nodeReg);
     // If the registered node is in exclude list, then decommission it
     if (getHostConfigManager().isExcluded(nodeReg)) {
-      decomManager.startDecommission(nodeReg);
+      datanodeAdminManager.startDecommission(nodeReg);
     } else if (nodeReg.maintenanceNotExpired(maintenanceExpireTimeInMS)) {
-      decomManager.startMaintenance(nodeReg, maintenanceExpireTimeInMS);
+      datanodeAdminManager.startMaintenance(nodeReg, maintenanceExpireTimeInMS);
     }
   }
 
@@ -1163,12 +1220,13 @@ public class DatanodeManager {
         long maintenanceExpireTimeInMS =
             hostConfigManager.getMaintenanceExpirationTimeInMS(node);
         if (node.maintenanceNotExpired(maintenanceExpireTimeInMS)) {
-          decomManager.startMaintenance(node, maintenanceExpireTimeInMS);
+          datanodeAdminManager.startMaintenance(
+              node, maintenanceExpireTimeInMS);
         } else if (hostConfigManager.isExcluded(node)) {
-          decomManager.startDecommission(node);
+          datanodeAdminManager.startDecommission(node);
         } else {
-          decomManager.stopMaintenance(node);
-          decomManager.stopDecommission(node);
+          datanodeAdminManager.stopMaintenance(node);
+          datanodeAdminManager.stopDecommission(node);
         }
       }
       node.setUpgradeDomain(hostConfigManager.getUpgradeDomain(node));
@@ -1393,6 +1451,9 @@ public class DatanodeManager {
     final boolean listEnteringMaintenanceNodes =
         type == DatanodeReportType.ALL ||
         type == DatanodeReportType.ENTERING_MAINTENANCE;
+    final boolean listInMaintenanceNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.IN_MAINTENANCE;
 
     ArrayList<DatanodeDescriptor> nodes;
     final HostSet foundNodes = new HostSet();
@@ -1405,11 +1466,13 @@ public class DatanodeManager {
         final boolean isDead = isDatanodeDead(dn);
         final boolean isDecommissioning = dn.isDecommissionInProgress();
         final boolean isEnteringMaintenance = dn.isEnteringMaintenance();
+        final boolean isInMaintenance = dn.isInMaintenance();
 
         if (((listLiveNodes && !isDead) ||
             (listDeadNodes && isDead) ||
             (listDecommissioningNodes && isDecommissioning) ||
-            (listEnteringMaintenanceNodes && isEnteringMaintenance)) &&
+            (listEnteringMaintenanceNodes && isEnteringMaintenance) ||
+            (listInMaintenanceNodes && isInMaintenance)) &&
             hostConfigManager.isIncluded(dn)) {
           nodes.add(dn);
         }
@@ -1566,7 +1629,9 @@ public class DatanodeManager {
       StorageReport[] reports, final String blockPoolId,
       long cacheCapacity, long cacheUsed, int xceiverCount, 
       int maxTransfers, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException {
+      VolumeFailureSummary volumeFailureSummary,
+      @Nonnull SlowPeerReports slowPeers,
+      @Nonnull SlowDiskReports slowDisks) throws IOException {
     final DatanodeDescriptor nodeinfo;
     try {
       nodeinfo = getDatanode(nodeReg);
@@ -1600,20 +1665,38 @@ public class DatanodeManager {
     }
 
     final List<DatanodeCommand> cmds = new ArrayList<>();
-    // check pending replication
-    List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
-        maxTransfers);
-    if (pendingList != null) {
-      cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
-          pendingList));
+    // Allocate _approximately_ maxTransfers pending tasks to DataNode.
+    // NN chooses pending tasks based on the ratio between the lengths of
+    // replication and erasure-coded block queues.
+    int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
+    int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = totalReplicateBlocks + totalECBlocks;
+    if (totalBlocks > 0) {
+      int numReplicationTasks = (int) Math.ceil(
+          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
+      int numECTasks = (int) Math.ceil(
+          (double) (totalECBlocks * maxTransfers) / totalBlocks);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Pending replication tasks: " + numReplicationTasks
+            + " erasure-coded tasks: " + numECTasks);
+      }
+      // check pending replication tasks
+      List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+          numReplicationTasks);
+      if (pendingList != null && !pendingList.isEmpty()) {
+        cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+            pendingList));
+      }
+      // check pending erasure coding tasks
+      List<BlockECReconstructionInfo> pendingECList = nodeinfo
+          .getErasureCodeCommand(numECTasks);
+      if (pendingECList != null && !pendingECList.isEmpty()) {
+        cmds.add(new BlockECReconstructionCommand(
+            DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
+      }
     }
-    // check pending erasure coding tasks
-    List<BlockECReconstructionInfo> pendingECList = nodeinfo
-        .getErasureCodeCommand(maxTransfers);
-    if (pendingECList != null) {
-      cmds.add(new BlockECReconstructionCommand(
-          DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
-    }
+
     // check block invalidation
     Block[] blks = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
     if (blks != null) {
@@ -1630,6 +1713,29 @@ public class DatanodeManager {
       cmds.add(new BalancerBandwidthCommand(nodeinfo.getBalancerBandwidth()));
       // set back to 0 to indicate that datanode has been sent the new value
       nodeinfo.setBalancerBandwidth(0);
+    }
+
+    if (slowPeerTracker != null) {
+      final Map<String, Double> slowPeersMap = slowPeers.getSlowPeers();
+      if (!slowPeersMap.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataNode " + nodeReg + " reported slow peers: " +
+              slowPeersMap);
+        }
+        for (String slowNodeId : slowPeersMap.keySet()) {
+          slowPeerTracker.addReport(slowNodeId, nodeReg.getIpcAddr(false));
+        }
+      }
+    }
+
+    if (slowDiskTracker != null) {
+      if (!slowDisks.getSlowDisks().isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataNode " + nodeReg + " reported slow disks: " +
+              slowDisks.getSlowDisks());
+        }
+        slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
+      }
     }
 
     if (!cmds.isEmpty()) {
@@ -1707,7 +1813,7 @@ public class DatanodeManager {
 
   /**
    * Tell all datanodes to use a new, non-persistent bandwidth value for
-   * dfs.balance.bandwidthPerSec.
+   * dfs.datanode.balance.bandwidthPerSec.
    *
    * A system administrator can tune the balancer bandwidth parameter
    * (dfs.datanode.balance.bandwidthPerSec) dynamically by calling
@@ -1832,7 +1938,33 @@ public class DatanodeManager {
     this.heartbeatExpireInterval = 2L * recheckInterval + 10 * 1000
         * intervalSeconds;
     this.blockInvalidateLimit = Math.max(20 * (int) (intervalSeconds),
-        DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+        blockInvalidateLimit);
+  }
+
+  /**
+   * Retrieve information about slow peers as a JSON.
+   * Returns null if we are not tracking slow peers.
+   * @return
+   */
+  public String getSlowPeersReport() {
+    return slowPeerTracker != null ? slowPeerTracker.getJson() : null;
+  }
+
+  /**
+   * Use only for testing.
+   */
+  @VisibleForTesting
+  public SlowDiskTracker getSlowDiskTracker() {
+    return slowDiskTracker;
+  }
+  /**
+   * Retrieve information about slow disks as a JSON.
+   * Returns null if we are not tracking slow disks.
+   * @return
+   */
+  public String getSlowDisksReport() {
+    return slowDiskTracker != null ?
+        slowDiskTracker.getSlowDiskReportAsJsonString() : null;
   }
 }
 

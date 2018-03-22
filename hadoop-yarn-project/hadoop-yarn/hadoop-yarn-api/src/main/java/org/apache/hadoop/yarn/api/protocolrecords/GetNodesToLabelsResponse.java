@@ -24,12 +24,11 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.util.Records;
 
 public abstract class GetNodesToLabelsResponse {
   public static GetNodesToLabelsResponse newInstance(
-      Map<NodeId, Set<NodeLabel>> map) {
+      Map<NodeId, Set<String>> map) {
     GetNodesToLabelsResponse response =
         Records.newRecord(GetNodesToLabelsResponse.class);
     response.setNodeToLabels(map);
@@ -38,9 +37,9 @@ public abstract class GetNodesToLabelsResponse {
 
   @Public
   @Evolving
-  public abstract void setNodeToLabels(Map<NodeId, Set<NodeLabel>> map);
+  public abstract void setNodeToLabels(Map<NodeId, Set<String>> map);
 
   @Public
   @Evolving
-  public abstract Map<NodeId, Set<NodeLabel>> getNodeToLabels();
+  public abstract Map<NodeId, Set<String>> getNodeToLabels();
 }

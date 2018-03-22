@@ -18,16 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import com.google.common.base.Splitter;
-
-import java.text.NumberFormat;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.FastNumberFormat;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -38,8 +33,7 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class ContainerId implements Comparable<ContainerId>{
   public static final long CONTAINER_ID_BITMASK = 0xffffffffffL;
-  private static final Splitter _SPLITTER = Splitter.on('_').trimResults();
-  private static final String CONTAINER_PREFIX = "container";
+  private static final String CONTAINER_PREFIX = "container_";
   private static final String EPOCH_PREFIX = "e";
 
   @Public
@@ -115,29 +109,13 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   protected abstract void setContainerId(long id);
  
   
-  // TODO: fail the app submission if attempts are more than 10 or something
-  private static final ThreadLocal<NumberFormat> appAttemptIdAndEpochFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(2);
-          return fmt;
-        }
-      };
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> containerIdFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(6);
-          return fmt;
-        }
-      };
+  private static final int APP_ID_MIN_DIGITS = 4;
+
+  private static final int ATTEMPT_ID_MIN_DIGITS = 2;
+
+  private static final int EPOCH_MIN_DIGITS = 2;
+
+  private static final int CONTAINER_ID_MIN_DIGITS = 6;
 
   @Override
   public int hashCode() {
@@ -185,71 +163,84 @@ public abstract class ContainerId implements Comparable<ContainerId>{
    */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(CONTAINER_PREFIX + "_");
+    StringBuilder sb = new StringBuilder(64);
+    sb.append(CONTAINER_PREFIX);
     long epoch = getContainerId() >> 40;
     if (epoch > 0) {
-      sb.append(EPOCH_PREFIX)
-          .append(appAttemptIdAndEpochFormat.get().format(epoch)).append("_");;
+      sb.append(EPOCH_PREFIX);
+      FastNumberFormat.format(sb, epoch, EPOCH_MIN_DIGITS);
+      sb.append('_');
     }
     ApplicationId appId = getApplicationAttemptId().getApplicationId();
-    sb.append(appId.getClusterTimestamp()).append("_");
-    sb.append(ApplicationId.appIdFormat.get().format(appId.getId()))
-        .append("_");
-    sb.append(
-        appAttemptIdAndEpochFormat.get().format(
-            getApplicationAttemptId().getAttemptId())).append("_");
-    sb.append(containerIdFormat.get()
-        .format(CONTAINER_ID_BITMASK & getContainerId()));
+    sb.append(appId.getClusterTimestamp());
+    sb.append('_');
+    FastNumberFormat.format(sb, appId.getId(), APP_ID_MIN_DIGITS);
+    sb.append('_');
+    FastNumberFormat.format(sb, getApplicationAttemptId().getAttemptId(),
+        ATTEMPT_ID_MIN_DIGITS);
+    sb.append('_');
+    FastNumberFormat.format(sb, CONTAINER_ID_BITMASK & getContainerId(),
+        CONTAINER_ID_MIN_DIGITS);
     return sb.toString();
   }
 
   @Public
   @Stable
   public static ContainerId fromString(String containerIdStr) {
-    Iterator<String> it = _SPLITTER.split(containerIdStr).iterator();
-    if (!it.next().equals(CONTAINER_PREFIX)) {
+    if (!containerIdStr.startsWith(CONTAINER_PREFIX)) {
       throw new IllegalArgumentException("Invalid ContainerId prefix: "
           + containerIdStr);
     }
     try {
-      String epochOrClusterTimestampStr = it.next();
+      int pos1 = CONTAINER_PREFIX.length() - 1;
+
       long epoch = 0;
-      ApplicationAttemptId appAttemptID = null;
-      if (epochOrClusterTimestampStr.startsWith(EPOCH_PREFIX)) {
-        String epochStr = epochOrClusterTimestampStr;
-        epoch = Integer.parseInt(epochStr.substring(EPOCH_PREFIX.length()));
-        appAttemptID = toApplicationAttemptId(it);
-      } else {
-        String clusterTimestampStr = epochOrClusterTimestampStr;
-        long clusterTimestamp = Long.parseLong(clusterTimestampStr);
-        appAttemptID = toApplicationAttemptId(clusterTimestamp, it);
+      if (containerIdStr.regionMatches(pos1 + 1, EPOCH_PREFIX, 0,
+            EPOCH_PREFIX.length())) {
+        int pos2 = containerIdStr.indexOf('_', pos1 + 1);
+        if (pos2 < 0) {
+          throw new IllegalArgumentException("Invalid ContainerId: "
+              + containerIdStr);
+        }
+        String epochStr = containerIdStr.substring(
+            pos1 + 1 + EPOCH_PREFIX.length(), pos2);
+        epoch = Integer.parseInt(epochStr);
+        // rewind the current position
+        pos1 = pos2;
       }
-      long id = Long.parseLong(it.next());
+      int pos2 = containerIdStr.indexOf('_', pos1 + 1);
+      if (pos2 < 0) {
+        throw new IllegalArgumentException("Invalid ContainerId: "
+            + containerIdStr);
+      }
+      long clusterTimestamp = Long.parseLong(
+        containerIdStr.substring(pos1 + 1, pos2));
+
+      int pos3 = containerIdStr.indexOf('_', pos2 + 1);
+      if (pos3 < 0) {
+        throw new IllegalArgumentException("Invalid ContainerId: "
+            + containerIdStr);
+      }
+      int appId = Integer.parseInt(containerIdStr.substring(pos2 + 1, pos3));
+      ApplicationId applicationId = ApplicationId.newInstance(clusterTimestamp,
+          appId);
+      int pos4 = containerIdStr.indexOf('_', pos3 + 1);
+      if (pos4 < 0) {
+        throw new IllegalArgumentException("Invalid ContainerId: "
+            + containerIdStr);
+      }
+      int attemptId = Integer.parseInt(
+          containerIdStr.substring(pos3 + 1, pos4));
+      ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, attemptId);
+      long id = Long.parseLong(containerIdStr.substring(pos4 + 1));
       long cid = (epoch << 40) | id;
-      ContainerId containerId = ContainerId.newContainerId(appAttemptID, cid);
+      ContainerId containerId = ContainerId.newContainerId(appAttemptId, cid);
       return containerId;
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid ContainerId: "
           + containerIdStr, n);
-    } catch (NoSuchElementException e) {
-      throw new IllegalArgumentException("Invalid ContainerId: "
-          + containerIdStr, e);
     }
-  }
-
-  private static ApplicationAttemptId toApplicationAttemptId(
-      Iterator<String> it) throws NumberFormatException {
-    return toApplicationAttemptId(Long.parseLong(it.next()), it);
-  }
-
-  private static ApplicationAttemptId toApplicationAttemptId(
-      long clusterTimestamp, Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = ApplicationId.newInstance(clusterTimestamp,
-        Integer.parseInt(it.next()));
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));
-    return appAttemptId;
   }
 
   protected abstract void build();

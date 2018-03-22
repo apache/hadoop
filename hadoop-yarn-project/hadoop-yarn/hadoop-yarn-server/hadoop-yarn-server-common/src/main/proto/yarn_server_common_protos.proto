@@ -49,6 +49,7 @@ message OpportunisticContainersStatusProto {
   optional int32 queued_opport_containers = 4;
   optional int32 wait_queue_length = 5;
   optional int32 estimated_queue_wait_time = 6;
+  optional int32 opport_queue_capacity = 7;
 }
 
 message MasterKeyProto {

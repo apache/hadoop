@@ -16,7 +16,9 @@
 function hadoop_usage()
 {
   echo "Usage: slsrun.sh <OPTIONS> "
-  echo "                 --input-rumen=<FILE1,FILE2,...>  | --input-sls=<FILE1,FILE2,...>"
+  echo "                 --tracetype=<SYNTH | SLS | RUMEN>"
+  echo "                 --tracelocation=<FILE1,FILE2,...>"
+  echo "                 (deprecated --input-rumen=<FILE1,FILE2,...>  | --input-sls=<FILE1,FILE2,...>)"
   echo "                 --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY>"
   echo "                 [--nodes=<SLS_NODES_FILE>]"
   echo "                 [--track-jobs=<JOBID1,JOBID2,...>]"
@@ -32,6 +34,12 @@ function parse_args()
       ;;
       --input-sls=*)
         inputsls=${i#*=}
+      ;;
+      --tracetype=*)
+        tracetype=${i#*=}
+      ;;
+      --tracelocation=*)
+        tracelocation=${i#*=}
       ;;
       --output-dir=*)
         outputdir=${i#*=}
@@ -52,14 +60,12 @@ function parse_args()
     esac
   done
 
-  if [[ -z "${inputrumen}" && -z "${inputsls}" ]] ; then
-    hadoop_error "ERROR: Either --input-rumen or --input-sls must be specified."
-    hadoop_exit_with_usage 1
+  if [[ -z "${inputrumen}" && -z "${inputsls}" && -z "${tracetype}" ]] ; then
+    hadoop_error "ERROR: Either --input-rumen, --input-sls, or --tracetype (with --tracelocation) must be specified."
   fi
 
-  if [[ -n "${inputrumen}" && -n "${inputsls}" ]] ; then
-    hadoop_error "ERROR: Only specify one of --input-rumen or --input-sls."
-    hadoop_exit_with_usage 1
+  if [[ -n "${inputrumen}" && -n "${inputsls}" && -n "${tracetype}" ]] ; then
+    hadoop_error "ERROR: Only specify one of --input-rumen, --input-sls, or --tracetype (with --tracelocation)"
   fi
 
   if [[ -z "${outputdir}" ]] ; then
@@ -71,16 +77,22 @@ function parse_args()
 function calculate_classpath
 {
   hadoop_add_to_classpath_tools hadoop-sls
-  hadoop_debug "Injecting ${HADOOP_TOOLS_HOME}/${HADOOP_TOOLS_DIR}/sls/html into CLASSPATH"
-  hadoop_add_classpath "${HADOOP_TOOLS_HOME}/${HADOOP_TOOLS_DIR}/sls/html"
 }
 
 function run_simulation() {
-  if [[ "${inputsls}" == "" ]] ; then
-    hadoop_add_param args -inputrumen "-inputrumen ${inputrumen}"
-  else
-    hadoop_add_param args -inputsls "-inputsls ${inputsls}"
-  fi
+
+  local args
+
+   if [[ "${inputsls}" != "" ]] ; then
+        hadoop_add_param args -inputsls "-inputsls ${inputsls}"
+   fi
+   if [[ "${inputrumen}" != "" ]] ; then
+        hadoop_add_param args -inputrumen "-inputrumen ${inputrumen}"
+   fi
+   if [[ "${tracetype}" != "" ]] ; then
+        hadoop_add_param args -tracetype "-tracetype ${tracetype}"
+        hadoop_add_param args -tracelocation "-tracelocation ${tracelocation}"
+   fi
 
   hadoop_add_param args -output "-output ${outputdir}"
 
@@ -116,6 +128,7 @@ HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  # shellcheck disable=SC1090
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1

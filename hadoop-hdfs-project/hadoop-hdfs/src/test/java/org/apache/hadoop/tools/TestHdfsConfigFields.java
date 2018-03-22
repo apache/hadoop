@@ -41,8 +41,8 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
   public void initializeMemberVariables() {
     xmlFilename = new String("hdfs-default.xml");
     configurationClasses = new Class[] { HdfsClientConfigKeys.class,
-        HdfsClientConfigKeys.StripedRead.class,
-        DFSConfigKeys.class};
+        HdfsClientConfigKeys.StripedRead.class, DFSConfigKeys.class,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.class };
 
     // Set error modes
     errorIfMissingConfigProps = true;
@@ -99,8 +99,8 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
         .add(DFSConfigKeys.DFS_DATANODE_STARTUP_KEY);
     configurationPropsToSkipCompare
         .add(DFSConfigKeys.DFS_NAMENODE_STARTUP_KEY);
-    configurationPropsToSkipCompare
-        .add(DFSConfigKeys.DFS_DATANODE_FILE_IO_EVENTS_CLASS_KEY);
+    configurationPropsToSkipCompare.add(DFSConfigKeys
+        .DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY);
 
     // Allocate
     xmlPropsToSkipCompare = new HashSet<String>();

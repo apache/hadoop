@@ -21,20 +21,21 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestGroupFallback {
-  public static final Log LOG = LogFactory.getLog(TestGroupFallback.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestGroupFallback.class);
 
   @Test
   public void testGroupShell() throws Exception {
-    Logger.getRootLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.ShellBasedUnixGroupsMapping");
@@ -50,7 +51,7 @@ public class TestGroupFallback {
 
   @Test
   public void testNetgroupShell() throws Exception {
-    Logger.getRootLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.ShellBasedUnixGroupsNetgroupMapping");
@@ -69,7 +70,7 @@ public class TestGroupFallback {
     LOG.info("running 'mvn -Pnative -DTestGroupFallback clear test' will " +
         "test the normal path and 'mvn -DTestGroupFallback clear test' will" +
         " test the fall back functionality");
-    Logger.getRootLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback");
@@ -88,7 +89,7 @@ public class TestGroupFallback {
     LOG.info("running 'mvn -Pnative -DTestGroupFallback clear test' will " +
         "test the normal path and 'mvn -DTestGroupFallback clear test' will" +
         " test the fall back functionality");
-    Logger.getRootLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         "org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMappingWithFallback");

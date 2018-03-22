@@ -30,7 +30,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
       LogFactory.getLog(DefaultResourceCalculator.class);
 
   @Override
-  public int compare(Resource unused, Resource lhs, Resource rhs) {
+  public int compare(Resource unused, Resource lhs, Resource rhs,
+      boolean singleType) {
     // Only consider memory
     return Long.compare(lhs.getMemorySize(), rhs.getMemorySize());
   }
@@ -61,6 +62,12 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public Resource divideAndCeil(Resource numerator, int denominator) {
+    return Resources.createResource(
+        divideAndCeil(numerator.getMemorySize(), denominator));
+  }
+
+  @Override
+  public Resource divideAndCeil(Resource numerator, float denominator) {
     return Resources.createResource(
         divideAndCeil(numerator.getMemorySize(), denominator));
   }
@@ -105,6 +112,14 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public Resource multiplyAndNormalizeUp(Resource r, double[] by,
+      Resource stepFactor) {
+    return Resources.createResource(
+        roundUp((long) (r.getMemorySize() * by[0] + 0.5),
+            stepFactor.getMemorySize()));
+  }
+
+  @Override
   public Resource multiplyAndNormalizeDown(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
@@ -116,8 +131,18 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger) {
+  public boolean fitsIn(Resource smaller, Resource bigger) {
     return smaller.getMemorySize() <= bigger.getMemorySize();
+  }
+
+  @Override
+  public boolean isAnyMajorResourceZero(Resource resource) {
+    return resource.getMemorySize() == 0f;
+  }
+
+  @Override
+  public Resource normalizeDown(Resource r, Resource stepFactor) {
+    return Resources.createResource(
+        roundDown((r.getMemorySize()), stepFactor.getMemorySize()));
   }
 }

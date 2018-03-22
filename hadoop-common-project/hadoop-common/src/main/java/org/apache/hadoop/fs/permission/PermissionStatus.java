@@ -44,10 +44,6 @@ public class PermissionStatus implements Writable {
       String user, String group, FsPermission permission) {
     return new PermissionStatus(user, group, permission) {
       @Override
-      public PermissionStatus applyUMask(FsPermission umask) {
-        throw new UnsupportedOperationException();
-      }
-      @Override
       public void readFields(DataInput in) throws IOException {
         throw new UnsupportedOperationException();
       }
@@ -75,15 +71,6 @@ public class PermissionStatus implements Writable {
 
   /** Return permission */
   public FsPermission getPermission() {return permission;}
-
-  /**
-   * Apply umask.
-   * @see FsPermission#applyUMask(FsPermission)
-   */
-  public PermissionStatus applyUMask(FsPermission umask) {
-    permission = permission.applyUMask(umask);
-    return this;
-  }
 
   @Override
   public void readFields(DataInput in) throws IOException {

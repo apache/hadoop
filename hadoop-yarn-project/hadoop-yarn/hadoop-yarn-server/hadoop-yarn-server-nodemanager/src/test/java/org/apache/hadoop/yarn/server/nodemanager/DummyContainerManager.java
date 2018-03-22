@@ -19,12 +19,12 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.junit.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -60,22 +60,24 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 
 public class DummyContainerManager extends ContainerManagerImpl {
 
-  private static final Log LOG = LogFactory
-      .getLog(DummyContainerManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DummyContainerManager.class);
   
   public DummyContainerManager(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
         dirsHandler);
+    dispatcher.disableExitOnDispatchException();
   }
 
   @Override
   @SuppressWarnings("unchecked")
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext, Context context) {
+      ContainerExecutor exec, DeletionService deletionContext, Context context,
+      NodeManagerMetrics metrics) {
     return new ResourceLocalizationService(super.dispatcher, exec,
-        deletionContext, super.dirsHandler, context) {
+        deletionContext, super.dirsHandler, context, metrics) {
       @Override
       public void handle(LocalizationEvent event) {
         switch (event.getType()) {
@@ -188,11 +190,6 @@ public class DummyContainerManager extends ContainerManagerImpl {
     };
   }
 
-  @Override
-  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
-    // do nothing
-  }
-  
   @Override
   protected void authorizeStartAndResourceIncreaseRequest(
       NMTokenIdentifier nmTokenIdentifier,

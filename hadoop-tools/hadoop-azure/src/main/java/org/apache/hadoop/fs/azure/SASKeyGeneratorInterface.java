@@ -41,7 +41,8 @@ public interface SASKeyGeneratorInterface {
    * @param container
    *          - Container name within the storage account.
    * @return SAS URI for the container.
-   * @throws SASKeyGenerationException
+   * @throws SASKeyGenerationException Exception that gets thrown during
+   * generation of SAS Key.
    */
   URI getContainerSASUri(String accountName, String container)
       throws SASKeyGenerationException;
@@ -57,7 +58,8 @@ public interface SASKeyGeneratorInterface {
    * @param relativePath
    *          - Relative path within the container
    * @return SAS URI for the relative path blob.
-   * @throws SASKeyGenerationException
+   * @throws SASKeyGenerationException Exception that gets thrown during
+   * generation of SAS Key.
    */
   URI getRelativeBlobSASUri(String accountName, String container,
       String relativePath) throws SASKeyGenerationException;

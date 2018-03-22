@@ -98,7 +98,7 @@ public class TestMissingBlocksAlert {
         Thread.sleep(100);
       }
       assertTrue(dfs.getMissingBlocksCount() == 1);
-      assertEquals(4, dfs.getUnderReplicatedBlocksCount());
+      assertEquals(4, dfs.getLowRedundancyBlocksCount());
       assertEquals(3, bm.getUnderReplicatedNotMissingBlocks());
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -117,7 +117,7 @@ public class TestMissingBlocksAlert {
         Thread.sleep(100);
       }
 
-      assertEquals(2, dfs.getUnderReplicatedBlocksCount());
+      assertEquals(2, dfs.getLowRedundancyBlocksCount());
       assertEquals(2, bm.getUnderReplicatedNotMissingBlocks());
 
       Assert.assertEquals(0, (long)(Long) mbs.getAttribute(mxbeanName,

@@ -61,7 +61,7 @@ class OfflineEditsXmlLoader
   private long nextTxId;
   private final OpInstanceCache opCache = new OpInstanceCache();
   
-  static enum ParseState {
+  enum ParseState {
     EXPECT_EDITS_TAG,
     EXPECT_VERSION,
     EXPECT_RECORD,

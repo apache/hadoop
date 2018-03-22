@@ -26,9 +26,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.RejectedExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
@@ -59,8 +60,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class NonAggregatingLogHandler extends AbstractService implements
     LogHandler {
 
-  private static final Log LOG = LogFactory
-      .getLog(NonAggregatingLogHandler.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NonAggregatingLogHandler.class);
   private final Dispatcher dispatcher;
   private final DeletionService delService;
   private final Map<ApplicationId, String> appOwners;
@@ -247,8 +248,10 @@ public class NonAggregatingLogHandler extends AbstractService implements
         new ApplicationEvent(this.applicationId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
       if (localAppLogDirs.size() > 0) {
-        NonAggregatingLogHandler.this.delService.delete(user, null,
-          (Path[]) localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
+        FileDeletionTask deletionTask = new FileDeletionTask(
+            NonAggregatingLogHandler.this.delService, user, null,
+            localAppLogDirs);
+        NonAggregatingLogHandler.this.delService.delete(deletionTask);
       }
       try {
         NonAggregatingLogHandler.this.stateStore.removeLogDeleter(

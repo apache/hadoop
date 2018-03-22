@@ -19,17 +19,17 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies.MultipleLinearRandomRetry;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.ipc.RetriableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RetryUtils {
-  public static final Log LOG = LogFactory.getLog(RetryUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RetryUtils.class);
   
   /**
    * Return the default retry policy set in conf.
@@ -72,9 +72,7 @@ public class RetryUtils {
             retryPolicySpecKey, defaultRetryPolicySpec
             );
     
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("multipleLinearRandomRetry = " + multipleLinearRandomRetry);
-    }
+    LOG.debug("multipleLinearRandomRetry = {}", multipleLinearRandomRetry);
 
     if (multipleLinearRandomRetry == null) {
       //no retry
@@ -124,10 +122,9 @@ public class RetryUtils {
         p = RetryPolicies.TRY_ONCE_THEN_FAIL;
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("RETRY " + retries + ") policy="
-            + p.getClass().getSimpleName() + ", exception=" + e);
-      }
+      LOG.debug("RETRY {}) policy={}", retries,
+            p.getClass().getSimpleName(), e);
+
       return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
     }
 

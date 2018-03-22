@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -281,6 +283,84 @@ public class TestShuffleScheduler {
     // handle output fetch failure for failedAttemptID, part II
     // for MAPREDUCE-6361: verify no NPE exception get thrown out
     scheduler.copyFailed(failedAttemptID, host1, true, false);
+  }
+
+  @Test
+  public <K, V> void testDuplicateCopySucceeded() throws Exception {
+    JobConf job = new JobConf();
+    job.setNumMapTasks(2);
+    //mock creation
+    TaskUmbilicalProtocol mockUmbilical = mock(TaskUmbilicalProtocol.class);
+    Reporter mockReporter = mock(Reporter.class);
+    FileSystem mockFileSystem = mock(FileSystem.class);
+    Class<? extends org.apache.hadoop.mapred.Reducer>  combinerClass =
+        job.getCombinerClass();
+    @SuppressWarnings("unchecked")  // needed for mock with generic
+        CombineOutputCollector<K, V>  mockCombineOutputCollector =
+        (CombineOutputCollector<K, V>) mock(CombineOutputCollector.class);
+    org.apache.hadoop.mapreduce.TaskAttemptID mockTaskAttemptID =
+        mock(org.apache.hadoop.mapreduce.TaskAttemptID.class);
+    LocalDirAllocator mockLocalDirAllocator = mock(LocalDirAllocator.class);
+    CompressionCodec mockCompressionCodec = mock(CompressionCodec.class);
+    Counter mockCounter = mock(Counter.class);
+    TaskStatus mockTaskStatus = mock(TaskStatus.class);
+    Progress mockProgress = mock(Progress.class);
+    MapOutputFile mockMapOutputFile = mock(MapOutputFile.class);
+    Task mockTask = mock(Task.class);
+    @SuppressWarnings("unchecked")
+    MapOutput<K, V> output1 = mock(MapOutput.class);
+    @SuppressWarnings("unchecked")
+    MapOutput<K, V> output2 = mock(MapOutput.class);
+    @SuppressWarnings("unchecked")
+    MapOutput<K, V> output3 = mock(MapOutput.class);
+
+    ShuffleConsumerPlugin.Context<K, V> context =
+        new ShuffleConsumerPlugin.Context<K, V>(
+            mockTaskAttemptID, job, mockFileSystem,
+            mockUmbilical, mockLocalDirAllocator,
+            mockReporter, mockCompressionCodec,
+            combinerClass, mockCombineOutputCollector,
+            mockCounter, mockCounter, mockCounter,
+            mockCounter, mockCounter, mockCounter,
+            mockTaskStatus, mockProgress, mockProgress,
+            mockTask, mockMapOutputFile, null);
+    TaskStatus status = new TaskStatus() {
+      @Override
+      public boolean getIsMap() {
+        return false;
+      }
+      @Override
+      public void addFetchFailedMap(TaskAttemptID mapTaskId) {
+      }
+    };
+    Progress progress = new Progress();
+    ShuffleSchedulerImpl<K, V> scheduler = new ShuffleSchedulerImpl<K, V>(job,
+        status, null, null, progress, context.getShuffledMapsCounter(),
+        context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
+
+    MapHost host1 = new MapHost("host1", null);
+    TaskAttemptID succeedAttempt1ID = new TaskAttemptID(
+        new org.apache.hadoop.mapred.TaskID(
+            new JobID("test", 0), TaskType.MAP, 0), 0);
+    TaskAttemptID succeedAttempt2ID = new TaskAttemptID(
+        new org.apache.hadoop.mapred.TaskID(
+            new JobID("test", 0), TaskType.MAP, 0), 1);
+    TaskAttemptID succeedAttempt3ID = new TaskAttemptID(
+        new org.apache.hadoop.mapred.TaskID(
+            new JobID("test", 0), TaskType.MAP, 1), 0);
+
+    long bytes = (long)500 * 1024 * 1024;
+    //First successful copy for map 0 should commit output
+    scheduler.copySucceeded(succeedAttempt1ID, host1, bytes, 0, 1, output1);
+    verify(output1).commit();
+
+    //Second successful copy for map 0 should abort output
+    scheduler.copySucceeded(succeedAttempt2ID, host1, bytes, 0, 1, output2);
+    verify(output2).abort();
+
+    //First successful copy for map 1 should commit output
+    scheduler.copySucceeded(succeedAttempt3ID, host1, bytes, 0, 1, output3);
+    verify(output3).commit();
   }
 
   private static String copyMessage(int attemptNo, double rate1, double rate2) {

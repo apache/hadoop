@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
@@ -28,7 +29,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -50,13 +50,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENAB
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 
 public class FSDirAttrOp {
-  static HdfsFileStatus setPermission(
-      FSDirectory fsd, final String src, FsPermission permission)
-      throws IOException {
+  static FileStatus setPermission(
+      FSDirectory fsd, FSPermissionChecker pc, final String src,
+      FsPermission permission) throws IOException {
     if (FSDirectory.isExactReservedName(src)) {
       throw new InvalidPathException(src);
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -70,13 +69,12 @@ public class FSDirAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus setOwner(
-      FSDirectory fsd, String src, String username, String group)
-      throws IOException {
+  static FileStatus setOwner(
+      FSDirectory fsd, FSPermissionChecker pc, String src, String username,
+      String group) throws IOException {
     if (FSDirectory.isExactReservedName(src)) {
       throw new InvalidPathException(src);
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -100,11 +98,9 @@ public class FSDirAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static HdfsFileStatus setTimes(
-      FSDirectory fsd, String src, long mtime, long atime)
-      throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
-
+  static FileStatus setTimes(
+      FSDirectory fsd, FSPermissionChecker pc, String src, long mtime,
+      long atime) throws IOException {
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -129,11 +125,10 @@ public class FSDirAttrOp {
   }
 
   static boolean setReplication(
-      FSDirectory fsd, BlockManager bm, String src, final short replication)
-      throws IOException {
+      FSDirectory fsd, FSPermissionChecker pc, BlockManager bm, String src,
+      final short replication) throws IOException {
     bm.verifyReplication(src, replication, null);
     final boolean isFile;
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
       final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
@@ -153,33 +148,31 @@ public class FSDirAttrOp {
     return isFile;
   }
 
-  static HdfsFileStatus unsetStoragePolicy(FSDirectory fsd, BlockManager bm,
-      String src) throws IOException {
-    return setStoragePolicy(fsd, bm, src,
+  static FileStatus unsetStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
+      BlockManager bm, String src) throws IOException {
+    return setStoragePolicy(fsd, pc, bm, src,
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, "unset");
   }
 
-  static HdfsFileStatus setStoragePolicy(FSDirectory fsd, BlockManager bm,
-      String src, final String policyName) throws IOException {
+  static FileStatus setStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
+      BlockManager bm, String src, final String policyName) throws IOException {
     // get the corresponding policy and make sure the policy name is valid
     BlockStoragePolicy policy = bm.getStoragePolicy(policyName);
     if (policy == null) {
       throw new HadoopIllegalArgumentException(
           "Cannot find a block policy with the name " + policyName);
     }
-
-    return setStoragePolicy(fsd, bm, src, policy.getId(), "set");
+    return setStoragePolicy(fsd, pc, bm, src, policy.getId(), "set");
   }
 
-  static HdfsFileStatus setStoragePolicy(FSDirectory fsd, BlockManager bm,
-      String src, final byte policyId, final String operation)
+  static FileStatus setStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
+      BlockManager bm, String src, final byte policyId, final String operation)
       throws IOException {
     if (!fsd.isStoragePolicyEnabled()) {
       throw new IOException(String.format(
           "Failed to %s storage policy since %s is set to false.", operation,
           DFS_STORAGE_POLICY_ENABLED_KEY));
     }
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -202,9 +195,8 @@ public class FSDirAttrOp {
     return bm.getStoragePolicies();
   }
 
-  static BlockStoragePolicy getStoragePolicy(FSDirectory fsd, BlockManager bm,
-      String path) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+  static BlockStoragePolicy getStoragePolicy(FSDirectory fsd,
+      FSPermissionChecker pc, BlockManager bm, String path) throws IOException {
     fsd.readLock();
     try {
       final INodesInPath iip = fsd.resolvePath(pc, path, DirOp.READ_LINK);
@@ -222,9 +214,8 @@ public class FSDirAttrOp {
     }
   }
 
-  static long getPreferredBlockSize(FSDirectory fsd, String src)
-      throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+  static long getPreferredBlockSize(FSDirectory fsd, FSPermissionChecker pc,
+      String src) throws IOException {
     fsd.readLock();
     try {
       final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
@@ -240,9 +231,8 @@ public class FSDirAttrOp {
    *
    * Note: This does not support ".inodes" relative path.
    */
-  static void setQuota(FSDirectory fsd, String src, long nsQuota, long ssQuota,
-      StorageType type) throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
+  static void setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
+      long nsQuota, long ssQuota, StorageType type) throws IOException {
     if (fsd.isPermissionEnabled()) {
       pc.checkSuperuserPrivilege();
     }
@@ -414,9 +404,12 @@ public class FSDirAttrOp {
       if (oldBR > targetReplication) {
         FSDirectory.LOG.info("Decreasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
-      } else {
+      } else if (oldBR < targetReplication) {
         FSDirectory.LOG.info("Increasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
+      } else {
+        FSDirectory.LOG.info("Replication remains unchanged at {} for {}",
+                             oldBR, iip.getPath());
       }
     }
     return file.getBlocks();
@@ -494,7 +487,9 @@ public class FSDirAttrOp {
     // then no need to store access time
     if (atime != -1 && (status || force
         || atime > inode.getAccessTime() + fsd.getAccessTimePrecision())) {
-      inode.setAccessTime(atime, latest);
+      inode.setAccessTime(atime, latest,
+          fsd.getFSNamesystem().getSnapshotManager().
+          getSkipCaptureAccessTimeOnlyChange());
       status = true;
     }
     return status;

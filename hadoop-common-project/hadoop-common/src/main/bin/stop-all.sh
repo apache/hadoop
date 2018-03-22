@@ -15,11 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+## @description  catch the ctrl-c
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function hadoop_abort_stopall()
+{
+  exit 1
+}
 
 # Stop all hadoop daemons.  Run this on master node.
-
-echo "This script is deprecated. Use stop-dfs.sh and stop-yarn.sh instead."
-exit 1
 
 # let's locate libexec...
 if [[ -n "${HADOOP_HOME}" ]]; then
@@ -38,6 +43,14 @@ if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
   exit 1
+fi
+
+if ! hadoop_privilege_check; then
+  trap hadoop_abort_stopall INT
+  hadoop_error "WARNING: Stopping all Apache Hadoop daemons as ${USER} in 10 seconds."
+  hadoop_error "WARNING: Use CTRL-C to abort."
+  sleep 10
+  trap - INT
 fi
 
 # stop hdfs daemons if hdfs is present

@@ -25,9 +25,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.commons.logging.Log;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
 
 /**
  * This is a debugging class that can be used by callers to track
@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class InstrumentedLock implements Lock {
 
   private final Lock lock;
-  private final Log logger;
+  private final Logger logger;
   private final String name;
   private final Timer clock;
 
@@ -70,20 +70,20 @@ public class InstrumentedLock implements Lock {
    * @param lockWarningThresholdMs the time threshold to view lock held
    *                               time as being "too long"
    */
-  public InstrumentedLock(String name, Log logger, long minLoggingGapMs,
-      long lockWarningThresholdMs) {
+  public InstrumentedLock(String name, Logger logger, long minLoggingGapMs,
+                          long lockWarningThresholdMs) {
     this(name, logger, new ReentrantLock(),
         minLoggingGapMs, lockWarningThresholdMs);
   }
 
-  public InstrumentedLock(String name, Log logger, Lock lock,
+  public InstrumentedLock(String name, Logger logger, Lock lock,
       long minLoggingGapMs, long lockWarningThresholdMs) {
     this(name, logger, lock,
         minLoggingGapMs, lockWarningThresholdMs, new Timer());
   }
 
   @VisibleForTesting
-  InstrumentedLock(String name, Log logger, Lock lock,
+  InstrumentedLock(String name, Logger logger, Lock lock,
       long minLoggingGapMs, long lockWarningThresholdMs, Timer clock) {
     this.name = name;
     this.lock = lock;

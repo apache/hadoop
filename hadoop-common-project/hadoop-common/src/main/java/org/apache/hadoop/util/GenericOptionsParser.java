@@ -15,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.util;
-
-import java.io.File;
+package org.apache.hadoop.util;import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -36,8 +34,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +43,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>GenericOptionsParser</code> is a utility to parse command line
@@ -85,11 +83,11 @@ import org.apache.hadoop.security.UserGroupInformation;
  *
  * <p>Examples:</p>
  * <p><blockquote><pre>
- * $ bin/hadoop dfs -fs darwin:9820 -ls /data
- * list /data directory in dfs with namenode darwin:9820
+ * $ bin/hadoop dfs -fs darwin:8020 -ls /data
+ * list /data directory in dfs with namenode darwin:8020
  * 
- * $ bin/hadoop dfs -D fs.default.name=darwin:9820 -ls /data
- * list /data directory in dfs with namenode darwin:9820
+ * $ bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
+ * list /data directory in dfs with namenode darwin:8020
  *     
  * $ bin/hadoop dfs -conf core-site.xml -conf hdfs-site.xml -ls /data
  * list /data directory in dfs with multiple conf files specified.
@@ -115,9 +113,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class GenericOptionsParser {
 
-  private static final Log LOG = LogFactory.getLog(GenericOptionsParser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GenericOptionsParser.class);
   private Configuration conf;
   private CommandLine commandLine;
+  private final boolean parseSuccessful;
 
   /**
    * Create an options parser with the given options to parse the args.
@@ -171,7 +171,7 @@ public class GenericOptionsParser {
   public GenericOptionsParser(Configuration conf,
       Options options, String[] args) throws IOException {
     this.conf = conf;
-    parseGeneralOptions(options, args);
+    parseSuccessful = parseGeneralOptions(options, args);
   }
 
   /**
@@ -208,57 +208,72 @@ public class GenericOptionsParser {
   }
 
   /**
-   * Specify properties of each generic option
+   * Query for the parse operation succeeding.
+   * @return true if parsing the CLI was successful
+   */
+  public boolean isParseSuccessful() {
+    return parseSuccessful;
+  }
+
+  /**
+   * Specify properties of each generic option.
+   * <i>Important</i?: as {@link OptionBuilder} is not thread safe, subclasses
+   * must synchronize use on {@code OptionBuilder.class}
    */
   @SuppressWarnings("static-access")
-  private static synchronized Options buildGeneralOptions(Options opts) {
-    Option fs = OptionBuilder.withArgName("local|namenode:port")
-    .hasArg()
-    .withDescription("specify a namenode")
-    .create("fs");
-    Option jt = OptionBuilder.withArgName("local|resourcemanager:port")
-    .hasArg()
-    .withDescription("specify a ResourceManager")
-    .create("jt");
-    Option oconf = OptionBuilder.withArgName("configuration file")
-    .hasArg()
-    .withDescription("specify an application configuration file")
-    .create("conf");
-    Option property = OptionBuilder.withArgName("property=value")
-    .hasArg()
-    .withDescription("use value for given property")
-    .create('D');
-    Option libjars = OptionBuilder.withArgName("paths")
-    .hasArg()
-    .withDescription("comma separated jar files to include in the classpath.")
-    .create("libjars");
-    Option files = OptionBuilder.withArgName("paths")
-    .hasArg()
-    .withDescription("comma separated files to be copied to the " +
-           "map reduce cluster")
-    .create("files");
-    Option archives = OptionBuilder.withArgName("paths")
-    .hasArg()
-    .withDescription("comma separated archives to be unarchived" +
-                     " on the compute machines.")
-    .create("archives");
-    
-    // file with security tokens
-    Option tokensFile = OptionBuilder.withArgName("tokensFile")
-    .hasArg()
-    .withDescription("name of the file with the tokens")
-    .create("tokenCacheFile");
+  protected Options buildGeneralOptions(Options opts) {
+    synchronized (OptionBuilder.class) {
+      Option fs = OptionBuilder.withArgName("file:///|hdfs://namenode:port")
+          .hasArg()
+          .withDescription("specify default filesystem URL to use, "
+          + "overrides 'fs.defaultFS' property from configurations.")
+          .create("fs");
+      Option jt = OptionBuilder.withArgName("local|resourcemanager:port")
+          .hasArg()
+          .withDescription("specify a ResourceManager")
+          .create("jt");
+      Option oconf = OptionBuilder.withArgName("configuration file")
+          .hasArg()
+          .withDescription("specify an application configuration file")
+          .create("conf");
+      Option property = OptionBuilder.withArgName("property=value")
+          .hasArg()
+          .withDescription("use value for given property")
+          .create('D');
+      Option libjars = OptionBuilder.withArgName("paths")
+          .hasArg()
+          .withDescription(
+              "comma separated jar files to include in the classpath.")
+          .create("libjars");
+      Option files = OptionBuilder.withArgName("paths")
+          .hasArg()
+          .withDescription("comma separated files to be copied to the " +
+              "map reduce cluster")
+          .create("files");
+      Option archives = OptionBuilder.withArgName("paths")
+          .hasArg()
+          .withDescription("comma separated archives to be unarchived" +
+              " on the compute machines.")
+          .create("archives");
 
-    opts.addOption(fs);
-    opts.addOption(jt);
-    opts.addOption(oconf);
-    opts.addOption(property);
-    opts.addOption(libjars);
-    opts.addOption(files);
-    opts.addOption(archives);
-    opts.addOption(tokensFile);
+      // file with security tokens
+      Option tokensFile = OptionBuilder.withArgName("tokensFile")
+          .hasArg()
+          .withDescription("name of the file with the tokens")
+          .create("tokenCacheFile");
 
-    return opts;
+
+      opts.addOption(fs);
+      opts.addOption(jt);
+      opts.addOption(oconf);
+      opts.addOption(property);
+      opts.addOption(libjars);
+      opts.addOption(files);
+      opts.addOption(archives);
+      opts.addOption(tokensFile);
+
+      return opts;
+    }
   }
 
   /**
@@ -367,7 +382,7 @@ public class GenericOptionsParser {
   }
 
   /**
-   * takes input as a comma separated list of files
+   * Takes input as a comma separated list of files
    * and verifies if they exist. It defaults for file:///
    * if the files specified do not have a scheme.
    * it returns the paths uri converted defaulting to file:///.
@@ -542,20 +557,24 @@ public class GenericOptionsParser {
    *
    * @param opts Options to use for parsing args.
    * @param args User-specified arguments
+   * @return true if the parse was successful
    */
-  private void parseGeneralOptions(Options opts, String[] args)
+  private boolean parseGeneralOptions(Options opts, String[] args)
       throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
+    boolean parsed = false;
     try {
       commandLine = parser.parse(opts, preProcessForWindows(args), true);
       processGeneralOptions(commandLine);
+      parsed = true;
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());
 
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("general options are: ", opts);
     }
+    return parsed;
   }
 
   /**
@@ -569,8 +588,9 @@ public class GenericOptionsParser {
         + "specify an application configuration file");
     out.println("-D <property=value>               "
         + "define a value for a given property");
-    out.println("-fs <local|namenode:port>         "
-        + "specify a namenode");
+    out.println("-fs <file:///|hdfs://namenode:port> "
+        + "specify default filesystem URL to use, overrides "
+        + "'fs.defaultFS' property from configurations.");
     out.println("-jt <local|resourcemanager:port>  "
         + "specify a ResourceManager");
     out.println("-files <file1,...>                "

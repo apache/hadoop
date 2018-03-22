@@ -34,6 +34,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.CompositeGroupsMapping;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.LdapGroupsMapping;
+import org.apache.hadoop.security.RuleBasedLdapGroupsMapping;
 import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.apache.hadoop.security.ssl.SSLFactory;
 
@@ -74,7 +75,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         ZKFailoverController.class,
         SSLFactory.class,
         CompositeGroupsMapping.class,
-        CodecUtil.class
+        CodecUtil.class,
+        RuleBasedLdapGroupsMapping.class
         };
 
     // Initialize used variables
@@ -89,22 +91,42 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // Lots of properties not in the above classes
     xmlPropsToSkipCompare.add("fs.ftp.password.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
+    xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
-    xmlPropsToSkipCompare.add("test.fs.s3n.name");
+    xmlPropsToSkipCompare.add("fs.viewfs.rename.strategy");
 
-    // S3N/S3A properties are in a different subtree.
-    // - org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys
+    // S3A properties are in a different subtree.
     xmlPrefixToSkipCompare.add("fs.s3a.");
-    xmlPrefixToSkipCompare.add("fs.s3n.");
-    xmlPrefixToSkipCompare.add("s3native.");
+
+    //ftp properties are in a different subtree.
+    // - org.apache.hadoop.fs.ftp.FTPFileSystem.
+    xmlPrefixToSkipCompare.add("fs.ftp.impl");
+
+    // WASB properties are in a different subtree.
+    // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
+    xmlPrefixToSkipCompare.add("fs.wasb.impl");
+    xmlPrefixToSkipCompare.add("fs.wasbs.impl");
+    xmlPrefixToSkipCompare.add("fs.azure.");
 
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys
     xmlPrefixToSkipCompare.add("adl.");
-    xmlPropsToSkipCompare.add("fs.adl.impl");
+    xmlPrefixToSkipCompare.add("fs.adl.");
     xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
+
+    // Azure properties are in a different class
+    // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
+    // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl
+    xmlPropsToSkipCompare.add("fs.azure.sas.expiry.period");
+    xmlPropsToSkipCompare.add("fs.azure.local.sas.key.mode");
+    xmlPropsToSkipCompare.add("fs.azure.secure.mode");
+    xmlPropsToSkipCompare.add("fs.azure.authorization");
+    xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
+    xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
+    xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
     // Deprecated properties.  These should eventually be removed from the
     // class.
@@ -117,8 +139,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add("dr.who");
 
     // XML deprecated properties.
-    xmlPropsToSkipCompare.add("io.seqfile.lazydecompress");
-    xmlPropsToSkipCompare.add("io.seqfile.sorter.recordlimit");
     // - org.apache.hadoop.hdfs.client.HdfsClientConfigKeys
     xmlPropsToSkipCompare
         .add("io.bytes.per.checksum");

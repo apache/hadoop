@@ -28,6 +28,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -70,12 +73,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
@@ -118,28 +122,31 @@ public class FSDirectory implements Closeable {
 
   @VisibleForTesting
   static boolean CHECK_RESERVED_FILE_NAMES = true;
-  public final static String DOT_RESERVED_STRING = ".reserved";
-  public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
-      + DOT_RESERVED_STRING;
+  public final static String DOT_RESERVED_STRING =
+      HdfsConstants.DOT_RESERVED_STRING;
+  public final static String DOT_RESERVED_PATH_PREFIX =
+      HdfsConstants.DOT_RESERVED_PATH_PREFIX;
   public final static byte[] DOT_RESERVED = 
       DFSUtil.string2Bytes(DOT_RESERVED_STRING);
   private final static String RAW_STRING = "raw";
   private final static byte[] RAW = DFSUtil.string2Bytes(RAW_STRING);
-  public final static String DOT_INODES_STRING = ".inodes";
+  public final static String DOT_INODES_STRING =
+      HdfsConstants.DOT_INODES_STRING;
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
   private final static byte[] DOT_DOT =
       DFSUtil.string2Bytes("..");
 
   public final static HdfsFileStatus DOT_RESERVED_STATUS =
-      new HdfsFileStatus(0, true, 0, 0, 0, 0, new FsPermission((short) 01770),
-          null, null, null, HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+      new HdfsFileStatus.Builder()
+        .isdir(true)
+        .perm(new FsPermission((short) 01770))
+        .build();
 
   public final static HdfsFileStatus DOT_SNAPSHOT_DIR_STATUS =
-      new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+      new HdfsFileStatus.Builder()
+        .isdir(true)
+        .build();
 
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
@@ -195,6 +202,10 @@ public class FSDirectory implements Closeable {
   private HdfsFileStatus[] reservedStatuses;
 
   private INodeAttributeProvider attributeProvider;
+
+  // A HashSet of principals of users for whom the external attribute provider
+  // will be bypassed
+  private HashSet<String> usersToBypassExtAttrProvider = null;
 
   public void setINodeAttributeProvider(INodeAttributeProvider provider) {
     attributeProvider = provider;
@@ -351,6 +362,49 @@ public class FSDirectory implements Closeable {
     this.quotaInitThreads = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_KEY,
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT);
+
+    initUsersToBypassExtProvider(conf);
+  }
+
+  private void initUsersToBypassExtProvider(Configuration conf) {
+    String[] bypassUsers = conf.getTrimmedStrings(
+        DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_DEFAULT);
+    for(int i = 0; i < bypassUsers.length; i++) {
+      String tmp = bypassUsers[i].trim();
+      if (!tmp.isEmpty()) {
+        if (usersToBypassExtAttrProvider == null) {
+          usersToBypassExtAttrProvider = new HashSet<String>();
+        }
+        LOG.info("Add user " + tmp + " to the list that will bypass external"
+            + " attribute provider.");
+        usersToBypassExtAttrProvider.add(tmp);
+      }
+    }
+  }
+
+  /**
+   * Check if a given user is configured to bypass external attribute provider.
+   * @param user user principal
+   * @return true if the user is to bypass external attribute provider
+   */
+  private boolean isUserBypassingExtAttrProvider(final String user) {
+    return (usersToBypassExtAttrProvider != null) &&
+          usersToBypassExtAttrProvider.contains(user);
+  }
+
+  /**
+   * Return attributeProvider or null if ugi is to bypass attributeProvider.
+   * @param ugi
+   * @return configured attributeProvider or null
+   */
+  private INodeAttributeProvider getUserFilteredAttributeProvider(
+      UserGroupInformation ugi) {
+    if (attributeProvider == null ||
+        (ugi != null && isUserBypassingExtAttrProvider(ugi.getUserName()))) {
+      return null;
+    }
+    return attributeProvider;
   }
 
   /**
@@ -380,13 +434,22 @@ public class FSDirectory implements Closeable {
    * @return Array of HdfsFileStatus
    */
   void createReservedStatuses(long cTime) {
-    HdfsFileStatus inodes = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770), null, supergroup, null,
-        DOT_INODES, -1L, 0, null,
-        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
-    HdfsFileStatus raw = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770), null, supergroup, null, RAW, -1L,
-        0, null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+    HdfsFileStatus inodes = new HdfsFileStatus.Builder()
+        .isdir(true)
+        .mtime(cTime)
+        .atime(cTime)
+        .perm(new FsPermission((short) 0770))
+        .group(supergroup)
+        .path(DOT_INODES)
+        .build();
+    HdfsFileStatus raw = new HdfsFileStatus.Builder()
+        .isdir(true)
+        .mtime(cTime)
+        .atime(cTime)
+        .perm(new FsPermission((short) 0770))
+        .group(supergroup)
+        .path(RAW)
+        .build();
     reservedStatuses = new HdfsFileStatus[] {inodes, raw};
   }
 
@@ -593,7 +656,14 @@ public class FSDirectory implements Closeable {
     byte[][] components = INode.getPathComponents(src);
     boolean isRaw = isReservedRawName(components);
     if (isPermissionEnabled && pc != null && isRaw) {
-      pc.checkSuperuserPrivilege();
+      switch(dirOp) {
+        case READ_LINK:
+        case READ:
+          break;
+        default:
+          pc.checkSuperuserPrivilege();
+          break;
+      }
     }
     components = resolveComponents(components, this);
     INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
@@ -695,7 +765,7 @@ public class FSDirectory implements Closeable {
     try {
       int threads = (initThreads < 1) ? 1 : initThreads;
       LOG.info("Initializing quota with " + threads + " thread(s)");
-      long start = Time.now();
+      long start = Time.monotonicNow();
       QuotaCounts counts = new QuotaCounts.Builder().build();
       ForkJoinPool p = new ForkJoinPool(threads);
       RecursiveAction task = new InitQuotaTask(getBlockStoragePolicySuite(),
@@ -703,7 +773,7 @@ public class FSDirectory implements Closeable {
       p.execute(task);
       task.join();
       p.shutdown();
-      LOG.info("Quota initialization completed in " + (Time.now() - start) +
+      LOG.info("Quota initialization completed in " + (Time.monotonicNow() - start) +
           " milliseconds\n" + counts);
     } finally {
       writeUnlock();
@@ -957,7 +1027,8 @@ public class FSDirectory implements Closeable {
     final short replicationFactor;
     if (fileINode.isStriped()) {
       final ErasureCodingPolicy ecPolicy =
-          FSDirErasureCodingOp.getErasureCodingPolicy(namesystem, iip);
+          FSDirErasureCodingOp
+              .unprotectedGetErasureCodingPolicy(namesystem, iip);
       final short numDataUnits = (short) ecPolicy.getNumDataUnits();
       final short numParityUnits = (short) ecPolicy.getNumParityUnits();
 
@@ -1222,13 +1293,8 @@ public class FSDirectory implements Closeable {
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
-    boolean added;
-    try {
-      added = parent.addChild(inode, true, existing.getLatestSnapshotId());
-    } catch (QuotaExceededException e) {
-      updateCountNoQuotaCheck(existing, pos, counts.negation());
-      throw e;
-    }
+    final boolean added = parent.addChild(inode, true,
+        existing.getLatestSnapshotId());
     if (!added) {
       updateCountNoQuotaCheck(existing, pos, counts.negation());
       return null;
@@ -1349,12 +1415,18 @@ public class FSDirectory implements Closeable {
     }
     try {
       final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-              xattr.getValue());
+          HdfsProtos.ZoneEncryptionInfoProto.parseFrom(xattr.getValue());
       ezManager.unprotectedAddEncryptionZone(inode.getId(),
           PBHelperClient.convert(ezProto.getSuite()),
           PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
           ezProto.getKeyName());
+      if (ezProto.hasReencryptionProto()) {
+        final ReencryptionInfoProto reProto = ezProto.getReencryptionProto();
+        // inodes parents may not be loaded if this is done during fsimage
+        // loading so cannot set full path now. Pass in null to indicate that.
+        ezManager.getReencryptionStatus()
+            .updateZoneStatus(inode.getId(), null, reProto);
+      }
     } catch (InvalidProtocolBufferException e) {
       NameNode.LOG.warn("Error parsing protocol buffer of " +
           "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
@@ -1695,7 +1767,7 @@ public class FSDirectory implements Closeable {
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
-        fsOwner, superGroup, ugi, attributeProvider);
+        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi));
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
@@ -1795,10 +1867,45 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  HdfsFileStatus getAuditFileInfo(INodesInPath iip)
+  FileStatus getAuditFileInfo(INodesInPath iip)
       throws IOException {
-    return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
-        ? FSDirStatAndListingOp.getFileInfo(this, iip, false) : null;
+    if (!namesystem.isAuditEnabled() || !namesystem.isExternalInvocation()) {
+      return null;
+    }
+
+    final INode inode = iip.getLastINode();
+    if (inode == null) {
+      return null;
+    }
+    final int snapshot = iip.getPathSnapshotId();
+
+    Path symlink = null;
+    long size = 0;     // length is zero for directories
+    short replication = 0;
+    long blocksize = 0;
+
+    if (inode.isFile()) {
+      final INodeFile fileNode = inode.asFile();
+      size = fileNode.computeFileSize(snapshot);
+      replication = fileNode.getFileReplication(snapshot);
+      blocksize = fileNode.getPreferredBlockSize();
+    } else if (inode.isSymlink()) {
+      symlink = new Path(
+          DFSUtilClient.bytes2String(inode.asSymlink().getSymlink()));
+    }
+
+    return new FileStatus(
+        size,
+        inode.isDirectory(),
+        replication,
+        blocksize,
+        inode.getModificationTime(snapshot),
+        inode.getAccessTime(snapshot),
+        inode.getFsPermission(snapshot),
+        inode.getUserName(snapshot),
+        inode.getGroupName(snapshot),
+        symlink,
+        new Path(iip.getPath()));
   }
 
   /**
@@ -1845,18 +1952,20 @@ public class FSDirectory implements Closeable {
   }
 
   INodeAttributes getAttributes(INodesInPath iip)
-      throws FileNotFoundException {
+      throws IOException {
     INode node = FSDirectory.resolveLastINode(iip);
     int snapshot = iip.getPathSnapshotId();
     INodeAttributes nodeAttrs = node.getSnapshotINode(snapshot);
-    if (attributeProvider != null) {
+    UserGroupInformation ugi = NameNode.getRemoteUser();
+    INodeAttributeProvider ap = this.getUserFilteredAttributeProvider(ugi);
+    if (ap != null) {
       // permission checking sends the full components array including the
       // first empty component for the root.  however file status
       // related calls are expected to strip out the root component according
       // to TestINodeAttributeProvider.
       byte[][] components = iip.getPathComponents();
       components = Arrays.copyOfRange(components, 1, components.length);
-      nodeAttrs = attributeProvider.getAttributes(components, nodeAttrs);
+      nodeAttrs = ap.getAttributes(components, nodeAttrs);
     }
     return nodeAttrs;
   }

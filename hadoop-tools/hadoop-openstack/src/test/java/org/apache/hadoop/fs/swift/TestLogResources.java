@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Test;
 
 import java.net.URL;
@@ -28,8 +28,8 @@ import java.net.URL;
  * This test just debugs which log resources are being picked up
  */
 public class TestLogResources implements SwiftTestConstants {
-  protected static final Log LOG =
-    LogFactory.getLog(TestLogResources.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestLogResources.class);
 
   private void printf(String format, Object... args) {
     String msg = String.format(format, args);

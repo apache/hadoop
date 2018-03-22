@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConnectionClosedException;
 import org.apache.hadoop.fs.swift.util.SwiftUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -43,10 +44,11 @@ import java.net.URI;
  */
 public class HttpInputStreamWithRelease extends InputStream {
 
-  private static final Log LOG =
-    LogFactory.getLog(HttpInputStreamWithRelease.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HttpInputStreamWithRelease.class);
   private final URI uri;
-  private HttpMethod method;
+  private HttpRequestBase req;
+  private HttpResponse resp;
   //flag to say the stream is released -volatile so that read operations
   //pick it up even while unsynchronized.
   private volatile boolean released;
@@ -64,16 +66,17 @@ public class HttpInputStreamWithRelease extends InputStream {
    */
   private String reasonClosed = "unopened";
 
-  public HttpInputStreamWithRelease(URI uri, HttpMethod method) throws
-                                                                IOException {
+  public HttpInputStreamWithRelease(URI uri, HttpRequestBase req,
+      HttpResponse resp) throws IOException {
     this.uri = uri;
-    this.method = method;
+    this.req = req;
+    this.resp = resp;
     constructionStack = LOG.isDebugEnabled() ? new Exception("stack") : null;
-    if (method == null) {
-      throw new IllegalArgumentException("Null 'method' parameter ");
+    if (req == null) {
+      throw new IllegalArgumentException("Null 'request' parameter ");
     }
     try {
-      inStream = method.getResponseBodyAsStream();
+      inStream = resp.getEntity().getContent();
     } catch (IOException e) {
       inStream = new ByteArrayInputStream(new byte[]{});
       throw releaseAndRethrow("getResponseBodyAsStream() in constructor -" + e, e);
@@ -97,14 +100,12 @@ public class HttpInputStreamWithRelease extends InputStream {
     if (!released) {
       reasonClosed = reason;
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Releasing connection to " + uri + ":  " + reason, ex);
-        }
-        if (method != null) {
+        LOG.debug("Releasing connection to {}:  {}", uri, reason, ex);
+        if (req != null) {
           if (!dataConsumed) {
-            method.abort();
+            req.abort();
           }
-          method.releaseConnection();
+          req.releaseConnection();
         }
         if (inStream != null) {
           //this guard may seem un-needed, but a stack trace seen
@@ -134,7 +135,7 @@ public class HttpInputStreamWithRelease extends InputStream {
     try {
       release(operation, ex);
     } catch (IOException ioe) {
-      LOG.debug("Exception during release: " + operation + " - " + ioe, ioe);
+      LOG.debug("Exception during release: {}", operation, ioe);
       //make this the exception if there was none before
       if (ex == null) {
         ex = ioe;
@@ -170,9 +171,7 @@ public class HttpInputStreamWithRelease extends InputStream {
     try {
       read = inStream.read();
     } catch (EOFException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("EOF exception " + e, e);
-      }
+      LOG.debug("EOF exception", e);
       read = -1;
     } catch (IOException e) {
       throw releaseAndRethrow("read()", e);
@@ -197,9 +196,7 @@ public class HttpInputStreamWithRelease extends InputStream {
     try {
       read = inStream.read(b, off, len);
     } catch (EOFException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("EOF exception " + e, e);
-      }
+      LOG.debug("EOF exception", e);
       read = -1;
     } catch (IOException e) {
       throw releaseAndRethrow("read(b, off, " + len + ")", e);
@@ -219,13 +216,12 @@ public class HttpInputStreamWithRelease extends InputStream {
   protected void finalize() {
     try {
       if (release("finalize()", constructionStack)) {
-        LOG.warn("input stream of " + uri
-                 + " not closed properly -cleaned up in finalize()");
+        LOG.warn("input stream of {}" +
+                 " not closed properly -cleaned up in finalize()", uri);
       }
     } catch (Exception e) {
       //swallow anything that failed here
-      LOG.warn("Exception while releasing " + uri + "in finalizer",
-               e);
+      LOG.warn("Exception while releasing {} in finalizer", uri, e);
     }
   }
 

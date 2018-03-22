@@ -4,11 +4,10 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8+
-* Maven 3.0 or later
-* Findbugs 1.3.9 (if running findbugs)
+* JDK 1.8
+* Maven 3.3 or later
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
+* CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
@@ -83,6 +82,8 @@ Optional packages:
   $ sudo apt-get install libjansson-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
+* ZStandard compression
+    $ sudo apt-get install zstd
 
 ----------------------------------------------------------------------------------
 Maven main modules:
@@ -131,6 +132,8 @@ Maven build goals:
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
   * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
+  * Use -DskipShade to disable client jar shading to speed up build times (in
+    development environments only, not to build release artifacts)
 
  Snappy build options:
 
@@ -153,6 +156,29 @@ Maven build goals:
   * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
     the final tar file. This option requires that -Dsnappy.lib is also given,
     and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
+    bundling and building will fail.
+
+
+ ZStandard build options:
+
+   ZStandard is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.zstd to fail the build if libzstd.so is not found.
+    If this option is not specified and the zstd library is missing.
+
+  * Use -Dzstd.prefix to specify a nonstandard location for the libzstd
+    header files and library files. You do not need this option if you have
+    installed zstandard using a package manager.
+
+  * Use -Dzstd.lib to specify a nonstandard location for the libzstd library
+    files.  Similarly to zstd.prefix, you do not need this option if you have
+    installed using a package manager.
+
+  * Use -Dbundle.zstd to copy the contents of the zstd.lib directory into
+    the final tar file. This option requires that -Dzstd.lib is also given,
+    and it ignores the -Dzstd.prefix option. If -Dzstd.lib isn't given, the
     bundling and building will fail.
 
  OpenSSL build options:
@@ -282,6 +308,8 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 
   $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
+Note that the site needs to be built in a second pass after other artifacts.
+
 ----------------------------------------------------------------------------------
 Installing Hadoop
 
@@ -303,10 +331,10 @@ If the build process fails with an out of memory error, you should be able to fi
 it by increasing the memory used by maven which can be done via the environment
 variable MAVEN_OPTS.
 
-Here is an example setting to allocate between 256 and 512 MB of heap space to
+Here is an example setting to allocate between 256 MB and 1.5 GB of heap space to
 Maven
 
-export MAVEN_OPTS="-Xms256m -Xmx512m"
+export MAVEN_OPTS="-Xms256m -Xmx1536m"
 
 ----------------------------------------------------------------------------------
 
@@ -316,12 +344,11 @@ Building on Windows
 Requirements:
 
 * Windows System
-* JDK 1.8+
+* JDK 1.8
 * Maven 3.0 or later
-* Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer
-* Windows SDK 7.1 or Visual Studio 2010 Professional
+* CMake 3.1 or newer
+* Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
@@ -332,18 +359,15 @@ Requirements:
 Unix command-line tools are also included with the Windows Git package which
 can be downloaded from http://git-scm.com/downloads
 
-If using Visual Studio, it must be Visual Studio 2010 Professional (not 2012).
+If using Visual Studio, it must be Professional level or higher.
 Do not use Visual Studio Express.  It does not support compiling for 64-bit,
-which is problematic if running a 64-bit system.  The Windows SDK 7.1 is free to
-download here:
-
-http://www.microsoft.com/en-us/download/details.aspx?id=8279
+which is problematic if running a 64-bit system.
 
 The Windows SDK 8.1 is available to download at:
 
 http://msdn.microsoft.com/en-us/windows/bg162891.aspx
 
-Cygwin is neither required nor supported.
+Cygwin is not required.
 
 ----------------------------------------------------------------------------------
 Building:
@@ -351,21 +375,12 @@ Building:
 Keep the source code tree in a short path to avoid running into problems related
 to Windows maximum path length limitation (for example, C:\hdc).
 
-Run builds from a Windows SDK Command Prompt. (Start, All Programs,
-Microsoft Windows SDK v7.1, Windows SDK 7.1 Command Prompt).
+There is one support command file located in dev-support called win-paths-eg.cmd.
+It should be copied somewhere convenient and modified to fit your needs.
 
-JAVA_HOME must be set, and the path must not contain spaces. If the full path
-would contain spaces, then use the Windows short path instead.
-
-You must set the Platform environment variable to either x64 or Win32 depending
-on whether you're running a 64-bit or 32-bit system. Note that this is
-case-sensitive. It must be "Platform", not "PLATFORM" or "platform".
-Environment variables on Windows are usually case-insensitive, but Maven treats
-them as case-sensitive. Failure to set this environment variable correctly will
-cause msbuild to fail while building the native code in hadoop-common.
-
-set Platform=x64 (when building on a 64-bit system)
-set Platform=Win32 (when building on a 32-bit system)
+win-paths-eg.cmd sets up the environment for use. You will need to modify this
+file. It will put all of the required components in the command path,
+configure the bit-ness of the build, and set several optional components.
 
 Several tests require that the user must have the Create Symbolic Links
 privilege.

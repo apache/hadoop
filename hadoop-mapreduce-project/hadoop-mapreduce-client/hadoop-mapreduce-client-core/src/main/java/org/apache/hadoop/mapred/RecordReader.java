@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,7 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public interface RecordReader<K, V> {
+public interface RecordReader<K, V> extends Closeable{
   /** 
    * Reads the next key/value pair from the input for processing.
    *
@@ -74,7 +75,8 @@ public interface RecordReader<K, V> {
    * Close this {@link InputSplit} to future operations.
    * 
    * @throws IOException
-   */ 
+   */
+  @Override
   public void close() throws IOException;
 
   /**

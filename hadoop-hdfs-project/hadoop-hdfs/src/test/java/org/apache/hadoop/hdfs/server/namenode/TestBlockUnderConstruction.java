@@ -38,11 +38,15 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 
 public class TestBlockUnderConstruction {
   static final String BASE_DIR = "/test/TestBlockUnderConstruction";
@@ -182,5 +186,46 @@ public class TestBlockUnderConstruction {
     }
     // close file
     out.close();
+  }
+
+  /**
+   * A storage ID can be invalid if the storage failed or the node
+   * reregisters. When the node heart-beats, the storage report in it
+   * causes storage volumes to be added back. An invalid storage ID
+   * should not cause an NPE.
+   */
+  @Test
+  public void testEmptyExpectedLocations() throws Exception {
+    final NamenodeProtocols namenode = cluster.getNameNodeRpc();
+    final FSNamesystem fsn = cluster.getNamesystem();
+    final BlockManager bm = fsn.getBlockManager();
+    final Path p = new Path(BASE_DIR, "file2.dat");
+    final String src = p.toString();
+    final FSDataOutputStream out = TestFileCreation.createFile(hdfs, p, 1);
+    writeFile(p, out, 256);
+    out.hflush();
+
+    // make sure the block is readable
+    LocatedBlocks lbs = namenode.getBlockLocations(src, 0, 256);
+    LocatedBlock lastLB = lbs.getLocatedBlocks().get(0);
+    final Block b = lastLB.getBlock().getLocalBlock();
+
+    // fake a block recovery
+    long blockRecoveryId = bm.nextGenerationStamp(false);
+    BlockUnderConstructionFeature uc = bm.getStoredBlock(b).
+        getUnderConstructionFeature();
+    uc.initializeBlockRecovery(null, blockRecoveryId, false);
+
+    try {
+      String[] storages = { "invalid-storage-id1" };
+      fsn.commitBlockSynchronization(lastLB.getBlock(), blockRecoveryId, 256L,
+          true, false, lastLB.getLocations(), storages);
+    } catch (java.lang.IllegalStateException ise) {
+       // Although a failure is expected as of now, future commit policy
+       // changes may make it not fail. This is not critical to the test.
+    }
+
+    // Invalid storage should not trigger an exception.
+    lbs = namenode.getBlockLocations(src, 0, 256);
   }
 }

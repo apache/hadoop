@@ -19,9 +19,9 @@ package org.apache.hadoop.jmx;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.http.HttpServer2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
@@ -38,7 +38,6 @@ import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -116,7 +115,8 @@ import java.util.Set;
  *
  */
 public class JMXJsonServlet extends HttpServlet {
-  private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JMXJsonServlet.class);
   static final String ACCESS_CONTROL_ALLOW_METHODS =
       "Access-Control-Allow-Methods";
   static final String ACCESS_CONTROL_ALLOW_ORIGIN =
@@ -169,12 +169,7 @@ public class JMXJsonServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
-      // If user is a static user and auth Type is null, that means
-      // there is a non-security environment and no need authorization,
-      // otherwise, do the authorization.
-      final ServletContext servletContext = getServletContext();
-      if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-          !isInstrumentationAccessAllowed(request, response)) {
+      if (!isInstrumentationAccessAllowed(request, response)) {
         return;
       }
       JsonGenerator jg = null;

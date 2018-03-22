@@ -225,7 +225,6 @@ public class TestTrashWithSecureEncryptionZones {
     clientConf = new Configuration(conf);
     clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
     shell = new FsShell(clientConf);
-    System.setProperty("user.name", HDFS_USER_NAME);
   }
 
   @AfterClass

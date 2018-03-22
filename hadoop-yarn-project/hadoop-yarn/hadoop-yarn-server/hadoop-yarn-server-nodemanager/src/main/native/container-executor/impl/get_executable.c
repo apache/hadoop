@@ -29,11 +29,9 @@
  */
 
 #include "config.h"
-#include "configuration.h"
-#include "container-executor.h"
+#include "util.h"
 
 #include <errno.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -142,7 +140,7 @@ char* get_executable(char *argv0) {
   return __get_exec_sysctl(mib);
 }
 
-#elif defined(__linux)
+#elif defined(__linux__)
 
 
 char* get_executable(char *argv0) {

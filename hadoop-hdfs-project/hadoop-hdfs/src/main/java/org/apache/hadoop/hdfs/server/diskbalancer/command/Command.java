@@ -49,17 +49,17 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSe
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.HostsFileReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -268,16 +268,33 @@ public abstract class Command extends Configured implements Closeable {
     if ((listArg == null) || listArg.isEmpty()) {
       return resultSet;
     }
+
     if (listArg.startsWith("file://")) {
       listURL = new URL(listArg);
-      byte[] data = Files.readAllBytes(Paths.get(listURL.getPath()));
-      nodeData = new String(data, Charset.forName("UTF-8"));
+      try {
+        HostsFileReader.readFileToSet("include",
+            Paths.get(listURL.getPath()).toString(), resultSet);
+      } catch (FileNotFoundException e) {
+        String warnMsg = String
+            .format("The input host file path '%s' is not a valid path. "
+                + "Please make sure the host file exists.", listArg);
+        throw new DiskBalancerException(warnMsg,
+            DiskBalancerException.Result.INVALID_HOST_FILE_PATH);
+      }
     } else {
       nodeData = listArg;
+      String[] nodes = nodeData.split(",");
+
+      if (nodes.length == 0) {
+        String warnMsg = "The number of input nodes is 0. "
+            + "Please input the valid nodes.";
+        throw new DiskBalancerException(warnMsg,
+            DiskBalancerException.Result.INVALID_NODE);
+      }
+
+      Collections.addAll(resultSet, nodes);
     }
 
-    String[] nodes = nodeData.split(",");
-    Collections.addAll(resultSet, nodes);
     return resultSet;
   }
 
@@ -484,7 +501,8 @@ public abstract class Command extends Configured implements Closeable {
    * Parse top number of nodes to be processed.
    * @return top number of nodes to be processed.
    */
-  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result) {
+  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result)
+      throws IllegalArgumentException {
     String outputLine = "";
     int nodes = 0;
     final String topVal = cmd.getOptionValue(DiskBalancerCLI.TOP);
@@ -505,6 +523,10 @@ public abstract class Command extends Configured implements Closeable {
         LOG.info(outputLine);
         result.appendln(outputLine);
         nodes = getDefaultTop();
+      }
+      if (nodes <= 0) {
+        throw new IllegalArgumentException(
+            "Top limit input should be a positive numeric value");
       }
     }
 

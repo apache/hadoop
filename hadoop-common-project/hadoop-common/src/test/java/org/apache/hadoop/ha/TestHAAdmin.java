@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
@@ -34,9 +32,11 @@ import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHAAdmin {
-  private static final Log LOG = LogFactory.getLog(TestHAAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHAAdmin.class);
   
   private HAAdmin tool;
   private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();

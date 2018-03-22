@@ -1,0 +1,60 @@
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 0,
+  "job.end.ms": 95375,
+  "job.queue.name": "sls_queue_1",
+  "job.id": "job_1",
+  "job.user": "default",
+  "job.tasks": [
+    {
+      "container.host": "/default-rack/node1",
+      "container.start.ms": 6664,
+      "container.end.ms": 23707,
+      "container.priority": 20,
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
+    },
+    {
+      "container.host": "/default-rack/node3",
+      "container.start.ms": 6665,
+      "container.end.ms": 21593,
+      "container.priority": 20,
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
+    },
+    {
+      "container.host": "/default-rack/node2",
+      "container.start.ms": 68770,
+      "container.end.ms": 86613,
+      "container.priority": 20,
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 105204,
+  "job.end.ms": 197256,
+  "job.queue.name": "sls_queue_2",
+  "job.id": "job_2",
+  "job.user": "default",
+  "job.tasks": [
+    {
+      "container.host": "/default-rack/node1",
+      "container.start.ms": 111822,
+      "container.end.ms": 133985,
+      "container.priority": 20,
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
+    },
+    {
+      "container.host": "/default-rack/node2",
+      "container.start.ms": 111788,
+      "container.end.ms": 131377,
+      "container.priority": 20,
+      "container.type": "map",
+      "container.execution.type": "GUARANTEED"
+    }
+  ]
+}

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -119,7 +119,7 @@ final class RestCsrfPreventionFilterHandler
 
     @Override
     public String getMethod() {
-      return req.method().name();
+      return req.getMethod().name();
     }
 
     @Override

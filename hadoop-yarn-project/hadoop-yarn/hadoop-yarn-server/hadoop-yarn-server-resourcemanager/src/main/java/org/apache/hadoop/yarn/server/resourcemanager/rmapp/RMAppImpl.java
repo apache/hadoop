@@ -18,17 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -46,11 +41,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.CallerContext;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -58,11 +52,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -75,6 +71,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -85,6 +82,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.SimpleBlacklistManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
@@ -104,7 +103,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -114,7 +112,6 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -128,6 +125,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static final EnumSet<RMAppState> COMPLETED_APP_STATES =
       EnumSet.of(RMAppState.FINISHED, RMAppState.FINISHING, RMAppState.FAILED,
           RMAppState.KILLED, RMAppState.FINAL_SAVING, RMAppState.KILLING);
+  private static final String STATE_CHANGE_MESSAGE =
+      "%s State change from %s to %s on event = %s";
+  private static final String RECOVERY_MESSAGE =
+      "Recovering app: %s with %d attempts and final state = %s";
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -146,9 +147,10 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final Map<ApplicationAttemptId, RMAppAttempt> attempts
       = new LinkedHashMap<ApplicationAttemptId, RMAppAttempt>();
   private final long submitTime;
-  private final Set<RMNode> updatedNodes = new HashSet<RMNode>();
+  private final Map<RMNode, NodeUpdateType> updatedNodes = new HashMap<>();
   private final String applicationType;
   private final Set<String> applicationTags;
+  private Map<String, String> applicationSchedulingEnvs = new HashMap<>();
 
   private final long attemptFailuresValidityInterval;
   private boolean amBlacklistingEnabled = false;
@@ -158,13 +160,16 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private boolean isNumAttemptsBeyondThreshold = false;
 
+
+
   // Mutable fields
   private long startTime;
   private long finishTime = 0;
   private long storedFinishTime = 0;
   private int firstAttemptIdInStateStore = 1;
   private int nextAttemptId = 1;
-  private String collectorAddr;
+  private AppCollectorData collectorData;
+  private CollectorInfo collectorInfo;
   // This field isn't protected by readlock now.
   private volatile RMAppAttempt currentAttempt;
   private String queue;
@@ -177,8 +182,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long logAggregationStartTime = 0;
   private final long logAggregationStatusTimeout;
   private final Map<NodeId, LogAggregationReport> logAggregationStatus =
-      new HashMap<NodeId, LogAggregationReport>();
-  private LogAggregationStatus logAggregationStatusForAppReport;
+      new ConcurrentHashMap<NodeId, LogAggregationReport>();
+  private volatile LogAggregationStatus logAggregationStatusForAppReport;
   private int logAggregationSucceed = 0;
   private int logAggregationFailed = 0;
   private Map<NodeId, List<String>> logAggregationDiagnosticsForNMs =
@@ -195,9 +200,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   private RMAppEvent eventCausingFinalSaving;
   private RMAppState targetedFinalState;
   private RMAppState recoveredFinalState;
-  private ResourceRequest amReq;
+  private List<ResourceRequest> amReqs;
   
   private CallerContext callerContext;
+
+  private ApplicationPlacementContext placementContext;
 
   Object transitionTodo;
 
@@ -216,8 +223,6 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from NEW state
     .addTransition(RMAppState.NEW, RMAppState.NEW,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
-    .addTransition(RMAppState.NEW, RMAppState.NEW,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
         RMAppEventType.START, new RMAppNewlySavingTransition())
     .addTransition(RMAppState.NEW, EnumSet.of(RMAppState.SUBMITTED,
@@ -234,8 +239,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     // Transitions from NEW_SAVING state
     .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
-    .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.SUBMITTED,
         RMAppEventType.APP_NEW_SAVED, new AddApplicationToSchedulerTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.FINAL_SAVING,
@@ -246,12 +249,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.APP_REJECTED,
           new FinalSavingTransition(new AppRejectedTransition(),
             RMAppState.FAILED))
+      .addTransition(RMAppState.NEW_SAVING, RMAppState.FAILED,
+          RMAppEventType.APP_SAVE_FAILED, new AppRejectedTransition())
 
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
-    .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING,
         RMAppEventType.APP_REJECTED,
         new FinalSavingTransition(
@@ -266,8 +269,6 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
-    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED, new RMAppStateUpdateTransition(
             YarnApplicationState.RUNNING))
@@ -293,8 +294,6 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
-    .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_UNREGISTERED,
         new FinalSavingTransition(
@@ -324,8 +323,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
-    .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
@@ -337,8 +334,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
-    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
       EnumSet.of(RMAppEventType.NODE_UPDATE,
@@ -350,8 +345,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.KILLING, RMAppState.KILLING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
-    .addTransition(RMAppState.KILLING, RMAppState.KILLING,
-        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.KILLING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_KILLED,
         new FinalSavingTransition(
@@ -407,7 +400,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         EnumSet.of(RMAppEventType.APP_ACCEPTED,
             RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
             RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
-            RMAppEventType.NODE_UPDATE))
+            RMAppEventType.NODE_UPDATE, RMAppEventType.START))
 
      .installTopology();
 
@@ -423,10 +416,10 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
-      ResourceRequest amReq) {
+      List<ResourceRequest> amReqs) {
     this(applicationId, rmContext, config, name, user, queue, submissionContext,
       scheduler, masterService, submitTime, applicationType, applicationTags,
-      amReq, -1);
+      amReqs, null, -1);
   }
 
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
@@ -434,17 +427,18 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
-      ResourceRequest amReq, long startTime) {
+      List<ResourceRequest> amReqs, ApplicationPlacementContext
+      placementContext, long startTime) {
 
     this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
-    this.name = name;
+    this.name = StringInterner.weakIntern(name);
     this.rmContext = rmContext;
     this.dispatcher = rmContext.getDispatcher();
     this.handler = dispatcher.getEventHandler();
     this.conf = config;
-    this.user = user;
+    this.user = StringInterner.weakIntern(user);
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
@@ -455,9 +449,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       this.startTime = startTime;
     }
-    this.applicationType = applicationType;
+    this.applicationType = StringInterner.weakIntern(applicationType);
     this.applicationTags = applicationTags;
-    this.amReq = amReq;
+    this.amReqs = amReqs;
     if (submissionContext.getPriority() != null) {
       this.applicationPriority = Priority
           .newInstance(submissionContext.getPriority().getPriority());
@@ -492,6 +486,17 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.stateMachine = stateMachineFactory.make(this);
 
     this.callerContext = CallerContext.getCurrent();
+
+    this.placementContext = placementContext;
+
+    // If applications are not explicitly specifying envs, try to pull from
+    // AM container environment lists.
+    if(submissionContext.getAMContainerSpec() != null) {
+      applicationSchedulingEnvs
+          .putAll(submissionContext.getAMContainerSpec().getEnvironment());
+    }
+    applicationSchedulingEnvs
+        .putAll(submissionContext.getApplicationSchedulingPropertiesMap());
 
     long localLogAggregationStatusTimeout =
         conf.getLong(YarnConfiguration.LOG_AGGREGATION_STATUS_TIME_OUT_MS,
@@ -542,7 +547,7 @@ public class RMAppImpl implements RMApp, Recoverable {
    */
   public void startTimelineCollector() {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollector(applicationId);
+        new AppLevelTimelineCollector(applicationId, user);
     rmContext.getRMTimelineCollectorManager().putIfAbsent(
         applicationId, collector);
   }
@@ -624,18 +629,22 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
-  public String getCollectorAddr() {
-    return this.collectorAddr;
+  public AppCollectorData getCollectorData() {
+    return this.collectorData;
   }
 
-  @Override
-  public void setCollectorAddr(String collectorAddress) {
-    this.collectorAddr = collectorAddress;
+  public void setCollectorData(AppCollectorData incomingData) {
+    this.collectorData = incomingData;
+    this.collectorInfo = CollectorInfo.newInstance(
+        incomingData.getCollectorAddr(), incomingData.getCollectorToken());
   }
 
-  @Override
-  public void removeCollectorAddr() {
-    this.collectorAddr = null;
+  public CollectorInfo getCollectorInfo() {
+    return this.collectorInfo;
+  }
+
+  public void removeCollectorData() {
+    this.collectorData = null;
   }
 
   @Override
@@ -681,11 +690,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
-  public int pullRMNodeUpdates(Collection<RMNode> updatedNodes) {
+  public int pullRMNodeUpdates(Map<RMNode, NodeUpdateType> upNodes) {
     this.writeLock.lock();
     try {
       int updatedNodeCount = this.updatedNodes.size();
-      updatedNodes.addAll(this.updatedNodes);
+      upNodes.putAll(this.updatedNodes);
       this.updatedNodes.clear();
       return updatedNodeCount;
     } finally {
@@ -713,7 +722,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       float progress = 0.0f;
       org.apache.hadoop.yarn.api.records.Token amrmToken = null;
       if (allowAccess) {
-        trackingUrl = getDefaultProxyTrackingUrl();
+        trackingUrl = rmContext.getAppProxyUrl(conf, applicationId);
         if (this.currentAttempt != null) {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
@@ -754,14 +763,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
 
         RMAppMetrics rmAppMetrics = getRMAppMetrics();
-        appUsageReport.setMemorySeconds(rmAppMetrics.getMemorySeconds());
-        appUsageReport.setVcoreSeconds(rmAppMetrics.getVcoreSeconds());
-        appUsageReport.
-            setPreemptedMemorySeconds(rmAppMetrics.
-                getPreemptedMemorySeconds());
-        appUsageReport.
-            setPreemptedVcoreSeconds(rmAppMetrics.
-                getPreemptedVcoreSeconds());
+        appUsageReport
+            .setResourceSecondsMap(rmAppMetrics.getResourceSecondsMap());
+        appUsageReport.setPreemptedResourceSecondsMap(
+            rmAppMetrics.getPreemptedResourceSecondsMap());
       }
 
       if (currentApplicationAttemptId == null) {
@@ -804,20 +809,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       return report;
     } finally {
       this.readLock.unlock();
-    }
-  }
-
-  private String getDefaultProxyTrackingUrl() {
-    try {
-      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-      String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, applicationId);
-      return result.toASCIIString();
-    } catch (URISyntaxException e) {
-      LOG.warn("Could not generate default proxy tracking URL for "
-          + applicationId);
-      return UNAVAILABLE;
     }
   }
 
@@ -901,13 +892,21 @@ public class RMAppImpl implements RMApp, Recoverable {
         /* keep the master in sync with the state machine */
         this.stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.error("Can't handle this event at current state", e);
-        /* TODO fail the application on the failed transition */
+        LOG.error("App: " + appID
+            + " can't handle this event at current state", e);
+        onInvalidStateTransition(event.getType(), oldState);
       }
 
-      if (oldState != getState()) {
-        LOG.info(appID + " State change from " + oldState + " to "
-            + getState() + " on event=" + event.getType());
+      // Log at INFO if we're not recovering or not in a terminal state.
+      // Log at DEBUG otherwise.
+      if ((oldState != getState()) &&
+          (((recoveredFinalState == null)) ||
+            (event.getType() != RMAppEventType.RECOVER))) {
+        LOG.info(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
+      } else if ((oldState != getState()) && LOG.isDebugEnabled()) {
+        LOG.debug(String.format(STATE_CHANGE_MESSAGE, appID, oldState,
+            getState(), event.getType()));
       }
     } finally {
       this.writeLock.unlock();
@@ -919,9 +918,15 @@ public class RMAppImpl implements RMApp, Recoverable {
     ApplicationStateData appState =
         state.getApplicationState().get(getApplicationId());
     this.recoveredFinalState = appState.getState();
-    LOG.info("Recovering app: " + getApplicationId() + " with " + 
-        + appState.getAttemptCount() + " attempts and final state = "
-        + this.recoveredFinalState );
+
+    if (recoveredFinalState == null) {
+      LOG.info(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), "NONE"));
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug(String.format(RECOVERY_MESSAGE, getApplicationId(),
+          appState.getAttemptCount(), recoveredFinalState));
+    }
+
     this.diagnostics.append(null == appState.getDiagnostics() ? "" : appState
         .getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
@@ -970,26 +975,22 @@ public class RMAppImpl implements RMApp, Recoverable {
       // Transfer over the blacklist from the previous app-attempt.
       currentAMBlacklistManager = currentAttempt.getAMBlacklistManager();
     } else {
-      if (amBlacklistingEnabled) {
+      if (amBlacklistingEnabled && !submissionContext.getUnmanagedAM()) {
         currentAMBlacklistManager = new SimpleBlacklistManager(
-            scheduler.getNumClusterNodes(), blacklistDisableThreshold);
+            RMServerUtils.getApplicableNodeCountForAM(rmContext, conf,
+                getAMResourceRequests()),
+            blacklistDisableThreshold);
       } else {
         currentAMBlacklistManager = new DisabledBlacklistManager();
       }
     }
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf,
-          // The newly created attempt maybe last attempt if (number of
-          // previously failed attempts(which should not include Preempted,
-          // hardware error and NM resync) + 1) equal to the max-attempt
-          // limit.
-          maxAppAttempts == (getNumFailedAppAttempts() + 1), amReq,
-          currentAMBlacklistManager);
+          submissionContext, conf, amReqs, this, currentAMBlacklistManager);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
   }
-  
+
   private void
       createAndStartNewAttempt(boolean transferStateFromPreviousAttempt) {
     createNewAttempt();
@@ -999,7 +1000,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
-    updatedNodes.add(node);
+    updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
     LOG.debug("Received node update event:" + type + " for node:" + node
         + " with state:" + nodeState);
   }
@@ -1007,24 +1008,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static class RMAppTransition implements
       SingleArcTransition<RMAppImpl, RMAppEvent> {
     public void transition(RMAppImpl app, RMAppEvent event) {
-    };
-  }
-
-  private static final class RMAppCollectorUpdateTransition
-      extends RMAppTransition {
-
-    public void transition(RMAppImpl app, RMAppEvent event) {
-      if (YarnConfiguration.timelineServiceV2Enabled(app.conf)) {
-        LOG.info("Updating collector info for app: " + app.getApplicationId());
-
-        RMAppCollectorUpdateEvent appCollectorUpdateEvent =
-            (RMAppCollectorUpdateEvent) event;
-        // Update collector address
-        app.setCollectorAddr(appCollectorUpdateEvent.getAppCollectorAddr());
-
-        // TODO persistent to RMStateStore for recover
-        // Save to RMStateStore
-      }
     };
   }
 
@@ -1103,42 +1086,46 @@ public class RMAppImpl implements RMApp, Recoverable {
         try {
           app.rmContext.getDelegationTokenRenewer()
               .addApplicationAsyncDuringRecovery(app.getApplicationId(),
-                  app.parseCredentials(),
+                  BuilderUtils.parseCredentials(app.submissionContext),
                   app.submissionContext.getCancelTokensWhenComplete(),
-                  app.getUser());
+                  app.getUser(),
+                  BuilderUtils.parseTokensConf(app.submissionContext));
         } catch (Exception e) {
-          String msg = "Failed to fetch user credentials from application:"
-              + e.getMessage();
+          String msg = "Failed to fetch user credentials from application:" + e
+              .getMessage();
           app.diagnostics.append(msg);
           LOG.error(msg, e);
         }
       }
 
-      for (Map.Entry<ApplicationTimeoutType, Long> timeout :
-        app.applicationTimeouts.entrySet()) {
+      for (Map.Entry<ApplicationTimeoutType, Long> timeout : app.applicationTimeouts
+          .entrySet()) {
         app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
             timeout.getKey(), timeout.getValue());
         if (LOG.isDebugEnabled()) {
           long remainingTime = timeout.getValue() - app.systemClock.getTime();
           LOG.debug("Application " + app.applicationId
               + " is registered for timeout monitor, type=" + timeout.getKey()
-              + " remaining timeout="
-              + (remainingTime > 0 ? remainingTime / 1000 : 0) + " seconds");
+              + " remaining timeout=" + (remainingTime > 0 ?
+              remainingTime / 1000 :
+              0) + " seconds");
         }
       }
 
       // No existent attempts means the attempt associated with this app was not
       // started or started but not yet saved.
       if (app.attempts.isEmpty()) {
-        app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-            app.submissionContext, false, app.applicationPriority));
+        app.scheduler.handle(
+            new AppAddedSchedulerEvent(app.user, app.submissionContext, false,
+                app.applicationPriority, app.placementContext));
         return RMAppState.SUBMITTED;
       }
 
       // Add application to scheduler synchronously to guarantee scheduler
       // knows applications before AM or NM re-registers.
-      app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, true, app.applicationPriority));
+      app.scheduler.handle(
+          new AppAddedSchedulerEvent(app.user, app.submissionContext, true,
+              app.applicationPriority, app.placementContext));
 
       // recover attempts
       app.recoverAppAttempts();
@@ -1154,8 +1141,9 @@ public class RMAppImpl implements RMApp, Recoverable {
       RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.handler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, false, app.applicationPriority));
+      app.handler.handle(
+          new AppAddedSchedulerEvent(app.user, app.submissionContext, false,
+              app.applicationPriority, app.placementContext));
       // send the ATS create Event
       app.sendATSCreateEvent();
     }
@@ -1238,6 +1226,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       long applicationLifetime =
           app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      applicationLifetime = app.scheduler
+          .checkAndGetApplicationLifetime(app.queue, applicationLifetime);
       if (applicationLifetime > 0) {
         // calculate next timeout value
         Long newTimeout =
@@ -1327,7 +1317,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.rememberTargetTransitionsAndStoreState(event, transitionToDo,
-        targetedFinalState, stateToBeStored);
+          targetedFinalState, stateToBeStored);
     }
   }
 
@@ -1473,21 +1463,18 @@ public class RMAppImpl implements RMApp, Recoverable {
           .applicationFinished(app, finalState);
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
+      // set the memory free
+      app.clearUnusedFields();
     };
   }
 
-  private int getNumFailedAppAttempts() {
+  public int getNumFailedAppAttempts() {
     int completedAttempts = 0;
-    long endTime = this.systemClock.getTime();
     // Do not count AM preemption, hardware failures or NM resync
     // as attempt failure.
     for (RMAppAttempt attempt : attempts.values()) {
       if (attempt.shouldCountTowardsMaxAttemptRetry()) {
-        if (this.attemptFailuresValidityInterval <= 0
-            || (attempt.getFinishTime() > endTime
-                - this.attemptFailuresValidityInterval)) {
-          completedAttempts++;
-        }
+        completedAttempts++;
       }
     }
     return completedAttempts;
@@ -1505,14 +1492,22 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       int numberOfFailure = app.getNumFailedAppAttempts();
-      LOG.info("The number of failed attempts"
-          + (app.attemptFailuresValidityInterval > 0 ? " in previous "
-              + app.attemptFailuresValidityInterval + " milliseconds " : " ")
-          + "is " + numberOfFailure + ". The max attempts is "
-          + app.maxAppAttempts);
+      if (app.maxAppAttempts == 1) {
+        // If the user explicitly set the attempts to 1 then there are likely
+        // correctness issues if the AM restarts for any reason.
+        LOG.info("Max app attempts is 1 for " + app.applicationId
+            + ", preventing further attempts.");
+        numberOfFailure = app.maxAppAttempts;
+      } else {
+        LOG.info("The number of failed attempts"
+            + (app.attemptFailuresValidityInterval > 0 ? " in previous "
+            + app.attemptFailuresValidityInterval + " milliseconds " : " ")
+            + "is " + numberOfFailure + ". The max attempts is "
+            + app.maxAppAttempts);
 
-      if (app.attemptFailuresValidityInterval > 0) {
-        removeExcessAttempts(app);
+        if (app.attemptFailuresValidityInterval > 0) {
+          removeExcessAttempts(app);
+        }
       }
 
       if (!app.submissionContext.getUnmanagedAM()
@@ -1622,6 +1617,11 @@ public class RMAppImpl implements RMApp, Recoverable {
         || appState == RMAppState.KILLING;
   }
 
+  @Override
+  public ApplicationPlacementContext getApplicationPlacementContext() {
+    return placementContext;
+  }
+
   public RMAppState getRecoveredFinalState() {
     return this.recoveredFinalState;
   }
@@ -1636,34 +1636,45 @@ public class RMAppImpl implements RMApp, Recoverable {
     Resource resourcePreempted = Resource.newInstance(0, 0);
     int numAMContainerPreempted = 0;
     int numNonAMContainerPreempted = 0;
-    long memorySeconds = 0;
-    long vcoreSeconds = 0;
-    long preemptedMemorySeconds = 0;
-    long preemptedVcoreSeconds = 0;
-    for (RMAppAttempt attempt : attempts.values()) {
-      if (null != attempt) {
-        RMAppAttemptMetrics attemptMetrics =
-            attempt.getRMAppAttemptMetrics();
-        Resources.addTo(resourcePreempted,
-            attemptMetrics.getResourcePreempted());
-        numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
-        numNonAMContainerPreempted +=
-            attemptMetrics.getNumNonAMContainersPreempted();
-        // getAggregateAppResourceUsage() will calculate resource usage stats
-        // for both running and finished containers.
-        AggregateAppResourceUsage resUsage =
-            attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-        memorySeconds += resUsage.getMemorySeconds();
-        vcoreSeconds += resUsage.getVcoreSeconds();
-        preemptedMemorySeconds += attemptMetrics.getPreemptedMemory();
-        preemptedVcoreSeconds += attemptMetrics.getPreemptedVcore();
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedSecondsMap = new HashMap<>();
+    this.readLock.lock();
+    try {
+      for (RMAppAttempt attempt : attempts.values()) {
+        if (null != attempt) {
+          RMAppAttemptMetrics attemptMetrics =
+              attempt.getRMAppAttemptMetrics();
+          Resources.addTo(resourcePreempted,
+              attemptMetrics.getResourcePreempted());
+          numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
+          numNonAMContainerPreempted +=
+              attemptMetrics.getNumNonAMContainersPreempted();
+          // getAggregateAppResourceUsage() will calculate resource usage stats
+          // for both running and finished containers.
+          AggregateAppResourceUsage resUsage =
+              attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
+          for (Map.Entry<String, Long> entry : resUsage
+              .getResourceUsageSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            resourceSecondsMap.put(entry.getKey(), value);
+          }
+          for (Map.Entry<String, Long> entry : attemptMetrics
+              .getPreemptedResourceSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            preemptedSecondsMap.put(entry.getKey(), value);
+          }
+        }
       }
+    } finally {
+      this.readLock.unlock();
     }
 
-    return new RMAppMetrics(resourcePreempted,
-        numNonAMContainerPreempted, numAMContainerPreempted,
-        memorySeconds, vcoreSeconds,
-        preemptedMemorySeconds, preemptedVcoreSeconds);
+    return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
+        numAMContainerPreempted, resourceSecondsMap, preemptedSecondsMap);
   }
 
   @Private
@@ -1678,46 +1689,31 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
   
   @Override
-  public ResourceRequest getAMResourceRequest() {
-    return this.amReq; 
-  }
-
-  protected Credentials parseCredentials() throws IOException {
-    Credentials credentials = new Credentials();
-    DataInputByteBuffer dibb = new DataInputByteBuffer();
-    ByteBuffer tokens = submissionContext.getAMContainerSpec().getTokens();
-    if (tokens != null) {
-      dibb.reset(tokens);
-      credentials.readTokenStorageStream(dibb);
-      tokens.rewind();
-    }
-    return credentials;
+  public List<ResourceRequest> getAMResourceRequests() {
+    return this.amReqs;
   }
 
   @Override
   public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
     try {
       this.readLock.lock();
-      Map<NodeId, LogAggregationReport> outputs =
-          new HashMap<NodeId, LogAggregationReport>();
-      outputs.putAll(logAggregationStatus);
-      if (!isLogAggregationFinished()) {
-        for (Entry<NodeId, LogAggregationReport> output : outputs.entrySet()) {
+      if (!isLogAggregationFinished() && isAppInFinalState(this) &&
+          System.currentTimeMillis() > this.logAggregationStartTime
+          + this.logAggregationStatusTimeout) {
+        for (Entry<NodeId, LogAggregationReport> output :
+            logAggregationStatus.entrySet()) {
           if (!output.getValue().getLogAggregationStatus()
             .equals(LogAggregationStatus.TIME_OUT)
               && !output.getValue().getLogAggregationStatus()
                 .equals(LogAggregationStatus.SUCCEEDED)
               && !output.getValue().getLogAggregationStatus()
-                .equals(LogAggregationStatus.FAILED)
-              && isAppInFinalState(this)
-              && System.currentTimeMillis() > this.logAggregationStartTime
-                  + this.logAggregationStatusTimeout) {
+                .equals(LogAggregationStatus.FAILED)) {
             output.getValue().setLogAggregationStatus(
               LogAggregationStatus.TIME_OUT);
           }
         }
       }
-      return outputs;
+      return Collections.unmodifiableMap(logAggregationStatus);
     } finally {
       this.readLock.unlock();
     }
@@ -1825,11 +1821,17 @@ public class RMAppImpl implements RMApp, Recoverable {
         // the log aggregation is finished. And the log aggregation status will
         // not be updated anymore.
         if (logFailedCount > 0 && isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.FAILED;
           return LogAggregationStatus.FAILED;
         } else if (logTimeOutCount > 0) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.TIME_OUT;
           return LogAggregationStatus.TIME_OUT;
         }
         if (isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport =
+              LogAggregationStatus.SUCCEEDED;
           return LogAggregationStatus.SUCCEEDED;
         }
       } else if (logRunningWithFailure > 0) {
@@ -1845,7 +1847,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     return this.logAggregationStatusForAppReport
       .equals(LogAggregationStatus.SUCCEEDED)
         || this.logAggregationStatusForAppReport
-          .equals(LogAggregationStatus.FAILED);
+          .equals(LogAggregationStatus.FAILED)
+        || this.logAggregationStatusForAppReport
+          .equals(LogAggregationStatus.TIME_OUT);
 
   }
 
@@ -1959,7 +1963,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   public String getAmNodeLabelExpression() {
     String amNodeLabelExpression = null;
     if (!getApplicationSubmissionContext().getUnmanagedAM()) {
-      amNodeLabelExpression = getAMResourceRequest().getNodeLabelExpression();
+      amNodeLabelExpression =
+          getAMResourceRequests() != null && !getAMResourceRequests().isEmpty()
+              ? getAMResourceRequests().get(0).getNodeLabelExpression() : null;
       amNodeLabelExpression = (amNodeLabelExpression == null)
           ? NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET : amNodeLabelExpression;
       amNodeLabelExpression = (amNodeLabelExpression.trim().isEmpty())
@@ -2028,5 +2034,28 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   public void setApplicationPriority(Priority applicationPriority) {
     this.applicationPriority = applicationPriority;
+  }
+
+  /**
+     * Clear Unused fields to free memory.
+     */
+  private void clearUnusedFields() {
+    this.submissionContext.setAMContainerSpec(null);
+    this.submissionContext.setLogAggregationContext(null);
+  }
+
+  @Override
+  public Map<String, String> getApplicationSchedulingEnvs() {
+    return this.applicationSchedulingEnvs;
+  }
+
+  /**
+     * catch the InvalidStateTransition.
+     * @param state
+     * @param rmAppEventType
+     */
+  protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
+              RMAppState state){
+      /* TODO fail the application on the failed transition */
   }
 }

@@ -41,12 +41,12 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
@@ -131,6 +131,19 @@ public class LdapGroupsMapping
   public static final String BASE_DN_DEFAULT = "";
 
   /*
+   * Base DN used in user search.
+   */
+  public static final String USER_BASE_DN_KEY =
+          LDAP_CONFIG_PREFIX + ".userbase";
+
+  /*
+   * Base DN used in group search.
+   */
+  public static final String GROUP_BASE_DN_KEY =
+          LDAP_CONFIG_PREFIX + ".groupbase";
+
+
+  /*
    * Any additional filters to apply when searching for users
    */
   public static final String USER_SEARCH_FILTER_KEY = LDAP_CONFIG_PREFIX + ".search.filter.user";
@@ -198,9 +211,10 @@ public class LdapGroupsMapping
       LDAP_CONFIG_PREFIX + ".read.timeout.ms";
   public static final int READ_TIMEOUT_DEFAULT = 60 * 1000; // 60 seconds
 
-  private static final Log LOG = LogFactory.getLog(LdapGroupsMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LdapGroupsMapping.class);
 
-  private static final SearchControls SEARCH_CONTROLS = new SearchControls();
+  static final SearchControls SEARCH_CONTROLS = new SearchControls();
   static {
     SEARCH_CONTROLS.setSearchScope(SearchControls.SUBTREE_SCOPE);
   }
@@ -214,7 +228,8 @@ public class LdapGroupsMapping
   private String keystorePass;
   private String bindUser;
   private String bindPassword;
-  private String baseDN;
+  private String userbaseDN;
+  private String groupbaseDN;
   private String groupSearchFilter;
   private String userSearchFilter;
   private String memberOfAttr;
@@ -315,7 +330,7 @@ public class LdapGroupsMapping
       uidNumber = uidAttribute.get().toString();
     }
     if (uidNumber != null && gidNumber != null) {
-      return c.search(baseDN,
+      return c.search(groupbaseDN,
               "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
                   "(" + groupMemberAttr + "={1})))",
               new Object[] {gidNumber, uidNumber},
@@ -350,7 +365,7 @@ public class LdapGroupsMapping
     } else {
       String userDn = result.getNameInNamespace();
       groupResults =
-          c.search(baseDN,
+          c.search(groupbaseDN,
               "(&" + groupSearchFilter + "(" + groupMemberAttr + "={0}))",
               new Object[]{userDn},
               SEARCH_CONTROLS);
@@ -391,7 +406,7 @@ public class LdapGroupsMapping
     DirContext c = getDirContext();
 
     // Search for the user. We'll only ever need to look at the first result
-    NamingEnumeration<SearchResult> results = c.search(baseDN,
+    NamingEnumeration<SearchResult> results = c.search(userbaseDN,
         userSearchFilter, new Object[]{user}, SEARCH_CONTROLS);
     // return empty list if the user can not be found.
     if (!results.hasMoreElements()) {
@@ -489,7 +504,7 @@ public class LdapGroupsMapping
     filter.append("))");
     LOG.debug("Ldap group query string: " + filter.toString());
     NamingEnumeration<SearchResult> groupResults =
-        context.search(baseDN,
+        context.search(groupbaseDN,
            filter.toString(),
            SEARCH_CONTROLS);
     while (groupResults.hasMoreElements()) {
@@ -575,7 +590,20 @@ public class LdapGroupsMapping
           conf.get(BIND_PASSWORD_FILE_KEY, BIND_PASSWORD_FILE_DEFAULT));
     }
     
-    baseDN = conf.get(BASE_DN_KEY, BASE_DN_DEFAULT);
+    String baseDN = conf.getTrimmed(BASE_DN_KEY, BASE_DN_DEFAULT);
+
+    //User search base which defaults to base dn.
+    userbaseDN = conf.getTrimmed(USER_BASE_DN_KEY, baseDN);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Usersearch baseDN: " + userbaseDN);
+    }
+
+    //Group search base which defaults to base dn.
+    groupbaseDN = conf.getTrimmed(GROUP_BASE_DN_KEY, baseDN);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Groupsearch baseDN: " + userbaseDN);
+    }
+
     groupSearchFilter =
         conf.get(GROUP_SEARCH_FILTER_KEY, GROUP_SEARCH_FILTER_DEFAULT);
     userSearchFilter =

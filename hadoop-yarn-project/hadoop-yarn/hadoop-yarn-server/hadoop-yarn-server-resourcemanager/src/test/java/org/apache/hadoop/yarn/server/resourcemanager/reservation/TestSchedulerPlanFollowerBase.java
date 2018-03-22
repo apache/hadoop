@@ -89,6 +89,11 @@ public abstract class TestSchedulerPlanFollowerBase {
             "dedicated", 10, 10 + f2.length, ReservationSystemTestUtil
                 .generateAllocation(10L, 1L, f2), res, minAlloc), false));
 
+
+    // default reseration queue should exist before run of PlanFollower AND have
+    // no apps
+    checkDefaultQueueBeforePlanFollowerRun();
+
     AbstractSchedulerPlanFollower planFollower = createPlanFollower();
 
     when(mClock.getTime()).thenReturn(0L);
@@ -108,8 +113,8 @@ public abstract class TestSchedulerPlanFollowerBase {
         new AppAttemptAddedSchedulerEvent(appAttemptId_0, false);
     scheduler.handle(appAttemptAddedEvent);
 
-    // initial default reservation queue should have no apps
 
+    // initial default reservation queue should have no apps after first run
     Queue defQ = getDefaultQueue();
     Assert.assertEquals(0, getNumberOfApplications(defQ));
 
@@ -178,6 +183,8 @@ public abstract class TestSchedulerPlanFollowerBase {
 
     verifyCapacity(defQ);
   }
+
+  protected abstract void checkDefaultQueueBeforePlanFollowerRun();
 
   protected abstract Queue getReservationQueue(String reservationId);
 

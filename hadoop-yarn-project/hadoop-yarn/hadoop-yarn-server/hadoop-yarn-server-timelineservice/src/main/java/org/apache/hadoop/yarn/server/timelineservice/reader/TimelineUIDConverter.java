@@ -137,6 +137,41 @@ enum TimelineUIDConverter {
     }
   },
 
+  // Sub Application Entity UID should contain cluster, user, entity type and
+  // entity id
+  SUB_APPLICATION_ENTITY_UID {
+    @Override
+    String encodeUID(TimelineReaderContext context) {
+      if (context == null) {
+        return null;
+      }
+      if (context.getClusterId() == null || context.getDoAsUser() == null
+          || context.getEntityType() == null || context.getEntityId() == null) {
+        return null;
+      }
+      String[] entityTupleArr = {context.getClusterId(), context.getDoAsUser(),
+          context.getEntityType(), context.getEntityIdPrefix().toString(),
+          context.getEntityId()};
+      return joinAndEscapeUIDParts(entityTupleArr);
+    }
+
+    @Override
+    TimelineReaderContext decodeUID(String uId) throws Exception {
+      if (uId == null) {
+        return null;
+      }
+      List<String> entityTupleList = splitUID(uId);
+      if (entityTupleList.size() == 5) {
+        // Flow information exists.
+        return new TimelineReaderContext(entityTupleList.get(0), null, null,
+            null, null, entityTupleList.get(2),
+            Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4),
+            entityTupleList.get(1));
+      }
+      return null;
+    }
+  },
+
   // Generic Entity UID should contain cluster, user, flow name, flowrun id,
   // app id, entity type and entity id OR should contain cluster, appid, entity
   // type and entity id(i.e.without flow context info).
@@ -155,12 +190,14 @@ enum TimelineUIDConverter {
         // Flow information exists.
         String[] entityTupleArr = {context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId().toString(),
-            context.getAppId(), context.getEntityType(), context.getEntityId()};
+            context.getAppId(), context.getEntityType(),
+            context.getEntityIdPrefix().toString(), context.getEntityId() };
         return joinAndEscapeUIDParts(entityTupleArr);
       } else {
         // Only entity and app information exists. Flow info does not exist.
         String[] entityTupleArr = {context.getClusterId(), context.getAppId(),
-            context.getEntityType(), context.getEntityId()};
+            context.getEntityType(), context.getEntityIdPrefix().toString(),
+            context.getEntityId() };
         return joinAndEscapeUIDParts(entityTupleArr);
       }
     }
@@ -171,20 +208,21 @@ enum TimelineUIDConverter {
         return null;
       }
       List<String> entityTupleList = splitUID(uId);
-      // Should have 7 parts i.e. cluster, user, flow name, flowrun id, app id,
-      // entity type and entity id OR should have 4 parts i.e. cluster, app id,
+      // Should have 8 parts i.e. cluster, user, flow name, flowrun id, app id,
+      // entity type and entity id OR should have 5 parts i.e. cluster, app id,
       // entity type and entity id.
-      if (entityTupleList.size() == 7) {
+      if (entityTupleList.size() == 8) {
         // Flow information exists.
         return new TimelineReaderContext(entityTupleList.get(0),
             entityTupleList.get(1), entityTupleList.get(2),
             Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4),
-            entityTupleList.get(5), entityTupleList.get(6));
-      } else if (entityTupleList.size() == 4) {
+            entityTupleList.get(5), Long.parseLong(entityTupleList.get(6)),
+            entityTupleList.get(7));
+      } else if (entityTupleList.size() == 5) {
         // Flow information does not exist.
         return new TimelineReaderContext(entityTupleList.get(0), null, null,
             null, entityTupleList.get(1), entityTupleList.get(2),
-            entityTupleList.get(3));
+            Long.parseLong(entityTupleList.get(3)), entityTupleList.get(4));
       } else {
         return null;
       }
@@ -192,39 +230,29 @@ enum TimelineUIDConverter {
   };
 
   /**
-   * Delimiter used for UID.
-   */
-  public static final char UID_DELIMITER_CHAR = '!';
-
-  /**
-   * Escape Character used if delimiter or escape character itself is part of
-   * different components of UID.
-   */
-  public static final char UID_ESCAPE_CHAR = '*';
-
-  /**
-   * Split UID using {@link #UID_DELIMITER_CHAR} and {@link #UID_ESCAPE_CHAR}.
+   * Split UID using {@link TimelineReaderUtils#DEFAULT_DELIMITER_CHAR} and
+   * {@link TimelineReaderUtils#DEFAULT_ESCAPE_CHAR}.
    * @param uid UID to be splitted.
    * @return a list of different parts of UID split across delimiter.
    * @throws IllegalArgumentException if UID is not properly escaped.
    */
   private static List<String> splitUID(String uid)
       throws IllegalArgumentException {
-    return TimelineReaderUtils.split(uid, UID_DELIMITER_CHAR, UID_ESCAPE_CHAR);
+    return TimelineReaderUtils.split(uid);
   }
 
   /**
-   * Join different parts of UID delimited by {@link #UID_DELIMITER_CHAR} with
-   * delimiter and escape character escaped using {@link #UID_ESCAPE_CHAR} if
-   * UID parts contain them.
+   * Join different parts of UID delimited by
+   * {@link TimelineReaderUtils#DEFAULT_DELIMITER_CHAR} with delimiter and
+   * escape character escaped using
+   * {@link TimelineReaderUtils#DEFAULT_ESCAPE_CHAR} if UID parts contain them.
    * @param parts an array of UID parts to be joined.
    * @return a string joined using the delimiter with escape and delimiter
-   *     characters escaped if they are part of the string parts to be joined.
-   *     Returns null if one of the parts is null.
+   *         characters escaped if they are part of the string parts to be
+   *         joined. Returns null if one of the parts is null.
    */
   private static String joinAndEscapeUIDParts(String[] parts) {
-    return TimelineReaderUtils.joinAndEscapeStrings(parts, UID_DELIMITER_CHAR,
-        UID_ESCAPE_CHAR);
+    return TimelineReaderUtils.joinAndEscapeStrings(parts);
   }
 
   /**

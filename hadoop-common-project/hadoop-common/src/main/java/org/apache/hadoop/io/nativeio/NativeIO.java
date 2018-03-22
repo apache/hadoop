@@ -35,14 +35,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.HardLink;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.PerformanceAdvisory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -98,7 +99,7 @@ public class NativeIO {
        write.  */
     public static int SYNC_FILE_RANGE_WAIT_AFTER = 4;
 
-    private static final Log LOG = LogFactory.getLog(NativeIO.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
     // Set to true via JNI if possible
     public static boolean fadvisePossible = false;
@@ -221,6 +222,8 @@ public class NativeIO {
     public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
     /** Wrapper around fstat(2) */
     private static native Stat fstat(FileDescriptor fd) throws IOException;
+    /** Wrapper around stat(2). */
+    private static native Stat stat(String path) throws IOException;
 
     /** Native chmod implementation. On UNIX, it is a wrapper around chmod(2) */
     private static native void chmodImpl(String path, int mode) throws IOException;
@@ -428,6 +431,37 @@ public class NativeIO {
       return stat;
     }
 
+    /**
+     * Return the file stat for a file path.
+     *
+     * @param path  file path
+     * @return  the file stat
+     * @throws IOException  thrown if there is an IO error while obtaining the
+     * file stat
+     */
+    public static Stat getStat(String path) throws IOException {
+      if (path == null) {
+        String errMessage = "Path is null";
+        LOG.warn(errMessage);
+        throw new IOException(errMessage);
+      }
+      Stat stat = null;
+      try {
+        if (!Shell.WINDOWS) {
+          stat = stat(path);
+          stat.owner = getName(IdCache.USER, stat.ownerId);
+          stat.group = getName(IdCache.GROUP, stat.groupId);
+        } else {
+          stat = stat(path);
+        }
+      } catch (NativeIOException nioe) {
+        LOG.warn("NativeIO.getStat error ({}): {} -- file path: {}",
+            nioe.getErrorCode(), nioe.getMessage(), path);
+        throw new PathIOException(path, nioe);
+      }
+      return stat;
+    }
+
     private static String getName(IdCache domain, int id) throws IOException {
       Map<Integer, CachedName> idNameCache = (domain == IdCache.USER)
         ? USER_ID_NAME_CACHE : GROUP_ID_NAME_CACHE;
@@ -570,7 +604,7 @@ public class NativeIO {
     private static native String getOwner(FileDescriptor fd) throws IOException;
 
     /** Supported list of Windows access right flags */
-    public static enum AccessRight {
+    public enum AccessRight {
       ACCESS_READ (0x0001),      // FILE_READ_DATA
       ACCESS_WRITE (0x0002),     // FILE_WRITE_DATA
       ACCESS_EXECUTE (0x0020);   // FILE_EXECUTE
@@ -634,7 +668,7 @@ public class NativeIO {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(NativeIO.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
   private static boolean nativeLoaded = false;
 
@@ -922,28 +956,23 @@ public class NativeIO {
     if (nativeLoaded && Shell.WINDOWS) {
       copyFileUnbuffered0(src.getAbsolutePath(), dst.getAbsolutePath());
     } else {
-      FileInputStream fis = null;
-      FileOutputStream fos = null;
+      FileInputStream fis = new FileInputStream(src);
       FileChannel input = null;
-      FileChannel output = null;
       try {
-        fis = new FileInputStream(src);
-        fos = new FileOutputStream(dst);
         input = fis.getChannel();
-        output = fos.getChannel();
-        long remaining = input.size();
-        long position = 0;
-        long transferred = 0;
-        while (remaining > 0) {
-          transferred = input.transferTo(position, remaining, output);
-          remaining -= transferred;
-          position += transferred;
+        try (FileOutputStream fos = new FileOutputStream(dst);
+             FileChannel output = fos.getChannel()) {
+          long remaining = input.size();
+          long position = 0;
+          long transferred = 0;
+          while (remaining > 0) {
+            transferred = input.transferTo(position, remaining, output);
+            remaining -= transferred;
+            position += transferred;
+          }
         }
       } finally {
-        IOUtils.cleanup(LOG, output);
-        IOUtils.cleanup(LOG, fos);
-        IOUtils.cleanup(LOG, input);
-        IOUtils.cleanup(LOG, fis);
+        IOUtils.cleanupWithLogger(LOG, input, fis);
       }
     }
   }

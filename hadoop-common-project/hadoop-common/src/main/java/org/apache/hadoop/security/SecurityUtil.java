@@ -28,6 +28,7 @@ import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
@@ -36,8 +37,6 @@ import javax.annotation.Nullable;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -50,8 +49,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
-
-
+import org.apache.hadoop.util.ZKUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 //this will need to be replaced someday when there is a suitable replacement
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
@@ -64,7 +64,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class SecurityUtil {
-  public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
+  public static final Logger LOG = LoggerFactory.getLogger(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
   public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
       "Failed to obtain user group information:";
@@ -473,7 +473,7 @@ public final class SecurityUtil {
       try { 
         ugi = UserGroupInformation.getLoginUser();
       } catch (IOException e) {
-        LOG.fatal("Exception while getting login user", e);
+        LOG.error("Exception while getting login user", e);
         e.printStackTrace();
         Runtime.getRuntime().exit(-1);
       }
@@ -719,5 +719,29 @@ public final class SecurityUtil {
    */
   public static boolean isPrivilegedPort(final int port) {
     return port < 1024;
+  }
+
+  /**
+   * Utility method to fetch ZK auth info from the configuration.
+   * @throws java.io.IOException if the Zookeeper ACLs configuration file
+   * cannot be read
+   * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
+   */
+  public static List<ZKUtil.ZKAuthInfo> getZKAuthInfos(Configuration conf,
+      String configKey) throws IOException {
+    char[] zkAuthChars = conf.getPassword(configKey);
+    String zkAuthConf =
+        zkAuthChars != null ? String.valueOf(zkAuthChars) : null;
+    try {
+      zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
+      if (zkAuthConf != null) {
+        return ZKUtil.parseAuth(zkAuthConf);
+      } else {
+        return Collections.emptyList();
+      }
+    } catch (IOException | ZKUtil.BadAuthFormatException e) {
+      LOG.error("Couldn't read Auth based on {}", configKey);
+      throw e;
+    }
   }
 }

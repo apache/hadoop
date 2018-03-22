@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Joiner;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
 import org.apache.hadoop.io.IOUtils;
@@ -39,15 +38,19 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,7 +58,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.assertEquals;
 
 public class StripedFileTestUtil {
-  public static final Log LOG = LogFactory.getLog(StripedFileTestUtil.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(StripedFileTestUtil.class);
 
   public static byte[] generateBytes(int cnt) {
     byte[] bytes = new byte[cnt];
@@ -76,10 +80,15 @@ public class StripedFileTestUtil {
     assertEquals("File length should be the same", fileLength, status.getLen());
   }
 
-  static void verifyPread(FileSystem fs, Path srcPath,  int fileLength,
-      byte[] expected, byte[] buf) throws IOException {
-    final ErasureCodingPolicy ecPolicy =
-        ((DistributedFileSystem)fs).getErasureCodingPolicy(srcPath);
+  static void verifyPread(DistributedFileSystem fs, Path srcPath,
+      int fileLength, byte[] expected, byte[] buf) throws IOException {
+    final ErasureCodingPolicy ecPolicy = fs.getErasureCodingPolicy(srcPath);
+    verifyPread(fs, srcPath, fileLength, expected, buf, ecPolicy);
+  }
+
+  static void verifyPread(FileSystem fs, Path srcPath, int fileLength,
+      byte[] expected, byte[] buf, ErasureCodingPolicy ecPolicy)
+      throws IOException {
     try (FSDataInputStream in = fs.open(srcPath)) {
       int[] startOffsets = {0, 1, ecPolicy.getCellSize() - 102,
           ecPolicy.getCellSize(), ecPolicy.getCellSize() + 102,
@@ -355,11 +364,12 @@ public class StripedFileTestUtil {
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
     LocatedBlocks lbs = dfs.getClient().getLocatedBlocks(srcPath.toString(), 0L,
         Long.MAX_VALUE);
-    int expectedNumGroup = 0;
+
     if (length > 0) {
-      expectedNumGroup = (length - 1) / blkGroupSize + 1;
+      int expectedNumGroup = (length - 1) / blkGroupSize + 1;
+
+      assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
     }
-    assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
 
     final ErasureCodingPolicy ecPolicy = dfs.getErasureCodingPolicy(srcPath);
     final int cellSize = ecPolicy.getCellSize();
@@ -494,7 +504,11 @@ public class StripedFileTestUtil {
         dataBytes.length, parityBytes.length);
     final RawErasureEncoder encoder =
         CodecUtil.createRawEncoder(conf, codecName, coderOptions);
-    encoder.encode(dataBytes, expectedParityBytes);
+    try {
+      encoder.encode(dataBytes, expectedParityBytes);
+    } catch (IOException e) {
+      Assert.fail("Unexpected IOException: " + e.getMessage());
+    }
     for (int i = 0; i < parityBytes.length; i++) {
       if (checkSet.contains(i + dataBytes.length)){
         Assert.assertArrayEquals("i=" + i, expectedParityBytes[i],
@@ -557,5 +571,39 @@ public class StripedFileTestUtil {
                                                DistributedFileSystem fs)
       throws IOException {
     return fs.getClient().getLocatedBlocks(file.toString(), 0, Long.MAX_VALUE);
+  }
+
+  /**
+   * Get system-wide default Erasure Coding Policy, which can be
+   * used by default when no policy is specified for a path.
+   * @return ErasureCodingPolicy
+   */
+  public static ErasureCodingPolicy getDefaultECPolicy() {
+    return SystemErasureCodingPolicies.getPolicies().get(0);
+  }
+
+  /**
+   * Get non-default Erasure Coding Policy randomly.
+   * @return ErasureCodingPolicy
+   */
+  public static ErasureCodingPolicy getRandomNonDefaultECPolicy() {
+    Random rand = new Random();
+    List<ErasureCodingPolicy> policies = SystemErasureCodingPolicies
+            .getPolicies();
+    return policies.get(1 + rand.nextInt(policies.size() - 1));
+  }
+
+  /**
+   * Get all Erasure Coding Policies for Parameterized tests.
+   * @return Collection<Object[]>
+   */
+  public static Collection<Object[]> getECPolicies() {
+    ArrayList<Object[]> params = new ArrayList<>();
+    List<ErasureCodingPolicy> policies =
+        SystemErasureCodingPolicies.getPolicies();
+    for (ErasureCodingPolicy policy: policies) {
+      params.add(new Object[]{policy});
+    }
+    return params;
   }
 }

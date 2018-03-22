@@ -57,7 +57,7 @@ public class Nfs3 extends Nfs3Base {
     start(register);
   }
   
-  static void startService(String[] args,
+  static Nfs3 startService(String[] args,
       DatagramSocket registrationSocket) throws IOException {
     StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);
     NfsConfiguration conf = new NfsConfiguration();
@@ -67,8 +67,14 @@ public class Nfs3 extends Nfs3Base {
     final Nfs3 nfsServer = new Nfs3(conf, registrationSocket,
         allowInsecurePorts);
     nfsServer.startServiceInternal(true);
+    return nfsServer;
   }
-  
+
+  public void stop() {
+    super.stop();
+    mountd.stop();
+  }
+
   public static void main(String[] args) throws IOException {
     startService(args, null);
   }

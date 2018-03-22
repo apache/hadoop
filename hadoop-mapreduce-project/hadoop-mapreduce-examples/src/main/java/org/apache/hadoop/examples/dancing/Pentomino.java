@@ -153,6 +153,11 @@ public class Pentomino {
           break;
         }
       }
+
+      if (piece == null) {
+        continue;
+      }
+
       // for each point where the piece was placed, mark it with the piece name
       for(ColumnName item: row) {
         if (item instanceof Point) {
@@ -406,7 +411,7 @@ public class Pentomino {
   /**
    * Find all of the solutions that start with the given prefix. The printer
    * is given each solution as it is found.
-   * @param split a list of row indexes that should be choosen for each row
+   * @param split a list of row indexes that should be chosen for each row
    *        in order
    * @return the number of solutions found
    */

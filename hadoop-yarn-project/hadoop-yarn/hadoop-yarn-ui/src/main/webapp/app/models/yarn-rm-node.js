@@ -32,10 +32,12 @@ export default DS.Model.extend({
   availableVirtualCores: DS.attr('number'),
   version: DS.attr('string'),
   nodeLabels: DS.attr('array'),
+  availableResource: DS.attr('object'),
+  usedResource: DS.attr('object'),
 
   nodeLabelsAsString: function() {
     var labels = this.get("nodeLabels");
-    var labelToReturn = "";
+    var labelToReturn = "default";
     // Only one label per node supported.
     if (labels && labels.length > 0) {
       labelToReturn = labels[0];
@@ -47,18 +49,18 @@ export default DS.Model.extend({
    * Indicates no rows were retrieved from backend
    */
   isDummyNode: function() {
-    return this.get('id') == "dummy";
+    return this.get('id') === "dummy";
   }.property("id"),
 
   nodeStateStyle: function() {
     var style = "default";
     var nodeState = this.get("state");
-    if (nodeState == "REBOOTED") {
+    if (nodeState === "REBOOTED" || nodeState === "DECOMMISSIONING") {
       style = "warning";
-    } else if (nodeState == "UNHEALTHY" || nodeState == "DECOMMISSIONED" ||
-          nodeState == "LOST" || nodeState == "SHUTDOWN") {
+    } else if (nodeState === "UNHEALTHY" || nodeState === "DECOMMISSIONED" ||
+          nodeState === "LOST" || nodeState === "SHUTDOWN") {
       style = "danger";
-    } else if (nodeState == "RUNNING") {
+    } else if (nodeState === "RUNNING") {
       style = "success";
     }
     return "label label-" + style;
@@ -90,10 +92,51 @@ export default DS.Model.extend({
     return arr;
   }.property("availableVirtualCores", "usedVirtualCores"),
 
+  getGpuDataForDonutChart: function() {
+    var arr = [];
+    var used = 0;
+    var ri;
+
+    const usedResource = this.get("usedResource");
+    const availableResource = this.get("availableResource");
+    var resourceInformations = usedResource ? usedResource.resourceInformations.resourceInformation : [];
+    for (var i = 0; i < resourceInformations.length; i++) {
+      ri = resourceInformations[i];
+      if (ri.name === "yarn.io/gpu") {
+        used = ri.value;
+      }
+    }
+
+    var available = 0;
+    resourceInformations = availableResource ? availableResource.resourceInformations.resourceInformation : [];
+    for (i = 0; i < resourceInformations.length; i++) {
+      ri = resourceInformations[i];
+      if (ri.name === "yarn.io/gpu") {
+        available = ri.value;
+      }
+    }
+
+    arr.push({
+      label: "Used",
+      value: used
+    });
+    arr.push({
+      label: "Available",
+      value: available
+    });
+    return arr;
+  }.property("availableResource", "usedResource"),
+
   toolTipText: function() {
     return "<p>Rack: " + this.get("rack") + '</p>' +
-           "<p>Host: " + this.get("nodeHostName") + '</p>' +
-           "<p>Used Memory: " + Math.round(this.get("usedMemoryMB")) + ' MB</p>' +
-           "<p>Available Memory: " + Math.round(this.get("availMemoryMB")) + ' MB</p>';
+           "<p>Host: " + this.get("nodeHostName") + '</p>';
   }.property(),
+
+  usedMemoryBytes: function() {
+    return this.get("usedMemoryMB") * 1024 * 1024;
+  }.property("usedMemoryMB"),
+
+  availMemoryBytes: function() {
+    return this.get("availMemoryMB") * 1024 * 1024;
+  }.property("availMemoryMB"),
 });

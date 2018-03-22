@@ -15,19 +15,7 @@
 Archival Storage, SSD & Memory
 ==============================
 
-* [Archival Storage, SSD & Memory](#Archival_Storage_SSD__Memory)
-    * [Introduction](#Introduction)
-    * [Storage Types and Storage Policies](#Storage_Types_and_Storage_Policies)
-        * [Storage Types: ARCHIVE, DISK, SSD and RAM\_DISK](#Storage_Types:_ARCHIVE_DISK_SSD_and_RAM_DISK)
-        * [Storage Policies: Hot, Warm, Cold, All\_SSD, One\_SSD and Lazy\_Persist](#Storage_Policies:_Hot_Warm_Cold_All_SSD_One_SSD_and_Lazy_Persist)
-        * [Storage Policy Resolution](#Storage_Policy_Resolution)
-        * [Configuration](#Configuration)
-    * [Mover - A New Data Migration Tool](#Mover_-_A_New_Data_Migration_Tool)
-    * [Storage Policy Commands](#Storage_Policy_Commands)
-        * [List Storage Policies](#List_Storage_Policies)
-        * [Set Storage Policy](#Set_Storage_Policy)
-        * [Unset Storage Policy](#Unset_Storage_Policy)
-        * [Get Storage Policy](#Get_Storage_Policy)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Introduction
 ------------
@@ -110,7 +98,7 @@ The effective storage policy can be retrieved by the "[`storagepolicies -getStor
 Mover - A New Data Migration Tool
 ---------------------------------
 
-A new data migration tool is added for archiving data. The tool is similar to Balancer. It periodically scans the files in HDFS to check if the block placement satisfies the storage policy. For the blocks violating the storage policy, it moves the replicas to a different storage type in order to fulfill the storage policy requirement.
+A new data migration tool is added for archiving data. The tool is similar to Balancer. It periodically scans the files in HDFS to check if the block placement satisfies the storage policy. For the blocks violating the storage policy, it moves the replicas to a different storage type in order to fulfill the storage policy requirement. Note that it always tries to move block replicas within the same node whenever possible. If that is not possible (e.g. when a node doesn’t have the target storage type) then it will copy the block replicas to another node over the network.
 
 * Command:
 

@@ -21,8 +21,6 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 
-import org.apache.commons.logging.*;
-
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -38,12 +36,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSequenceFile {
-  private static final Log LOG = LogFactory.getLog(TestSequenceFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSequenceFile.class);
 
   private Configuration conf = new Configuration();
 
@@ -54,7 +56,72 @@ public class TestSequenceFile {
     compressedSeqFileTest(new DefaultCodec());
     LOG.info("Successfully tested SequenceFile with DefaultCodec");
   }
-  
+
+  @SuppressWarnings("deprecation")
+  public void testSorterProperties() throws IOException {
+    // Test to ensure that deprecated properties have no default
+    // references anymore.
+    Configuration config = new Configuration();
+    assertNull("The deprecated sort memory property "
+        + CommonConfigurationKeys.IO_SORT_MB_KEY
+        + " must not exist in any core-*.xml files.",
+        config.get(CommonConfigurationKeys.IO_SORT_MB_KEY));
+    assertNull("The deprecated sort factor property "
+        + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
+        + " must not exist in any core-*.xml files.",
+        config.get(CommonConfigurationKeys.IO_SORT_FACTOR_KEY));
+
+    // Test deprecated property honoring
+    // Set different values for old and new property names
+    // and compare which one gets loaded
+    config = new Configuration();
+    FileSystem fs = FileSystem.get(config);
+    config.setInt(CommonConfigurationKeys.IO_SORT_MB_KEY, 10);
+    config.setInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY, 10);
+    config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY, 20);
+    config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
+    SequenceFile.Sorter sorter = new SequenceFile.Sorter(
+        fs, Text.class, Text.class, config);
+    assertEquals("Deprecated memory conf must be honored over newer property",
+        10*1024*1024, sorter.getMemory());
+    assertEquals("Deprecated factor conf must be honored over newer property",
+        10, sorter.getFactor());
+
+    // Test deprecated properties (graceful deprecation)
+    config = new Configuration();
+    fs = FileSystem.get(config);
+    config.setInt(CommonConfigurationKeys.IO_SORT_MB_KEY, 10);
+    config.setInt(CommonConfigurationKeys.IO_SORT_FACTOR_KEY, 10);
+    sorter = new SequenceFile.Sorter(
+        fs, Text.class, Text.class, config);
+    assertEquals("Deprecated memory property "
+        + CommonConfigurationKeys.IO_SORT_MB_KEY
+        + " must get properly applied.",
+        10*1024*1024, // In bytes
+        sorter.getMemory());
+    assertEquals("Deprecated sort factor property "
+        + CommonConfigurationKeys.IO_SORT_FACTOR_KEY
+        + " must get properly applied.",
+        10, sorter.getFactor());
+
+    // Test regular properties (graceful deprecation)
+    config = new Configuration();
+    fs = FileSystem.get(config);
+    config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY, 20);
+    config.setInt(CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY, 20);
+    sorter = new SequenceFile.Sorter(
+        fs, Text.class, Text.class, config);
+    assertEquals("Memory property "
+        + CommonConfigurationKeys.SEQ_IO_SORT_MB_KEY
+        + " must get properly applied if present.",
+        20*1024*1024, // In bytes
+        sorter.getMemory());
+    assertEquals("Merge factor property "
+        + CommonConfigurationKeys.SEQ_IO_SORT_FACTOR_KEY
+        + " must get properly applied if present.",
+        20, sorter.getFactor());
+  }
+
   public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
     int count = 1024 * 10;
     int megabytes = 1;

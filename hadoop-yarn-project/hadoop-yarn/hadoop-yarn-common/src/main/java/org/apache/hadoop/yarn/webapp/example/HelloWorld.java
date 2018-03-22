@@ -41,11 +41,11 @@ public class HelloWorld {
   }
 
   public static class HelloView extends HtmlPage {
-    @Override protected void render(Page.HTML<_> html) {
+    @Override protected void render(Page.HTML<__> html) {
       html. // produces valid html 4.01 strict
         title($("title")).
         p("#hello-for-css").
-          _($("title"))._()._();
+          __($("title")).__().__();
     }
   }
 

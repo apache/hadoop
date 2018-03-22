@@ -78,6 +78,14 @@ public class TestTraceAdmin extends SaslDataTransferTestCase {
   }
 
   @Test
+  public void testNoOperator() throws Exception {
+    TraceAdmin trace = new TraceAdmin();
+    trace.setConf(new Configuration());
+    Assert.assertEquals("ret:1, You must specify an operation." + NEWLINE,
+        runTraceCommand(trace, "-host", "127.0.0.1:12346"));
+  }
+
+  @Test
   public void testCreateAndDestroySpanReceiver() throws Exception {
     Configuration conf = new Configuration();
     conf = new Configuration();

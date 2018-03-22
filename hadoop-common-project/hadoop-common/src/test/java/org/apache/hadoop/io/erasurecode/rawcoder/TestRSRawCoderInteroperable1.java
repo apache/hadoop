@@ -30,8 +30,8 @@ public class TestRSRawCoderInteroperable1 extends TestRSRawCoderBase {
   public void setup() {
     Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
 
-    this.encoderClass = RSRawEncoder.class;
-    this.decoderClass = NativeRSRawDecoder.class;
+    this.encoderFactoryClass = RSRawErasureCoderFactory.class;
+    this.decoderFactoryClass = NativeRSRawErasureCoderFactory.class;
     setAllowDump(true);
   }
 

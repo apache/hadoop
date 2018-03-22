@@ -29,7 +29,7 @@ The client is a KeyProvider implementation interacts with the KMS using the KMS 
 
 KMS and its client have built-in security and they support HTTP SPNEGO Kerberos authentication and HTTPS secure transport.
 
-KMS is a Java web-application and it runs using a pre-configured Tomcat bundled with the Hadoop distribution.
+KMS is a Java Jetty web-application.
 
 KMS Client Configuration
 ------------------------
@@ -51,6 +51,15 @@ The following is an example to configure HDFS NameNode as a KMS client in
 KMS
 ---
 
+$H3 Start/Stop the KMS
+
+To start/stop KMS, use `hadoop --daemon start|stop kms`. For example:
+
+    hadoop-${project.version} $ hadoop --daemon start kms
+
+NOTE: The script `kms.sh` is deprecated. It is now just a wrapper of
+`hadoop kms`.
+
 $H3 KMS Configuration
 
 Configure the KMS backing KeyProvider properties in the `etc/hadoop/kms-site.xml` configuration file:
@@ -71,6 +80,17 @@ The password file is looked up in the Hadoop's configuration directory via the c
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
+NOTE: The KMS server can choose any `KeyProvider` implementation as the backing provider. The example here uses a JavaKeyStoreProvider, which should only be used for experimental purposes and never be used in production. For detailed usage and caveats of JavaKeyStoreProvider, please see [Keystore Passwords section of the Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html#Keystore_Passwords).
+
+$H3 KMS HTTP Configuration
+
+KMS pre-configures the HTTP port to 9600.
+
+KMS supports the following HTTP [configuration properties](./kms-default.html)
+in `etc/hadoop/kms-site.xml`.
+
+NOTE: You need to restart the KMS for the configuration changes to take effect.
+
 $H3 KMS Cache
 
 KMS has two kinds of caching: a CachingKeyProvider for caching the encryption keys, and a KeyProvider for caching the EEKs.
@@ -85,7 +105,9 @@ This cache is used with the following 3 methods only, `getCurrentKey()` and `get
 
 For the `getCurrentKey()` method, cached entries are kept for a maximum of 30000 milliseconds regardless the number of times the key is being accessed (to avoid stale keys to be considered current).
 
-For the `getKeyVersion()` method, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins).
+For the `getKeyVersion()` and `getMetadata()` methods, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins).
+
+The cache is invalidated when the key is deleted by `deleteKey()`, or when `invalidateCache()` is called.
 
 These configurations can be changed via the following properties in the `etc/hadoop/kms-site.xml` configuration file:
 
@@ -180,36 +202,6 @@ The Aggregation interval is configured via the property :
         <value>10000</value>
       </property>
 
-$H3 Start/Stop the KMS
-
-To start/stop KMS use KMS's sbin/kms.sh script. For example:
-
-    hadoop-${project.version} $ sbin/kms.sh start
-
-NOTE: Invoking the script without any parameters list all possible parameters (start, stop, run, etc.). The `kms.sh` script is a wrapper for Tomcat's `catalina.sh` script that sets the environment variables and Java System properties required to run KMS.
-
-$H3 Embedded Tomcat Configuration
-
-To configure the embedded Tomcat go to the `share/hadoop/kms/tomcat/conf`.
-
-KMS pre-configures the HTTP and Admin ports in Tomcat's `server.xml` to 9600 and 9601.
-
-Tomcat logs are also preconfigured to go to Hadoop's `logs/` directory.
-
-The following environment variables (which can be set in KMS's `etc/hadoop/kms-env.sh` script) can be used to alter those values:
-
-* KMS_HTTP_PORT
-* KMS_ADMIN_PORT
-* KMS_MAX_THREADS
-* KMS_MAX_HTTP_HEADER_SIZE
-* KMS_LOGNOTE: You need to restart the KMS for the configuration changes to take effect.
-
-$H3 Loading native libraries
-
-The following environment variable (which can be set in KMS's `etc/hadoop/kms-env.sh` script) can be used to specify the location of any required native libraries. For eg. Tomact native Apache Portable Runtime (APR) libraries:
-
-* JAVA_LIBRARY_PATH
-
 $H3 KMS Security Configuration
 
 $H4 Enabling Kerberos HTTP SPNEGO Authentication
@@ -279,20 +271,55 @@ If `users`, `groups` or `hosts` has a `*`, it means there are no restrictions fo
 
 $H4 KMS over HTTPS (SSL)
 
-To configure KMS to work over HTTPS the following 2 properties must be set in the `etc/hadoop/kms_env.sh` script (shown with default values):
+Enable SSL in `etc/hadoop/kms-site.xml`:
 
-* KMS_SSL_KEYSTORE_FILE=$HOME/.keystore
-* KMS_SSL_KEYSTORE_PASS=password
+```xml
+  <property>
+    <name>hadoop.kms.ssl.enabled</name>
+    <value>true</value>
+    <description>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </description>
+  </property>
 
-In the KMS `tomcat/conf` directory, replace the `server.xml` file with the provided `ssl-server.xml` file.
+```
+
+Configure `etc/hadoop/ssl-server.xml` with proper values, for example:
+
+```xml
+<property>
+  <name>ssl.server.keystore.location</name>
+  <value>${user.home}/.keystore</value>
+  <description>Keystore to be used. Must be specified.</description>
+</property>
+
+<property>
+  <name>ssl.server.keystore.password</name>
+  <value></value>
+  <description>Must be specified.</description>
+</property>
+
+<property>
+  <name>ssl.server.keystore.keypassword</name>
+  <value></value>
+  <description>Must be specified.</description>
+</property>
+```
+
+The SSL passwords can be secured by a credential provider. See
+[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 You need to create an SSL certificate for the KMS. As the `kms` Unix user, using the Java `keytool` command to create the SSL certificate:
 
-    $ keytool -genkey -alias tomcat -keyalg RSA
+    $ keytool -genkey -alias jetty -keyalg RSA
 
-You will be asked a series of questions in an interactive prompt. It will create the keystore file, which will be named **.keystore** and located in the `kms` user home directory.
+You will be asked a series of questions in an interactive prompt. It will
+create the keystore file, which will be named **.keystore** and located in the
+user's home directory.
 
-The password you enter for "keystore password" must match the value of the `KMS_SSL_KEYSTORE_PASS` environment variable set in the `kms-env.sh` script in the configuration directory.
+The password you enter for "keystore password" must match the value of the
+property `ssl.server.keystore.password` set in the `ssl-server.xml` in the
+configuration directory.
 
 The answer to "What is your first and last name?" (i.e. "CN") must be the hostname of the machine where the KMS will be running.
 
@@ -481,7 +508,7 @@ $H5 Key ACLs
 KMS supports access control for all non-read operations at the Key level. All Key Access operations are classified as :
 
 * MANAGEMENT - createKey, deleteKey, rolloverNewVersion
-* GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, warmUpEncryptedKeys
+* GENERATE_EEK - generateEncryptedKey, reencryptEncryptedKey, reencryptEncryptedKeys, warmUpEncryptedKeys
 * DECRYPT_EEK - decryptEncryptedKey
 * READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata, getCurrentKey
 * ALL - all of the above
@@ -818,6 +845,16 @@ $H4 Rollover Key
       "material"    : "<material>",    //base64, not present without GET ACL
     }
 
+$H4 Invalidate Cache of a Key
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/key/<key-name>/_invalidatecache
+
+*RESPONSE:*
+
+    200 OK
+
 $H4 Delete Key
 
 *REQUEST:*
@@ -921,7 +958,7 @@ $H4 Re-encrypt Encrypted Key With The Latest KeyVersion
 
 This command takes a previously generated encrypted key, and re-encrypts it using the latest KeyVersion encryption key in the KeyProvider. If the latest KeyVersion is the same as the one used to generate the encrypted key, the same encrypted key is returned.
 
-This is usually useful after a [Rollover](Rollover_Key) of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+This is usually useful after a [Rollover](#Rollover_Key) of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
 
 *REQUEST:*
 
@@ -947,6 +984,64 @@ This is usually useful after a [Rollover](Rollover_Key) of an encryption key. Re
           "material"          : "<material>",    //base64
       }
     }
+
+$H4 Batch Re-encrypt Encrypted Keys With The Latest KeyVersion
+
+Batched version of the above re-encrypt Encrypted Key. This command takes a list of previously generated encrypted key, and re-encrypts them using the latest KeyVersion encryption key in the KeyProvider, and return the re-encrypted encrypted keys in the same sequence. For each encrypted key, if the latest KeyVersion is the same as the one used to generate the encrypted key, no action is taken and the same encrypted key is returned.
+
+This is usually useful after a [Rollover](#Rollover_Key) of an encryption key. Re-encrypting the encrypted key will allow it to be encrypted using the latest version of the encryption key, but still with the same key material and initialization vector.
+
+All Encrypted keys for a batch request must be under the same encryption key name, but could be potentially under different versions of the encryption key.
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/key/<key-name>/_reencryptbatch
+    Content-Type: application/json
+
+    [
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      ...
+    ]
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    [
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      {
+        "versionName"         : "<encryptionVersionName>",
+        "iv"                  : "<iv>",            //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      ...
+    ]
 
 $H4 Get Key Version
 
@@ -1032,3 +1127,63 @@ $H4 Get Keys Metadata
       },
       ...
     ]
+
+$H3 Deprecated Environment Variables
+
+The following environment variables are deprecated. Set the corresponding
+configuration properties instead.
+
+Environment Variable     | Configuration Property       | Configuration File
+-------------------------|------------------------------|--------------------
+KMS_TEMP                 | hadoop.http.temp.dir         | kms-site.xml
+KMS_HTTP_PORT            | hadoop.kms.http.port         | kms-site.xml
+KMS_MAX_HTTP_HEADER_SIZE | hadoop.http.max.request.header.size and hadoop.http.max.response.header.size | kms-site.xml
+KMS_MAX_THREADS          | hadoop.http.max.threads      | kms-site.xml
+KMS_SSL_ENABLED          | hadoop.kms.ssl.enabled       | kms-site.xml
+KMS_SSL_KEYSTORE_FILE    | ssl.server.keystore.location | ssl-server.xml
+KMS_SSL_KEYSTORE_PASS    | ssl.server.keystore.password | ssl-server.xml
+
+$H3 Default HTTP Services
+
+Name               | Description
+-------------------|------------------------------------
+/conf              | Display configuration properties
+/jmx               | Java JMX management interface
+/logLevel          | Get or set log level per class
+/logs              | Display log files
+/stacks            | Display JVM stacks
+/static/index.html | The static home page
+
+To control the access to servlet `/conf`, `/jmx`, `/logLevel`, `/logs`,
+and `/stacks`, configure the following properties in `kms-site.xml`:
+
+```xml
+  <property>
+    <name>hadoop.security.authorization</name>
+    <value>true</value>
+    <description>Is service-level authorization enabled?</description>
+  </property>
+
+  <property>
+    <name>hadoop.security.instrumentation.requires.admin</name>
+    <value>true</value>
+    <description>
+      Indicates if administrator ACLs are required to access
+      instrumentation servlets (JMX, METRICS, CONF, STACKS).
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.http.administrators</name>
+    <value></value>
+    <description>ACL for the admins, this configuration is used to control
+      who can access the default KMS servlets. The value should be a comma
+      separated list of users and groups. The user list comes first and is
+      separated by a space followed by the group list,
+      e.g. "user1,user2 group1,group2". Both users and groups are optional,
+      so "user1", " group1", "", "user1 group1", "user1,user2 group1,group2"
+      are all valid (note the leading space in " group1"). '*' grants access
+      to all users and groups, e.g. '*', '* ' and ' *' are all valid.
+    </description>
+  </property>
+```

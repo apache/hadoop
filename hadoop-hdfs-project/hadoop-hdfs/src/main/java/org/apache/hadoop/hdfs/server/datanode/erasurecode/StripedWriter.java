@@ -55,6 +55,7 @@ class StripedWriter {
   private final short[] targetIndices;
   private boolean hasValidTargets;
   private final StorageType[] targetStorageTypes;
+  private final String[] targetStorageIds;
 
   private StripedBlockWriter[] writers;
 
@@ -77,6 +78,8 @@ class StripedWriter {
     assert targets != null;
     this.targetStorageTypes = stripedReconInfo.getTargetStorageTypes();
     assert targetStorageTypes != null;
+    this.targetStorageIds = stripedReconInfo.getTargetStorageIds();
+    assert targetStorageIds != null;
 
     writers = new StripedBlockWriter[targets.length];
 
@@ -192,7 +195,7 @@ class StripedWriter {
   private StripedBlockWriter createWriter(short index) throws IOException {
     return new StripedBlockWriter(this, datanode, conf,
         reconstructor.getBlock(targetIndices[index]), targets[index],
-        targetStorageTypes[index]);
+        targetStorageTypes[index], targetStorageIds[index]);
   }
 
   ByteBuffer allocateWriteBuffer() {

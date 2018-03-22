@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
+import javax.annotation.Nonnull;
+
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
  * It's used to upload current load information and block reports.
@@ -105,6 +107,9 @@ public interface DatanodeProtocol {
    * @param volumeFailureSummary info about volume failures
    * @param requestFullBlockReportLease whether to request a full block
    *                                    report lease.
+   * @param slowPeers Details of peer DataNodes that were detected as being
+   *                  slow to respond to packet writes. Empty report if no
+   *                  slow peers were detected by the DataNode.
    * @throws IOException on error
    */
   @Idempotent
@@ -116,7 +121,9 @@ public interface DatanodeProtocol {
                                        int xceiverCount,
                                        int failedVolumes,
                                        VolumeFailureSummary volumeFailureSummary,
-                                       boolean requestFullBlockReportLease)
+                                       boolean requestFullBlockReportLease,
+                                       @Nonnull SlowPeerReports slowPeers,
+                                       @Nonnull SlowDiskReports slowDisks)
       throws IOException;
 
   /**

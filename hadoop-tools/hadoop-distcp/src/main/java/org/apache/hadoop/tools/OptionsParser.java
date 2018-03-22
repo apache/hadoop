@@ -32,7 +32,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 
 import com.google.common.base.Preconditions;
 
@@ -95,221 +94,149 @@ public class OptionsParser {
         Arrays.toString(args), e);
     }
 
-    DistCpOptions option = parseSourceAndTargetPaths(command);
-
-    option.setIgnoreFailures(
-        command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch()));
-
-    option.setAtomicCommit(
-        command.hasOption(DistCpOptionSwitch.ATOMIC_COMMIT.getSwitch()));
-
-    option.setSyncFolder(
-        command.hasOption(DistCpOptionSwitch.SYNC_FOLDERS.getSwitch()));
-
-    option.setOverwrite(
-        command.hasOption(DistCpOptionSwitch.OVERWRITE.getSwitch()));
-
-    option.setAppend(
-        command.hasOption(DistCpOptionSwitch.APPEND.getSwitch()));
-
-    option.setDeleteMissing(
-        command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch()));
-
-    option.setSkipCRC(
-        command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch()));
-
-    if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch()) &&
-        option.shouldAtomicCommit()) {
-      String workPath = getVal(command, DistCpOptionSwitch.WORK_PATH.getSwitch());
-      if (workPath != null && !workPath.isEmpty()) {
-        option.setAtomicWorkPath(new Path(workPath));
-      }
-    } else if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch())) {
-      throw new IllegalArgumentException("-tmp work-path can only be specified along with -atomic");
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.LOG_PATH.getSwitch())) {
-      option.setLogPath(new Path(getVal(command, DistCpOptionSwitch.LOG_PATH.getSwitch())));
-    }
-
-
-    if (command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch())) {
-      option.setBlocking(false);
-    }
-
-    parseBandwidth(command, option);
-
-    parseNumListStatusThreads(command, option);
-
-    parseMaxMaps(command, option);
-
-    if (command.hasOption(DistCpOptionSwitch.COPY_STRATEGY.getSwitch())) {
-      option.setCopyStrategy(
-            getVal(command, DistCpOptionSwitch.COPY_STRATEGY.getSwitch()));
-    }
-
-    parsePreserveStatus(command, option);
+    DistCpOptions.Builder builder = parseSourceAndTargetPaths(command);
+    builder
+        .withAtomicCommit(
+            command.hasOption(DistCpOptionSwitch.ATOMIC_COMMIT.getSwitch()))
+        .withSyncFolder(
+            command.hasOption(DistCpOptionSwitch.SYNC_FOLDERS.getSwitch()))
+        .withDeleteMissing(
+            command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch()))
+        .withIgnoreFailures(
+            command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch()))
+        .withOverwrite(
+            command.hasOption(DistCpOptionSwitch.OVERWRITE.getSwitch()))
+        .withAppend(
+            command.hasOption(DistCpOptionSwitch.APPEND.getSwitch()))
+        .withCRC(
+            command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch()))
+        .withBlocking(
+            !command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch()))
+        .withVerboseLog(
+            command.hasOption(DistCpOptionSwitch.VERBOSE_LOG.getSwitch()));
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
       String[] snapshots = getVals(command,
           DistCpOptionSwitch.DIFF.getSwitch());
       checkSnapshotsArgs(snapshots);
-      option.setUseDiff(snapshots[0], snapshots[1]);
+      builder.withUseDiff(snapshots[0], snapshots[1]);
     }
     if (command.hasOption(DistCpOptionSwitch.RDIFF.getSwitch())) {
       String[] snapshots = getVals(command,
           DistCpOptionSwitch.RDIFF.getSwitch());
       checkSnapshotsArgs(snapshots);
-      option.setUseRdiff(snapshots[0], snapshots[1]);
+      builder.withUseRdiff(snapshots[0], snapshots[1]);
     }
-
-    parseFileLimit(command);
-
-    parseSizeLimit(command);
 
     if (command.hasOption(DistCpOptionSwitch.FILTERS.getSwitch())) {
-      option.setFiltersFile(getVal(command,
-          DistCpOptionSwitch.FILTERS.getSwitch()));
+      builder.withFiltersFile(
+          getVal(command, DistCpOptionSwitch.FILTERS.getSwitch()));
     }
 
-    option.validate();
+    if (command.hasOption(DistCpOptionSwitch.LOG_PATH.getSwitch())) {
+      builder.withLogPath(
+          new Path(getVal(command, DistCpOptionSwitch.LOG_PATH.getSwitch())));
+    }
 
-    return option;
-  }
+    if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch())) {
+      final String workPath = getVal(command,
+          DistCpOptionSwitch.WORK_PATH.getSwitch());
+      if (workPath != null && !workPath.isEmpty()) {
+        builder.withAtomicWorkPath(new Path(workPath));
+      }
+    }
+    if (command.hasOption(DistCpOptionSwitch.TRACK_MISSING.getSwitch())) {
+      builder.withTrackMissing(
+          new Path(getVal(
+              command,
+              DistCpOptionSwitch.TRACK_MISSING.getSwitch())));
+    }
 
-  /**
-   * parseSizeLimit is a helper method for parsing the deprecated
-   * argument SIZE_LIMIT.
-   *
-   * @param command command line arguments
-   */
-  private static void parseSizeLimit(CommandLine command) {
-    if (command.hasOption(DistCpOptionSwitch.SIZE_LIMIT.getSwitch())) {
-      String sizeLimitString = getVal(command,
-                              DistCpOptionSwitch.SIZE_LIMIT.getSwitch().trim());
+    if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
       try {
-        Long.parseLong(sizeLimitString);
-      }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Size-limit is invalid: "
-                                            + sizeLimitString, e);
-      }
-      LOG.warn(DistCpOptionSwitch.SIZE_LIMIT.getSwitch() + " is a deprecated" +
-              " option. Ignoring.");
-    }
-  }
-
-  /**
-   * parseFileLimit is a helper method for parsing the deprecated
-   * argument FILE_LIMIT.
-   *
-   * @param command command line arguments
-   */
-  private static void parseFileLimit(CommandLine command) {
-    if (command.hasOption(DistCpOptionSwitch.FILE_LIMIT.getSwitch())) {
-      String fileLimitString = getVal(command,
-                              DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
-      try {
-        Integer.parseInt(fileLimitString);
-      }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("File-limit is invalid: "
-                                            + fileLimitString, e);
-      }
-      LOG.warn(DistCpOptionSwitch.FILE_LIMIT.getSwitch() + " is a deprecated" +
-          " option. Ignoring.");
-    }
-  }
-
-  /**
-   * parsePreserveStatus is a helper method for parsing PRESERVE_STATUS.
-   *
-   * @param command command line arguments
-   * @param option  parsed distcp options
-   */
-  private static void parsePreserveStatus(CommandLine command,
-                                          DistCpOptions option) {
-    if (command.hasOption(DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
-      String attributes =
-          getVal(command, DistCpOptionSwitch.PRESERVE_STATUS.getSwitch());
-      if (attributes == null || attributes.isEmpty()) {
-        for (FileAttribute attribute : FileAttribute.values()) {
-          option.preserve(attribute);
-        }
-      } else {
-        for (int index = 0; index < attributes.length(); index++) {
-          option.preserve(FileAttribute.
-              getAttribute(attributes.charAt(index)));
-        }
-      }
-    }
-  }
-
-  /**
-   * parseMaxMaps is a helper method for parsing MAX_MAPS.
-   *
-   * @param command command line arguments
-   * @param option  parsed distcp options
-   */
-  private static void parseMaxMaps(CommandLine command,
-                                   DistCpOptions option) {
-    if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
-      try {
-        Integer maps = Integer.parseInt(
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
-        option.setMaxMaps(maps);
+        final Float mapBandwidth = Float.parseFloat(
+            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()));
+        builder.withMapBandwidth(mapBandwidth);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Number of maps is invalid: " +
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
+        throw new IllegalArgumentException("Bandwidth specified is invalid: " +
+            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
       }
     }
-  }
 
-  /**
-   * parseNumListStatusThreads is a helper method for parsing
-   * NUM_LISTSTATUS_THREADS.
-   *
-   * @param command command line arguments
-   * @param option  parsed distcp options
-   */
-  private static void parseNumListStatusThreads(CommandLine command,
-                                                DistCpOptions option) {
     if (command.hasOption(
         DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch())) {
       try {
-        Integer numThreads = Integer.parseInt(getVal(command,
-              DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()).trim());
-        option.setNumListstatusThreads(numThreads);
+        final Integer numThreads = Integer.parseInt(getVal(command,
+            DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()));
+        builder.withNumListstatusThreads(numThreads);
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(
             "Number of liststatus threads is invalid: " + getVal(command,
                 DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()), e);
       }
     }
-  }
 
-  /**
-   * parseBandwidth is a helper method for parsing BANDWIDTH.
-   *
-   * @param command command line arguments
-   * @param option  parsed distcp options
-   */
-  private static void parseBandwidth(CommandLine command,
-                                     DistCpOptions option) {
-    if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
+    if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
       try {
-        Float mapBandwidth = Float.parseFloat(
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()).trim());
-        if (mapBandwidth <= 0) {
-          throw new IllegalArgumentException("Bandwidth specified is not " +
-              "positive: " + mapBandwidth);
-        }
-        option.setMapBandwidth(mapBandwidth);
+        final Integer maps = Integer.parseInt(
+            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()));
+        builder.maxMaps(maps);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Bandwidth specified is invalid: " +
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
+        throw new IllegalArgumentException("Number of maps is invalid: " +
+            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
       }
     }
+
+    if (command.hasOption(DistCpOptionSwitch.COPY_STRATEGY.getSwitch())) {
+      builder.withCopyStrategy(
+            getVal(command, DistCpOptionSwitch.COPY_STRATEGY.getSwitch()));
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
+      builder.preserve(
+          getVal(command, DistCpOptionSwitch.PRESERVE_STATUS.getSwitch()));
+    } else {
+      // No "preserve" settings specified. Preserve block-size.
+      builder.preserve(DistCpOptions.FileAttribute.BLOCKSIZE);
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.FILE_LIMIT.getSwitch())) {
+      LOG.warn(DistCpOptionSwitch.FILE_LIMIT.getSwitch() + " is a deprecated" +
+          " option. Ignoring.");
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.SIZE_LIMIT.getSwitch())) {
+      LOG.warn(DistCpOptionSwitch.SIZE_LIMIT.getSwitch() + " is a deprecated" +
+          " option. Ignoring.");
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch())) {
+      final String chunkSizeStr = getVal(command,
+          DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch().trim());
+      try {
+        int csize = Integer.parseInt(chunkSizeStr);
+        csize = csize > 0 ? csize : 0;
+        LOG.info("Set distcp blocksPerChunk to " + csize);
+        builder.withBlocksPerChunk(csize);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("blocksPerChunk is invalid: "
+            + chunkSizeStr, e);
+      }
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch())) {
+      final String copyBufferSizeStr = getVal(command,
+          DistCpOptionSwitch.COPY_BUFFER_SIZE.getSwitch().trim());
+      try {
+        int copyBufferSize = Integer.parseInt(copyBufferSizeStr);
+        builder.withCopyBufferSize(copyBufferSize);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("copyBufferSize is invalid: "
+            + copyBufferSizeStr, e);
+      }
+    }
+
+    return builder.build();
   }
 
   /**
@@ -319,9 +246,8 @@ public class OptionsParser {
    * @param command command line arguments
    * @return        DistCpOptions
    */
-  private static DistCpOptions parseSourceAndTargetPaths(
+  private static DistCpOptions.Builder parseSourceAndTargetPaths(
       CommandLine command) {
-    DistCpOptions option;
     Path targetPath;
     List<Path> sourcePaths = new ArrayList<Path>();
 
@@ -346,20 +272,22 @@ public class OptionsParser {
         throw new IllegalArgumentException("Both source file listing and " +
             "source paths present");
       }
-      option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
-          SOURCE_FILE_LISTING.getSwitch())), targetPath);
+      return new DistCpOptions.Builder(new Path(getVal(command,
+          DistCpOptionSwitch.SOURCE_FILE_LISTING.getSwitch())), targetPath);
     } else {
       if (sourcePaths.isEmpty()) {
         throw new IllegalArgumentException("Neither source file listing nor " +
             "source paths present");
       }
-      option = new DistCpOptions(sourcePaths, targetPath);
+      return new DistCpOptions.Builder(sourcePaths, targetPath);
     }
-    return option;
   }
 
   private static String getVal(CommandLine command, String swtch) {
-    String optionValue = command.getOptionValue(swtch);
+    if (swtch == null) {
+      return null;
+    }
+    String optionValue = command.getOptionValue(swtch.trim());
     if (optionValue == null) {
       return null;
     } else {

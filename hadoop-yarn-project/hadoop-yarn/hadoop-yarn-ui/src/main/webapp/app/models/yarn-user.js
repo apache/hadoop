@@ -23,4 +23,4 @@ export default DS.Model.extend({
   queueName: DS.attr('string'),
   usedMemoryMB: DS.attr('number'),
   usedVCore: DS.attr('number')
-})
+});

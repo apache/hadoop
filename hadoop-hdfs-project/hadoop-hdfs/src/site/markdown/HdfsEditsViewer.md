@@ -15,10 +15,7 @@
 Offline Edits Viewer Guide
 ==========================
 
-* [Offline Edits Viewer Guide](#Offline_Edits_Viewer_Guide)
-    * [Overview](#Overview)
-    * [Usage](#Usage)
-    * [Case study: Hadoop cluster recovery](#Case_study:_Hadoop_cluster_recovery)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -33,6 +30,8 @@ Input formats supported:
 2.  **xml**: XML format, as produced by xml processor, used if filename
     has `.xml` (case insensitive) extension
 
+Note: XML/Binary format input file is not allowed to be processed by the same type processor.
+
 The Offline Edits Viewer provides several output processors (unless stated otherwise the output of the processor can be converted back to original edits file):
 
 1.  **binary**: native binary format that Hadoop uses internally
@@ -43,9 +42,84 @@ The Offline Edits Viewer provides several output processors (unless stated other
 Usage
 -----
 
+### XML Processor
+
+XML processor can create an XML file that contains the edits log information. Users can specify input and output file via -i and -o command-line.
+
+       bash$ bin/hdfs oev -p xml -i edits -o edits.xml
+
+XML processor is the default processor in Offline Edits Viewer, users can also use the following command:
+
        bash$ bin/hdfs oev -i edits -o edits.xml
 
-|                                       Flag | Description |
+This would result in the following output:
+
+       <?xml version="1.0" encoding="UTF-8"?>
+       <EDITS>
+         <EDITS_VERSION>-64</EDITS_VERSION>
+         <RECORD>
+           <OPCODE>OP_START_LOG_SEGMENT</OPCODE>
+           <DATA>
+             <TXID>1</TXID>
+           </DATA>
+         </RECORD>
+         <RECORD>
+           <OPCODE>OP_UPDATE_MASTER_KEY</OPCODE>
+           <DATA>
+             <TXID>2</TXID>
+             <DELEGATION_KEY>
+               <KEY_ID>1</KEY_ID>
+               <EXPIRY_DATE>1487921580728</EXPIRY_DATE>
+               <KEY>2e127ca41c7de215</KEY>
+             </DELEGATION_KEY>
+           </DATA>
+         </RECORD>
+         <RECORD>
+       ...remaining output omitted...
+
+### Binary Processor
+
+Binary processor is the opposite of the XML processor. Users can specify input XML file and output file via -i and -o command-line.
+
+       bash$ bin/hdfs oev -p binary -i edits.xml -o edits
+
+This will reconstruct an edits log file from an XML file.
+
+### Stats Processor
+
+Stats processor is used to aggregate counts of op codes contained in the edits log file. Users can specify this processor by -p option.
+
+       bash$ bin/hdfs oev -p stats -i edits -o edits.stats
+
+The output result of this processor should be like the following output:
+
+       VERSION                             : -64
+       OP_ADD                         (  0): 8
+       OP_RENAME_OLD                  (  1): 1
+       OP_DELETE                      (  2): 1
+       OP_MKDIR                       (  3): 1
+       OP_SET_REPLICATION             (  4): 1
+       OP_DATANODE_ADD                (  5): 0
+       OP_DATANODE_REMOVE             (  6): 0
+       OP_SET_PERMISSIONS             (  7): 1
+       OP_SET_OWNER                   (  8): 1
+       OP_CLOSE                       (  9): 9
+       OP_SET_GENSTAMP_V1             ( 10): 0
+       ...some output omitted...
+       OP_APPEND                      ( 47): 1
+       OP_SET_QUOTA_BY_STORAGETYPE    ( 48): 1
+       OP_ADD_ERASURE_CODING_POLICY   ( 49): 0
+       OP_ENABLE_ERASURE_CODING_POLICY  ( 50): 1
+       OP_DISABLE_ERASURE_CODING_POLICY ( 51): 0
+       OP_REMOVE_ERASURE_CODING_POLICY  ( 52): 0
+       OP_INVALID                     ( -1): 0
+
+The output is formatted as a colon separated two column table: OpCode and OpCodeCount. Each OpCode corresponding to the specific operation(s) in NameNode.
+
+Options
+-------
+
+| Flag | Description |
 |:---- |:---- |
 | [`-i` ; `--inputFile`] *input file* | Specify the input edits log file to process. Xml (case insensitive) extension means XML format otherwise binary format is assumed. Required. |
 | [`-o` ; `--outputFile`] *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. Required. |

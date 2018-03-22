@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -302,6 +303,15 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     rbw.getBlockFile().createNewFile();
     rbw.getMetaFile().createNewFile();
     dataset.volumeMap.add(bpid, rbw);
+
+    FileIoProvider fileIoProvider = rbw.getFileIoProvider();
+
+    try (RandomAccessFile blockRAF = fileIoProvider.getRandomAccessFile(
+        volume, rbw.getBlockFile(), "rw")) {
+      //extend blockFile
+      blockRAF.setLength(eb.getNumBytes());
+    }
+    saveMetaFileHeader(rbw.getMetaFile());
     return rbw;
   }
 

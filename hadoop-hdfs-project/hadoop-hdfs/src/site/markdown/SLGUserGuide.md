@@ -15,12 +15,7 @@
 Synthetic Load Generator Guide
 ==============================
 
-* [Synthetic Load Generator Guide](#Synthetic_Load_Generator_Guide)
-    * [Overview](#Overview)
-    * [Synopsis](#Synopsis)
-    * [Test Space Population](#Test_Space_Population)
-        * [Structure Generator](#Structure_Generator)
-        * [Data Generator](#Data_Generator)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -42,26 +44,35 @@ public class AMRMProxyApplicationContextImpl implements
   private Integer localTokenKeyId;
   private Token<AMRMTokenIdentifier> amrmToken;
   private Token<AMRMTokenIdentifier> localToken;
+  private Credentials credentials;
+  private RegistryOperations registry;
 
   /**
    * Create an instance of the AMRMProxyApplicationContext.
-   * 
-   * @param nmContext
-   * @param conf
-   * @param applicationAttemptId
-   * @param user
-   * @param amrmToken
+   *
+   * @param nmContext NM context
+   * @param conf configuration
+   * @param applicationAttemptId attempt id
+   * @param user user name of the application
+   * @param amrmToken amrmToken issued by RM
+   * @param localToken amrmToken issued by AMRMProxy
+   * @param credentials application credentials
+   * @param registry Yarn Registry client
    */
-  public AMRMProxyApplicationContextImpl(Context nmContext,
-      Configuration conf, ApplicationAttemptId applicationAttemptId,
-      String user, Token<AMRMTokenIdentifier> amrmToken,
-      Token<AMRMTokenIdentifier> localToken) {
+  @SuppressWarnings("checkstyle:parameternumber")
+  public AMRMProxyApplicationContextImpl(Context nmContext, Configuration conf,
+      ApplicationAttemptId applicationAttemptId, String user,
+      Token<AMRMTokenIdentifier> amrmToken,
+      Token<AMRMTokenIdentifier> localToken, Credentials credentials,
+      RegistryOperations registry) {
     this.nmContext = nmContext;
     this.conf = conf;
     this.applicationAttemptId = applicationAttemptId;
     this.user = user;
     this.amrmToken = amrmToken;
     this.localToken = localToken;
+    this.credentials = credentials;
+    this.registry = registry;
   }
 
   @Override
@@ -86,10 +97,15 @@ public class AMRMProxyApplicationContextImpl implements
 
   /**
    * Sets the application's AMRMToken.
+   *
+   * @param amrmToken the new amrmToken from RM
+   * @return whether the saved token is updated to a different value
    */
-  public synchronized void setAMRMToken(
+  public synchronized boolean setAMRMToken(
       Token<AMRMTokenIdentifier> amrmToken) {
+    Token<AMRMTokenIdentifier> oldValue = this.amrmToken;
     this.amrmToken = amrmToken;
+    return !this.amrmToken.equals(oldValue);
   }
 
   @Override
@@ -99,6 +115,8 @@ public class AMRMProxyApplicationContextImpl implements
 
   /**
    * Sets the application's AMRMToken.
+   *
+   * @param localToken amrmToken issued by AMRMProxy
    */
   public synchronized void setLocalAMRMToken(
       Token<AMRMTokenIdentifier> localToken) {
@@ -115,7 +133,7 @@ public class AMRMProxyApplicationContextImpl implements
           throw new YarnRuntimeException("Missing AMRM token for "
               + this.applicationAttemptId);
         }
-        keyId = this.amrmToken.decodeIdentifier().getKeyId();
+        keyId = this.localToken.decodeIdentifier().getKeyId();
         this.localTokenKeyId = keyId;
       } catch (IOException e) {
         throw new YarnRuntimeException("AMRM token decode error for "
@@ -128,5 +146,15 @@ public class AMRMProxyApplicationContextImpl implements
   @Override
   public Context getNMCotext() {
     return nmContext;
+  }
+
+  @Override
+  public Credentials getCredentials() {
+    return this.credentials;
+  }
+
+  @Override
+  public RegistryOperations getRegistryClient() {
+    return this.registry;
   }
 }

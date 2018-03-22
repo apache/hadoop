@@ -71,6 +71,7 @@
   <PropertyGroup>
     <SnappyLib Condition="Exists('$(CustomSnappyPrefix)\snappy.dll')">$(CustomSnappyPrefix)</SnappyLib>
     <SnappyLib Condition="Exists('$(CustomSnappyPrefix)\lib\snappy.dll') And '$(SnappyLib)' == ''">$(CustomSnappyPrefix)\lib</SnappyLib>
+    <SnappyLib Condition="Exists('$(CustomSnappyPrefix)\bin\snappy.dll') And '$(SnappyLib)' == ''">$(CustomSnappyPrefix)\bin</SnappyLib>
     <SnappyLib Condition="Exists('$(CustomSnappyLib)') And '$(SnappyLib)' == ''">$(CustomSnappyLib)</SnappyLib>
     <SnappyInclude Condition="Exists('$(CustomSnappyPrefix)\snappy.h')">$(CustomSnappyPrefix)</SnappyInclude>
     <SnappyInclude Condition="Exists('$(CustomSnappyPrefix)\include\snappy.h') And '$(SnappyInclude)' == ''">$(CustomSnappyPrefix)\include</SnappyInclude>
@@ -82,6 +83,7 @@
   <PropertyGroup>
     <IsalLib Condition="Exists('$(CustomIsalPrefix)\isa-l.dll')">$(CustomIsalPrefix)</IsalLib>
     <IsalLib Condition="Exists('$(CustomIsalPrefix)\lib\isa-l.dll') And '$(IsalLib)' == ''">$(CustomIsalPrefix)\lib</IsalLib>
+    <IsalLib Condition="Exists('$(CustomIsalPrefix)\bin\isa-l.dll') And '$(IsalLib)' == ''">$(CustomIsalPrefix)\bin</IsalLib>
     <IsalLib Condition="Exists('$(CustomIsalLib)') And '$(IsalLib)' == ''">$(CustomIsalLib)</IsalLib>
     <IsalEnabled Condition="'$(IsalLib)' != ''">true</IsalEnabled>
   </PropertyGroup>

@@ -95,7 +95,7 @@ public class TestNMTimelineCollectorManager {
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineCollector collector =
-              new AppLevelTimelineCollector(appId);
+              new AppLevelTimelineCollectorWithAgg(appId, "user");
           return (collectorManager.putIfAbsent(appId, collector) == collector);
         }
       };
@@ -126,7 +126,7 @@ public class TestNMTimelineCollectorManager {
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineCollector collector =
-              new AppLevelTimelineCollector(appId);
+              new AppLevelTimelineCollectorWithAgg(appId, "user");
           boolean successPut =
               (collectorManager.putIfAbsent(appId, collector) == collector);
           return successPut && collectorManager.remove(appId);

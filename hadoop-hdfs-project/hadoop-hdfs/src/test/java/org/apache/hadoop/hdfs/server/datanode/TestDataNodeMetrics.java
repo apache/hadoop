@@ -24,14 +24,17 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.*;
 
 import java.io.Closeable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -44,8 +47,10 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -58,6 +63,7 @@ import org.mockito.Mockito;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+@NotThreadSafe
 public class TestDataNodeMetrics {
   private static final Log LOG = LogFactory.getLog(TestDataNodeMetrics.class);
 
@@ -216,6 +222,7 @@ public class TestDataNodeMetrics {
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 
     final List<FSDataOutputStream> streams = Lists.newArrayList();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     try {
       final FSDataOutputStream out =
           cluster.getFileSystem().create(path, (short) 2);
@@ -224,7 +231,7 @@ public class TestDataNodeMetrics {
       Mockito.doThrow(new IOException("mock IOException")).
           when(injector).
           writeBlockAfterFlush();
-      DataNodeFaultInjector.instance = injector;
+      DataNodeFaultInjector.set(injector);
       streams.add(out);
       out.writeBytes("old gs data\n");
       out.hflush();
@@ -250,7 +257,7 @@ public class TestDataNodeMetrics {
       if (cluster != null) {
         cluster.shutdown();
       }
-      DataNodeFaultInjector.instance = new DataNodeFaultInjector();
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 
@@ -361,5 +368,63 @@ public class TestDataNodeMetrics {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testDNShouldNotDeleteBlockONTooManyOpenFiles()
+      throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1);
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    final DataNodeFaultInjector injector =
+        Mockito.mock(DataNodeFaultInjector.class);
+    try {
+      // wait until the cluster is up
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/testShouldThrowTMP");
+      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      //Before DN throws too many open files
+      verifyBlockLocations(fs, p, 1);
+      Mockito.doThrow(new FileNotFoundException("Too many open files")).
+          when(injector).
+          throwTooManyOpenFiles();
+      DataNodeFaultInjector.set(injector);
+      ExtendedBlock b =
+          fs.getClient().getLocatedBlocks(p.toString(), 0).get(0).getBlock();
+      try {
+        new BlockSender(b, 0, -1, false, true, true,
+                cluster.getDataNodes().get(0), null,
+                CachingStrategy.newDefaultStrategy());
+        fail("Must throw FileNotFoundException");
+      } catch (FileNotFoundException fe) {
+        assertTrue("Should throw too many open files",
+                fe.getMessage().contains("Too many open files"));
+      }
+      cluster.triggerHeartbeats(); // IBR delete ack
+      //After DN throws too many open files
+      assertTrue(cluster.getDataNodes().get(0).getFSDataset().isValidBlock(b));
+      verifyBlockLocations(fs, p, 1);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  private void verifyBlockLocations(DistributedFileSystem fs, Path p,
+      int expected) throws IOException, TimeoutException, InterruptedException {
+    final LocatedBlock lb =
+        fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return lb.getLocations().length == expected;
+      }
+    }, 1000, 6000);
   }
 }

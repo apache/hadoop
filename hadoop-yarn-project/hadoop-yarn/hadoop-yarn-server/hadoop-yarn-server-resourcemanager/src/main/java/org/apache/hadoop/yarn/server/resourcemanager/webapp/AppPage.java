@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 public class AppPage extends RmView {
 
   @Override 
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String appId = $(YarnWebParams.APPLICATION_ID);
     set(

@@ -24,9 +24,8 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link Compressor} based on the popular 
@@ -42,7 +41,8 @@ public class Bzip2Compressor implements Compressor {
   static final int DEFAULT_BLOCK_SIZE = 9;
   static final int DEFAULT_WORK_FACTOR = 30;
 
-  private static final Log LOG = LogFactory.getLog(Bzip2Compressor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Bzip2Compressor.class);
 
   private long stream;
   private int blockSize;

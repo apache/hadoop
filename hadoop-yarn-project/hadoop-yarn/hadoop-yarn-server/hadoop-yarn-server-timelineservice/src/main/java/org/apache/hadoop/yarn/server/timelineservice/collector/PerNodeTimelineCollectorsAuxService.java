@@ -19,12 +19,15 @@
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +36,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
@@ -43,6 +47,8 @@ import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The top-level server for the per-node timeline collector manager. Currently
@@ -52,16 +58,18 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
-  private static final Log LOG =
-      LogFactory.getLog(PerNodeTimelineCollectorsAuxService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PerNodeTimelineCollectorsAuxService.class);
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private final NodeTimelineCollectorManager collectorManager;
   private long collectorLingerPeriod;
   private ScheduledExecutorService scheduler;
+  private Map<ApplicationId, Set<ContainerId>> appIdToContainerId =
+      new ConcurrentHashMap<>();
 
   public PerNodeTimelineCollectorsAuxService() {
-    this(new NodeTimelineCollectorManager());
+    this(new NodeTimelineCollectorManager(true));
   }
 
   @VisibleForTesting PerNodeTimelineCollectorsAuxService(
@@ -73,7 +81,12 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     if (!YarnConfiguration.timelineServiceV2Enabled(conf)) {
-      throw new YarnException("Timeline service v2 is not enabled");
+      throw new YarnException(
+          "Looks like timeline_collector is set as an auxillary service in "
+              + YarnConfiguration.NM_AUX_SERVICES
+              + ". But Timeline service v2 is not enabled,"
+              + " so timeline_collector needs to be removed"
+              + " from that list of auxillary services.");
     }
     collectorLingerPeriod =
         conf.getLong(YarnConfiguration.ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS,
@@ -109,11 +122,12 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * exists, no new service is created.
    *
    * @param appId Application Id to be added.
+   * @param user Application Master container user.
    * @return whether it was added successfully
    */
-  public boolean addApplication(ApplicationId appId) {
+  public boolean addApplication(ApplicationId appId, String user) {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollector(appId);
+        new AppLevelTimelineCollectorWithAgg(appId, user);
     return (collectorManager.putIfAbsent(appId, collector)
         == collector);
   }
@@ -142,7 +156,15 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
-      addApplication(appId);
+      synchronized (appIdToContainerId) {
+        Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
+        if (masterContainers == null) {
+          masterContainers = new HashSet<>();
+          appIdToContainerId.put(appId, masterContainers);
+        }
+        masterContainers.add(context.getContainerId());
+        addApplication(appId, context.getUser());
+      }
     }
   }
 
@@ -156,14 +178,33 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     // intercept the event of the AM container being stopped and remove the app
     // level collector service
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
-      final ApplicationId appId =
-          context.getContainerId().getApplicationAttemptId().getApplicationId();
-      scheduler.schedule(new Runnable() {
-        public void run() {
-          removeApplication(appId);
-        }
-      }, collectorLingerPeriod, TimeUnit.MILLISECONDS);
+      final ContainerId containerId = context.getContainerId();
+      removeApplicationCollector(containerId);
     }
+  }
+
+  @VisibleForTesting
+  protected Future removeApplicationCollector(final ContainerId containerId) {
+    final ApplicationId appId =
+        containerId.getApplicationAttemptId().getApplicationId();
+    return scheduler.schedule(new Runnable() {
+      public void run() {
+        synchronized (appIdToContainerId) {
+          Set<ContainerId> masterContainers = appIdToContainerId.get(appId);
+          if (masterContainers == null) {
+            LOG.info("Stop container for " + containerId
+                + " is called before initializing container.");
+            return;
+          }
+          masterContainers.remove(containerId);
+          if (masterContainers.size() == 0) {
+            // remove only if it is last master container
+            removeApplication(appId);
+            appIdToContainerId.remove(appId);
+          }
+        }
+      }
+    }, collectorLingerPeriod, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
@@ -197,14 +238,15 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     PerNodeTimelineCollectorsAuxService auxService = null;
     try {
       auxService = collectorManager == null ?
-          new PerNodeTimelineCollectorsAuxService() :
+          new PerNodeTimelineCollectorsAuxService(
+              new NodeTimelineCollectorManager(false)) :
           new PerNodeTimelineCollectorsAuxService(collectorManager);
       ShutdownHookManager.get().addShutdownHook(new ShutdownHook(auxService),
           SHUTDOWN_HOOK_PRIORITY);
       auxService.init(conf);
       auxService.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting PerNodeTimelineCollectorServer", t);
+      LOG.error("Error starting PerNodeTimelineCollectorServer", t);
       ExitUtil.terminate(-1, "Error starting PerNodeTimelineCollectorServer");
     }
     return auxService;

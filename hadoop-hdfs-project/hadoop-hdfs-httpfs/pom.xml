@@ -22,28 +22,23 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-hdfs-httpfs</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
-  <packaging>war</packaging>
+  <version>3.2.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
 
   <name>Apache Hadoop HttpFS</name>
   <description>Apache Hadoop HttpFS</description>
 
   <properties>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
-    <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.revision>REVISION NOT AVAIL</httpfs.source.revision>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
     <httpfs.build.timestamp>${maven.build.timestamp}</httpfs.build.timestamp>
-    <httpfs.tomcat.dist.dir>
-      ${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/httpfs/tomcat
-    </httpfs.tomcat.dist.dir>
     <kerberos.realm>LOCALHOST</kerberos.realm>
     <test.exclude.kerberos.test>**/TestHttpFSWithKerberos.java</test.exclude.kerberos.test>
-    <tomcat.download.url>http://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.download.url>
   </properties>
 
   <dependencies>
@@ -75,7 +70,6 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -90,7 +84,10 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -100,10 +97,6 @@
         <exclusion>
           <groupId>javax.xml.stream</groupId>
           <artifactId>stax-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
         </exclusion>
         <exclusion>
           <groupId>javax.servlet</groupId>
@@ -126,10 +119,6 @@
           <artifactId>servlet-api-2.5</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>net.java.dev.jets3t</groupId>
-          <artifactId>jets3t</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
@@ -149,10 +138,6 @@
           <artifactId>commons-cli</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>javax.servlet-api</artifactId>
         </exclusion>
@@ -169,10 +154,6 @@
           <artifactId>servlet-api-2.5</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>net.java.dev.jets3t</groupId>
-          <artifactId>jets3t</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
@@ -181,6 +162,11 @@
           <artifactId>core</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -313,21 +299,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <executions>
-          <execution>
-            <configuration>
-              <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-            </configuration>
-            <goals>
-              <goal>dependencies</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
@@ -374,23 +345,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default-war</id>
-            <phase>package</phase>
-            <goals>
-              <goal>war</goal>
-            </goals>
-            <configuration>
-              <warName>webhdfs</warName>
-              <webappDirectory>${project.build.directory}/webhdfs</webappDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
@@ -432,30 +386,6 @@
     </profile>
     
     <profile>
-      <id>docs</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-site-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>docs</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>site</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
       <id>dist</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -486,79 +416,6 @@
                   <descriptorRefs>
                     <descriptorRef>hadoop-httpfs-dist</descriptorRef>
                   </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <!-- Downloading Tomcat TAR.GZ, using downloads/ dir to avoid downloading over an over -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>dist</id>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <phase>package</phase>
-                <configuration>
-                  <target>
-                    <mkdir dir="downloads"/>
-                    <get
-                        src="${tomcat.download.url}"
-                        dest="downloads/apache-tomcat-${tomcat.version}.tar.gz" verbose="true" skipexisting="true"/>
-                    <delete dir="${project.build.directory}/tomcat.exp"/>
-                    <mkdir dir="${project.build.directory}/tomcat.exp"/>
-
-                    <!-- Using Unix script to preserve file permissions -->
-                    <echo file="${project.build.directory}/tomcat-untar.sh">
-                      cd "${project.build.directory}/tomcat.exp"
-                      gzip -cd ../../downloads/apache-tomcat-${tomcat.version}.tar.gz | tar xf -
-                    </echo>
-                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./tomcat-untar.sh"/>
-                    </exec>
-
-                    <move file="${project.build.directory}/tomcat.exp/apache-tomcat-${tomcat.version}"
-                          tofile="${httpfs.tomcat.dist.dir}"/>
-                    <delete dir="${project.build.directory}/tomcat.exp"/>
-                    <delete dir="${httpfs.tomcat.dist.dir}/webapps"/>
-                    <mkdir dir="${httpfs.tomcat.dist.dir}/webapps"/>
-                    <delete file="${httpfs.tomcat.dist.dir}/conf/server.xml"/>
-                    <copy file="${basedir}/src/main/tomcat/server.xml"
-                          toDir="${httpfs.tomcat.dist.dir}/conf"/>
-                    <delete file="${httpfs.tomcat.dist.dir}/conf/ssl-server.xml"/>
-                    <copy file="${basedir}/src/main/tomcat/ssl-server.xml.conf"
-                          toDir="${httpfs.tomcat.dist.dir}/conf"/>
-                    <delete file="${httpfs.tomcat.dist.dir}/conf/logging.properties"/>
-                    <copy file="${basedir}/src/main/tomcat/logging.properties"
-                          toDir="${httpfs.tomcat.dist.dir}/conf"/>
-                    <copy toDir="${httpfs.tomcat.dist.dir}/webapps/ROOT">
-                      <fileset dir="${basedir}/src/main/tomcat/ROOT"/>
-                    </copy>
-                    <copy toDir="${httpfs.tomcat.dist.dir}/webapps/webhdfs">
-                      <fileset dir="${project.build.directory}/webhdfs"/>
-                    </copy>
-                  </target>
-                </configuration>
-              </execution>
-              <execution>
-                <id>tar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target if="tar">
-                    <!-- Using Unix script to preserve symlinks -->
-                    <echo file="${project.build.directory}/dist-maketar.sh">
-                      cd "${project.build.directory}"
-                      tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
-                    </echo>
-                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./dist-maketar.sh"/>
-                    </exec>
-                  </target>
                 </configuration>
               </execution>
             </executions>

@@ -19,8 +19,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -30,10 +32,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
@@ -51,7 +57,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +84,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
  */
 public class ProportionalCapacityPreemptionPolicy
     implements SchedulingEditPolicy, CapacitySchedulerPreemptionContext {
+
+  /**
+   * IntraQueuePreemptionOrder will be used to define various priority orders
+   * which could be configured by admin.
+   */
+  @Unstable
+  public enum IntraQueuePreemptionOrderPolicy {
+    PRIORITY_FIRST, USERLIMIT_FIRST;
+  }
+
   private static final Log LOG =
     LogFactory.getLog(ProportionalCapacityPreemptionPolicy.class);
 
@@ -95,6 +110,10 @@ public class ProportionalCapacityPreemptionPolicy
 
   private float maxAllowableLimitForIntraQueuePreemption;
   private float minimumThresholdForIntraQueuePreemption;
+  private IntraQueuePreemptionOrderPolicy intraQueuePreemptionOrderPolicy;
+
+  // Current configuration
+  private CapacitySchedulerConfiguration csConfig;
 
   // Pointer to other RM components
   private RMContext rmContext;
@@ -109,8 +128,7 @@ public class ProportionalCapacityPreemptionPolicy
       new HashMap<>();
   private Map<String, LinkedHashSet<String>> partitionToUnderServedQueues =
       new HashMap<String, LinkedHashSet<String>>();
-  private List<PreemptionCandidatesSelector>
-      candidatesSelectionPolicies = new ArrayList<>();
+  private List<PreemptionCandidatesSelector> candidatesSelectionPolicies;
   private Set<String> allPartitions;
   private Set<String> leafQueueNames;
 
@@ -118,27 +136,25 @@ public class ProportionalCapacityPreemptionPolicy
   private Map<String, PreemptableQueue> preemptableQueues;
   private Set<ContainerId> killableContainers;
 
-  @SuppressWarnings("unchecked")
   public ProportionalCapacityPreemptionPolicy() {
     clock = SystemClock.getInstance();
-    allPartitions = Collections.EMPTY_SET;
-    leafQueueNames = Collections.EMPTY_SET;
-    preemptableQueues = Collections.EMPTY_MAP;
+    allPartitions = Collections.emptySet();
+    leafQueueNames = Collections.emptySet();
+    preemptableQueues = Collections.emptyMap();
   }
 
-  @SuppressWarnings("unchecked")
   @VisibleForTesting
   public ProportionalCapacityPreemptionPolicy(RMContext context,
       CapacityScheduler scheduler, Clock clock) {
     init(context.getYarnConfiguration(), context, scheduler);
     this.clock = clock;
-    allPartitions = Collections.EMPTY_SET;
-    leafQueueNames = Collections.EMPTY_SET;
-    preemptableQueues = Collections.EMPTY_MAP;
+    allPartitions = Collections.emptySet();
+    leafQueueNames = Collections.emptySet();
+    preemptableQueues = Collections.emptyMap();
   }
 
   public void init(Configuration config, RMContext context,
-      PreemptableResourceScheduler sched) {
+      ResourceScheduler sched) {
     LOG.info("Preemption monitor:" + this.getClass().getCanonicalName());
     assert null == scheduler : "Unexpected duplicate call to init";
     if (!(sched instanceof CapacityScheduler)) {
@@ -148,53 +164,76 @@ public class ProportionalCapacityPreemptionPolicy
     }
     rmContext = context;
     scheduler = (CapacityScheduler) sched;
-    CapacitySchedulerConfiguration csConfig = scheduler.getConfiguration();
+    rc = scheduler.getResourceCalculator();
+    nlm = scheduler.getRMContext().getNodeLabelManager();
+    updateConfigIfNeeded();
+  }
 
-    maxIgnoredOverCapacity = csConfig.getDouble(
+  private void updateConfigIfNeeded() {
+    CapacitySchedulerConfiguration config = scheduler.getConfiguration();
+    if (config == csConfig) {
+      return;
+    }
+
+    maxIgnoredOverCapacity = config.getDouble(
         CapacitySchedulerConfiguration.PREEMPTION_MAX_IGNORED_OVER_CAPACITY,
         CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_MAX_IGNORED_OVER_CAPACITY);
 
-    naturalTerminationFactor = csConfig.getDouble(
+    naturalTerminationFactor = config.getDouble(
         CapacitySchedulerConfiguration.PREEMPTION_NATURAL_TERMINATION_FACTOR,
         CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_NATURAL_TERMINATION_FACTOR);
 
-    maxWaitTime = csConfig.getLong(
+    maxWaitTime = config.getLong(
         CapacitySchedulerConfiguration.PREEMPTION_WAIT_TIME_BEFORE_KILL,
         CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_WAIT_TIME_BEFORE_KILL);
 
-    monitoringInterval = csConfig.getLong(
+    monitoringInterval = config.getLong(
         CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL,
         CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_MONITORING_INTERVAL);
 
-    percentageClusterPreemptionAllowed = csConfig.getFloat(
+    percentageClusterPreemptionAllowed = config.getFloat(
         CapacitySchedulerConfiguration.TOTAL_PREEMPTION_PER_ROUND,
         CapacitySchedulerConfiguration.DEFAULT_TOTAL_PREEMPTION_PER_ROUND);
 
-    observeOnly = csConfig.getBoolean(
+    observeOnly = config.getBoolean(
         CapacitySchedulerConfiguration.PREEMPTION_OBSERVE_ONLY,
         CapacitySchedulerConfiguration.DEFAULT_PREEMPTION_OBSERVE_ONLY);
 
-    lazyPreempionEnabled = csConfig.getBoolean(
-        CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENALBED,
+    lazyPreempionEnabled = config.getBoolean(
+        CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENABLED,
         CapacitySchedulerConfiguration.DEFAULT_LAZY_PREEMPTION_ENABLED);
 
-    maxAllowableLimitForIntraQueuePreemption = csConfig.getFloat(
+    maxAllowableLimitForIntraQueuePreemption = config.getFloat(
         CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         CapacitySchedulerConfiguration.
         DEFAULT_INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT);
 
-    minimumThresholdForIntraQueuePreemption = csConfig.getFloat(
+    minimumThresholdForIntraQueuePreemption = config.getFloat(
         CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD,
         CapacitySchedulerConfiguration.
         DEFAULT_INTRAQUEUE_PREEMPTION_MINIMUM_THRESHOLD);
 
-    rc = scheduler.getResourceCalculator();
-    nlm = scheduler.getRMContext().getNodeLabelManager();
+    intraQueuePreemptionOrderPolicy = IntraQueuePreemptionOrderPolicy
+        .valueOf(config
+            .get(
+                CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
+                CapacitySchedulerConfiguration.DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY)
+            .toUpperCase());
+
+    candidatesSelectionPolicies = new ArrayList<>();
+
+    // Do we need white queue-priority preemption policy?
+    boolean isQueuePriorityPreemptionEnabled =
+        config.getPUOrderingPolicyUnderUtilizedPreemptionEnabled();
+    if (isQueuePriorityPreemptionEnabled) {
+      candidatesSelectionPolicies.add(
+          new QueuePriorityContainerCandidateSelector(this));
+    }
 
     // Do we need to specially consider reserved containers?
-    boolean selectCandidatesForResevedContainers = csConfig.getBoolean(
+    boolean selectCandidatesForResevedContainers = config.getBoolean(
         CapacitySchedulerConfiguration.
         PREEMPTION_SELECT_CANDIDATES_FOR_RESERVED_CONTAINERS,
         CapacitySchedulerConfiguration.
@@ -204,16 +243,48 @@ public class ProportionalCapacityPreemptionPolicy
           .add(new ReservedContainerCandidatesSelector(this));
     }
 
+    boolean additionalPreemptionBasedOnReservedResource = config.getBoolean(
+        CapacitySchedulerConfiguration.ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS,
+        CapacitySchedulerConfiguration.DEFAULT_ADDITIONAL_RESOURCE_BALANCE_BASED_ON_RESERVED_CONTAINERS);
+
     // initialize candidates preemption selection policies
-    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this));
+    candidatesSelectionPolicies.add(new FifoCandidatesSelector(this,
+        additionalPreemptionBasedOnReservedResource));
 
     // Do we need to specially consider intra queue
-    boolean isIntraQueuePreemptionEnabled = csConfig.getBoolean(
+    boolean isIntraQueuePreemptionEnabled = config.getBoolean(
         CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED,
         CapacitySchedulerConfiguration.DEFAULT_INTRAQUEUE_PREEMPTION_ENABLED);
     if (isIntraQueuePreemptionEnabled) {
       candidatesSelectionPolicies.add(new IntraQueueCandidatesSelector(this));
     }
+
+    LOG.info("Capacity Scheduler configuration changed, updated preemption " +
+        "properties to:\n" +
+        "max_ignored_over_capacity = " + maxIgnoredOverCapacity + "\n" +
+        "natural_termination_factor = " + naturalTerminationFactor + "\n" +
+        "max_wait_before_kill = " + maxWaitTime + "\n" +
+        "monitoring_interval = " + monitoringInterval + "\n" +
+        "total_preemption_per_round = " + percentageClusterPreemptionAllowed +
+          "\n" +
+        "observe_only = " + observeOnly + "\n" +
+        "lazy-preemption-enabled = " + lazyPreempionEnabled + "\n" +
+        "intra-queue-preemption.enabled = " + isIntraQueuePreemptionEnabled +
+          "\n" +
+        "intra-queue-preemption.max-allowable-limit = " +
+          maxAllowableLimitForIntraQueuePreemption + "\n" +
+        "intra-queue-preemption.minimum-threshold = " +
+          minimumThresholdForIntraQueuePreemption + "\n" +
+        "intra-queue-preemption.preemption-order-policy = " +
+          intraQueuePreemptionOrderPolicy + "\n" +
+        "priority-utilization.underutilized-preemption.enabled = " +
+          isQueuePriorityPreemptionEnabled + "\n" +
+        "select_based_on_reserved_containers = " +
+          selectCandidatesForResevedContainers + "\n" +
+        "additional_res_balance_based_on_reserved_containers = " +
+          additionalPreemptionBasedOnReservedResource);
+
+    csConfig = config;
   }
 
   @Override
@@ -223,6 +294,8 @@ public class ProportionalCapacityPreemptionPolicy
 
   @Override
   public synchronized void editSchedule() {
+    updateConfigIfNeeded();
+
     long startTs = clock.getTime();
 
     CSQueue root = scheduler.getRootQueue();
@@ -234,7 +307,6 @@ public class ProportionalCapacityPreemptionPolicy
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void preemptOrkillSelectedContainerAfterWait(
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       long currentTime) {
@@ -297,20 +369,18 @@ public class ProportionalCapacityPreemptionPolicy
 
   private void cleanupStaledPreemptionCandidates(long currentTime) {
     // Keep the preemptionCandidates list clean
-    for (Iterator<RMContainer> i = preemptionCandidates.keySet().iterator();
-         i.hasNext(); ) {
-      RMContainer id = i.next();
-      // garbage collect containers that are irrelevant for preemption
-      // And avoid preempt selected containers for *this execution*
-      // or within 1 ms
-      if (preemptionCandidates.get(id) + 2 * maxWaitTime < currentTime) {
-        i.remove();
-      }
-    }
+    // garbage collect containers that are irrelevant for preemption
+    // And avoid preempt selected containers for *this execution*
+    // or within 1 ms
+    preemptionCandidates.entrySet()
+        .removeIf(candidate ->
+            candidate.getValue() + 2 * maxWaitTime < currentTime);
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    if (q.children == null || q.children.isEmpty()) {
+    // If its a ManagedParentQueue, it might not have any children
+    if ((q.children == null || q.children.isEmpty())
+        && !(q.parentQueue instanceof ManagedParentQueue)) {
       return ImmutableSet.of(q.queueName);
     }
 
@@ -352,6 +422,8 @@ public class ProportionalCapacityPreemptionPolicy
                 .clone(nlm.getResourceByLabel(partitionToLookAt, clusterResources)),
             partitionToLookAt);
       }
+
+      // Update effective priority of queues
     }
 
     this.leafQueueNames = ImmutableSet.copyOf(getLeafQueueNames(
@@ -368,13 +440,28 @@ public class ProportionalCapacityPreemptionPolicy
         new HashMap<>();
     for (PreemptionCandidatesSelector selector :
         candidatesSelectionPolicies) {
+      long startTime = 0;
       if (LOG.isDebugEnabled()) {
         LOG.debug(MessageFormat
             .format("Trying to use {0} to select preemption candidates",
                 selector.getClass().getName()));
+        startTime = clock.getTime();
       }
       toPreempt = selector.selectCandidates(toPreempt,
           clusterResources, totalPreemptionAllowed);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(MessageFormat
+            .format("{0} uses {1} millisecond to run",
+                selector.getClass().getName(), clock.getTime() - startTime));
+        int totalSelected = 0;
+        for (Set<RMContainer> set : toPreempt.values()) {
+          totalSelected += set.size();
+        }
+        LOG.debug(MessageFormat
+            .format("So far, total {0} containers selected to be preempted",
+                totalSelected));
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -442,6 +529,13 @@ public class ProportionalCapacityPreemptionPolicy
       float absMaxCap = qc.getAbsoluteMaximumCapacity(partitionToLookAt);
       boolean preemptionDisabled = curQueue.getPreemptionDisabled();
 
+      QueueResourceQuotas queueResourceQuotas = curQueue
+          .getQueueResourceQuotas();
+      Resource effMinRes = queueResourceQuotas
+          .getEffectiveMinResource(partitionToLookAt);
+      Resource effMaxRes = queueResourceQuotas
+          .getEffectiveMaxResource(partitionToLookAt);
+
       Resource current = Resources
           .clone(curQueue.getQueueResourceUsage().getUsed(partitionToLookAt));
       Resource killable = Resources.none();
@@ -467,14 +561,25 @@ public class ProportionalCapacityPreemptionPolicy
 
       ret = new TempQueuePerPartition(queueName, current, preemptionDisabled,
           partitionToLookAt, killable, absCap, absMaxCap, partitionResource,
-          reserved, curQueue);
+          reserved, curQueue, effMinRes, effMaxRes);
 
       if (curQueue instanceof ParentQueue) {
+        String configuredOrderingPolicy =
+            ((ParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
+
         // Recursively add children
         for (CSQueue c : curQueue.getChildQueues()) {
           TempQueuePerPartition subq = cloneQueues(c, partitionResource,
               partitionToLookAt);
+
+          // If we respect priority
+          if (StringUtils.equals(
+              CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY,
+              configuredOrderingPolicy)) {
+            subq.relativePriority = c.getPriority().getPriority();
+          }
           ret.addChild(subq);
+          subq.parent = ret;
         }
       }
     } finally {
@@ -619,5 +724,10 @@ public class ProportionalCapacityPreemptionPolicy
       partitionToUnderServedQueues.put(partition, underServedQueues);
     }
     underServedQueues.add(queueName);
+  }
+
+  @Override
+  public IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy() {
+    return intraQueuePreemptionOrderPolicy;
   }
 }

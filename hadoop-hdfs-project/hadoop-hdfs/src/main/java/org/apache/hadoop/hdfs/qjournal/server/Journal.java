@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
@@ -135,6 +137,11 @@ public class Journal implements Closeable {
 
   private long lastJournalTimestamp = 0;
 
+  // This variable tracks, have we tried to start journalsyncer
+  // with nameServiceId. This will help not to start the journalsyncer
+  // on each rpc call, if it has failed to start
+  private boolean triedJournalSyncerStartedwithnsId = false;
+
   /**
    * Time threshold for sync calls, beyond which a warning should be logged to the console.
    */
@@ -156,6 +163,14 @@ public class Journal implements Closeable {
     if (latest != null) {
       updateHighestWrittenTxId(latest.getLastTxId());
     }
+  }
+
+  public void setTriedJournalSyncerStartedwithnsId(boolean started) {
+    this.triedJournalSyncerStartedwithnsId = started;
+  }
+
+  public boolean getTriedJournalSyncerStartedwithnsId() {
+    return triedJournalSyncerStartedwithnsId;
   }
 
   /**
@@ -284,8 +299,7 @@ public class Journal implements Closeable {
     fjm.setLastReadableTxId(val);
   }
 
-  @VisibleForTesting
-  JournalMetrics getMetricsForTests() {
+  JournalMetrics getMetrics() {
     return metrics;
   }
 
@@ -659,7 +673,7 @@ public class Journal implements Closeable {
   }
 
   /**
-   * @see QJournalProtocol#getEditLogManifest(String, long, boolean)
+   * @see QJournalProtocol#getEditLogManifest(String, String, long, boolean)
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
       boolean inProgressOk) throws IOException {
@@ -1090,6 +1104,34 @@ public class Journal implements Closeable {
     storage.getJournalManager().discardSegments(startTxId);
     // we delete all the segments after the startTxId. let's reset committedTxnId 
     committedTxnId.set(startTxId - 1);
+  }
+
+  synchronized boolean moveTmpSegmentToCurrent(File tmpFile, File finalFile,
+      long endTxId) throws IOException {
+    final boolean success;
+    if (endTxId <= committedTxnId.get()) {
+      if (!finalFile.getParentFile().exists()) {
+        LOG.error(finalFile.getParentFile() + " doesn't exist. Aborting tmp " +
+            "segment move to current directory");
+        return false;
+      }
+      Files.move(tmpFile.toPath(), finalFile.toPath(),
+          StandardCopyOption.ATOMIC_MOVE);
+      if (finalFile.exists() && FileUtil.canRead(finalFile)) {
+        success = true;
+      } else {
+        success = false;
+        LOG.warn("Unable to move edits file from " + tmpFile + " to " +
+            finalFile);
+      }
+    } else {
+      success = false;
+      LOG.error("The endTxId of the temporary file is not less than the " +
+          "last committed transaction id. Aborting move to final file" +
+          finalFile);
+    }
+
+    return success;
   }
 
   public Long getJournalCTime() throws IOException {

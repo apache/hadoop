@@ -67,7 +67,7 @@ public class HHXORErasureDecoder extends ErasureDecoder {
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
       rsRawDecoder = CodecUtil.createRawDecoder(getConf(),
-              ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
+              ErasureCodeConstants.RS_CODEC_NAME, getOptions());
     }
     return rsRawDecoder;
   }

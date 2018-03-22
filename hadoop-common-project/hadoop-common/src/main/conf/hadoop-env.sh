@@ -58,10 +58,13 @@
 # export HADOOP_HOME=
 
 # Location of Hadoop's configuration information.  i.e., where this
-# file is probably living. Many sites will also set this in the
-# same location where JAVA_HOME is defined.  If this is not defined
-# Hadoop will attempt to locate it based upon its execution
-# path.
+# file is living. If this is not defined, Hadoop will attempt to
+# locate it based upon its execution path.
+#
+# NOTE: It is recommend that this variable not be set here but in
+# /etc/profile.d or equivalent.  Some options (such as
+# --config) may react strangely otherwise.
+#
 # export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
 
 # The maximum amount of heap to use (Java -Xmx).  If no unit
@@ -269,7 +272,7 @@ esac
 #
 # When running a secure daemon, the default value of HADOOP_IDENT_STRING
 # ends up being a bit bogus.  Therefore, by default, the code will
-# replace HADOOP_IDENT_STRING with HADOOP_SECURE_xx_USER.  If one wants
+# replace HADOOP_IDENT_STRING with HADOOP_xx_SECURE_USER.  If one wants
 # to keep HADOOP_IDENT_STRING untouched, then uncomment this line.
 # export HADOOP_SECURE_IDENT_PRESERVE="true"
 
@@ -325,19 +328,12 @@ esac
 # defined if SASL is configured for authentication of data transfer protocol
 # using non-privileged ports.
 # This will replace the hadoop.id.str Java property in secure mode.
-# export HADOOP_SECURE_DN_USER=hdfs
+# export HDFS_DATANODE_SECURE_USER=hdfs
 
 # Supplemental options for secure datanodes
 # By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HDFS_DATANODE_SECURE_EXTRA_OPTS="-jvm server"
-
-# Where datanode log files are stored in the secure data environment.
-# This will replace the hadoop.log.dir Java property in secure mode.
-# export HADOOP_SECURE_DN_LOG_DIR=${HADOOP_SECURE_LOG_DIR}
-
-# Where datanode pid files are stored in the secure data environment.
-# export HADOOP_SECURE_DN_PID_DIR=${HADOOP_SECURE_PID_DIR}
 
 ###
 # NFS3 Gateway specific parameters
@@ -361,7 +357,7 @@ esac
 
 # On privileged gateways, user to run the gateway as after dropping privileges
 # This will replace the hadoop.id.str Java property in secure mode.
-# export HADOOP_PRIVILEGED_NFS_USER=nfsserver
+# export HDFS_NFS3_SECURE_USER=nfsserver
 
 ###
 # ZKFailoverController specific parameters
@@ -398,6 +394,15 @@ esac
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # export HDFS_MOVER_OPTS=""
+
+###
+# Router-based HDFS Federation specific parameters
+# Specify the JVM options to be used when starting the RBF Routers.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_DFSROUTER_OPTS=""
+###
 
 ###
 # Advanced Users Only!

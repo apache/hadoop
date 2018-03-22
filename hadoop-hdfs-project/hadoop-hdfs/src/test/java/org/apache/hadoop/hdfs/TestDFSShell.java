@@ -36,12 +36,12 @@ import java.util.zip.GZIPOutputStream;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Level;
 import org.junit.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -65,6 +65,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.rules.Timeout;
 import org.junit.AfterClass;
@@ -115,6 +116,7 @@ public class TestDFSShell {
         GenericTestUtils.getTestDir("TestDFSShell").getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1000);
 
     miniCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     miniCluster.waitActive();
@@ -789,7 +791,7 @@ public class TestDFSShell {
       argv = new String[3];
       argv[0] = "-mv";
       argv[1] = srcFs.getUri() + "/testfile";
-      argv[2] = "hdfs://localhost/testfile2";
+      argv[2] = "hdfs://" + srcFs.getUri().getHost() + "/testfile2";
       int ret = ToolRunner.run(shell, argv);
       assertEquals("mv should have succeeded", 0, ret);
     } finally {
@@ -888,6 +890,33 @@ public class TestDFSShell {
         dstCluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Test that -head displays first kilobyte of the file to stdout.
+   */
+  @Test (timeout = 30000)
+  public void testHead() throws Exception {
+    final int fileLen = 5 * BLOCK_SIZE;
+
+    // create a text file with multiple KB bytes (and multiple blocks)
+    final Path testFile = new Path("testHead", "file1");
+    final String text = RandomStringUtils.randomAscii(fileLen);
+    try (OutputStream pout = dfs.create(testFile)) {
+      pout.write(text.getBytes());
+    }
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    final String[] argv = new String[]{"-head", testFile.toString()};
+    final int ret = ToolRunner.run(new FsShell(dfs.getConf()), argv);
+
+    assertEquals(Arrays.toString(argv) + " returned " + ret, 0, ret);
+    assertEquals("-head returned " + out.size() + " bytes data, expected 1KB",
+            1024, out.size());
+    // tailed out last 1KB of the file content
+    assertArrayEquals("Head output doesn't match input",
+            text.substring(0, 1024).getBytes(), out.toByteArray());
+    out.reset();
   }
 
   /**
@@ -2002,8 +2031,12 @@ public class TestDFSShell {
     DFSTestUtil.createFile(dfs, testFile2, 2 * BLOCK_SIZE, (short) 3, 0);
     final FileStatus status1 = dfs.getFileStatus(testDir1);
     final String mtime1 = fmt.format(new Date(status1.getModificationTime()));
+    final String atime1 = fmt.format(new Date(status1.getAccessTime()));
+    long now = Time.now();
+    dfs.setTimes(testFile2, now + 3000, now + 6000);
     final FileStatus status2 = dfs.getFileStatus(testFile2);
     final String mtime2 = fmt.format(new Date(status2.getModificationTime()));
+    final String atime2 = fmt.format(new Date(status2.getAccessTime()));
 
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     System.setOut(new PrintStream(out));
@@ -2036,17 +2069,19 @@ public class TestDFSShell {
         out.toString().contains(String.valueOf(octal)));
 
     out.reset();
-    doFsStat(dfs.getConf(), "%F %a %A %u:%g %b %y %n", testDir1, testFile2);
+    doFsStat(dfs.getConf(), "%F %a %A %u:%g %b %x %y %n", testDir1, testFile2);
 
     n = status2.getPermission().toShort();
     octal = (n>>>9&1)*1000 + (n>>>6&7)*100 + (n>>>3&7)*10 + (n&7);
     assertTrue(out.toString(), out.toString().contains(mtime1));
+    assertTrue(out.toString(), out.toString().contains(atime1));
     assertTrue(out.toString(), out.toString().contains("regular file"));
     assertTrue(out.toString(),
         out.toString().contains(status2.getPermission().toString()));
     assertTrue(out.toString(),
         out.toString().contains(String.valueOf(octal)));
     assertTrue(out.toString(), out.toString().contains(mtime2));
+    assertTrue(out.toString(), out.toString().contains(atime2));
   }
 
   private static void doFsStat(Configuration conf, String format, Path... files)
@@ -2181,7 +2216,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       List<AclEntry> acls = dfs.getAclStatus(target1).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptop
       Path target2 = new Path(hdfsTestDir, "targetfile2");
@@ -2200,7 +2235,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(target2).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptopx
       Path target3 = new Path(hdfsTestDir, "targetfile3");
@@ -2221,7 +2256,7 @@ public class TestDFSShell {
       assertArrayEquals(TRUSTED_A1_VALUE, xattrs.get(TRUSTED_A1));
       acls = dfs.getAclStatus(target3).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptopa
       Path target4 = new Path(hdfsTestDir, "targetfile4");
@@ -2240,7 +2275,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(target4).getEntries();
       assertFalse(acls.isEmpty());
-      assertTrue(targetPerm.getAclBit());
+      assertTrue(targetStatus.hasAcl());
       assertEquals(dfs.getAclStatus(src), dfs.getAclStatus(target4));
 
       // -ptoa (verify -pa option will preserve permissions also)
@@ -2260,7 +2295,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(target5).getEntries();
       assertFalse(acls.isEmpty());
-      assertTrue(targetPerm.getAclBit());
+      assertTrue(targetStatus.hasAcl());
       assertEquals(dfs.getAclStatus(src), dfs.getAclStatus(target5));
     } finally {
       if (null != shell) {
@@ -2472,7 +2507,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       List<AclEntry> acls = dfs.getAclStatus(targetDir1).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptop
       Path targetDir2 = new Path(hdfsTestDir, "targetDir2");
@@ -2491,7 +2526,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(targetDir2).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptopx
       Path targetDir3 = new Path(hdfsTestDir, "targetDir3");
@@ -2512,7 +2547,7 @@ public class TestDFSShell {
       assertArrayEquals(TRUSTED_A1_VALUE, xattrs.get(TRUSTED_A1));
       acls = dfs.getAclStatus(targetDir3).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptopa
       Path targetDir4 = new Path(hdfsTestDir, "targetDir4");
@@ -2531,7 +2566,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(targetDir4).getEntries();
       assertFalse(acls.isEmpty());
-      assertTrue(targetPerm.getAclBit());
+      assertTrue(targetStatus.hasAcl());
       assertEquals(dfs.getAclStatus(srcDir), dfs.getAclStatus(targetDir4));
 
       // -ptoa (verify -pa option will preserve permissions also)
@@ -2551,7 +2586,7 @@ public class TestDFSShell {
       assertTrue(xattrs.isEmpty());
       acls = dfs.getAclStatus(targetDir5).getEntries();
       assertFalse(acls.isEmpty());
-      assertTrue(targetPerm.getAclBit());
+      assertTrue(targetStatus.hasAcl());
       assertEquals(dfs.getAclStatus(srcDir), dfs.getAclStatus(targetDir5));
     } finally {
       if (shell != null) {
@@ -2607,7 +2642,7 @@ public class TestDFSShell {
       assertTrue(perm.equals(targetPerm));
       List<AclEntry> acls = dfs.getAclStatus(target1).getEntries();
       assertTrue(acls.isEmpty());
-      assertFalse(targetPerm.getAclBit());
+      assertFalse(targetStatus.hasAcl());
 
       // -ptopa preserves both sticky bit and ACL
       Path target2 = new Path(hdfsTestDir, "targetfile2");
@@ -2624,7 +2659,7 @@ public class TestDFSShell {
       assertTrue(perm.equals(targetPerm));
       acls = dfs.getAclStatus(target2).getEntries();
       assertFalse(acls.isEmpty());
-      assertTrue(targetPerm.getAclBit());
+      assertTrue(targetStatus.hasAcl());
       assertEquals(dfs.getAclStatus(src), dfs.getAclStatus(target2));
     } finally {
       if (null != shell) {

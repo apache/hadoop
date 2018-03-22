@@ -17,7 +17,7 @@
  */
 
 import { moduleFor, test } from 'ember-qunit';
-import Constants from 'yarn-ui/constants';
+import Ember from 'ember';
 
 moduleFor('route:yarn-container-log', 'Unit | Route | ContainerLog', {
 });
@@ -34,11 +34,11 @@ test('Test getting container log', function(assert) {
       containerID: "container_e32_1456000363780_0002_01_000001",
       logFileName: "syslog"};
   var store = {
-    findRecord: function(type) {
+    findRecord: function() {
       return new Ember.RSVP.Promise(function(resolve) {
         resolve(response);
-      }
-    )}
+      });
+    }
   };
   assert.expect(6);
   var route = this.subject();
@@ -67,11 +67,11 @@ test('Test non HTTP error while getting container log', function(assert) {
       containerID: "container_e32_1456000363780_0002_01_000001",
       logFileName: "syslog"};
   var store = {
-    findRecord: function(type) {
+    findRecord: function() {
       return new Ember.RSVP.Promise(function(resolve, reject) {
         reject(error);
-      }
-    )}
+      });
+    }
   };
   assert.expect(6);
   var route = this.subject();
@@ -92,16 +92,12 @@ test('Test non HTTP error while getting container log', function(assert) {
 
 test('Test HTTP error while getting container log', function(assert) {
   var error = {errors: [{status: 404, responseText: 'Not Found'}]};
-  var response = {
-      logs: "",
-      containerID: "container_e32_1456000363780_0002_01_000001",
-      logFileName: "syslog"};
   var store = {
-    findRecord: function(type) {
+    findRecord: function() {
       return new Ember.RSVP.Promise(function(resolve, reject) {
         reject(error);
-      }
-    )}
+      });
+    }
   };
   assert.expect(5);
   var route = this.subject();

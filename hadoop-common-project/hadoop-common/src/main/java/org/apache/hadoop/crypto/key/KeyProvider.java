@@ -71,8 +71,8 @@ public abstract class KeyProvider {
 
     protected KeyVersion(String name, String versionName,
                          byte[] material) {
-      this.name = name;
-      this.versionName = versionName;
+      this.name = name == null ? null : name.intern();
+      this.versionName = versionName == null ? null : versionName.intern();
       this.material = material;
     }
     
@@ -199,9 +199,8 @@ public abstract class KeyProvider {
       return cipher;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     /**
@@ -370,9 +369,8 @@ public abstract class KeyProvider {
       return description;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, String> getAttributes() {
-      return (attributes == null) ? Collections.EMPTY_MAP : attributes;
+      return (attributes == null) ? Collections.emptyMap() : attributes;
     }
 
     @Override
@@ -591,6 +589,18 @@ public abstract class KeyProvider {
 
     byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
     return rollNewVersion(name, material);
+  }
+
+  /**
+   * Can be used by implementing classes to invalidate the caches. This could be
+   * used after rollNewVersion to provide a strong guarantee to return the new
+   * version of the given key.
+   *
+   * @param name the basename of the key
+   * @throws IOException
+   */
+  public void invalidateCache(String name) throws IOException {
+    // NOP
   }
 
   /**

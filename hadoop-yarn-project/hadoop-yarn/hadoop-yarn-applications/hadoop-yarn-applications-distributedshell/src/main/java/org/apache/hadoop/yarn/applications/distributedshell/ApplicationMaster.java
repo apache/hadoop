@@ -28,6 +28,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,17 +39,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -87,27 +89,42 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ResourceSizing;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched
@@ -174,17 +191,18 @@ import com.sun.jersey.api.client.ClientHandlerException;
 @InterfaceStability.Unstable
 public class ApplicationMaster {
 
-  private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ApplicationMaster.class);
 
   @VisibleForTesting
   @Private
-  public static enum DSEvent {
+  public enum DSEvent {
     DS_APP_ATTEMPT_START, DS_APP_ATTEMPT_END, DS_CONTAINER_START, DS_CONTAINER_END
   }
   
   @VisibleForTesting
   @Private
-  public static enum DSEntity {
+  public enum DSEntity {
     DS_APP_ATTEMPT, DS_CONTAINER
   }
 
@@ -219,18 +237,34 @@ public class ApplicationMaster {
   // Tracking url to which app master publishes info for clients to monitor
   private String appMasterTrackingUrl = "";
 
-  private boolean timelineServiceV2 = false;
+  private boolean timelineServiceV2Enabled = false;
+
+  private boolean timelineServiceV1Enabled = false;
 
   // App Master configuration
   // No. of containers to run shell command on
   @VisibleForTesting
   protected int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
-  private long containerMemory = 10;
+  private static final long DEFAULT_CONTAINER_MEMORY = 10;
+  private long containerMemory = DEFAULT_CONTAINER_MEMORY;
   // VirtualCores to request for the container on which the shell command will run
-  private int containerVirtualCores = 1;
+  private static final int DEFAULT_CONTAINER_VCORES = 1;
+  private int containerVirtualCores = DEFAULT_CONTAINER_VCORES;
+  // All other resources to request for the container
+  // on which the shell command will run
+  private Map<String, Long> containerResources = new HashMap<>();
   // Priority of the request
   private int requestPriority;
+  // Execution type of the containers.
+  // Default GUARANTEED.
+  private ExecutionType containerType = ExecutionType.GUARANTEED;
+  // Whether to automatically promote opportunistic containers.
+  private boolean autoPromoteContainers = false;
+
+  // Resource profile for the container
+  private String containerResourceProfile = "";
+  Map<String, Resource> resourceProfiles;
 
   // Counter for completed containers ( complete denotes successful or failed )
   private AtomicInteger numCompletedContainers = new AtomicInteger();
@@ -245,6 +279,10 @@ public class ApplicationMaster {
   // Only request for more if the original requirement changes.
   @VisibleForTesting
   protected AtomicInteger numRequestedContainers = new AtomicInteger();
+
+  protected AtomicInteger numIgnore = new AtomicInteger();
+
+  protected AtomicInteger totalRetries = new AtomicInteger(10);
 
   // Shell command to be executed
   private String shellCommand = "";
@@ -261,12 +299,16 @@ public class ApplicationMaster {
   // File length needed for local resource
   private long shellScriptPathLen = 0;
 
+  // Placement Specifications
+  private Map<String, PlacementSpec> placementSpecs = null;
+
   // Container retry options
   private ContainerRetryPolicy containerRetryPolicy =
       ContainerRetryPolicy.NEVER_RETRY;
   private Set<Integer> containerRetryErrorCodes = null;
   private int containerMaxRetries = 0;
   private int containrRetryInterval = 0;
+  private long containerFailuresValidityInterval = -1;
 
   // Timeline domain ID
   private String domainId = null;
@@ -293,6 +335,11 @@ public class ApplicationMaster {
   // Timeline Client
   @VisibleForTesting
   TimelineClient timelineClient;
+
+  // Timeline v2 Client
+  @VisibleForTesting
+  TimelineV2Client timelineV2Client;
+
   static final String CONTAINER_ENTITY_GROUP_ID = "CONTAINERS";
   static final String APPID_TIMELINE_FILTER_NAME = "appId";
   static final String USER_TIMELINE_FILTER_NAME = "user";
@@ -301,10 +348,22 @@ public class ApplicationMaster {
   private final String windows_command = "cmd /c";
 
   private int yarnShellIdCounter = 1;
+  private final AtomicLong allocIdCounter = new AtomicLong(1);
 
   @VisibleForTesting
   protected final Set<ContainerId> launchedContainers =
       Collections.newSetFromMap(new ConcurrentHashMap<ContainerId, Boolean>());
+
+  /**
+   * Container start times used to set id prefix while publishing entity
+   * to ATSv2.
+   */
+  private final ConcurrentMap<ContainerId, Long> containerStartTimes =
+      new ConcurrentHashMap<ContainerId, Long>();
+
+  private ConcurrentMap<ContainerId, Long> getContainerStartTimes() {
+    return containerStartTimes;
+  }
 
   /**
    * @param args Command line args
@@ -321,7 +380,7 @@ public class ApplicationMaster {
       appMaster.run();
       result = appMaster.finish();
     } catch (Throwable t) {
-      LOG.fatal("Error running ApplicationMaster", t);
+      LOG.error("Error running ApplicationMaster", t);
       LogManager.shutdown();
       ExitUtil.terminate(1, t);
     }
@@ -360,7 +419,7 @@ public class ApplicationMaster {
     } catch (IOException e) {
       e.printStackTrace();
     } finally {
-      IOUtils.cleanup(LOG, buf);
+      IOUtils.cleanupWithLogger(LOG, buf);
     }
   }
 
@@ -383,10 +442,21 @@ public class ApplicationMaster {
         "App Attempt ID. Not to be used unless for testing purposes");
     opts.addOption("shell_env", true,
         "Environment for shell script. Specified as env_key=env_val pairs");
+    opts.addOption("container_type", true,
+        "Container execution type, GUARANTEED or OPPORTUNISTIC");
+    opts.addOption("promote_opportunistic_after_start", false,
+        "Flag to indicate whether to automatically promote opportunistic"
+            + " containers to guaranteed.");
     opts.addOption("container_memory", true,
         "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true,
         "Amount of virtual cores to be requested to run the shell command");
+    opts.addOption("container_resources", true,
+        "Amount of resources to be requested to run the shell command. " +
+        "Specified as resource type=value pairs separated by commas. " +
+        "E.g. -container_resources memory-mb=512,vcores=1");
+    opts.addOption("container_resource_profile", true,
+        "Resource profile to be requested to run the shell command");
     opts.addOption("num_containers", true,
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("priority", true, "Application Priority. Default 0");
@@ -402,6 +472,10 @@ public class ApplicationMaster {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("container_failures_validity_interval", true,
+        "Failures which are out of the time window will not be added to"
+            + " the number of container retry attempts");
+    opts.addOption("placement_spec", true, "Placement specification");
     opts.addOption("debug", false, "Dump out debug information");
 
     opts.addOption("help", false, "Print usage");
@@ -430,6 +504,17 @@ public class ApplicationMaster {
 
     if (cliParser.hasOption("debug")) {
       dumpOutDebugInfo();
+    }
+
+    if (cliParser.hasOption("placement_spec")) {
+      String placementSpec = cliParser.getOptionValue("placement_spec");
+      LOG.info("Placement Spec received [{}]", placementSpec);
+      parsePlacementSpecs(placementSpec);
+      LOG.info("Total num containers requested [{}]", numTotalContainers);
+      if (numTotalContainers == 0) {
+        throw new IllegalArgumentException(
+            "Cannot run distributed shell with no containers");
+      }
     }
 
     Map<String, String> envs = System.getenv();
@@ -527,12 +612,38 @@ public class ApplicationMaster {
       domainId = envs.get(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN);
     }
 
+    if (cliParser.hasOption("container_type")) {
+      String containerTypeStr = cliParser.getOptionValue("container_type");
+      if (Arrays.stream(ExecutionType.values()).noneMatch(
+          executionType -> executionType.toString()
+              .equals(containerTypeStr))) {
+        throw new IllegalArgumentException("Invalid container_type: "
+            + containerTypeStr);
+      }
+      containerType = ExecutionType.valueOf(containerTypeStr);
+    }
+    if (cliParser.hasOption("promote_opportunistic_after_start")) {
+      autoPromoteContainers = true;
+    }
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
-        "container_memory", "10"));
+        "container_memory", "-1"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue(
-        "container_vcores", "1"));
-    numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
-        "num_containers", "1"));
+        "container_vcores", "-1"));
+    containerResources = new HashMap<>();
+    if (cliParser.hasOption("container_resources")) {
+      Map<String, Long> resources = Client.parseResourcesString(
+          cliParser.getOptionValue("container_resources"));
+      for (Map.Entry<String, Long> entry : resources.entrySet()) {
+        containerResources.put(entry.getKey(), entry.getValue());
+      }
+    }
+    containerResourceProfile =
+        cliParser.getOptionValue("container_resource_profile", "");
+
+    if (this.placementSpecs == null) {
+      numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
+          "num_containers", "1"));
+    }
     if (numTotalContainers == 0) {
       throw new IllegalArgumentException(
           "Cannot run distributed shell with no containers");
@@ -554,15 +665,32 @@ public class ApplicationMaster {
         cliParser.getOptionValue("container_max_retries", "0"));
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
         "container_retry_interval", "0"));
-
-    if (YarnConfiguration.timelineServiceEnabled(conf)) {
-      timelineServiceV2 = YarnConfiguration.timelineServiceV2Enabled(conf);
-    } else {
+    containerFailuresValidityInterval = Long.parseLong(
+        cliParser.getOptionValue("container_failures_validity_interval", "-1"));
+    if (!YarnConfiguration.timelineServiceEnabled(conf)) {
       timelineClient = null;
+      timelineV2Client = null;
       LOG.warn("Timeline service is not enabled");
     }
 
     return true;
+  }
+
+  private void parsePlacementSpecs(String placementSpecifications) {
+    // Client sends placement spec in encoded format
+    Base64.Decoder decoder = Base64.getDecoder();
+    byte[] decodedBytes = decoder.decode(
+        placementSpecifications.getBytes(StandardCharsets.UTF_8));
+    String decodedSpec = new String(decodedBytes, StandardCharsets.UTF_8);
+    LOG.info("Decode placement spec: " + decodedSpec);
+    Map<String, PlacementSpec> pSpecs =
+        PlacementSpec.parse(decodedSpec);
+    this.placementSpecs = new HashMap<>();
+    this.numTotalContainers = 0;
+    for (PlacementSpec pSpec : pSpecs.values()) {
+      this.numTotalContainers += pSpec.numContainers;
+      this.placementSpecs.put(pSpec.sourceTag, pSpec);
+    }
   }
 
   /**
@@ -595,7 +723,7 @@ public class ApplicationMaster {
     LOG.info("Executing with tokens:");
     while (iter.hasNext()) {
       Token<?> token = iter.next();
-      LOG.info(token);
+      LOG.info(token.toString());
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
         iter.remove();
       }
@@ -621,18 +749,16 @@ public class ApplicationMaster {
     nmClientAsync.start();
 
     startTimelineClient(conf);
-    if (timelineServiceV2) {
+    if (timelineServiceV2Enabled) {
       // need to bind timelineClient
-      amRMClient.registerTimelineClient(timelineClient);
+      amRMClient.registerTimelineV2Client(timelineV2Client);
+      publishApplicationAttemptEventOnTimelineServiceV2(
+          DSEvent.DS_APP_ATTEMPT_START);
     }
-    if(timelineClient != null) {
-      if (timelineServiceV2) {
-        publishApplicationAttemptEventOnTimelineServiceV2(
-            DSEvent.DS_APP_ATTEMPT_START);
-      } else {
-        publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-            DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
-      }
+
+    if (timelineServiceV1Enabled) {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
     }
 
     // Setup local RPC Server to accept status requests directly from clients
@@ -644,9 +770,21 @@ public class ApplicationMaster {
     // Register self with ResourceManager
     // This will start heartbeating to the RM
     appMasterHostname = NetUtils.getHostname();
+    Map<Set<String>, PlacementConstraint> placementConstraintMap = null;
+    if (this.placementSpecs != null) {
+      placementConstraintMap = new HashMap<>();
+      for (PlacementSpec spec : this.placementSpecs.values()) {
+        if (spec.constraint != null) {
+          placementConstraintMap.put(
+              Collections.singleton(spec.sourceTag), spec.constraint);
+        }
+      }
+    }
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(appMasterHostname, appMasterRpcPort,
-            appMasterTrackingUrl);
+            appMasterTrackingUrl, placementConstraintMap);
+    resourceProfiles = response.getResourceProfiles();
+    ResourceUtils.reinitializeResources(response.getResourceTypes());
     // Dump out information about cluster capability as seen by the
     // resource manager
     long maxMem = response.getMaximumResourceCapability().getMemorySize();
@@ -688,9 +826,20 @@ public class ApplicationMaster {
     // containers
     // Keep looping until all the containers are launched and shell script
     // executed on them ( regardless of success/failure).
-    for (int i = 0; i < numTotalContainersToRequest; ++i) {
-      ContainerRequest containerAsk = setupContainerAskForRM();
-      amRMClient.addContainerRequest(containerAsk);
+    if (this.placementSpecs == null) {
+      for (int i = 0; i < numTotalContainersToRequest; ++i) {
+        ContainerRequest containerAsk = setupContainerAskForRM();
+        amRMClient.addContainerRequest(containerAsk);
+      }
+    } else {
+      List<SchedulingRequest> schedReqs = new ArrayList<>();
+      for (PlacementSpec pSpec : this.placementSpecs.values()) {
+        for (int i = 0; i < pSpec.numContainers; i++) {
+          SchedulingRequest sr = setupSchedulingRequest(pSpec);
+          schedReqs.add(sr);
+        }
+      }
+      amRMClient.addSchedulingRequests(schedReqs);
     }
     numRequestedContainers.set(numTotalContainers);
   }
@@ -703,19 +852,27 @@ public class ApplicationMaster {
         @Override
         public Void run() throws Exception {
           if (YarnConfiguration.timelineServiceEnabled(conf)) {
+            timelineServiceV1Enabled =
+                YarnConfiguration.timelineServiceV1Enabled(conf);
+            timelineServiceV2Enabled =
+                YarnConfiguration.timelineServiceV2Enabled(conf);
             // Creating the Timeline Client
-            if (timelineServiceV2) {
-              timelineClient = TimelineClient.createTimelineClient(
-                  appAttemptID.getApplicationId());
-              LOG.info("Timeline service V2 client is enabled");
-            } else {
+            if (timelineServiceV1Enabled) {
               timelineClient = TimelineClient.createTimelineClient();
+              timelineClient.init(conf);
+              timelineClient.start();
               LOG.info("Timeline service V1 client is enabled");
             }
-            timelineClient.init(conf);
-            timelineClient.start();
+            if (timelineServiceV2Enabled) {
+              timelineV2Client = TimelineV2Client.createTimelineClient(
+                  appAttemptID.getApplicationId());
+              timelineV2Client.init(conf);
+              timelineV2Client.start();
+              LOG.info("Timeline service V2 client is enabled");
+            }
           } else {
             timelineClient = null;
+            timelineV2Client = null;
             LOG.warn("Timeline service is not enabled");
           }
           return null;
@@ -741,14 +898,14 @@ public class ApplicationMaster {
       } catch (InterruptedException ex) {}
     }
 
-    if (timelineClient != null) {
-      if (timelineServiceV2) {
-        publishApplicationAttemptEventOnTimelineServiceV2(
-            DSEvent.DS_APP_ATTEMPT_END);
-      } else {
-        publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-            DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
-      }
+    if (timelineServiceV1Enabled) {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
+    }
+
+    if (timelineServiceV2Enabled) {
+      publishApplicationAttemptEventOnTimelineServiceV2(
+          DSEvent.DS_APP_ATTEMPT_END);
     }
 
     // Join all launched threads
@@ -797,8 +954,11 @@ public class ApplicationMaster {
     amRMClient.stop();
 
     // Stop Timeline Client
-    if(timelineClient != null) {
+    if(timelineServiceV1Enabled) {
       timelineClient.stop();
+    }
+    if (timelineServiceV2Enabled) {
+      timelineV2Client.stop();
     }
 
     return success;
@@ -845,6 +1005,12 @@ public class ApplicationMaster {
             numRequestedContainers.decrementAndGet();
             // we do not need to release the container as it would be done
             // by the RM
+
+            // Ignore these containers if placementspec is enabled
+            // for the time being.
+            if (placementSpecs != null) {
+              numIgnore.incrementAndGet();
+            }
           }
         } else {
           // nothing to do
@@ -853,28 +1019,39 @@ public class ApplicationMaster {
           LOG.info("Container completed successfully." + ", containerId="
               + containerStatus.getContainerId());
         }
-        if(timelineClient != null) {
-          if (timelineServiceV2) {
-            publishContainerEndEventOnTimelineServiceV2(containerStatus);
-          } else {
-            publishContainerEndEvent(
-                timelineClient, containerStatus, domainId, appSubmitterUgi);
+        if (timelineServiceV2Enabled) {
+          Long containerStartTime =
+              containerStartTimes.get(containerStatus.getContainerId());
+          if (containerStartTime == null) {
+            containerStartTime = SystemClock.getInstance().getTime();
+            containerStartTimes.put(containerStatus.getContainerId(),
+                containerStartTime);
           }
+          publishContainerEndEventOnTimelineServiceV2(containerStatus,
+              containerStartTime);
+        }
+        if (timelineServiceV1Enabled) {
+          publishContainerEndEvent(timelineClient, containerStatus, domainId,
+              appSubmitterUgi);
         }
       }
-      
+
       // ask for more containers if any failed
       int askCount = numTotalContainers - numRequestedContainers.get();
       numRequestedContainers.addAndGet(askCount);
 
-      if (askCount > 0) {
-        for (int i = 0; i < askCount; ++i) {
-          ContainerRequest containerAsk = setupContainerAskForRM();
-          amRMClient.addContainerRequest(containerAsk);
+      // Dont bother re-asking if we are using placementSpecs
+      if (placementSpecs == null) {
+        if (askCount > 0) {
+          for (int i = 0; i < askCount; ++i) {
+            ContainerRequest containerAsk = setupContainerAskForRM();
+            amRMClient.addContainerRequest(containerAsk);
+          }
         }
       }
-      
-      if (numCompletedContainers.get() == numTotalContainers) {
+
+      if (numCompletedContainers.get() + numIgnore.get() >=
+          numTotalContainers) {
         done = true;
       }
     }
@@ -914,7 +1091,41 @@ public class ApplicationMaster {
 
     @Override
     public void onContainersUpdated(
-        List<UpdatedContainer> containers) {}
+        List<UpdatedContainer> containers) {
+      for (UpdatedContainer container : containers) {
+        LOG.info("Container {} updated, updateType={}, resource={}, "
+                + "execType={}",
+            container.getContainer().getId(),
+            container.getUpdateType().toString(),
+            container.getContainer().getResource().toString(),
+            container.getContainer().getExecutionType());
+
+        // TODO Remove this line with finalized updateContainer API.
+        // Currently nm client needs to notify the NM to update container
+        // execution type via NMClient#updateContainerResource() or
+        // NMClientAsync#updateContainerResourceAsync() when
+        // auto-update.containers is disabled, but this API is
+        // under evolving and will need to be replaced by a proper new API.
+        nmClientAsync.updateContainerResourceAsync(container.getContainer());
+      }
+    }
+
+    @Override
+    public void onRequestsRejected(List<RejectedSchedulingRequest> rejReqs) {
+      List<SchedulingRequest> reqsToRetry = new ArrayList<>();
+      for (RejectedSchedulingRequest rejReq : rejReqs) {
+        LOG.info("Scheduling Request {} has been rejected. Reason {}",
+            rejReq.getRequest(), rejReq.getReason());
+        reqsToRetry.add(rejReq.getRequest());
+      }
+      totalRetries.addAndGet(-1 * reqsToRetry.size());
+      if (totalRetries.get() <= 0) {
+        LOG.info("Exiting, since retries are exhausted !!");
+        done = true;
+      } else {
+        amRMClient.addSchedulingRequests(reqsToRetry);
+      }
+    }
 
     @Override
     public void onShutdownRequest() {
@@ -941,7 +1152,7 @@ public class ApplicationMaster {
   }
 
   @VisibleForTesting
-  static class NMCallbackHandler extends NMClientAsync.AbstractCallbackHandler {
+  class NMCallbackHandler extends NMClientAsync.AbstractCallbackHandler {
 
     private ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentHashMap<ContainerId, Container>();
@@ -970,6 +1181,24 @@ public class ApplicationMaster {
         LOG.debug("Container Status: id=" + containerId + ", status=" +
             containerStatus);
       }
+
+      // If promote_opportunistic_after_start is set, automatically promote
+      // opportunistic containers to guaranteed.
+      if (autoPromoteContainers) {
+        if (containerStatus.getState() == ContainerState.RUNNING) {
+          Container container = containers.get(containerId);
+          if (container.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+            // Promote container
+            LOG.info("Promoting container {} to {}", container.getId(),
+                container.getExecutionType());
+            UpdateContainerRequest updateRequest = UpdateContainerRequest
+                .newInstance(container.getVersion(), container.getId(),
+                    ContainerUpdateType.PROMOTE_EXECUTION_TYPE, null,
+                    ExecutionType.GUARANTEED);
+            amRMClient.requestContainerUpdate(container, updateRequest);
+          }
+        }
+      }
     }
 
     @Override
@@ -983,25 +1212,22 @@ public class ApplicationMaster {
         applicationMaster.nmClientAsync.getContainerStatusAsync(
             containerId, container.getNodeId());
       }
-      if(applicationMaster.timelineClient != null) {
-        if (applicationMaster.timelineServiceV2) {
-          applicationMaster.publishContainerStartEventOnTimelineServiceV2(
-              container);
-        } else {
-          applicationMaster.publishContainerStartEvent(
-              applicationMaster.timelineClient, container,
-              applicationMaster.domainId, applicationMaster.appSubmitterUgi);
-        }
+      if (applicationMaster.timelineServiceV2Enabled) {
+        long startTime = SystemClock.getInstance().getTime();
+        applicationMaster.getContainerStartTimes().put(containerId, startTime);
+        applicationMaster.publishContainerStartEventOnTimelineServiceV2(
+            container, startTime);
+      }
+      if (applicationMaster.timelineServiceV1Enabled) {
+        applicationMaster.publishContainerStartEvent(
+            applicationMaster.timelineClient, container,
+            applicationMaster.domainId, applicationMaster.appSubmitterUgi);
       }
     }
 
     @Override
-    public void onContainerResourceIncreased(
-        ContainerId containerId, Resource resource) {}
-
-    @Override
     public void onStartContainerError(ContainerId containerId, Throwable t) {
-      LOG.error("Failed to start Container " + containerId);
+      LOG.error("Failed to start Container " + containerId, t);
       containers.remove(containerId);
       applicationMaster.numCompletedContainers.incrementAndGet();
       applicationMaster.numFailedContainers.incrementAndGet();
@@ -1019,10 +1245,25 @@ public class ApplicationMaster {
       containers.remove(containerId);
     }
 
+    @Deprecated
     @Override
     public void onIncreaseContainerResourceError(
         ContainerId containerId, Throwable t) {}
 
+    @Deprecated
+    @Override
+    public void onContainerResourceIncreased(
+        ContainerId containerId, Resource resource) {}
+
+    @Override
+    public void onUpdateContainerResourceError(
+        ContainerId containerId, Throwable t) {
+    }
+
+    @Override
+    public void onContainerResourceUpdated(ContainerId containerId,
+        Resource resource) {
+    }
   }
 
   /**
@@ -1149,7 +1390,8 @@ public class ApplicationMaster {
       ContainerRetryContext containerRetryContext =
           ContainerRetryContext.newInstance(
               containerRetryPolicy, containerRetryErrorCodes,
-              containerMaxRetries, containrRetryInterval);
+              containerMaxRetries, containrRetryInterval,
+              containerFailuresValidityInterval);
       ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
         localResources, myShellEnv, commands, null, allTokens.duplicate(),
           null, containerRetryContext);
@@ -1185,14 +1427,26 @@ public class ApplicationMaster {
     Priority pri = Priority.newInstance(requestPriority);
 
     // Set up resource type requirements
-    // For now, memory and CPU are supported so we set memory and cpu requirements
-    Resource capability = Resource.newInstance(containerMemory,
-      containerVirtualCores);
-
-    ContainerRequest request = new ContainerRequest(capability, null, null,
-        pri);
+    ContainerRequest request = new ContainerRequest(
+        getTaskResourceCapability(),
+        null, null, pri, 0, true, null,
+        ExecutionTypeRequest.newInstance(containerType),
+        containerResourceProfile);
     LOG.info("Requested container ask: " + request.toString());
     return request;
+  }
+
+  private SchedulingRequest setupSchedulingRequest(PlacementSpec spec) {
+    long allocId = allocIdCounter.incrementAndGet();
+    SchedulingRequest sReq = SchedulingRequest.newInstance(
+        allocId, Priority.newInstance(requestPriority),
+        ExecutionTypeRequest.newInstance(),
+        Collections.singleton(spec.sourceTag),
+        ResourceSizing.newInstance(
+            getTaskResourceCapability()), null);
+    sReq.setPlacementConstraint(spec.constraint);
+    LOG.info("Scheduling Request made: " + sReq.toString());
+    return sReq;
   }
 
   private boolean fileExist(String filePath) {
@@ -1348,30 +1602,30 @@ public class ApplicationMaster {
   }
 
   private void publishContainerStartEventOnTimelineServiceV2(
-      Container container) {
+      Container container, long startTime) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
         entity =
             new org.apache.hadoop.yarn.api.records.timelineservice.
             TimelineEntity();
     entity.setId(container.getId().toString());
     entity.setType(DSEntity.DS_CONTAINER.toString());
-    long ts = System.currentTimeMillis();
-    entity.setCreatedTime(ts);
+    entity.setCreatedTime(startTime);
     entity.addInfo("user", appSubmitterUgi.getShortUserName());
 
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent event =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent();
-    event.setTimestamp(ts);
+    event.setTimestamp(startTime);
     event.setId(DSEvent.DS_CONTAINER_START.toString());
     event.addInfo("Node", container.getNodeId().toString());
     event.addInfo("Resources", container.getResource().toString());
     entity.addEvent(event);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(startTime));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineClient.putEntities(entity);
+          timelineV2Client.putEntitiesAsync(entity);
           return null;
         }
       });
@@ -1383,7 +1637,7 @@ public class ApplicationMaster {
   }
 
   private void publishContainerEndEventOnTimelineServiceV2(
-      final ContainerStatus container) {
+      final ContainerStatus container, long containerStartTime) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
         entity =
             new org.apache.hadoop.yarn.api.records.timelineservice.
@@ -1399,12 +1653,13 @@ public class ApplicationMaster {
     event.addInfo("State", container.getState().name());
     event.addInfo("Exit Status", container.getExitStatus());
     entity.addEvent(event);
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineClient.putEntities(entity);
+          timelineV2Client.putEntitiesAsync(entity);
           return null;
         }
       });
@@ -1433,12 +1688,14 @@ public class ApplicationMaster {
     event.setId(appEvent.toString());
     event.setTimestamp(ts);
     entity.addEvent(event);
+    entity.setIdPrefix(
+        TimelineServiceHelper.invertLong(appAttemptID.getAttemptId()));
 
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public TimelinePutResponse run() throws Exception {
-          timelineClient.putEntitiesAsync(entity);
+          timelineV2Client.putEntitiesAsync(entity);
           return null;
         }
       });
@@ -1451,4 +1708,31 @@ public class ApplicationMaster {
     }
   }
 
+  private Resource getTaskResourceCapability()
+      throws YarnRuntimeException {
+    if (containerMemory < -1 || containerMemory == 0) {
+      throw new YarnRuntimeException("Value of AM memory '" + containerMemory
+          + "' has to be greater than 0");
+    }
+    if (containerVirtualCores < -1 || containerVirtualCores == 0) {
+      throw new YarnRuntimeException(
+          "Value of AM vcores '" + containerVirtualCores
+              + "' has to be greater than 0");
+    }
+
+    Resource resourceCapability =
+        Resource.newInstance(containerMemory, containerVirtualCores);
+    containerMemory =
+        containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY : containerMemory;
+    containerVirtualCores = containerVirtualCores == -1 ?
+        DEFAULT_CONTAINER_VCORES :
+        containerVirtualCores;
+    resourceCapability.setMemorySize(containerMemory);
+    resourceCapability.setVirtualCores(containerVirtualCores);
+    for (Map.Entry<String, Long> entry : containerResources.entrySet()) {
+      resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
+    }
+
+    return resourceCapability;
+  }
 }

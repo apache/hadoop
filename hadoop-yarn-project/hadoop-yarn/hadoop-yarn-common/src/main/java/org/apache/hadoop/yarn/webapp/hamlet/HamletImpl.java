@@ -43,7 +43,9 @@ import org.apache.hadoop.yarn.webapp.WebAppException;
  * optimized to use a thread-local element pool.
  *
  * Prints HTML as it builds. So the order is important.
+ * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class HamletImpl extends HamletSpec {
   private static final String INDENT_CHARS = "  ";

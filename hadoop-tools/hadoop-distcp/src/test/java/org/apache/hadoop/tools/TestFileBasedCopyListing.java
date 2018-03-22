@@ -514,10 +514,11 @@ public class TestFileBasedCopyListing {
   private void runTest(Path listFile, Path target, boolean targetExists,
       boolean sync) throws IOException {
     CopyListing listing = new FileBasedCopyListing(config, CREDENTIALS);
-    DistCpOptions options = new DistCpOptions(listFile, target);
-    options.setSyncFolder(sync);
-    options.setTargetPathExists(targetExists);
-    listing.buildListing(listFile, options);
+    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+        .withSyncFolder(sync).build();
+    final DistCpContext context = new DistCpContext(options);
+    context.setTargetPathExists(targetExists);
+    listing.buildListing(listFile, context);
   }
 
   private void checkResult(Path listFile, int count) throws IOException {

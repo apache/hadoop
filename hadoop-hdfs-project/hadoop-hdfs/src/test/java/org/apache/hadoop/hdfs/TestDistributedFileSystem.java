@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
@@ -66,14 +67,18 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem.HdfsDataOutputStreamBuilder;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -81,12 +86,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
@@ -418,6 +425,7 @@ public class TestDistributedFileSystem {
     Configuration conf = getTestConfiguration();
     final long grace = 1000L;
     MiniDFSCluster cluster = null;
+    LeaseRenewer.setLeaseRenewerGraceDefault(grace);
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -430,10 +438,6 @@ public class TestDistributedFileSystem {
 
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        Method setMethod = dfs.dfs.getLeaseRenewer().getClass()
-            .getDeclaredMethod("setGraceSleepPeriod", long.class);
-        setMethod.setAccessible(true);
-        setMethod.invoke(dfs.dfs.getLeaseRenewer(), grace);
         Method checkMethod = dfs.dfs.getLeaseRenewer().getClass()
             .getDeclaredMethod("isRunning");
         checkMethod.setAccessible(true);
@@ -568,6 +572,22 @@ public class TestDistributedFileSystem {
         in.close();
         fs.close();
       }
+
+      {
+        // Test PathIsNotEmptyDirectoryException while deleting non-empty dir
+        FileSystem fs = cluster.getFileSystem();
+        fs.mkdirs(new Path("/test/nonEmptyDir"));
+        fs.create(new Path("/tmp/nonEmptyDir/emptyFile")).close();
+        try {
+          fs.delete(new Path("/tmp/nonEmptyDir"), false);
+          Assert.fail("Expecting PathIsNotEmptyDirectoryException");
+        } catch (PathIsNotEmptyDirectoryException ex) {
+          // This is the proper exception to catch; move on.
+        }
+        Assert.assertTrue(fs.exists(new Path("/test/nonEmptyDir")));
+        fs.delete(new Path("/tmp/nonEmptyDir"), true);
+      }
+
     }
     finally {
       if (cluster != null) {cluster.shutdown();}
@@ -1030,13 +1050,6 @@ public class TestDistributedFileSystem {
         out.close();
       }
 
-      // verify the magic val for zero byte files
-      {
-        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
-        assertEquals(zeroChecksum.toString(),
-            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51");
-      }
-
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
@@ -1045,8 +1058,19 @@ public class TestDistributedFileSystem {
         out.write(data);
         out.close();
       }
-  
-      { //verify checksum
+
+      {
+        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
+        final String magicValue =
+            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51";
+        // verify the magic val for zero byte files
+        assertEquals(magicValue, zeroChecksum.toString());
+
+        //verify checksums for empty file and 0 request length
+        final FileChecksum checksumWith0 = hdfs.getFileChecksum(bar, 0);
+        assertEquals(zeroChecksum, checksumWith0);
+
+        //verify checksum
         final FileChecksum barcs = hdfs.getFileChecksum(bar);
         final int barhashcode = barcs.hashCode();
         assertEquals(hdfsfoocs.hashCode(), barhashcode);
@@ -1259,6 +1283,25 @@ public class TestDistributedFileSystem {
     }
   }
 
+  @Test
+  public void testListStatusOfSnapshotDirs() throws IOException {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+        .build();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.create(new Path("/parent/test1/dfsclose/file-0"));
+      Path snapShotDir = new Path("/parent/test1/");
+      dfs.allowSnapshot(snapShotDir);
+
+      FileStatus status = dfs.getFileStatus(new Path("/parent/test1"));
+      assertTrue(status.isSnapshotEnabled());
+      status = dfs.getFileStatus(new Path("/parent/"));
+      assertFalse(status.isSnapshotEnabled());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test(timeout=10000)
   public void testDFSClientPeerReadTimeout() throws IOException {
     final int timeout = 1000;
@@ -1400,6 +1443,252 @@ public class TestDistributedFileSystem {
       // The list of clients corresponding to this renewer should be empty
       assertEquals(true, leaseRenewer.isEmpty());
       assertEquals(true, dfsClient.isFilesBeingWrittenEmpty());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void testBuilderSetters(DistributedFileSystem fs) {
+    Path testFilePath = new Path("/testBuilderSetters");
+    HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath);
+
+    builder.append().overwrite(false).newBlock().lazyPersist().noLocalWrite()
+        .ecPolicyName("ec-policy");
+    EnumSet<CreateFlag> flags = builder.getFlags();
+    assertTrue(flags.contains(CreateFlag.APPEND));
+    assertTrue(flags.contains(CreateFlag.CREATE));
+    assertTrue(flags.contains(CreateFlag.NEW_BLOCK));
+    assertTrue(flags.contains(CreateFlag.NO_LOCAL_WRITE));
+    assertFalse(flags.contains(CreateFlag.OVERWRITE));
+    assertFalse(flags.contains(CreateFlag.SYNC_BLOCK));
+
+    assertEquals("ec-policy", builder.getEcPolicyName());
+    assertFalse(builder.shouldReplicate());
+  }
+
+  @Test
+  public void testHdfsDataOutputStreamBuilderSetParameters()
+      throws IOException {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      testBuilderSetters(fs);
+    }
+  }
+
+  @Test
+  public void testDFSDataOutputStreamBuilderForCreation() throws Exception {
+    Configuration conf = getTestConfiguration();
+    String testFile = "/testDFSDataOutputStreamBuilder";
+    Path testFilePath = new Path(testFile);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // Before calling build(), no change was made in the file system
+      HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath)
+          .blockSize(4096).replication((short)1);
+      assertFalse(fs.exists(testFilePath));
+
+      // Test create an empty file
+      try (FSDataOutputStream out =
+               fs.createFile(testFilePath).build()) {
+        LOG.info("Test create an empty file");
+      }
+
+      // Test create a file with content, and verify the content
+      String content = "This is a test!";
+      try (FSDataOutputStream out1 = fs.createFile(testFilePath)
+          .bufferSize(4096)
+          .replication((short) 1)
+          .blockSize(4096)
+          .build()) {
+        byte[] contentOrigin = content.getBytes("UTF8");
+        out1.write(contentOrigin);
+      }
+
+      ContractTestUtils.verifyFileContents(fs, testFilePath,
+          content.getBytes());
+
+      try (FSDataOutputStream out = fs.createFile(testFilePath).overwrite(false)
+        .build()) {
+        fail("it should fail to overwrite an existing file");
+      } catch (FileAlreadyExistsException e) {
+        // As expected, ignore.
+      }
+
+      Path nonParentFile = new Path("/parent/test");
+      try (FSDataOutputStream out = fs.createFile(nonParentFile).build()) {
+        fail("parent directory not exist");
+      } catch (FileNotFoundException e) {
+        // As expected.
+      }
+      assertFalse("parent directory should not be created",
+          fs.exists(new Path("/parent")));
+
+      try (FSDataOutputStream out = fs.createFile(nonParentFile).recursive()
+        .build()) {
+        out.write(1);
+      }
+      assertTrue("parent directory has not been created",
+          fs.exists(new Path("/parent")));
+    }
+  }
+
+  @Test
+  public void testDFSDataOutputStreamBuilderForAppend() throws IOException {
+    Configuration conf = getTestConfiguration();
+    String testFile = "/testDFSDataOutputStreamBuilderForAppend";
+    Path path = new Path(testFile);
+    Random random = new Random();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      byte[] buf = new byte[16];
+      random.nextBytes(buf);
+
+      try (FSDataOutputStream out = fs.appendFile(path).build()) {
+        out.write(buf);
+        fail("should fail on appending to non-existent file");
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("non-existent", e);
+      }
+
+      random.nextBytes(buf);
+      try (FSDataOutputStream out = fs.createFile(path).build()) {
+        out.write(buf);
+      }
+
+      random.nextBytes(buf);
+      try (FSDataOutputStream out = fs.appendFile(path).build()) {
+        out.write(buf);
+      }
+
+      FileStatus status = fs.getFileStatus(path);
+      assertEquals(16 * 2, status.getLen());
+    }
+  }
+
+  @Test
+  public void testRemoveErasureCodingPolicy() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      ECSchema toAddSchema = new ECSchema("rs", 3, 2);
+      ErasureCodingPolicy toAddPolicy =
+          new ErasureCodingPolicy(toAddSchema, 128 * 1024, (byte) 254);
+      String policyName = toAddPolicy.getName();
+      ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{toAddPolicy};
+      fs.addErasureCodingPolicies(policies);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+      fs.removeErasureCodingPolicy(policyName);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getRemovedPolicies().get(0).getName());
+
+      // remove erasure coding policy as a user without privilege
+      UserGroupInformation fakeUGI = UserGroupInformation.createUserForTesting(
+          "ProbablyNotARealUserName", new String[] {"ShangriLa"});
+      final MiniDFSCluster finalCluster = cluster;
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          DistributedFileSystem fs = finalCluster.getFileSystem();
+          try {
+            fs.removeErasureCodingPolicy(policyName);
+            fail();
+          } catch (AccessControlException ace) {
+            GenericTestUtils.assertExceptionContains("Access denied for user " +
+                "ProbablyNotARealUserName. Superuser privilege is required",
+                ace);
+          }
+          return null;
+        }
+      });
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testEnableAndDisableErasureCodingPolicy() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      ECSchema toAddSchema = new ECSchema("rs", 3, 2);
+      ErasureCodingPolicy toAddPolicy =
+          new ErasureCodingPolicy(toAddSchema, 128 * 1024, (byte) 254);
+      String policyName = toAddPolicy.getName();
+      ErasureCodingPolicy[] policies =
+          new ErasureCodingPolicy[]{toAddPolicy};
+      fs.addErasureCodingPolicies(policies);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+      fs.disableErasureCodingPolicy(policyName);
+      fs.enableErasureCodingPolicy(policyName);
+      assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
+          getByName(policyName).getName());
+
+      //test enable a policy that doesn't exist
+      try {
+        fs.enableErasureCodingPolicy("notExistECName");
+        Assert.fail("enable the policy that doesn't exist should fail");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("does not exist", e);
+        // pass
+      }
+
+      //test disable a policy that doesn't exist
+      try {
+        fs.disableErasureCodingPolicy("notExistECName");
+        Assert.fail("disable the policy that doesn't exist should fail");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("does not exist", e);
+        // pass
+      }
+
+      // disable and enable erasure coding policy as a user without privilege
+      UserGroupInformation fakeUGI = UserGroupInformation.createUserForTesting(
+          "ProbablyNotARealUserName", new String[] {"ShangriLa"});
+      final MiniDFSCluster finalCluster = cluster;
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          DistributedFileSystem fs = finalCluster.getFileSystem();
+          try {
+            fs.disableErasureCodingPolicy(policyName);
+            fail();
+          } catch (AccessControlException ace) {
+            GenericTestUtils.assertExceptionContains("Access denied for user " +
+                    "ProbablyNotARealUserName. Superuser privilege is required",
+                ace);
+          }
+          try {
+            fs.enableErasureCodingPolicy(policyName);
+            fail();
+          } catch (AccessControlException ace) {
+            GenericTestUtils.assertExceptionContains("Access denied for user " +
+                    "ProbablyNotARealUserName. Superuser privilege is required",
+                ace);
+          }
+          return null;
+        }
+      });
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.sls.web;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.text.MessageFormat;
@@ -31,7 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -39,16 +38,17 @@ import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+
+import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ResourceHandler;
 
 @Private
 @Unstable
@@ -85,12 +85,12 @@ public class SLSWebApp extends HttpServlet {
     // load templates
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
-      simulateInfoTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("simulate.info.html.template").getFile()));
-      simulateTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("simulate.html.template").getFile()));
-      trackTemplate = FileUtils.readFileToString(new File(
-              cl.getResource("track.html.template").getFile()));
+      simulateInfoTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/simulate.info.html.template"));
+      simulateTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/simulate.html.template"));
+      trackTemplate = IOUtils.toString(
+          cl.getResourceAsStream("html/track.html.template"));
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -106,19 +106,20 @@ public class SLSWebApp extends HttpServlet {
 
   public SLSWebApp(SchedulerWrapper wrapper, int metricsAddressPort) {
     this.wrapper = wrapper;
-    metrics = wrapper.getMetrics();
-    handleOperTimecostHistogramMap =
-            new HashMap<SchedulerEventType, Histogram>();
-    queueAllocatedMemoryCounterMap = new HashMap<String, Counter>();
-    queueAllocatedVCoresCounterMap = new HashMap<String, Counter>();
+    handleOperTimecostHistogramMap = new HashMap<>();
+    queueAllocatedMemoryCounterMap = new HashMap<>();
+    queueAllocatedVCoresCounterMap = new HashMap<>();
     schedulerMetrics = wrapper.getSchedulerMetrics();
+    metrics = schedulerMetrics.getMetrics();
     port = metricsAddressPort;
   }
 
   public void start() throws Exception {
-    // static files
     final ResourceHandler staticHandler = new ResourceHandler();
-    staticHandler.setResourceBase("html");
+    staticHandler.setMimeTypes(new MimeTypes());
+    String webRootDir = getClass().getClassLoader().getResource("html").
+        toExternalForm();
+    staticHandler.setResourceBase(webRootDir);
 
     Handler handler = new AbstractHandler() {
       @Override
@@ -186,14 +187,14 @@ public class SLSWebApp extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_OK);
 
     String simulateInfo;
-    if (SLSRunner.simulateInfoMap.isEmpty()) {
+    if (SLSRunner.getSimulateInfoMap().isEmpty()) {
       String empty = "<tr><td colspan='2' align='center'>" +
               "No information available</td></tr>";
       simulateInfo = MessageFormat.format(simulateInfoTemplate, empty);
     } else {
       StringBuilder info = new StringBuilder();
       for (Map.Entry<String, Object> entry :
-              SLSRunner.simulateInfoMap.entrySet()) {
+              SLSRunner.getSimulateInfoMap().entrySet()) {
         info.append("<tr>");
         info.append("<td class='td1'>").append(entry.getKey()).append("</td>");
         info.append("<td class='td2'>").append(entry.getValue())
@@ -224,7 +225,7 @@ public class SLSWebApp extends HttpServlet {
     response.setStatus(HttpServletResponse.SC_OK);
 
     // queues {0}
-    Set<String> queues = wrapper.getQueueSet();
+    Set<String> queues = wrapper.getTracker().getQueueSet();
     StringBuilder queueInfo = new StringBuilder();
 
     int i = 0;
@@ -263,7 +264,7 @@ public class SLSWebApp extends HttpServlet {
 
     // tracked queues {0}
     StringBuilder trackedQueueInfo = new StringBuilder();
-    Set<String> trackedQueues = wrapper.getQueueSet();
+    Set<String> trackedQueues = wrapper.getTracker().getQueueSet();
     for(String queue : trackedQueues) {
       trackedQueueInfo.append("<option value='Queue ").append(queue)
               .append("'>").append(queue).append("</option>");
@@ -271,7 +272,7 @@ public class SLSWebApp extends HttpServlet {
 
     // tracked apps {1}
     StringBuilder trackedAppInfo = new StringBuilder();
-    Set<String> trackedApps = wrapper.getTrackedAppSet();
+    Set<String> trackedApps = wrapper.getTracker().getTrackedAppSet();
     for(String job : trackedApps) {
       trackedAppInfo.append("<option value='Job ").append(job)
               .append("'>").append(job).append("</option>");
@@ -420,7 +421,7 @@ public class SLSWebApp extends HttpServlet {
     // allocated resource for each queue
     Map<String, Double> queueAllocatedMemoryMap = new HashMap<String, Double>();
     Map<String, Long> queueAllocatedVCoresMap = new HashMap<String, Long>();
-    for (String queue : wrapper.getQueueSet()) {
+    for (String queue : wrapper.getTracker().getQueueSet()) {
       // memory
       String key = "counter.queue." + queue + ".allocated.memory";
       if (! queueAllocatedMemoryCounterMap.containsKey(queue) &&
@@ -460,7 +461,7 @@ public class SLSWebApp extends HttpServlet {
             .append(",\"cluster.available.memory\":").append(availableMemoryGB)
             .append(",\"cluster.available.vcores\":").append(availableVCoresGB);
 
-    for (String queue : wrapper.getQueueSet()) {
+    for (String queue : wrapper.getTracker().getQueueSet()) {
       sb.append(",\"queue.").append(queue).append(".allocated.memory\":")
               .append(queueAllocatedMemoryMap.get(queue));
       sb.append(",\"queue.").append(queue).append(".allocated.vcores\":")

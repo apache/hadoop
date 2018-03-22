@@ -29,6 +29,7 @@ import com.aliyun.oss.model.CompleteMultipartUploadRequest;
 import com.aliyun.oss.model.CompleteMultipartUploadResult;
 import com.aliyun.oss.model.CopyObjectResult;
 import com.aliyun.oss.model.DeleteObjectsRequest;
+import com.aliyun.oss.model.DeleteObjectsResult;
 import com.aliyun.oss.model.GetObjectRequest;
 import com.aliyun.oss.model.InitiateMultipartUploadRequest;
 import com.aliyun.oss.model.InitiateMultipartUploadResult;
@@ -45,7 +46,14 @@ import com.aliyun.oss.model.UploadPartResult;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +65,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -92,6 +102,9 @@ public class AliyunOSSFileSystemStore {
         ESTABLISH_TIMEOUT_DEFAULT));
     clientConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT_KEY,
         SOCKET_TIMEOUT_DEFAULT));
+    clientConf.setUserAgent(
+        conf.get(USER_AGENT_PREFIX, USER_AGENT_PREFIX_DEFAULT) + ", Hadoop/"
+            + VersionInfo.getVersion());
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);
@@ -128,6 +141,10 @@ public class AliyunOSSFileSystemStore {
     }
 
     String endPoint = conf.getTrimmed(ENDPOINT_KEY, "");
+    if (StringUtils.isEmpty(endPoint)) {
+      throw new IllegalArgumentException("Aliyun OSS endpoint should not be " +
+        "null or empty. Please set proper endpoint with 'fs.oss.endpoint'.");
+    }
     CredentialsProvider provider =
         AliyunOSSUtils.getCredentialsProvider(conf);
     ossClient = new OSSClient(endPoint, provider, clientConf);
@@ -183,14 +200,40 @@ public class AliyunOSSFileSystemStore {
    * Delete a list of keys, and update write operation statistics.
    *
    * @param keysToDelete collection of keys to delete.
+   * @throws IOException if failed to delete objects.
    */
-  public void deleteObjects(List<String> keysToDelete) {
-    if (CollectionUtils.isNotEmpty(keysToDelete)) {
-      DeleteObjectsRequest deleteRequest =
-          new DeleteObjectsRequest(bucketName);
-      deleteRequest.setKeys(keysToDelete);
-      ossClient.deleteObjects(deleteRequest);
-      statistics.incrementWriteOps(keysToDelete.size());
+  public void deleteObjects(List<String> keysToDelete) throws IOException {
+    if (CollectionUtils.isEmpty(keysToDelete)) {
+      LOG.warn("Keys to delete is empty.");
+      return;
+    }
+
+    int retry = 10;
+    int tries = 0;
+    List<String> deleteFailed = keysToDelete;
+    while(CollectionUtils.isNotEmpty(deleteFailed)) {
+      DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName);
+      deleteRequest.setKeys(deleteFailed);
+      // There are two modes to do batch delete:
+      // 1. detail mode: DeleteObjectsResult.getDeletedObjects returns objects
+      // which were deleted successfully.
+      // 2. simple mode: DeleteObjectsResult.getDeletedObjects returns objects
+      // which were deleted unsuccessfully.
+      // Here, we choose the simple mode to do batch delete.
+      deleteRequest.setQuiet(true);
+      DeleteObjectsResult result = ossClient.deleteObjects(deleteRequest);
+      deleteFailed = result.getDeletedObjects();
+      tries++;
+      if (tries == retry) {
+        break;
+      }
+    }
+
+    if (tries == retry && CollectionUtils.isNotEmpty(deleteFailed)) {
+      // Most of time, it is impossible to try 10 times, expect the
+      // Aliyun OSS service problems.
+      throw new IOException("Failed to delete Aliyun OSS objects for " +
+          tries + " times.");
     }
   }
 
@@ -198,8 +241,9 @@ public class AliyunOSSFileSystemStore {
    * Delete a directory from Aliyun OSS.
    *
    * @param key directory key to delete.
+   * @throws IOException if failed to delete directory.
    */
-  public void deleteDirs(String key) {
+  public void deleteDirs(String key) throws IOException {
     key = AliyunOSSUtils.maybeAddTrailingSlash(key);
     ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
     listRequest.setPrefix(key);
@@ -496,8 +540,9 @@ public class AliyunOSSFileSystemStore {
    * Clean up all objects matching the prefix.
    *
    * @param prefix Aliyun OSS object prefix.
+   * @throws IOException if failed to clean up objects.
    */
-  public void purge(String prefix) {
+  public void purge(String prefix) throws IOException {
     String key;
     try {
       ObjectListing objects = listObjects(prefix, maxKeys, null, true);
@@ -512,5 +557,103 @@ public class AliyunOSSFileSystemStore {
     } catch (OSSException | ClientException e) {
       LOG.error("Failed to purge " + prefix);
     }
+  }
+
+  public RemoteIterator<LocatedFileStatus> singleStatusRemoteIterator(
+      final FileStatus fileStatus, final BlockLocation[] locations) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private boolean hasNext = true;
+      @Override
+      public boolean hasNext() throws IOException {
+        return fileStatus != null && hasNext;
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (hasNext()) {
+          LocatedFileStatus s = new LocatedFileStatus(fileStatus,
+              fileStatus.isFile() ? locations : null);
+          hasNext = false;
+          return s;
+        } else {
+          throw new NoSuchElementException();
+        }
+      }
+    };
+  }
+
+  public RemoteIterator<LocatedFileStatus> createLocatedFileStatusIterator(
+      final String prefix, final int maxListingLength, FileSystem fs,
+      PathFilter filter, FileStatusAcceptor acceptor, String delimiter) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private String nextMarker = null;
+      private boolean firstListing = true;
+      private boolean meetEnd = false;
+      private ListIterator<FileStatus> batchIterator;
+
+      @Override
+      public boolean hasNext() throws IOException {
+        if (firstListing) {
+          requestNextBatch();
+          firstListing = false;
+        }
+        return batchIterator.hasNext() || requestNextBatch();
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (hasNext()) {
+          FileStatus status = batchIterator.next();
+          BlockLocation[] locations = fs.getFileBlockLocations(status,
+            0, status.getLen());
+          return new LocatedFileStatus(
+              status, status.isFile() ? locations : null);
+        } else {
+          throw new NoSuchElementException();
+        }
+      }
+
+      private boolean requestNextBatch() {
+        if (meetEnd) {
+          return false;
+        }
+        ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
+        listRequest.setPrefix(AliyunOSSUtils.maybeAddTrailingSlash(prefix));
+        listRequest.setMaxKeys(maxListingLength);
+        listRequest.setMarker(nextMarker);
+        listRequest.setDelimiter(delimiter);
+        ObjectListing listing = ossClient.listObjects(listRequest);
+        List<FileStatus> stats = new ArrayList<>(
+            listing.getObjectSummaries().size() +
+            listing.getCommonPrefixes().size());
+        for(OSSObjectSummary summary: listing.getObjectSummaries()) {
+          String key = summary.getKey();
+          Path path = fs.makeQualified(new Path("/" + key));
+          if (filter.accept(path) && acceptor.accept(path, summary)) {
+            FileStatus status = new FileStatus(summary.getSize(),
+                key.endsWith("/"), 1, fs.getDefaultBlockSize(path),
+                summary.getLastModified().getTime(), path);
+            stats.add(status);
+          }
+        }
+
+        for(String commonPrefix: listing.getCommonPrefixes()) {
+          Path path = fs.makeQualified(new Path("/" + commonPrefix));
+          if (filter.accept(path) && acceptor.accept(path, commonPrefix)) {
+            FileStatus status = new FileStatus(0, true, 1, 0, 0, path);
+            stats.add(status);
+          }
+        }
+
+        batchIterator = stats.listIterator();
+        if (listing.isTruncated()) {
+          nextMarker = listing.getNextMarker();
+        } else {
+          meetEnd = true;
+        }
+        statistics.incrementReadOps(1);
+        return batchIterator.hasNext();
+      }
+    };
   }
 }

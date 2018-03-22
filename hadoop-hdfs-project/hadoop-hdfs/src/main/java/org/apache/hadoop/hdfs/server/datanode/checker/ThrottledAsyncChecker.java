@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -37,6 +38,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -63,12 +66,14 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * The ExecutorService used to schedule asynchronous checks.
    */
   private final ListeningExecutorService executorService;
+  private final ScheduledExecutorService scheduledExecutorService;
 
   /**
    * The minimum gap in milliseconds between two successive checks
    * of the same object. This is the throttle.
    */
   private final long minMsBetweenChecks;
+  private final long diskCheckTimeout;
 
   /**
    * Map of checks that are currently in progress. Protected by the object
@@ -85,12 +90,23 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
 
   ThrottledAsyncChecker(final Timer timer,
                         final long minMsBetweenChecks,
+                        final long diskCheckTimeout,
                         final ExecutorService executorService) {
     this.timer = timer;
     this.minMsBetweenChecks = minMsBetweenChecks;
+    this.diskCheckTimeout = diskCheckTimeout;
     this.executorService = MoreExecutors.listeningDecorator(executorService);
     this.checksInProgress = new HashMap<>();
     this.completedChecks = new WeakHashMap<>();
+
+    if (this.diskCheckTimeout > 0) {
+      ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new
+          ScheduledThreadPoolExecutor(1);
+      this.scheduledExecutorService = MoreExecutors
+          .getExitingScheduledExecutorService(scheduledThreadPoolExecutor);
+    } else {
+      this.scheduledExecutorService = null;
+    }
   }
 
   /**
@@ -101,13 +117,10 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * will receive the same Future.
    */
   @Override
-  public synchronized ListenableFuture<V> schedule(
-      final Checkable<K, V> target,
-      final K context) {
-    LOG.debug("Scheduling a check of {}", target);
-
+  public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
+                                                K context) {
     if (checksInProgress.containsKey(target)) {
-      return checksInProgress.get(target);
+      return Optional.absent();
     }
 
     if (completedChecks.containsKey(target)) {
@@ -115,24 +128,33 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
         LOG.debug("Skipped checking {}. Time since last check {}ms " +
-            "is less than the min gap {}ms.",
+                "is less than the min gap {}ms.",
             target, msSinceLastCheck, minMsBetweenChecks);
-        return result.result != null ?
-            Futures.immediateFuture(result.result) :
-            Futures.immediateFailedFuture(result.exception);
+        return Optional.absent();
       }
     }
 
-    final ListenableFuture<V> lf = executorService.submit(
+    LOG.info("Scheduling a check for {}", target);
+    final ListenableFuture<V> lfWithoutTimeout = executorService.submit(
         new Callable<V>() {
           @Override
           public V call() throws Exception {
             return target.check(context);
           }
         });
+    final ListenableFuture<V> lf;
+
+    if (diskCheckTimeout > 0) {
+      lf = TimeoutFuture
+          .create(lfWithoutTimeout, diskCheckTimeout, TimeUnit.MILLISECONDS,
+              scheduledExecutorService);
+    } else {
+      lf = lfWithoutTimeout;
+    }
+
     checksInProgress.put(target, lf);
     addResultCachingCallback(target, lf);
-    return lf;
+    return Optional.of(lf);
   }
 
   /**
@@ -165,18 +187,21 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
 
   /**
    * {@inheritDoc}.
+   *
+   * The results of in-progress checks are not useful during shutdown,
+   * so we optimize for faster shutdown by interrupt all actively
+   * executing checks.
    */
   @Override
   public void shutdownAndWait(long timeout, TimeUnit timeUnit)
       throws InterruptedException {
-    // Try orderly shutdown.
-    executorService.shutdown();
-
-    if (!executorService.awaitTermination(timeout, timeUnit)) {
-      // Interrupt executing tasks and wait again.
-      executorService.shutdownNow();
-      executorService.awaitTermination(timeout, timeUnit);
+    if (scheduledExecutorService != null) {
+      scheduledExecutorService.shutdownNow();
+      scheduledExecutorService.awaitTermination(timeout, timeUnit);
     }
+
+    executorService.shutdownNow();
+    executorService.awaitTermination(timeout, timeUnit);
   }
 
   /**

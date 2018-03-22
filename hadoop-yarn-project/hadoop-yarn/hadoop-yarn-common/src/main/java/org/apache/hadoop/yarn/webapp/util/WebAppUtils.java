@@ -26,6 +26,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -88,18 +89,57 @@ public class WebAppUtils {
           hostName + ":" + port);
     }
   }
-  
-  public static String getRMWebAppURLWithScheme(Configuration conf) {
-    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(conf);
-  }
-  
-  public static String getRMWebAppURLWithoutScheme(Configuration conf) {
-    if (YarnConfiguration.useHttps(conf)) {
-      return conf.get(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
+
+  public static String getRMWebAppURLWithoutScheme(Configuration conf,
+      boolean isHAEnabled)  {
+    YarnConfiguration yarnConfig = new YarnConfiguration(conf);
+    // set RM_ID if we have not configure it.
+    if (isHAEnabled) {
+      String rmId = yarnConfig.get(YarnConfiguration.RM_HA_ID);
+      if (rmId == null || rmId.isEmpty()) {
+        List<String> rmIds = new ArrayList<>(HAUtil.getRMHAIds(conf));
+        if (rmIds != null && !rmIds.isEmpty()) {
+          yarnConfig.set(YarnConfiguration.RM_HA_ID, rmIds.get(0));
+        }
+      }
+    }
+    if (YarnConfiguration.useHttps(yarnConfig)) {
+      if (isHAEnabled) {
+        return HAUtil.getConfValueForRMInstance(
+            YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, yarnConfig);
+      }
+      return yarnConfig.get(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS);
     }else {
-      return conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+      if (isHAEnabled) {
+        return HAUtil.getConfValueForRMInstance(
+            YarnConfiguration.RM_WEBAPP_ADDRESS, yarnConfig);
+      }
+      return yarnConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
+    }
+  }
+
+  public static String getRMWebAppURLWithScheme(Configuration conf) {
+    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(
+        conf, HAUtil.isHAEnabled(conf));
+  }
+
+  public static String getRMWebAppURLWithoutScheme(Configuration conf) {
+    return getRMWebAppURLWithoutScheme(conf, false);
+  }
+
+  public static String getRouterWebAppURLWithScheme(Configuration conf) {
+    return getHttpSchemePrefix(conf) + getRouterWebAppURLWithoutScheme(conf);
+  }
+
+  public static String getRouterWebAppURLWithoutScheme(Configuration conf) {
+    if (YarnConfiguration.useHttps(conf)) {
+      return conf.get(YarnConfiguration.ROUTER_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ADDRESS);
     }
   }
 
@@ -274,16 +314,41 @@ public class WebAppUtils {
   }
 
   public static String getAHSWebAppURLWithoutScheme(Configuration conf) {
-    return getTimelineReaderWebAppURL(conf);
-  }
-
-  public static String getTimelineReaderWebAppURL(Configuration conf) {
     if (YarnConfiguration.useHttps(conf)) {
       return conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS);
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS);
     } else {
       return conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
+    }
+  }
+
+  public static String getTimelineReaderWebAppURLWithoutScheme(
+      Configuration conf) {
+    if (YarnConfiguration.useHttps(conf)) {
+      return conf
+          .get(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_HTTPS_ADDRESS,
+              YarnConfiguration.
+                  DEFAULT_TIMELINE_SERVICE_READER_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
+          YarnConfiguration.
+              DEFAULT_TIMELINE_SERVICE_READER_WEBAPP_ADDRESS);
+    }
+  }
+
+  public static String getTimelineCollectorWebAppURLWithoutScheme(
+      Configuration conf) {
+    if (YarnConfiguration.useHttps(conf)) {
+      return conf.get(
+          YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.
+              DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf
+          .get(YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS,
+              YarnConfiguration.
+                  DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS);
     }
   }
 
@@ -302,7 +367,7 @@ public class WebAppUtils {
       return schemePrefix + url;
     }
   }
-  
+
   public static String getRunningLogURL(
       String nodeHttpAddress, String containerId, String user) {
     if (nodeHttpAddress == null || nodeHttpAddress.isEmpty() ||
@@ -349,16 +414,21 @@ public class WebAppUtils {
   /**
    * Load the SSL keystore / truststore into the HttpServer builder.
    * @param builder the HttpServer2.Builder to populate with ssl config
-   * @param sslConf the Configuration instance to use during loading of SSL conf
+   * @param conf the Configuration instance to load custom SSL config from
+   *
+   * @return HttpServer2.Builder instance (passed in as the first parameter)
+   *         after loading SSL stores
    */
   public static HttpServer2.Builder loadSslConfiguration(
-      HttpServer2.Builder builder, Configuration sslConf) {
-    if (sslConf == null) {
-      sslConf = new Configuration(false);
+      HttpServer2.Builder builder, Configuration conf) {
+
+    Configuration sslConf = new Configuration(false);
+
+    sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
+    if (conf != null) {
+      sslConf.addResource(conf);
     }
     boolean needsClientAuth = YarnConfiguration.YARN_SSL_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
-    sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
-
     return builder
         .needsClientAuth(needsClientAuth)
         .keyPassword(getPassword(sslConf, WEB_APP_KEY_PASSWORD_KEY))
@@ -428,7 +498,8 @@ public class WebAppUtils {
     return Arrays.asList("text", "octet-stream");
   }
 
-  private static String getURLEncodedQueryString(HttpServletRequest request) {
+  private static String getURLEncodedQueryString(HttpServletRequest request,
+      String parameterToRemove) {
     String queryString = request.getQueryString();
     if (queryString != null && !queryString.isEmpty()) {
       String reqEncoding = request.getCharacterEncoding();
@@ -436,10 +507,52 @@ public class WebAppUtils {
         reqEncoding = "ISO-8859-1";
       }
       Charset encoding = Charset.forName(reqEncoding);
-      List<NameValuePair> params = URLEncodedUtils.parse(queryString, encoding);
+      List<NameValuePair> params = URLEncodedUtils.parse(queryString,
+          encoding);
+      if (parameterToRemove != null && !parameterToRemove.isEmpty()) {
+        Iterator<NameValuePair> paramIterator = params.iterator();
+        while(paramIterator.hasNext()) {
+          NameValuePair current = paramIterator.next();
+          if (current.getName().equals(parameterToRemove)) {
+            paramIterator.remove();
+          }
+        }
+      }
       return URLEncodedUtils.format(params, encoding);
     }
     return null;
+  }
+
+  /**
+   * Get a query string.
+   * @param request HttpServletRequest with the request details
+   * @return the query parameter string
+  */
+  public static List<NameValuePair> getURLEncodedQueryParam(
+      HttpServletRequest request) {
+    String queryString = request.getQueryString();
+    if (queryString != null && !queryString.isEmpty()) {
+      String reqEncoding = request.getCharacterEncoding();
+      if (reqEncoding == null || reqEncoding.isEmpty()) {
+        reqEncoding = "ISO-8859-1";
+      }
+      Charset encoding = Charset.forName(reqEncoding);
+      List<NameValuePair> params = URLEncodedUtils.parse(queryString,
+          encoding);
+      return params;
+    }
+    return null;
+  }
+
+  /**
+    * Get a query string which removes the passed parameter.
+    * @param httpRequest HttpServletRequest with the request details
+    * @param parameterName the query parameters must be removed
+    * @return the query parameter string
+    */
+  public static String removeQueryParams(HttpServletRequest httpRequest,
+      String parameterName) {
+    return getURLEncodedQueryString(httpRequest, parameterName);
   }
 
   /**
@@ -449,7 +562,7 @@ public class WebAppUtils {
    */
   public static String getHtmlEscapedURIWithQueryString(
       HttpServletRequest request) {
-    String urlEncodedQueryString = getURLEncodedQueryString(request);
+    String urlEncodedQueryString = getURLEncodedQueryString(request, null);
     if (urlEncodedQueryString != null) {
       return HtmlQuoting.quoteHtmlChars(
           request.getRequestURI() + "?" + urlEncodedQueryString);
@@ -466,7 +579,7 @@ public class WebAppUtils {
   public static String appendQueryParams(HttpServletRequest request,
       String targetUri) {
     String ret = targetUri;
-    String urlEncodedQueryString = getURLEncodedQueryString(request);
+    String urlEncodedQueryString = getURLEncodedQueryString(request, null);
     if (urlEncodedQueryString != null) {
       ret += "?" + urlEncodedQueryString;
     }

@@ -53,7 +53,7 @@ public class RSErasureEncoder extends ErasureEncoder {
     if (rawEncoder == null) {
       // TODO: we should create the raw coder according to codec.
       rawEncoder = CodecUtil.createRawEncoder(getConf(),
-          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
+          ErasureCodeConstants.RS_CODEC_NAME, getOptions());
     }
     return rawEncoder;
   }

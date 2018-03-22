@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -113,7 +114,7 @@ import com.google.common.base.Preconditions;
  * defined in the default configuration file:
  * <pre>
  * <property>
- *   <name>dfs.balance.bandwidthPerSec</name>
+ *   <name>dfs.datanode.balance.bandwidthPerSec</name>
  *   <value>1048576</value>
  * <description>  Specifies the maximum bandwidth that each datanode 
  * can utilize for the balancing purpose in term of the number of bytes 
@@ -220,7 +221,7 @@ public class Balancer {
       ) throws UnsupportedActionException {
     BlockPlacementPolicies placementPolicies =
         new BlockPlacementPolicies(conf, null, null, null);
-    if (!(placementPolicies.getPolicy(false) instanceof
+    if (!(placementPolicies.getPolicy(CONTIGUOUS) instanceof
         BlockPlacementPolicyDefault)) {
       throw new UnsupportedActionException(
           "Balancer without BlockPlacementPolicyDefault");

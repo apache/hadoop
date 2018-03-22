@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -30,7 +31,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 
@@ -57,11 +59,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
+@Deprecated
 public class TestContinuousScheduling extends FairSchedulerTestBase {
   private ControlledClock mockClock;
   private static int delayThresholdTimeMs = 1000;
 
+  @SuppressWarnings("deprecation")
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -74,6 +79,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     return conf;
   }
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setup() {
     mockClock = new ControlledClock();
@@ -119,7 +125,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
     scheduler.allocate(
-        appAttemptId, ask, new ArrayList<ContainerId>(), null, null, null, null);
+        appAttemptId, ask, null, new ArrayList<ContainerId>(),
+        null, null, NULL_UPDATE_REQUESTS);
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
     triggerSchedulingAttempt();
@@ -156,8 +163,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ResourceRequest request =
         createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, null, null);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
@@ -168,8 +174,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
     ask.clear();
     ask.add(request);
-    scheduler.allocate(appAttemptId, ask,
-        new ArrayList<ContainerId>(), null, null, null, null);
+    scheduler.allocate(appAttemptId, ask, null, new ArrayList<ContainerId>(), null, null, NULL_UPDATE_REQUESTS);
     triggerSchedulingAttempt();
 
     checkAppConsumption(app, Resources.createResource(2048,2));
@@ -183,6 +188,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     Assert.assertEquals(2, nodes.size());
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testWithNodeRemoved() throws Exception {
     // Disable continuous scheduling, will invoke continuous
@@ -236,6 +242,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testInterruptedException()
           throws Exception {
@@ -260,7 +267,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     FairScheduler spyScheduler = spy(scheduler);
     Assert.assertTrue("Continuous scheduling should be disabled.",
         !spyScheduler.isContinuousSchedulingEnabled());
-    // Add one nodes
+    // Add one node
     RMNode node1 =
         MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
             "127.0.0.1");
@@ -280,25 +287,55 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
-  public void testThreadLifeCycle() throws InterruptedException {
+  public void testSchedulerThreadLifeCycle() throws InterruptedException {
     scheduler.start();
 
-    Thread updateThread = scheduler.updateThread;
     Thread schedulingThread = scheduler.schedulingThread;
-
-    assertTrue(updateThread.isAlive());
     assertTrue(schedulingThread.isAlive());
-
     scheduler.stop();
 
     int numRetries = 100;
-    while (numRetries-- > 0 &&
-        (updateThread.isAlive() || schedulingThread.isAlive())) {
+    while (numRetries-- > 0 && schedulingThread.isAlive()) {
       Thread.sleep(50);
     }
 
-    assertNotEquals("One of the threads is still alive", 0, numRetries);
+    assertNotEquals("The Scheduling thread is still alive", 0, numRetries);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestNodeAvailableResourceComparatorTransitivity() {
+    ClusterNodeTracker<FSSchedulerNode> clusterNodeTracker =
+        scheduler.getNodeTracker();
+
+    List<RMNode> rmNodes =
+        MockNodes.newNodes(2, 4000, Resource.newInstance(4096, 4));
+    for (RMNode rmNode : rmNodes) {
+      clusterNodeTracker.addNode(new FSSchedulerNode(rmNode, false));
+    }
+
+    // To simulate unallocated resource changes
+    new Thread() {
+      @Override
+      public void run() {
+        for (int j = 0; j < 100; j++) {
+          for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
+            int i = ThreadLocalRandom.current().nextInt(-30, 30);
+            synchronized (scheduler) {
+              node.deductUnallocatedResource(Resource.newInstance(i * 1024, i));
+            }
+          }
+        }
+      }
+    }.start();
+
+    try {
+      scheduler.continuousSchedulingAttempt();
+    } catch (Exception e) {
+      fail(e.getMessage());
+    }
   }
 
   @Test
@@ -334,8 +371,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
         true);
     ask1.add(request1);
     ask1.add(request2);
-    scheduler.allocate(id11, ask1, new ArrayList<ContainerId>(), null, null,
-        null, null);
+    scheduler.allocate(id11, ask1, null, new ArrayList<ContainerId>(), null, null,
+        NULL_UPDATE_REQUESTS);
 
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
@@ -352,6 +389,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     assertEquals(delayThresholdTimeMs, initSchedulerTime);
   }
 
+  @SuppressWarnings("deprecation")
   private void triggerSchedulingAttempt() throws InterruptedException {
     Thread.sleep(
         2 * scheduler.getConf().getContinuousSchedulingSleepMs());

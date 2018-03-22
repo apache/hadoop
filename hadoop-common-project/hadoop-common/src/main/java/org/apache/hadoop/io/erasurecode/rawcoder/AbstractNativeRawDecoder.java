@@ -19,9 +19,11 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -37,7 +39,12 @@ abstract class AbstractNativeRawDecoder extends RawErasureDecoder {
   }
 
   @Override
-  protected void doDecode(ByteBufferDecodingState decodingState) {
+  protected synchronized void doDecode(ByteBufferDecodingState decodingState)
+      throws IOException {
+    if (nativeCoder == 0) {
+      throw new IOException(String.format("%s closed",
+          getClass().getSimpleName()));
+    }
     int[] inputOffsets = new int[decodingState.inputs.length];
     int[] outputOffsets = new int[decodingState.outputs.length];
 
@@ -62,11 +69,13 @@ abstract class AbstractNativeRawDecoder extends RawErasureDecoder {
   protected abstract void performDecodeImpl(ByteBuffer[] inputs,
                                             int[] inputOffsets, int dataLen,
                                             int[] erased, ByteBuffer[] outputs,
-                                            int[] outputOffsets);
+                                            int[] outputOffsets)
+      throws IOException;
 
   @Override
-  protected void doDecode(ByteArrayDecodingState decodingState) {
-    LOG.warn("convertToByteBufferState is invoked, " +
+  protected void doDecode(ByteArrayDecodingState decodingState)
+      throws IOException {
+    PerformanceAdvisory.LOG.debug("convertToByteBufferState is invoked, " +
         "not efficiently. Please use direct ByteBuffer inputs/outputs");
 
     ByteBufferDecodingState bbdState = decodingState.convertToByteBufferState();
@@ -76,6 +85,11 @@ abstract class AbstractNativeRawDecoder extends RawErasureDecoder {
       bbdState.outputs[i].get(decodingState.outputs[i],
           decodingState.outputOffsets[i], decodingState.decodeLength);
     }
+  }
+
+  @Override
+  public boolean preferDirectBuffer() {
+    return true;
   }
 
   // To link with the underlying data structure in the native layer.

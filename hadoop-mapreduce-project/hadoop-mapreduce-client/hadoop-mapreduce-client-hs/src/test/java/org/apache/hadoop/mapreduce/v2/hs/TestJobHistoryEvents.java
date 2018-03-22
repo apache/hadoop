@@ -22,8 +22,6 @@ import java.util.Map;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -44,9 +42,12 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestJobHistoryEvents {
-  private static final Log LOG = LogFactory.getLog(TestJobHistoryEvents.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestJobHistoryEvents.class);
 
   @Test
   public void testHistoryEvents() throws Exception {

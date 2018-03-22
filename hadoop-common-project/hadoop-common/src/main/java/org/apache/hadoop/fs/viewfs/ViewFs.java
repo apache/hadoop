@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -156,7 +157,9 @@ public class ViewFs extends AbstractFileSystem {
   final Configuration config;
   InodeTree<AbstractFileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
-  
+  private ViewFileSystem.RenameStrategy renameStrategy =
+      ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT;
+
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
     return new AccessControlException( 
@@ -209,8 +212,7 @@ public class ViewFs extends AbstractFileSystem {
     fsState = new InodeTree<AbstractFileSystem>(conf, authority) {
 
       @Override
-      protected
-      AbstractFileSystem getTargetFileSystem(final URI uri)
+      protected AbstractFileSystem getTargetFileSystem(final URI uri)
         throws URISyntaxException, UnsupportedFileSystemException {
           String pathString = uri.getPath();
           if (pathString.isEmpty()) {
@@ -222,25 +224,39 @@ public class ViewFs extends AbstractFileSystem {
       }
 
       @Override
-      protected
-      AbstractFileSystem getTargetFileSystem(
+      protected AbstractFileSystem getTargetFileSystem(
           final INodeDir<AbstractFileSystem> dir) throws URISyntaxException {
         return new InternalDirOfViewFs(dir, creationTime, ugi, getUri());
       }
 
       @Override
-      protected
-      AbstractFileSystem getTargetFileSystem(URI[] mergeFsURIList)
+      protected AbstractFileSystem getTargetFileSystem(final String settings,
+          final URI[] mergeFsURIList)
           throws URISyntaxException, UnsupportedFileSystemException {
         throw new UnsupportedFileSystemException("mergefs not implemented yet");
         // return MergeFs.createMergeFs(mergeFsURIList, config);
       }
     };
+    renameStrategy = ViewFileSystem.RenameStrategy.valueOf(
+        conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+            ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT.toString()));
   }
 
   @Override
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     return LocalConfigKeys.getServerDefaults(); 
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(f), true);
+    } catch (FileNotFoundException fnfe) {
+      return LocalConfigKeys.getServerDefaults();
+    }
+    return res.targetFileSystem.getServerDefaults(res.remainingPath);
   }
 
   @Override
@@ -388,26 +404,32 @@ public class ViewFs extends AbstractFileSystem {
     if (res.isInternalDir()) {
       return fsIter;
     }
-    
-    return new RemoteIterator<FileStatus>() {
-      final RemoteIterator<FileStatus> myIter;
-      final ChRootedFs targetFs;
-      { // Init
-          myIter = fsIter;
-          targetFs = (ChRootedFs) res.targetFileSystem;
-      }
-      
+
+    return new WrappingRemoteIterator<FileStatus>(res, fsIter, f) {
       @Override
-      public boolean hasNext() throws IOException {
-        return myIter.hasNext();
+      public FileStatus getViewFsFileStatus(FileStatus stat, Path newPath) {
+        return new ViewFsFileStatus(stat, newPath);
       }
-      
+    };
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    final InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    final RemoteIterator<LocatedFileStatus> fsIter =
+        res.targetFileSystem.listLocatedStatus(res.remainingPath);
+    if (res.isInternalDir()) {
+      return fsIter;
+    }
+
+    return new WrappingRemoteIterator<LocatedFileStatus>(res, fsIter, f) {
       @Override
-      public FileStatus next() throws IOException {
-        FileStatus status =  myIter.next();
-        String suffix = targetFs.stripOutRoot(status.getPath());
-        return new ViewFsFileStatus(status, makeQualified(
-            suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix)));
+      public LocatedFileStatus getViewFsFileStatus(LocatedFileStatus stat,
+          Path newPath) {
+        return new ViewFsLocatedFileStatus(stat, newPath);
       }
     };
   }
@@ -476,37 +498,23 @@ public class ViewFs extends AbstractFileSystem {
               + " is readOnly");
     }
 
-    InodeTree.ResolveResult<AbstractFileSystem> resDst = 
+    InodeTree.ResolveResult<AbstractFileSystem> resDst =
                                 fsState.resolve(getUriPath(dst), false);
     if (resDst.isInternalDir()) {
       throw new AccessControlException(
           "Cannot Rename within internal dirs of mount table: dest=" + dst
               + " is readOnly");
     }
-    
-    /**
-    // Alternate 1: renames within same file system - valid but we disallow
-    // Alternate 2: (as described in next para - valid but we have disallowed it
-    //
-    // Note we compare the URIs. the URIs include the link targets. 
-    // hence we allow renames across mount links as long as the mount links
-    // point to the same target.
-    if (!resSrc.targetFileSystem.getUri().equals(
-              resDst.targetFileSystem.getUri())) {
-      throw new IOException("Renames across Mount points not supported");
-    }
-    */
-    
-    //
-    // Alternate 3 : renames ONLY within the the same mount links.
-    //
+    //Alternate 1: renames within same file system
+    URI srcUri = resSrc.targetFileSystem.getUri();
+    URI dstUri = resDst.targetFileSystem.getUri();
+    ViewFileSystem.verifyRenameStrategy(srcUri, dstUri,
+        resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
 
-    if (resSrc.targetFileSystem !=resDst.targetFileSystem) {
-      throw new IOException("Renames across Mount points not supported");
-    }
-    
-    resSrc.targetFileSystem.renameInternal(resSrc.remainingPath,
-      resDst.remainingPath, overwrite);
+    ChRootedFs srcFS = (ChRootedFs) resSrc.targetFileSystem;
+    ChRootedFs dstFS = (ChRootedFs) resDst.targetFileSystem;
+    srcFS.getMyFs().renameInternal(srcFS.fullPath(resSrc.remainingPath),
+        dstFS.fullPath(resDst.remainingPath), overwrite);
   }
 
   @Override
@@ -773,6 +781,42 @@ public class ViewFs extends AbstractFileSystem {
     return res.targetFileSystem.getStoragePolicy(res.remainingPath);
   }
 
+  /**
+   * Helper class to perform some transformation on results returned
+   * from a RemoteIterator.
+   */
+  private abstract class WrappingRemoteIterator<T extends FileStatus>
+      implements RemoteIterator<T> {
+    private final String resolvedPath;
+    private final ChRootedFs targetFs;
+    private final RemoteIterator<T> innerIter;
+    private final Path originalPath;
+
+    WrappingRemoteIterator(InodeTree.ResolveResult<AbstractFileSystem> res,
+        RemoteIterator<T> innerIter, Path originalPath) {
+      this.resolvedPath = res.resolvedPath;
+      this.targetFs = (ChRootedFs)res.targetFileSystem;
+      this.innerIter = innerIter;
+      this.originalPath = originalPath;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return innerIter.hasNext();
+    }
+
+    @Override
+    public T next() throws IOException {
+      T status =  innerIter.next();
+      String suffix = targetFs.stripOutRoot(status.getPath());
+      Path newPath = makeQualified(suffix.length() == 0 ? originalPath
+          : new Path(resolvedPath, suffix));
+      return getViewFsFileStatus(status, newPath);
+    }
+
+    protected abstract T getViewFsFileStatus(T status, Path newPath);
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * ie internal dir of the mount table.
@@ -855,13 +899,13 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       // look up i internalDirs children - ignore first Slash
       INode<AbstractFileSystem> inode =
-        theInternalDir.children.get(f.toUri().toString().substring(1)); 
+          theInternalDir.getChildren().get(f.toUri().toString().substring(1));
       if (inode == null) {
         throw new FileNotFoundException(
             "viewFs internal mount table - missing entry:" + f);
       }
       FileStatus result;
-      if (inode instanceof INodeLink) {
+      if (inode.isLink()) {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
         result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
@@ -884,8 +928,14 @@ public class ViewFs extends AbstractFileSystem {
     }
 
     @Override
+    @Deprecated
     public FsServerDefaults getServerDefaults() throws IOException {
-      throw new IOException("FsServerDefaults not implemented yet");
+      return LocalConfigKeys.getServerDefaults();
+    }
+
+    @Override
+    public FsServerDefaults getServerDefaults(final Path f) throws IOException {
+      return LocalConfigKeys.getServerDefaults();
     }
 
     @Override
@@ -897,14 +947,14 @@ public class ViewFs extends AbstractFileSystem {
     public FileStatus[] listStatus(final Path f) throws AccessControlException,
         IOException {
       checkPathIsSlash(f);
-      FileStatus[] result = new FileStatus[theInternalDir.children.size()];
+      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
-      for (Entry<String, INode<AbstractFileSystem>> iEntry : 
-                                          theInternalDir.children.entrySet()) {
+      for (Entry<String, INode<AbstractFileSystem>> iEntry :
+          theInternalDir.getChildren().entrySet()) {
         INode<AbstractFileSystem> inode = iEntry.getValue();
 
         
-        if (inode instanceof INodeLink ) {
+        if (inode.isLink()) {
           INodeLink<AbstractFileSystem> link = 
             (INodeLink<AbstractFileSystem>) inode;
 
@@ -929,7 +979,7 @@ public class ViewFs extends AbstractFileSystem {
     public void mkdir(final Path dir, final FsPermission permission,
         final boolean createParent) throws AccessControlException,
         FileAlreadyExistsException {
-      if (theInternalDir.isRoot && dir == null) {
+      if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       throw readOnlyMountTable("mkdir", dir);

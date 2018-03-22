@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -32,9 +36,10 @@ public class SchedulingMonitor extends AbstractService {
   private final SchedulingEditPolicy scheduleEditPolicy;
   private static final Log LOG = LogFactory.getLog(SchedulingMonitor.class);
 
-  //thread which runs periodically to see the last time since a heartbeat is
-  //received.
-  private Thread checkerThread;
+  // ScheduledExecutorService which schedules the PreemptionChecker to run
+  // periodically.
+  private ScheduledExecutorService ses;
+  private ScheduledFuture<?> handler;
   private volatile boolean stopped;
   private long monitorInterval;
   private RMContext rmContext;
@@ -52,26 +57,39 @@ public class SchedulingMonitor extends AbstractService {
   }
 
   public void serviceInit(Configuration conf) throws Exception {
-    scheduleEditPolicy.init(conf, rmContext,
-        (PreemptableResourceScheduler) rmContext.getScheduler());
+    LOG.info("Initializing SchedulingMonitor=" + getName());
+    scheduleEditPolicy.init(conf, rmContext, rmContext.getScheduler());
     this.monitorInterval = scheduleEditPolicy.getMonitoringInterval();
     super.serviceInit(conf);
   }
 
   @Override
   public void serviceStart() throws Exception {
+    LOG.info("Starting SchedulingMonitor=" + getName());
     assert !stopped : "starting when already stopped";
-    checkerThread = new Thread(new PreemptionChecker());
-    checkerThread.setName(getName());
-    checkerThread.start();
+    ses = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+      public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setName(getName());
+        return t;
+      }
+    });
+    schedulePreemptionChecker();
     super.serviceStart();
+  }
+
+  private void schedulePreemptionChecker() {
+    handler = ses.scheduleAtFixedRate(new PolicyInvoker(),
+        0, monitorInterval, TimeUnit.MILLISECONDS);
   }
 
   @Override
   public void serviceStop() throws Exception {
     stopped = true;
-    if (checkerThread != null) {
-      checkerThread.interrupt();
+    if (handler != null) {
+      LOG.info("Stop " + getName());
+      handler.cancel(true);
+      ses.shutdown();
     }
     super.serviceStop();
   }
@@ -81,27 +99,22 @@ public class SchedulingMonitor extends AbstractService {
     scheduleEditPolicy.editSchedule();
   }
 
-  private class PreemptionChecker implements Runnable {
+  private class PolicyInvoker implements Runnable {
     @Override
     public void run() {
-      while (!stopped && !Thread.currentThread().isInterrupted()) {
-        try {
-          //invoke the preemption policy at a regular pace
-          //the policy will generate preemption or kill events
-          //managed by the dispatcher
+      try {
+        if (monitorInterval != scheduleEditPolicy.getMonitoringInterval()) {
+          handler.cancel(true);
+          monitorInterval = scheduleEditPolicy.getMonitoringInterval();
+          schedulePreemptionChecker();
+        } else {
           invokePolicy();
-        } catch (YarnRuntimeException e) {
-          LOG.error("YarnRuntimeException raised while executing preemption"
-              + " checker, skip this run..., exception=", e);
         }
-
-        // Wait before next run
-        try {
-          Thread.sleep(monitorInterval);
-        } catch (InterruptedException e) {
-          LOG.info(getName() + " thread interrupted");
-          break;
-        }
+      } catch (Throwable t) {
+        // The preemption monitor does not alter structures nor do structures
+        // persist across invocations. Therefore, log, skip, and retry.
+        LOG.error("Exception raised while executing preemption"
+            + " checker, skip this run..., exception=", t);
       }
     }
   }

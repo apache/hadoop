@@ -135,7 +135,7 @@ class ChRootedFileSystem extends FilterFileSystem {
   /**
    * Strip out the root from the path.
    * @param p - fully qualified path p
-   * @return -  the remaining path  without the begining /
+   * @return -  the remaining path  without the beginning /
    * @throws IOException if the p is not prefixed with root
    */
   String stripOutRoot(final Path p) throws IOException {
@@ -231,6 +231,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   public FileStatus getFileStatus(final Path f) 
       throws IOException {
     return super.getFileStatus(fullPath(f));
+  }
+
+  @Override
+  public Path getLinkTarget(Path f) throws IOException {
+    return super.getLinkTarget(fullPath(f));
   }
 
   @Override

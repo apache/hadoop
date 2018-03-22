@@ -29,11 +29,11 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
 
@@ -47,7 +47,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_S
 public class StaticUserWebFilter extends FilterInitializer {
   static final String DEPRECATED_UGI_KEY = "dfs.web.ugi";
 
-  private static final Log LOG = LogFactory.getLog(StaticUserWebFilter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StaticUserWebFilter.class);
 
   static class User implements Principal {
     private final String name;

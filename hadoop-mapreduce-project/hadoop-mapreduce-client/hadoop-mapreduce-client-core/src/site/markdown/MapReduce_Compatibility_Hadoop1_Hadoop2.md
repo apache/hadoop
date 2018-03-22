@@ -15,6 +15,8 @@
 Apache Hadoop MapReduce - Migrating from Apache Hadoop 1.x to Apache Hadoop 2.x
 ===============================================================================
 
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
+
 Introduction
 ------------
 

@@ -31,7 +31,7 @@ public class RMErrorsAndWarningsPage extends RmView {
   }
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String title = "Errors and Warnings in the ResourceManager";
     setTitle(title);

@@ -61,7 +61,7 @@ public class DataNodeLayoutVersion {
    * </li>
    * </ul>
    */
-  public static enum Feature implements LayoutFeature {
+  public enum Feature implements LayoutFeature {
     FIRST_LAYOUT(-55, -53, "First datanode layout", false),
     BLOCKID_BASED_LAYOUT(-56,
         "The block ID of a finalized block uniquely determines its position " +

@@ -99,7 +99,7 @@ public class CapacitySchedulerPreemptionUtils {
           }
 
           deductPreemptableResourcePerApp(context, tq.totalPartitionResource,
-              tas, res, partition);
+              tas, res);
         }
       }
     }
@@ -108,10 +108,10 @@ public class CapacitySchedulerPreemptionUtils {
   private static void deductPreemptableResourcePerApp(
       CapacitySchedulerPreemptionContext context,
       Resource totalPartitionResource, Collection<TempAppPerPartition> tas,
-      Resource res, String partition) {
+      Resource res) {
     for (TempAppPerPartition ta : tas) {
       ta.deductActuallyToBePreempted(context.getResourceCalculator(),
-          totalPartitionResource, res, partition);
+          totalPartitionResource, res);
     }
   }
 
@@ -156,8 +156,9 @@ public class CapacitySchedulerPreemptionUtils {
     if (null != toObtainByPartition
         && Resources.greaterThan(rc, clusterResource, toObtainByPartition,
             Resources.none())
-        && Resources.fitsIn(rc, clusterResource,
-            rmContainer.getAllocatedResource(), totalPreemptionAllowed)) {
+        && Resources.fitsIn(rc, rmContainer.getAllocatedResource(),
+            totalPreemptionAllowed)
+        && !Resources.isAnyMajorResourceZero(rc, toObtainByPartition)) {
       Resources.subtractFrom(toObtainByPartition,
           rmContainer.getAllocatedResource());
       Resources.subtractFrom(totalPreemptionAllowed,

@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -56,6 +59,7 @@ import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -68,6 +72,7 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineC
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -98,10 +103,12 @@ public class TestSystemMetricsPublisherForV2 {
           new Path(testRootDir.getAbsolutePath()), true);
     }
 
+    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     rmAppsMapInContext = new ConcurrentHashMap<ApplicationId, RMApp>();
     when(rmContext.getRMApps()).thenReturn(rmAppsMapInContext);
-    rmTimelineCollectorManager = new RMTimelineCollectorManager(rmContext);
+    when(rm.getRMContext()).thenReturn(rmContext);
+    rmTimelineCollectorManager = new RMTimelineCollectorManager(rm);
     when(rmContext.getRMTimelineCollectorManager()).thenReturn(
         rmTimelineCollectorManager);
 
@@ -113,7 +120,8 @@ public class TestSystemMetricsPublisherForV2 {
 
     dispatcher.init(conf);
     dispatcher.start();
-    metricsPublisher = new TimelineServiceV2Publisher(rmContext) {
+    metricsPublisher =
+        new TimelineServiceV2Publisher(rmTimelineCollectorManager) {
       @Override
       protected Dispatcher getDispatcher() {
         return dispatcher;
@@ -162,7 +170,7 @@ public class TestSystemMetricsPublisherForV2 {
   public void testSystemMetricPublisherInitialization() {
     @SuppressWarnings("resource")
     TimelineServiceV2Publisher publisher =
-        new TimelineServiceV2Publisher(mock(RMContext.class));
+        new TimelineServiceV2Publisher(mock(RMTimelineCollectorManager.class));
     try {
       Configuration conf = getTimelineV2Conf();
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
@@ -174,7 +182,8 @@ public class TestSystemMetricsPublisherForV2 {
 
       publisher.stop();
 
-      publisher = new TimelineServiceV2Publisher(mock(RMContext.class));
+      publisher = new TimelineServiceV2Publisher(
+          mock(RMTimelineCollectorManager.class));
       conf = getTimelineV2Conf();
       publisher.init(conf);
       assertTrue("Expected to have registered event handlers and set ready to "
@@ -211,7 +220,8 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8);
+    verifyEntity(
+        appFile, 3, ApplicationMetricsConstants.CREATED_EVENT_TYPE, 8, 0);
   }
 
   @Test(timeout = 10000)
@@ -246,7 +256,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE,
-        0);
+        0, TimelineServiceHelper.invertLong(appAttemptId.getAttemptId()));
   }
 
   @Test(timeout = 10000)
@@ -278,7 +288,7 @@ public class TestSystemMetricsPublisherForV2 {
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
     verifyEntity(appFile, 2,
-        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0);
+        ContainerMetricsConstants.CREATED_IN_RM_EVENT_TYPE, 0, 0);
   }
 
   private RMApp createAppAndRegister(ApplicationId appId) {
@@ -292,7 +302,8 @@ public class TestSystemMetricsPublisherForV2 {
   }
 
   private static void verifyEntity(File entityFile, long expectedEvents,
-      String eventForCreatedTime, long expectedMetrics) throws IOException {
+      String eventForCreatedTime, long expectedMetrics, long idPrefix)
+      throws IOException {
     BufferedReader reader = null;
     String strLine;
     long count = 0;
@@ -304,6 +315,7 @@ public class TestSystemMetricsPublisherForV2 {
           TimelineEntity entity = FileSystemTimelineReaderImpl.
               getTimelineRecordFromJSON(strLine.trim(), TimelineEntity.class);
           metricsCount = entity.getMetrics().size();
+          assertEquals(idPrefix, entity.getIdPrefix());
           for (TimelineEvent event : entity.getEvents()) {
             if (event.getId().equals(eventForCreatedTime)) {
               assertTrue(entity.getCreatedTime() > 0);
@@ -348,15 +360,20 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getDiagnostics()).thenReturn(
         new StringBuilder("test diagnostics info"));
     RMAppAttempt appAttempt = mock(RMAppAttempt.class);
-    when(appAttempt.getAppAttemptId()).thenReturn(
-        ApplicationAttemptId.newInstance(appId, 1));
+    when(appAttempt.getAppAttemptId())
+        .thenReturn(ApplicationAttemptId.newInstance(appId, 1));
     when(app.getCurrentAppAttempt()).thenReturn(appAttempt);
-    when(app.getFinalApplicationStatus()).thenReturn(
-        FinalApplicationStatus.UNDEFINED);
+    when(app.getFinalApplicationStatus())
+        .thenReturn(FinalApplicationStatus.UNDEFINED);
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    resourceSecondsMap
+        .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
+    resourceSecondsMap
+        .put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, Integer.MAX_VALUE,
-            Long.MAX_VALUE, 0, 0));
-    when(app.getApplicationTags()).thenReturn(Collections.<String> emptySet());
+        new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceSecondsMap,
+            new HashMap<>()));
+    when(app.getApplicationTags()).thenReturn(Collections.<String>emptySet());
     ApplicationSubmissionContext appSubmissionContext =
         mock(ApplicationSubmissionContext.class);
     when(appSubmissionContext.getPriority())
@@ -389,6 +406,7 @@ public class TestSystemMetricsPublisherForV2 {
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
     when(appAttempt.getOriginalTrackingUrl()).thenReturn(
         "test original tracking url");
+    when(appAttempt.getStartTime()).thenReturn(200L);
     return appAttempt;
   }
 

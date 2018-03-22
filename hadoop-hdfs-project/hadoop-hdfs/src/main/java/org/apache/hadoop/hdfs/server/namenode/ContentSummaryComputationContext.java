@@ -20,11 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.AccessControlException;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -39,9 +46,12 @@ public class ContentSummaryComputationContext {
   private long yieldCount = 0;
   private long sleepMilliSec = 0;
   private int sleepNanoSec = 0;
-  private Set<INode> includedNodes = new HashSet<>();
-  private Set<INode> deletedSnapshottedNodes = new HashSet<>();
 
+  public static final String REPLICATED = "Replicated";
+  public static final Log LOG = LogFactory
+      .getLog(ContentSummaryComputationContext.class);
+
+  private FSPermissionChecker pc;
   /**
    * Constructor
    *
@@ -53,14 +63,21 @@ public class ContentSummaryComputationContext {
    */
   public ContentSummaryComputationContext(FSDirectory dir,
       FSNamesystem fsn, long limitPerRun, long sleepMicroSec) {
+    this(dir, fsn, limitPerRun, sleepMicroSec, null);
+  }
+
+  public ContentSummaryComputationContext(FSDirectory dir,
+      FSNamesystem fsn, long limitPerRun, long sleepMicroSec,
+      FSPermissionChecker pc) {
     this.dir = dir;
     this.fsn = fsn;
     this.limitPerRun = limitPerRun;
     this.nextCountLimit = limitPerRun;
-    setCounts(new ContentCounts.Builder().build());
-    setSnapshotCounts(new ContentCounts.Builder().build());
+    this.counts = new ContentCounts.Builder().build();
+    this.snapshotCounts = new ContentCounts.Builder().build();
     this.sleepMilliSec = sleepMicroSec/1000;
     this.sleepNanoSec = (int)((sleepMicroSec%1000)*1000);
+    this.pc = pc;
   }
 
   /** Constructor for blocking computation. */
@@ -88,7 +105,6 @@ public class ContentSummaryComputationContext {
     }
 
     // Have we reached the limit?
-    ContentCounts counts = getCounts();
     long currentCount = counts.getFileCount() +
         counts.getSymlinkCount() +
         counts.getDirectoryCount() +
@@ -130,20 +146,12 @@ public class ContentSummaryComputationContext {
   }
 
   /** Get the content counts */
-  public synchronized ContentCounts getCounts() {
+  public ContentCounts getCounts() {
     return counts;
-  }
-
-  private synchronized void setCounts(ContentCounts counts) {
-    this.counts = counts;
   }
 
   public ContentCounts getSnapshotCounts() {
     return snapshotCounts;
-  }
-
-  private void setSnapshotCounts(ContentCounts snapshotCounts) {
-    this.snapshotCounts = snapshotCounts;
   }
 
   public BlockStoragePolicySuite getBlockStoragePolicySuite() {
@@ -154,76 +162,49 @@ public class ContentSummaryComputationContext {
         fsn.getBlockManager().getStoragePolicySuite();
   }
 
-  /**
-   * If the node is an INodeReference, resolves it to the actual inode.
-   * Snapshot diffs represent renamed / moved files as different
-   * INodeReferences, but the underlying INode it refers to is consistent.
-   *
-   * @param node
-   * @return The referred INode if there is one, else returns the input
-   * unmodified.
-   */
-  private INode resolveINodeReference(INode node) {
-    if (node.isReference() && node instanceof INodeReference) {
-      return ((INodeReference)node).getReferredINode();
-    }
-    return node;
-  }
-
-  /**
-   * Reports that a node is about to be included in this summary. Can be used
-   * either to simply report that a node has been including, or check whether
-   * a node has already been included.
-   *
-   * @param node
-   * @return true if node has already been included
-   */
-  public boolean nodeIncluded(INode node) {
-    INode resolvedNode = resolveINodeReference(node);
-    synchronized (includedNodes) {
-      if (!includedNodes.contains(resolvedNode)) {
-        includedNodes.add(resolvedNode);
-        return false;
+  /** Get the erasure coding policy. */
+  public String getErasureCodingPolicyName(INode inode) {
+    if (inode.isFile()) {
+      INodeFile iNodeFile = inode.asFile();
+      if (iNodeFile.isStriped()) {
+        byte ecPolicyId = iNodeFile.getErasureCodingPolicyID();
+        return fsn.getErasureCodingPolicyManager()
+            .getByID(ecPolicyId).getName();
+      } else {
+        return REPLICATED;
       }
     }
-    return true;
-  }
-
-  /**
-   * Schedules a node that is listed as DELETED in a snapshot's diff to be
-   * included in the summary at the end of computation. See
-   * {@link #tallyDeletedSnapshottedINodes()} for more context.
-   *
-   * @param node
-   */
-  public void reportDeletedSnapshottedNode(INode node) {
-    deletedSnapshottedNodes.add(node);
-  }
-
-  /**
-   * Finalizes the computation by including all nodes that were reported as
-   * deleted by a snapshot but have not been already including due to other
-   * references.
-   * <p>
-   * Nodes that get renamed are listed in the snapshot's diff as both DELETED
-   * under the old name and CREATED under the new name. The computation
-   * relies on nodes to report themselves as being included (via
-   * {@link #nodeIncluded(INode)} as the only reliable way to determine which
-   * nodes were renamed within the tree being summarized and which were
-   * removed (either by deletion or being renamed outside of the tree).
-   */
-  public synchronized void tallyDeletedSnapshottedINodes() {
-    /* Temporarily create a new counts object so these results can then be
-    added to both counts and snapshotCounts */
-    ContentCounts originalCounts = getCounts();
-    setCounts(new ContentCounts.Builder().build());
-    for (INode node : deletedSnapshottedNodes) {
-      if (!nodeIncluded(node)) {
-        node.computeContentSummary(Snapshot.CURRENT_STATE_ID, this);
-      }
+    if (inode.isSymlink()) {
+      return "";
     }
-    originalCounts.addContents(getCounts());
-    snapshotCounts.addContents(getCounts());
-    setCounts(originalCounts);
+    try {
+      final XAttrFeature xaf = inode.getXAttrFeature();
+      if (xaf != null) {
+        XAttr xattr = xaf.getXAttr(XATTR_ERASURECODING_POLICY);
+        if (xattr != null) {
+          ByteArrayInputStream bins =
+              new ByteArrayInputStream(xattr.getValue());
+          DataInputStream din = new DataInputStream(bins);
+          String ecPolicyName = WritableUtils.readString(din);
+          return dir.getFSNamesystem()
+              .getErasureCodingPolicyManager()
+              .getEnabledPolicyByName(ecPolicyName)
+              .getName();
+        }
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Encountered error getting ec policy for "
+          + inode.getFullPathName(), ioe);
+      return "";
+    }
+    return "";
+  }
+
+  void checkPermission(INodeDirectory inode, int snapshotId, FsAction access)
+      throws AccessControlException {
+    if (dir != null && dir.isPermissionEnabled()
+        && pc != null && !pc.isSuperUser()) {
+      pc.checkPermission(inode, snapshotId, access);
+    }
   }
 }

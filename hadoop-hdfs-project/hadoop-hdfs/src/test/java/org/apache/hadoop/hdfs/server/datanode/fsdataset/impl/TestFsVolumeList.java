@@ -101,7 +101,7 @@ public class TestFsVolumeList {
     }
     for (int i = 0; i < 10; i++) {
       try (FsVolumeReference ref =
-          volumeList.getNextVolume(StorageType.DEFAULT, 128)) {
+          volumeList.getNextVolume(StorageType.DEFAULT, null, 128)) {
         // volume No.2 will not be chosen.
         assertNotEquals(ref.getVolume(), volumes.get(1));
       }

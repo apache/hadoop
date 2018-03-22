@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.azure;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +32,8 @@ import com.microsoft.azure.storage.StorageErrorCodeStrings;
 import com.microsoft.azure.storage.StorageException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FSExceptionMessages;
+
 /**
  * Utility class that has helper methods.
  *
@@ -92,6 +97,23 @@ final class NativeAzureFileSystemHelper {
   }
 
   /*
+   * Determines if a conditional request failed because the blob already
+   * exists.
+   *
+   * @param e - the storage exception thrown by the failed operation.
+   *
+   * @return true if a conditional request failed because the blob already
+   * exists; otherwise, returns false.
+   */
+  static boolean isBlobAlreadyExistsConflict(StorageException e) {
+    if (e.getHttpStatusCode() == HttpURLConnection.HTTP_CONFLICT
+        && StorageErrorCodeStrings.BLOB_ALREADY_EXISTS.equals(e.getErrorCode())) {
+      return true;
+    }
+    return false;
+  }
+
+  /*
    * Helper method that logs stack traces from all live threads.
    */
   public static void logAllLiveStackTraces() {
@@ -102,6 +124,30 @@ final class NativeAzureFileSystemHelper {
       for (int j = 0; j < trace.length; j++) {
         LOG.debug("\tat " + trace[j]);
       }
+    }
+  }
+
+  /**
+   * Validation code, based on
+   * {@code FSInputStream.validatePositionedReadArgs()}.
+   * @param buffer destination buffer
+   * @param offset offset within the buffer
+   * @param length length of bytes to read
+   * @throws EOFException if the position is negative
+   * @throws IndexOutOfBoundsException if there isn't space for the amount of
+   * data requested.
+   * @throws IllegalArgumentException other arguments are invalid.
+   */
+  static void validateReadArgs(byte[] buffer, int offset, int length)
+      throws EOFException {
+    Preconditions.checkArgument(length >= 0, "length is negative");
+    Preconditions.checkArgument(buffer != null, "Null buffer");
+    if (buffer.length - offset < length) {
+      throw new IndexOutOfBoundsException(
+          FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER
+              + ": request length=" + length
+              + ", with offset =" + offset
+              + "; buffer capacity =" + (buffer.length - offset));
     }
   }
 }

@@ -63,7 +63,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
     conf = createJobConf();
     localConf = createJobConf();
-    localConf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
+    localConf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPARATOR, " ");
   }
 
   public void configure(String keySpec, int expect) throws Exception {
@@ -85,7 +85,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     conf.setOutputKeyComparatorClass(KeyFieldBasedComparator.class);
     conf.setKeyFieldComparatorOptions(keySpec);
     conf.setKeyFieldPartitionerOptions("-k1.1,1.1");
-    conf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
+    conf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPARATOR, " ");
     conf.setMapperClass(InverseMapper.class);
     conf.setReducerClass(IdentityReducer.class);
     if (!fs.mkdirs(testdir)) {

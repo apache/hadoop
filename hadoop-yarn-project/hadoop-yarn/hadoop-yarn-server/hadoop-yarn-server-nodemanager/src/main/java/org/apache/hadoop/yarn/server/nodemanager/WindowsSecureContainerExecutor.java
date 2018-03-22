@@ -702,7 +702,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
     command.addAll(ContainerLocalizer.getJavaOpts(getConf()));
 
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        localDirs);
+        localDirs, super.getConf());
 
     String cmdLine = StringUtils.join(command, " ");
 

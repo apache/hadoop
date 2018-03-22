@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 /*
  * A system administrator can tune the balancer bandwidth parameter
- * (dfs.balance.bandwidthPerSec) dynamically by calling
+ * (dfs.datanode.balance.bandwidthPerSec) dynamically by calling
  * "dfsadmin -setBalanacerBandwidth newbandwidth".
  * This class is to define the command which sends the new bandwidth value to
  * each datanode.

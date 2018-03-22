@@ -51,7 +51,9 @@ public class TestBlockPoolManager {
     bpm = new BlockPoolManager(mockDN){
 
       @Override
-      protected BPOfferService createBPOS(List<InetSocketAddress> nnAddrs,
+      protected BPOfferService createBPOS(
+          final String nameserviceId,
+          List<InetSocketAddress> nnAddrs,
           List<InetSocketAddress> lifelineNnAddrs) {
         final int idx = mockIdx++;
         doLog("create #" + idx);
@@ -98,7 +100,7 @@ public class TestBlockPoolManager {
   public void testSimpleSingleNS() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY,
-        "hdfs://mock1:9820");
+        "hdfs://mock1:8020");
     bpm.refreshNamenodes(conf);
     assertEquals("create #1\n", log.toString());
   }
@@ -108,8 +110,8 @@ public class TestBlockPoolManager {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES,
         "ns1,ns2");
-    addNN(conf, "ns1", "mock1:9820");
-    addNN(conf, "ns2", "mock1:9820");
+    addNN(conf, "ns1", "mock1:8020");
+    addNN(conf, "ns2", "mock1:8020");
     bpm.refreshNamenodes(conf);
     assertEquals(
         "create #1\n" +
@@ -139,9 +141,9 @@ public class TestBlockPoolManager {
   public void testInternalNameService() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1,ns2,ns3");
-    addNN(conf, "ns1", "mock1:9820");
-    addNN(conf, "ns2", "mock1:9820");
-    addNN(conf, "ns3", "mock1:9820");
+    addNN(conf, "ns1", "mock1:8020");
+    addNN(conf, "ns2", "mock1:8020");
+    addNN(conf, "ns3", "mock1:8020");
     conf.set(DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY, "ns1");
     bpm.refreshNamenodes(conf);
     assertEquals("create #1\n", log.toString());

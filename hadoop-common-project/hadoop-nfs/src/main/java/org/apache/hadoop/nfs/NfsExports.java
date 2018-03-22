@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +33,8 @@ import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides functionality for loading and checking the mapping 
@@ -64,7 +64,7 @@ public class NfsExports {
     return exports;
   }
   
-  public static final Log LOG = LogFactory.getLog(NfsExports.class);
+  public static final Logger LOG = LoggerFactory.getLogger(NfsExports.class);
   
   // only support IPv4 now
   private static final String IP_ADDRESS = 

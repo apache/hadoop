@@ -715,6 +715,37 @@ public class TestActiveStandbyElector {
       }
     }
   }
+
+  /**
+   * Test that ACLs are set on parent zNode even if the node already exists.
+   */
+  @Test
+  public void testParentZNodeACLs() throws Exception {
+    KeeperException ke = new KeeperException(Code.NODEEXISTS) {
+      @Override
+      public Code code() {
+        return super.code();
+      }
+    };
+
+    Mockito.when(mockZK.create(Mockito.anyString(), Mockito.eq(new byte[]{}),
+        Mockito.anyListOf(ACL.class),
+        Mockito.eq(CreateMode.PERSISTENT))).thenThrow(ke);
+
+    elector.ensureParentZNode();
+
+    StringBuilder prefix = new StringBuilder();
+    for (String part : ZK_PARENT_NAME.split("/")) {
+      if (part.isEmpty()) continue;
+      prefix.append("/").append(part);
+      if (!"/".equals(prefix.toString())) {
+        Mockito.verify(mockZK).getACL(Mockito.eq(prefix.toString()),
+            Mockito.eq(new Stat()));
+        Mockito.verify(mockZK).setACL(Mockito.eq(prefix.toString()),
+            Mockito.eq(Ids.OPEN_ACL_UNSAFE), Mockito.anyInt());
+      }
+    }
+  }
   
   /**
    * Test for a bug encountered during development of HADOOP-8163:

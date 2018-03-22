@@ -241,7 +241,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     }
   }
 
-  static enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
+  enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
 
   static class RandomMapOutput extends Mapper<Text,Text,Text,Text> {
     StringBuilder sentence = new StringBuilder();

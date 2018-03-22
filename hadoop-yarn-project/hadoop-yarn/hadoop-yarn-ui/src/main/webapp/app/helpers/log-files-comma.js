@@ -27,19 +27,26 @@ export default Ember.Helper.helper(function(params,hash) {
     return "";
   }
   var logFilesLen = logFiles.length;
-  if (logFilesLen == 0) {
+  if (logFilesLen === 0) {
     return "";
   }
   var nodeId = hash.nodeId;
   var nodeAddr = hash.nodeAddr;
   var containerId = hash.containerId;
   var html = '<td>';
-  var logFilesCommaSeparated = "";
   for (var i = 0; i < logFilesLen; i++) {
+    var logFileName = "";
+    if (logFiles[i]) {
+      if (typeof logFiles[i] === "object" && logFiles[i].containerLogFiles) {
+        logFileName = logFiles[i].containerLogFiles;
+      } else if (typeof logFiles[i] === "string") {
+        logFileName = logFiles[i];
+      }
+    }
     html = html + '<a href="#/yarn-container-log/' + nodeId + '/' +
-        nodeAddr + '/' + containerId + '/' + logFiles[i] + '">' + logFiles[i] +
+        nodeAddr + '/' + containerId + '/' + logFileName + '">' + logFileName +
         '</a>';
-    if (i != logFilesLen - 1) {
+    if (i !== logFilesLen - 1) {
       html = html + ",";
     }
   }

@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -39,8 +40,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -54,6 +53,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *  File System based implementation for TimelineReader. This implementation may
@@ -64,8 +65,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class FileSystemTimelineReaderImpl extends AbstractService
     implements TimelineReader {
 
-  private static final Log LOG =
-      LogFactory.getLog(FileSystemTimelineReaderImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemTimelineReaderImpl.class);
 
   private String rootPath;
   private static final String ENTITIES_DIR = "entities";
@@ -278,69 +279,74 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             }
           }
         );
-    for (File entityFile : dir.listFiles()) {
-      if (!entityFile.getName().contains(TIMELINE_SERVICE_STORAGE_EXTENSION)) {
-        continue;
-      }
-      try (BufferedReader reader =
-               new BufferedReader(
-                   new InputStreamReader(
-                       new FileInputStream(
-                           entityFile), Charset.forName("UTF-8")))) {
-        TimelineEntity entity = readEntityFromFile(reader);
-        if (!entity.getType().equals(entityType)) {
-          continue;
+    if (dir != null) {
+      File[] files = dir.listFiles();
+      if (files != null) {
+        for (File entityFile : files) {
+          if (!entityFile.getName()
+              .contains(TIMELINE_SERVICE_STORAGE_EXTENSION)) {
+            continue;
+          }
+          try (BufferedReader reader = new BufferedReader(
+              new InputStreamReader(new FileInputStream(entityFile),
+                  Charset.forName("UTF-8")))) {
+            TimelineEntity entity = readEntityFromFile(reader);
+            if (!entity.getType().equals(entityType)) {
+              continue;
+            }
+            if (!isTimeInRange(entity.getCreatedTime(),
+                filters.getCreatedTimeBegin(),
+                filters.getCreatedTimeEnd())) {
+              continue;
+            }
+            if (filters.getRelatesTo() != null &&
+                !filters.getRelatesTo().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchRelatesTo(entity,
+                    filters.getRelatesTo())) {
+              continue;
+            }
+            if (filters.getIsRelatedTo() != null &&
+                !filters.getIsRelatedTo().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchIsRelatedTo(entity,
+                    filters.getIsRelatedTo())) {
+              continue;
+            }
+            if (filters.getInfoFilters() != null &&
+                !filters.getInfoFilters().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchInfoFilters(entity,
+                    filters.getInfoFilters())) {
+              continue;
+            }
+            if (filters.getConfigFilters() != null &&
+                !filters.getConfigFilters().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchConfigFilters(entity,
+                    filters.getConfigFilters())) {
+              continue;
+            }
+            if (filters.getMetricFilters() != null &&
+                !filters.getMetricFilters().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchMetricFilters(entity,
+                    filters.getMetricFilters())) {
+              continue;
+            }
+            if (filters.getEventFilters() != null &&
+                !filters.getEventFilters().getFilterList().isEmpty() &&
+                !TimelineStorageUtils.matchEventFilters(entity,
+                    filters.getEventFilters())) {
+              continue;
+            }
+            TimelineEntity entityToBeReturned = createEntityToBeReturned(
+                entity, dataToRetrieve.getFieldsToRetrieve());
+            Set<TimelineEntity> entitiesCreatedAtSameTime =
+                sortedEntities.get(entityToBeReturned.getCreatedTime());
+            if (entitiesCreatedAtSameTime == null) {
+              entitiesCreatedAtSameTime = new HashSet<TimelineEntity>();
+            }
+            entitiesCreatedAtSameTime.add(entityToBeReturned);
+            sortedEntities.put(entityToBeReturned.getCreatedTime(),
+                entitiesCreatedAtSameTime);
+          }
         }
-        if (!isTimeInRange(entity.getCreatedTime(),
-            filters.getCreatedTimeBegin(), filters.getCreatedTimeEnd())) {
-          continue;
-        }
-        if (filters.getRelatesTo() != null &&
-            !filters.getRelatesTo().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchRelatesTo(entity,
-            filters.getRelatesTo())) {
-          continue;
-        }
-        if (filters.getIsRelatedTo()  != null &&
-            !filters.getIsRelatedTo().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchIsRelatedTo(entity,
-            filters.getIsRelatedTo())) {
-          continue;
-        }
-        if (filters.getInfoFilters() != null &&
-            !filters.getInfoFilters().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchInfoFilters(entity,
-            filters.getInfoFilters())) {
-          continue;
-        }
-        if (filters.getConfigFilters() != null &&
-            !filters.getConfigFilters().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchConfigFilters(entity,
-            filters.getConfigFilters())) {
-          continue;
-        }
-        if (filters.getMetricFilters() != null &&
-            !filters.getMetricFilters().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchMetricFilters(entity,
-            filters.getMetricFilters())) {
-          continue;
-        }
-        if (filters.getEventFilters() != null &&
-            !filters.getEventFilters().getFilterList().isEmpty() &&
-            !TimelineStorageUtils.matchEventFilters(entity,
-            filters.getEventFilters())) {
-          continue;
-        }
-        TimelineEntity entityToBeReturned = createEntityToBeReturned(
-            entity, dataToRetrieve.getFieldsToRetrieve());
-        Set<TimelineEntity> entitiesCreatedAtSameTime =
-            sortedEntities.get(entityToBeReturned.getCreatedTime());
-        if (entitiesCreatedAtSameTime == null) {
-          entitiesCreatedAtSameTime = new HashSet<TimelineEntity>();
-        }
-        entitiesCreatedAtSameTime.add(entityToBeReturned);
-        sortedEntities.put(
-            entityToBeReturned.getCreatedTime(), entitiesCreatedAtSameTime);
       }
     }
 
@@ -402,5 +408,25 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             File.separator + context.getAppId() + File.separator +
             context.getEntityType());
     return getEntities(dir, context.getEntityType(), filters, dataToRetrieve);
+  }
+
+  @Override public Set<String> getEntityTypes(TimelineReaderContext context)
+      throws IOException {
+    Set<String> result = new TreeSet<>();
+    String flowRunPath = getFlowRunPath(context.getUserId(),
+        context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
+        context.getAppId());
+    File dir = new File(new File(rootPath, ENTITIES_DIR),
+        context.getClusterId() + File.separator + flowRunPath
+            + File.separator + context.getAppId());
+    File[] fileList = dir.listFiles();
+    if (fileList != null) {
+      for (File f : fileList) {
+        if (f.isDirectory()) {
+          result.add(f.getName());
+        }
+      }
+    }
+    return result;
   }
 }

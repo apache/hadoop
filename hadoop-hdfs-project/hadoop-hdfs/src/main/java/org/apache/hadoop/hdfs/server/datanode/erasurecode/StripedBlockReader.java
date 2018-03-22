@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
@@ -104,11 +105,13 @@ class StripedBlockReader {
     if (offsetInBlock >= block.getNumBytes()) {
       return null;
     }
+    Peer peer = null;
     try {
       InetSocketAddress dnAddr =
           stripedReader.getSocketAddress4Transfer(source);
       Token<BlockTokenIdentifier> blockToken = datanode.getBlockAccessToken(
-          block, EnumSet.of(BlockTokenIdentifier.AccessMode.READ));
+          block, EnumSet.of(BlockTokenIdentifier.AccessMode.READ),
+          StorageType.EMPTY_ARRAY, new String[0]);
         /*
          * This can be further improved if the replica is local, then we can
          * read directly from DN and need to check the replica is FINALIZED
@@ -118,7 +121,7 @@ class StripedBlockReader {
          *
          * TODO: add proper tracer
          */
-      Peer peer = newConnectedPeer(block, dnAddr, blockToken, source);
+      peer = newConnectedPeer(block, dnAddr, blockToken, source);
       if (peer.isLocal()) {
         this.isLocal = true;
       }
@@ -129,6 +132,7 @@ class StripedBlockReader {
     } catch (IOException e) {
       LOG.info("Exception while creating remote block reader, datanode {}",
           source, e);
+      IOUtils.closeStream(peer);
       return null;
     }
   }

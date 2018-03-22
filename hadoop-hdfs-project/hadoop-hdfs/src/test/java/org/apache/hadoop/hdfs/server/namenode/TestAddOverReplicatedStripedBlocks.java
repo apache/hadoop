@@ -56,7 +56,7 @@ public class TestAddOverReplicatedStripedBlocks {
   private final Path dirPath = new Path("/striped");
   private Path filePath = new Path(dirPath, "file");
   private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+      StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
   private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
   private final short groupSize = (short) (dataBlocks + parityBlocks);
@@ -80,8 +80,10 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
     fs.mkdirs(dirPath);
-    fs.getClient().setErasureCodingPolicy(dirPath.toString(), null);
+    fs.getClient().setErasureCodingPolicy(dirPath.toString(),
+        ecPolicy.getName());
   }
 
   @After
@@ -191,7 +193,7 @@ public class TestAddOverReplicatedStripedBlocks {
     long groupId = bg.getBlock().getBlockId();
     Block blk = new Block(groupId, blockSize, gs);
     BlockInfoStriped blockInfo = new BlockInfoStriped(blk,
-        ErasureCodingPolicyManager.getSystemDefaultPolicy());
+        StripedFileTestUtil.getDefaultECPolicy());
     for (int i = 0; i < groupSize; i++) {
       blk.setBlockId(groupId + i);
       cluster.injectBlocks(i, Arrays.asList(blk), bpid);

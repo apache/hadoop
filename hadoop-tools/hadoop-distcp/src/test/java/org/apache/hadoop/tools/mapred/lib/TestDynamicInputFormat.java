@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.mapred.lib;
 
 import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpContext;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -84,9 +85,9 @@ public class TestDynamicInputFormat {
 
     List<Path> sourceList = new ArrayList<Path>();
     sourceList.add(sourcePath);
-    DistCpOptions options = new DistCpOptions(sourceList, targetPath);
-    options.setMaxMaps(NUM_SPLITS);
-    return options;
+    return new DistCpOptions.Builder(sourceList, targetPath)
+        .maxMaps(NUM_SPLITS)
+        .build();
   }
 
   private static void createFile(String path) throws Exception {
@@ -110,13 +111,13 @@ public class TestDynamicInputFormat {
 
   @Test
   public void testGetSplits() throws Exception {
-    DistCpOptions options = getOptions();
+    final DistCpContext context = new DistCpContext(getOptions());
     Configuration configuration = new Configuration();
     configuration.set("mapred.map.tasks",
-                      String.valueOf(options.getMaxMaps()));
-    CopyListing.getCopyListing(configuration, CREDENTIALS, options).buildListing(
-            new Path(cluster.getFileSystem().getUri().toString()
-                    +"/tmp/testDynInputFormat/fileList.seq"), options);
+                      String.valueOf(context.getMaxMaps()));
+    CopyListing.getCopyListing(configuration, CREDENTIALS, context)
+        .buildListing(new Path(cluster.getFileSystem().getUri().toString()
+            +"/tmp/testDynInputFormat/fileList.seq"), context);
 
     JobContext jobContext = new JobContextImpl(configuration, new JobID());
     DynamicInputFormat<Text, CopyListingFileStatus> inputFormat =

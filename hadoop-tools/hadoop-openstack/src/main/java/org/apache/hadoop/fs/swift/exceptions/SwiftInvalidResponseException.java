@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.swift.exceptions;
 
-import org.apache.commons.httpclient.HttpMethod;
+import org.apache.hadoop.fs.swift.util.HttpResponseUtils;
+import org.apache.http.HttpResponse;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,14 +49,14 @@ public class SwiftInvalidResponseException extends SwiftConnectionException {
   public SwiftInvalidResponseException(String message,
                                        String operation,
                                        URI uri,
-                                       HttpMethod method) {
+                                       HttpResponse resp) {
     super(message);
-    this.statusCode = method.getStatusCode();
+    this.statusCode = resp.getStatusLine().getStatusCode();
     this.operation = operation;
     this.uri = uri;
     String bodyAsString;
     try {
-      bodyAsString = method.getResponseBodyAsString();
+      bodyAsString = HttpResponseUtils.getResponseBodyAsString(resp);
       if (bodyAsString == null) {
         bodyAsString = "";
       }

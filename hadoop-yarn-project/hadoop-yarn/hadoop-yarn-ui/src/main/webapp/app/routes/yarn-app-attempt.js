@@ -17,34 +17,30 @@
  */
 
 import Ember from 'ember';
-
 import AbstractRoute from './abstract';
+import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
-export default AbstractRoute.extend({
+export default AbstractRoute.extend(AppAttemptMixin, {
   model(param) {
     return Ember.RSVP.hash({
-      attempt: this.store.findRecord('yarn-app-attempt', param.app_attempt_id),
-      
-      rmContainers: this.store.query('yarn-container', 
-        {
-          app_attempt_id: param.app_attempt_id,
-          is_rm: true
-        }),
-      
-      tsContainers: this.store.query('yarn-container', 
-        {
-          app_attempt_id: param.app_attempt_id,
-          is_rm: false
-        }).catch (function() {
-         // Promise rejected, fulfill with some default value to
-         // use as the route's model and continue on with the transition
-          return [];
-        })
+      attempt: this.fetchAttemptInfoFromRMorATS(param.app_attempt_id, this.store),
+      rmContainers: this.store.query('yarn-container', {
+        app_attempt_id: param.app_attempt_id
+      }).catch(function() {
+        return Ember.A();
+      }),
+      tsContainers: this.store.query('yarn-timeline-container', {
+        app_attempt_id: param.app_attempt_id
+      }).catch(function() {
+        return Ember.A();
+      })
     });
   },
 
   unloadAll() {
     this.store.unloadAll('yarn-app-attempt');
+    this.store.unloadAll('yarn-timeline-appattempt');
     this.store.unloadAll('yarn-container');
+    this.store.unloadAll('yarn-timeline-container');
   }
 });

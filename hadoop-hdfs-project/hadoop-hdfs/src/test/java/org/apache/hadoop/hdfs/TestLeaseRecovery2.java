@@ -52,21 +52,21 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 public class TestLeaseRecovery2 {
   
   public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
   
   {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
   }
 
   static final private long BLOCK_SIZE = 1024;
@@ -465,7 +465,8 @@ public class TestLeaseRecovery2 {
         cluster.getNameNode(), fileStr);
     
     assertFalse("original lease holder should not be the NN",
-        originalLeaseHolder.equals(HdfsServerConstants.NAMENODE_LEASE_HOLDER));
+        originalLeaseHolder.startsWith(
+        HdfsServerConstants.NAMENODE_LEASE_HOLDER));
 
     // hflush file
     AppendTestUtil.LOG.info("hflush");
@@ -501,8 +502,9 @@ public class TestLeaseRecovery2 {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return HdfsServerConstants.NAMENODE_LEASE_HOLDER.equals(
-            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path));
+        String holder =
+            NameNodeAdapter.getLeaseHolderForPath(cluster.getNameNode(), path);
+        return holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER);
       }
     }, (int)SHORT_LEASE_PERIOD, (int)SHORT_LEASE_PERIOD * 10);
 
@@ -563,8 +565,8 @@ public class TestLeaseRecovery2 {
     if (size == 0) {
       assertEquals("lease holder should null, file is closed", null, holder);
     } else {
-      assertEquals("lease holder should now be the NN",
-          HdfsServerConstants.NAMENODE_LEASE_HOLDER, holder);
+      assertTrue("lease holder should now be the NN",
+          holder.startsWith(HdfsServerConstants.NAMENODE_LEASE_HOLDER));
     }
     
   }

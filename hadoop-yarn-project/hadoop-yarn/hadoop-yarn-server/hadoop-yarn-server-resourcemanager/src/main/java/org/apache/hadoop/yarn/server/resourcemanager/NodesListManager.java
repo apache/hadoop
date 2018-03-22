@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -40,6 +39,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.HostsFileReader.HostDetails;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -71,6 +71,11 @@ public class NodesListManager extends CompositeService implements
   private HostsFileReader hostsReader;
   private Configuration conf;
   private final RMContext rmContext;
+
+  // Default decommissioning timeout value in seconds.
+  // Negative value indicates no timeout. 0 means immediate.
+  private int defaultDecTimeoutSecs =
+      YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT;
 
   private String includesFile;
   private String excludesFile;
@@ -192,14 +197,11 @@ public class NodesListManager extends CompositeService implements
         conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
             YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
 
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
-
-    for (String include : hostsList) {
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    for (String include : hostDetails.getIncludedHosts()) {
       LOG.debug("include: " + include);
     }
-    for (String exclude : excludeList) {
+    for (String exclude : hostDetails.getExcludedHosts()) {
       LOG.debug("exclude: " + exclude);
     }
   }
@@ -217,6 +219,11 @@ public class NodesListManager extends CompositeService implements
   private void refreshHostsReader(
       Configuration yarnConf, boolean graceful, Integer timeout)
           throws IOException, YarnException {
+    // resolve the default timeout to the decommission timeout that is
+    // configured at this moment
+    if (null == timeout) {
+      timeout = readDecommissioningTimeout(yarnConf);
+    }
     if (null == yarnConf) {
       yarnConf = new YarnConfiguration();
     }
@@ -255,16 +262,16 @@ public class NodesListManager extends CompositeService implements
   // Gracefully decommission excluded nodes that are not already
   // DECOMMISSIONED nor DECOMMISSIONING; Take no action for excluded nodes
   // that are already DECOMMISSIONED or DECOMMISSIONING.
-  private void handleExcludeNodeList(boolean graceful, Integer timeout) {
+  private void handleExcludeNodeList(boolean graceful, int timeout) {
     // DECOMMISSIONED/DECOMMISSIONING nodes need to be re-commissioned.
     List<RMNode> nodesToRecom = new ArrayList<RMNode>();
 
     // Nodes need to be decommissioned (graceful or forceful);
     List<RMNode> nodesToDecom = new ArrayList<RMNode>();
 
-    Set<String> includes = new HashSet<String>();
-    Map<String, Integer> excludes = new HashMap<String, Integer>();
-    hostsReader.getHostDetails(includes, excludes);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    Set<String> includes = hostDetails.getIncludedHosts();
+    Map<String, Integer> excludes = hostDetails.getExcludedMap();
 
     for (RMNode n : this.rmContext.getRMNodes().values()) {
       NodeState s = n.getState();
@@ -453,10 +460,9 @@ public class NodesListManager extends CompositeService implements
   }
 
   public boolean isValidNode(String hostName) {
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
-    return isValidNode(hostName, hostsList, excludeList);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    return isValidNode(hostName, hostDetails.getIncludedHosts(),
+        hostDetails.getExcludedHosts());
   }
 
   private boolean isValidNode(
@@ -467,36 +473,40 @@ public class NodesListManager extends CompositeService implements
         && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
 
+  private void sendRMAppNodeUpdateEventToNonFinalizedApps(
+      RMNode eventNode, RMAppNodeUpdateType appNodeUpdateType) {
+    for(RMApp app : rmContext.getRMApps().values()) {
+      if (!app.isAppFinalStateStored()) {
+        this.rmContext
+            .getDispatcher()
+            .getEventHandler()
+            .handle(
+                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                    appNodeUpdateType));
+      }
+    }
+  }
+
   @Override
   public void handle(NodesListManagerEvent event) {
     RMNode eventNode = event.getNode();
     switch (event.getType()) {
     case NODE_UNUSABLE:
       LOG.debug(eventNode + " reported unusable");
-      for(RMApp app: rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_UNUSABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_UNUSABLE);
       break;
     case NODE_USABLE:
       LOG.debug(eventNode + " reported usable");
-      for (RMApp app : rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_USABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_USABLE);
       break;
+    case NODE_DECOMMISSIONING:
+      LOG.debug(eventNode + " reported decommissioning");
+      sendRMAppNodeUpdateEventToNonFinalizedApps(
+          eventNode, RMAppNodeUpdateType.NODE_DECOMMISSIONING);
+      break;
+
     default:
       LOG.error("Ignoring invalid eventtype " + event.getType());
     }
@@ -563,9 +573,9 @@ public class NodesListManager extends CompositeService implements
   public boolean isUntrackedNode(String hostName) {
     String ip = resolver.resolve(hostName);
 
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    Set<String> hostsList = hostDetails.getIncludedHosts();
+    Set<String> excludeList = hostDetails.getExcludedHosts();
 
     return !hostsList.isEmpty() && !hostsList.contains(hostName)
         && !hostsList.contains(ip) && !excludeList.contains(hostName)
@@ -613,6 +623,28 @@ public class NodesListManager extends CompositeService implements
             new RMNodeEvent(entry.getKey(), nodeEventType));
       }
     }
+  }
+
+  // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
+  // This enables NodesListManager to pick up new value without
+  // ResourceManager restart.
+  private int readDecommissioningTimeout(Configuration pConf) {
+    try {
+      if (pConf == null) {
+        pConf = new YarnConfiguration();
+      }
+      int configuredDefaultDecTimeoutSecs =
+          pConf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+              YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
+      if (defaultDecTimeoutSecs != configuredDefaultDecTimeoutSecs) {
+        defaultDecTimeoutSecs = configuredDefaultDecTimeoutSecs;
+        LOG.info("Use new decommissioningTimeoutSecs: "
+            + defaultDecTimeoutSecs);
+      }
+    } catch (Exception e) {
+      LOG.warn("Error readDecommissioningTimeout " + e.getMessage());
+    }
+    return defaultDecTimeoutSecs;
   }
 
   /**

@@ -40,24 +40,27 @@ public class StripedReconstructionInfo {
   private final byte[] targetIndices;
   private final DatanodeInfo[] targets;
   private final StorageType[] targetStorageTypes;
+  private final String[] targetStorageIds;
 
   public StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices) {
-    this(blockGroup, ecPolicy, liveIndices, sources, targetIndices, null, null);
+    this(blockGroup, ecPolicy, liveIndices, sources, targetIndices, null,
+        null, null);
   }
 
   StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
-      DatanodeInfo[] targets, StorageType[] targetStorageTypes) {
+      DatanodeInfo[] targets, StorageType[] targetStorageTypes,
+      String[] targetStorageIds) {
     this(blockGroup, ecPolicy, liveIndices, sources, null, targets,
-        targetStorageTypes);
+        targetStorageTypes, targetStorageIds);
   }
 
   private StripedReconstructionInfo(ExtendedBlock blockGroup,
       ErasureCodingPolicy ecPolicy, byte[] liveIndices, DatanodeInfo[] sources,
       byte[] targetIndices, DatanodeInfo[] targets,
-      StorageType[] targetStorageTypes) {
+      StorageType[] targetStorageTypes, String[] targetStorageIds) {
 
     this.blockGroup = blockGroup;
     this.ecPolicy = ecPolicy;
@@ -66,6 +69,7 @@ public class StripedReconstructionInfo {
     this.targetIndices = targetIndices;
     this.targets = targets;
     this.targetStorageTypes = targetStorageTypes;
+    this.targetStorageIds = targetStorageIds;
   }
 
   ExtendedBlock getBlockGroup() {
@@ -94,6 +98,25 @@ public class StripedReconstructionInfo {
 
   StorageType[] getTargetStorageTypes() {
     return targetStorageTypes;
+  }
+
+  String[] getTargetStorageIds() {
+    return targetStorageIds;
+  }
+
+  /**
+   * Return the weight of this EC reconstruction task.
+   *
+   * DN uses it to coordinate with NN to adjust the speed of scheduling the
+   * reconstructions tasks to this DN.
+   *
+   * @return the weight of this reconstruction task.
+   * @see HDFS-12044
+   */
+  int getWeight() {
+    // See HDFS-12044. The weight of a RS(n, k) is calculated by the network
+    // connections it opens.
+    return sources.length + targets.length;
   }
 }
 

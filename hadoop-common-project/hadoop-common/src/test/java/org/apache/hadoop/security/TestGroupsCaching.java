@@ -40,17 +40,17 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class TestGroupsCaching {
-  public static final Log LOG = LogFactory.getLog(TestGroupsCaching.class);
+  public static final Logger TESTLOG =
+      LoggerFactory.getLogger(TestGroupsCaching.class);
   private static String[] myGroups = {"grp1", "grp2"};
   private Configuration conf;
 
@@ -76,7 +76,7 @@ public class TestGroupsCaching {
 
     @Override
     public List<String> getGroups(String user) throws IOException {
-      LOG.info("Getting groups for " + user);
+      TESTLOG.info("Getting groups for " + user);
       delayIfNecessary();
 
       requestCount++;
@@ -115,18 +115,18 @@ public class TestGroupsCaching {
 
     @Override
     public void cacheGroupsRefresh() throws IOException {
-      LOG.info("Cache is being refreshed.");
+      TESTLOG.info("Cache is being refreshed.");
       clearBlackList();
       return;
     }
 
     public static void clearBlackList() throws IOException {
-      LOG.info("Clearing the blacklist");
+      TESTLOG.info("Clearing the blacklist");
       blackList.clear();
     }
 
     public static void clearAll() throws IOException {
-      LOG.info("Resetting FakeGroupMapping");
+      TESTLOG.info("Resetting FakeGroupMapping");
       blackList.clear();
       allGroups.clear();
       requestCount = 0;
@@ -137,12 +137,12 @@ public class TestGroupsCaching {
 
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
-      LOG.info("Adding " + groups + " to groups.");
+      TESTLOG.info("Adding " + groups + " to groups.");
       allGroups.addAll(groups);
     }
 
     public static void addToBlackList(String user) throws IOException {
-      LOG.info("Adding " + user + " to the blacklist");
+      TESTLOG.info("Adding " + user + " to the blacklist");
       blackList.add(user);
     }
 
@@ -226,11 +226,12 @@ public class TestGroupsCaching {
 
     // ask for a negative entry
     try {
-      LOG.error("We are not supposed to get here." + groups.getGroups("user1").toString());
+      TESTLOG.error("We are not supposed to get here."
+          + groups.getGroups("user1").toString());
       fail();
     } catch (IOException ioe) {
       if(!ioe.getMessage().startsWith("No groups found")) {
-        LOG.error("Got unexpected exception: " + ioe.getMessage());
+        TESTLOG.error("Got unexpected exception: " + ioe.getMessage());
         fail();
       }
     }

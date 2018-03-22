@@ -138,6 +138,15 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains("key1 has been successfully " +
         "rolled."));
 
+    // jceks provider's invalidate is a no-op.
+    outContent.reset();
+    final String[] args3 =
+        {"invalidateCache", keyName, "-provider", jceksProvider};
+    rc = ks.run(args3);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString()
+        .contains("key1 has been successfully " + "invalidated."));
+
     deleteKey(ks, keyName);
 
     listOut = listKeys(ks, false);

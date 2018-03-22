@@ -23,8 +23,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTI
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -46,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -56,6 +61,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
+import org.mockito.Mockito;
 
 public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
@@ -74,7 +80,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
   @After
   public void shutdown() {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
@@ -118,7 +124,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
     exception.expect(IOException.class);
-    exception.expectMessage("could only be replicated to 0 nodes");
+    exception.expectMessage("could only be written to 0");
     doTest(clientConf);
   }
 
@@ -140,7 +146,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
           "configured or not supported in client");
     } catch (IOException e) {
       GenericTestUtils.assertMatches(e.getMessage(), 
-          "could only be replicated to 0 nodes");
+          "could only be written to 0");
     } finally {
       logs.stopCapturing();
     }
@@ -162,9 +168,17 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   public void testDataNodeAbortsIfNotHttpsOnly() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig("authentication");
     clusterConf.set(DFS_HTTP_POLICY_KEY,
-      HttpConfig.Policy.HTTP_AND_HTTPS.name());
+        HttpConfig.Policy.HTTP_AND_HTTPS.name());
     exception.expect(RuntimeException.class);
     exception.expectMessage("Cannot start secure DataNode");
+    startCluster(clusterConf);
+  }
+
+  @Test
+  public void testDataNodeStartIfHttpsQopPrivacy() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("privacy");
+    clusterConf.set(DFS_HTTP_POLICY_KEY,
+        Policy.HTTPS_ONLY.name());
     startCluster(clusterConf);
   }
 
@@ -245,4 +259,151 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       IOUtils.cleanup(null, socket, serverSocket);
     }
   }
+
+  /**
+   * Verifies that SaslDataTransferClient#checkTrustAndSend should not trust a
+   * partially trusted channel.
+   */
+  @Test
+  public void testSaslDataTransferWithTrustedServerUntrustedClient() throws
+      Exception {
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,integrity,privacy");
+
+    AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
+    TrustedChannelResolver trustedChannelResolver = new
+        TrustedChannelResolver() {
+          @Override
+          public boolean isTrusted() {
+            return true;
+          }
+
+          @Override
+          public boolean isTrusted(InetAddress peerAddress) {
+            return false;
+          }
+        };
+
+    SaslDataTransferClient saslClient = new SaslDataTransferClient(
+        conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+        trustedChannelResolver, fallbackToSimpleAuth);
+
+    ServerSocket serverSocket = null;
+    Socket socket = null;
+    DataEncryptionKeyFactory dataEncryptionKeyFactory = null;
+    try {
+      serverSocket = new ServerSocket(10002, 10);
+      socket = new Socket(serverSocket.getInetAddress(),
+          serverSocket.getLocalPort());
+
+      dataEncryptionKeyFactory = mock(DataEncryptionKeyFactory.class);
+      Mockito.when(dataEncryptionKeyFactory.newDataEncryptionKey())
+          .thenThrow(new IOException("Encryption enabled"));
+
+      saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
+          null, null);
+
+      Assert.fail("Expected IOException from "
+          + "SaslDataTransferClient#checkTrustAndSend");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Encryption enabled", e);
+      verify(dataEncryptionKeyFactory, times(1)).newDataEncryptionKey();
+    } finally {
+      IOUtils.cleanupWithLogger(null, socket, serverSocket);
+    }
+  }
+
+  @Test
+  public void testSaslDataTransferWithUntrustedServerUntrustedClient() throws
+      Exception {
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,integrity,privacy");
+
+    AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
+    TrustedChannelResolver trustedChannelResolver = new
+        TrustedChannelResolver() {
+          @Override
+          public boolean isTrusted() {
+            return false;
+          }
+
+          @Override
+          public boolean isTrusted(InetAddress peerAddress) {
+            return false;
+          }
+        };
+
+    SaslDataTransferClient saslClient = new SaslDataTransferClient(
+        conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+        trustedChannelResolver, fallbackToSimpleAuth);
+
+    ServerSocket serverSocket = null;
+    Socket socket = null;
+    DataEncryptionKeyFactory dataEncryptionKeyFactory = null;
+    try {
+      serverSocket = new ServerSocket(10002, 10);
+      socket = new Socket(serverSocket.getInetAddress(),
+          serverSocket.getLocalPort());
+
+      dataEncryptionKeyFactory = mock(DataEncryptionKeyFactory.class);
+      Mockito.when(dataEncryptionKeyFactory.newDataEncryptionKey())
+          .thenThrow(new IOException("Encryption enabled"));
+
+      saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
+          null, null);
+
+      Assert.fail("Expected IOException from "
+          + "SaslDataTransferClient#checkTrustAndSend");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Encryption enabled", e);
+      verify(dataEncryptionKeyFactory, times(1)).newDataEncryptionKey();
+    } finally {
+      IOUtils.cleanupWithLogger(null, socket, serverSocket);
+    }
+  }
+
+  @Test
+  public void testSaslDataTransferWithTrustedServerTrustedClient() throws
+      Exception {
+    HdfsConfiguration conf = createSecureConfig(
+        "authentication,integrity,privacy");
+
+    AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
+    TrustedChannelResolver trustedChannelResolver = new
+        TrustedChannelResolver() {
+          @Override
+          public boolean isTrusted() {
+            return true;
+          }
+
+          @Override
+          public boolean isTrusted(InetAddress peerAddress) {
+            return true;
+          }
+        };
+
+    SaslDataTransferClient saslClient = new SaslDataTransferClient(
+        conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+        trustedChannelResolver, fallbackToSimpleAuth);
+
+    ServerSocket serverSocket = null;
+    Socket socket = null;
+    DataEncryptionKeyFactory dataEncryptionKeyFactory = null;
+    try {
+      serverSocket = new ServerSocket(10002, 10);
+      socket = new Socket(serverSocket.getInetAddress(),
+          serverSocket.getLocalPort());
+
+      dataEncryptionKeyFactory = mock(DataEncryptionKeyFactory.class);
+      Mockito.when(dataEncryptionKeyFactory.newDataEncryptionKey())
+          .thenThrow(new IOException("Encryption enabled"));
+
+      saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
+          null, null);
+      verify(dataEncryptionKeyFactory, times(0)).newDataEncryptionKey();
+    } finally {
+      IOUtils.cleanupWithLogger(null, socket, serverSocket);
+    }
+  }
+
 }

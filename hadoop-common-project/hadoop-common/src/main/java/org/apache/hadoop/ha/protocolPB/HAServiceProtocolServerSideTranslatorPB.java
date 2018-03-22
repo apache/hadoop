@@ -19,8 +19,6 @@ package org.apache.hadoop.ha.protocolPB;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -42,6 +40,8 @@ import org.apache.hadoop.ipc.RPC;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is used on the server side. Calls come across the wire for the
@@ -61,7 +61,7 @@ public class HAServiceProtocolServerSideTranslatorPB implements
       TransitionToActiveResponseProto.newBuilder().build();
   private static final TransitionToStandbyResponseProto TRANSITION_TO_STANDBY_RESP = 
       TransitionToStandbyResponseProto.newBuilder().build();
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       HAServiceProtocolServerSideTranslatorPB.class);
   
   public HAServiceProtocolServerSideTranslatorPB(HAServiceProtocol server) {

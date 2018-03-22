@@ -47,7 +47,8 @@ import org.junit.rules.Timeout;
 
 public class TestNetworkTopology {
   private static final Log LOG = LogFactory.getLog(TestNetworkTopology.class);
-  private final static NetworkTopology cluster = new NetworkTopology();
+  private final static NetworkTopology cluster =
+      NetworkTopology.getInstance(new Configuration());
   private DatanodeDescriptor dataNodes[];
 
   @Rule
@@ -101,7 +102,8 @@ public class TestNetworkTopology {
 
   @Test
   public void testCreateInvalidTopology() throws Exception {
-    NetworkTopology invalCluster = new NetworkTopology();
+    NetworkTopology invalCluster =
+        NetworkTopology.getInstance(new Configuration());
     DatanodeDescriptor invalDataNodes[] = new DatanodeDescriptor[] {
         DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
         DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
@@ -296,7 +298,7 @@ public class TestNetworkTopology {
       assertFalse(cluster.contains(dataNodes[i]));
     }
     assertEquals(0, cluster.getNumOfLeaves());
-    assertEquals(0, cluster.clusterMap.children.size());
+    assertEquals(0, cluster.clusterMap.getChildren().size());
     for(int i=0; i<dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
     }

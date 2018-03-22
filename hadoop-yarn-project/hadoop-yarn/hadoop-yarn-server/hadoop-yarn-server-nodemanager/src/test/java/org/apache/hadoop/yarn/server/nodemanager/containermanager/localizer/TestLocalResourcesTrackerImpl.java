@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -54,6 +55,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceLocalizedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
@@ -529,7 +531,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -610,7 +612,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -672,7 +674,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, false, conf, stateStore);
+          appId, dispatcher, false, conf, stateStore, null);
       // Container 1 needs lr1 resource
       ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
@@ -725,7 +727,7 @@ public class TestLocalResourcesTrackerImpl {
 
     try {
       LocalResourcesTrackerImpl tracker = new LocalResourcesTrackerImpl(user,
-          appId, dispatcher, true, conf, stateStore);
+          appId, dispatcher, true, conf, stateStore, null);
       LocalResourceRequest lr1 = createLocalResourceRequest(user, 1, 1,
           LocalResourceVisibility.PUBLIC);
       Assert.assertNull(tracker.getLocalizedResource(lr1));
@@ -823,7 +825,8 @@ public class TestLocalResourcesTrackerImpl {
       Path rPath = tracker.getPathForLocalization(req1, base_path,
           delService);
       Assert.assertFalse(lfs.util().exists(rPath));
-      verify(delService, times(1)).delete(eq(user), eq(conflictPath));
+      verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
+          delService, user, conflictPath, null)));
     } finally {
       lfs.delete(base_path, true);
       if (dispatcher != null) {

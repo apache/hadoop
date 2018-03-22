@@ -154,4 +154,14 @@ public class MockAppContext implements AppContext {
       return null;
   }
 
+  @Override
+  public String getHistoryUrl() {
+    return null;
+  }
+
+  @Override
+  public void setHistoryUrl(String historyUrl) {
+    return;
+  }
+
 }

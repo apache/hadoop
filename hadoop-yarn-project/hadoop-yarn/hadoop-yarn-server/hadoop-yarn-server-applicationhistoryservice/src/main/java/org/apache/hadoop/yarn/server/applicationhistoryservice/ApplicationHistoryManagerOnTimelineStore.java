@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -48,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -69,12 +68,14 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     implements
     ApplicationHistoryManager {
-  private static final Log LOG = LogFactory
-      .getLog(ApplicationHistoryManagerOnTimelineStore.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ApplicationHistoryManagerOnTimelineStore.class);
 
   @VisibleForTesting
   static final String UNAVAILABLE = "N/A";
@@ -330,20 +331,30 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
-        long vcoreSeconds=Long.parseLong(entityInfo.get(
-                ApplicationMetricsConstants.APP_CPU_METRICS).toString());
-        long memorySeconds=Long.parseLong(entityInfo.get(
-                ApplicationMetricsConstants.APP_MEM_METRICS).toString());
-        long preemptedMemorySeconds = Long.parseLong(entityInfo.get(
-            ApplicationMetricsConstants
-                .APP_MEM_PREEMPT_METRICS).toString());
-        long preemptedVcoreSeconds = Long.parseLong(entityInfo.get(
-            ApplicationMetricsConstants
-                .APP_CPU_PREEMPT_METRICS).toString());
+        long vcoreSeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_CPU_METRICS);
+        long memorySeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_MEM_METRICS);
+        long preemptedMemorySeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS);
+        long preemptedVcoreSeconds = parseLong(entityInfo,
+            ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
+        Map<String, Long> resourceSecondsMap = new HashMap<>();
+        Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+        resourceSecondsMap
+            .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
+        resourceSecondsMap
+            .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
+        preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+            preemptedMemorySeconds);
+        preemptedResoureSecondsMap
+            .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
+
         appResources = ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, 0,
-                0, preemptedMemorySeconds, preemptedVcoreSeconds);
+            .newInstance(0, 0, null, null, null, resourceSecondsMap, 0, 0,
+                preemptedResoureSecondsMap);
       }
+
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
         appTags = new HashSet<String>();
         Object obj = entityInfo.get(ApplicationMetricsConstants.APP_TAGS_INFO);
@@ -443,6 +454,16 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         appResources, null, progress, type, null, appTags, unmanagedApplication,
         Priority.newInstance(applicationPriority), appNodeLabelExpression,
         amNodeLabelExpression), appViewACLs);
+  }
+
+  private static long parseLong(Map<String, Object> entityInfo,
+      String infoKey) {
+    long result = 0;
+    Object infoValue = entityInfo.get(infoKey);
+    if (infoValue != null) {
+      result = Long.parseLong(infoValue.toString());
+    }
+    return result;
   }
 
   private static boolean isFinalState(YarnApplicationState state) {
@@ -731,7 +752,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
      }
    }
 
-  private static enum ApplicationReportField {
+  private enum ApplicationReportField {
     ALL, // retrieve all the fields
     USER_AND_ACLS // retrieve user and ACLs info only
   }

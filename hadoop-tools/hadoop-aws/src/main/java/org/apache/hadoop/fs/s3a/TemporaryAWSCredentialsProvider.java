@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 
 /**
  * Support session credentials for authenticating with AWS.
@@ -51,13 +52,19 @@ public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
   private String sessionToken;
   private IOException lookupIOE;
 
+  public TemporaryAWSCredentialsProvider(Configuration conf) {
+    this(null, conf);
+  }
+
   public TemporaryAWSCredentialsProvider(URI uri, Configuration conf) {
     try {
+      // determine the bucket
+      String bucket = uri != null ? uri.getHost():  "";
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
-      this.accessKey = S3AUtils.lookupPassword(c, ACCESS_KEY, null);
-      this.secretKey = S3AUtils.lookupPassword(c, SECRET_KEY, null);
-      this.sessionToken = S3AUtils.lookupPassword(c, SESSION_TOKEN, null);
+      this.accessKey = lookupPassword(bucket, c, ACCESS_KEY, null);
+      this.secretKey = lookupPassword(bucket, c, SECRET_KEY, null);
+      this.sessionToken = lookupPassword(bucket, c, SESSION_TOKEN, null);
     } catch (IOException e) {
       lookupIOE = e;
     }

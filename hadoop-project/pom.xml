@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -31,11 +31,11 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2016</release-year>
+    <release-year>2018</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.3.11.v20160721</jetty.version>
+    <jetty.version>9.3.19.v20170502</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -49,8 +49,6 @@
     <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
-    <hbase.version>1.2.4</hbase.version>
-    <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -64,7 +62,7 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.7.4</avro.version>
+    <avro.version>1.7.7</avro.version>
 
     <!-- jersey version -->
     <jersey.version>1.19</jersey.version>
@@ -73,25 +71,36 @@
     <jackson.version>1.9.13</jackson.version>
     <jackson2.version>2.7.8</jackson2.version>
 
+    <!-- SLF4J version -->
+    <slf4j.version>1.7.25</slf4j.version>
+
     <!-- com.google.re2j version -->
-    <re2j.version>1.0</re2j.version>
+    <re2j.version>1.1</re2j.version>
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
     <protobuf.version>2.5.0</protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <zookeeper.version>3.4.6</zookeeper.version>
-    <curator.version>2.7.1</curator.version>
+    <zookeeper.version>3.4.9</zookeeper.version>
+    <curator.version>2.12.0</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
+    <spotbugs.version>3.1.0-RC1</spotbugs.version>
+    <dnsjava.version>2.1.7</dnsjava.version>
 
-    <tomcat.version>6.0.48</tomcat.version>
+    <guava.version>11.0.2</guava.version>
     <guice.version>4.0</guice.version>
-    <joda-time.version>2.9.4</joda-time.version>
+    <joda-time.version>2.9.9</joda-time.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0-M21</apacheds.version>
     <ldap-api.version>1.0.0-M33</ldap-api.version>
+
+    <jcache.version>1.0-alpha-1</jcache.version>
+    <ehcache.version>3.3.1</ehcache.version>
+    <hikari.version>2.4.12</hikari.version>
+    <mssql.version>6.2.1.jre7</mssql.version>
+    <okhttp.version>2.7.5</okhttp.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -102,11 +111,11 @@
     for an open-ended enforcement
     -->
     <enforced.java.version>[${javac.version},)</enforced.java.version>
-    <enforced.maven.version>[3.0.2,)</enforced.maven.version>
+    <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>2.20.1</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -116,9 +125,8 @@
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
     <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
-    <maven-war-plugin.version>2.4</maven-war-plugin.version>
+    <maven-war-plugin.version>3.1.0</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
-    <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
     <maven-pdf-plugin.version>1.2</maven-pdf-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
     <build-helper-maven-plugin.version>1.9</build-helper-maven-plugin.version>
@@ -126,14 +134,32 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.11.45</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.271</aws-java-sdk.version>
+    <hsqldb.version>2.3.4</hsqldb.version>
+    <frontend-maven-plugin.version>1.5</frontend-maven-plugin.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
     <declared.hadoop.version>${project.version}</declared.hadoop.version>
+
+    <swagger-annotations-version>1.5.4</swagger-annotations-version>
+    <snakeyaml.version>1.16</snakeyaml.version>
+    <hbase.one.version>1.2.6</hbase.one.version>
+    <hbase.two.version>2.0.0-beta-1</hbase.two.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.squareup.okhttp</groupId>
+        <artifactId>okhttp</artifactId>
+        <version>${okhttp.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okhttp3</groupId>
+        <artifactId>mockwebserver</artifactId>
+        <version>3.7.0</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>jdiff</groupId>
         <artifactId>jdiff</artifactId>
@@ -226,6 +252,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-rbf</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
@@ -303,6 +334,13 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-common</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
          <artifactId>hadoop-yarn-server-tests</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
@@ -361,6 +399,18 @@
           <type>test-jar</type>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
@@ -377,6 +427,18 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timeline-pluginstorage</artifactId>
         <type>test-jar</type>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-router</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-services-core</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -469,10 +531,16 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-azure-datalake</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -492,8 +560,6 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
         <version>${project.version}</version>
-        <classifier>classes</classifier>
-        <type>jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -505,7 +571,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>11.0.2</version>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -533,11 +599,6 @@
         <version>1.0</version>
       </dependency>
       <dependency>
-        <groupId>xmlenc</groupId>
-        <artifactId>xmlenc</artifactId>
-        <version>0.52</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>4.5.2</version>
@@ -550,17 +611,22 @@
       <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
-        <version>1.4</version>
+        <version>1.11</version>
       </dependency>
       <dependency>
         <groupId>commons-net</groupId>
         <artifactId>commons-net</artifactId>
-        <version>3.1</version>
+        <version>3.6</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>3.1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>jsr311-api</artifactId>
+        <version>1.1.1</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -594,21 +660,10 @@
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.tomcat.embed</groupId>
-        <artifactId>tomcat-embed-core</artifactId>
-        <version>7.0.55</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.tomcat.embed</groupId>
-        <artifactId>tomcat-embed-logging-juli</artifactId>
-        <version>7.0.55</version>
-      </dependency>
-      <dependency>
         <groupId>javax.servlet.jsp</groupId>
         <artifactId>jsp-api</artifactId>
         <version>2.1</version>
       </dependency>
-
       <dependency>
         <groupId>org.glassfish</groupId>
         <artifactId>javax.servlet</artifactId>
@@ -630,6 +685,11 @@
         <groupId>org.ow2.asm</groupId>
         <artifactId>asm</artifactId>
         <version>5.0.4</version>
+      </dependency>
+      <dependency>
+          <groupId>org.ojalgo</groupId>
+          <artifactId>ojalgo</artifactId>
+          <version>43.0</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
@@ -663,7 +723,7 @@
         <artifactId>guice</artifactId>
         <version>${guice.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
@@ -715,19 +775,13 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.1.0.Beta5</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.twitter</groupId>
-        <artifactId>hpack</artifactId>
-        <version>0.11.0</version>
+        <version>4.0.52.Final</version>
       </dependency>
 
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.4</version>
+        <version>2.5</version>
       </dependency>
 
       <dependency>
@@ -787,29 +841,25 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>net.java.dev.jets3t</groupId>
-        <artifactId>jets3t</artifactId>
-        <version>0.9.0</version>
-      </dependency>
-      <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-s3</artifactId>
+        <artifactId>aws-java-sdk-bundle</artifactId>
         <version>${aws-java-sdk.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-sts</artifactId>
-        <version>${aws-java-sdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.0.0-M5</version>
+        <version>2.0.16</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
         <artifactId>sshd-core</artifactId>
-        <version>0.14.0</version>
+        <version>1.6.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.ftpserver</groupId>
@@ -849,27 +899,48 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.1</version>
+        <version>2.1.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.4</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
-        <version>1.7.10</version>
+        <version>${slf4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jdt</groupId>
         <artifactId>core</artifactId>
         <version>3.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.woodstox</groupId>
+        <artifactId>stax2-api</artifactId>
+        <version>3.1.4</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.woodstox</groupId>
+        <artifactId>woodstox-core</artifactId>
+        <version>5.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
@@ -909,11 +980,6 @@
       <dependency>
         <groupId>com.fasterxml.jackson.module</groupId>
         <artifactId>jackson-module-jaxb-annotations</artifactId>
-        <version>${jackson2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.jaxrs</groupId>
-        <artifactId>jackson-jaxrs-json-provider</artifactId>
         <version>${jackson2.version}</version>
       </dependency>
       <dependency>
@@ -970,7 +1036,7 @@
       <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jsch</artifactId>
-        <version>0.1.51</version>
+        <version>0.1.54</version>
       </dependency>
       <dependency>
         <groupId>org.apache.htrace</groupId>
@@ -985,7 +1051,7 @@
       <dependency>
         <groupId>com.googlecode.json-simple</groupId>
         <artifactId>json-simple</artifactId>
-        <version>1.1</version>
+        <version>1.1.1</version>
       </dependency>
 
       <dependency>
@@ -1010,6 +1076,10 @@
             <groupId>org.jboss.netty</groupId>
             <artifactId>netty</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1031,12 +1101,12 @@
       <dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
-        <version>2.0.0</version>
+        <version>${hsqldb.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.codahale.metrics</groupId>
+        <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>3.0.1</version>
+        <version>3.2.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -1100,13 +1170,13 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
-        <version>4.2.0</version>
+        <version>5.4.0</version>
      </dependency>
 
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>2.2.1</version>
+        <version>2.8.3</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -1117,12 +1187,6 @@
             <artifactId>commons-beanutils</artifactId>
           </exclusion>
         </exclusions>
-     </dependency>
-
-     <dependency>
-       <groupId>xerces</groupId>
-       <artifactId>xercesImpl</artifactId>
-       <version>2.9.1</version>
      </dependency>
 
      <dependency>
@@ -1151,7 +1215,7 @@
        <version>1.46</version>
        <scope>test</scope>
      </dependency>
-      
+
      <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
@@ -1161,7 +1225,7 @@
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
-          <version>3.9</version>
+          <version>4.41.1</version>
           <scope>compile</scope>
           <exclusions>
           <exclusion>
@@ -1169,6 +1233,22 @@
             <artifactId>bcprov-jdk15on</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>${dnsjava.version}</version>
+      </dependency>
+
+      <dependency>
+        <!-- HACK.  Transitive dependency for nimbus-jose-jwt.  Needed for
+             packaging.  Please re-check this version when updating
+             nimbus-jose-jwt.  Please read HADOOP-14903 for more details.
+          -->
+        <groupId>net.minidev</groupId>
+        <artifactId>json-smart</artifactId>
+        <version>2.3</version>
       </dependency>
       <dependency>
         <groupId>org.skyscreamer</groupId>
@@ -1219,13 +1299,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-it</artifactId>
-        <version>${hbase.version}</version>
-        <scope>test</scope>
-        <classifier>tests</classifier>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-testing-util</artifactId>
         <version>${hbase.version}</version>
         <scope>test</scope>
@@ -1252,8 +1325,54 @@
         <dependency>
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
-          <version>1.0.0-RC2</version>
+          <version>1.0.1</version>
         </dependency>
+        <dependency>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-jcache_1.0_spec</artifactId>
+          <version>${jcache.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.ehcache</groupId>
+          <artifactId>ehcache</artifactId>
+          <version>${ehcache.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.zaxxer</groupId>
+          <artifactId>HikariCP-java7</artifactId>
+          <version>${hikari.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>mssql-jdbc</artifactId>
+          <version>${mssql.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.swagger</groupId>
+          <artifactId>swagger-annotations</artifactId>
+          <version>${swagger-annotations-version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>jackson-jaxrs-json-provider</artifactId>
+          <version>${jackson2.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+          <version>${snakeyaml.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.assertj</groupId>
+          <artifactId>assertj-core</artifactId>
+          <version>3.8.0</version>
+          <scope>test</scope>
+        </dependency>
+      <dependency>
+        <groupId>org.jruby.jcodings</groupId>
+        <artifactId>jcodings</artifactId>
+        <version>1.0.13</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -1336,7 +1455,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.8.1</version>
+          <version>${maven-javadoc-plugin.version}</version>
           <configuration>
             <additionalparam>-Xmaxwarns 10000</additionalparam>
           </configuration>
@@ -1350,6 +1469,13 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>${findbugs.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -1370,11 +1496,6 @@
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
           <version>${avro.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>${maven-project-info-reports-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -1441,6 +1562,35 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <version>1.16</version>
+        <executions>
+          <execution>
+            <id>signature-check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <signature>
+            <groupId>org.codehaus.mojo.signature</groupId>
+            <artifactId>java18</artifactId>
+            <version>1.0</version>
+          </signature>
+          <ignores>
+            <ignore>sun.misc.*</ignore>
+            <ignore>sun.net.*</ignore>
+            <ignore>sun.nio.ch.*</ignore>
+            <ignore>com.sun.javadoc.*</ignore>
+            <ignore>com.sun.tools.*</ignore>
+            <ignore>java.lang.invoke.*</ignore>
+          </ignores>
+        </configuration>
+      </plugin>
        <plugin>
          <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -1475,6 +1625,7 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
+          <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 
             <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
@@ -1485,7 +1636,7 @@
             <test.build.data>${test.build.data}</test.build.data>
             <test.build.webapps>${test.build.webapps}</test.build.webapps>
             <test.cache.data>${test.cache.data}</test.cache.data>
-            <test.build.classes>${test.build.classes}</test.build.classes>
+            <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
@@ -1596,6 +1747,7 @@
         <!-- attempt to open a file at this path. -->
         <java.security.egd>file:/dev/urandom</java.security.egd>
         <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
+        <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
       </properties>
       <build>
@@ -1607,6 +1759,7 @@
               <environmentVariables>
                 <!-- Specify where to look for the native DLL on Windows -->
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${snappy.lib}</PATH>
+                <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${zstd.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${openssl.lib}</PATH>
                 <PATH>${env.PATH};${hadoop.common.build.dir}/bin;${isal.lib}</PATH>
               </environmentVariables>
@@ -1688,5 +1841,66 @@
         </plugins>
       </build>
     </profile>
+    <!-- The profile for building against HBase 1.2.x
+     This is the default.
+     -->
+    <profile>
+      <id>hbase1</id>
+      <activation>
+        <property>
+          <name>!hbase.profile</name>
+        </property>
+      </activation>
+      <properties>
+        <hbase.version>${hbase.one.version}</hbase.version>
+        <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+        <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
+        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-1</hbase-server-artifactid>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>${hbase-server-artifactid}</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+    </profile>
+    <!-- The profile for building against HBase 2.0.0.
+     Activate using: mvn -Dhbase.profile=2.0
+    -->
+    <profile>
+      <id>hbase2</id>
+      <activation>
+        <property>
+          <name>hbase.profile</name>
+          <value>2.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hbase.version>${hbase.two.version}</hbase.version>
+        <hbase-compatible-hadoop.version>3.0.0</hbase-compatible-hadoop.version>
+        <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
+        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-2</hbase-server-artifactid>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>${hbase-server-artifactid}</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+    </profile>
   </profiles>
+
+  <repositories>
+    <repository>
+      <id>dynamodb-local-oregon</id>
+      <name>DynamoDB Local Release Repository</name>
+      <url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+    </repository>
+  </repositories>
 </project>

@@ -84,6 +84,7 @@ class BlockPoolSlice {
   private final int ioFileBufferSize;
   @VisibleForTesting
   public static final String DU_CACHE_FILE = "dfsUsed";
+  private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
   private final boolean deleteDuplicateReplicas;
@@ -162,15 +163,16 @@ class BlockPoolSlice {
                                                      .build();
 
     // Make the dfs usage to be saved during shutdown.
-    ShutdownHookManager.get().addShutdownHook(
-      new Runnable() {
-        @Override
-        public void run() {
-          if (!dfsUsedSaved) {
-            saveDfsUsed();
-          }
+    shutdownHook = new Runnable() {
+      @Override
+      public void run() {
+        if (!dfsUsedSaved) {
+          saveDfsUsed();
         }
-      }, SHUTDOWN_HOOK_PRIORITY);
+      }
+    };
+    ShutdownHookManager.get().addShutdownHook(shutdownHook,
+        SHUTDOWN_HOOK_PRIORITY);
   }
 
   File getDirectory() {
@@ -271,7 +273,10 @@ class BlockPoolSlice {
           new FileOutputStream(outFile), "UTF-8")) {
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(timer.now()));
-        fileIoProvider.flush(volume, out);
+        // This is only called as part of the volume shutdown.
+        // We explicitly avoid calling flush with fileIoProvider which triggers
+        // volume check upon io exception to avoid cyclic volume checks.
+        out.flush();
       }
     } catch (IOException ioe) {
       // If write failed, the volume might be bad. Since the cache file is
@@ -737,7 +742,8 @@ class BlockPoolSlice {
         }
       }
     } catch (IOException e) {
-      FsDatasetImpl.LOG.warn(e);
+      FsDatasetImpl.LOG.warn("Getting exception while validating integrity " +
+              "and setting length for blockFile", e);
       return 0;
     }
   }
@@ -751,6 +757,11 @@ class BlockPoolSlice {
     saveReplicas(blocksListToPersist);
     saveDfsUsed();
     dfsUsedSaved = true;
+
+    // Remove the shutdown hook to avoid any memory leak
+    if (shutdownHook != null) {
+      ShutdownHookManager.get().removeShutdownHook(shutdownHook);
+    }
 
     if (dfsUsage instanceof CachingGetSpaceUsed) {
       IOUtils.cleanup(LOG, ((CachingGetSpaceUsed) dfsUsage));
@@ -801,7 +812,6 @@ class BlockPoolSlice {
           break;
         }
       }
-      inputStream.close();
       // Now it is safe to add the replica into volumeMap
       // In case of any exception during parsing this cache file, fall back
       // to scan all the files on disk.
@@ -819,17 +829,18 @@ class BlockPoolSlice {
     } catch (Exception e) {
       // Any exception we need to revert back to read from disk
       // Log the error and return false
-      LOG.info("Exception occured while reading the replicas cache file: "
+      LOG.info("Exception occurred while reading the replicas cache file: "
           + replicaFile.getPath(), e );
       return false;
     }
     finally {
+      // close the inputStream
+      IOUtils.closeStream(inputStream);
+
       if (!fileIoProvider.delete(volume, replicaFile)) {
         LOG.info("Failed to delete replica cache file: " +
             replicaFile.getPath());
       }
-      // close the inputStream
-      IOUtils.closeStream(inputStream);
     }
   }
 

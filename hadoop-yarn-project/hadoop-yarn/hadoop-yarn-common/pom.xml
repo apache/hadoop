@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-common</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Common</name>
 
   <properties>
@@ -108,6 +108,15 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
     </dependency>
+    <!--
+    junit must be before mockito-all on the classpath.  mockito-all bundles its
+    own copy of the hamcrest classes, but they don't match our junit version.
+    -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
@@ -127,11 +136,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
@@ -209,6 +213,14 @@
         <filtering>true</filtering>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/src/test/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>${project.basedir}/src/test/resources/resource-types</directory>
+      </testResource>
+    </testResources>
     <plugins>
      <plugin>
         <groupId>org.apache.rat</groupId>
@@ -220,6 +232,7 @@
             <exclude>src/main/resources/webapps/yarn/.keep</exclude>
             <exclude>src/main/resources/webapps/applicationhistory/.keep</exclude>
             <exclude>src/main/resources/webapps/timeline/.keep</exclude>
+            <exclude>src/main/resources/webapps/sharedcache/.keep</exclude>
             <exclude>src/main/resources/webapps/cluster/.keep</exclude>
             <exclude>src/main/resources/webapps/test/.keep</exclude>
             <exclude>src/main/resources/webapps/proxy/.keep</exclude>
@@ -236,6 +249,10 @@
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_masterindex</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_SUCCESS</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_index</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/part-0</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_masterindex</exclude>
+            <exclude>src/test/resources/application_123456_0001.har/_SUCCESS</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -340,4 +357,32 @@
       </plugin>
     </plugins>
   </build>
+  <!-- TODO: Remove this profile when hamlet was removed. -->
+  <profiles>
+    <profile>
+      <id>java9</id>
+      <activation>
+        <jdk>9</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>src/main/java/org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
+                <exclude>src/main/test/org/apache/haodop/yarn/webapp/hamlet/**</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <excludePackageNames>org.apache.hadoop.yarn.webapp.hamlet</excludePackageNames>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

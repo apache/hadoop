@@ -24,8 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.collections.map.LRUMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -41,6 +39,8 @@ import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.util.StringHelper;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>TimelineACLsManager</code> check the entity level timeline data access.
@@ -48,7 +48,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 public class TimelineACLsManager {
 
-  private static final Log LOG = LogFactory.getLog(TimelineACLsManager.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(TimelineACLsManager.class);
   private static final int DOMAIN_ACCESS_ENTRY_CACHE_SIZE = 100;
 
   private AdminACLsManager adminAclsManager;

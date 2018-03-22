@@ -98,7 +98,7 @@ class JVMId {
     int jobComp = this.jobId.compareTo(that.jobId);
     if(jobComp == 0) {
       if(this.isMap == that.isMap) {
-        return Long.valueOf(this.jvmId).compareTo(that.jvmId);
+        return Long.compare(this.jvmId, that.jvmId);
       } else {
         return this.isMap ? -1 : 1;
       }

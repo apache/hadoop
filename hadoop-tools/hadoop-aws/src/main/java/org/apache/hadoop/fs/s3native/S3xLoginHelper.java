@@ -48,6 +48,13 @@ public final class S3xLoginHelper {
       "The Filesystem URI contains login details."
       +" This is insecure and may be unsupported in future.";
 
+  public static final String PLUS_WARNING =
+      "Secret key contains a special character that should be URL encoded! " +
+          "Attempting to resolve...";
+
+  public static final String PLUS_UNENCODED = "+";
+  public static final String PLUS_ENCODED = "%2B";
+
   /**
    * Build the filesystem URI. This can include stripping down of part
    * of the URI.
@@ -81,7 +88,7 @@ public final class S3xLoginHelper {
   /**
    * Extract the login details from a URI, logging a warning if
    * the URI contains these.
-   * @param name URI of the filesystem
+   * @param name URI of the filesystem, can be null
    * @return a login tuple, possibly empty.
    */
   public static Login extractLoginDetailsWithWarnings(URI name) {
@@ -94,10 +101,14 @@ public final class S3xLoginHelper {
 
   /**
    * Extract the login details from a URI.
-   * @param name URI of the filesystem
+   * @param name URI of the filesystem, may be null
    * @return a login tuple, possibly empty.
    */
   public static Login extractLoginDetails(URI name) {
+    if (name == null) {
+      return Login.EMPTY;
+    }
+
     try {
       String authority = name.getAuthority();
       if (authority == null) {
@@ -112,7 +123,13 @@ public final class S3xLoginHelper {
       int loginSplit = login.indexOf(':');
       if (loginSplit > 0) {
         String user = login.substring(0, loginSplit);
-        String password = URLDecoder.decode(login.substring(loginSplit + 1),
+        String encodedPassword = login.substring(loginSplit + 1);
+        if (encodedPassword.contains(PLUS_UNENCODED)) {
+          LOG.warn(PLUS_WARNING);
+          encodedPassword = encodedPassword.replaceAll("\\" + PLUS_UNENCODED,
+              PLUS_ENCODED);
+        }
+        String password = URLDecoder.decode(encodedPassword,
             "UTF-8");
         return new Login(user, password);
       } else if (loginSplit == 0) {

@@ -61,6 +61,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
@@ -146,8 +147,13 @@ public class MiniDFSCluster implements AutoCloseable {
       GenericTestUtils.SYSPROP_TEST_DATA_DIR;
   /** Configuration option to set the data dir: {@value} */
   public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
+  /** Configuration option to set the provided data dir: {@value} */
+  public static final String HDFS_MINIDFS_BASEDIR_PROVIDED =
+      "hdfs.minidfs.basedir.provided";
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
+  public static final String  DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY
+      = DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY + ".testing";
 
   // Changing this default may break some tests that assume it is 2.
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
@@ -579,6 +585,14 @@ public class MiniDFSCluster implements AutoCloseable {
     public void setStartOpt(StartupOption startOpt) {
       this.startOpt = startOpt;
     }
+
+    public String getNameserviceId() {
+      return this.nameserviceId;
+    }
+
+    public String getNamenodeId() {
+      return this.nnId;
+    }
   }
   
   /**
@@ -807,10 +821,21 @@ public class MiniDFSCluster implements AutoCloseable {
     
       int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
       conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+      int maintenanceMinReplication = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT);
+      if (maintenanceMinReplication ==
+          DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT) {
+        conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+            Math.min(maintenanceMinReplication, numDataNodes));
+      }
       int safemodeExtension = conf.getInt(
           DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
       conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
-      conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+      long decommissionInterval = conf.getTimeDuration(
+          DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY, 3, TimeUnit.SECONDS);
+      conf.setTimeDuration(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY,
+          decommissionInterval, TimeUnit.SECONDS);
       if (!useConfiguredTopologyMappingClass) {
         conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
             StaticMapping.class, DNSToSwitchMapping.class);
@@ -1307,7 +1332,7 @@ public class MiniDFSCluster implements AutoCloseable {
     try {
       uri = new URI("hdfs://" + hostPort);
     } catch (URISyntaxException e) {
-      NameNode.LOG.warn("unexpected URISyntaxException: " + e );
+      NameNode.LOG.warn("unexpected URISyntaxException", e);
     }
     return uri;
   }
@@ -1375,7 +1400,12 @@ public class MiniDFSCluster implements AutoCloseable {
       if ((storageTypes != null) && (j >= storageTypes.length)) {
         break;
       }
-      File dir = getInstanceStorageDir(dnIndex, j);
+      File dir;
+      if (storageTypes != null && storageTypes[j] == StorageType.PROVIDED) {
+        dir = getProvidedStorageDir(dnIndex, j);
+      } else {
+        dir = getInstanceStorageDir(dnIndex, j);
+      }
       dir.mkdirs();
       if (!dir.isDirectory()) {
         throw new IOException("Mkdirs failed to create directory for DataNode " + dir);
@@ -2248,6 +2278,22 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /*
+   * Restart a DataNode by name.
+   * @return true if DataNode restart is successful else returns false
+   */
+  public synchronized boolean restartDataNode(String dnName)
+      throws IOException {
+    for (int i = 0; i < dataNodes.size(); i++) {
+      DataNode dn = dataNodes.get(i).datanode;
+      if (dnName.equals(dn.getDatanodeId().getXferAddr())) {
+        return restartDataNode(i);
+      }
+    }
+    return false;
+  }
+
+
+  /*
    * Shutdown a particular datanode
    * @param i node index
    * @return null if the node index is out of range, else the properties of the
@@ -2715,7 +2761,8 @@ public class MiniDFSCluster implements AutoCloseable {
     final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
     final FsDatasetSpi<?> dataSet = DataNodeTestUtils.getFSDataset(dn);
     if (!(dataSet instanceof SimulatedFSDataset)) {
-      throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
+      throw new IOException("injectBlocks is valid only for" +
+          " SimulatedFSDataset");
     }
     if (bpid == null) {
       bpid = getNamesystem().getBlockPoolId();
@@ -2736,7 +2783,8 @@ public class MiniDFSCluster implements AutoCloseable {
     final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
     final FsDatasetSpi<?> dataSet = DataNodeTestUtils.getFSDataset(dn);
     if (!(dataSet instanceof SimulatedFSDataset)) {
-      throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
+      throw new IOException("injectBlocks is valid only for" +
+          " SimulatedFSDataset");
     }
     String bpid = getNamesystem(nameNodeIndex).getBlockPoolId();
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
@@ -2822,6 +2870,26 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public File getInstanceStorageDir(int dnIndex, int dirIndex) {
     return new File(base_dir, getStorageDirPath(dnIndex, dirIndex));
+  }
+
+  /**
+   * Get a storage directory for PROVIDED storages.
+   * The PROVIDED directory to return can be set by using the configuration
+   * parameter {@link #HDFS_MINIDFS_BASEDIR_PROVIDED}. If this parameter is
+   * not set, this function behaves exactly the same as
+   * {@link #getInstanceStorageDir(int, int)}. Currently, the two parameters
+   * are ignored as only one PROVIDED storage is supported in HDFS-9806.
+   *
+   * @param dnIndex datanode index (starts from 0)
+   * @param dirIndex directory index
+   * @return Storage directory
+   */
+  public File getProvidedStorageDir(int dnIndex, int dirIndex) {
+    String base = conf.get(HDFS_MINIDFS_BASEDIR_PROVIDED, null);
+    if (base == null) {
+      return getInstanceStorageDir(dnIndex, dirIndex);
+    }
+    return new File(base);
   }
 
   /**
@@ -2934,6 +3002,29 @@ public class MiniDFSCluster implements AutoCloseable {
   public static File getBlockFile(File storageDir, ExtendedBlock blk) {
     return new File(DatanodeUtil.idToBlockDir(getFinalizedDir(storageDir,
         blk.getBlockPoolId()), blk.getBlockId()), blk.getBlockName());
+  }
+
+  /**
+   * Return all block files in given directory (recursive search).
+   */
+  public static List<File> getAllBlockFiles(File storageDir) {
+    List<File> results = new ArrayList<File>();
+    File[] files = storageDir.listFiles();
+    if (files == null) {
+      return null;
+    }
+    for (File f : files) {
+      if (f.getName().startsWith(Block.BLOCK_FILE_PREFIX) &&
+          !f.getName().endsWith(Block.METADATA_EXTENSION)) {
+        results.add(f);
+      } else if (f.isDirectory()) {
+        List<File> subdirResults = getAllBlockFiles(f);
+        if (subdirResults != null) {
+          results.addAll(subdirResults);
+        }
+      }
+    }
+    return results;
   }
 
   /**
@@ -3077,6 +3168,16 @@ public class MiniDFSCluster implements AutoCloseable {
 
     // Wait for new namenode to get registrations from all the datanodes
     waitActive(nnIndex);
+  }
+
+  /**
+   * Sets the timeout for re-issuing a block recovery.
+   */
+  public void setBlockRecoveryTimeout(long timeout) {
+    for (int nnIndex = 0; nnIndex < getNumNameNodes(); nnIndex++) {
+      getNamesystem(nnIndex).getBlockManager().setBlockRecoveryTimeout(
+          timeout);
+    }
   }
   
   protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,

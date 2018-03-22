@@ -100,7 +100,7 @@ public class ReportCommand extends Command {
   }
 
   private void handleTopReport(final CommandLine cmd, final StrBuilder result,
-      final String nodeFormat) {
+      final String nodeFormat) throws IllegalArgumentException {
     Collections.sort(getCluster().getNodes(), Collections.reverseOrder());
 
     /* extract value that identifies top X DataNode(s) */
@@ -148,7 +148,9 @@ public class ReportCommand extends Command {
        * Reporting volume information for specific DataNode(s)
        */
       outputLine = String.format(
-          "Reporting volume information for DataNode(s) '%s'.", nodeVal);
+          "Reporting volume information for DataNode(s). "
+          + "These DataNode(s) are parsed from '%s'.", nodeVal);
+
       recordOutput(result, outputLine);
 
       List<DiskBalancerDataNode> dbdns = Lists.newArrayList();
@@ -224,7 +226,7 @@ public class ReportCommand extends Command {
         + "hdfs diskbalancer -report\n"
         + "hdfs diskbalancer -report -top 5\n"
         + "hdfs diskbalancer -report "
-        + "-node [<DataNodeID|IP|Hostname>,...]";
+        + "-node <file://> | [<DataNodeID|IP|Hostname>,...]";
 
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.printHelp("hdfs diskbalancer -fs http://namenode.uri " +

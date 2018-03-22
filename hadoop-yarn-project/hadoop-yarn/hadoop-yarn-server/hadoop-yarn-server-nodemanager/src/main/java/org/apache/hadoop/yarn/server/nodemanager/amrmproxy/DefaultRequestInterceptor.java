@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -48,6 +47,7 @@ import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
+import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,7 +134,8 @@ public final class DefaultRequestInterceptor extends
     }
     AllocateResponse allocateResponse = rmClient.allocate(request);
     if (allocateResponse.getAMRMToken() != null) {
-      updateAMRMToken(allocateResponse.getAMRMToken());
+      YarnServerSecurityUtils.updateAMRMToken(allocateResponse.getAMRMToken(),
+          this.user, getConf());
     }
 
     return allocateResponse;
@@ -170,7 +171,9 @@ public final class DefaultRequestInterceptor extends
           ((DistributedSchedulingAMProtocol)rmClient)
               .allocateForDistributedScheduling(request);
       if (allocateResponse.getAllocateResponse().getAMRMToken() != null) {
-        updateAMRMToken(allocateResponse.getAllocateResponse().getAMRMToken());
+        YarnServerSecurityUtils.updateAMRMToken(
+            allocateResponse.getAllocateResponse().getAMRMToken(), this.user,
+            getConf());
       }
       return allocateResponse;
     } else {
@@ -193,18 +196,6 @@ public final class DefaultRequestInterceptor extends
         "setNextInterceptor is being called on DefaultRequestInterceptor,"
             + "which should be the last one in the chain "
             + "Check if the interceptor pipeline configuration is correct");
-  }
-
-  private void updateAMRMToken(Token token) throws IOException {
-    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
-        new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(
-            token.getIdentifier().array(), token.getPassword().array(),
-            new Text(token.getKind()), new Text(token.getService()));
-    // Preserve the token service sent by the RM when adding the token
-    // to ensure we replace the previous token setup by the RM.
-    // Afterwards we can update the service address for the RPC layer.
-    user.addToken(amrmToken);
-    amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConf()));
   }
 
   @VisibleForTesting
@@ -257,16 +248,9 @@ public final class DefaultRequestInterceptor extends
     for (org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token : UserGroupInformation
         .getCurrentUser().getTokens()) {
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
-        token.setService(getAMRMTokenService(conf));
+        token.setService(ClientRMProxy.getAMRMTokenService(conf));
       }
     }
-  }
-
-  @InterfaceStability.Unstable
-  public static Text getAMRMTokenService(Configuration conf) {
-    return getTokenService(conf, YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
   }
 
   @InterfaceStability.Unstable

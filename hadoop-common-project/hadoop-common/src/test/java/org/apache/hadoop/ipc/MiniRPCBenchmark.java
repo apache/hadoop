@@ -26,9 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -43,8 +43,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelect
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.slf4j.event.Level;
 
 /**
  * MiniRPCBenchmark measures time to establish an RPC connection 
@@ -255,9 +254,9 @@ public class MiniRPCBenchmark {
   }
 
   static void setLoggingLevel(Level level) {
-    LogManager.getLogger(Server.class.getName()).setLevel(level);
-    ((Log4JLogger)Server.AUDITLOG).getLogger().setLevel(level);
-    LogManager.getLogger(Client.class.getName()).setLevel(level);
+    GenericTestUtils.setLogLevel(Server.LOG, level);
+    GenericTestUtils.setLogLevel(Server.AUDITLOG, level);
+    GenericTestUtils.setLogLevel(Client.LOG, level);
   }
 
   /**
@@ -370,7 +369,7 @@ public class MiniRPCBenchmark {
       useDelegationToken = args[3].equalsIgnoreCase("useToken");
     Level l = Level.ERROR;
     if(args.length > 4)
-      l = Level.toLevel(args[4]);
+      l = GenericTestUtils.toLevel(args[4]);
 
     MiniRPCBenchmark mb = new MiniRPCBenchmark(l);
     long elapsedTime = 0;

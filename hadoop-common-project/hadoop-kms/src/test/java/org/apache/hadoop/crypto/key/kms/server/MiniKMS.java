@@ -17,83 +17,23 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import com.google.common.base.Preconditions;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.util.ThreadUtil;
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.ConnectionFactory;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.webapp.WebAppContext;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.UUID;
+
+import com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.util.ThreadUtil;
 
 public class MiniKMS {
-
-  private static Server createJettyServer(String keyStore, String password, int inPort) {
-    try {
-      boolean ssl = keyStore != null;
-      String host = "localhost";
-      Server server = new Server();
-      ServerConnector conn = new ServerConnector(server);
-      HttpConfiguration httpConfig = new HttpConfiguration();
-      httpConfig.setRequestHeaderSize(JettyUtils.HEADER_SIZE);
-      httpConfig.setResponseHeaderSize(JettyUtils.HEADER_SIZE);
-      httpConfig.setSecureScheme("https");
-      httpConfig.addCustomizer(new SecureRequestCustomizer());
-      ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
-      conn.addConnectionFactory(connFactory);
-      conn.setHost(host);
-      conn.setPort(inPort);
-      if (ssl) {
-        SslContextFactory sslContextFactory = new SslContextFactory();
-        sslContextFactory.setNeedClientAuth(false);
-        sslContextFactory.setKeyStorePath(keyStore);
-        sslContextFactory.setKeyStoreType("jks");
-        sslContextFactory.setKeyStorePassword(password);
-        conn.addFirstConnectionFactory(
-            new SslConnectionFactory(sslContextFactory,
-            HttpVersion.HTTP_1_1.asString()));
-      }
-      server.addConnector(conn);
-      return server;
-    } catch (Exception ex) {
-      throw new RuntimeException("Could not start embedded servlet container, "
-          + ex.getMessage(), ex);
-    }
-  }
-
-  private static URL getJettyURL(Server server) {
-    boolean ssl = server.getConnectors()[0]
-        .getConnectionFactory(SslConnectionFactory.class) != null;
-    try {
-      String scheme = (ssl) ? "https" : "http";
-      return new URL(scheme + "://" +
-          ((ServerConnector)server.getConnectors()[0]).getHost() + ":"
-          + ((ServerConnector)server.getConnectors()[0]).getLocalPort());
-    } catch (MalformedURLException ex) {
-      throw new RuntimeException("It should never happen, " + ex.getMessage(),
-          ex);
-    }
-  }
 
   public static class Builder {
     private File kmsConfDir;
@@ -150,7 +90,7 @@ public class MiniKMS {
   private String log4jConfFile;
   private String keyStore;
   private String keyStorePassword;
-  private Server jetty;
+  private KMSWebServer jetty;
   private int inPort;
   private URL kmsURL;
 
@@ -165,20 +105,15 @@ public class MiniKMS {
 
   private void copyResource(String inputResourceName, File outputFile) throws
       IOException {
-    InputStream is = null;
-    OutputStream os = null;
-    try {
-      is = ThreadUtil.getResourceAsStream(inputResourceName);
-      os = new FileOutputStream(outputFile);
+    InputStream is = ThreadUtil.getResourceAsStream(inputResourceName);
+    try (OutputStream os = new FileOutputStream(outputFile)) {
       IOUtils.copy(is, os);
     } finally {
       IOUtils.closeQuietly(is);
-      IOUtils.closeQuietly(os);
     }
   }
 
   public void start() throws Exception {
-    ClassLoader cl = Thread.currentThread().getContextClassLoader();
     System.setProperty(KMSConfiguration.KMS_CONFIG_DIR, kmsConfDir);
     File aclsFile = new File(kmsConfDir, "kms-acls.xml");
     if (!aclsFile.exists()) {
@@ -202,35 +137,23 @@ public class MiniKMS {
       writer.close();
     }
     System.setProperty("log4j.configuration", log4jConfFile);
-    jetty = createJettyServer(keyStore, keyStorePassword, inPort);
 
-    // we need to do a special handling for MiniKMS to work when in a dir and
-    // when in a JAR in the classpath thanks to Jetty way of handling of webapps
-    // when they are in the a DIR, WAR or JAR.
-    URL webXmlUrl = cl.getResource("kms-webapp/WEB-INF/web.xml");
-    if (webXmlUrl == null) {
-      throw new RuntimeException(
-          "Could not find kms-webapp/ dir in test classpath");
+    final Configuration conf = KMSConfiguration.getKMSConf();
+    conf.set(KMSConfiguration.HTTP_HOST_KEY, "localhost");
+    conf.setInt(KMSConfiguration.HTTP_PORT_KEY, inPort);
+
+    Configuration sslConf = null;
+    if (keyStore != null) {
+      conf.setBoolean(KMSConfiguration.SSL_ENABLED_KEY, true);
+      sslConf = SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER);
+      sslConf.set(SSLFactory.SSL_SERVER_KEYSTORE_LOCATION, keyStore);
+      sslConf.set(SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD, keyStorePassword);
+      sslConf.set(SSLFactory.SSL_SERVER_KEYSTORE_TYPE, "jks");
     }
-    boolean webXmlInJar = webXmlUrl.getPath().contains(".jar!/");
-    String webappPath;
-    if (webXmlInJar) {
-      File webInf = new File("target/" + UUID.randomUUID().toString() +
-          "/kms-webapp/WEB-INF");
-      webInf.mkdirs();
-      new File(webInf, "web.xml").delete();
-      copyResource("kms-webapp/WEB-INF/web.xml", new File(webInf, "web.xml"));
-      webappPath = webInf.getParentFile().getAbsolutePath();
-    } else {
-      webappPath = cl.getResource("kms-webapp").getPath();
-    }
-    WebAppContext context = new WebAppContext(webappPath, "/kms");
-    if (webXmlInJar) {
-      context.setClassLoader(cl);
-    }
-    jetty.setHandler(context);
+
+    jetty = new KMSWebServer(conf, sslConf);
     jetty.start();
-    kmsURL = new URL(getJettyURL(jetty), "kms");
+    kmsURL = jetty.getKMSUrl();
   }
 
   public URL getKMSUrl() {

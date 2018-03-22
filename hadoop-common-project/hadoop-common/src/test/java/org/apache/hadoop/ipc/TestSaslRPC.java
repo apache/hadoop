@@ -20,9 +20,6 @@ package org.apache.hadoop.ipc;
 
 import com.google.protobuf.ServiceException;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -36,7 +33,7 @@ import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.*;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.log4j.Level;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -44,6 +41,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -120,8 +120,7 @@ public class TestSaslRPC extends TestRpcBase {
     this.saslPropertiesResolver = saslPropertiesResolver;
   }
 
-  public static final Log LOG =
-    LogFactory.getLog(TestSaslRPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestSaslRPC.class);
   
   static final String ERROR_MESSAGE = "Token is invalid";
   static final String SERVER_KEYTAB_KEY = "test.ipc.server.keytab";
@@ -186,12 +185,12 @@ public class TestSaslRPC extends TestRpcBase {
   }
 
   static {
-    ((Log4JLogger) Client.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) Server.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslRpcClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslRpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SaslInputStream.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) SecurityUtil.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(Client.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslRpcClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslRpcServer.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SaslInputStream.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(SecurityUtil.LOG, Level.TRACE);
   }
 
   public static class BadTokenSecretManager extends TestTokenSecretManager {

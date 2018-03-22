@@ -29,9 +29,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSche
  * Context of the Queues in Scheduler.
  *
  */
+@SuppressWarnings("rawtypes")
 @Private
 @Unstable
-public interface SchedulerQueueManager<T extends Queue,
+public interface SchedulerQueueManager<T extends SchedulerQueue,
     E extends ReservationSchedulerConfiguration> {
 
   /**

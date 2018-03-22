@@ -15,8 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="yarn"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
 ## @description  build up the yarn command's usage text.
 ## @audience     public
@@ -31,27 +32,30 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
-  hadoop_add_subcommand "application" "prints application(s) report/kill application"
-  hadoop_add_subcommand "applicationattempt" "prints applicationattempt(s) report"
-  hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
-  hadoop_add_subcommand "cluster" "prints cluster information"
-  hadoop_add_subcommand "container" "prints container(s) report"
-  hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
-  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "jar <jar>" "run a jar file"
-  hadoop_add_subcommand "logs" "dump container logs"
-  hadoop_add_subcommand "node" "prints node report(s)"
-  hadoop_add_subcommand "nodemanager" "run a nodemanager on each worker"
-  hadoop_add_subcommand "proxyserver" "run the web app proxy server"
-  hadoop_add_subcommand "queue" "prints queue information"
-  hadoop_add_subcommand "resourcemanager" "run the ResourceManager"
-  hadoop_add_subcommand "rmadmin" "admin tools"
-  hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
-  hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
-  hadoop_add_subcommand "timelinereader" "run the timeline reader server"
-  hadoop_add_subcommand "timelineserver" "run the timeline server"
-  hadoop_add_subcommand "top" "view cluster information"
-  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "app|application" client "prints application(s) report/kill application/manage long running application"
+  hadoop_add_subcommand "applicationattempt" client "prints applicationattempt(s) report"
+  hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "cluster" client "prints cluster information"
+  hadoop_add_subcommand "container" client "prints container(s) report"
+  hadoop_add_subcommand "daemonlog" admin "get/set the log level for each daemon"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "jar <jar>" client "run a jar file"
+  hadoop_add_subcommand "logs" client "dump container logs"
+  hadoop_add_subcommand "node" admin "prints node report(s)"
+  hadoop_add_subcommand "nodemanager" daemon "run a nodemanager on each worker"
+  hadoop_add_subcommand "proxyserver" daemon "run the web app proxy server"
+  hadoop_add_subcommand "queue" client "prints queue information"
+  hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
+  hadoop_add_subcommand "resourcemanager" daemon "run the ResourceManager"
+  hadoop_add_subcommand "rmadmin" admin "admin tools"
+  hadoop_add_subcommand "router" daemon "run the Router daemon"
+  hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
+  hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
+  hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
+  hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
+  hadoop_add_subcommand "top" client "view cluster information"
+  hadoop_add_subcommand "version" client "print the version"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -66,10 +70,18 @@ function yarncmd_case
   shift
 
   case ${subcmd} in
-    application|applicationattempt|container)
+    app|application|applicationattempt|container)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.ApplicationCLI
       set -- "${subcmd}" "$@"
       HADOOP_SUBCMD_ARGS=("$@")
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -109,6 +121,8 @@ function yarncmd_case
     ;;
     nodemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
       # Backwards compatibility
       if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
@@ -120,24 +134,44 @@ function yarncmd_case
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
       # Backwards compatibility
       if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
-        # shellcheck disable=SC2034
         HADOOP_HEAPSIZE_MAX="${YARN_PROXYSERVER_HEAPSIZE}"
       fi
     ;;
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
     ;;
+    registrydns)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
+      HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
+    ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
       # Backwards compatibility
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
-        # shellcheck disable=SC2034
         HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
       fi
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
+    ;;
+    router)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
+    ;;
+    schedulerconf)
+    HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
     ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
@@ -148,6 +182,8 @@ function yarncmd_case
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
     timelineserver)
@@ -155,7 +191,6 @@ function yarncmd_case
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
       # Backwards compatibility
       if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
-        # shellcheck disable=SC2034
         HADOOP_HEAPSIZE_MAX="${YARN_TIMELINESERVER_HEAPSIZE}"
       fi
     ;;
@@ -210,14 +245,17 @@ else
 fi
 
 HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/yarn-config.sh" ]]; then
+  # shellcheck source=./hadoop-yarn-project/hadoop-yarn/bin/yarn-config.sh
   . "${HADOOP_LIBEXEC_DIR}/yarn-config.sh"
 else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/yarn-config.sh." 2>&1
   exit 1
 fi
+
+# now that we have support code, let's abs MYNAME so we can use it later
+MYNAME=$(hadoop_abs "${MYNAME}")
 
 # if no args specified, show usage
 if [[ $# = 0 ]]; then
@@ -228,7 +266,15 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
-hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+if hadoop_need_reexec yarn "${HADOOP_SUBCMD}"; then
+  hadoop_uservar_su yarn "${HADOOP_SUBCMD}" \
+    "${MYNAME}" \
+    "--reexec" \
+    "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
+hadoop_verify_user_perm "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
 HADOOP_SUBCMD_ARGS=("$@")
 
@@ -245,7 +291,6 @@ fi
 # HADOOP_CLIENT_OPTS instead before we (potentially) add it
 # to the command line
 if [[ -n "${YARN_CLIENT_OPTS}" ]]; then
-  # shellcheck disable=SC2034
   HADOOP_CLIENT_OPTS=${YARN_CLIENT_OPTS}
 fi
 
@@ -258,55 +303,5 @@ fi
 
 hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
 
-if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
-
-  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
-
-  hadoop_verify_secure_prereq
-  hadoop_setup_secure_service
-  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
-  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-else
-  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
-  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
-fi
-
-if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
-  # shellcheck disable=SC2034
-  HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  # shellcheck disable=SC2034
-  HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
-fi
-
-hadoop_finalize
-
-if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
-  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
-    hadoop_secure_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${priv_pidfile}" \
-      "${priv_outfile}" \
-      "${priv_errfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  else
-    hadoop_daemon_handler \
-      "${HADOOP_DAEMON_MODE}" \
-      "${HADOOP_SUBCMD}" \
-      "${HADOOP_CLASSNAME}" \
-      "${daemon_pidfile}" \
-      "${daemon_outfile}" \
-      "${HADOOP_SUBCMD_ARGS[@]}"
-  fi
-  exit $?
-else
-  # shellcheck disable=SC2086
-  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
-fi
+# everything is in globals at this point, so call the generic handler
+hadoop_generic_java_subcmd_handler

@@ -37,6 +37,8 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
+import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.PROP_ZK_SASL_CLIENT_CONTEXT;
+import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.PROP_ZK_SASL_CLIENT_USERNAME;
 
 /**
  * Verify that the Mini ZK service can be started up securely
@@ -136,6 +138,26 @@ public class TestSecureRegistry extends AbstractSecureRegistryTest {
       logout(login);
       ServiceOperations.stop(curator);
     }
+  }
+
+  @Test
+  public void testSystemPropertyOverwrite() {
+    System.setProperty(PROP_ZK_SASL_CLIENT_USERNAME, "");
+    System.setProperty(PROP_ZK_SASL_CLIENT_CONTEXT, "");
+    RegistrySecurity.setZKSaslClientProperties(ZOOKEEPER,
+        ZOOKEEPER_CLIENT_CONTEXT);
+    assertEquals(ZOOKEEPER, System.getProperty(PROP_ZK_SASL_CLIENT_USERNAME));
+    assertEquals(ZOOKEEPER_CLIENT_CONTEXT,
+        System.getProperty(PROP_ZK_SASL_CLIENT_CONTEXT));
+
+    String userName = "user1";
+    String context = "context1";
+    System.setProperty(PROP_ZK_SASL_CLIENT_USERNAME, userName);
+    System.setProperty(PROP_ZK_SASL_CLIENT_CONTEXT, context);
+    RegistrySecurity.setZKSaslClientProperties(ZOOKEEPER,
+        ZOOKEEPER_CLIENT_CONTEXT);
+    assertEquals(userName, System.getProperty(PROP_ZK_SASL_CLIENT_USERNAME));
+    assertEquals(context, System.getProperty(PROP_ZK_SASL_CLIENT_CONTEXT));
   }
 
   /**

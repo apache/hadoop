@@ -23,23 +23,16 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-6498](https://issues.apache.org/jira/browse/HADOOP-6498) | *Blocker* | **IPC client  bug may cause rpc call hang**
+* [MAPREDUCE-826](https://issues.apache.org/jira/browse/MAPREDUCE-826) | *Trivial* | **harchive doesn't use ToolRunner / harchive returns 0 even if the job fails with exception**
 
-Correct synchronization error in IPC where handler thread could hang if request reader got an error.
-
-
----
-
-* [HADOOP-6460](https://issues.apache.org/jira/browse/HADOOP-6460) | *Blocker* | **Namenode runs of out of memory due to memory leak in ipc Server**
-
-If an IPC server response buffer has grown to than 1MB, it is replaced by a smaller buffer to free up the Java heap that was used. This will improve the longevity of the name service.
+Use ToolRunner for archives job and return non zero error code on failure.
 
 
 ---
 
-* [HADOOP-6428](https://issues.apache.org/jira/browse/HADOOP-6428) | *Major* | **HttpServer sleeps with negative values**
+* [MAPREDUCE-112](https://issues.apache.org/jira/browse/MAPREDUCE-112) | *Blocker* | **Reduce Input Records and Reduce Output Records counters are not being set when using the new Mapreduce reducer API**
 
-Corrected arithmetic error that made sleep times less than zero.
+Updates of counters for reduce input and output records were added in the new API so they are available for jobs using the new API.
 
 
 ---
@@ -51,30 +44,9 @@ Allow a general mechanism to disable the cache on a per filesystem basis by usin
 
 ---
 
-* [HADOOP-6097](https://issues.apache.org/jira/browse/HADOOP-6097) | *Major* | **Multiple bugs w/ Hadoop archives**
+* [MAPREDUCE-979](https://issues.apache.org/jira/browse/MAPREDUCE-979) | *Blocker* | **JobConf.getMemoryFor{Map\|Reduce}Task doesn't fallback to newer config knobs when mapred.taskmaxvmem is set to DISABLED\_MEMORY\_LIMIT of -1**
 
-Bugs fixed for Hadoop archives: character escaping in paths, LineReader and file system caching.
-
-
----
-
-* [HDFS-793](https://issues.apache.org/jira/browse/HDFS-793) | *Blocker* | **DataNode should first receive the whole packet ack message before it constructs and sends its own ack message for the packet**
-
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HDFS-781](https://issues.apache.org/jira/browse/HDFS-781) | *Blocker* | **Metrics PendingDeletionBlocks is not decremented**
-
-Correct PendingDeletionBlocks metric to properly decrement counts.
-
-
----
-
-* [HDFS-761](https://issues.apache.org/jira/browse/HDFS-761) | *Major* | **Failure to process rename operation from edits log due to quota verification**
-
-Corrected an error when checking quota policy that resulted in a failure to read the edits log, stopping the primary/secondary name node.
+Added support to fallback to new task memory configuration when deprecated memory configuration values are set to disabled.
 
 
 ---
@@ -86,23 +58,16 @@ Rename properly considers the case where both source and destination are over qu
 
 ---
 
-* [HDFS-596](https://issues.apache.org/jira/browse/HDFS-596) | *Blocker* | **Memory leak in libhdfs: hdfsFreeFileInfo() in libhdfs does not free memory for mOwner and mGroup**
+* [HADOOP-6097](https://issues.apache.org/jira/browse/HADOOP-6097) | *Major* | **Multiple bugs w/ Hadoop archives**
 
-Memory leak in function hdfsFreeFileInfo in libhdfs. This bug affects fuse-dfs severely.
-
-
----
-
-* [MAPREDUCE-1182](https://issues.apache.org/jira/browse/MAPREDUCE-1182) | *Blocker* | **Reducers fail with OutOfMemoryError while copying Map outputs**
-
-Modifies shuffle related memory parameters to use 'long' from 'int' so that sizes greater than maximum integer size are handled correctly
+Bugs fixed for Hadoop archives: character escaping in paths, LineReader and file system caching.
 
 
 ---
 
-* [MAPREDUCE-1147](https://issues.apache.org/jira/browse/MAPREDUCE-1147) | *Blocker* | **Map output records counter missing for map-only jobs in new API**
+* [HDFS-761](https://issues.apache.org/jira/browse/HDFS-761) | *Major* | **Failure to process rename operation from edits log due to quota verification**
 
-Adds a counter to track the number of records emitted by map writing directly to HDFS i.e map tasks of job with 0 reducers.
+Corrected an error when checking quota policy that resulted in a failure to read the edits log, stopping the primary/secondary name node.
 
 
 ---
@@ -114,23 +79,51 @@ Fix streaming job to show proper message if file is is not present, for -file op
 
 ---
 
-* [MAPREDUCE-979](https://issues.apache.org/jira/browse/MAPREDUCE-979) | *Blocker* | **JobConf.getMemoryFor{Map\|Reduce}Task doesn't fallback to newer config knobs when mapred.taskmaxvmem is set to DISABLED\_MEMORY\_LIMIT of -1**
+* [HDFS-596](https://issues.apache.org/jira/browse/HDFS-596) | *Blocker* | **Memory leak in libhdfs: hdfsFreeFileInfo() in libhdfs does not free memory for mOwner and mGroup**
 
-Added support to fallback to new task memory configuration when deprecated memory configuration values are set to disabled.
-
-
----
-
-* [MAPREDUCE-826](https://issues.apache.org/jira/browse/MAPREDUCE-826) | *Trivial* | **harchive doesn't use ToolRunner / harchive returns 0 even if the job fails with exception**
-
-Use ToolRunner for archives job and return non zero error code on failure.
+Memory leak in function hdfsFreeFileInfo in libhdfs. This bug affects fuse-dfs severely.
 
 
 ---
 
-* [MAPREDUCE-623](https://issues.apache.org/jira/browse/MAPREDUCE-623) | *Major* | **Resolve javac warnings in mapred**
+* [MAPREDUCE-1147](https://issues.apache.org/jira/browse/MAPREDUCE-1147) | *Blocker* | **Map output records counter missing for map-only jobs in new API**
 
-Removes javac warnings by either resolving them or suppressing them (wherever resolution is not possible)
+Adds a counter to track the number of records emitted by map writing directly to HDFS i.e map tasks of job with 0 reducers.
+
+
+---
+
+* [MAPREDUCE-1182](https://issues.apache.org/jira/browse/MAPREDUCE-1182) | *Blocker* | **Reducers fail with OutOfMemoryError while copying Map outputs**
+
+Modifies shuffle related memory parameters to use 'long' from 'int' so that sizes greater than maximum integer size are handled correctly
+
+
+---
+
+* [HDFS-781](https://issues.apache.org/jira/browse/HDFS-781) | *Blocker* | **Metrics PendingDeletionBlocks is not decremented**
+
+Correct PendingDeletionBlocks metric to properly decrement counts.
+
+
+---
+
+* [HDFS-793](https://issues.apache.org/jira/browse/HDFS-793) | *Blocker* | **DataNode should first receive the whole packet ack message before it constructs and sends its own ack message for the packet**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
+* [HADOOP-6428](https://issues.apache.org/jira/browse/HADOOP-6428) | *Major* | **HttpServer sleeps with negative values**
+
+Corrected arithmetic error that made sleep times less than zero.
+
+
+---
+
+* [HADOOP-6460](https://issues.apache.org/jira/browse/HADOOP-6460) | *Blocker* | **Namenode runs of out of memory due to memory leak in ipc Server**
+
+If an IPC server response buffer has grown to than 1MB, it is replaced by a smaller buffer to free up the Java heap that was used. This will improve the longevity of the name service.
 
 
 ---
@@ -142,9 +135,16 @@ Resolves the test failure by modifying the test to base it on spill counters rat
 
 ---
 
-* [MAPREDUCE-112](https://issues.apache.org/jira/browse/MAPREDUCE-112) | *Blocker* | **Reduce Input Records and Reduce Output Records counters are not being set when using the new Mapreduce reducer API**
+* [HADOOP-6498](https://issues.apache.org/jira/browse/HADOOP-6498) | *Blocker* | **IPC client  bug may cause rpc call hang**
 
-Updates of counters for reduce input and output records were added in the new API so they are available for jobs using the new API.
+Correct synchronization error in IPC where handler thread could hang if request reader got an error.
+
+
+---
+
+* [MAPREDUCE-623](https://issues.apache.org/jira/browse/MAPREDUCE-623) | *Major* | **Resolve javac warnings in mapred**
+
+Removes javac warnings by either resolving them or suppressing them (wherever resolution is not possible)
 
 
 

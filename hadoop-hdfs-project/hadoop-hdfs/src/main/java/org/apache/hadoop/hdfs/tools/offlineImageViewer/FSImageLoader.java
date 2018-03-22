@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
@@ -589,7 +590,11 @@ class FSImageLoader {
         map.put("pathSuffix",
             printSuffix ? inode.getName().toStringUtf8() : "");
         map.put("permission", toString(p.getPermission()));
-        map.put("replication", f.getReplication());
+        if (f.hasErasureCodingPolicyID()) {
+          map.put("replication", INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS);
+        } else {
+          map.put("replication", f.getReplication());
+        }
         map.put("type", inode.getType());
         map.put("fileId", inode.getId());
         map.put("childrenNum", 0);

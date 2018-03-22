@@ -353,7 +353,7 @@ public class TestShortCircuitLocalRead {
     });
   }
 
-  @Test(timeout=10000)
+  @Test(timeout=60000)
   public void testDeprecatedGetBlockLocalPathInfoRpc() throws IOException {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -388,7 +388,7 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test(timeout=10000)
+  @Test(timeout=60000)
   public void testSkipWithVerifyChecksum() throws IOException {
     int size = blockSize;
     Configuration conf = new Configuration();

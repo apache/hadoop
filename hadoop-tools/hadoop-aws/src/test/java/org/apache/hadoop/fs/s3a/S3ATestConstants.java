@@ -86,18 +86,6 @@ public interface S3ATestConstants {
   String DEFAULT_CSVTEST_FILE = "s3a://landsat-pds/scene_list.gz";
 
   /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  String KEY_CSVTEST_ENDPOINT = S3A_SCALE_TEST + "csvfile.endpoint";
-
-  /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  String DEFAULT_CSVTEST_ENDPOINT = "s3.amazonaws.com";
-
-  /**
    * Name of the property to define the timeout for scale tests: {@value}.
    * Measured in seconds.
    */
@@ -147,6 +135,18 @@ public interface S3ATestConstants {
   String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
 
   /**
+   * Various S3Guard tests.
+   */
+  String TEST_S3GUARD_PREFIX = "fs.s3a.s3guard.test";
+  String TEST_S3GUARD_ENABLED = TEST_S3GUARD_PREFIX + ".enabled";
+  String TEST_S3GUARD_AUTHORITATIVE = TEST_S3GUARD_PREFIX + ".authoritative";
+  String TEST_S3GUARD_IMPLEMENTATION = TEST_S3GUARD_PREFIX + ".implementation";
+  String TEST_S3GUARD_IMPLEMENTATION_LOCAL = "local";
+  String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
+  String TEST_S3GUARD_IMPLEMENTATION_DYNAMODBLOCAL = "dynamodblocal";
+  String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
+
+  /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
   int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
@@ -163,4 +163,10 @@ public interface S3ATestConstants {
    */
   String CONFIGURATION_TEST_ENDPOINT =
       "test.fs.s3a.endpoint";
+
+  /**
+   * Property to set to disable caching.
+   */
+  String FS_S3A_IMPL_DISABLE_CACHE
+      = "fs.s3a.impl.disable.cache";
 }

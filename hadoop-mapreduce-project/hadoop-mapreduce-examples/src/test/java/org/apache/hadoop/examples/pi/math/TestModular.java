@@ -21,14 +21,16 @@ import java.math.BigInteger;
 import java.util.Random;
 
 import org.apache.hadoop.examples.pi.Util.Timer;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class TestModular extends junit.framework.TestCase { 
-  private static final Random RANDOM = new Random(); 
+public class TestModular{
+  private static final Random RANDOM = new Random();
   private static final BigInteger TWO = BigInteger.valueOf(2);
 
 
   static final int DIV_VALID_BIT = 32;
-  static final long DIV_LIMIT = 1L << DIV_VALID_BIT; 
+  static final long DIV_LIMIT = 1L << DIV_VALID_BIT;
 
   // return r/n for n > r > 0
   static long div(long sum, long r, long n) {
@@ -36,7 +38,7 @@ public class TestModular extends junit.framework.TestCase {
     int i = DIV_VALID_BIT - 1;
     for(r <<= 1; r < n; r <<= 1) i--;
 //System.out.printf("  r=%d, n=%d, q=%d\n", r, n, q);
-    
+
     for(; i >= 0 ;) {
       r -= n;
       q |= (1L << i);
@@ -48,14 +50,15 @@ public class TestModular extends junit.framework.TestCase {
     sum += q;
     return sum < DIV_LIMIT? sum: sum - DIV_LIMIT;
   }
- 
+
+  @Test
   public void testDiv() {
     for(long n = 2; n < 100; n++)
       for(long r = 1; r < n; r++) {
         final long a = div(0, r, n);
         final long b = (long)((r*1.0/n) * (1L << DIV_VALID_BIT));
         final String s = String.format("r=%d, n=%d, a=%X, b=%X", r, n, a, b);
-        assertEquals(s, b, a);
+        Assert.assertEquals(s, b, a);
       }
   }
 
@@ -64,16 +67,16 @@ public class TestModular extends junit.framework.TestCase {
 
     for(int i = 0; i < rn.length; i++) {
       rn[i] = new long[rsize + 1][];
-      long n = RANDOM.nextLong() & 0xFFFFFFFFFFFFFFFL; 
+      long n = RANDOM.nextLong() & 0xFFFFFFFFFFFFFFFL;
       if (n <= 1) n = 0xFFFFFFFFFFFFFFFL - n;
       rn[i][0] = new long[]{n};
-      final BigInteger N = BigInteger.valueOf(n); 
+      final BigInteger N = BigInteger.valueOf(n);
 
       for(int j = 1; j < rn[i].length; j++) {
         long r = RANDOM.nextLong();
         if (r < 0) r = -r;
         if (r >= n) r %= n;
-        final BigInteger R = BigInteger.valueOf(r); 
+        final BigInteger R = BigInteger.valueOf(r);
         rn[i][j] = new long[]{r, R.multiply(R).mod(N).longValue()};
       }
     }
@@ -102,20 +105,20 @@ public class TestModular extends junit.framework.TestCase {
     } else {
       final int HALF = (63 - Long.numberOfLeadingZeros(n)) >> 1;
       final int FULL = HALF << 1;
-      final long ONES = (1 << HALF) - 1; 
-  
+      final long ONES = (1 << HALF) - 1;
+
       final long high = r >>> HALF;
       final long low  = r &= ONES;
 
       r *= r;
       if (r >= n) r %= n;
-  
+
       if (high != 0) {
         long s = high * high;
         if (s >= n) s %= n;
         for(int i = 0; i < FULL; i++)
           if ((s <<= 1) >= n) s -= n;
-        
+
         if (low == 0)
           r = s;
         else {
@@ -123,7 +126,7 @@ public class TestModular extends junit.framework.TestCase {
           if (t >= n) t %= n;
           for(int i = -1; i < HALF; i++)
             if ((t <<= 1) >= n) t -= n;
-          
+
           r += s;
           if (r >= n) r -= n;
           r += t;
@@ -133,7 +136,7 @@ public class TestModular extends junit.framework.TestCase {
     }
     return r;
   }
-  
+
   static void squareBenchmarks() {
     final Timer t = new Timer(false);
     t.tick("squareBenchmarks(), MAX_SQRT=" + Modular.MAX_SQRT_LONG);
@@ -147,8 +150,11 @@ public class TestModular extends junit.framework.TestCase {
         final long r = rn[i][j][0];
         final long answer = rn[i][j][1];
         final long s = square_slow(r, n);
-        if (s != answer)
-          assertEquals("r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("square_slow");
@@ -161,8 +167,11 @@ public class TestModular extends junit.framework.TestCase {
         final long r = rn[i][j][0];
         final long answer = rn[i][j][1];
         final long s = square(r, n, r2p64);
-        if (s != answer)
-          assertEquals("r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("square");
@@ -175,8 +184,11 @@ public class TestModular extends junit.framework.TestCase {
         final long answer = rn[i][j][1];
         final BigInteger R = BigInteger.valueOf(r);
         final long s = R.multiply(R).mod(N).longValue();
-        if (s != answer)
-          assertEquals("r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("R.multiply(R).mod(N)");
@@ -189,8 +201,11 @@ public class TestModular extends junit.framework.TestCase {
         final long answer = rn[i][j][1];
         final BigInteger R = BigInteger.valueOf(r);
         final long s = R.modPow(TWO, N).longValue();
-        if (s != answer)
-          assertEquals("r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "r=" + r + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("R.modPow(TWO, N)");
@@ -201,15 +216,15 @@ public class TestModular extends junit.framework.TestCase {
 
     for(int i = 0; i < en.length; i++) {
       en[i] = new long[esize + 1][];
-      long n = (RANDOM.nextLong() & 0xFFFFFFFFFFFFFFFL) | 1L; 
+      long n = (RANDOM.nextLong() & 0xFFFFFFFFFFFFFFFL) | 1L;
       if (n == 1) n = 3;
       en[i][0] = new long[]{n};
-      final BigInteger N = BigInteger.valueOf(n); 
+      final BigInteger N = BigInteger.valueOf(n);
 
       for(int j = 1; j < en[i].length; j++) {
         long e = RANDOM.nextLong();
         if (e < 0) e = -e;
-        final BigInteger E = BigInteger.valueOf(e); 
+        final BigInteger E = BigInteger.valueOf(e);
         en[i][j] = new long[]{e, TWO.modPow(E, N).longValue()};
       }
     }
@@ -253,10 +268,10 @@ public class TestModular extends junit.framework.TestCase {
   static class Montgomery2 extends Montgomery {
     /** Compute 2^y mod N for N odd. */
     long mod2(final long y) {
-      long r0 = R - N; 
+      long r0 = R - N;
       long r1 = r0 << 1;
       if (r1 >= N) r1 -= N;
-      
+
       for(long mask = Long.highestOneBit(y); mask > 0; mask >>>= 1) {
         if ((mask & y) == 0) {
           r1 = product.m(r0, r1);
@@ -269,7 +284,7 @@ public class TestModular extends junit.framework.TestCase {
       return product.m(r0, 1);
     }
   }
-  
+
   static void modBenchmarks() {
     final Timer t = new Timer(false);
     t.tick("modBenchmarks()");
@@ -283,12 +298,15 @@ public class TestModular extends junit.framework.TestCase {
         final long e = en[i][j][0];
         final long answer = en[i][j][1];
         final long s = Modular.mod(e, n);
-        if (s != answer)
-          assertEquals("e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("Modular.mod");
-    
+
     final Montgomery2 m2 = new Montgomery2();
     for(int i = 0; i < en.length; i++) {
       final long n = en[i][0][0];
@@ -297,8 +315,11 @@ public class TestModular extends junit.framework.TestCase {
         final long e = en[i][j][0];
         final long answer = en[i][j][1];
         final long s = m2.mod(e);
-        if (s != answer)
-          assertEquals("e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("montgomery.mod");
@@ -310,21 +331,27 @@ public class TestModular extends junit.framework.TestCase {
         final long e = en[i][j][0];
         final long answer = en[i][j][1];
         final long s = m2.mod2(e);
-        if (s != answer)
-          assertEquals("e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("montgomery.mod2");
 
     for(int i = 0; i < en.length; i++) {
       final long n = en[i][0][0];
-      final BigInteger N = BigInteger.valueOf(n); 
+      final BigInteger N = BigInteger.valueOf(n);
       for(int j = 1; j < en[i].length; j++) {
         final long e = en[i][j][0];
         final long answer = en[i][j][1];
         final long s = TWO.modPow(BigInteger.valueOf(e), N).longValue();
-        if (s != answer)
-          assertEquals("e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s, answer, s);
+        if (s != answer) {
+          Assert.assertEquals(
+              "e=" + e + ", n=" + n + ", answer=" + answer + " but s=" + s,
+              answer, s);
+        }
       }
     }
     t.tick("BigInteger.modPow(e, n)");

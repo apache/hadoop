@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockMissingException;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -46,8 +49,11 @@ import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -61,9 +67,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -79,6 +88,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -91,7 +101,9 @@ public class TestDataNodeHotSwapVolumes {
   private static final Log LOG = LogFactory.getLog(
     TestDataNodeHotSwapVolumes.class);
   private static final int BLOCK_SIZE = 512;
+  private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
   private MiniDFSCluster cluster;
+  private Configuration conf;
 
   @After
   public void tearDown() {
@@ -100,8 +112,13 @@ public class TestDataNodeHotSwapVolumes {
 
   private void startDFSCluster(int numNameNodes, int numDataNodes)
       throws IOException {
+    startDFSCluster(numNameNodes, numDataNodes, DEFAULT_STORAGES_PER_DATANODE);
+  }
+
+  private void startDFSCluster(int numNameNodes, int numDataNodes,
+      int storagePerDataNode) throws IOException {
     shutdown();
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
 
     /*
@@ -123,6 +140,7 @@ public class TestDataNodeHotSwapVolumes {
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(nnTopology)
         .numDataNodes(numDataNodes)
+        .storagesPerDatanode(storagePerDataNode)
         .build();
     cluster.waitActive();
   }
@@ -281,8 +299,12 @@ public class TestDataNodeHotSwapVolumes {
 
   /** Add volumes to the first DataNode. */
   private void addVolumes(int numNewVolumes)
-      throws ReconfigurationException, IOException {
-    File dataDir = new File(cluster.getDataDirectory());
+      throws InterruptedException, IOException, ReconfigurationException {
+    addVolumes(numNewVolumes, new CountDownLatch(0));
+  }
+
+  private void addVolumes(int numNewVolumes, CountDownLatch waitLatch)
+      throws ReconfigurationException, IOException, InterruptedException {
     DataNode dn = cluster.getDataNodes().get(0);  // First DataNode.
     Configuration conf = dn.getConf();
     String oldDataDir = conf.get(DFS_DATANODE_DATA_DIR_KEY);
@@ -292,14 +314,14 @@ public class TestDataNodeHotSwapVolumes {
     int startIdx = oldDataDir.split(",").length + 1;
     // Find the first available (non-taken) directory name for data volume.
     while (true) {
-      File volumeDir = new File(dataDir, "data" + startIdx);
+      File volumeDir = cluster.getInstanceStorageDir(0, startIdx);
       if (!volumeDir.exists()) {
         break;
       }
       startIdx++;
     }
     for (int i = startIdx; i < startIdx + numNewVolumes; i++) {
-      File volumeDir = new File(dataDir, "data" + String.valueOf(i));
+      File volumeDir = cluster.getInstanceStorageDir(0, i);
       newVolumeDirs.add(volumeDir);
       volumeDir.mkdirs();
       newDataDirBuf.append(",");
@@ -312,6 +334,9 @@ public class TestDataNodeHotSwapVolumes {
         "DN did not update its own config",
         dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDataDir),
         is(conf.get(DFS_DATANODE_DATA_DIR_KEY)));
+
+    // Await on the latch for needed operations to complete
+    waitLatch.await();
 
     // Verify the configuration value is appropriately set.
     String[] effectiveDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY).split(",");
@@ -400,23 +425,34 @@ public class TestDataNodeHotSwapVolumes {
       throws IOException, InterruptedException, TimeoutException,
       ReconfigurationException {
     startDFSCluster(1, 1);
+    int numVolumes = cluster.getStoragesPerDatanode();
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Path testFile = new Path("/test");
-    createFile(testFile, 4);  // Each volume has 2 blocks.
 
-    addVolumes(2);
+    // Each volume has 2 blocks
+    int initialBlockCount = numVolumes * 2;
+    createFile(testFile, initialBlockCount);
+
+    int newVolumeCount = 5;
+    addVolumes(newVolumeCount);
+    numVolumes += newVolumeCount;
+
+    int additionalBlockCount = 9;
+    int totalBlockCount = initialBlockCount + additionalBlockCount;
 
     // Continue to write the same file, thus the new volumes will have blocks.
-    DFSTestUtil.appendFile(cluster.getFileSystem(), testFile, BLOCK_SIZE * 8);
-    verifyFileLength(cluster.getFileSystem(), testFile, 8 + 4);
-    // After appending data, there should be [2, 2, 4, 4] blocks in each volume
-    // respectively.
-    List<Integer> expectedNumBlocks = Arrays.asList(2, 2, 4, 4);
+    DFSTestUtil.appendFile(cluster.getFileSystem(), testFile,
+        BLOCK_SIZE * additionalBlockCount);
+    verifyFileLength(cluster.getFileSystem(), testFile, totalBlockCount);
+
+    // After appending data, each new volume added should
+    // have 1 block each.
+    List<Integer> expectedNumBlocks = Arrays.asList(1, 1, 1, 1, 1, 4, 4);
 
     List<Map<DatanodeStorage, BlockListAsLongs>> blockReports =
         cluster.getAllBlockReports(bpid);
     assertEquals(1, blockReports.size());  // 1 DataNode
-    assertEquals(4, blockReports.get(0).size());  // 4 volumes
+    assertEquals(numVolumes, blockReports.get(0).size());  // 7 volumes
     Map<DatanodeStorage, BlockListAsLongs> dnReport =
         blockReports.get(0);
     List<Integer> actualNumBlocks = new ArrayList<Integer>();
@@ -425,6 +461,110 @@ public class TestDataNodeHotSwapVolumes {
     }
     Collections.sort(actualNumBlocks);
     assertEquals(expectedNumBlocks, actualNumBlocks);
+  }
+
+  @Test(timeout=180000)
+  public void testAddVolumesConcurrently()
+      throws IOException, InterruptedException, TimeoutException,
+      ReconfigurationException {
+    startDFSCluster(1, 1, 10);
+    int numVolumes = cluster.getStoragesPerDatanode();
+    String blockPoolId = cluster.getNamesystem().getBlockPoolId();
+    Path testFile = new Path("/test");
+
+    // Each volume has 2 blocks
+    int initialBlockCount = numVolumes * 2;
+    createFile(testFile, initialBlockCount);
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
+    dn.data = Mockito.spy(data);
+
+    final int newVolumeCount = 40;
+    List<Thread> addVolumeDelayedThreads = new ArrayList<>();
+    AtomicBoolean addVolumeError = new AtomicBoolean(false);
+    AtomicBoolean listStorageError = new AtomicBoolean(false);
+    CountDownLatch addVolumeCompletionLatch =
+        new CountDownLatch(newVolumeCount);
+
+    // Thread to list all storage available at DataNode,
+    // when the volumes are being added in parallel.
+    final Thread listStorageThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        while (addVolumeCompletionLatch.getCount() != newVolumeCount) {
+          int i = 0;
+          while(i++ < 1000) {
+            try {
+              dn.getStorage().listStorageDirectories();
+            } catch (Exception e) {
+              listStorageError.set(true);
+              LOG.error("Error listing storage: " + e);
+            }
+          }
+        }
+      }
+    });
+    listStorageThread.start();
+
+    // FsDatasetImpl addVolume mocked to perform the operation asynchronously
+    doAnswer(new Answer<Object>() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        final Random r = new Random();
+        Thread addVolThread =
+            new Thread(new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  r.setSeed(Time.now());
+                  // Let 50% of add volume operations
+                  // start after an initial delay.
+                  if (r.nextInt(10) > 4) {
+                    int s = r.nextInt(10) + 1;
+                    Thread.sleep(s * 100);
+                  }
+                  invocationOnMock.callRealMethod();
+                } catch (Throwable throwable) {
+                  addVolumeError.set(true);
+                  LOG.error("Error adding volume: " + throwable);
+                } finally {
+                  addVolumeCompletionLatch.countDown();
+                }
+              }
+            });
+        addVolumeDelayedThreads.add(addVolThread);
+        addVolThread.start();
+        return null;
+      }
+    }).when(dn.data).addVolume(any(StorageLocation.class), any(List.class));
+
+    addVolumes(newVolumeCount, addVolumeCompletionLatch);
+    numVolumes += newVolumeCount;
+
+    // Wait for all addVolume and listStorage Threads to complete
+    for (Thread t : addVolumeDelayedThreads) {
+      t.join();
+    }
+    listStorageThread.join();
+
+    // Verify errors while adding volumes and listing storage directories
+    Assert.assertEquals("Error adding volumes!", false, addVolumeError.get());
+    Assert.assertEquals("Error listing storage!",
+        false, listStorageError.get());
+
+    int additionalBlockCount = 9;
+    int totalBlockCount = initialBlockCount + additionalBlockCount;
+
+    // Continue to write the same file, thus the new volumes will have blocks.
+    DFSTestUtil.appendFile(cluster.getFileSystem(), testFile,
+        BLOCK_SIZE * additionalBlockCount);
+    verifyFileLength(cluster.getFileSystem(), testFile, totalBlockCount);
+
+    List<Map<DatanodeStorage, BlockListAsLongs>> blockReports =
+        cluster.getAllBlockReports(blockPoolId);
+    assertEquals(1, blockReports.size());
+    assertEquals(numVolumes, blockReports.get(0).size());
   }
 
   @Test(timeout=60000)
@@ -622,7 +762,7 @@ public class TestDataNodeHotSwapVolumes {
     }
   }
 
-  @Test(timeout=180000)
+  @Test(timeout=600000)
   public void testRemoveVolumeBeingWritten()
       throws InterruptedException, TimeoutException, ReconfigurationException,
       IOException, BrokenBarrierException {
@@ -640,12 +780,11 @@ public class TestDataNodeHotSwapVolumes {
   private void testRemoveVolumeBeingWrittenForDatanode(int dataNodeIdx)
       throws IOException, ReconfigurationException, TimeoutException,
       InterruptedException, BrokenBarrierException {
-    // Starts DFS cluster with 3 DataNodes to form a pipeline.
-    startDFSCluster(1, 3);
+    startDFSCluster(1, 4);
 
     final short REPLICATION = 3;
-    final DataNode dn = cluster.getDataNodes().get(dataNodeIdx);
-    final FileSystem fs = cluster.getFileSystem();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    final DFSClient client = fs.getClient();
     final Path testFile = new Path("/test");
     FSDataOutputStream out = fs.create(testFile, REPLICATION);
 
@@ -655,52 +794,93 @@ public class TestDataNodeHotSwapVolumes {
     out.write(writeBuf);
     out.hflush();
 
-    // Make FsDatasetSpi#finalizeBlock a time-consuming operation. So if the
-    // BlockReceiver releases volume reference before finalizeBlock(), the blocks
-    // on the volume will be removed, and finalizeBlock() throws IOE.
-    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
-    dn.data = Mockito.spy(data);
-    doAnswer(new Answer<Object>() {
-          public Object answer(InvocationOnMock invocation)
-              throws IOException, InterruptedException {
-            Thread.sleep(1000);
-            // Bypass the argument to FsDatasetImpl#finalizeBlock to verify that
-            // the block is not removed, since the volume reference should not
-            // be released at this point.
-            data.finalizeBlock((ExtendedBlock) invocation.getArguments()[0]);
-            return null;
-          }
-        }).when(dn.data).finalizeBlock(any(ExtendedBlock.class));
+    BlockLocation[] blocks = fs.getFileBlockLocations(testFile, 0, BLOCK_SIZE);
+    String[] dataNodeNames = blocks[0].getNames();
+    String dataNodeName = dataNodeNames[dataNodeIdx];
+    int xferPort = Integer.parseInt(dataNodeName.split(":")[1]);
+    DataNode dn = null;
+    for (DataNode dataNode : cluster.getDataNodes()) {
+      if (dataNode.getXferPort() == xferPort) {
+        dn = dataNode;
+        break;
+      }
+    }
+    assertNotNull(dn);
 
-    final CyclicBarrier barrier = new CyclicBarrier(2);
-
-    List<String> oldDirs = getDataDirs(dn);
-    final String newDirs = oldDirs.get(1);  // Remove the first volume.
-    final List<Exception> exceptions = new ArrayList<>();
-    Thread reconfigThread = new Thread() {
-      public void run() {
+    final CyclicBarrier barrier = new CyclicBarrier(4);
+    final AtomicBoolean done = new AtomicBoolean(false);
+    DataNodeFaultInjector newInjector = new DataNodeFaultInjector() {
+      public void logDelaySendingAckToUpstream(
+          final String upstreamAddr, final long delayMs) throws IOException {
         try {
-          barrier.await();
-          assertThat(
-              "DN did not update its own config",
-              dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDirs),
-              is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
-        } catch (ReconfigurationException |
-            InterruptedException |
-            BrokenBarrierException e) {
-          exceptions.add(e);
+          // Make all streams which hold the volume references to wait the
+          // reconfiguration thread to start.
+          // It should only block IO during the period of reconfiguration
+          // task running.
+          if (!done.get()) {
+            barrier.await();
+            // Add delays to allow the reconfiguration thread starts before
+            // IO finish.
+            Thread.sleep(1000);
+          }
+        } catch (InterruptedException | BrokenBarrierException e) {
+          throw new IOException(e);
         }
       }
     };
-    reconfigThread.start();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
 
-    barrier.await();
-    rb.nextBytes(writeBuf);
-    out.write(writeBuf);
-    out.hflush();
-    out.close();
+    try {
+      DataNodeFaultInjector.set(newInjector);
 
-    reconfigThread.join();
+      List<String> oldDirs = getDataDirs(dn);
+      LocatedBlocks lbs = client.getLocatedBlocks("/test", 0);
+      LocatedBlock block = lbs.get(0);
+      FsVolumeImpl volume =
+          (FsVolumeImpl) dn.getFSDataset().getVolume(block.getBlock());
+      final String newDirs = oldDirs.stream()
+          .filter((d) -> !d.contains(volume.getStorageLocation().toString()))
+          .collect(Collectors.joining(","));
+      final List<IOException> exceptions = new ArrayList<>();
+      final DataNode dataNode = dn;
+      final CyclicBarrier reconfigBarrier = new CyclicBarrier(2);
+
+      Thread reconfigThread = new Thread(() -> {
+        try {
+          reconfigBarrier.await();
+
+          // Wake up writing threads on the pipeline to finish the block.
+          barrier.await();
+
+          assertThat(
+              "DN did not update its own config",
+              dataNode.reconfigurePropertyImpl(
+                  DFS_DATANODE_DATA_DIR_KEY, newDirs),
+              is(dataNode.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
+          done.set(true);
+        } catch (ReconfigurationException |
+            InterruptedException |
+            BrokenBarrierException e) {
+          exceptions.add(new IOException(e));
+        }
+      });
+      reconfigThread.start();
+
+      // Write more data to make sure the stream threads wait on the barrier.
+      rb.nextBytes(writeBuf);
+      out.write(writeBuf);
+      reconfigBarrier.await();
+      out.hflush();
+      out.close();
+
+      reconfigThread.join();
+
+      if (!exceptions.isEmpty()) {
+        throw MultipleIOException.createIOException(exceptions);
+      }
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
 
     // Verify if the data directory reconfigure was successful
     FsDatasetSpi<? extends FsVolumeSpi> fsDatasetSpi = dn.getFSDataset();
@@ -720,8 +900,30 @@ public class TestDataNodeHotSwapVolumes {
     byte[] content = DFSTestUtil.readFileBuffer(fs, testFile);
     assertEquals(BLOCK_SIZE, content.length);
 
-    if (!exceptions.isEmpty()) {
-      throw new IOException(exceptions.get(0).getCause());
+    // Write more files to make sure that the DataNode that has removed volume
+    // is still alive to receive data.
+    for (int i = 0; i < 10; i++) {
+      final Path file = new Path("/after-" + i);
+      try (FSDataOutputStream fout = fs.create(file, REPLICATION)) {
+        rb.nextBytes(writeBuf);
+        fout.write(writeBuf);
+      }
+    }
+
+    try (FsDatasetSpi.FsVolumeReferences fsVolumeReferences = fsDatasetSpi
+        .getFsVolumeReferences()) {
+      assertEquals("Volume remove wasn't successful.",
+          1, fsVolumeReferences.size());
+      FsVolumeSpi volume = fsVolumeReferences.get(0);
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      FsVolumeSpi.BlockIterator blkIter = volume.newBlockIterator(bpid, "test");
+      int blockCount = 0;
+      while (!blkIter.atEnd()) {
+        blkIter.nextBlock();
+        blockCount++;
+      }
+      assertTrue(String.format("DataNode(%d) should have more than 1 blocks",
+          dataNodeIdx), blockCount > 1);
     }
   }
 
@@ -765,29 +967,14 @@ public class TestDataNodeHotSwapVolumes {
         is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
   }
 
-  /** Get the FsVolume on the given basePath */
-  private FsVolumeImpl getVolume(DataNode dn, File basePath)
-      throws IOException {
-    try (FsDatasetSpi.FsVolumeReferences volumes =
-      dn.getFSDataset().getFsVolumeReferences()) {
-      for (FsVolumeSpi vol : volumes) {
-        if (vol.getBaseURI().equals(basePath.toURI())) {
-          return (FsVolumeImpl) vol;
-        }
-      }
-    }
-    return null;
-  }
-
   /**
-   * Verify that {@link DataNode#checkDiskErrors()} removes all metadata in
+   * Verify that {@link DataNode#checkDiskError()} removes all metadata in
    * DataNode upon a volume failure. Thus we can run reconfig on the same
    * configuration to reload the new volume on the same directory as the failed one.
    */
   @Test(timeout=60000)
   public void testDirectlyReloadAfterCheckDiskError()
-      throws IOException, TimeoutException, InterruptedException,
-      ReconfigurationException {
+      throws Exception {
     // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
     assumeNotWindows();
@@ -797,20 +984,16 @@ public class TestDataNodeHotSwapVolumes {
 
     DataNode dn = cluster.getDataNodes().get(0);
     final String oldDataDir = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY);
-    File dirToFail = new File(cluster.getDataDirectory(), "data1");
+    File dirToFail = cluster.getInstanceStorageDir(0, 0);
 
-    FsVolumeImpl failedVolume = getVolume(dn, dirToFail);
+    FsVolumeImpl failedVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue("No FsVolume was found for " + dirToFail,
         failedVolume != null);
     long used = failedVolume.getDfsUsed();
 
     DataNodeTestUtils.injectDataDirFailure(dirToFail);
     // Call and wait DataNode to detect disk failure.
-    long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
-    dn.checkDiskErrorAsync();
-    while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
-      Thread.sleep(100);
-    }
+    DataNodeTestUtils.waitForDiskError(dn, failedVolume);
 
     createFile(new Path("/test1"), 32, (short)2);
     assertEquals(used, failedVolume.getDfsUsed());
@@ -823,7 +1006,7 @@ public class TestDataNodeHotSwapVolumes {
         is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
 
     createFile(new Path("/test2"), 32, (short)2);
-    FsVolumeImpl restoredVolume = getVolume(dn, dirToFail);
+    FsVolumeImpl restoredVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue(restoredVolume != null);
     assertTrue(restoredVolume != failedVolume);
     // More data has been written to this volume.
@@ -853,7 +1036,7 @@ public class TestDataNodeHotSwapVolumes {
         InternalDataNodeTestUtils.spyOnBposToNN(dn, cluster.getNameNode());
 
     // Remove a data dir from datanode
-    File dataDirToKeep = new File(cluster.getDataDirectory(), "data1");
+    File dataDirToKeep = cluster.getInstanceStorageDir(0, 0);
     assertThat(
         "DN did not update its own config",
         dn.reconfigurePropertyImpl(

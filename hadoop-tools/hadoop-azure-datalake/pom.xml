@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-azure-datalake</artifactId>
@@ -29,23 +29,14 @@
   </description>
   <packaging>jar</packaging>
   <properties>
-    <okHttpVersion>2.4.0</okHttpVersion>
+    <okHttpVersion>${okhttp.version}</okHttpVersion>
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <azure.data.lake.store.sdk.version>2.2.5</azure.data.lake.store.sdk.version>
   </properties>
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-
-        <configuration>
-          <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
-          <dependencyLocationsEnabled>false
-          </dependencyLocationsEnabled>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -112,7 +103,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-
   </build>
 
   <dependencies>
@@ -120,17 +110,19 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-data-lake-store-sdk</artifactId>
-      <version>2.0.11</version>
+      <version>${azure.data.lake.store.sdk.version}</version>
     </dependency>
     <!--  ENDS HERE-->
     <dependency>
     <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.squareup.okhttp</groupId>
       <artifactId>okhttp</artifactId>
-      <version>2.4.0</version>
+      <version>${okhttp.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -152,8 +144,27 @@
     <dependency>
       <groupId>com.squareup.okhttp</groupId>
       <artifactId>mockwebserver</artifactId>
-      <version>2.4.0</version>
+      <version>${okhttp.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
 </project>

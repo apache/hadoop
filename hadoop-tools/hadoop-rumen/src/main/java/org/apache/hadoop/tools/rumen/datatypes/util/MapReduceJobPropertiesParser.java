@@ -130,7 +130,7 @@ public class MapReduceJobPropertiesParser implements JobPropertyParser {
   /**
    * Extracts the -Xmx heap option from the specified string.
    */
-  public static void extractMaxHeapOpts(String javaOptions, 
+  public static void extractMaxHeapOpts(final String javaOptions,
                                         List<String> heapOpts, 
                                         List<String> others) {
     for (String opt : javaOptions.split(" ")) {
@@ -160,6 +160,7 @@ public class MapReduceJobPropertiesParser implements JobPropertyParser {
   
   // Maps the value of the specified key.
   private DataType<?> fromString(String key, String value) {
+    DefaultDataType defaultValue = new DefaultDataType(value);
     if (value != null) {
       // check known configs
       //  job-name
@@ -190,14 +191,13 @@ public class MapReduceJobPropertiesParser implements JobPropertyParser {
       // check if the config parameter represents a number
       try {
         format.parse(value);
-        return new DefaultDataType(value);
+        return defaultValue;
       } catch (ParseException pe) {}
 
       // check if the config parameters represents a boolean 
       // avoiding exceptions
       if ("true".equals(value) || "false".equals(value)) {
-        Boolean.parseBoolean(value);
-        return new DefaultDataType(value);
+        return defaultValue;
       }
 
       // check if the config parameter represents a class
@@ -208,7 +208,7 @@ public class MapReduceJobPropertiesParser implements JobPropertyParser {
       // handle distributed cache sizes and timestamps
       if (latestKey.endsWith("sizes") 
           || latestKey.endsWith(".timestamps")) {
-        new DefaultDataType(value);
+        return defaultValue;
       }
       
       // check if the config parameter represents a file-system path

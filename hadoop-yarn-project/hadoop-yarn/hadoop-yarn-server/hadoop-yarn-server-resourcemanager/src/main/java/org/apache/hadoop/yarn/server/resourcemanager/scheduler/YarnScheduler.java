@@ -42,8 +42,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
-import org.apache.hadoop.yarn.api.records.AbstractResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -134,20 +133,18 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * 
    * @param appAttemptId
    * @param ask
+   * @param schedulingRequests
    * @param release
-   * @param blacklistAdditions 
-   * @param blacklistRemovals 
-   * @param increaseRequests
-   * @param decreaseRequests
-   * @return the {@link Allocation} for the application
+   * @param blacklistAdditions
+   * @param blacklistRemovals
+   * @param updateRequests     @return the {@link Allocation} for the application
    */
   @Public
   @Stable
   Allocation allocate(ApplicationAttemptId appAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release,
-      List<String> blacklistAdditions, List<String> blacklistRemovals,
-      List<UpdateContainerRequest> increaseRequests,
-      List<UpdateContainerRequest> decreaseRequests);
+      List<ResourceRequest> ask, List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> release, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests);
 
   /**
    * Get node resource usage report.
@@ -276,7 +273,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param newQueue the queue being added.
    * @throws YarnException
    */
-  void addQueue(Queue newQueue) throws YarnException;
+  void addQueue(Queue newQueue) throws YarnException, IOException;
 
   /**
    * This method increase the entitlement for current queue (must respect
@@ -311,7 +308,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Verify whether a submitted application priority is valid as per configured
    * Queue
    *
-   * @param priorityFromContext
+   * @param priorityRequestedByApp
    *          Submitted Application priority.
    * @param user
    *          User who submitted the Application
@@ -321,8 +318,8 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *          Application ID
    * @return Updated Priority from scheduler
    */
-  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
-      String user, String queueName, ApplicationId applicationId)
+  public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
+      UserGroupInformation user, String queueName, ApplicationId applicationId)
       throws YarnException;
 
   /**
@@ -334,12 +331,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param applicationId Application ID
    *
    * @param future Sets any type of exception happened from StateStore
+   * @param user who submitted the application
    *
    * @return updated priority
    */
   public Priority updateApplicationPriority(Priority newPriority,
-      ApplicationId applicationId, SettableFuture<Object> future)
-      throws YarnException;
+      ApplicationId applicationId, SettableFuture<Object> future,
+      UserGroupInformation user) throws YarnException;
 
   /**
    *
@@ -384,7 +382,28 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Normalize a resource request.
    *
-   * @param request the resource request to be normalized
+   * @param requestedResource the resource to be normalized
+   * @return the normalized resource
    */
-  void normalizeRequest(AbstractResourceRequest request);
+  Resource getNormalizedResource(Resource requestedResource);
+
+  /**
+   * Verify whether a submitted application lifetime is valid as per configured
+   * Queue lifetime.
+   * @param queueName Name of the Queue
+   * @param lifetime configured application lifetime
+   * @return valid lifetime as per queue
+   */
+  @Public
+  @Evolving
+  long checkAndGetApplicationLifetime(String queueName, long lifetime);
+
+  /**
+   * Get maximum lifetime for a queue.
+   * @param queueName to get lifetime
+   * @return maximum lifetime in seconds
+   */
+  @Public
+  @Evolving
+  long getMaximumApplicationLifetime(String queueName);
 }

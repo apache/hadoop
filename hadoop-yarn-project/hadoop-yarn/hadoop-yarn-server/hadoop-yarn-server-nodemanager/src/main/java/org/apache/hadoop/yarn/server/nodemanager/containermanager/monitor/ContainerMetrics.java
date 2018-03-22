@@ -130,7 +130,7 @@ public class ContainerMetrics implements MetricsSource {
   /**
    * Simple metrics cache to help prevent re-registrations.
    */
-  protected final static Map<ContainerId, ContainerMetrics>
+  private final static Map<ContainerId, ContainerMetrics>
       usageMetrics = new HashMap<>();
   // Create a timer to unregister container metrics,
   // whose associated thread run as a daemon.

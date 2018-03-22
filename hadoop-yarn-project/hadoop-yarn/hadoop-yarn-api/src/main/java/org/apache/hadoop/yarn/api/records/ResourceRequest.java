@@ -58,8 +58,7 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @Public
 @Stable
-public abstract class ResourceRequest extends AbstractResourceRequest
-    implements Comparable<ResourceRequest>{
+public abstract class ResourceRequest implements Comparable<ResourceRequest> {
 
   @Public
   @Stable
@@ -99,7 +98,8 @@ public abstract class ResourceRequest extends AbstractResourceRequest
         .resourceName(hostName).capability(capability)
         .numContainers(numContainers).relaxLocality(relaxLocality)
         .nodeLabelExpression(labelExpression)
-        .executionTypeRequest(executionTypeRequest).build();
+        .executionTypeRequest(executionTypeRequest)
+        .build();
   }
 
   @Public
@@ -220,6 +220,22 @@ public abstract class ResourceRequest extends AbstractResourceRequest
     public ResourceRequestBuilder executionTypeRequest(
         ExecutionTypeRequest executionTypeRequest) {
       resourceRequest.setExecutionTypeRequest(executionTypeRequest);
+      return this;
+    }
+
+    /**
+     * Set the <code>executionTypeRequest</code> of the request with 'ensure
+     * execution type' flag set to true.
+     * @see ResourceRequest#setExecutionTypeRequest(
+     * ExecutionTypeRequest)
+     * @param executionType <code>executionType</code> of the request.
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder executionType(ExecutionType executionType) {
+      resourceRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance(executionType, true));
       return this;
     }
 
@@ -506,6 +522,22 @@ public abstract class ResourceRequest extends AbstractResourceRequest
   public void setAllocationRequestId(long allocationRequestID) {
     throw new UnsupportedOperationException();
   }
+
+  /**
+   * Set the <code>Resource</code> capability of the request.
+   * @param capability <code>Resource</code> capability of the request
+   */
+  @Public
+  @Stable
+  public abstract void setCapability(Resource capability);
+
+  /**
+   * Get the <code>Resource</code> capability of the request.
+   * @return <code>Resource</code> capability of the request
+   */
+  @Public
+  @Stable
+  public abstract Resource getCapability();
   
   @Override
   public int hashCode() {
@@ -557,8 +589,7 @@ public abstract class ResourceRequest extends AbstractResourceRequest
       if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (!execTypeRequest.getExecutionType()
-        .equals(other.getExecutionTypeRequest().getExecutionType())) {
+    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
       return false;
     }
 

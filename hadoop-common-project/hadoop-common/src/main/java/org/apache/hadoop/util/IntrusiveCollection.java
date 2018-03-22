@@ -21,11 +21,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements an intrusive doubly-linked list.
@@ -298,7 +298,8 @@ public class IntrusiveCollection<E extends IntrusiveCollection.Element>
     return true;
   }
 
-  public static final Log LOG = LogFactory.getLog(IntrusiveCollection.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(IntrusiveCollection.class);
 
   @Override
   public boolean remove(Object o) {

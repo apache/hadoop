@@ -104,6 +104,7 @@ public class TestKMSAudit {
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DELETE_KEY, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.ROLL_NEW_VERSION, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.INVALIDATE_CACHE, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
@@ -113,6 +114,9 @@ public class TestKMSAudit {
     kmsAudit.ok(luser, KMSOp.REENCRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.REENCRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.REENCRYPT_EEK, "k1", "testmsg");
+    kmsAudit.evictCacheForTesting();
+    kmsAudit.ok(luser, KMSOp.REENCRYPT_EEK_BATCH, "k1", "testmsg");
+    kmsAudit.ok(luser, KMSOp.REENCRYPT_EEK_BATCH, "k1", "testmsg");
     kmsAudit.evictCacheForTesting();
     String out = getAndResetLogOutput();
     System.out.println(out);
@@ -122,11 +126,14 @@ public class TestKMSAudit {
             // Not aggregated !!
             + "OK\\[op=DELETE_KEY, key=k1, user=luser\\] testmsg"
             + "OK\\[op=ROLL_NEW_VERSION, key=k1, user=luser\\] testmsg"
+            + "OK\\[op=INVALIDATE_CACHE, key=k1, user=luser\\] testmsg"
             // Aggregated
             + "OK\\[op=DECRYPT_EEK, key=k1, user=luser, accessCount=6, interval=[^m]{1,4}ms\\] testmsg"
             + "OK\\[op=DECRYPT_EEK, key=k1, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
             + "OK\\[op=REENCRYPT_EEK, key=k1, user=luser, accessCount=1, interval=[^m]{1,4}ms\\] testmsg"
-            + "OK\\[op=REENCRYPT_EEK, key=k1, user=luser, accessCount=3, interval=[^m]{1,4}ms\\] testmsg"));
+            + "OK\\[op=REENCRYPT_EEK, key=k1, user=luser, accessCount=3, interval=[^m]{1,4}ms\\] testmsg"
+            + "OK\\[op=REENCRYPT_EEK_BATCH, key=k1, user=luser\\] testmsg"
+            + "OK\\[op=REENCRYPT_EEK_BATCH, key=k1, user=luser\\] testmsg"));
   }
 
   @Test

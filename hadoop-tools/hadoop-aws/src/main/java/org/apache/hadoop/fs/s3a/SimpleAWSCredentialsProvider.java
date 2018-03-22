@@ -53,10 +53,11 @@ public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
 
   public SimpleAWSCredentialsProvider(URI uri, Configuration conf) {
     try {
+      String bucket = uri != null ? uri.getHost() : "";
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
-      this.accessKey = S3AUtils.lookupPassword(c, ACCESS_KEY, null);
-      this.secretKey = S3AUtils.lookupPassword(c, SECRET_KEY, null);
+      this.accessKey = S3AUtils.lookupPassword(bucket, c, ACCESS_KEY, null);
+      this.secretKey = S3AUtils.lookupPassword(bucket, c, SECRET_KEY, null);
     } catch (IOException e) {
       lookupIOE = e;
     }
@@ -72,7 +73,7 @@ public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
       return new BasicAWSCredentials(accessKey, secretKey);
     }
     throw new CredentialInitializationException(
-        "Access key, secret key or session token is unset");
+        "Access key or secret key is unset");
   }
 
   @Override

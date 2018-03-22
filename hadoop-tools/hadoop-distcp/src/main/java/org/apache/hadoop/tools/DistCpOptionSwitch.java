@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import org.apache.commons.cli.Option;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -63,17 +64,32 @@ public enum DistCpOptionSwitch {
    */
   SYNC_FOLDERS(DistCpConstants.CONF_LABEL_SYNC_FOLDERS,
       new Option("update", false, "Update target, copying only missing" +
-          "files or directories")),
+          " files or directories")),
 
   /**
-   * Deletes missing files in target that are missing from source
+   * Deletes missing files in target that are missing from source.
    * This allows the target to be in sync with the source contents
    * Typically used in conjunction with SYNC_FOLDERS
    * Incompatible with ATOMIC_COMMIT
    */
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
-          "files missing in source")),
+          "files missing in source. Delete is applicable only with update or overwrite options")),
+
+  /**
+   * Track missing files in target that are missing from source
+   * This allows for other applications to complete the synchronization,
+   * possibly with object-store-specific delete algorithms.
+   * Typically used in conjunction with SYNC_FOLDERS
+   * Incompatible with ATOMIC_COMMIT
+   */
+  @InterfaceStability.Unstable
+  TRACK_MISSING(DistCpConstants.CONF_LABEL_TRACK_MISSING,
+      new Option("xtrack", true,
+          "Save information about missing source files to the"
+              + " specified directory")),
+
+
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).
@@ -81,7 +97,7 @@ public enum DistCpOptionSwitch {
   NUM_LISTSTATUS_THREADS(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
       new Option("numListstatusThreads", true, "Number of threads to " +
           "use for building file listing (max " +
-          DistCpOptions.maxNumListstatusThreads + ").")),
+          DistCpOptions.MAX_NUM_LISTSTATUS_THREADS + ").")),
   /**
    * Max number of maps to use during copy. DistCp will split work
    * as equally as possible among these maps
@@ -117,6 +133,13 @@ public enum DistCpOptionSwitch {
    */
   LOG_PATH(DistCpConstants.CONF_LABEL_LOG_PATH,
       new Option("log", true, "Folder on DFS where distcp execution logs are saved")),
+
+  /**
+   * Log additional info (path, size) in the SKIP/COPY log.
+   */
+  VERBOSE_LOG(DistCpConstants.CONF_LABEL_VERBOSE_LOG,
+      new Option("v", false,
+          "Log additional info (path, size) in the SKIP/COPY log")),
 
   /**
    * Copy strategy is use. This could be dynamic or uniform size etc.
@@ -168,6 +191,24 @@ public enum DistCpOptionSwitch {
   SIZE_LIMIT("",
       new Option("sizelimit", true, "(Deprecated!) Limit number of files " +
               "copied to <= n bytes")),
+
+  BLOCKS_PER_CHUNK("",
+      new Option("blocksperchunk", true, "If set to a positive value, files"
+          + "with more blocks than this value will be split into chunks of "
+          + "<blocksperchunk> blocks to be transferred in parallel, and "
+          + "reassembled on the destination. By default, <blocksperchunk> is "
+          + "0 and the files will be transmitted in their entirety without "
+          + "splitting. This switch is only applicable when the source file "
+          + "system implements getBlockLocations method and the target file "
+          + "system implements concat method")),
+
+  /**
+   * Configurable copy buffer size.
+   */
+  COPY_BUFFER_SIZE(DistCpConstants.CONF_LABEL_COPY_BUFFER_SIZE,
+      new Option("copybuffersize", true, "Size of the copy buffer to use. "
+          + "By default <copybuffersize> is "
+          + DistCpConstants.COPY_BUFFER_SIZE_DEFAULT + "B.")),
 
   /**
    * Specify bandwidth per map in MB, accepts bandwidth as a fraction

@@ -25,11 +25,11 @@ import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This util class provides a method to register an MBean using
@@ -39,7 +39,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MBeans {
-  private static final Log LOG = LogFactory.getLog(MBeans.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MBeans.class);
   private static final String DOMAIN_PREFIX = "Hadoop:";
   private static final String SERVICE_PREFIX = "service=";
   private static final String NAME_PREFIX = "name=";

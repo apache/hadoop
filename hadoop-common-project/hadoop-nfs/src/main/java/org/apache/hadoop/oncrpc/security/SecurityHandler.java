@@ -19,13 +19,14 @@ package org.apache.hadoop.oncrpc.security;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.XDR;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class SecurityHandler {
-  public static final Log LOG = LogFactory.getLog(SecurityHandler.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SecurityHandler.class);
   
   public abstract String getUser();
 

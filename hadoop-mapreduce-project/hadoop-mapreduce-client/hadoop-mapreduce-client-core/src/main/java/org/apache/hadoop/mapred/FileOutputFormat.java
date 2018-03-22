@@ -36,7 +36,7 @@ import org.apache.hadoop.util.Progressable;
 public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
 
   @Deprecated
-  public static enum Counter { 
+  public enum Counter {
     BYTES_WRITTEN
   }
   

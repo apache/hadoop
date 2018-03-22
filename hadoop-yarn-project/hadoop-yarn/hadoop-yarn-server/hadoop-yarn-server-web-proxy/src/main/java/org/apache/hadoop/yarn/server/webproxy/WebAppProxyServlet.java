@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -108,7 +108,7 @@ public class WebAppProxyServlet extends HttpServlet {
   /**
    * Empty Hamlet class.
    */
-  private static class _ implements Hamlet._ {
+  private static class __ implements Hamlet.__ {
     //Empty
   }
   
@@ -117,7 +117,7 @@ public class WebAppProxyServlet extends HttpServlet {
       super(out, 0, false);
     }
   
-    public HTML<WebAppProxyServlet._> html() {
+    public HTML<WebAppProxyServlet.__> html() {
       return new HTML<>("html", null, EnumSet.of(EOpt.ENDTAG));
     }
   }
@@ -172,10 +172,10 @@ public class WebAppProxyServlet extends HttpServlet {
     p.html().
       h1("WARNING: The following page may not be safe!").
       h3().
-      _("click ").a(link, "here").
-      _(" to continue to an Application Master web interface owned by ", user).
-      _().
-    _();
+        __("click ").a(link, "here").
+        __(" to continue to an Application Master web interface owned by ", user).
+        __().
+        __();
   }
   
   /**
@@ -613,7 +613,7 @@ public class WebAppProxyServlet extends HttpServlet {
    * <p>
    *   <I>Do not remove</I>
    * <p>
-   * Yarn isn't currently serializing this class, but findbugs
+   * YARN isn't currently serializing this class, but findbugs
    * complains in its absence.
    * 
    * 

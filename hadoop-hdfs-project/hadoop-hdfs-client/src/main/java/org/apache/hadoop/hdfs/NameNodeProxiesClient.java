@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.ha.ClientHAProxyFactory;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,6 +214,14 @@ public class NameNodeProxiesClient {
   public static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
       AtomicBoolean fallbackToSimpleAuth) throws IOException {
+    return createFailoverProxyProvider(conf, nameNodeUri, xface, checkPort,
+      fallbackToSimpleAuth, new ClientHAProxyFactory<T>());
+  }
+
+  protected static <T> AbstractNNFailoverProxyProvider<T> createFailoverProxyProvider(
+      Configuration conf, URI nameNodeUri, Class<T> xface, boolean checkPort,
+      AtomicBoolean fallbackToSimpleAuth, HAProxyFactory<T> proxyFactory)
+      throws IOException {
     Class<FailoverProxyProvider<T>> failoverProxyProviderClass = null;
     AbstractNNFailoverProxyProvider<T> providerNN;
     try {
@@ -223,9 +233,10 @@ public class NameNodeProxiesClient {
       }
       // Create a proxy provider instance.
       Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
-          .getConstructor(Configuration.class, URI.class, Class.class);
+          .getConstructor(Configuration.class, URI.class,
+              Class.class, HAProxyFactory.class);
       FailoverProxyProvider<T> provider = ctor.newInstance(conf, nameNodeUri,
-          xface);
+          xface, proxyFactory);
 
       // If the proxy provider is of an old implementation, wrap it.
       if (!(provider instanceof AbstractNNFailoverProxyProvider)) {

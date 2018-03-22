@@ -25,8 +25,9 @@ import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 
 /**
- * Provides equivalent behavior to String.intern() to optimize performance, 
- * whereby does not consume memory in the permanent generation.
+ * Provides string interning utility methods. For weak interning,
+ * we use the standard String.intern() call, that performs very well
+ * (no problems with PermGen overflowing, etc.) starting from JDK 7.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -35,20 +36,9 @@ public class StringInterner {
   /**
    * Retains a strong reference to each string instance it has interned.
    */
-  private final static Interner<String> strongInterner;
-  
-  /**
-   * Retains a weak reference to each string instance it has interned. 
-   */
-  private final static Interner<String> weakInterner;
-  
-  
-  
-  static {
-    strongInterner = Interners.newStrongInterner();
-    weakInterner = Interners.newWeakInterner();
-  }
-  
+  private final static Interner<String> STRONG_INTERNER =
+      Interners.newStrongInterner();
+
   /**
    * Interns and returns a reference to the representative instance 
    * for any of a collection of string instances that are equal to each other.
@@ -62,7 +52,7 @@ public class StringInterner {
     if (sample == null) {
       return null;
     }
-    return strongInterner.intern(sample);
+    return STRONG_INTERNER.intern(sample);
   }
   
   /**
@@ -78,7 +68,18 @@ public class StringInterner {
     if (sample == null) {
       return null;
     }
-    return weakInterner.intern(sample);
+    return sample.intern();
+  }
+
+  /**
+   * Interns all the strings in the given array in place,
+   * returning the same array.
+   */
+  public static String[] internStringsInArray(String[] strings) {
+    for (int i = 0; i < strings.length; i++) {
+      strings[i] = weakIntern(strings[i]);
+    }
+    return strings;
   }
 
 }

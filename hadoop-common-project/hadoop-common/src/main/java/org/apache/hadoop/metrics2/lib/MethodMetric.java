@@ -22,20 +22,21 @@ import java.lang.reflect.Method;
 
 import static com.google.common.base.Preconditions.*;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.annotation.Metric;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.metrics2.util.Contracts.*;
 
 /**
  * Metric generated from a method, mostly used by annotation
  */
 class MethodMetric extends MutableMetric {
-  private static final Log LOG = LogFactory.getLog(MethodMetric.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MethodMetric.class);
 
   private final Object obj;
   private final Method method;

@@ -17,18 +17,99 @@
  */
 
 import Ember from 'ember';
+import AppTableController from './app-table-columns';
+import TableDefinition from 'em-table/utils/table-definition';
 
-export default Ember.Controller.extend({
+export default AppTableController.extend({
+  queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
+  tableDefinition: TableDefinition.create({
+    searchType: 'manual',
+    sortColumnId: 'stTime',
+    sortOrder: 'desc',
+    rowCount: 25,
+    minValuesToDisplay: 1,
+    enableFaceting: true
+  }),
+  searchText: Ember.computed.alias('tableDefinition.searchText'),
+  sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
+  sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
+  pageNum: Ember.computed.alias('tableDefinition.pageNum'),
+  rowCount: Ember.computed.alias('tableDefinition.rowCount'),
 
   breadcrumbs: [{
     text: "Home",
     routeName: 'application'
   }, {
-    text: "Applications",
-    routeName: 'yarn-apps',
-  }, {
-    text: "Long Running Services",
+    text: "Services",
     routeName: 'yarn-services',
-  }]
+  }],
+
+  getFinishedServicesDataForDonutChart: Ember.computed('model.apps', function() {
+
+    var finishdApps = 0;
+    var failedApps = 0;
+    var killedApps = 0;
+
+    this.get('model.apps').forEach(function(service){
+      if (service.get('state') === "FINISHED") {
+        finishdApps++;
+      }
+
+      if (service.get('state') === "FAILED") {
+        failedApps++;
+      }
+
+     if (service.get('state') === "KILLED") {
+        killedApps++;
+      }
+    });
+
+    var arr = [];
+    arr.push({
+      label: "Completed",
+      value: finishdApps
+    });
+    arr.push({
+      label: "Killed",
+      value: killedApps
+    });
+    arr.push({
+      label: "Failed",
+      value: failedApps
+    });
+
+    return arr;
+  }),
+
+
+  getRunningServicesDataForDonutChart: Ember.computed('model.apps', function() {
+    var pendingApps = 0;
+    var runningApps = 0;
+
+    this.get('model.apps').forEach(function(service){
+    if (service.get('state') === "RUNNING") {
+        runningApps++;
+      }
+
+     if (service.get('state') === "ACCEPTED" ||
+          service.get('state') === "SUBMITTED" ||
+          service.get('state') === "NEW" ||
+          service.get('state') === "NEW_SAVING") {
+        pendingApps++;
+      }
+    });
+
+    var arr = [];
+    arr.push({
+      label: "Pending",
+      value: pendingApps
+    });
+    arr.push({
+      label: "Running",
+      value: runningApps
+    });
+
+    return arr;
+  }),
 
 });

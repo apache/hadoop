@@ -52,14 +52,14 @@ public class TestUserGroupMappingPlacementRule {
   private void verifyQueueMapping(QueueMapping queueMapping, String inputUser,
       String inputQueue, String expectedQueue, boolean overwrite) throws YarnException {
     Groups groups = new Groups(conf);
-    UserGroupMappingPlacementRule rule =
-        new UserGroupMappingPlacementRule(overwrite, Arrays.asList(queueMapping),
-            groups);
-    ApplicationSubmissionContext asc =
-        Records.newRecord(ApplicationSubmissionContext.class);
+    UserGroupMappingPlacementRule rule = new UserGroupMappingPlacementRule(
+        overwrite, Arrays.asList(queueMapping), groups);
+    ApplicationSubmissionContext asc = Records.newRecord(
+        ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
-    String queue = rule.getQueueForApp(asc, inputUser);
-    Assert.assertEquals(expectedQueue, queue);
+    ApplicationPlacementContext ctx = rule.getPlacementForApp(asc, inputUser);
+    Assert.assertEquals(expectedQueue,
+        ctx != null ? ctx.getQueue() : inputQueue);
   }
 
   @Test
@@ -85,5 +85,26 @@ public class TestUserGroupMappingPlacementRule {
     // if overwritten not specified, it should be which user specified
     verifyQueueMapping(new QueueMapping(MappingType.USER, "user", "q1"),
         "user", "q2", "q2", false);
+
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
+            "%user", "usergroup"),
+        "user", "default", "user", false);
+
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "usergroup",
+            "%user", "usergroup"),
+        "user", "agroup", "user", true);
+
+    //If user specific queue is enabled for a specified group under a given
+    // parent queue
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup",
+            "%user", "parent1"),
+        "a", "a");
+
+    //If user specific queue is enabled for a specified group without parent
+    // queue
+    verifyQueueMapping(new QueueMapping(MappingType.GROUP, "agroup", "%user"),
+        "a", "a");
   }
 }

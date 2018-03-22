@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.util.ExitUtil;
+
 import org.junit.After;
 import org.junit.Test;
 
@@ -78,7 +80,7 @@ public class TestMetadataVersionOutput {
       try {
         NameNode.createNameNode(new String[] { "-metadataVersion" }, conf);
       } catch (Exception e) {
-        assertExceptionContains("ExitException", e);
+        assertExceptionContains(ExitUtil.EXIT_EXCEPTION_MESSAGE, e);
       }
     /* Check if meta data version is printed correctly. */
       final String verNumStr = HdfsServerConstants.NAMENODE_LAYOUT_VERSION + "";

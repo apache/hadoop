@@ -27,7 +27,7 @@ import org.junit.Test;
 
 public class TestXException extends HTestCase {
 
-  public static enum TestERROR implements XException.ERROR {
+  public enum TestERROR implements XException.ERROR {
     TC;
 
     @Override

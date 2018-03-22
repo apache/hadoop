@@ -17,21 +17,14 @@
  */
 package org.apache.hadoop.hdfs.client;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URI;
-import java.util.Collection;
-import java.util.EnumSet;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -40,14 +33,26 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.security.AccessControlException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collection;
+import java.util.EnumSet;
 
 /**
  * The public API for performing administrative functions on HDFS. Those writing
@@ -268,6 +273,17 @@ public class HdfsAdmin {
   }
 
   /**
+   * Get KeyProvider if present.
+   *
+   * @return the key provider if encryption is enabled on HDFS.
+   *         Otherwise, it returns null.
+   * @throws IOException on RPC exception to the NN.
+   */
+  public KeyProvider getKeyProvider() throws IOException {
+    return dfs.getClient().getKeyProvider();
+  }
+
+  /**
    * Create an encryption zone rooted at an empty existing directory, using the
    * specified encryption key. An encryption zone has an associated encryption
    * key used when reading and writing files within the zone.
@@ -312,7 +328,7 @@ public class HdfsAdmin {
         throw new HadoopIllegalArgumentException(
             "can not have both PROVISION_TRASH and NO_TRASH flags");
       }
-      this.provisionEZTrash(path);
+      dfs.provisionEZTrash(path, TRASH_PERMISSION);
     }
   }
 
@@ -323,7 +339,7 @@ public class HdfsAdmin {
    * @throws IOException if the trash directory can not be created.
    */
   public void provisionEncryptionZoneTrash(Path path) throws IOException {
-    this.provisionEZTrash(path);
+    dfs.provisionEZTrash(path, TRASH_PERMISSION);
   }
 
   /**
@@ -353,6 +369,33 @@ public class HdfsAdmin {
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     return dfs.listEncryptionZones();
+  }
+
+  /**
+   * Performs re-encryption action for a given encryption zone.
+   *
+   * @param zone the root of the encryption zone
+   * @param action the re-encrypt action
+   * @throws IOException If any error occurs when handling re-encrypt action.
+   */
+  public void reencryptEncryptionZone(final Path zone,
+      final ReencryptAction action) throws IOException {
+    dfs.reencryptEncryptionZone(zone, action);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all re-encryption
+   * information. For large numbers of re-encryptions, the iterator will fetch
+   * the list in a number of small batches.
+   * <p>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the entire list of encryption zones.
+   * <p>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<ZoneReencryptionStatus> listReencryptionStatus()
+      throws IOException {
+    return dfs.listReencryptionStatus();
   }
 
   /**
@@ -465,13 +508,15 @@ public class HdfsAdmin {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path The source path referring to a directory.
-   * @param ecPolicy The erasure coding policy for the directory.
-   *                 If null, the default will be used.
+   * @param ecPolicyName The erasure coding policy name for the directory.
+   *
    * @throws IOException
+   * @throws HadoopIllegalArgumentException if the specified EC policy is not
+   * enabled on the cluster
    */
   public void setErasureCodingPolicy(final Path path,
-      final ErasureCodingPolicy ecPolicy) throws IOException {
-    dfs.setErasureCodingPolicy(path, ecPolicy);
+      final String ecPolicyName) throws IOException {
+    dfs.setErasureCodingPolicy(path, ecPolicyName);
   }
 
   /**
@@ -492,48 +537,88 @@ public class HdfsAdmin {
    *
    * @throws IOException
    */
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
+      throws IOException {
     return dfs.getClient().getErasureCodingPolicies();
   }
 
-  private void provisionEZTrash(Path path) throws IOException {
-    // make sure the path is an EZ
-    EncryptionZone ez = dfs.getEZForPath(path);
-    if (ez == null) {
-      throw new IllegalArgumentException(path + " is not an encryption zone.");
-    }
+  /**
+   * Unset erasure coding policy from the directory.
+   *
+   * @param path The source path referring to a directory.
+   * @throws IOException
+   */
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    dfs.unsetErasureCodingPolicy(path);
+  }
 
-    String ezPath = ez.getPath();
-    if (!path.toString().equals(ezPath)) {
-      throw new IllegalArgumentException(path + " is not the root of an " +
-          "encryption zone. Do you mean " + ez.getPath() + "?");
-    }
+  /**
+   * Add Erasure coding policies to HDFS. For each policy input, schema and
+   * cellSize are musts, name and id are ignored. They will be automatically
+   * created and assigned by Namenode once the policy is successfully added,
+   * and will be returned in the response; policy states will be set to
+   * DISABLED automatically.
+   *
+   * @param policies The user defined ec policy list to add.
+   * @return Return the response list of adding operations.
+   * @throws IOException
+   */
+  public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies)  throws IOException {
+    return dfs.addErasureCodingPolicies(policies);
+  }
 
-    // check if the trash directory exists
+  /**
+   * Remove erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.removeErasureCodingPolicy(ecPolicyName);
+  }
 
-    Path trashPath = new Path(ez.getPath(), FileSystem.TRASH_PREFIX);
+  /**
+   * Enable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+  }
 
-    try {
-      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
-      String errMessage = "Will not provision new trash directory for " +
-          "encryption zone " + ez.getPath() + ". Path already exists.";
-      if (!trashFileStatus.isDirectory()) {
-        errMessage += "\r\n" +
-            "Warning: " + trashPath.toString() + " is not a directory";
-      }
-      if (!trashFileStatus.getPermission().equals(TRASH_PERMISSION)) {
-        errMessage += "\r\n" +
-            "Warning: the permission of " +
-            trashPath.toString() + " is not " + TRASH_PERMISSION;
-      }
-      throw new FileAlreadyExistsException(errMessage);
-    } catch (FileNotFoundException ignored) {
-      // no trash path
-    }
+  /**
+   * Disable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.disableErasureCodingPolicy(ecPolicyName);
+  }
 
-    // Update the permission bits
-    dfs.mkdir(trashPath, TRASH_PERMISSION);
-    dfs.setPermission(trashPath, TRASH_PERMISSION);
+  /**
+   * Returns a RemoteIterator which can be used to list all open files
+   * currently managed by the NameNode. For large numbers of open files,
+   * iterator will fetch the list in batches of configured size.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the all open files.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  @Deprecated
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    return dfs.listOpenFiles();
+  }
+
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    return dfs.listOpenFiles(openFilesTypes, path);
   }
 
 }

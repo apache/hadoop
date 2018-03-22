@@ -36,7 +36,8 @@ public interface KeyProvider {
    * @param conf
    *          Hadoop configuration parameters
    * @return the plaintext storage account key
-   * @throws KeyProviderException
+   * @throws KeyProviderException Thrown if there is a problem instantiating a
+   * KeyProvider or retrieving a key using a KeyProvider object.
    */
   String getStorageAccountKey(String accountName, Configuration conf)
       throws KeyProviderException;

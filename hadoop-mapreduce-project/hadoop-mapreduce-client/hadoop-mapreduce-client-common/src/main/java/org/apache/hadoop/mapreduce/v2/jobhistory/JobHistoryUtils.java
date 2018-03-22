@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -48,6 +47,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -89,13 +90,7 @@ public class JobHistoryUtils {
    */
   public static final FsPermission HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS = 
     FsPermission.createImmutable((short) 01777);
-  
-  /**
-   * Permissions for the user directory under the intermediate done directory.
-   */
-  public static final FsPermission HISTORY_INTERMEDIATE_USER_DIR_PERMISSIONS = 
-    FsPermission.createImmutable((short) 0770);
-  
+
   public static final FsPermission HISTORY_INTERMEDIATE_FILE_PERMISSIONS = 
     FsPermission.createImmutable((short) 0770); // rwx------
   
@@ -121,7 +116,8 @@ public class JobHistoryUtils {
   public static final String TIMESTAMP_DIR_REGEX = "\\d{4}" + "\\" + Path.SEPARATOR +  "\\d{2}" + "\\" + Path.SEPARATOR + "\\d{2}";
   public static final Pattern TIMESTAMP_DIR_PATTERN = Pattern.compile(TIMESTAMP_DIR_REGEX);
   private static final String TIMESTAMP_DIR_FORMAT = "%04d" + File.separator + "%02d" + File.separator + "%02d";
-  private static final Log LOG = LogFactory.getLog(JobHistoryUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryUtils.class);
 
   private static final PathFilter CONF_FILTER = new PathFilter() {
     @Override
@@ -206,6 +202,35 @@ public class JobHistoryUtils {
           + "/history/done_intermediate";
     }
     return ensurePathInDefaultFileSystem(doneDirPrefix, conf);
+  }
+
+  /**
+   * Gets the configured directory permissions for the user directories in the
+   * directory of the intermediate done history files. The user and the group
+   * both need full permissions, this is enforced by this method.
+   * @param conf The configuration object
+   * @return FsPermission of the user directories
+   */
+  public static FsPermission
+        getConfiguredHistoryIntermediateUserDoneDirPermissions(
+            Configuration conf) {
+    String userDoneDirPermissions = conf.get(
+        JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS);
+    if (userDoneDirPermissions == null) {
+      return new FsPermission(
+          JHAdminConfig.DEFAULT_MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS);
+    }
+    FsPermission permission = new FsPermission(userDoneDirPermissions);
+    if (permission.getUserAction() != FsAction.ALL ||
+        permission.getGroupAction() != FsAction.ALL) {
+      permission = new FsPermission(FsAction.ALL, FsAction.ALL,
+          permission.getOtherAction(), permission.getStickyBit());
+      LOG.warn("Unsupported permission configured in " +
+          JHAdminConfig.MR_HISTORY_INTERMEDIATE_USER_DONE_DIR_PERMISSIONS +
+          ", the user and the group permission must be 7 (rwx). " +
+          "The permission was set to " + permission.toString());
+    }
+    return permission;
   }
   
   /**

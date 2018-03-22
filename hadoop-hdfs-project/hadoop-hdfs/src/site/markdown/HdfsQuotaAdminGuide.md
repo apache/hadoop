@@ -15,13 +15,7 @@
 HDFS Quotas Guide
 =================
 
-* [HDFS Quotas Guide](#HDFS_Quotas_Guide)
-    * [Overview](#Overview)
-    * [Name Quotas](#Name_Quotas)
-    * [Space Quotas](#Space_Quotas)
-    * [Storage Type Quotas](#Storage_Type_Quotas)
-    * [Administrative Commands](#Administrative_Commands)
-    * [Reporting Command](#Reporting_Command)
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------

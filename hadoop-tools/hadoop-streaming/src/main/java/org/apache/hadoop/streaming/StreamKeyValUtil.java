@@ -26,11 +26,11 @@ import org.apache.hadoop.util.LineReader;
 public class StreamKeyValUtil {
 
   /**
-   * Find the first occured tab in a UTF-8 encoded string
+   * Find the first occurred tab in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
    * @param start starting offset
    * @param length no. of bytes
-   * @return position that first tab occures otherwise -1
+   * @return position that first tab occurres otherwise -1
    */
   public static int findTab(byte [] utf, int start, int length) {
     for(int i=start; i<(start+length); i++) {
@@ -41,9 +41,9 @@ public class StreamKeyValUtil {
     return -1;      
   }
   /**
-   * Find the first occured tab in a UTF-8 encoded string
+   * Find the first occurred tab in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
-   * @return position that first tab occures otherwise -1
+   * @return position that first tab occurres otherwise -1
    */
   public static int findTab(byte [] utf) {
     return org.apache.hadoop.util.UTF8ByteArrayUtils.findNthByte(utf, 0, 

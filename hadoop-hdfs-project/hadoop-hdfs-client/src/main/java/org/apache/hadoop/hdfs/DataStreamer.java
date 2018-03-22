@@ -142,8 +142,6 @@ class DataStreamer extends Daemon {
 
     /**
      * Record a connection exception.
-     * @param e
-     * @throws InvalidEncryptionKeyException
      */
     void recordFailure(final InvalidEncryptionKeyException e)
         throws InvalidEncryptionKeyException {
@@ -176,11 +174,12 @@ class DataStreamer extends Daemon {
 
     void sendTransferBlock(final DatanodeInfo[] targets,
         final StorageType[] targetStorageTypes,
+        final String[] targetStorageIDs,
         final Token<BlockTokenIdentifier> blockToken) throws IOException {
       //send the TRANSFER_BLOCK request
-      new Sender(out)
-          .transferBlock(block, blockToken, dfsClient.clientName, targets,
-              targetStorageTypes);
+      new Sender(out).transferBlock(block.getCurrentBlock(), blockToken,
+          dfsClient.clientName, targets, targetStorageTypes,
+          targetStorageIDs);
       out.flush();
       //ack
       BlockOpResponseProto transferResponse = BlockOpResponseProto
@@ -196,6 +195,42 @@ class DataStreamer extends Daemon {
       IOUtils.closeStream(in);
       IOUtils.closeStream(out);
       IOUtils.closeSocket(sock);
+    }
+  }
+
+  static class BlockToWrite {
+    private ExtendedBlock currentBlock;
+
+    BlockToWrite(ExtendedBlock block) {
+      setCurrentBlock(block);
+    }
+
+    synchronized ExtendedBlock getCurrentBlock() {
+      return currentBlock == null ? null : new ExtendedBlock(currentBlock);
+    }
+
+    synchronized long getNumBytes() {
+      return currentBlock == null ? 0 : currentBlock.getNumBytes();
+    }
+
+    synchronized void setCurrentBlock(ExtendedBlock block) {
+      currentBlock = (block == null || block.getLocalBlock() == null) ?
+          null : new ExtendedBlock(block);
+    }
+
+    synchronized void setNumBytes(long numBytes) {
+      assert currentBlock != null;
+      currentBlock.setNumBytes(numBytes);
+    }
+
+    synchronized void setGenerationStamp(long generationStamp) {
+      assert currentBlock != null;
+      currentBlock.setGenerationStamp(generationStamp);
+    }
+
+    @Override
+    public synchronized String toString() {
+      return currentBlock == null ? "null" : currentBlock.toString();
     }
   }
 
@@ -250,38 +285,21 @@ class DataStreamer extends Daemon {
     packets.clear();
   }
 
-  class LastExceptionInStreamer {
-    private IOException thrown;
-
-    synchronized void set(Throwable t) {
-      assert t != null;
-      this.thrown = t instanceof IOException ?
-          (IOException) t : new IOException(t);
-    }
-
-    synchronized void clear() {
-      thrown = null;
-    }
-
-    /** Check if there already is an exception. */
+  class LastExceptionInStreamer extends ExceptionLastSeen {
+    /**
+     * Check if there already is an exception.
+     */
+    @Override
     synchronized void check(boolean resetToNull) throws IOException {
+      final IOException thrown = get();
       if (thrown != null) {
         if (LOG.isTraceEnabled()) {
           // wrap and print the exception to know when the check is called
           LOG.trace("Got Exception while checking, " + DataStreamer.this,
               new Throwable(thrown));
         }
-        final IOException e = thrown;
-        if (resetToNull) {
-          thrown = null;
-        }
-        throw e;
+        super.check(resetToNull);
       }
-    }
-
-    synchronized void throwException4Close() throws IOException {
-      check(false);
-      throw new ClosedChannelException();
     }
   }
 
@@ -292,6 +310,7 @@ class DataStreamer extends Daemon {
   static class ErrorState {
     ErrorType error = ErrorType.NONE;
     private int badNodeIndex = -1;
+    private boolean waitForRestart = true;
     private int restartingNodeIndex = -1;
     private long restartingNodeDeadline = 0;
     private final long datanodeRestartTimeout;
@@ -307,6 +326,7 @@ class DataStreamer extends Daemon {
       badNodeIndex = -1;
       restartingNodeIndex = -1;
       restartingNodeDeadline = 0;
+      waitForRestart = true;
     }
 
     synchronized void reset() {
@@ -314,6 +334,7 @@ class DataStreamer extends Daemon {
       badNodeIndex = -1;
       restartingNodeIndex = -1;
       restartingNodeDeadline = 0;
+      waitForRestart = true;
     }
 
     synchronized boolean hasInternalError() {
@@ -354,14 +375,19 @@ class DataStreamer extends Daemon {
       return restartingNodeIndex;
     }
 
-    synchronized void initRestartingNode(int i, String message) {
+    synchronized void initRestartingNode(int i, String message,
+        boolean shouldWait) {
       restartingNodeIndex = i;
-      restartingNodeDeadline =  Time.monotonicNow() + datanodeRestartTimeout;
-      // If the data streamer has already set the primary node
-      // bad, clear it. It is likely that the write failed due to
-      // the DN shutdown. Even if it was a real failure, the pipeline
-      // recovery will take care of it.
-      badNodeIndex = -1;
+      if (shouldWait) {
+        restartingNodeDeadline = Time.monotonicNow() + datanodeRestartTimeout;
+        // If the data streamer has already set the primary node
+        // bad, clear it. It is likely that the write failed due to
+        // the DN shutdown. Even if it was a real failure, the pipeline
+        // recovery will take care of it.
+        badNodeIndex = -1;
+      } else {
+        this.waitForRestart = false;
+      }
       LOG.info(message);
     }
 
@@ -370,7 +396,7 @@ class DataStreamer extends Daemon {
     }
 
     synchronized boolean isNodeMarked() {
-      return badNodeIndex >= 0 || isRestartingNode();
+      return badNodeIndex >= 0 || (isRestartingNode() && doWaitForRestart());
     }
 
     /**
@@ -395,7 +421,7 @@ class DataStreamer extends Daemon {
         } else if (badNodeIndex < restartingNodeIndex) {
           // the node index has shifted.
           restartingNodeIndex--;
-        } else {
+        } else if (waitForRestart) {
           throw new IllegalStateException("badNodeIndex = " + badNodeIndex
               + " = restartingNodeIndex = " + restartingNodeIndex);
         }
@@ -437,10 +463,14 @@ class DataStreamer extends Daemon {
         }
       }
     }
+
+    boolean doWaitForRestart() {
+      return waitForRestart;
+    }
   }
 
   private volatile boolean streamerClosed = false;
-  protected volatile ExtendedBlock block; // its length is number of bytes acked
+  protected final BlockToWrite block; // its length is number of bytes acked
   protected Token<BlockTokenIdentifier> accessToken;
   private DataOutputStream blockStream;
   private DataInputStream blockReplyStream;
@@ -456,6 +486,8 @@ class DataStreamer extends Daemon {
 
   /** Nodes have been used in the pipeline before and have failed. */
   private final List<DatanodeInfo> failed = new ArrayList<>();
+  /** Restarting Nodes */
+  private List<DatanodeInfo> restartingNodes = new ArrayList<>();
   /** The times have retried to recover pipeline, for the same packet. */
   private volatile int pipelineRecoveryCount = 0;
   /** Has the current block been hflushed? */
@@ -508,7 +540,7 @@ class DataStreamer extends Daemon {
                        ByteArrayManager byteArrayManage,
                        boolean isAppend, String[] favoredNodes,
                        EnumSet<AddBlockFlag> flags) {
-    this.block = block;
+    this.block = new BlockToWrite(block);
     this.dfsClient = dfsClient;
     this.src = src;
     this.progress = progress;
@@ -640,8 +672,7 @@ class DataStreamer extends Daemon {
           long now = Time.monotonicNow();
           while ((!shouldStop() && dataQueue.size() == 0 &&
               (stage != BlockConstructionStage.DATA_STREAMING ||
-                  stage == BlockConstructionStage.DATA_STREAMING &&
-                      now - lastPacket < halfSocketTimeout)) || doSleep ) {
+                  now - lastPacket < halfSocketTimeout)) || doSleep) {
             long timeout = halfSocketTimeout - (now-lastPacket);
             timeout = timeout <= 0 ? 1000 : timeout;
             timeout = (stage == BlockConstructionStage.DATA_STREAMING)?
@@ -865,8 +896,9 @@ class DataStreamer extends Daemon {
       }
       long duration = Time.monotonicNow() - begin;
       if (duration > dfsclientSlowLogThresholdMs) {
-        LOG.warn("Slow waitForAckedSeqno took " + duration
-            + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms)");
+        LOG.warn("Slow waitForAckedSeqno took {}ms (threshold={}ms). File being"
+                + " written: {}, block: {}, Write pipeline datanodes: {}.",
+            duration, dfsclientSlowLogThresholdMs, src, block, nodes);
       }
     }
   }
@@ -1007,6 +1039,13 @@ class DataStreamer extends Daemon {
       return true;
     }
 
+    /*
+     * Treat all nodes as remote for test when skip enabled.
+     */
+    if (DFSClientFaultInjector.get().skipRollingRestartWait()) {
+      return false;
+    }
+
     // Is it a local node?
     InetAddress addr = null;
     try {
@@ -1074,11 +1113,11 @@ class DataStreamer extends Daemon {
             }
             // Restart will not be treated differently unless it is
             // the local node or the only one in the pipeline.
-            if (PipelineAck.isRestartOOBStatus(reply) &&
-                shouldWaitForRestart(i)) {
+            if (PipelineAck.isRestartOOBStatus(reply)) {
               final String message = "Datanode " + i + " is restarting: "
                   + targets[i];
-              errorState.initRestartingNode(i, message);
+              errorState.initRestartingNode(i, message,
+                  shouldWaitForRestart(i));
               throw new IOException(message);
             }
             // node error
@@ -1321,21 +1360,52 @@ class DataStreamer extends Daemon {
       LocatedBlock lb;
       //get a new datanode
       lb = dfsClient.namenode.getAdditionalDatanode(
-          src, stat.getFileId(), block, nodes, storageIDs,
+          src, stat.getFileId(), block.getCurrentBlock(), nodes, storageIDs,
           exclude.toArray(new DatanodeInfo[exclude.size()]),
           1, dfsClient.clientName);
       // a new node was allocated by the namenode. Update nodes.
       setPipeline(lb);
 
       //find the new datanode
-      final int d = findNewDatanode(original);
+      final int d;
+      try {
+        d = findNewDatanode(original);
+      } catch (IOException ioe) {
+        // check the minimal number of nodes available to decide whether to
+        // continue the write.
+
+        //if live block location datanodes is greater than or equal to
+        // HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+        // MIN_REPLICATION threshold value, continue writing to the
+        // remaining nodes. Otherwise throw exception.
+        //
+        // If HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+        // MIN_REPLICATION is set to 0 or less than zero, an exception will be
+        // thrown if a replacement could not be found.
+
+        if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 && nodes.length
+            >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
+          DFSClient.LOG.warn(
+              "Failed to find a new datanode to add to the write pipeline, "
+                  + " continue to write to the pipeline with " + nodes.length
+                  + " nodes since it's no less than minimum replication: "
+                  + dfsClient.dtpReplaceDatanodeOnFailureReplication
+                  + " configured by "
+                  + BlockWrite.ReplaceDatanodeOnFailure.MIN_REPLICATION
+                  + ".", ioe);
+          return;
+        }
+        throw ioe;
+      }
       //transfer replica. pick a source from the original nodes
       final DatanodeInfo src = original[tried % original.length];
       final DatanodeInfo[] targets = {nodes[d]};
       final StorageType[] targetStorageTypes = {storageTypes[d]};
+      final String[] targetStorageIDs = {storageIDs[d]};
 
       try {
-        transfer(src, targets, targetStorageTypes, lb.getBlockToken());
+        transfer(src, targets, targetStorageTypes, targetStorageIDs,
+            lb.getBlockToken());
       } catch (IOException ioe) {
         DFSClient.LOG.warn("Error transferring data from " + src + " to " +
             nodes[d] + ": " + ioe.getMessage());
@@ -1366,6 +1436,7 @@ class DataStreamer extends Daemon {
 
   private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
                         final StorageType[] targetStorageTypes,
+                        final String[] targetStorageIDs,
                         final Token<BlockTokenIdentifier> blockToken)
       throws IOException {
     //transfer replica to the new datanode
@@ -1378,7 +1449,8 @@ class DataStreamer extends Daemon {
 
         streams = new StreamerStreams(src, writeTimeout, readTimeout,
             blockToken);
-        streams.sendTransferBlock(targets, targetStorageTypes, blockToken);
+        streams.sendTransferBlock(targets, targetStorageTypes,
+            targetStorageIDs, blockToken);
         return;
       } catch (InvalidEncryptionKeyException e) {
         policy.recordFailure(e);
@@ -1406,11 +1478,12 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return;
     }
-    setupPipelineInternal(nodes, storageTypes);
+    setupPipelineInternal(nodes, storageTypes, storageIDs);
   }
 
   protected void setupPipelineInternal(DatanodeInfo[] datanodes,
-      StorageType[] nodeStorageTypes) throws IOException {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
+      throws IOException {
     boolean success = false;
     long newGS = 0L;
     while (!success && !streamerClosed && dfsClient.clientRunning) {
@@ -1431,7 +1504,8 @@ class DataStreamer extends Daemon {
       accessToken = lb.getBlockToken();
 
       // set up the pipeline again with the remaining nodes
-      success = createBlockOutputStream(nodes, storageTypes, newGS, isRecovery);
+      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
+          isRecovery);
 
       failPacket4Testing();
 
@@ -1439,7 +1513,7 @@ class DataStreamer extends Daemon {
     } // while
 
     if (success) {
-      block = updatePipeline(newGS);
+      updatePipeline(newGS);
     }
   }
 
@@ -1450,6 +1524,14 @@ class DataStreamer extends Daemon {
    */
   boolean handleRestartingDatanode() {
     if (errorState.isRestartingNode()) {
+      if (!errorState.doWaitForRestart()) {
+        // If node is restarting and not worth to wait for restart then can go
+        // ahead with error recovery considering it as bad node for now. Later
+        // it should be able to re-consider the same node for future pipeline
+        // updates.
+        errorState.setBadNodeIndex(errorState.getRestartingNodeIndex());
+        return true;
+      }
       // 4 seconds or the configured deadline period, whichever is shorter.
       // This is the retry interval and recovery will be retried in this
       // interval until timeout or success.
@@ -1481,9 +1563,14 @@ class DataStreamer extends Daemon {
         return false;
       }
 
+      String reason = "bad.";
+      if (errorState.getRestartingNodeIndex() == badNodeIndex) {
+        reason = "restarting.";
+        restartingNodes.add(nodes[badNodeIndex]);
+      }
       LOG.warn("Error Recovery for " + block + " in pipeline "
           + Arrays.toString(nodes) + ": datanode " + badNodeIndex
-          + "("+ nodes[badNodeIndex] + ") is bad.");
+          + "("+ nodes[badNodeIndex] + ") is " + reason);
       failed.add(nodes[badNodeIndex]);
 
       DatanodeInfo[] newnodes = new DatanodeInfo[nodes.length-1];
@@ -1535,21 +1622,23 @@ class DataStreamer extends Daemon {
   }
 
   private LocatedBlock updateBlockForPipeline() throws IOException {
-    return dfsClient.namenode.updateBlockForPipeline(block,
+    return dfsClient.namenode.updateBlockForPipeline(block.getCurrentBlock(),
         dfsClient.clientName);
   }
 
-  static ExtendedBlock newBlock(ExtendedBlock b, final long newGS) {
-    return new ExtendedBlock(b.getBlockPoolId(), b.getBlockId(),
-        b.getNumBytes(), newGS);
+  void updateBlockGS(final long newGS) {
+    block.setGenerationStamp(newGS);
   }
 
   /** update pipeline at the namenode */
-  ExtendedBlock updatePipeline(long newGS) throws IOException {
-    final ExtendedBlock newBlock = newBlock(block, newGS);
-    dfsClient.namenode.updatePipeline(dfsClient.clientName, block, newBlock,
-        nodes, storageIDs);
-    return newBlock;
+  @VisibleForTesting
+  public void updatePipeline(long newGS) throws IOException {
+    final ExtendedBlock oldBlock = block.getCurrentBlock();
+    // the new GS has been propagated to all DN, it should be ok to update the
+    // local block state
+    updateBlockGS(newGS);
+    dfsClient.namenode.updatePipeline(dfsClient.clientName, oldBlock,
+        block.getCurrentBlock(), nodes, storageIDs);
   }
 
   DatanodeInfo[] getExcludedNodes() {
@@ -1566,34 +1655,35 @@ class DataStreamer extends Daemon {
   protected LocatedBlock nextBlockOutputStream() throws IOException {
     LocatedBlock lb;
     DatanodeInfo[] nodes;
-    StorageType[] storageTypes;
+    StorageType[] nextStorageTypes;
+    String[] nextStorageIDs;
     int count = dfsClient.getConf().getNumBlockWriteRetry();
     boolean success;
-    ExtendedBlock oldBlock = block;
+    final ExtendedBlock oldBlock = block.getCurrentBlock();
     do {
       errorState.resetInternalError();
       lastException.clear();
 
       DatanodeInfo[] excluded = getExcludedNodes();
-      block = oldBlock;
-      lb = locateFollowingBlock(excluded.length > 0 ? excluded : null);
-      block = lb.getBlock();
+      lb = locateFollowingBlock(
+          excluded.length > 0 ? excluded : null, oldBlock);
+      block.setCurrentBlock(lb.getBlock());
       block.setNumBytes(0);
       bytesSent = 0;
       accessToken = lb.getBlockToken();
       nodes = lb.getLocations();
-      storageTypes = lb.getStorageTypes();
+      nextStorageTypes = lb.getStorageTypes();
+      nextStorageIDs = lb.getStorageIDs();
 
-      //
       // Connect to first DataNode in the list.
-      //
-      success = createBlockOutputStream(nodes, storageTypes, 0L, false);
+      success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs,
+          0L, false);
 
       if (!success) {
         LOG.warn("Abandoning " + block);
-        dfsClient.namenode.abandonBlock(block, stat.getFileId(), src,
-            dfsClient.clientName);
-        block = null;
+        dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
+            stat.getFileId(), src, dfsClient.clientName);
+        block.setCurrentBlock(null);
         final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
         LOG.warn("Excluding datanode " + badNode);
         excludedNodes.put(badNode, badNode);
@@ -1610,7 +1700,8 @@ class DataStreamer extends Daemon {
   // Returns true if success, otherwise return failure.
   //
   boolean createBlockOutputStream(DatanodeInfo[] nodes,
-      StorageType[] nodeStorageTypes, long newGS, boolean recoveryFlag) {
+      StorageType[] nodeStorageTypes, String[] nodeStorageIDs,
+      long newGS, boolean recoveryFlag) {
     if (nodes.length == 0) {
       LOG.info("nodes are empty for write pipeline of " + block);
       return false;
@@ -1654,7 +1745,7 @@ class DataStreamer extends Daemon {
 
         // We cannot change the block length in 'block' as it counts the number
         // of bytes ack'ed.
-        ExtendedBlock blockCopy = new ExtendedBlock(block);
+        ExtendedBlock blockCopy = block.getCurrentBlock();
         blockCopy.setNumBytes(stat.getBlockSize());
 
         boolean[] targetPinnings = getPinnings(nodes);
@@ -1663,7 +1754,8 @@ class DataStreamer extends Daemon {
             dfsClient.clientName, nodes, nodeStorageTypes, null, bcs,
             nodes.length, block.getNumBytes(), bytesSent, newGS,
             checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
-            (targetPinnings != null && targetPinnings[0]), targetPinnings);
+            (targetPinnings != null && targetPinnings[0]), targetPinnings,
+            nodeStorageIDs[0], nodeStorageIDs);
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
@@ -1689,6 +1781,9 @@ class DataStreamer extends Daemon {
         blockStream = out;
         result =  true; // success
         errorState.resetInternalError();
+        // remove all restarting nodes from failed nodes list
+        failed.removeAll(restartingNodes);
+        restartingNodes.clear();
       } catch (IOException ie) {
         if (!errorState.isRestartingNode()) {
           LOG.info("Exception in createBlockOutputStream " + this, ie);
@@ -1722,9 +1817,10 @@ class DataStreamer extends Daemon {
 
         final int i = errorState.getBadNodeIndex();
         // Check whether there is a restart worth waiting for.
-        if (checkRestart && shouldWaitForRestart(i)) {
-          errorState.initRestartingNode(i, "Datanode " + i + " is restarting: "
-              + nodes[i]);
+        if (checkRestart) {
+          errorState.initRestartingNode(i,
+              "Datanode " + i + " is restarting: " + nodes[i],
+              shouldWaitForRestart(i));
         }
         errorState.setInternalError();
         lastException.set(ie);
@@ -1764,9 +1860,9 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
-      throws IOException {
-    return DFSOutputStream.addBlock(excludedNodes, dfsClient, src, block,
+  private LocatedBlock locateFollowingBlock(DatanodeInfo[] excluded,
+      ExtendedBlock oldBlock) throws IOException {
+    return DFSOutputStream.addBlock(excluded, dfsClient, src, oldBlock,
         stat.getFileId(), favoredNodes, addBlockFlags);
   }
 
@@ -1810,7 +1906,7 @@ class DataStreamer extends Daemon {
    * @return the block this streamer is writing to
    */
   ExtendedBlock getBlock() {
-    return block;
+    return block.getCurrentBlock();
   }
 
   /**
@@ -2015,6 +2111,8 @@ class DataStreamer extends Daemon {
 
   @Override
   public String toString() {
-    return block == null? "block==null": "" + block.getLocalBlock();
+    final ExtendedBlock extendedBlock = block.getCurrentBlock();
+    return extendedBlock == null ?
+        "block==null" : "" + extendedBlock.getLocalBlock();
   }
 }

@@ -54,7 +54,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
     Configuration conf = new YarnConfiguration();
     List<PrivilegedOperation> ret =
         cGroupsBlkioResourceHandlerImpl.bootstrap(conf);
-    verify(mockCGroupsHandler, times(1)).mountCGroupController(
+    verify(mockCGroupsHandler, times(1)).initializeCGroupController(
         CGroupsHandler.CGroupController.BLKIO);
     Assert.assertNull(ret);
   }

@@ -30,9 +30,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.util.Collection;
@@ -63,7 +63,7 @@ class NodesPage extends RmView {
 
     @Override
     protected void render(Block html) {
-      html._(MetricsOverviewTable.class);
+      html.__(MetricsOverviewTable.class);
 
       ResourceScheduler sched = rm.getResourceScheduler();
 
@@ -81,12 +81,14 @@ class NodesPage extends RmView {
 
       if (!this.opportunisticContainersEnabled) {
         trbody.th(".containers", "Containers")
+            .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used")
             .th(".mem", "Mem Avail")
             .th(".vcores", "VCores Used")
             .th(".vcores", "VCores Avail");
       } else {
         trbody.th(".containers", "Running Containers (G)")
+            .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used (G)")
             .th(".mem", "Mem Avail (G)")
             .th(".vcores", "VCores Used (G)")
@@ -98,7 +100,7 @@ class NodesPage extends RmView {
       }
 
       TBODY<TABLE<Hamlet>> tbody =
-          trbody.th(".nodeManagerVersion", "Version")._()._().tbody();
+          trbody.th(".nodeManagerVersion", "Version").__().__().tbody();
 
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
@@ -167,6 +169,7 @@ class NodesPage extends RmView {
             .append(Times.format(info.getLastHealthUpdate())).append("\",\"")
             .append(info.getHealthReport()).append("\",\"")
             .append(String.valueOf(info.getNumContainers())).append("\",\"")
+            .append(info.getAllocationTagsSummary()).append("\",\"")
             .append("<br title='").append(String.valueOf(usedMemory))
             .append("'>").append(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))
             .append("\",\"").append("<br title='")
@@ -201,13 +204,13 @@ class NodesPage extends RmView {
       }
       nodeTableData.append("]");
       html.script().$type("text/javascript")
-          ._("var nodeTableData=" + nodeTableData)._();
-      tbody._()._();
+          .__("var nodeTableData=" + nodeTableData).__();
+      tbody.__().__();
     }
   }
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String type = $(NODE_STATE);
     String title = "Nodes of the cluster";

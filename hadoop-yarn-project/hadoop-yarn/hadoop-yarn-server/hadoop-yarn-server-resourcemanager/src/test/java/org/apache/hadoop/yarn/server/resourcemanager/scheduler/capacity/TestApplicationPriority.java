@@ -26,25 +26,21 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
@@ -344,7 +340,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -378,7 +377,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 15
     Priority appPriority2 = Priority.newInstance(15);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt = cs.getSchedulerApplications()
@@ -400,16 +402,11 @@ public class TestApplicationPriority {
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-    RMState rmState = memStore.getState();
-    Map<ApplicationId, ApplicationStateData> rmAppState = rmState
-        .getApplicationState();
-
     // PHASE 1: create state in an RM
 
     // start RM
-    MockRM rm1 = new MockRM(conf, memStore);
+    MockRM rm1 = new MockRM(conf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
 
     MockNM nm1 = new MockNM("127.0.0.1:1234", 15120,
@@ -428,7 +425,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 8
     Priority appPriority2 = Priority.newInstance(8);
-    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app1.getUser());
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId(), null,
+        ugi);
 
     // let things settle down
     Thread.sleep(1000);
@@ -557,7 +557,10 @@ public class TestApplicationPriority {
 
     // Change the priority of App1 to 3 (lowest)
     Priority appPriority3 = Priority.newInstance(3);
-    cs.updateApplicationPriority(appPriority3, app2.getApplicationId(), null);
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app2.getUser());
+    cs.updateApplicationPriority(appPriority3, app2.getApplicationId(), null,
+        ugi);
 
     // add request for containers App2
     am2.allocate("127.0.0.1", 2 * GB, 3, new ArrayList<ContainerId>());
@@ -599,24 +602,15 @@ public class TestApplicationPriority {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
-    final DrainDispatcher dispatcher = new DrainDispatcher();
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
-    MockRM rm1 = new MockRM(conf, memStore) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher;
-      }
-    };
+    MockRM rm1 = new MockRM(conf);
+    MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();
     rm1.start();
 
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 16384, rm1.getResourceTrackerService());
     nm1.registerNode();
-
-    dispatcher.await();
+    rm1.drainEvents();
 
     ResourceScheduler scheduler = rm1.getRMContext().getScheduler();
     LeafQueue defaultQueue =
@@ -635,7 +629,7 @@ public class TestApplicationPriority {
     MockAM am2 = MockRM.launchAM(app2, rm1, nm1);
     am2.registerAppAttempt();
 
-    dispatcher.await();
+    rm1.drainEvents();
     Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
     Assert.assertEquals(0, defaultQueue.getNumPendingApplications());
 
@@ -644,7 +638,7 @@ public class TestApplicationPriority {
     Priority appPriority3 = Priority.newInstance(7);
     RMApp app3 = rm1.submitApp(memory, appPriority3);
 
-    dispatcher.await();
+    rm1.drainEvents();
     Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
     Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
 
@@ -663,14 +657,8 @@ public class TestApplicationPriority {
     Assert.assertEquals(app3.getCurrentAppAttempt().getAppAttemptId(),
         fcApp3.getApplicationAttemptId());
 
-    final DrainDispatcher dispatcher1 = new DrainDispatcher();
     // create new RM to represent restart and recover state
-    MockRM rm2 = new MockRM(conf, memStore) {
-      @Override
-      protected Dispatcher createDispatcher() {
-        return dispatcher1;
-      }
-    };
+    MockRM rm2 = new MockRM(conf, memStore);
 
     // start new RM
     rm2.start();
@@ -680,7 +668,7 @@ public class TestApplicationPriority {
     // Verify RM Apps after this restart
     Assert.assertEquals(3, rm2.getRMContext().getRMApps().size());
 
-    dispatcher1.await();
+    rm2.drainEvents();
     scheduler = rm2.getRMContext().getScheduler();
     defaultQueue =
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue("default");
@@ -701,7 +689,7 @@ public class TestApplicationPriority {
 
     // NM resync to new RM
     nm1.registerNode();
-    dispatcher1.await();
+    rm2.drainEvents();
 
     // wait for activating applications
     count = 50;
@@ -788,8 +776,10 @@ public class TestApplicationPriority {
       int appsPendingExpected, int activeAppsExpected, RMApp app)
       throws YarnException {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    UserGroupInformation ugi = UserGroupInformation
+        .createRemoteUser(app.getUser());
     cs.updateApplicationPriority(Priority.newInstance(2),
-        app.getApplicationId(), null);
+        app.getApplicationId(), null, ugi);
     SchedulerEvent removeAttempt;
     removeAttempt = new AppAttemptRemovedSchedulerEvent(
         app.getCurrentAppAttempt().getAppAttemptId(), RMAppAttemptState.KILLED,

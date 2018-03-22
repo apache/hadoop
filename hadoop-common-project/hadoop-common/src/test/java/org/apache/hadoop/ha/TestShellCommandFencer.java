@@ -19,30 +19,43 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
 
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 
 public class TestShellCommandFencer {
   private ShellCommandFencer fencer = createFencer();
   private static final HAServiceTarget TEST_TARGET =
       new DummyHAService(HAServiceState.ACTIVE,
           new InetSocketAddress("dummyhost", 1234));
-  
+  private static final Logger LOG = ShellCommandFencer.LOG;
+
   @BeforeClass
-  public static void setupLogSpy() {
-    ShellCommandFencer.LOG = spy(ShellCommandFencer.LOG);
+  public static void setupLogMock() {
+    ShellCommandFencer.LOG = mock(Logger.class, new LogAnswer());
   }
-  
+
+  @AfterClass
+  public static void tearDownLogMock() throws Exception {
+    ShellCommandFencer.LOG = LOG;
+  }
+
   @Before
   public void resetLogSpy() {
     Mockito.reset(ShellCommandFencer.LOG);
@@ -173,4 +186,36 @@ public class TestShellCommandFencer {
     assertEquals("a...gh", ShellCommandFencer.abbreviate("abcdefgh", 6));
     assertEquals("ab...gh", ShellCommandFencer.abbreviate("abcdefgh", 7));
   }
+
+  /**
+   * An answer simply delegate some basic log methods to real LOG.
+   */
+  private static class LogAnswer implements Answer {
+
+    private static final List<String> DELEGATE_METHODS = Lists.asList("error",
+        new String[]{"warn", "info", "debug", "trace"});
+
+    @Override
+    public Object answer(InvocationOnMock invocation) {
+
+      String methodName = invocation.getMethod().getName();
+
+      if (!DELEGATE_METHODS.contains(methodName)) {
+        return null;
+      }
+
+      try {
+        String msg = invocation.getArguments()[0].toString();
+        Method delegateMethod = LOG.getClass().getMethod(methodName,
+            msg.getClass());
+        delegateMethod.invoke(LOG, msg);
+      } catch (Throwable e) {
+        throw new IllegalStateException(
+            "Unsupported delegate method: " + methodName);
+      }
+
+      return null;
+    }
+  }
+
 }

@@ -23,9 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
@@ -37,10 +37,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 
@@ -60,11 +62,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
 class JsonUtilClient {
   static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
+  static final String UNSUPPPORTED_EXCEPTION_STR =
+      UnsupportedOperationException.class.getName();
 
   /** Convert a Json map to a RemoteException. */
   static RemoteException toRemoteException(final Map<?, ?> json) {
@@ -72,6 +77,9 @@ class JsonUtilClient {
         RemoteException.class.getSimpleName());
     final String message = (String)m.get("message");
     final String javaClassName = (String)m.get("javaClassName");
+    if (UNSUPPPORTED_EXCEPTION_STR.equals(javaClassName)) {
+      throw new UnsupportedOperationException(message);
+    }
     return new RemoteException(javaClassName, message);
   }
 
@@ -96,16 +104,8 @@ class JsonUtilClient {
   }
 
   /** Convert a string to a FsPermission object. */
-  static FsPermission toFsPermission(
-      final String s, Boolean aclBit, Boolean encBit) {
-    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
-    final boolean aBit = (aclBit != null) ? aclBit : false;
-    final boolean eBit = (encBit != null) ? encBit : false;
-    if (aBit || eBit) {
-      return new FsPermissionExtension(perm, aBit, eBit);
-    } else {
-      return perm;
-    }
+  static FsPermission toFsPermission(final String s) {
+    return null == s ? null : new FsPermission(Short.parseShort(s, 8));
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
@@ -126,9 +126,23 @@ class JsonUtilClient {
     final long len = ((Number) m.get("length")).longValue();
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
-    final FsPermission permission = toFsPermission((String) m.get("permission"),
-        (Boolean) m.get("aclBit"),
-        (Boolean) m.get("encBit"));
+    final FsPermission permission = toFsPermission((String)m.get("permission"));
+
+    Boolean aclBit = (Boolean) m.get("aclBit");
+    Boolean encBit = (Boolean) m.get("encBit");
+    Boolean erasureBit  = (Boolean) m.get("ecBit");
+    EnumSet<HdfsFileStatus.Flags> f =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
+    if (aclBit != null && aclBit) {
+      f.add(HdfsFileStatus.Flags.HAS_ACL);
+    }
+    if (encBit != null && encBit) {
+      f.add(HdfsFileStatus.Flags.HAS_CRYPT);
+    }
+    if (erasureBit != null && erasureBit) {
+      f.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+
     final long aTime = ((Number) m.get("accessTime")).longValue();
     final long mTime = ((Number) m.get("modificationTime")).longValue();
     final long blockSize = ((Number) m.get("blockSize")).longValue();
@@ -140,11 +154,23 @@ class JsonUtilClient {
     final byte storagePolicy = m.containsKey("storagePolicy") ?
         (byte) ((Number) m.get("storagePolicy")).longValue() :
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-    return new HdfsFileStatus(len, type == WebHdfsConstants.PathType.DIRECTORY,
-        replication, blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtilClient.string2Bytes(localName),
-        fileId, childrenNum, null,
-        storagePolicy, null);
+    return new HdfsFileStatus.Builder()
+      .length(len)
+      .isdir(type == WebHdfsConstants.PathType.DIRECTORY)
+      .replication(replication)
+      .blocksize(blockSize)
+      .mtime(mTime)
+      .atime(aTime)
+      .perm(permission)
+      .flags(f)
+      .owner(owner)
+      .group(group)
+      .symlink(symlink)
+      .path(DFSUtilClient.string2Bytes(localName))
+      .fileId(fileId)
+      .children(childrenNum)
+      .storagePolicy(storagePolicy)
+      .build();
   }
 
   static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
@@ -294,6 +320,8 @@ class JsonUtilClient {
             DatanodeInfo.AdminStates
                 .valueOf(getString(m, "adminState", "NORMAL")))
         .setUpgradeDomain(getString(m, "upgradeDomain", ""))
+        .setLastBlockReportTime(getLong(m, "lastBlockReportTime", 0L))
+        .setLastBlockReportMonotonic(getLong(m, "lastBlockReportMonotonic", 0L))
         .build();
   }
 
@@ -385,9 +413,9 @@ class JsonUtilClient {
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
     final Map<?, ?> typem = (Map<?, ?>) m.get("typeQuota");
 
-    Builder contentSummaryBuilder = new ContentSummary.Builder().length(length)
-        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
-        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
+    ContentSummary.Builder contentSummaryBuilder =new ContentSummary.Builder()
+        .length(length).fileCount(fileCount).directoryCount(directoryCount)
+        .quota(quota).spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
     if (typem != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
         Map<?, ?> type = (Map<?, ?>) typem.get(t.toString());
@@ -460,8 +488,7 @@ class JsonUtilClient {
     aclStatusBuilder.stickyBit((Boolean) m.get("stickyBit"));
     String permString = (String) m.get("permission");
     if (permString != null) {
-      final FsPermission permission = toFsPermission(permString,
-          (Boolean) m.get("aclBit"), (Boolean) m.get("encBit"));
+      final FsPermission permission = toFsPermission(permString);
       aclStatusBuilder.setPermission(permission);
     }
     final List<?> entries = (List<?>) m.get("entries");
@@ -637,4 +664,116 @@ class JsonUtilClient {
     }
   }
 
+  /*
+   * The parameters which have default value -1 are required fields according
+   * to hdfs.proto.
+   * The default values for optional fields are taken from
+   * hdfs.proto#FsServerDefaultsProto.
+   */
+  public static FsServerDefaults toFsServerDefaults(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(FsServerDefaults.class.getSimpleName());
+    long blockSize =  getLong(m, "blockSize", -1);
+    int bytesPerChecksum = getInt(m, "bytesPerChecksum", -1);
+    int writePacketSize = getInt(m, "writePacketSize", -1);
+    short replication = (short) getInt(m, "replication", -1);
+    int fileBufferSize = getInt(m, "fileBufferSize", -1);
+    boolean encryptDataTransfer = m.containsKey("encryptDataTransfer")
+        ? (Boolean) m.get("encryptDataTransfer")
+        : false;
+    long trashInterval = getLong(m, "trashInterval", 0);
+    DataChecksum.Type type =
+        DataChecksum.Type.valueOf(getInt(m, "checksumType", 1));
+    String keyProviderUri = (String) m.get("keyProviderUri");
+    byte storagepolicyId = m.containsKey("defaultStoragePolicyId")
+        ? ((Number) m.get("defaultStoragePolicyId")).byteValue()
+        : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+    return new FsServerDefaults(blockSize, bytesPerChecksum,
+        writePacketSize, replication, fileBufferSize,
+        encryptDataTransfer, trashInterval, type, keyProviderUri,
+        storagepolicyId);
+  }
+
+  public static SnapshotDiffReport toSnapshotDiffReport(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    Map<?, ?> m =
+        (Map<?, ?>) json.get(SnapshotDiffReport.class.getSimpleName());
+    String snapshotRoot = (String) m.get("snapshotRoot");
+    String fromSnapshot = (String) m.get("fromSnapshot");
+    String toSnapshot = (String) m.get("toSnapshot");
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        toDiffList(getList(m, "diffList"));
+    return new SnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot,
+        diffList);
+  }
+
+  private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(
+      List<?> objs) {
+    if (objs == null) {
+      return null;
+    }
+    List<SnapshotDiffReport.DiffReportEntry> diffList =
+        new ChunkedArrayList<>();
+    for (int i = 0; i < objs.size(); i++) {
+      diffList.add(toDiffReportEntry((Map<?, ?>) objs.get(i)));
+    }
+    return diffList;
+  }
+
+  private static SnapshotDiffReport.DiffReportEntry toDiffReportEntry(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    SnapshotDiffReport.DiffType type =
+        SnapshotDiffReport.DiffType.parseDiffType((String) json.get("type"));
+    byte[] sourcePath = toByteArray((String) json.get("sourcePath"));
+    byte[] targetPath = toByteArray((String) json.get("targetPath"));
+    return new SnapshotDiffReport.DiffReportEntry(type, sourcePath, targetPath);
+  }
+
+  private static byte[] toByteArray(String str) {
+    if (str == null) {
+      return null;
+    }
+    return DFSUtilClient.string2Bytes(str);
+  }
+
+  public static SnapshottableDirectoryStatus[] toSnapshottableDirectoryList(
+      final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    List<?> list = (List<?>) json.get("SnapshottableDirectoryList");
+    if (list == null) {
+      return null;
+    }
+    SnapshottableDirectoryStatus[] statuses =
+        new SnapshottableDirectoryStatus[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      statuses[i] = toSnapshottableDirectoryStatus((Map<?, ?>) list.get(i));
+    }
+    return statuses;
+  }
+
+  private static SnapshottableDirectoryStatus toSnapshottableDirectoryStatus(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    int snapshotNumber = getInt(json, "snapshotNumber", 0);
+    int snapshotQuota = getInt(json, "snapshotQuota", 0);
+    byte[] parentFullPath = toByteArray((String) json.get("parentFullPath"));
+    HdfsFileStatus dirStatus =
+        toFileStatus((Map<?, ?>) json.get("dirStatus"), false);
+    SnapshottableDirectoryStatus snapshottableDirectoryStatus =
+        new SnapshottableDirectoryStatus(dirStatus, snapshotNumber,
+            snapshotQuota, parentFullPath);
+    return snapshottableDirectoryStatus;
+  }
 }

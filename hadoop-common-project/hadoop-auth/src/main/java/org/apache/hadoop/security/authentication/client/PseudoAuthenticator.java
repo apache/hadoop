@@ -68,10 +68,7 @@ public class PseudoAuthenticator implements Authenticator {
     String paramSeparator = (strUrl.contains("?")) ? "&" : "?";
     strUrl += paramSeparator + USER_NAME_EQ + getUserName();
     url = new URL(strUrl);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    if (connConfigurator != null) {
-      conn = connConfigurator.configure(conn);
-    }
+    HttpURLConnection conn = token.openConnection(url, connConfigurator);
     conn.setRequestMethod("OPTIONS");
     conn.connect();
     AuthenticatedURL.extractToken(conn, token);

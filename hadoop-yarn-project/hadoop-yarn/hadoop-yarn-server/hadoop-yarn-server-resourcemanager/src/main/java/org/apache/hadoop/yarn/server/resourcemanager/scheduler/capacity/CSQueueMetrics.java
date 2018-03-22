@@ -23,14 +23,17 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 
 @Metrics(context = "yarn")
 public class CSQueueMetrics extends QueueMetrics {
 
+  //Metrics updated only for "default" partition
   @Metric("AM memory limit in MB")
   MutableGaugeLong AMResourceLimitMB;
   @Metric("AM CPU limit in virtual cores")
@@ -39,6 +42,10 @@ public class CSQueueMetrics extends QueueMetrics {
   MutableGaugeLong usedAMResourceMB;
   @Metric("Used AM CPU limit in virtual cores")
   MutableGaugeLong usedAMResourceVCores;
+  @Metric("Percent of Capacity Used")
+  MutableGaugeFloat usedCapacity;
+  @Metric("Percent of Absolute Capacity Used")
+  MutableGaugeFloat absoluteUsedCapacity;
 
   CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
@@ -61,40 +68,68 @@ public class CSQueueMetrics extends QueueMetrics {
     return usedAMResourceVCores.value();
   }
 
-  public void setAMResouceLimit(Resource res) {
-    AMResourceLimitMB.set(res.getMemorySize());
-    AMResourceLimitVCores.set(res.getVirtualCores());
-  }
-
-  public void setAMResouceLimitForUser(String user, Resource res) {
-    CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
-    if (userMetrics != null) {
-      userMetrics.setAMResouceLimit(res);
+  public void setAMResouceLimit(String partition, Resource res) {
+    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      AMResourceLimitMB.set(res.getMemorySize());
+      AMResourceLimitVCores.set(res.getVirtualCores());
     }
   }
 
-  public void incAMUsed(String user, Resource res) {
-    usedAMResourceMB.incr(res.getMemorySize());
-    usedAMResourceVCores.incr(res.getVirtualCores());
+  public void setAMResouceLimitForUser(String partition,
+      String user, Resource res) {
     CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.incAMUsed(user, res);
+      userMetrics.setAMResouceLimit(partition, res);
     }
   }
 
-  public void decAMUsed(String user, Resource res) {
-    usedAMResourceMB.decr(res.getMemorySize());
-    usedAMResourceVCores.decr(res.getVirtualCores());
-    CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
-    if (userMetrics != null) {
-      userMetrics.decAMUsed(user, res);
+  public void incAMUsed(String partition, String user, Resource res) {
+    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      usedAMResourceMB.incr(res.getMemorySize());
+      usedAMResourceVCores.incr(res.getVirtualCores());
+      CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.incAMUsed(partition, user, res);
+      }
+    }
+  }
+
+  public void decAMUsed(String partition, String user, Resource res) {
+    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      usedAMResourceMB.decr(res.getMemorySize());
+      usedAMResourceVCores.decr(res.getVirtualCores());
+      CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
+      if (userMetrics != null) {
+        userMetrics.decAMUsed(partition, user, res);
+      }
+    }
+  }
+
+  public float getUsedCapacity() {
+    return usedCapacity.value();
+  }
+
+  public void setUsedCapacity(String partition, float usedCap) {
+    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      this.usedCapacity.set(usedCap);
+    }
+  }
+
+  public float getAbsoluteUsedCapacity() {
+    return absoluteUsedCapacity.value();
+  }
+
+  public void setAbsoluteUsedCapacity(String partition,
+      Float absoluteUsedCap) {
+    if(partition == null || partition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      this.absoluteUsedCapacity.set(absoluteUsedCap);
     }
   }
 
   public synchronized static CSQueueMetrics forQueue(String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    QueueMetrics metrics = queueMetrics.get(queueName);
+    QueueMetrics metrics = QueueMetrics.getQueueMetrics().get(queueName);
     if (metrics == null) {
       metrics =
           new CSQueueMetrics(ms, queueName, parent, enableUserMetrics, conf)
@@ -106,7 +141,7 @@ public class CSQueueMetrics extends QueueMetrics {
             ms.register(sourceName(queueName).toString(), "Metrics for queue: "
                 + queueName, metrics);
       }
-      queueMetrics.put(queueName, metrics);
+      QueueMetrics.getQueueMetrics().put(queueName, metrics);
     }
 
     return (CSQueueMetrics) metrics;

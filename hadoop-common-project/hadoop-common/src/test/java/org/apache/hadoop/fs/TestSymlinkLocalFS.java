@@ -105,7 +105,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     super.testStatDanglingLink();
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   /** lstat a non-existant file using a partially qualified path */
   public void testDanglingLinkFilePartQual() throws IOException {
     Path filePartQual = new Path(getScheme()+":///doesNotExist");
@@ -123,7 +123,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     }
   }
   
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   /** Stat and lstat a dangling link */
   public void testDanglingLink() throws IOException {
     assumeNotWindows();
@@ -169,7 +169,7 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
     wrapper.getFileStatus(link);
   }
 
-  @Test(timeout=1000)
+  @Test(timeout=10000)
   /** 
    * Test getLinkTarget with a partially qualified target. 
    * NB: Hadoop does not support fully qualified URIs for the 

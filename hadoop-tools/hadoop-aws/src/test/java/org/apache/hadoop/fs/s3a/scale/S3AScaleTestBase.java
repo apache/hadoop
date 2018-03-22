@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,14 +90,13 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
     super.setup();
     testPath = path("/tests3ascale");
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    // multipart purges are disabled on the scale tests
-    // check for the test being enabled
     enabled = getTestPropertyBool(
         getConf(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
-    Assume.assumeTrue("Scale test disabled: to enable set property " +
-        KEY_SCALE_TESTS_ENABLED, isEnabled());
+    assume("Scale test disabled: to enable set property " +
+        KEY_SCALE_TESTS_ENABLED,
+        isEnabled());
   }
 
   /**
@@ -128,7 +126,7 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    * @return a configuration with which to create FS instances
    */
   protected Configuration createScaleConfiguration() {
-    return new Configuration();
+    return super.createConfiguration();
   }
 
   protected Path getTestPath() {

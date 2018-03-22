@@ -28,8 +28,36 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Unstable
 public abstract class ResourceCalculator {
 
-  public abstract int 
-  compare(Resource clusterResource, Resource lhs, Resource rhs);
+  /**
+   * On a cluster with capacity {@code clusterResource}, compare {@code lhs}
+   * and {@code rhs}. Consider all resources unless {@code singleType} is set
+   * to true. When {@code singleType} is set to true, consider only one
+   * resource as per the {@link ResourceCalculator} implementation; the
+   * {@link DefaultResourceCalculator} considers memory and
+   * {@link DominantResourceCalculator} considers the dominant resource.
+   *
+   * @param clusterResource cluster capacity
+   * @param lhs First {@link Resource} to compare
+   * @param rhs Second {@link Resource} to compare
+   * @param singleType Whether to consider a single resource type or all
+   *                   resource types
+   * @return -1 if {@code lhs} is smaller, 0 if equal and 1 if it is larger
+   */
+  public abstract int compare(
+      Resource clusterResource, Resource lhs, Resource rhs, boolean singleType);
+
+  /**
+   * On a cluster with capacity {@code clusterResource}, compare {@code lhs}
+   * and {@code rhs} considering all resources.
+   *
+   * @param clusterResource cluster capacity
+   * @param lhs First {@link Resource} to compare
+   * @param rhs Second {@link Resource} to compare
+   * @return -1 if {@code lhs} is smaller, 0 if equal and 1 if it is larger
+   */
+  public int compare(Resource clusterResource, Resource lhs, Resource rhs) {
+    return compare(clusterResource, lhs, rhs, false);
+  }
 
   public static int divideAndCeil(int a, int b) {
     if (b == 0) {
@@ -37,12 +65,26 @@ public abstract class ResourceCalculator {
     }
     return (a + (b - 1)) / b;
   }
+
+  public static int divideAndCeil(int a, float b) {
+    if (b == 0) {
+      return 0;
+    }
+    return (int) Math.ceil(a / b);
+  }
   
   public static long divideAndCeil(long a, long b) {
     if (b == 0) {
       return 0;
     }
     return (a + (b - 1)) / b;
+  }
+
+  public static long divideAndCeil(long a, float b) {
+    if (b == 0) {
+      return 0;
+    }
+    return (long) Math.ceil(a/b);
   }
 
   public static int roundUp(int a, int b) {
@@ -83,7 +125,19 @@ public abstract class ResourceCalculator {
    */
   public abstract Resource multiplyAndNormalizeUp(
       Resource r, double by, Resource stepFactor);
-  
+
+  /**
+   * Multiply resource <code>r</code> by factor <code>by</code>
+   * and normalize up using step-factor <code>stepFactor</code>.
+   *
+   * @param r resource to be multiplied
+   * @param by multiplier array for all resource types
+   * @param stepFactor factor by which to normalize up
+   * @return resulting normalized resource
+   */
+  public abstract Resource multiplyAndNormalizeUp(
+      Resource r, double[] by, Resource stepFactor);
+
   /**
    * Multiply resource <code>r</code> by factor <code>by</code> 
    * and normalize down using step-factor <code>stepFactor</code>.
@@ -95,7 +149,7 @@ public abstract class ResourceCalculator {
    */
   public abstract Resource multiplyAndNormalizeDown(
       Resource r, double by, Resource stepFactor);
-  
+
   /**
    * Normalize resource <code>r</code> given the base 
    * <code>minimumResource</code> and verify against max allowed
@@ -108,9 +162,7 @@ public abstract class ResourceCalculator {
    * @return normalized resource
    */
   public abstract Resource normalize(Resource r, Resource minimumResource,
-                                     Resource maximumResource, 
-                                     Resource stepFactor);
-
+      Resource maximumResource, Resource stepFactor);
 
   /**
    * Round-up resource <code>r</code> given factor <code>stepFactor</code>.
@@ -170,10 +222,39 @@ public abstract class ResourceCalculator {
    * @return resultant resource
    */
   public abstract Resource divideAndCeil(Resource numerator, int denominator);
+
+  /**
+   * Divide-and-ceil <code>numerator</code> by <code>denominator</code>.
+   *
+   * @param numerator numerator resource
+   * @param denominator denominator
+   * @return resultant resource
+   */
+  public abstract Resource divideAndCeil(Resource numerator, float denominator);
   
   /**
    * Check if a smaller resource can be contained by bigger resource.
    */
-  public abstract boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger);
+  public abstract boolean fitsIn(Resource smaller, Resource bigger);
+
+  /**
+   * Check if resource has any major resource types (which are all NodeManagers
+   * included) a zero value.
+   *
+   * @param resource resource
+   * @return returns true if any resource is zero.
+   */
+  public abstract boolean isAnyMajorResourceZero(Resource resource);
+
+  /**
+   * Get resource <code>r</code>and normalize down using step-factor
+   * <code>stepFactor</code>.
+   *
+   * @param r
+   *          resource to be multiplied
+   * @param stepFactor
+   *          factor by which to normalize down
+   * @return resulting normalized resource
+   */
+  public abstract Resource normalizeDown(Resource r, Resource stepFactor);
 }

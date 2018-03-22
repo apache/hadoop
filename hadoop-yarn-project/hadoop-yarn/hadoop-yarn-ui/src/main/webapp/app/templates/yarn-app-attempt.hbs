@@ -17,27 +17,58 @@
 }}
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
-<br/><br/><br/>
-<div class="container-fluid">
-  <div class="row">
-    {{#if model.attempt}}
-      <div class="container-fluid">
+
+<div class="row container-fluid">
+  <div class="col-md-2">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        Application Attempt
+      </div>
+      <div class="panel-body">
+        <ul class="nav nav-pills nav-stacked" id="stacked-menu">
+          <ul class="nav nav-pills nav-stacked collapse in">
+            {{#link-to 'yarn-app-attempt' tagName="li"}}
+              {{#link-to 'yarn-app-attempt' model.attempt.id}}Attempt Info{{/link-to}}
+            {{/link-to}}
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-10">
+    <div class="row container-fluid">
+      {{#if model.attempt}}
         <div class="panel panel-default">
           <div class="panel-heading">
-            Application attempt Information
+            Attempt Information
           </div>
           {{app-attempt-table attempt=model.attempt}}
         </div>
-      </div>
-    {{/if}}
-  </div>
-
-  <!-- containers table -->
-  <div class="row">
-     {{#if (or model.rmContainers model.tsContainers)}}
-     {{timeline-view parent-id="containers-timeline-div" my-id="timeline-view" height="400" rmModel=model.rmContainers tsModel=model.tsContainers label="shortAppAttemptId" attemptModel=false}}
-     {{/if}}
+      {{/if}}
+    </div>
+    <div class="row">
+      {{#if (or model.rmContainers model.tsContainers)}}
+        {{timeline-view
+          parent-id="containers-timeline-div"
+          my-id="timeline-view"
+          height="400"
+          rmModel=model.rmContainers
+          tsModel=model.tsContainers
+          label="shortAppAttemptId"
+          attemptModel=false
+        }}
+      {{else}}
+        <div class="col-md-12 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+               Containers
+            </div>
+            <div class="panel-body">
+              <h4 class="text-center">No data available!</h4>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+    </div>
   </div>
 </div>
-
-{{outlet}}

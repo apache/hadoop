@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -90,6 +91,8 @@ import org.junit.Assert;
 public class RMStateStoreTestBase {
 
   public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
+
+  protected final long epoch = 10L;
 
   static class TestDispatcher implements Dispatcher, EventHandler<Event> {
 
@@ -156,11 +159,11 @@ public class RMStateStoreTestBase {
   }
 
   protected RMApp storeApp(RMStateStore store, ApplicationId appId,
-      long submitTime,
-      long startTime) throws Exception {
+      long submitTime, long startTime) throws Exception {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
     context.setApplicationId(appId);
+    context.setAMContainerSpec(new ContainerLaunchContextPBImpl());
 
     RMApp mockApp = mock(RMApp.class);
     when(mockApp.getApplicationId()).thenReturn(appId);
@@ -193,11 +196,18 @@ public class RMStateStoreTestBase {
     when(mockAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0, 0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     dispatcher.attemptId = attemptId;
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
     return mockAttempt;
+  }
+
+  protected void updateAttempt(RMStateStore store, TestDispatcher dispatcher,
+      ApplicationAttemptStateData attemptState) {
+    dispatcher.attemptId = attemptState.getAttemptId();
+    store.updateApplicationAttemptState(attemptState);
+    waitNotify(dispatcher);
   }
 
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)
@@ -284,7 +294,7 @@ public class RMStateStoreTestBase {
     when(mockRemovedAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0,0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     attempts.put(attemptIdRemoved, mockRemovedAttempt);
     store.removeApplication(mockRemovedApp);
 
@@ -361,7 +371,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 100,
-            oldAttemptState.getFinishTime(), 0, 0, 0, 0);
+            oldAttemptState.getFinishTime(), new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(newAttemptState);
 
     // test updating the state of an app/attempt whose initial state was not
@@ -370,6 +380,7 @@ public class RMStateStoreTestBase {
     ApplicationSubmissionContext dummyContext =
         new ApplicationSubmissionContextPBImpl();
     dummyContext.setApplicationId(dummyAppId);
+    dummyContext.setAMContainerSpec(new ContainerLaunchContextPBImpl());
     ApplicationStateData dummyApp =
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(), dummyContext,
@@ -385,7 +396,7 @@ public class RMStateStoreTestBase {
             oldAttemptState.getStartTime(), RMAppAttemptState.FINISHED,
             "myTrackingUrl", "attemptDiagnostics",
             FinalApplicationStatus.SUCCEEDED, 111,
-            oldAttemptState.getFinishTime(), 0, 0, 0, 0);
+            oldAttemptState.getFinishTime(), new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(dummyAttempt);
 
     // let things settle down
@@ -558,13 +569,13 @@ public class RMStateStoreTestBase {
     store.setRMDispatcher(new TestDispatcher());
     
     long firstTimeEpoch = store.getAndIncrementEpoch();
-    Assert.assertEquals(0, firstTimeEpoch);
+    Assert.assertEquals(epoch, firstTimeEpoch);
     
     long secondTimeEpoch = store.getAndIncrementEpoch();
-    Assert.assertEquals(1, secondTimeEpoch);
+    Assert.assertEquals(epoch + 1, secondTimeEpoch);
     
     long thirdTimeEpoch = store.getAndIncrementEpoch();
-    Assert.assertEquals(2, thirdTimeEpoch);
+    Assert.assertEquals(epoch + 2, thirdTimeEpoch);
   }
 
   public void testAppDeletion(RMStateStoreHelper stateStoreHelper)

@@ -25,8 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,12 +34,14 @@ import org.apache.hadoop.io.file.tfile.BCFile.BlockRegion;
 import org.apache.hadoop.io.file.tfile.BCFile.MetaIndexEntry;
 import org.apache.hadoop.io.file.tfile.TFile.TFileIndexEntry;
 import org.apache.hadoop.io.file.tfile.Utils.Version;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Dumping the information of a TFile.
  */
 class TFileDumper {
-  static final Log LOG = LogFactory.getLog(TFileDumper.class);
+  static final Logger LOG = LoggerFactory.getLogger(TFileDumper.class);
 
   private TFileDumper() {
     // namespace object not constructable.
@@ -290,7 +290,7 @@ class TFileDumper {
         }
       }
     } finally {
-      IOUtils.cleanup(LOG, reader, fsdis);
+      IOUtils.cleanupWithLogger(LOG, reader, fsdis);
     }
   }
 }

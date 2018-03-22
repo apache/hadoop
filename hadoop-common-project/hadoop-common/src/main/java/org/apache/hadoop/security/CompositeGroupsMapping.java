@@ -25,13 +25,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
@@ -48,7 +48,8 @@ public class CompositeGroupsMapping
   public static final String MAPPING_PROVIDERS_COMBINED_CONFIG_KEY = MAPPING_PROVIDERS_CONFIG_KEY + ".combined";
   public static final String MAPPING_PROVIDER_CONFIG_PREFIX = GROUP_MAPPING_CONFIG_PREFIX + ".provider";
   
-  private static final Log LOG = LogFactory.getLog(CompositeGroupsMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompositeGroupsMapping.class);
 
   private List<GroupMappingServiceProvider> providersList = 
 		  new ArrayList<GroupMappingServiceProvider>();
@@ -73,7 +74,9 @@ public class CompositeGroupsMapping
       try {
         groups = provider.getGroups(user);
       } catch (Exception e) {
-        //LOG.warn("Exception trying to get groups for user " + user, e);      
+        LOG.warn("Unable to get groups for user {} via {} because: {}",
+            user, provider.getClass().getSimpleName(), e.toString());
+        LOG.debug("Stacktrace: ", e);
       }        
       if (groups != null && ! groups.isEmpty()) {
         groupSet.addAll(groups);

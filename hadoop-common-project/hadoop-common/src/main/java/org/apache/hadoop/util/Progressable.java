@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * to explicitly report progress to the Hadoop framework. This is especially
  * important for operations which take significant amount of time since,
  * in-lieu of the reported progress, the framework has to assume that an error
- * has occured and time-out the operation.</p>
+ * has occurred and time-out the operation.</p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

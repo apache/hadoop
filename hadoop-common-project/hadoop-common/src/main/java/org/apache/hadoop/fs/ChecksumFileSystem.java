@@ -605,6 +605,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Rename files/dirs
    */
   @Override
+  @SuppressWarnings("deprecation")
   public boolean rename(Path src, Path dst) throws IOException {
     if (fs.isDirectory(src)) {
       return fs.rename(src, dst);
@@ -721,6 +722,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * If src and dst are directories, the copyCrc parameter
    * determines whether to copy CRC files.
    */
+  @SuppressWarnings("deprecation")
   public void copyToLocalFile(Path src, Path dst, boolean copyCrc)
     throws IOException {
     if (!fs.isDirectory(src)) { // source is a file

@@ -51,7 +51,10 @@ public class PrivilegedOperation {
     TC_READ_STATS("--tc-read-stats"),
     ADD_PID_TO_CGROUP(""), //no CLI switch supported yet.
     RUN_DOCKER_CMD("--run-docker"),
-    LIST_AS_USER(""); //no CLI switch supported yet.
+    GPU("--module-gpu"),
+    FPGA("--module-fpga"),
+    LIST_AS_USER(""), // no CLI switch supported yet.
+    ADD_NUMA_PARAMS(""); // no CLI switch supported yet.
 
     private final String option;
 

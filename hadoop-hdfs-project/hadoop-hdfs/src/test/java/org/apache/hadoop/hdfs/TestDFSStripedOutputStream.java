@@ -17,16 +17,22 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertFalse;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
@@ -62,7 +68,7 @@ public class TestDFSStripedOutputStream {
   public Timeout globalTimeout = new Timeout(300000);
 
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    return StripedFileTestUtil.getDefaultECPolicy();
   }
 
   @Before
@@ -85,12 +91,13 @@ public class TestDFSStripedOutputStream {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY,
-          NativeRSRawErasureCoderFactory.class.getCanonicalName());
+          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
+          NativeRSRawErasureCoderFactory.CODER_NAME);
     }
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", ecPolicy);
     fs = cluster.getFileSystem();
+    DFSTestUtil.enableAllECPolicies(fs);
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
   @After
@@ -169,12 +176,38 @@ public class TestDFSStripedOutputStream {
         blockSize * dataBlocks + cellSize+ 123);
   }
 
-
   @Test
   public void testFileMoreThanABlockGroup3() throws Exception {
     testOneFile("/MoreThanABlockGroup3",
         blockSize * dataBlocks * 3 + cellSize * dataBlocks
         + cellSize + 123);
+  }
+
+  /**
+   * {@link DFSStripedOutputStream} doesn't support hflush() or hsync() yet.
+   * This test is to make sure that DFSStripedOutputStream doesn't throw any
+   * {@link UnsupportedOperationException} on hflush() or hsync() so as to
+   * comply with output stream spec.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testStreamFlush() throws Exception {
+    final byte[] bytes = StripedFileTestUtil.generateBytes(blockSize *
+        dataBlocks * 3 + cellSize * dataBlocks + cellSize + 123);
+    FSDataOutputStream os = fs.create(new Path("/ec-file-1"));
+    assertFalse("DFSStripedOutputStream should not have hflush() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HFLUSH.getValue()));
+    assertFalse("DFSStripedOutputStream should not have hsync() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HSYNC.getValue()));
+    InputStream is = new ByteArrayInputStream(bytes);
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hflush();
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hsync();
+    os.close();
   }
 
   private void testOneFile(String src, int writeBytes) throws Exception {

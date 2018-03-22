@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.inject.Provides;
@@ -275,7 +275,7 @@ public abstract class WebApp extends ServletModule {
 
   static String getPrefix(String pathSpec) {
     int start = 0;
-    while (CharMatcher.WHITESPACE.matches(pathSpec.charAt(start))) {
+    while (StringUtils.isAnyBlank(Character.toString(pathSpec.charAt(start)))) {
       ++start;
     }
     if (pathSpec.charAt(start) != '/') {
@@ -291,7 +291,7 @@ public abstract class WebApp extends ServletModule {
     char c;
     do {
       c = pathSpec.charAt(--ci);
-    } while (c == '/' || CharMatcher.WHITESPACE.matches(c));
+    } while (c == '/' || StringUtils.isAnyBlank(Character.toString(c)));
     return pathSpec.substring(start, ci + 1);
   }
 

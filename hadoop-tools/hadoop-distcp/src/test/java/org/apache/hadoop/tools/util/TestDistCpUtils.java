@@ -18,28 +18,36 @@
 
 package org.apache.hadoop.tools.util;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.EnumSet;
-import java.util.Random;
-import java.util.Stack;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.EnumSet;
+import java.util.Random;
+import java.util.Stack;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TestDistCpUtils {
   private static final Log LOG = LogFactory.getLog(TestDistCpUtils.class);
@@ -53,9 +61,10 @@ public class TestDistCpUtils {
   @BeforeClass
   public static void create() throws IOException {
     cluster = new MiniDFSCluster.Builder(config)
-        .numDataNodes(1)
+        .numDataNodes(2)
         .format(true)
-        .build(); 
+        .build();
+    cluster.getFileSystem().enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 
   @AfterClass
@@ -537,6 +546,117 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
     Assert.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
     Assert.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+  }
+
+  @Test (timeout = 60000)
+  public void testReplFactorNotPreservedOnErasureCodedFile() throws Exception {
+    FileSystem fs = FileSystem.get(config);
+
+    // Case 1: Verify replication attribute not preserved when the source
+    // file is erasure coded and the target file is replicated.
+    Path srcECDir = new Path("/tmp/srcECDir");
+    Path srcECFile = new Path(srcECDir, "srcECFile");
+    Path dstReplDir = new Path("/tmp/dstReplDir");
+    Path dstReplFile = new Path(dstReplDir, "destReplFile");
+    fs.mkdirs(srcECDir);
+    fs.mkdirs(dstReplDir);
+    String[] args = {"-setPolicy", "-path", "/tmp/srcECDir",
+        "-policy", "XOR-2-1-1024k"};
+    int res = ToolRunner.run(config, new ECAdmin(config), args);
+    assertEquals("Setting EC policy should succeed!", 0, res);
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcECFile, true,
+        dstReplFile, false);
+
+    // Case 2: Verify replication attribute not preserved when the source
+    // file is replicated and the target file is erasure coded.
+    Path srcReplDir = new Path("/tmp/srcReplDir");
+    Path srcReplFile = new Path(srcReplDir, "srcReplFile");
+    Path dstECDir = new Path("/tmp/dstECDir");
+    Path dstECFile = new Path(dstECDir, "destECFile");
+    fs.mkdirs(srcReplDir);
+    fs.mkdirs(dstECDir);
+    args = new String[]{"-setPolicy", "-path", "/tmp/dstECDir",
+        "-policy", "XOR-2-1-1024k"};
+    res = ToolRunner.run(config, new ECAdmin(config), args);
+    assertEquals("Setting EC policy should succeed!", 0, res);
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcReplFile,
+        false, dstECFile, true);
+
+    // Case 3: Verify replication attribute not altered from the default
+    // INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS when both source and
+    // target files are erasure coded.
+    verifyReplFactorNotPreservedOnErasureCodedFile(srcECFile,
+        true, dstECFile, true);
+  }
+
+  private void verifyReplFactorNotPreservedOnErasureCodedFile(Path srcFile,
+      boolean isSrcEC, Path dstFile, boolean isDstEC) throws Exception {
+    FileSystem fs = FileSystem.get(config);
+    createFile(fs, srcFile);
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        fs.getFileStatus(srcFile));
+    if (isSrcEC) {
+      assertTrue(srcFile + "should be erasure coded!",
+          srcStatus.isErasureCoded());
+      assertEquals(INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          srcStatus.getReplication());
+    } else {
+      assertEquals("Unexpected replication factor for " + srcFile,
+          fs.getDefaultReplication(srcFile), srcStatus.getReplication());
+    }
+
+    createFile(fs, dstFile);
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        fs.getFileStatus(dstFile));
+    if (isDstEC) {
+      assertTrue(dstFile + "should be erasure coded!",
+          dstStatus.isErasureCoded());
+      assertEquals("Unexpected replication factor for erasure coded file!",
+          INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication());
+    } else {
+      assertEquals("Unexpected replication factor for " + dstFile,
+          fs.getDefaultReplication(dstFile), dstStatus.getReplication());
+    }
+
+    // Let srcFile and dstFile differ on their FileAttribute
+    fs.setPermission(srcFile, fullPerm);
+    fs.setOwner(srcFile, "ec", "ec-group");
+    fs.setTimes(srcFile, 0, 0);
+
+    fs.setPermission(dstFile, noPerm);
+    fs.setOwner(dstFile, "normal", "normal-group");
+    fs.setTimes(dstFile, 100, 100);
+
+    // Running preserve operations only for replication attribute
+    srcStatus = new CopyListingFileStatus(fs.getFileStatus(srcFile));
+    EnumSet<FileAttribute> attributes = EnumSet.of(FileAttribute.REPLICATION);
+    DistCpUtils.preserve(fs, dstFile, srcStatus, attributes, false);
+    dstStatus = new CopyListingFileStatus(fs.getFileStatus(dstFile));
+
+    assertFalse("Permission for " + srcFile + " and " + dstFile +
+            " should not be same after preserve only for replication attr!",
+        srcStatus.getPermission().equals(dstStatus.getPermission()));
+    assertFalse("File ownership should not match!",
+        srcStatus.getOwner().equals(dstStatus.getOwner()));
+    assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
+    assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
+    assertFalse(
+        srcStatus.getModificationTime() == dstStatus.getModificationTime());
+    if (isDstEC) {
+      assertEquals("Unexpected replication factor for erasure coded file!",
+          INodeFile.DEFAULT_REPL_FOR_STRIPED_BLOCKS,
+          dstStatus.getReplication());
+    } else {
+      assertEquals(dstFile + " replication factor should be same as dst " +
+              "filesystem!", fs.getDefaultReplication(dstFile),
+          dstStatus.getReplication());
+    }
+    if (!isSrcEC || !isDstEC) {
+      assertFalse(dstFile + " replication factor should not be " +
+              "same as " + srcFile,
+          srcStatus.getReplication() == dstStatus.getReplication());
+    }
   }
 
   @Test
@@ -1068,26 +1188,33 @@ public class TestDistCpUtils {
     }
   }
 
-  public static boolean checkIfFoldersAreInSync(FileSystem fs, String targetBase, String sourceBase)
-      throws IOException {
+  public static void verifyFoldersAreInSync(FileSystem fs, String targetBase,
+      String sourceBase) throws IOException {
     Path base = new Path(targetBase);
 
-     Stack<Path> stack = new Stack<Path>();
-     stack.push(base);
-     while (!stack.isEmpty()) {
-       Path file = stack.pop();
-       if (!fs.exists(file)) continue;
-       FileStatus[] fStatus = fs.listStatus(file);
-       if (fStatus == null || fStatus.length == 0) continue;
+    Stack<Path> stack = new Stack<>();
+    stack.push(base);
+    while (!stack.isEmpty()) {
+      Path file = stack.pop();
+      if (!fs.exists(file)) {
+        continue;
+      }
+      FileStatus[] fStatus = fs.listStatus(file);
+      if (fStatus == null || fStatus.length == 0) {
+        continue;
+      }
 
-       for (FileStatus status : fStatus) {
-         if (status.isDirectory()) {
-           stack.push(status.getPath());
-         }
-         Assert.assertTrue(fs.exists(new Path(sourceBase + "/" +
-             DistCpUtils.getRelativePath(new Path(targetBase), status.getPath()))));
-       }
-     }
-     return true;
+      for (FileStatus status : fStatus) {
+        if (status.isDirectory()) {
+          stack.push(status.getPath());
+        }
+        Path p = new Path(sourceBase + "/" +
+            DistCpUtils.getRelativePath(new Path(targetBase),
+                status.getPath()));
+        ContractTestUtils.assertPathExists(fs,
+            "path in sync with " + status.getPath(), p);
+      }
+    }
   }
+
 }

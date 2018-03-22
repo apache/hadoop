@@ -75,6 +75,13 @@ public interface DataNodeMXBean {
   public String getNamenodeAddresses();
 
   /**
+   * Gets the datanode hostname.
+   *
+   * @return the datanode hostname for the datanode.
+   */
+  public String getDatanodeHostname();
+
+  /**
    * Gets information of the block pool service actors.
    *
    * @return block pool service actors info
@@ -122,11 +129,6 @@ public interface DataNodeMXBean {
   String getDiskBalancerStatus();
 
   /**
-   * Gets the {@link FileIoProvider} statistics.
-   */
-  String getFileIoProviderStatistics();
-
-  /**
    * Gets the average info (e.g. time) of SendPacketDownstream when the DataNode
    * acts as the penultimate (2nd to the last) node in pipeline.
    * <p>
@@ -137,4 +139,11 @@ public interface DataNodeMXBean {
    * </p>
    */
   String getSendPacketDownstreamAvgInfo();
+
+  /**
+   * Gets the slow disks in the Datanode.
+   *
+   * @return list of slow disks
+   */
+  String getSlowDisks();
 }

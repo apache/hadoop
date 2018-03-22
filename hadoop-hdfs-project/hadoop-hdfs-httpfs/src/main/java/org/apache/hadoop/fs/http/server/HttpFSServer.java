@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ModifiedTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NewLengthParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OffsetParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OldSnapshotNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
@@ -45,6 +46,8 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PolicyNameParam
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.UnmaskedPermissionParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SnapshotNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
@@ -411,6 +414,16 @@ public class HttpFSServer {
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
+      case DELETESNAPSHOT: {
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSDeleteSnapshot command =
+                new FSOperations.FSDeleteSnapshot(path, snapshotName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] deleted snapshot [{}]", path, snapshotName);
+        response = Response.ok().build();
+        break;
+      }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP DELETE operation [{0}]",
@@ -566,6 +579,8 @@ public class HttpFSServer {
         } else {
           Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
+          Short unmaskedPermission = params.get(UnmaskedPermissionParam.NAME,
+              UnmaskedPermissionParam.class);
           Boolean override = params.get(OverwriteParam.NAME,
                                         OverwriteParam.class);
           Short replication = params.get(ReplicationParam.NAME,
@@ -574,13 +589,25 @@ public class HttpFSServer {
                                       BlockSizeParam.class);
           FSOperations.FSCreate command =
             new FSOperations.FSCreate(is, path, permission, override,
-                                      replication, blockSize);
+                replication, blockSize, unmaskedPermission);
           fsExecute(user, command);
           AUDIT_LOG.info(
-            "[{}] permission [{}] override [{}] replication [{}] blockSize [{}]",
-            new Object[]{path, permission, override, replication, blockSize});
+              "[{}] permission [{}] override [{}] "+
+              "replication [{}] blockSize [{}] unmaskedpermission [{}]",
+              new Object[]{path, permission,  override, replication, blockSize,
+                  unmaskedPermission});
           response = Response.status(Response.Status.CREATED).build();
         }
+        break;
+      }
+      case CREATESNAPSHOT: {
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSCreateSnapshot command =
+            new FSOperations.FSCreateSnapshot(path, snapshotName);
+        String json = fsExecute(user, command);
+        AUDIT_LOG.info("[{}] snapshot created as [{}]", path, snapshotName);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case SETXATTR: {
@@ -598,6 +625,20 @@ public class HttpFSServer {
         response = Response.ok().build();
         break;
       }
+      case RENAMESNAPSHOT: {
+        String oldSnapshotName = params.get(OldSnapshotNameParam.NAME,
+            OldSnapshotNameParam.class);
+        String snapshotName = params.get(SnapshotNameParam.NAME,
+            SnapshotNameParam.class);
+        FSOperations.FSRenameSnapshot command =
+                new FSOperations.FSRenameSnapshot(path, oldSnapshotName,
+                    snapshotName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] renamed snapshot [{}] to [{}]", path,
+            oldSnapshotName, snapshotName);
+        response = Response.ok().build();
+        break;
+      }
       case REMOVEXATTR: {
         String xattrName = params.get(XAttrNameParam.NAME, XAttrNameParam.class);
         FSOperations.FSRemoveXAttr command = new FSOperations.FSRemoveXAttr(
@@ -610,10 +651,13 @@ public class HttpFSServer {
       case MKDIRS: {
         Short permission = params.get(PermissionParam.NAME,
                                        PermissionParam.class);
+        Short unmaskedPermission = params.get(UnmaskedPermissionParam.NAME,
+            UnmaskedPermissionParam.class);
         FSOperations.FSMkdirs command =
-          new FSOperations.FSMkdirs(path, permission);
+            new FSOperations.FSMkdirs(path, permission, unmaskedPermission);
         JSONObject json = fsExecute(user, command);
-        AUDIT_LOG.info("[{}] permission [{}]", path, permission);
+        AUDIT_LOG.info("[{}] permission [{}] unmaskedpermission [{}]",
+            path, permission, unmaskedPermission);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }

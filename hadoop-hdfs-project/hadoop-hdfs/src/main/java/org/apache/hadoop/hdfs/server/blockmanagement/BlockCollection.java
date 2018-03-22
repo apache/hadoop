@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.security.AccessControlException;
 
 /** 
  * This interface is used by the block manager to expose a
@@ -31,61 +32,62 @@ public interface BlockCollection {
   /**
    * Get the last block of the collection.
    */
-  public BlockInfo getLastBlock();
+  BlockInfo getLastBlock();
 
   /** 
    * Get content summary.
    */
-  public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps);
+  ContentSummary computeContentSummary(BlockStoragePolicySuite bsps)
+      throws AccessControlException;
 
   /**
    * @return the number of blocks or block groups
    */ 
-  public int numBlocks();
+  int numBlocks();
 
   /**
    * Get the blocks (striped or contiguous).
    */
-  public BlockInfo[] getBlocks();
+  BlockInfo[] getBlocks();
 
   /**
    * Get preferred block size for the collection 
    * @return preferred block size in bytes
    */
-  public long getPreferredBlockSize();
+  long getPreferredBlockSize();
 
   /**
    * Get block replication for the collection.
    * @return block replication value. Return 0 if the file is erasure coded.
    */
-  public short getPreferredBlockReplication();
+  short getPreferredBlockReplication();
 
   /**
    * @return the storage policy ID.
    */
-  public byte getStoragePolicyID();
+  byte getStoragePolicyID();
 
   /**
    * Get the name of the collection.
    */
-  public String getName();
+  String getName();
 
   /**
    * Set the block (contiguous or striped) at the given index.
    */
-  public void setBlock(int index, BlockInfo blk);
+  void setBlock(int index, BlockInfo blk);
 
   /**
    * Convert the last block of the collection to an under-construction block
    * and set the locations.
    */
-  public void convertLastBlockToUC(BlockInfo lastBlock,
+  void convertLastBlockToUC(BlockInfo lastBlock,
       DatanodeStorageInfo[] targets) throws IOException;
 
   /**
    * @return whether the block collection is under construction.
    */
-  public boolean isUnderConstruction();
+  boolean isUnderConstruction();
 
   /**
    * @return whether the block collection is in striping format

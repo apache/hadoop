@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ProcessTreeInfo;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
@@ -72,7 +74,7 @@ public class TestContainersMonitorResourceChange {
 
   private static class MockExecutor extends ContainerExecutor {
     @Override
-    public void init() throws IOException {
+    public void init(Context nmContext) throws IOException {
     }
     @Override
     public void startLocalizer(LocalizerStartContext ctx)
@@ -80,11 +82,16 @@ public class TestContainersMonitorResourceChange {
     }
     @Override
     public int launchContainer(ContainerStartContext ctx) throws
-        IOException {
+        IOException, ConfigurationException {
       return 0;
     }
     @Override
     public boolean signalContainer(ContainerSignalContext ctx)
+        throws IOException {
+      return true;
+    }
+    @Override
+    public boolean reapContainer(ContainerReapContext ctx)
         throws IOException {
       return true;
     }

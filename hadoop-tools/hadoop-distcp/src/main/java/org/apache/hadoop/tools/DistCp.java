@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -65,7 +66,9 @@ public class DistCp extends Configured implements Tool {
 
   static final Log LOG = LogFactory.getLog(DistCp.class);
 
-  private DistCpOptions inputOptions;
+  @VisibleForTesting
+  DistCpContext context;
+
   private Path metaFolder;
 
   private static final String PREFIX = "_distcp";
@@ -78,15 +81,14 @@ public class DistCp extends Configured implements Tool {
   private FileSystem jobFS;
 
   private void prepareFileListing(Job job) throws Exception {
-    if (inputOptions.shouldUseSnapshotDiff()) {
+    if (context.shouldUseSnapshotDiff()) {
       // When "-diff" or "-rdiff" is passed, do sync() first, then
       // create copyListing based on snapshot diff.
-      DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
+      DistCpSync distCpSync = new DistCpSync(context, getConf());
       if (distCpSync.sync()) {
         createInputFileListingWithDiff(job, distCpSync);
       } else {
-        throw new Exception("DistCp sync failed, input options: "
-            + inputOptions);
+        throw new Exception("DistCp sync failed, input options: " + context);
       }
     } else {
       // When no "-diff" or "-rdiff" is passed, create copyListing
@@ -98,16 +100,19 @@ public class DistCp extends Configured implements Tool {
   /**
    * Public Constructor. Creates DistCp object with specified input-parameters.
    * (E.g. source-paths, target-location, etc.)
-   * @param inputOptions Options (indicating source-paths, target-location.)
-   * @param configuration The Hadoop configuration against which the Copy-mapper must run.
+   * @param configuration configuration against which the Copy-mapper must run
+   * @param inputOptions Immutable options
    * @throws Exception
    */
-  public DistCp(Configuration configuration, DistCpOptions inputOptions) throws Exception {
+  public DistCp(Configuration configuration, DistCpOptions inputOptions)
+      throws Exception {
     Configuration config = new Configuration(configuration);
     config.addResource(DISTCP_DEFAULT_XML);
     config.addResource(DISTCP_SITE_XML);
     setConf(config);
-    this.inputOptions = inputOptions;
+    if (inputOptions != null) {
+      this.context = new DistCpContext(inputOptions);
+    }
     this.metaFolder   = createMetaFolderPath();
   }
 
@@ -133,9 +138,10 @@ public class DistCp extends Configured implements Tool {
     }
     
     try {
-      inputOptions = (OptionsParser.parse(argv));
+      context = new DistCpContext(OptionsParser.parse(argv));
+      checkSplitLargeFile();
       setTargetPathExists();
-      LOG.info("Input Options: " + inputOptions);
+      LOG.info("Input Options: " + context);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
       System.err.println("Invalid arguments: " + e.getMessage());
@@ -171,9 +177,11 @@ public class DistCp extends Configured implements Tool {
    * @throws Exception
    */
   public Job execute() throws Exception {
+    Preconditions.checkState(context != null,
+        "The DistCpContext should have been created before running DistCp!");
     Job job = createAndSubmitJob();
 
-    if (inputOptions.shouldBlock()) {
+    if (context.shouldBlock()) {
       waitForJobCompletion(job);
     }
     return job;
@@ -184,7 +192,7 @@ public class DistCp extends Configured implements Tool {
    * @return The mapreduce job object that has been submitted
    */
   public Job createAndSubmitJob() throws Exception {
-    assert inputOptions != null;
+    assert context != null;
     assert getConf() != null;
     Job job = null;
     try {
@@ -228,13 +236,45 @@ public class DistCp extends Configured implements Tool {
    * for the benefit of CopyCommitter
    */
   private void setTargetPathExists() throws IOException {
-    Path target = inputOptions.getTargetPath();
+    Path target = context.getTargetPath();
     FileSystem targetFS = target.getFileSystem(getConf());
     boolean targetExists = targetFS.exists(target);
-    inputOptions.setTargetPathExists(targetExists);
+    context.setTargetPathExists(targetExists);
     getConf().setBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, 
         targetExists);
   }
+
+  /**
+   * Check splitting large files is supported and populate configs.
+   */
+  private void checkSplitLargeFile() throws IOException {
+    if (!context.splitLargeFile()) {
+      return;
+    }
+
+    final Path target = context.getTargetPath();
+    final FileSystem targetFS = target.getFileSystem(getConf());
+    try {
+      Path[] src = null;
+      Path tgt = null;
+      targetFS.concat(tgt, src);
+    } catch (UnsupportedOperationException use) {
+      throw new UnsupportedOperationException(
+          DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch() +
+              " is not supported since the target file system doesn't" +
+              " support concat.", use);
+    } catch (Exception e) {
+      // Ignore other exception
+    }
+
+    LOG.info("Set " +
+        DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES
+        + " to false since " + DistCpOptionSwitch.BLOCKS_PER_CHUNK.getSwitch()
+        + " is passed.");
+    getConf().setBoolean(
+        DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, false);
+  }
+
   /**
    * Create Job object for submitting it, with all the configuration
    *
@@ -248,7 +288,7 @@ public class DistCp extends Configured implements Tool {
       jobName += ": " + userChosenName;
     Job job = Job.getInstance(getConf());
     job.setJobName(jobName);
-    job.setInputFormatClass(DistCpUtils.getStrategy(getConf(), inputOptions));
+    job.setInputFormatClass(DistCpUtils.getStrategy(getConf(), context));
     job.setJarByClass(CopyMapper.class);
     configureOutputFormat(job);
 
@@ -259,9 +299,9 @@ public class DistCp extends Configured implements Tool {
     job.setOutputFormatClass(CopyOutputFormat.class);
     job.getConfiguration().set(JobContext.MAP_SPECULATIVE, "false");
     job.getConfiguration().set(JobContext.NUM_MAPS,
-                  String.valueOf(inputOptions.getMaxMaps()));
+                  String.valueOf(context.getMaxMaps()));
 
-    inputOptions.appendToConf(job.getConfiguration());
+    context.appendToConf(job.getConfiguration());
     return job;
   }
 
@@ -273,18 +313,20 @@ public class DistCp extends Configured implements Tool {
    */
   private void configureOutputFormat(Job job) throws IOException {
     final Configuration configuration = job.getConfiguration();
-    Path targetPath = inputOptions.getTargetPath();
+    Path targetPath = context.getTargetPath();
     FileSystem targetFS = targetPath.getFileSystem(configuration);
     targetPath = targetPath.makeQualified(targetFS.getUri(),
                                           targetFS.getWorkingDirectory());
-    if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.ACL)) {
+    if (context.shouldPreserve(
+        DistCpOptions.FileAttribute.ACL)) {
       DistCpUtils.checkFileSystemAclSupport(targetFS);
     }
-    if (inputOptions.shouldPreserve(DistCpOptions.FileAttribute.XATTR)) {
+    if (context.shouldPreserve(
+        DistCpOptions.FileAttribute.XATTR)) {
       DistCpUtils.checkFileSystemXAttrSupport(targetFS);
     }
-    if (inputOptions.shouldAtomicCommit()) {
-      Path workDir = inputOptions.getAtomicWorkPath();
+    if (context.shouldAtomicCommit()) {
+      Path workDir = context.getAtomicWorkPath();
       if (workDir == null) {
         workDir = targetPath.getParent();
       }
@@ -301,7 +343,7 @@ public class DistCp extends Configured implements Tool {
     }
     CopyOutputFormat.setCommitDirectory(job, targetPath);
 
-    Path logPath = inputOptions.getLogPath();
+    Path logPath = context.getLogPath();
     if (logPath == null) {
       logPath = new Path(metaFolder, "_logs");
     } else {
@@ -322,8 +364,8 @@ public class DistCp extends Configured implements Tool {
   protected Path createInputFileListing(Job job) throws IOException {
     Path fileListingPath = getFileListingPath();
     CopyListing copyListing = CopyListing.getCopyListing(job.getConfiguration(),
-        job.getCredentials(), inputOptions);
-    copyListing.buildListing(fileListingPath, inputOptions);
+        job.getCredentials(), context);
+    copyListing.buildListing(fileListingPath, context);
     return fileListingPath;
   }
 
@@ -339,7 +381,7 @@ public class DistCp extends Configured implements Tool {
     Path fileListingPath = getFileListingPath();
     CopyListing copyListing = new SimpleCopyListing(job.getConfiguration(),
         job.getCredentials(), distCpSync);
-    copyListing.buildListing(fileListingPath, inputOptions);
+    copyListing.buildListing(fileListingPath, context);
     return fileListingPath;
   }
 
@@ -411,10 +453,12 @@ public class DistCp extends Configured implements Tool {
 
   private synchronized void cleanup() {
     try {
-      if (metaFolder == null) return;
-
-      jobFS.delete(metaFolder, true);
-      metaFolder = null;
+      if (metaFolder != null) {
+        if (jobFS != null) {
+          jobFS.delete(metaFolder, true);
+        }
+        metaFolder = null;
+      }
     } catch (IOException e) {
       LOG.error("Unable to cleanup meta folder: " + metaFolder, e);
     }

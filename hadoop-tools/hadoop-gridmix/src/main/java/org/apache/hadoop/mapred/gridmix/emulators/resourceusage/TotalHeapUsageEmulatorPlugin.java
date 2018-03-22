@@ -19,6 +19,8 @@ package org.apache.hadoop.mapred.gridmix.emulators.resourceusage;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
@@ -129,7 +131,7 @@ implements ResourceUsageEmulatorPlugin {
   public static class DefaultHeapUsageEmulator 
   implements HeapUsageEmulatorCore {
     // store the unit loads in a list
-    protected static final ArrayList<Object> heapSpace =
+    private static final ArrayList<Object> heapSpace =
         new ArrayList<Object>();
     
     /**
@@ -142,7 +144,17 @@ implements ResourceUsageEmulatorPlugin {
         heapSpace.add((Object)new byte[ONE_MB]);
       }
     }
-    
+
+    /**
+     * Gets the total number of 1mb objects stored in the emulator.
+     *
+     * @return total number of 1mb objects.
+     */
+    @VisibleForTesting
+    public int getHeapSpaceSize() {
+      return heapSpace.size();
+    }
+
     /**
      * This will initialize the core and check if the core can emulate the 
      * desired target on the underlying hardware.

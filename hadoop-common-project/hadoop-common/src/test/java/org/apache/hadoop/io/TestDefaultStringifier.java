@@ -21,16 +21,18 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertEquals;
 
 public class TestDefaultStringifier {
 
   private static Configuration conf = new Configuration();
-  private static final Log LOG = LogFactory.getLog(TestDefaultStringifier.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDefaultStringifier.class);
 
   private char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 

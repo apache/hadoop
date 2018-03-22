@@ -53,6 +53,9 @@ function hadoop_subproject_init
 
   hadoop_deprecate_envvar HADOOP_NFS3_SECURE_EXTRA_OPTS HDFS_NFS3_SECURE_EXTRA_OPTS
 
+  hadoop_deprecate_envvar HADOOP_SECURE_DN_USER HDFS_DATANODE_SECURE_USER
+
+  hadoop_deprecate_envvar HADOOP_PRIVILEGED_NFS_USER HDFS_NFS3_SECURE_USER
 
   HADOOP_HDFS_HOME="${HADOOP_HDFS_HOME:-$HADOOP_HOME}"
 
@@ -73,6 +76,8 @@ if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then
   _hd_this="${BASH_SOURCE-$0}"
   HADOOP_LIBEXEC_DIR=$(cd -P -- "$(dirname -- "${_hd_this}")" >/dev/null && pwd -P)
 fi
+
+# shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
 
 if [[ -n "${HADOOP_COMMON_HOME}" ]] &&
    [[ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]]; then

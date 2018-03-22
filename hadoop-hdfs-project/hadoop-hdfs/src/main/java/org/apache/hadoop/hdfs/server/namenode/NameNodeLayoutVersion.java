@@ -77,7 +77,7 @@ public class NameNodeLayoutVersion {
    * support downgrade.
    * </ul>
    */
-  public static enum Feature implements LayoutFeature {
+  public enum Feature implements LayoutFeature {
     ROLLING_UPGRADE(-55, -53, -55, "Support rolling upgrade", false),
     EDITLOG_LENGTH(-56, -56, "Add length field to every edit log op"),
     XATTRS(-57, -57, "Extended attributes"),

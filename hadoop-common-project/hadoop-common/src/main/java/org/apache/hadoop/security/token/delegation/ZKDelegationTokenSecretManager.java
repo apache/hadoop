@@ -670,6 +670,26 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     return tokenInfo;
   }
 
+  /**
+   * This method synchronizes the state of a delegation token information in
+   * local cache with its actual value in Zookeeper.
+   *
+   * @param ident Identifier of the token
+   */
+  private synchronized void syncLocalCacheWithZk(TokenIdent ident) {
+    try {
+      DelegationTokenInformation tokenInfo = getTokenInfoFromZK(ident);
+      if (tokenInfo != null && !currentTokens.containsKey(ident)) {
+        currentTokens.put(ident, tokenInfo);
+      } else if (tokenInfo == null && currentTokens.containsKey(ident)) {
+        currentTokens.remove(ident);
+      }
+    } catch (IOException e) {
+      LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
+          + "] from ZK", e);
+    }
+  }
+
   private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
       throws IOException {
     return getTokenInfoFromZK(ident, false);
@@ -851,16 +871,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    try {
-      if (!currentTokens.containsKey(id)) {
-        // See if token can be retrieved and placed in currentTokens
-        getTokenInfo(id);
-      }
-      return super.cancelToken(token, canceller);
-    } catch (Exception e) {
-      LOG.error("Exception while checking if token exist !!", e);
-      return id;
-    }
+
+    syncLocalCacheWithZk(id);
+    return super.cancelToken(token, canceller);
   }
 
   private void addOrUpdateToken(TokenIdent ident,
@@ -868,11 +881,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     String nodeCreatePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
-    ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
-    DataOutputStream tokenOut = new DataOutputStream(tokenOs);
-    ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
 
-    try {
+    try (ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
+         DataOutputStream tokenOut = new DataOutputStream(tokenOs)) {
       ident.write(tokenOut);
       tokenOut.writeLong(info.getRenewDate());
       tokenOut.writeInt(info.getPassword().length);
@@ -889,8 +900,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         zkClient.create().withMode(CreateMode.PERSISTENT)
             .forPath(nodeCreatePath, tokenOs.toByteArray());
       }
-    } finally {
-      seqOs.close();
     }
   }
 

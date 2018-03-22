@@ -25,6 +25,7 @@ export default AbstractRoute.extend({
     // Get all apps running on a specific node. Node is contacted by using node_addr.
     return Ember.RSVP.hash({
       apps: this.store.query('yarn-node-app', { nodeAddr: param.node_addr }),
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     });
   },

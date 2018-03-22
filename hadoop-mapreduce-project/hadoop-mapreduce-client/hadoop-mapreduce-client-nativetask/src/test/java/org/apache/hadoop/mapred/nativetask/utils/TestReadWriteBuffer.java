@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.mapred.nativetask.utils;
 
-import junit.framework.TestCase;
-
-import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
+import org.junit.Test;
 import org.junit.Assert;
 
-public class TestReadWriteBuffer extends TestCase {
+import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
+
+public class TestReadWriteBuffer {
 
   private static byte[] bytes = new byte[] { '0', 'a', 'b', 'c', 'd', '9' };
 
+  @Test
   public void testReadWriteBuffer() {
 
     final ReadWriteBuffer buffer = new ReadWriteBuffer();

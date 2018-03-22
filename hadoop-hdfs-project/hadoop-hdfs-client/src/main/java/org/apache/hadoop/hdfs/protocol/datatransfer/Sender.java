@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -132,7 +133,9 @@ public class Sender implements DataTransferProtocol {
       final CachingStrategy cachingStrategy,
       final boolean allowLazyPersist,
       final boolean pinning,
-      final boolean[] targetPinnings) throws IOException {
+      final boolean[] targetPinnings,
+      final String storageId,
+      final String[] targetStorageIds) throws IOException {
     ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(
         blk, clientName, blockToken);
 
@@ -154,10 +157,13 @@ public class Sender implements DataTransferProtocol {
         .setCachingStrategy(getCachingStrategy(cachingStrategy))
         .setAllowLazyPersist(allowLazyPersist)
         .setPinning(pinning)
-        .addAllTargetPinnings(PBHelperClient.convert(targetPinnings, 1));
-
+        .addAllTargetPinnings(PBHelperClient.convert(targetPinnings, 1))
+        .addAllTargetStorageIds(PBHelperClient.convert(targetStorageIds, 1));
     if (source != null) {
       proto.setSource(PBHelperClient.convertDatanodeInfo(source));
+    }
+    if (storageId != null) {
+      proto.setStorageId(storageId);
     }
 
     send(out, Op.WRITE_BLOCK, proto.build());
@@ -168,7 +174,8 @@ public class Sender implements DataTransferProtocol {
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets,
-      final StorageType[] targetStorageTypes) throws IOException {
+      final StorageType[] targetStorageTypes,
+      final String[] targetStorageIds) throws IOException {
 
     OpTransferBlockProto proto = OpTransferBlockProto.newBuilder()
         .setHeader(DataTransferProtoUtil.buildClientHeader(
@@ -176,6 +183,7 @@ public class Sender implements DataTransferProtocol {
         .addAllTargets(PBHelperClient.convert(targets))
         .addAllTargetStorageTypes(
             PBHelperClient.convertStorageTypes(targetStorageTypes))
+        .addAllTargetStorageIds(Arrays.asList(targetStorageIds))
         .build();
 
     send(out, Op.TRANSFER_BLOCK, proto);
@@ -233,15 +241,18 @@ public class Sender implements DataTransferProtocol {
       final StorageType storageType,
       final Token<BlockTokenIdentifier> blockToken,
       final String delHint,
-      final DatanodeInfo source) throws IOException {
-    OpReplaceBlockProto proto = OpReplaceBlockProto.newBuilder()
+      final DatanodeInfo source,
+      final String storageId) throws IOException {
+    OpReplaceBlockProto.Builder proto = OpReplaceBlockProto.newBuilder()
         .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
         .setStorageType(PBHelperClient.convertStorageType(storageType))
         .setDelHint(delHint)
-        .setSource(PBHelperClient.convertDatanodeInfo(source))
-        .build();
+        .setSource(PBHelperClient.convertDatanodeInfo(source));
+    if (storageId != null) {
+      proto.setStorageId(storageId);
+    }
 
-    send(out, Op.REPLACE_BLOCK, proto);
+    send(out, Op.REPLACE_BLOCK, proto.build());
   }
 
   @Override

@@ -195,6 +195,8 @@ message VolumeFailureSummaryProto {
  * cacheCapacity - total cache capacity available at the datanode
  * cacheUsed - amount of cache used
  * volumeFailureSummary - info about volume failures
+ * slowPeers - info about peer DataNodes that are suspected to be slow.
+ * slowDisks - info about DataNode disks that are suspected to be slow.
  */
 message HeartbeatRequestProto {
   required DatanodeRegistrationProto registration = 1; // Datanode info
@@ -206,6 +208,8 @@ message HeartbeatRequestProto {
   optional uint64 cacheUsed = 7 [default = 0 ];
   optional VolumeFailureSummaryProto volumeFailureSummary = 8;
   optional bool requestFullBlockReportLease = 9 [ default = false ];
+  repeated SlowPeerReportProto slowPeers = 10;
+  repeated SlowDiskReportProto slowDisks = 11;
 }
 
 /**
@@ -383,6 +387,37 @@ message CommitBlockSynchronizationRequestProto {
  * void response
  */
 message CommitBlockSynchronizationResponseProto {
+}
+
+/**
+ * Information about a single slow peer that may be reported by
+ * the DataNode to the NameNode as part of the heartbeat request.
+ * The message includes the peer's DataNodeId and its
+ * aggregate packet latency as observed by the reporting DataNode.
+ * (DataNodeId must be transmitted as a string for protocol compability
+ *  with earlier versions of Hadoop).
+ *
+ * The exact choice of the aggregate is opaque to the NameNode but it
+ * _should_ be chosen consistenly by all DataNodes in the cluster.
+ * Examples of aggregates are 90th percentile (good) and mean (not so
+ * good).
+ */
+message SlowPeerReportProto {
+  optional string dataNodeId = 1;
+  optional double aggregateLatency = 2;
+}
+
+/**
+ * Information about a single slow disk that may be reported by
+ * the DataNode to the NameNode as part of the heartbeat request.
+ * The message includes the disk's basePath, mean metadata op latency,
+ * mean read io latency and mean write io latency as observed by the DataNode.
+ */
+message SlowDiskReportProto {
+  optional string basePath = 1;
+  optional double meanMetadataOpLatency = 2;
+  optional double meanReadIoLatency = 3;
+  optional double meanWriteIoLatency = 4;
 }
 
 /**

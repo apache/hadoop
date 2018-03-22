@@ -31,6 +31,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Test;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
@@ -136,6 +138,10 @@ public class TestHdfsHelper extends TestDirHelper {
 
   public static final Path ENCRYPTION_ZONE = new Path("/ez");
   public static final Path ENCRYPTED_FILE = new Path("/ez/encfile");
+  public static final Path ERASURE_CODING_DIR = new Path("/ec");
+  public static final Path ERASURE_CODING_FILE = new Path("/ec/ecfile");
+  public static final ErasureCodingPolicy ERASURE_CODING_POLICY =
+      StripedFileTestUtil.getDefaultECPolicy();
 
   private static MiniDFSCluster MINI_DFS = null;
 
@@ -162,12 +168,15 @@ public class TestHdfsHelper extends TestDirHelper {
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
           jceksPath);
       MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
-      builder.numDataNodes(2);
+      int totalDataNodes = ERASURE_CODING_POLICY.getNumDataUnits() +
+          ERASURE_CODING_POLICY.getNumParityUnits();
+      builder.numDataNodes(totalDataNodes);
       MiniDFSCluster miniHdfs = builder.build();
       final String testkey = "testkey";
       DFSTestUtil.createKey(testkey, miniHdfs, conf);
 
       DistributedFileSystem fileSystem = miniHdfs.getFileSystem();
+      fileSystem.enableErasureCodingPolicy(ERASURE_CODING_POLICY.getName());
       fileSystem.getClient().setKeyProvider(miniHdfs.getNameNode()
           .getNamesystem().getProvider());
 
@@ -178,6 +187,11 @@ public class TestHdfsHelper extends TestDirHelper {
       fileSystem.mkdirs(ENCRYPTION_ZONE);
       fileSystem.createEncryptionZone(ENCRYPTION_ZONE, testkey);
       fileSystem.create(ENCRYPTED_FILE).close();
+
+      fileSystem.mkdirs(ERASURE_CODING_DIR);
+      fileSystem.setErasureCodingPolicy(ERASURE_CODING_DIR,
+          ERASURE_CODING_POLICY.getName());
+      fileSystem.create(ERASURE_CODING_FILE).close();
 
       MINI_DFS = miniHdfs;
     }

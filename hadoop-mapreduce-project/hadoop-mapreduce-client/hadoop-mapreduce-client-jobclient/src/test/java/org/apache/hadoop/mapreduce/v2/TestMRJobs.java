@@ -36,8 +36,6 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.FailingMapper;
 import org.apache.hadoop.RandomTextWriterJob;
 import org.apache.hadoop.RandomTextWriterJob.RandomInputFormat;
@@ -55,14 +53,10 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -99,22 +93,25 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMRJobs {
 
-  private static final Log LOG = LogFactory.getLog(TestMRJobs.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMRJobs.class);
   private static final EnumSet<RMAppState> TERMINAL_RM_APP_STATES =
       EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);
   private static final int NUM_NODE_MGRS = 3;
   private static final String TEST_IO_SORT_MB = "11";
-  private static final String TEST_GROUP_MAX = "200";
 
   private static final int DEFAULT_REDUCES = 2;
   protected int numSleepReducers = DEFAULT_REDUCES;
@@ -133,8 +130,8 @@ public class TestMRJobs {
     }
   }
 
-  private static Path TEST_ROOT_DIR = new Path("target",
-      TestMRJobs.class.getName() + "-tmpDir").makeQualified(localFs);
+  private static Path TEST_ROOT_DIR = localFs.makeQualified(
+      new Path("target", TestMRJobs.class.getName() + "-tmpDir"));
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
   private static final String OUTPUT_ROOT_DIR = "/tmp/" +
     TestMRJobs.class.getSimpleName();
@@ -407,6 +404,10 @@ public class TestMRJobs {
 
   @Test(timeout = 3000000)
   public void testJobWithChangePriority() throws Exception {
+    Configuration sleepConf = new Configuration(mrCluster.getConfig());
+    // Assumption can be removed when FS priority support is implemented
+    Assume.assumeFalse(sleepConf.get(YarnConfiguration.RM_SCHEDULER)
+            .equals(FairScheduler.class.getCanonicalName()));
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -414,7 +415,6 @@ public class TestMRJobs {
       return;
     }
 
-    Configuration sleepConf = new Configuration(mrCluster.getConfig());
     // set master address to local to test that local mode applied if framework
     // equals local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
@@ -466,58 +466,31 @@ public class TestMRJobs {
   }
 
   @Test(timeout = 300000)
-  public void testConfVerificationWithClassloader() throws Exception {
-    testConfVerification(true, false, false, false);
+  public void testJobClassloader() throws IOException, InterruptedException,
+      ClassNotFoundException {
+    testJobClassloader(false);
   }
 
   @Test(timeout = 300000)
-  public void testConfVerificationWithClassloaderCustomClasses()
-      throws Exception {
-    testConfVerification(true, true, false, false);
+  public void testJobClassloaderWithCustomClasses() throws IOException,
+      InterruptedException, ClassNotFoundException {
+    testJobClassloader(true);
   }
 
-  @Test(timeout = 300000)
-  public void testConfVerificationWithOutClassloader() throws Exception {
-    testConfVerification(false, false, false, false);
-  }
-
-  @Test(timeout = 300000)
-  public void testConfVerificationWithJobClient() throws Exception {
-    testConfVerification(false, false, true, false);
-  }
-
-  @Test(timeout = 300000)
-  public void testConfVerificationWithJobClientLocal() throws Exception {
-    testConfVerification(false, false, true, true);
-  }
-
-  private void testConfVerification(boolean useJobClassLoader,
-      boolean useCustomClasses, boolean useJobClientForMonitring,
-      boolean useLocal) throws Exception {
-    LOG.info("\n\n\nStarting testConfVerification()"
-        + " jobClassloader=" + useJobClassLoader
-        + " customClasses=" + useCustomClasses
-        + " jobClient=" + useJobClientForMonitring
-        + " localMode=" + useLocal);
+  private void testJobClassloader(boolean useCustomClasses) throws IOException,
+      InterruptedException, ClassNotFoundException {
+    LOG.info("\n\n\nStarting testJobClassloader()"
+        + " useCustomClasses=" + useCustomClasses);
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
                + " not found. Not running test.");
       return;
     }
-    final Configuration clusterConfig;
-    if (useLocal) {
-      clusterConfig = new Configuration();
-      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
-    } else {
-      clusterConfig = mrCluster.getConfig();
-    }
-    final JobClient jc = new JobClient(clusterConfig);
-    final Configuration sleepConf = new Configuration(clusterConfig);
+    final Configuration sleepConf = new Configuration(mrCluster.getConfig());
     // set master address to local to test that local mode applied iff framework == local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
-    sleepConf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER,
-        useJobClassLoader);
+    sleepConf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, true);
     if (useCustomClasses) {
       // to test AM loading user classes such as output format class, we want
       // to blacklist them from the system classes (they need to be prepended
@@ -535,7 +508,6 @@ public class TestMRJobs {
     sleepConf.set(MRJobConfig.MAP_LOG_LEVEL, Level.ALL.toString());
     sleepConf.set(MRJobConfig.REDUCE_LOG_LEVEL, Level.ALL.toString());
     sleepConf.set(MRJobConfig.MAP_JAVA_OPTS, "-verbose:class");
-    sleepConf.set(MRJobConfig.COUNTER_GROUPS_MAX_KEY, TEST_GROUP_MAX);
     final SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(sleepConf);
     final Job job = sleepJob.createJob(1, 1, 10, 1, 10, 1);
@@ -553,26 +525,7 @@ public class TestMRJobs {
       jobConf.setBoolean(MRJobConfig.MAP_SPECULATIVE, true);
     }
     job.submit();
-    final boolean succeeded;
-    if (useJobClientForMonitring && !useLocal) {
-      // We can't use getJobID in useLocal case because JobClient and Job
-      // point to different instances of LocalJobRunner
-      //
-      final JobID mapredJobID = JobID.downgrade(job.getJobID());
-      RunningJob runningJob = null;
-      do {
-        Thread.sleep(10);
-        runningJob = jc.getJob(mapredJobID);
-      } while (runningJob == null);
-      Assert.assertEquals("Unexpected RunningJob's "
-          + MRJobConfig.COUNTER_GROUPS_MAX_KEY,
-          TEST_GROUP_MAX, runningJob.getConfiguration()
-              .get(MRJobConfig.COUNTER_GROUPS_MAX_KEY));
-      runningJob.waitForCompletion();
-      succeeded = runningJob.isSuccessful();
-    } else {
-      succeeded = job.waitForCompletion(true);
-    }
+    boolean succeeded = job.waitForCompletion(true);
     Assert.assertTrue("Job status: " + job.getStatus().getFailureInfo(),
         succeeded);
   }
@@ -1345,6 +1298,65 @@ public class TestMRJobs {
     jarFile.delete();
   }
 
+  @Test
+  public void testSharedCache() throws Exception {
+    Path localJobJarPath = makeJobJarWithLib(TEST_ROOT_DIR.toUri().toString());
+
+    if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
+      LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
+          + " not found. Not running test.");
+      return;
+    }
+
+    Job job = Job.getInstance(mrCluster.getConfig());
+
+    Configuration jobConf = job.getConfiguration();
+    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
+
+    Path inputFile = createTempFile("input-file", "x");
+
+    // Create jars with a single file inside them.
+    Path second = makeJar(new Path(TEST_ROOT_DIR, "distributed.second.jar"), 2);
+    Path third = makeJar(new Path(TEST_ROOT_DIR, "distributed.third.jar"), 3);
+    Path fourth = makeJar(new Path(TEST_ROOT_DIR, "distributed.fourth.jar"), 4);
+
+    // Add libjars to job conf
+    jobConf.set("tmpjars", second.toString() + "," + third.toString() + ","
+        + fourth.toString());
+
+    // Because the job jar is a "dummy" jar, we need to include the jar with
+    // DistributedCacheChecker or it won't be able to find it
+    Path distributedCacheCheckerJar =
+        new Path(JarFinder.getJar(SharedCacheChecker.class));
+    job.addFileToClassPath(distributedCacheCheckerJar.makeQualified(
+        localFs.getUri(), distributedCacheCheckerJar.getParent()));
+
+    job.setMapperClass(SharedCacheChecker.class);
+    job.setOutputFormatClass(NullOutputFormat.class);
+
+    FileInputFormat.setInputPaths(job, inputFile);
+
+    job.setMaxMapAttempts(1); // speed up failures
+
+    job.submit();
+    String trackingUrl = job.getTrackingURL();
+    String jobId = job.getJobID().toString();
+    Assert.assertTrue(job.waitForCompletion(true));
+    Assert.assertTrue("Tracking URL was " + trackingUrl
+        + " but didn't Match Job ID " + jobId,
+        trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"));
+  }
+
+  /**
+   * An identity mapper for testing the shared cache.
+   */
+  public static class SharedCacheChecker extends
+      Mapper<LongWritable, Text, NullWritable, NullWritable> {
+    @Override
+    public void setup(Context context) throws IOException {
+    }
+  }
+
   public static class ConfVerificationMapper extends SleepMapper {
     @Override
     protected void setup(Context context)
@@ -1364,15 +1376,6 @@ public class TestMRJobs {
       if (!TEST_IO_SORT_MB.equals(ioSortMb)) {
         throw new IOException("io.sort.mb expected: " + TEST_IO_SORT_MB
             + ", actual: "  + ioSortMb);
-      }
-    }
-
-    @Override
-    public void map(IntWritable key, IntWritable value, Context context) throws IOException, InterruptedException {
-      super.map(key, value, context);
-      for (int i = 0; i < 100; i++) {
-        context.getCounter("testCounterGroup-" + i,
-            "testCounter").increment(1);
       }
     }
   }

@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
@@ -30,7 +31,7 @@ import java.io.IOException;
 @VisibleForTesting
 @InterfaceAudience.Private
 public class DataNodeFaultInjector {
-  public static DataNodeFaultInjector instance = new DataNodeFaultInjector();
+  private static DataNodeFaultInjector instance = new DataNodeFaultInjector();
 
   public static DataNodeFaultInjector get() {
     return instance;
@@ -81,4 +82,17 @@ public class DataNodeFaultInjector {
 
   public void failPipeline(ReplicaInPipeline replicaInfo,
       String mirrorAddr) throws IOException { }
+
+  public void startOfferService() throws Exception {}
+
+  public void endOfferService() throws Exception {}
+
+  public void throwTooManyOpenFiles() throws FileNotFoundException {
+  }
+
+  /**
+   * Used as a hook to inject failure in erasure coding reconstruction
+   * process.
+   */
+  public void stripedBlockReconstruction() throws IOException {}
 }

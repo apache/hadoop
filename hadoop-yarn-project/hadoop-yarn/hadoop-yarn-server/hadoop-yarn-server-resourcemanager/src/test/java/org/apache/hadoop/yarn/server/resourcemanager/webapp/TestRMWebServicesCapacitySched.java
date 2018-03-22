@@ -354,10 +354,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void verifySubQueue(JSONObject info, String q, 
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 18;
+    int numExpectedElements = 20;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 31;
+      numExpectedElements = 35;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());

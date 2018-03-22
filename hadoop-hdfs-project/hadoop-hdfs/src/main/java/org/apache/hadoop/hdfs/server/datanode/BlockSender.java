@@ -175,8 +175,13 @@ class BlockSender implements java.io.Closeable {
    * See {{@link BlockSender#isLongRead()}
    */
   private static final long LONG_READ_THRESHOLD_BYTES = 256 * 1024;
-  
 
+  // The number of bytes per checksum here determines the alignment
+  // of reads: we always start reading at a checksum chunk boundary,
+  // even if the checksum type is NULL. So, choosing too big of a value
+  // would risk sending too much unnecessary data. 512 (1 disk sector)
+  // is likely to result in minimal extra IO.
+  private static final long CHUNK_SIZE = 512;
   /**
    * Constructor
    * 
@@ -250,17 +255,15 @@ class BlockSender implements java.io.Closeable {
       try(AutoCloseableLock lock = datanode.data.acquireDatasetLock()) {
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();
-        if (replica instanceof FinalizedReplica) {
-          // Load last checksum in case the replica is being written
-          // concurrently
-          final FinalizedReplica frep = (FinalizedReplica) replica;
-          chunkChecksum = frep.getLastChecksumAndDataLen();
-        }
       }
       if (replica.getState() == ReplicaState.RBW) {
         final ReplicaInPipeline rbw = (ReplicaInPipeline) replica;
         waitForMinLength(rbw, startOffset + length);
         chunkChecksum = rbw.getLastChecksumAndDataLen();
+      }
+      if (replica instanceof FinalizedReplica) {
+        chunkChecksum = getPartialChunkChecksumForFinalized(
+            (FinalizedReplica)replica);
       }
 
       if (replica.getGenerationStamp() < block.getGenerationStamp()) {
@@ -302,6 +305,7 @@ class BlockSender implements java.io.Closeable {
         LengthInputStream metaIn = null;
         boolean keepMetaInOpen = false;
         try {
+          DataNodeFaultInjector.get().throwTooManyOpenFiles();
           metaIn = datanode.data.getMetaDataInputStream(block);
           if (!corruptChecksumOk || metaIn != null) {
             if (metaIn == null) {
@@ -331,10 +335,14 @@ class BlockSender implements java.io.Closeable {
             LOG.warn("Could not find metadata file for " + block);
           }
         } catch (FileNotFoundException e) {
-          // The replica is on its volume map but not on disk
-          datanode.notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
-          datanode.data.invalidate(block.getBlockPoolId(),
-              new Block[]{block.getLocalBlock()});
+          if ((e.getMessage() != null) && !(e.getMessage()
+              .contains("Too many open files"))) {
+            // The replica is on its volume map but not on disk
+            datanode
+                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
+            datanode.data.invalidate(block.getBlockPoolId(),
+                new Block[] {block.getLocalBlock()});
+          }
           throw e;
         } finally {
           if (!keepMetaInOpen) {
@@ -343,12 +351,8 @@ class BlockSender implements java.io.Closeable {
         }
       }
       if (csum == null) {
-        // The number of bytes per checksum here determines the alignment
-        // of reads: we always start reading at a checksum chunk boundary,
-        // even if the checksum type is NULL. So, choosing too big of a value
-        // would risk sending too much unnecessary data. 512 (1 disk sector)
-        // is likely to result in minimal extra IO.
-        csum = DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 512);
+        csum = DataChecksum.newDataChecksum(DataChecksum.Type.NULL,
+            (int)CHUNK_SIZE);
       }
 
       /*
@@ -419,6 +423,37 @@ class BlockSender implements java.io.Closeable {
       org.apache.commons.io.IOUtils.closeQuietly(blockIn);
       org.apache.commons.io.IOUtils.closeQuietly(checksumIn);
       throw ioe;
+    }
+  }
+
+  private ChunkChecksum getPartialChunkChecksumForFinalized(
+      FinalizedReplica finalized) throws IOException {
+    // There are a number of places in the code base where a finalized replica
+    // object is created. If last partial checksum is loaded whenever a
+    // finalized replica is created, it would increase latency in DataNode
+    // initialization. Therefore, the last partial chunk checksum is loaded
+    // lazily.
+
+    // Load last checksum in case the replica is being written concurrently
+    final long replicaVisibleLength = replica.getVisibleLength();
+    if (replicaVisibleLength % CHUNK_SIZE != 0 &&
+        finalized.getLastPartialChunkChecksum() == null) {
+      // the finalized replica does not have precomputed last partial
+      // chunk checksum. Recompute now.
+      try {
+        finalized.loadLastPartialChunkChecksum();
+        return new ChunkChecksum(finalized.getVisibleLength(),
+            finalized.getLastPartialChunkChecksum());
+      } catch (FileNotFoundException e) {
+        // meta file is lost. Continue anyway to preserve existing behavior.
+        DataNode.LOG.warn(
+            "meta file " + finalized.getMetaFile() + " is missing!");
+        return null;
+      }
+    } else {
+      // If the checksum is null, BlockSender will use on-disk checksum.
+      return new ChunkChecksum(finalized.getVisibleLength(),
+          finalized.getLastPartialChunkChecksum());
     }
   }
 

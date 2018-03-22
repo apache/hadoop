@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -104,24 +105,28 @@ public class TestDatasetVolumeChecker {
     /**
      * Request a check and ensure it triggered {@link FsVolumeSpi#check}.
      */
-    checker.checkVolume(volume, new DatasetVolumeChecker.Callback() {
-      @Override
-      public void call(Set<FsVolumeSpi> healthyVolumes,
-                       Set<FsVolumeSpi> failedVolumes) {
-        numCallbackInvocations.incrementAndGet();
-        if (expectedVolumeHealth != null && expectedVolumeHealth != FAILED) {
-          assertThat(healthyVolumes.size(), is(1));
-          assertThat(failedVolumes.size(), is(0));
-        } else {
-          assertThat(healthyVolumes.size(), is(0));
-          assertThat(failedVolumes.size(), is(1));
-        }
-      }
-    });
+    boolean result =
+        checker.checkVolume(volume, new DatasetVolumeChecker.Callback() {
+          @Override
+          public void call(Set<FsVolumeSpi> healthyVolumes,
+                           Set<FsVolumeSpi> failedVolumes) {
+            numCallbackInvocations.incrementAndGet();
+            if (expectedVolumeHealth != null &&
+                expectedVolumeHealth != FAILED) {
+              assertThat(healthyVolumes.size(), is(1));
+              assertThat(failedVolumes.size(), is(0));
+            } else {
+              assertThat(healthyVolumes.size(), is(0));
+              assertThat(failedVolumes.size(), is(1));
+            }
+          }
+        });
 
     // Ensure that the check was invoked at least once.
     verify(volume, times(1)).check(anyObject());
-    assertThat(numCallbackInvocations.get(), is(1L));
+    if (result) {
+      assertThat(numCallbackInvocations.get(), is(1L));
+    }
   }
 
   /**
@@ -157,65 +162,22 @@ public class TestDatasetVolumeChecker {
   }
 
   /**
-   * Unit test for {@link DatasetVolumeChecker#checkAllVolumesAsync}.
-   *
-   * @throws Exception
-   */
-  @Test(timeout=10000)
-  public void testCheckAllVolumesAsync() throws Exception {
-    LOG.info("Executing {}", testName.getMethodName());
-
-    final List<FsVolumeSpi> volumes = makeVolumes(
-        NUM_VOLUMES, expectedVolumeHealth);
-    final FsDatasetSpi<FsVolumeSpi> dataset = makeDataset(volumes);
-    final DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
-    checker.setDelegateChecker(new DummyChecker());
-    final AtomicLong numCallbackInvocations = new AtomicLong(0);
-
-    checker.checkAllVolumesAsync(
-        dataset, new DatasetVolumeChecker.Callback() {
-          @Override
-          public void call(
-              Set<FsVolumeSpi> healthyVolumes,
-              Set<FsVolumeSpi> failedVolumes) {
-            LOG.info("Got back {} failed volumes", failedVolumes.size());
-            if (expectedVolumeHealth == null ||
-                expectedVolumeHealth == FAILED) {
-              assertThat(healthyVolumes.size(), is(0));
-              assertThat(failedVolumes.size(), is(NUM_VOLUMES));
-            } else {
-              assertThat(healthyVolumes.size(), is(NUM_VOLUMES));
-              assertThat(failedVolumes.size(), is(0));
-            }
-            numCallbackInvocations.incrementAndGet();
-          }
-        });
-
-    // The callback should be invoked exactly once.
-    assertThat(numCallbackInvocations.get(), is(1L));
-
-    // Ensure each volume's check() method was called exactly once.
-    for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyObject());
-    }
-  }
-
-  /**
    * A checker to wraps the result of {@link FsVolumeSpi#check} in
    * an ImmediateFuture.
    */
   static class DummyChecker
       implements AsyncChecker<VolumeCheckContext, VolumeCheckResult> {
+
     @Override
-    public ListenableFuture<VolumeCheckResult> schedule(
+    public Optional<ListenableFuture<VolumeCheckResult>> schedule(
         Checkable<VolumeCheckContext, VolumeCheckResult> target,
         VolumeCheckContext context) {
       try {
-        return Futures.immediateFuture(target.check(context));
+        return Optional.of(
+            Futures.immediateFuture(target.check(context)));
       } catch (Exception e) {
         LOG.info("check routine threw exception " + e);
-        return Futures.immediateFailedFuture(e);
+        return Optional.of(Futures.immediateFailedFuture(e));
       }
     }
 

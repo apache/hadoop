@@ -30,6 +30,8 @@ import com.microsoft.azure.storage.blob.CloudBlob;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.microsoft.azure.storage.StorageErrorCodeStrings.LEASE_ALREADY_PRESENT;
+
 /**
  * An Azure blob lease that automatically renews itself indefinitely
  * using a background thread. Use it to synchronize distributed processes,
@@ -66,7 +68,7 @@ public class SelfRenewingLease {
   @VisibleForTesting
   static final int LEASE_ACQUIRE_RETRY_INTERVAL = 2000;
 
-  public SelfRenewingLease(CloudBlobWrapper blobWrapper)
+  public SelfRenewingLease(CloudBlobWrapper blobWrapper, boolean throwIfPresent)
       throws StorageException {
 
     this.leaseFreed = false;
@@ -79,10 +81,14 @@ public class SelfRenewingLease {
         leaseID = blob.acquireLease(LEASE_TIMEOUT, null);
       } catch (StorageException e) {
 
+        if (throwIfPresent && e.getErrorCode().equals(LEASE_ALREADY_PRESENT)) {
+          throw e;
+        }
+
         // Throw again if we don't want to keep waiting.
         // We expect it to be that the lease is already present,
         // or in some cases that the blob does not exist.
-        if (!e.getErrorCode().equals("LeaseAlreadyPresent")) {
+        if (!LEASE_ALREADY_PRESENT.equals(e.getErrorCode())) {
           LOG.info(
             "Caught exception when trying to get lease on blob "
             + blobWrapper.getUri().toString() + ". " + e.getMessage());
@@ -111,7 +117,7 @@ public class SelfRenewingLease {
 
   /**
    * Free the lease and stop the keep-alive thread.
-   * @throws StorageException
+   * @throws StorageException Thrown when fail to free the lease.
    */
   public void free() throws StorageException {
     AccessCondition accessCondition = AccessCondition.generateEmptyCondition();
@@ -119,7 +125,7 @@ public class SelfRenewingLease {
     try {
       blobWrapper.getBlob().releaseLease(accessCondition);
     } catch (StorageException e) {
-      if (e.getErrorCode().equals("BlobNotFound")) {
+      if ("BlobNotFound".equals(e.getErrorCode())) {
 
         // Don't do anything -- it's okay to free a lease
         // on a deleted file. The delete freed the lease

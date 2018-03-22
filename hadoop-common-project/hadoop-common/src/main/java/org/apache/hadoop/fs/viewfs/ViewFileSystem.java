@@ -54,7 +54,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -126,7 +125,8 @@ public class ViewFileSystem extends FileSystem {
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
-  
+  // Default to rename within same mountpoint
+  private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
    * Make the path Absolute and get the path-part of a pathname.
    * Checks that URI matches this file system 
@@ -185,28 +185,27 @@ public class ViewFileSystem extends FileSystem {
       fsState = new InodeTree<FileSystem>(conf, authority) {
 
         @Override
-        protected
-        FileSystem getTargetFileSystem(final URI uri)
+        protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
             return new ChRootedFileSystem(uri, config);
         }
 
         @Override
-        protected
-        FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
+        protected FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
           throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri);
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config);
         }
 
         @Override
-        protected
-        FileSystem getTargetFileSystem(URI[] mergeFsURIList)
-            throws URISyntaxException, UnsupportedFileSystemException {
-          throw new UnsupportedFileSystemException("mergefs not implemented");
-          // return MergeFs.createMergeFs(mergeFsURIList, config);
+        protected FileSystem getTargetFileSystem(final String settings,
+            final URI[] uris) throws URISyntaxException, IOException {
+          return NflyFSystem.createFileSystem(uris, config, settings);
         }
       };
       workingDir = this.getHomeDirectory();
+      renameStrategy = RenameStrategy.valueOf(
+          conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+              RenameStrategy.SAME_MOUNTPOINT.toString()));
     } catch (URISyntaxException e) {
       throw new IOException("URISyntax exception: " + theUri);
     }
@@ -451,8 +450,13 @@ public class ViewFileSystem extends FileSystem {
 
   private Path getChrootedPath(InodeTree.ResolveResult<FileSystem> res,
       FileStatus status, Path f) throws IOException {
-    final String suffix = ((ChRootedFileSystem)res.targetFileSystem)
-        .stripOutRoot(status.getPath());
+    final String suffix;
+    if (res.targetFileSystem instanceof ChRootedFileSystem) {
+      suffix = ((ChRootedFileSystem)res.targetFileSystem)
+          .stripOutRoot(status.getPath());
+    } else { // nfly
+      suffix = ((NflyFSystem.NflyStatus)status).stripRoot();
+    }
     return this.makeQualified(
         suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix));
   }
@@ -490,27 +494,60 @@ public class ViewFileSystem extends FileSystem {
     if (resDst.isInternalDir()) {
           throw readOnlyMountTable("rename", dst);
     }
-    /**
-    // Alternate 1: renames within same file system - valid but we disallow
-    // Alternate 2: (as described in next para - valid but we have disallowed it
-    //
-    // Note we compare the URIs. the URIs include the link targets. 
-    // hence we allow renames across mount links as long as the mount links
-    // point to the same target.
-    if (!resSrc.targetFileSystem.getUri().equals(
-              resDst.targetFileSystem.getUri())) {
-      throw new IOException("Renames across Mount points not supported");
+
+    URI srcUri = resSrc.targetFileSystem.getUri();
+    URI dstUri = resDst.targetFileSystem.getUri();
+
+    verifyRenameStrategy(srcUri, dstUri,
+        resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
+
+    if (resSrc.targetFileSystem instanceof ChRootedFileSystem &&
+        resDst.targetFileSystem instanceof ChRootedFileSystem) {
+      ChRootedFileSystem srcFS = (ChRootedFileSystem) resSrc.targetFileSystem;
+      ChRootedFileSystem dstFS = (ChRootedFileSystem) resDst.targetFileSystem;
+      return srcFS.getMyFs().rename(srcFS.fullPath(resSrc.remainingPath),
+          dstFS.fullPath(resDst.remainingPath));
+    } else {
+      return resSrc.targetFileSystem.rename(resSrc.remainingPath, resDst.remainingPath);
     }
-    */
-    
-    //
-    // Alternate 3 : renames ONLY within the the same mount links.
-    //
-    if (resSrc.targetFileSystem !=resDst.targetFileSystem) {
-      throw new IOException("Renames across Mount points not supported");
+  }
+
+  static void verifyRenameStrategy(URI srcUri, URI dstUri,
+      boolean isSrcDestSame, ViewFileSystem.RenameStrategy renameStrategy)
+      throws IOException {
+    switch (renameStrategy) {
+    case SAME_FILESYSTEM_ACROSS_MOUNTPOINT:
+      if (srcUri.getAuthority() != null) {
+        if (!(srcUri.getScheme().equals(dstUri.getScheme()) && srcUri
+            .getAuthority().equals(dstUri.getAuthority()))) {
+          throw new IOException("Renames across Mount points not supported");
+        }
+      }
+
+      break;
+    case SAME_TARGET_URI_ACROSS_MOUNTPOINT:
+      // Alternate 2: Rename across mountpoints with same target.
+      // i.e. Rename across alias mountpoints.
+      //
+      // Note we compare the URIs. the URIs include the link targets.
+      // hence we allow renames across mount links as long as the mount links
+      // point to the same target.
+      if (!srcUri.equals(dstUri)) {
+        throw new IOException("Renames across Mount points not supported");
+      }
+
+      break;
+    case SAME_MOUNTPOINT:
+      //
+      // Alternate 3 : renames ONLY within the the same mount links.
+      //
+      if (!isSrcDestSame) {
+        throw new IOException("Renames across Mount points not supported");
+      }
+      break;
+    default:
+      throw new IllegalArgumentException ("Unexpected rename strategy");
     }
-    return resSrc.targetFileSystem.rename(resSrc.remainingPath,
-        resDst.remainingPath);
   }
 
   @Override
@@ -876,6 +913,17 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public Path getLinkTarget(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+    } catch (FileNotFoundException e) {
+      throw new NotInMountpointException(path, "getLinkTarget");
+    }
+    return res.targetFileSystem.getLinkTarget(res.remainingPath);
+  }
+
   /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
@@ -894,11 +942,11 @@ public class ViewFileSystem extends FileSystem {
     final URI myUri;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
-        final long cTime, final UserGroupInformation ugi, URI uri)
-      throws URISyntaxException {
+        final long cTime, final UserGroupInformation ugi, URI uri,
+        Configuration config) throws URISyntaxException {
       myUri = uri;
       try {
-        initialize(myUri, new Configuration());
+        initialize(myUri, config);
       } catch (IOException e) {
         throw new RuntimeException("Cannot occur");
       }
@@ -989,12 +1037,12 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
       checkPathIsSlash(f);
-      FileStatus[] result = new FileStatus[theInternalDir.children.size()];
+      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
-      for (Entry<String, INode<FileSystem>> iEntry : 
-                                          theInternalDir.children.entrySet()) {
+      for (Entry<String, INode<FileSystem>> iEntry :
+          theInternalDir.getChildren().entrySet()) {
         INode<FileSystem> inode = iEntry.getValue();
-        if (inode instanceof INodeLink ) {
+        if (inode.isLink()) {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
 
           result[i++] = new FileStatus(0, false, 0, 0,
@@ -1017,11 +1065,12 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
         throws AccessControlException, FileAlreadyExistsException {
-      if (theInternalDir.isRoot && dir == null) {
+      if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       // Note dir starts with /
-      if (theInternalDir.children.containsKey(dir.toString().substring(1))) {
+      if (theInternalDir.getChildren().containsKey(
+          dir.toString().substring(1))) {
         return true; // this is the stupid semantics of FileSystem
       }
       throw readOnlyMountTable("mkdirs",  dir);
@@ -1229,5 +1278,10 @@ public class ViewFileSystem extends FileSystem {
       }
       return allPolicies;
     }
+  }
+
+  enum RenameStrategy {
+    SAME_MOUNTPOINT, SAME_TARGET_URI_ACROSS_MOUNTPOINT,
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT
   }
 }

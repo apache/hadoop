@@ -140,7 +140,7 @@ public class ReservationRequestPBImpl extends ReservationRequest {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl) t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   @Override

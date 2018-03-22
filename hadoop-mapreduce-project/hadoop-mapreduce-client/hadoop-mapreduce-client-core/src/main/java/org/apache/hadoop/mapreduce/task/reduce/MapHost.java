@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 @InterfaceStability.Unstable
 public class MapHost {
   
-  public static enum State {
+  public enum State {
     IDLE,               // No map outputs available
     BUSY,               // Map outputs are being fetched
     PENDING,            // Known map outputs which need to be fetched

@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -43,13 +42,12 @@ import static org.junit.Assert.assertTrue;
 
 public class TestSafeModeWithStripedFile {
 
-  private final ErasureCodingPolicy ecPolicy =
-      ErasureCodingPolicyManager.getSystemDefaultPolicy();
-  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
-  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
-  private final int numDNs = dataBlocks + parityBlocks;
-  private final int cellSize = ecPolicy.getCellSize();
-  private final int blockSize = cellSize * 2;
+  private ErasureCodingPolicy ecPolicy;
+  private short dataBlocks;
+  private short parityBlocks;
+  private int numDNs;
+  private int cellSize;
+  private int blockSize;
 
   private MiniDFSCluster cluster;
   private Configuration conf;
@@ -57,13 +55,26 @@ public class TestSafeModeWithStripedFile {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
+  public ErasureCodingPolicy getEcPolicy() {
+    return StripedFileTestUtil.getDefaultECPolicy();
+  }
+
   @Before
   public void setup() throws IOException {
+    ecPolicy = getEcPolicy();
+    dataBlocks = (short) ecPolicy.getNumDataUnits();
+    parityBlocks = (short) ecPolicy.getNumParityUnits();
+    numDNs = dataBlocks + parityBlocks;
+    cellSize = ecPolicy.getCellSize();
+    blockSize = cellSize * 2;
+
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 100);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+    cluster.getFileSystem().enableErasureCodingPolicy(getEcPolicy().getName());
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
+        getEcPolicy().getName());
     cluster.waitActive();
   }
 

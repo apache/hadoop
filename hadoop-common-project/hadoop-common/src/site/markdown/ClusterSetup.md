@@ -139,7 +139,7 @@ This section deals with important parameters to be specified in the given config
 | `yarn.resourcemanager.admin.address` | `ResourceManager` host:port for administrative commands. | *host:port* If set, overrides the hostname set in `yarn.resourcemanager.hostname`. |
 | `yarn.resourcemanager.webapp.address` | `ResourceManager` web-ui host:port. | *host:port* If set, overrides the hostname set in `yarn.resourcemanager.hostname`. |
 | `yarn.resourcemanager.hostname` | `ResourceManager` host. | *host* Single hostname that can be set in place of setting all `yarn.resourcemanager*address` resources. Results in default ports for ResourceManager components. |
-| `yarn.resourcemanager.scheduler.class` | `ResourceManager` Scheduler class. | `CapacityScheduler` (recommended), `FairScheduler` (also recommended), or `FifoScheduler` |
+| `yarn.resourcemanager.scheduler.class` | `ResourceManager` Scheduler class. | `CapacityScheduler` (recommended), `FairScheduler` (also recommended), or `FifoScheduler`. Use a fully qualified class name, e.g., `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler`. |
 | `yarn.scheduler.minimum-allocation-mb` | Minimum limit of memory to allocate to each container request at the `Resource Manager`. | In MBs |
 | `yarn.scheduler.maximum-allocation-mb` | Maximum limit of memory to allocate to each container request at the `Resource Manager`. | In MBs |
 | `yarn.resourcemanager.nodes.include-path` / `yarn.resourcemanager.nodes.exclude-path` | List of permitted/excluded NodeManagers. | If necessary, use these files to control the list of allowable NodeManagers. |
@@ -202,7 +202,7 @@ The following parameters can be used to control the node health monitoring scrip
 |:---- |:---- |:---- |
 | `yarn.nodemanager.health-checker.script.path` | Node health script | Script to check for node's health status. |
 | `yarn.nodemanager.health-checker.script.opts` | Node health script options | Options for script to check for node's health status. |
-| `yarn.nodemanager.health-checker.script.interval-ms` | Node health script interval | Time interval for running health script. |
+| `yarn.nodemanager.health-checker.interval-ms` | Node health script interval | Time interval for running health script. |
 | `yarn.nodemanager.health-checker.script.timeout-ms` | Node health script timeout interval | Timeout for health script execution. |
 
 The health checker script is not supposed to give ERROR if only some of the local disks become bad. NodeManager has the ability to periodically check the health of the local disks (specifically checks nodemanager-local-dirs and nodemanager-log-dirs) and after reaching the threshold of number of bad directories based on the value set for the config property yarn.nodemanager.disk-health-checker.min-healthy-disks, the whole node is marked unhealthy and this info is sent to resource manager also. The boot disk is either raided or a failure in the boot disk is identified by the health checker script.

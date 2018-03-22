@@ -30,8 +30,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,6 +41,8 @@ import org.apache.hadoop.io.file.tfile.CompareUtils.ScalarComparator;
 import org.apache.hadoop.io.file.tfile.CompareUtils.ScalarLong;
 import org.apache.hadoop.io.file.tfile.Compression.Algorithm;
 import org.apache.hadoop.io.file.tfile.Utils.Version;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Block Compressed file, the underlying physical storage layer for TFile.
@@ -54,7 +54,7 @@ final class BCFile {
   // the current version of BCFile impl, increment them (major or minor) made
   // enough changes
   static final Version API_VERSION = new Version((short) 1, (short) 0);
-  static final Log LOG = LogFactory.getLog(BCFile.class);
+  static final Logger LOG = LoggerFactory.getLogger(BCFile.class);
 
   /**
    * Prevent the instantiation of BCFile objects.

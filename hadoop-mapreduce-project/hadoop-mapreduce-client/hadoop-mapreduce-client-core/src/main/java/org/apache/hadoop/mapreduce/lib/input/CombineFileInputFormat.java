@@ -30,8 +30,6 @@ import java.util.Set;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +49,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.NetworkTopology;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultiset;
@@ -84,7 +84,8 @@ import com.google.common.collect.Multiset;
 public abstract class CombineFileInputFormat<K, V>
   extends FileInputFormat<K, V> {
   
-  private static final Log LOG = LogFactory.getLog(CombineFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CombineFileInputFormat.class);
   
   public static final String SPLIT_MINSIZE_PERNODE = 
     "mapreduce.input.fileinputformat.split.minsize.per.node";

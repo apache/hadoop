@@ -33,20 +33,21 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * This class tests commands from Trash.
  */
-public class TestTrash extends TestCase {
+public class TestTrash {
 
   private final static Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
       "testTrash"));
@@ -507,19 +508,22 @@ public class TestTrash extends TestCase {
     }
   }
 
+  @Test
   public void testTrash() throws IOException {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     trashShell(FileSystem.getLocal(conf), TEST_DIR);
   }
 
+  @Test
   public void testNonDefaultFS() throws IOException {
     Configuration conf = new Configuration();
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set("fs.defaultFS", "invalid://host/bar/foo");
     trashNonDefaultFS(conf);
   }
-  
+
+  @Test
   public void testPluggableTrash() throws IOException {
     Configuration conf = new Configuration();
 
@@ -604,6 +608,7 @@ public class TestTrash extends TestCase {
     verifyTrashPermission(FileSystem.getLocal(conf), conf);
   }
 
+  @Test
   public void testTrashEmptier() throws Exception {
     Configuration conf = new Configuration();
     // Trash with 12 second deletes and 6 seconds checkpoints
@@ -665,12 +670,9 @@ public class TestTrash extends TestCase {
     emptierThread.interrupt();
     emptierThread.join();
   }
-  
-  /**
-   * @see TestCase#tearDown()
-   */
-  @Override
-  protected void tearDown() throws IOException {
+
+  @After
+  public void tearDown() throws IOException {
     File trashDir = new File(TEST_DIR.toUri().getPath());
     if (trashDir.exists() && !FileUtil.fullyDelete(trashDir)) {
       throw new IOException("Cannot remove data directory: " + trashDir);

@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -38,10 +36,10 @@ public class AboutBlock extends HtmlBlock {
     TimelineAbout tsInfo = TimelineUtils.createTimelineAbout(
         "Timeline Server - Generic History Service UI");
     info("Timeline Server Overview").
-        _("Timeline Server Version:", tsInfo.getTimelineServiceBuildVersion() +
+        __("Timeline Server Version:", tsInfo.getTimelineServiceBuildVersion() +
             " on " + tsInfo.getTimelineServiceVersionBuiltOn()).
-        _("Hadoop Version:", tsInfo.getHadoopBuildVersion() +
+        __("Hadoop Version:", tsInfo.getHadoopBuildVersion() +
             " on " + tsInfo.getHadoopVersionBuiltOn());
-    html._(InfoBlock.class);
+    html.__(InfoBlock.class);
   }
 }

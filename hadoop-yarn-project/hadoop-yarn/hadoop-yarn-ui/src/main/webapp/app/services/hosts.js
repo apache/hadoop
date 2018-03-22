@@ -61,14 +61,26 @@ export default Ember.Service.extend({
   },
 
   localBaseAddress: Ember.computed(function () {
-    return this.localAddress();
+    var url = this.localAddress();
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
+    return url;
   }),
 
   timelineWebAddress: Ember.computed(function () {
     return this.normalizeURL(this.get("env.app.hosts.timelineWebAddress"));
   }),
 
+  timelineV1WebAddress: Ember.computed(function () {
+    return this.normalizeURL(this.get("env.app.hosts.timelineV1WebAddress"));
+  }),
+
   rmWebAddress: Ember.computed(function () {
     return this.normalizeURL(this.get("env.app.hosts.rmWebAddress"));
   }),
+
+  dashWebAddress: Ember.computed(function () {
+    return this.normalizeURL(this.get("env.app.hosts.dashWebAddress"));
+  })
 });

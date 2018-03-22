@@ -43,8 +43,6 @@ public class ContainerAllocationProposal<A extends SchedulerApplicationAttempt,
   // not be included by toRelease list
   private SchedulerContainer<A, N> allocateFromReservedContainer;
 
-  private boolean isIncreasedAllocation;
-
   private NodeType allocationLocalityType;
 
   private NodeType requestLocalityType;
@@ -57,7 +55,7 @@ public class ContainerAllocationProposal<A extends SchedulerApplicationAttempt,
       SchedulerContainer<A, N> allocatedOrReservedContainer,
       List<SchedulerContainer<A, N>> toRelease,
       SchedulerContainer<A, N> allocateFromReservedContainer,
-      boolean isIncreasedAllocation, NodeType allocationLocalityType,
+      NodeType allocationLocalityType,
       NodeType requestLocalityType, SchedulingMode schedulingMode,
       Resource allocatedResource) {
     this.allocatedOrReservedContainer = allocatedOrReservedContainer;
@@ -65,7 +63,6 @@ public class ContainerAllocationProposal<A extends SchedulerApplicationAttempt,
       this.toRelease = toRelease;
     }
     this.allocateFromReservedContainer = allocateFromReservedContainer;
-    this.isIncreasedAllocation = isIncreasedAllocation;
     this.allocationLocalityType = allocationLocalityType;
     this.requestLocalityType = requestLocalityType;
     this.schedulingMode = schedulingMode;
@@ -82,10 +79,6 @@ public class ContainerAllocationProposal<A extends SchedulerApplicationAttempt,
 
   public NodeType getAllocationLocalityType() {
     return allocationLocalityType;
-  }
-
-  public boolean isIncreasedAllocation() {
-    return isIncreasedAllocation;
   }
 
   public SchedulerContainer<A, N> getAllocateFromReservedContainer() {

@@ -61,6 +61,7 @@ class StripedBlockWriter {
   private final ExtendedBlock block;
   private final DatanodeInfo target;
   private final StorageType storageType;
+  private final String storageId;
 
   private Socket targetSocket;
   private DataOutputStream targetOutputStream;
@@ -72,8 +73,8 @@ class StripedBlockWriter {
 
   StripedBlockWriter(StripedWriter stripedWriter, DataNode datanode,
                      Configuration conf, ExtendedBlock block,
-                     DatanodeInfo target, StorageType storageType)
-      throws IOException {
+                     DatanodeInfo target, StorageType storageType,
+                     String storageId) throws IOException {
     this.stripedWriter = stripedWriter;
     this.datanode = datanode;
     this.conf = conf;
@@ -81,6 +82,7 @@ class StripedBlockWriter {
     this.block = block;
     this.target = target;
     this.storageType = storageType;
+    this.storageId = storageId;
 
     this.targetBuffer = stripedWriter.allocateWriteBuffer();
 
@@ -116,7 +118,8 @@ class StripedBlockWriter {
 
       Token<BlockTokenIdentifier> blockToken =
           datanode.getBlockAccessToken(block,
-              EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+              EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
+              new StorageType[]{storageType}, new String[]{storageId});
 
       long writeTimeout = datanode.getDnConf().getSocketWriteTimeout();
       OutputStream unbufOut = NetUtils.getOutputStream(socket, writeTimeout);
@@ -140,7 +143,7 @@ class StripedBlockWriter {
           new StorageType[]{storageType}, source,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0, 0, 0,
           stripedWriter.getChecksum(), stripedWriter.getCachingStrategy(),
-          false, false, null);
+          false, false, null, storageId, new String[]{storageId});
 
       targetSocket = socket;
       targetOutputStream = out;

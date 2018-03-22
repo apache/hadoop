@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
@@ -57,28 +56,18 @@ public class JournalSet implements JournalManager {
 
   static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
+  // we want local logs to be ordered earlier in the collection, and true
+  // is considered larger than false, so reverse the comparator
   private static final Comparator<EditLogInputStream>
-    LOCAL_LOG_PREFERENCE_COMPARATOR = new Comparator<EditLogInputStream>() {
-    @Override
-    public int compare(EditLogInputStream elis1, EditLogInputStream elis2) {
-      // we want local logs to be ordered earlier in the collection, and true
-      // is considered larger than false, so we want to invert the booleans here
-      return ComparisonChain.start().compare(!elis1.isLocalLog(),
-          !elis2.isLocalLog()).result();
-    }
-  };
-  
-  static final public Comparator<EditLogInputStream>
-    EDIT_LOG_INPUT_STREAM_COMPARATOR = new Comparator<EditLogInputStream>() {
-      @Override
-      public int compare(EditLogInputStream a, EditLogInputStream b) {
-        return ComparisonChain.start().
-          compare(a.getFirstTxId(), b.getFirstTxId()).
-          compare(b.getLastTxId(), a.getLastTxId()).
-          result();
-      }
-    };
-  
+      LOCAL_LOG_PREFERENCE_COMPARATOR = Comparator
+      .comparing(EditLogInputStream::isLocalLog)
+      .reversed();
+
+  public static final Comparator<EditLogInputStream>
+      EDIT_LOG_INPUT_STREAM_COMPARATOR = Comparator
+      .comparing(EditLogInputStream::getFirstTxId)
+      .thenComparing(EditLogInputStream::getLastTxId);
+
   /**
    * Container for a JournalManager paired with its currently
    * active stream.

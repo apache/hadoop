@@ -20,18 +20,73 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 
+/**
+ * Event that indicates a non-recoverable error for the resource manager.
+ */
 public class RMFatalEvent extends AbstractEvent<RMFatalEventType> {
-  private String cause;
+  private final Exception cause;
+  private final String message;
 
-  public RMFatalEvent(RMFatalEventType rmFatalEventType, String cause) {
+  /**
+   * Create a new event of the given type with the given cause.
+   * @param rmFatalEventType The {@link RMFatalEventType} of the event
+   * @param message a text description of the reason for the event
+   */
+  public RMFatalEvent(RMFatalEventType rmFatalEventType, String message) {
+    this(rmFatalEventType, null, message);
+  }
+
+  /**
+   * Create a new event of the given type around the given source
+   * {@link Exception}.
+   * @param rmFatalEventType The {@link RMFatalEventType} of the event
+   * @param cause the source exception
+   */
+  public RMFatalEvent(RMFatalEventType rmFatalEventType, Exception cause) {
+    this(rmFatalEventType, cause, null);
+  }
+
+  /**
+   * Create a new event of the given type around the given source
+   * {@link Exception} with the given cause.
+   * @param rmFatalEventType The {@link RMFatalEventType} of the event
+   * @param cause the source exception
+   * @param message a text description of the reason for the event
+   */
+  public RMFatalEvent(RMFatalEventType rmFatalEventType, Exception cause,
+      String message) {
     super(rmFatalEventType);
     this.cause = cause;
+    this.message = message;
   }
 
-  public RMFatalEvent(RMFatalEventType rmFatalEventType, Exception cause) {
-    super(rmFatalEventType);
-    this.cause = StringUtils.stringifyException(cause);
+  /**
+   * Get a text description of the reason for the event.  If a cause was, that
+   * {@link Exception} will be converted to a {@link String} and included in
+   * the result.
+   * @return a text description of the reason for the event
+   */
+  public String getExplanation() {
+    StringBuilder sb = new StringBuilder();
+
+    if (message != null) {
+      sb.append(message);
+
+      if (cause != null) {
+        sb.append(": ");
+      }
+    }
+
+    if (cause != null) {
+      sb.append(StringUtils.stringifyException(cause));
+    }
+
+    return sb.toString();
   }
 
-  public String getCause() {return this.cause;}
+  @Override
+  public String toString() {
+    return String.format("RMFatalEvent of type %s, caused by %s",
+        getType().name(), getExplanation());
+  }
 }

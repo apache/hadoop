@@ -26,16 +26,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto;
@@ -58,7 +62,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private Set<NodeLabel> labels = null;
   private List<LogAggregationReport> logAggregationReportsForApps = null;
 
-  private Map<ApplicationId, String> registeredCollectors = null;
+  private Map<ApplicationId, AppCollectorData> registeringCollectors = null;
 
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -114,8 +118,8 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     if (this.logAggregationReportsForApps != null) {
       addLogAggregationStatusForAppsToProto();
     }
-    if (this.registeredCollectors != null) {
-      addRegisteredCollectorsToProto();
+    if (this.registeringCollectors != null) {
+      addRegisteringCollectorsToProto();
     }
   }
 
@@ -158,14 +162,23 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     return ((LogAggregationReportPBImpl) value).getProto();
   }
 
-  private void addRegisteredCollectorsToProto() {
+  private void addRegisteringCollectorsToProto() {
     maybeInitBuilder();
-    builder.clearRegisteredCollectors();
-    for (Map.Entry<ApplicationId, String> entry :
-        registeredCollectors.entrySet()) {
-      builder.addRegisteredCollectors(AppCollectorsMapProto.newBuilder()
-          .setAppId(convertToProtoFormat(entry.getKey()))
-          .setAppCollectorAddr(entry.getValue()));
+    builder.clearRegisteringCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry :
+        registeringCollectors.entrySet()) {
+      AppCollectorData data = entry.getValue();
+      AppCollectorDataProto.Builder appCollectorDataBuilder =
+          AppCollectorDataProto.newBuilder()
+              .setAppId(convertToProtoFormat(entry.getKey()))
+              .setAppCollectorAddr(data.getCollectorAddr())
+              .setRmIdentifier(data.getRMIdentifier())
+              .setVersion(data.getVersion());
+      if (data.getCollectorToken() != null) {
+        appCollectorDataBuilder.setAppCollectorToken(
+            convertToProtoFormat(data.getCollectorToken()));
+      }
+      builder.addRegisteringCollectors(appCollectorDataBuilder);
     }
   }
 
@@ -251,35 +264,42 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   }
 
   @Override
-  public Map<ApplicationId, String> getRegisteredCollectors() {
-    if (this.registeredCollectors != null) {
-      return this.registeredCollectors;
+  public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
+    if (this.registeringCollectors != null) {
+      return this.registeringCollectors;
     }
     initRegisteredCollectors();
-    return registeredCollectors;
+    return registeringCollectors;
   }
 
   private void initRegisteredCollectors() {
     NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
-    List<AppCollectorsMapProto> list = p.getRegisteredCollectorsList();
+    List<AppCollectorDataProto> list = p.getRegisteringCollectorsList();
     if (!list.isEmpty()) {
-      this.registeredCollectors = new HashMap<>();
-      for (AppCollectorsMapProto c : list) {
+      this.registeringCollectors = new HashMap<>();
+      for (AppCollectorDataProto c : list) {
         ApplicationId appId = convertFromProtoFormat(c.getAppId());
-        this.registeredCollectors.put(appId, c.getAppCollectorAddr());
+        Token collectorToken = null;
+        if (c.hasAppCollectorToken()){
+          collectorToken = convertFromProtoFormat(c.getAppCollectorToken());
+        }
+        AppCollectorData data = AppCollectorData.newInstance(appId,
+            c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion(),
+            collectorToken);
+        this.registeringCollectors.put(appId, data);
       }
     }
   }
 
   @Override
-  public void setRegisteredCollectors(
-      Map<ApplicationId, String> registeredCollectors) {
+  public void setRegisteringCollectors(
+      Map<ApplicationId, AppCollectorData> registeredCollectors) {
     if (registeredCollectors == null || registeredCollectors.isEmpty()) {
       return;
     }
     maybeInitBuilder();
-    this.registeredCollectors = new HashMap<ApplicationId, String>();
-    this.registeredCollectors.putAll(registeredCollectors);
+    this.registeringCollectors = new HashMap<>();
+    this.registeringCollectors.putAll(registeredCollectors);
   }
 
   private NodeStatusPBImpl convertFromProtoFormat(NodeStatusProto p) {
@@ -304,6 +324,14 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
 
   private MasterKeyProto convertToProtoFormat(MasterKey t) {
     return ((MasterKeyPBImpl)t).getProto();
+  }
+
+  private TokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new TokenPBImpl(p);
+  }
+
+  private TokenProto convertToProtoFormat(Token t) {
+    return ((TokenPBImpl) t).getProto();
   }
 
   @Override

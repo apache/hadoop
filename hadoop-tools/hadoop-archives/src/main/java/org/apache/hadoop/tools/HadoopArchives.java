@@ -473,7 +473,7 @@ public class HadoopArchives implements Tool {
     conf.setLong(HAR_BLOCKSIZE_LABEL, blockSize);
     conf.setLong(HAR_PARTSIZE_LABEL, partSize);
     conf.set(DST_HAR_LABEL, archiveName);
-    conf.set(SRC_PARENT_LABEL, parentPath.makeQualified(fs).toString());
+    conf.set(SRC_PARENT_LABEL, fs.makeQualified(parentPath).toString());
     conf.setInt(HAR_REPLICATION_LABEL, repl);
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);

@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
@@ -76,7 +75,7 @@ public class TestDFSStripedInputStream {
   public Timeout globalTimeout = new Timeout(300000);
 
   public ErasureCodingPolicy getEcPolicy() {
-    return ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    return StripedFileTestUtil.getDefaultECPolicy();
   }
 
   @Before
@@ -96,8 +95,8 @@ public class TestDFSStripedInputStream {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
-          CodecUtil.IO_ERASURECODE_CODEC_RS_DEFAULT_RAWCODER_KEY,
-          NativeRSRawErasureCoderFactory.class.getCanonicalName());
+          CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
+          NativeRSRawErasureCoderFactory.CODER_NAME);
     }
     SimulatedFSDataset.setFactory(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
@@ -107,8 +106,10 @@ public class TestDFSStripedInputStream {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
     }
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(getEcPolicy().getName());
     fs.mkdirs(dirPath);
-    fs.getClient().setErasureCodingPolicy(dirPath.toString(), ecPolicy);
+    fs.getClient()
+        .setErasureCodingPolicy(dirPath.toString(), ecPolicy.getName());
   }
 
   @After
@@ -489,5 +490,18 @@ public class TestDFSStripedInputStream {
 
     assertEquals(readSize, done);
     assertArrayEquals(expected, readBuffer);
+  }
+
+  @Test
+  public void testIdempotentClose() throws Exception {
+    final int numBlocks = 2;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+
+    try (DFSInputStream in = fs.getClient().open(filePath.toString())) {
+      assertTrue(in instanceof DFSStripedInputStream);
+      // Close twice
+      in.close();
+    }
   }
 }

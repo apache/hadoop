@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha2-SNAPSHOT</version>
+    <version>3.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-  <version>3.0.0-alpha2-SNAPSHOT</version>
+  <version>3.2.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN ResourceManager</name>
 
   <properties>
@@ -52,8 +52,17 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
     </dependency>
+    <!--
+    junit must be before mockito-all on the classpath.  mockito-all bundles its
+    own copy of the hamcrest classes, but they don't match our junit version.
+    -->
     <dependency>
-      <groupId>org.mockito</groupId>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+    <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
@@ -73,11 +82,6 @@
       <artifactId>protobuf-java</artifactId>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
@@ -85,6 +89,11 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -182,6 +191,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -194,6 +204,7 @@
     <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -203,9 +214,11 @@
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
+    <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
+      <scope>test</scope>
       <type>test-jar</type>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -338,6 +351,12 @@
             <exclude>src/test/resources/submit-reservation.json</exclude>
             <exclude>src/test/resources/delete-reservation.json</exclude>
             <exclude>src/test/resources/update-reservation.json</exclude>
+            <exclude>src/test/resources/invariants.txt</exclude>
+            <exclude>src/test/resources/profiles/sample-profiles-1.json</exclude>
+            <exclude>src/test/resources/profiles/sample-profiles-2.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-1.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-2.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-3.json</exclude>
           </excludes>
         </configuration>
       </plugin>

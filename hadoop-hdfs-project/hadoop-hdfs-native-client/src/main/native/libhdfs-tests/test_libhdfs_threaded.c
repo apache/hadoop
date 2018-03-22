@@ -17,8 +17,11 @@
  */
 
 #include "expect.h"
+#include "exception.h"
 #include "hdfs/hdfs.h"
+#include "jni_helper.h"
 #include "native_mini_dfs.h"
+#include "os/mutexes.h"
 #include "os/thread.h"
 
 #include <errno.h>
@@ -145,6 +148,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     int ret, expected, numEntries;
     hdfsFileInfo *fileInfo;
     struct hdfsReadStatistics *readStats = NULL;
+    struct hdfsHedgedReadMetrics *hedgedMetrics = NULL;
 
     if (hdfsExists(fs, paths->prefix) == 0) {
         EXPECT_ZERO(hdfsDelete(fs, paths->prefix, 1));
@@ -163,6 +167,12 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0));
+
+    /* Check if the exceptions are stored in the TLS */
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionRootCause(),
+                        "File does not exist");
+    EXPECT_STR_CONTAINS(hdfsGetLastExceptionStackTrace(),
+                        "java.io.FileNotFoundException");
 
     /* hdfsOpenFile should not accept mode = 3 */
     EXPECT_NULL(hdfsOpenFile(fs, paths->file1, 3, 0, 0, 0));
@@ -204,6 +214,15 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalLocalBytesRead);
     EXPECT_UINT64_EQ(UINT64_C(0), readStats->totalShortCircuitBytesRead);
     hdfsFileFreeReadStatistics(readStats);
+
+    /* Verify that we can retrieve the hedged read metrics */
+    EXPECT_ZERO(hdfsGetHedgedReadMetrics(fs, &hedgedMetrics));
+    errno = 0;
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOps);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsWin);
+    EXPECT_UINT64_EQ(UINT64_C(0), hedgedMetrics->hedgedReadOpsInCurThread);
+    hdfsFreeHedgedReadMetrics(hedgedMetrics);
+
     /* TODO: implement readFully and use it here */
     ret = hdfsRead(fs, file, tmp, sizeof(tmp));
     if (ret < 0) {
@@ -313,6 +332,23 @@ static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
     return EXIT_FAILURE;
 }
 
+int testRecursiveJvmMutex() {
+    jthrowable jthr;
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        fprintf(stderr, "testRecursiveJvmMutex: getJNIEnv failed\n");
+        return -EIO;
+    }
+    jthr = newRuntimeError(env, "Dummy error to print for testing");
+
+    /* printExceptionAndFree() takes the jvmMutex within */
+    mutexLock(&jvmMutex);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "testRecursiveJvmMutex");
+    mutexUnlock(&jvmMutex);
+
+    return 0;
+}
+
 /**
  * Test that we can write a file with libhdfs and then read it back
  */
@@ -324,6 +360,12 @@ int main(void)
     struct NativeMiniDfsConf conf = {
         1, /* doFormat */
     };
+
+    /* Check that the recursive mutex works as expected */
+    if (testRecursiveJvmMutex() < 0) {
+        fprintf(stderr, "testRecursiveJvmMutex failed\n");
+        return EXIT_FAILURE;
+    }
 
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
     if (!tlhNumThreadsStr) {

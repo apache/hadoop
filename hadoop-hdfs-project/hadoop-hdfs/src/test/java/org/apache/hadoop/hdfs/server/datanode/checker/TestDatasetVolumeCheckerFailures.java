@@ -132,29 +132,6 @@ public class TestDatasetVolumeCheckerFailures {
     assertThat(checker.getNumSkippedChecks(), is(1L));
   }
 
-  @Test(timeout=60000)
-  public void testMinGapIsEnforcedForASyncChecks() throws Exception {
-    final List<FsVolumeSpi> volumes =
-        TestDatasetVolumeChecker.makeVolumes(1, VolumeCheckResult.HEALTHY);
-    final FsDatasetSpi<FsVolumeSpi> dataset =
-        TestDatasetVolumeChecker.makeDataset(volumes);
-    final DatasetVolumeChecker checker = new DatasetVolumeChecker(conf, timer);
-
-    checker.checkAllVolumesAsync(dataset, null);
-    assertThat(checker.getNumAsyncDatasetChecks(), is(1L));
-
-    // Re-check without advancing the timer. Ensure the check is skipped.
-    checker.checkAllVolumesAsync(dataset, null);
-    assertThat(checker.getNumAsyncDatasetChecks(), is(1L));
-    assertThat(checker.getNumSkippedChecks(), is(1L));
-
-    // Re-check after advancing the timer. Ensure the check is performed.
-    timer.advance(MIN_DISK_CHECK_GAP_MS);
-    checker.checkAllVolumesAsync(dataset, null);
-    assertThat(checker.getNumAsyncDatasetChecks(), is(2L));
-    assertThat(checker.getNumSkippedChecks(), is(1L));
-  }
-
   /**
    * Create a mock FsVolumeSpi whose {@link FsVolumeSpi#check} routine
    * hangs forever.

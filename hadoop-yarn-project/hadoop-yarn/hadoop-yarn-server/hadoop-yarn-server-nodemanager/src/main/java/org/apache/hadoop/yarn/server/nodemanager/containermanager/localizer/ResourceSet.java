@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -40,7 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ResourceSet {
 
-  private static final Log LOG = LogFactory.getLog(ResourceSet.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(ResourceSet.class);
 
   // resources by localization state (localized, pending, failed)
   private Map<String, Path> localizedResources =
@@ -135,6 +136,10 @@ public class ResourceSet {
   }
 
   public void resourceLocalizationFailed(LocalResourceRequest request) {
+    // Skip null request when localization failed for running container
+    if (request == null) {
+      return;
+    }
     pendingResources.remove(request);
     resourcesFailedToBeLocalized.add(request);
   }

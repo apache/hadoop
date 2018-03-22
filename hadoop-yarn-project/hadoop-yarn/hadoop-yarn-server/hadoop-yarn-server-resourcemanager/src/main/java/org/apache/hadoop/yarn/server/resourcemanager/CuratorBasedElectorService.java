@@ -45,14 +45,12 @@ public class CuratorBasedElectorService extends AbstractService
       LogFactory.getLog(CuratorBasedElectorService.class);
   private LeaderLatch leaderLatch;
   private CuratorFramework curator;
-  private RMContext rmContext;
   private String latchPath;
   private String rmId;
   private ResourceManager rm;
 
-  public CuratorBasedElectorService(RMContext rmContext, ResourceManager rm) {
+  public CuratorBasedElectorService(ResourceManager rm) {
     super(CuratorBasedElectorService.class.getName());
-    this.rmContext = rmContext;
     this.rm = rm;
   }
 
@@ -102,7 +100,8 @@ public class CuratorBasedElectorService extends AbstractService
   public void isLeader() {
     LOG.info(rmId + "is elected leader, transitioning to active");
     try {
-      rmContext.getRMAdminService().transitionToActive(
+      rm.getRMContext().getRMAdminService()
+          .transitionToActive(
           new HAServiceProtocol.StateChangeRequestInfo(
               HAServiceProtocol.RequestSource.REQUEST_BY_ZKFC));
     } catch (Exception e) {
@@ -123,7 +122,8 @@ public class CuratorBasedElectorService extends AbstractService
   public void notLeader() {
     LOG.info(rmId + " relinquish leadership");
     try {
-      rmContext.getRMAdminService().transitionToStandby(
+      rm.getRMContext().getRMAdminService()
+          .transitionToStandby(
           new HAServiceProtocol.StateChangeRequestInfo(
               HAServiceProtocol.RequestSource.REQUEST_BY_ZKFC));
     } catch (Exception e) {

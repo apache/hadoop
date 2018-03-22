@@ -25,6 +25,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,13 +45,21 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
@@ -291,7 +300,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testSortLocatedBlocks() throws IOException, URISyntaxException {
-    HelperFunction(null);
+    HelperFunction(null, 0);
   }
 
   /**
@@ -303,7 +312,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testgoodScript() throws IOException, URISyntaxException {
-    HelperFunction("/" + Shell.appendScriptExtension("topology-script"));
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 0);
   }
 
 
@@ -316,7 +325,22 @@ public class TestDatanodeManager {
    */
   @Test
   public void testBadScript() throws IOException, URISyntaxException {
-    HelperFunction("/"+ Shell.appendScriptExtension("topology-broken-script"));
+    HelperFunction("/" + Shell.appendScriptExtension("topology-broken-script"),
+        0);
+  }
+
+  /**
+   * Test with different sorting functions but include datanodes.
+   * with provided storage
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testWithProvidedTypes() throws IOException, URISyntaxException {
+    HelperFunction(null, 1);
+    HelperFunction(null, 3);
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 1);
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 2);
   }
 
   /**
@@ -324,11 +348,12 @@ public class TestDatanodeManager {
    * we invoke this function with and without topology scripts
    *
    * @param scriptFileName - Script Name or null
+   * @param providedStorages - number of provided storages to add
    *
    * @throws URISyntaxException
    * @throws IOException
    */
-  public void HelperFunction(String scriptFileName)
+  public void HelperFunction(String scriptFileName, int providedStorages)
     throws URISyntaxException, IOException {
     // create the DatanodeManager which will be tested
     Configuration conf = new Configuration();
@@ -343,17 +368,25 @@ public class TestDatanodeManager {
     }
     DatanodeManager dm = mockDatanodeManager(fsn, conf);
 
+    int totalDNs = 5 + providedStorages;
+
     // register 5 datanodes, each with different storage ID and type
-    DatanodeInfo[] locs = new DatanodeInfo[5];
-    String[] storageIDs = new String[5];
-    StorageType[] storageTypes = new StorageType[]{
-      StorageType.ARCHIVE,
-      StorageType.DEFAULT,
-      StorageType.DISK,
-      StorageType.RAM_DISK,
-      StorageType.SSD
-    };
-    for (int i = 0; i < 5; i++) {
+    DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
+    String[] storageIDs = new String[totalDNs];
+    List<StorageType> storageTypesList = new ArrayList<>(
+        Arrays.asList(StorageType.ARCHIVE,
+            StorageType.DEFAULT,
+            StorageType.DISK,
+            StorageType.RAM_DISK,
+            StorageType.SSD));
+
+    for (int i = 0; i < providedStorages; i++) {
+      storageTypesList.add(StorageType.PROVIDED);
+    }
+
+    StorageType[] storageTypes= storageTypesList.toArray(new StorageType[0]);
+
+    for (int i = 0; i < totalDNs; i++) {
       // register new datanode
       String uuid = "UUID-" + i;
       String ip = "IP-" + i;
@@ -389,9 +422,9 @@ public class TestDatanodeManager {
     DatanodeInfo[] sortedLocs = block.getLocations();
     storageIDs = block.getStorageIDs();
     storageTypes = block.getStorageTypes();
-    assertThat(sortedLocs.length, is(5));
-    assertThat(storageIDs.length, is(5));
-    assertThat(storageTypes.length, is(5));
+    assertThat(sortedLocs.length, is(totalDNs));
+    assertThat(storageIDs.length, is(totalDNs));
+    assertThat(storageTypes.length, is(totalDNs));
     for (int i = 0; i < sortedLocs.length; i++) {
       assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageID(),
         is(storageIDs[i]));
@@ -405,6 +438,14 @@ public class TestDatanodeManager {
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
     assertThat(sortedLocs[sortedLocs.length - 2].getAdminState(),
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    // check that the StorageType of datanoodes immediately
+    // preceding the decommissioned datanodes is PROVIDED
+    for (int i = 0; i < providedStorages; i++) {
+      assertThat(
+          ((DatanodeInfoWithStorage)
+              sortedLocs[sortedLocs.length - 3 - i]).getStorageType(),
+          is(StorageType.PROVIDED));
+    }
   }
 
   /**
@@ -490,5 +531,95 @@ public class TestDatanodeManager {
         "127.0.0.1:12345", bothAgain.get(0).getInfoAddr());
     Assert.assertEquals("Unexpected host or host in unexpected position",
         "127.0.0.1:23456", bothAgain.get(1).getInfoAddr());
+  }
+
+  /**
+   * Verify the correctness of pending recovery process.
+   *
+   * @param numReplicationBlocks the number of replication blocks in the queue.
+   * @param numECBlocks number of EC blocks in the queue.
+   * @param maxTransfers the maxTransfer value.
+   * @param numReplicationTasks the number of replication tasks polled from
+   *                            the queue.
+   * @param numECTasks the number of EC tasks polled from the queue.
+   *
+   * @throws IOException
+   */
+  private void verifyPendingRecoveryTasks(
+      int numReplicationBlocks, int numECBlocks,
+      int maxTransfers, int numReplicationTasks, int numECTasks)
+      throws IOException {
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Configuration conf = new Configuration();
+    DatanodeManager dm = Mockito.spy(mockDatanodeManager(fsn, conf));
+
+    DatanodeDescriptor nodeInfo = Mockito.mock(DatanodeDescriptor.class);
+    Mockito.when(nodeInfo.isRegistered()).thenReturn(true);
+    Mockito.when(nodeInfo.getStorageInfos())
+        .thenReturn(new DatanodeStorageInfo[0]);
+
+    if (numReplicationBlocks > 0) {
+      Mockito.when(nodeInfo.getNumberOfReplicateBlocks())
+          .thenReturn(numReplicationBlocks);
+
+      List<BlockTargetPair> tasks =
+          Collections.nCopies(
+              Math.min(numReplicationTasks, numReplicationBlocks),
+              new BlockTargetPair(null, null));
+      Mockito.when(nodeInfo.getReplicationCommand(numReplicationTasks))
+          .thenReturn(tasks);
+    }
+
+    if (numECBlocks > 0) {
+      Mockito.when(nodeInfo.getNumberOfBlocksToBeErasureCoded())
+          .thenReturn(numECBlocks);
+
+      List<BlockECReconstructionInfo> tasks =
+          Collections.nCopies(numECTasks, null);
+      Mockito.when(nodeInfo.getErasureCodeCommand(numECTasks))
+          .thenReturn(tasks);
+    }
+
+    DatanodeRegistration dnReg = Mockito.mock(DatanodeRegistration.class);
+    Mockito.when(dm.getDatanode(dnReg)).thenReturn(nodeInfo);
+    DatanodeCommand[] cmds = dm.handleHeartbeat(
+        dnReg, new StorageReport[1], "bp-123", 0, 0, 10, maxTransfers, 0, null,
+        SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+
+    long expectedNumCmds = Arrays.stream(
+        new int[]{numReplicationTasks, numECTasks})
+        .filter(x -> x > 0)
+        .count();
+    assertEquals(expectedNumCmds, cmds.length);
+
+    int idx = 0;
+    if (numReplicationTasks > 0) {
+      assertTrue(cmds[idx] instanceof BlockCommand);
+      BlockCommand cmd = (BlockCommand) cmds[0];
+      assertEquals(numReplicationTasks, cmd.getBlocks().length);
+      assertEquals(numReplicationTasks, cmd.getTargets().length);
+      idx++;
+    }
+
+    if (numECTasks > 0) {
+      assertTrue(cmds[idx] instanceof BlockECReconstructionCommand);
+      BlockECReconstructionCommand cmd =
+          (BlockECReconstructionCommand) cmds[idx];
+      assertEquals(numECTasks, cmd.getECTasks().size());
+    }
+
+    Mockito.verify(nodeInfo).getReplicationCommand(numReplicationTasks);
+    Mockito.verify(nodeInfo).getErasureCodeCommand(numECTasks);
+  }
+
+  @Test
+  public void testPendingRecoveryTasks() throws IOException {
+    // Tasks are slitted according to the ratio between queue lengths.
+    verifyPendingRecoveryTasks(20, 20, 20, 10, 10);
+    verifyPendingRecoveryTasks(40, 10, 20, 16, 4);
+
+    // Approximately load tasks if the ratio between queue length is large.
+    verifyPendingRecoveryTasks(400, 1, 20, 20, 1);
   }
 }

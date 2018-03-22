@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.ListIterator;
 import java.util.Map;
@@ -32,26 +31,24 @@ import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInterval;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation.RLEOperator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ContractValidationException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * A planning algorithm consisting of two main phases. The algorithm iterates
- * over the job stages in descending order. For each stage, the algorithm: 1.
- * Determines an interval [stageArrivalTime, stageDeadline) in which the stage
- * is allocated. 2. Computes an allocation for the stage inside the interval.
- *
- * For ANY and ALL jobs, phase 1 sets the allocation window of each stage to be
- * [jobArrival, jobDeadline]. For ORDER and ORDER_NO_GAP jobs, the deadline of
- * each stage is set as succcessorStartTime - the starting time of its
- * succeeding stage (or jobDeadline if it is the last stage).
- *
- * The phases are set using the two functions: 1. setAlgEarliestStartTime 2.
- * setAlgComputeStageAllocation
+ * over the job stages in ascending/descending order, depending on the flag
+ * allocateLeft. For each stage, the algorithm: 1. Determines an interval
+ * [stageArrival, stageDeadline) in which the stage is allocated. 2. Computes an
+ * allocation for the stage inside the interval. For ANY and ALL jobs, phase 1
+ * sets the allocation window of each stage to be [jobArrival, jobDeadline]. For
+ * ORDER and ORDER_NO_GAP jobs, the deadline of each stage is set as
+ * succcessorStartTime - the starting time of its succeeding stage (or
+ * jobDeadline if it is the last stage). The phases are set using the two
+ * functions: 1. setAlgStageExecutionInterval 2.setAlgStageAllocator
  */
 public class IterativePlanner extends PlanningAlgorithm {
 
@@ -60,7 +57,7 @@ public class IterativePlanner extends PlanningAlgorithm {
   private RLESparseResourceAllocation planModifications;
 
   // Data extracted from plan
-  private Map<Long, Resource> planLoads;
+  private RLESparseResourceAllocation planLoads;
   private Resource capacity;
   private long step;
 
@@ -70,16 +67,16 @@ public class IterativePlanner extends PlanningAlgorithm {
   private long jobDeadline;
 
   // Phase algorithms
-  private StageEarliestStart algStageEarliestStart = null;
+  private StageExecutionInterval algStageExecutionInterval = null;
   private StageAllocator algStageAllocator = null;
   private final boolean allocateLeft;
 
   // Constructor
-  public IterativePlanner(StageEarliestStart algEarliestStartTime,
+  public IterativePlanner(StageExecutionInterval algStageExecutionInterval,
       StageAllocator algStageAllocator, boolean allocateLeft) {
 
     this.allocateLeft = allocateLeft;
-    setAlgStageEarliestStart(algEarliestStartTime);
+    setAlgStageExecutionInterval(algStageExecutionInterval);
     setAlgStageAllocator(algStageAllocator);
 
   }
@@ -101,11 +98,11 @@ public class IterativePlanner extends PlanningAlgorithm {
     // Current stage
     ReservationRequest currentReservationStage;
 
-    // Stage deadlines
-    long stageDeadline = stepRoundDown(reservation.getDeadline(), step);
-    long successorStartingTime = -1;
-    long predecessorEndTime = stepRoundDown(reservation.getArrival(), step);
-    long stageArrivalTime = -1;
+    // initialize periodicity
+    long period = 0;
+    if(reservation.getRecurrenceExpression() != null){
+      period = Long.parseLong(reservation.getRecurrenceExpression());
+    }
 
     // Iterate the stages in reverse order
     while (stageProvider.hasNext()) {
@@ -116,27 +113,17 @@ public class IterativePlanner extends PlanningAlgorithm {
       // Validate that the ReservationRequest respects basic constraints
       validateInputStage(plan, currentReservationStage);
 
-      // Compute an adjusted earliestStart for this resource
-      // (we need this to provision some space for the ORDER contracts)
+      // Set the stageArrival and stageDeadline
+      ReservationInterval stageInterval =
+          setStageExecutionInterval(plan, reservation, currentReservationStage,
+              allocations);
+      Long stageArrival = stageInterval.getStartTime();
+      Long stageDeadline = stageInterval.getEndTime();
 
-      if (allocateLeft) {
-        stageArrivalTime = predecessorEndTime;
-      } else {
-        stageArrivalTime = reservation.getArrival();
-        if (jobType == ReservationRequestInterpreter.R_ORDER
-            || jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
-          stageArrivalTime =
-              computeEarliestStartingTime(plan, reservation,
-                  stageProvider.getCurrentIndex(), currentReservationStage,
-                  stageDeadline);
-        }
-        stageArrivalTime = stepRoundUp(stageArrivalTime, step);
-        stageArrivalTime = Math.max(stageArrivalTime, reservation.getArrival());
-      }
-      // Compute the allocation of a single stage
+      // Compute stage allocation
       Map<ReservationInterval, Resource> curAlloc =
-          computeStageAllocation(plan, currentReservationStage,
-              stageArrivalTime, stageDeadline, user, reservationId);
+          computeStageAllocation(plan, currentReservationStage, stageArrival,
+              stageDeadline, period, user, reservationId);
 
       // If we did not find an allocation, return NULL
       // (unless it's an ANY job, then we simply continue).
@@ -152,9 +139,13 @@ public class IterativePlanner extends PlanningAlgorithm {
 
       }
 
-      // Get the start & end time of the current allocation
-      Long stageStartTime = findEarliestTime(curAlloc);
-      Long stageEndTime = findLatestTime(curAlloc);
+      // Validate ORDER_NO_GAP
+      if (jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
+        if (!validateOrderNoGap(allocations, curAlloc, allocateLeft)) {
+          throw new PlanningException(
+              "The allocation found does not respect ORDER_NO_GAP");
+        }
+      }
 
       // If we did find an allocation for the stage, add it
       for (Entry<ReservationInterval, Resource> entry : curAlloc.entrySet()) {
@@ -165,33 +156,6 @@ public class IterativePlanner extends PlanningAlgorithm {
       if (jobType == ReservationRequestInterpreter.R_ANY) {
         break;
       }
-
-      // If ORDER job, set the stageDeadline of the next stage to be processed
-      if (jobType == ReservationRequestInterpreter.R_ORDER
-          || jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP) {
-
-        // CHECK ORDER_NO_GAP
-        // Verify that there is no gap, in case the job is ORDER_NO_GAP
-        // note that the test is different left-to-right and right-to-left
-        if (jobType == ReservationRequestInterpreter.R_ORDER_NO_GAP
-            && successorStartingTime != -1
-            && ((allocateLeft && predecessorEndTime < stageStartTime) ||
-                (!allocateLeft && (stageEndTime < successorStartingTime))
-               )
-            || (!isNonPreemptiveAllocation(curAlloc))) {
-          throw new PlanningException(
-              "The allocation found does not respect ORDER_NO_GAP");
-        }
-
-        if (allocateLeft) {
-          // Store the stageStartTime and set the new stageDeadline
-          predecessorEndTime = stageEndTime;
-        } else {
-          // Store the stageStartTime and set the new stageDeadline
-          successorStartingTime = stageStartTime;
-          stageDeadline = stageStartTime;
-        }
-      }
     }
 
     // If the allocation is empty, return an error
@@ -200,7 +164,39 @@ public class IterativePlanner extends PlanningAlgorithm {
     }
 
     return allocations;
+  }
 
+  protected static boolean validateOrderNoGap(
+      RLESparseResourceAllocation allocations,
+      Map<ReservationInterval, Resource> curAlloc, boolean allocateLeft) {
+
+    // Left to right
+    if (allocateLeft) {
+      Long stageStartTime = findEarliestTime(curAlloc);
+      Long allocationEndTime = allocations.getLatestNonNullTime();
+
+      // Check that there is no gap between stages
+      if ((allocationEndTime != -1) && (allocationEndTime < stageStartTime)) {
+        return false;
+      }
+      // Right to left
+    } else {
+      Long stageEndTime = findLatestTime(curAlloc);
+      Long allocationStartTime = allocations.getEarliestStartTime();
+
+      // Check that there is no gap between stages
+      if ((allocationStartTime != -1) && (stageEndTime < allocationStartTime)) {
+        return false;
+      }
+    }
+
+    // Check that the stage allocation does not violate ORDER_NO_GAP
+    if (!isNonPreemptiveAllocation(curAlloc)) {
+      return false;
+    }
+
+    // The allocation is legal
+    return true;
   }
 
   protected void initialize(Plan plan, ReservationId reservationId,
@@ -223,35 +219,14 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     // planLoads are not used by other StageAllocators... and don't deal
     // well with huge reservation ranges
-    if (this.algStageAllocator instanceof StageAllocatorLowCostAligned) {
-      planLoads = getAllLoadsInInterval(plan, jobArrival, jobDeadline);
-      ReservationAllocation oldRes = plan.getReservationById(reservationId);
-      if (oldRes != null) {
-        planModifications =
-            RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
-                plan.getTotalCapacity(), planModifications,
-                oldRes.getResourcesOverTime(), RLEOperator.subtract,
-                jobArrival, jobDeadline);
-      }
+    planLoads = plan.getCumulativeLoadOverTime(jobArrival, jobDeadline);
+    ReservationAllocation oldRes = plan.getReservationById(reservationId);
+    if (oldRes != null) {
+      planLoads = RLESparseResourceAllocation.merge(
+          plan.getResourceCalculator(), plan.getTotalCapacity(), planLoads,
+          oldRes.getResourcesOverTime(jobArrival, jobDeadline),
+          RLEOperator.subtract, jobArrival, jobDeadline);
     }
-
-  }
-
-  private Map<Long, Resource> getAllLoadsInInterval(Plan plan, long startTime,
-      long endTime) {
-
-    // Create map
-    Map<Long, Resource> loads = new HashMap<Long, Resource>();
-
-    // Calculate the load for every time slot between [start,end)
-    for (long t = startTime; t < endTime; t += step) {
-      Resource load = plan.getTotalCommittedResources(t);
-      loads.put(t, load);
-    }
-
-    // Return map
-    return loads;
-
   }
 
   private void validateInputStage(Plan plan, ReservationRequest rr)
@@ -286,7 +261,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
   }
 
-  private boolean isNonPreemptiveAllocation(
+  private static boolean isNonPreemptiveAllocation(
       Map<ReservationInterval, Resource> curAlloc) {
 
     // Checks whether a stage allocation is non preemptive or not.
@@ -329,31 +304,31 @@ public class IterativePlanner extends PlanningAlgorithm {
 
   }
 
-  // Call algEarliestStartTime()
-  protected long computeEarliestStartingTime(Plan plan,
-      ReservationDefinition reservation, int index,
-      ReservationRequest currentReservationStage, long stageDeadline) {
-
-    return algStageEarliestStart.setEarliestStartTime(plan, reservation, index,
-        currentReservationStage, stageDeadline);
-
+  // Call setStageExecutionInterval()
+  protected ReservationInterval setStageExecutionInterval(Plan plan,
+      ReservationDefinition reservation,
+      ReservationRequest currentReservationStage,
+      RLESparseResourceAllocation allocations) {
+    return algStageExecutionInterval.computeExecutionInterval(plan,
+        reservation, currentReservationStage, allocateLeft, allocations);
   }
 
   // Call algStageAllocator
-  protected Map<ReservationInterval, Resource> computeStageAllocation(
-      Plan plan, ReservationRequest rr, long stageArrivalTime,
-      long stageDeadline, String user, ReservationId oldId)
-      throws PlanningException {
+  protected Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
+      ReservationRequest rr, long stageArrivalTime, long stageDeadline,
+      long period, String user, ReservationId oldId) throws PlanningException {
 
     return algStageAllocator.computeStageAllocation(plan, planLoads,
-        planModifications, rr, stageArrivalTime, stageDeadline, user, oldId);
+        planModifications, rr, stageArrivalTime, stageDeadline, period, user,
+        oldId);
 
   }
 
-  // Set the algorithm: algStageEarliestStart
-  public IterativePlanner setAlgStageEarliestStart(StageEarliestStart alg) {
+  // Set the algorithm: algStageExecutionInterval
+  public IterativePlanner setAlgStageExecutionInterval(
+      StageExecutionInterval alg) {
 
-    this.algStageEarliestStart = alg;
+    this.algStageExecutionInterval = alg;
     return this; // To allow concatenation of setAlg() functions
 
   }
@@ -375,7 +350,7 @@ public class IterativePlanner extends PlanningAlgorithm {
 
     private final boolean allocateLeft;
 
-    private ListIterator<ReservationRequest> li;
+    private final ListIterator<ReservationRequest> li;
 
     public StageProvider(boolean allocateLeft,
         ReservationDefinition reservation) {

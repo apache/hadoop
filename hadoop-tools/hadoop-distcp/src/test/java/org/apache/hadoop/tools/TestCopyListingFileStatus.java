@@ -62,6 +62,7 @@ public class TestCopyListingFileStatus {
     assertEquals(stat.getOwner(), clfs.getOwner());
     assertEquals(stat.getGroup(), clfs.getGroup());
     assertEquals(stat.getPath(), clfs.getPath());
+    assertEquals(stat.isErasureCoded(), clfs.isErasureCoded());
   }
 
 }

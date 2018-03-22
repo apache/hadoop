@@ -152,7 +152,7 @@ public class JobClient extends CLI implements AutoCloseable {
   public static final String MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
       "10000,6,60000,10"; // t1,n1,t2,n2,...
 
-  public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
+  public enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
   
   private int maxRetry = MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES;

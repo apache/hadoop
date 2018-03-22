@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.adl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.DeprecationDelta;
 
 /**
  * Constants.
@@ -28,27 +30,41 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class AdlConfKeys {
   // OAuth2 Common Configuration
-  public static final String AZURE_AD_REFRESH_URL_KEY = "dfs.adls.oauth2"
-      + ".refresh.url";
+  public static final String AZURE_AD_REFRESH_URL_KEY =
+      "fs.adl.oauth2.refresh.url";
+
+  public static final String AZURE_AD_ACCOUNT_PREFIX =
+          "fs.adl.account.";
+  public static final String AZURE_AD_PREFIX =
+          "fs.adl.";
 
   // optional when provider type is refresh or client id.
   public static final String AZURE_AD_TOKEN_PROVIDER_CLASS_KEY =
-      "dfs.adls.oauth2.access.token.provider";
+      "fs.adl.oauth2.access.token.provider";
   public static final String AZURE_AD_CLIENT_ID_KEY =
-      "dfs.adls.oauth2.client.id";
+      "fs.adl.oauth2.client.id";
   public static final String AZURE_AD_TOKEN_PROVIDER_TYPE_KEY =
-      "dfs.adls.oauth2.access.token.provider.type";
+      "fs.adl.oauth2.access.token.provider.type";
+  public static final TokenProviderType AZURE_AD_TOKEN_PROVIDER_TYPE_DEFAULT =
+      TokenProviderType.ClientCredential;
 
   // OAuth Refresh Token Configuration
   public static final String AZURE_AD_REFRESH_TOKEN_KEY =
-      "dfs.adls.oauth2.refresh.token";
+      "fs.adl.oauth2.refresh.token";
 
   public static final String TOKEN_PROVIDER_TYPE_REFRESH_TOKEN = "RefreshToken";
   // OAuth Client Cred Token Configuration
   public static final String AZURE_AD_CLIENT_SECRET_KEY =
-      "dfs.adls.oauth2.credential";
+      "fs.adl.oauth2.credential";
   public static final String TOKEN_PROVIDER_TYPE_CLIENT_CRED =
       "ClientCredential";
+
+  // MSI Auth Configuration
+  public static final String MSI_PORT = "fs.adl.oauth2.msi.port";
+
+  // DeviceCode Auth configuration
+  public static final String DEVICE_CODE_CLIENT_APP_ID =
+      "fs.adl.oauth2.devicecode.clientapp.id";
 
   public static final String READ_AHEAD_BUFFER_SIZE_KEY =
       "adl.feature.client.cache.readahead";
@@ -66,7 +82,6 @@ public final class AdlConfKeys {
   static final String ADL_HADOOP_CLIENT_NAME = "hadoop-azure-datalake-";
   static final String ADL_HADOOP_CLIENT_VERSION =
       "2.0.0-SNAPSHOT";
-  static final String ADL_EVENTS_TRACKING_SOURCE = "adl.events.tracking.source";
   static final String ADL_EVENTS_TRACKING_CLUSTERNAME =
       "adl.events.tracking.clustername";
 
@@ -76,7 +91,7 @@ public final class AdlConfKeys {
   static final int DEFAULT_WRITE_AHEAD_BUFFER_SIZE = 4 * 1024 * 1024;
 
   static final String LATENCY_TRACKER_KEY =
-      "adl.dfs.enable.client.latency.tracker";
+      "adl.enable.client.latency.tracker";
   static final boolean LATENCY_TRACKER_DEFAULT = true;
 
   static final String ADL_EXPERIMENT_POSITIONAL_READ_KEY =
@@ -86,6 +101,30 @@ public final class AdlConfKeys {
   static final String ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION =
       "adl.feature.support.acl.bit";
   static final boolean ADL_SUPPORT_ACL_BIT_IN_FSPERMISSION_DEFAULT = true;
+
+  static final String ADL_ENABLEUPN_FOR_OWNERGROUP_KEY =
+      "adl.feature.ownerandgroup.enableupn";
+  static final boolean ADL_ENABLEUPN_FOR_OWNERGROUP_DEFAULT = false;
+
+  public static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[]{
+        new DeprecationDelta("dfs.adls.oauth2.access.token.provider.type",
+            AZURE_AD_TOKEN_PROVIDER_TYPE_KEY),
+        new DeprecationDelta("dfs.adls.oauth2.client.id",
+            AZURE_AD_CLIENT_ID_KEY),
+        new DeprecationDelta("dfs.adls.oauth2.refresh.token",
+            AZURE_AD_REFRESH_TOKEN_KEY),
+        new DeprecationDelta("dfs.adls.oauth2.refresh.url",
+            AZURE_AD_REFRESH_URL_KEY),
+        new DeprecationDelta("dfs.adls.oauth2.credential",
+            AZURE_AD_CLIENT_SECRET_KEY),
+        new DeprecationDelta("dfs.adls.oauth2.access.token.provider",
+            AZURE_AD_TOKEN_PROVIDER_CLASS_KEY),
+        new DeprecationDelta("adl.dfs.enable.client.latency.tracker",
+            LATENCY_TRACKER_KEY)
+    });
+    Configuration.reloadExistingConfigurations();
+  }
 
   private AdlConfKeys() {
   }

@@ -58,6 +58,10 @@ public abstract class NMClient extends AbstractService {
     return client;
   }
 
+  protected enum UpgradeOp {
+    REINIT, RESTART, COMMIT, ROLLBACK
+  }
+
   private NMTokenCache nmTokenCache = NMTokenCache.getSingleton();
 
   @Private
@@ -79,8 +83,8 @@ public abstract class NMClient extends AbstractService {
    *                               <code>NodeManager</code> to launch the
    *                               container
    * @return a map between the auxiliary service names and their outputs
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
    */
   public abstract Map<String, ByteBuffer> startContainer(Container container,
       ContainerLaunchContext containerLaunchContext)
@@ -95,11 +99,30 @@ public abstract class NMClient extends AbstractService {
    * {@link Container}.
    * </p>
    *
-   * @param container the container with updated token
-   * @throws YarnException
-   * @throws IOException
+   * @param container the container with updated token.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
    */
+  @Deprecated
   public abstract void increaseContainerResource(Container container)
+      throws YarnException, IOException;
+
+  /**
+   * <p>Update the resources of a container.</p>
+   *
+   * <p>The <code>ApplicationMaster</code> or other applications that use the
+   * client must provide the details of the container, including the Id and
+   * the target resource encapsulated in the updated container token via
+   * {@link Container}.
+   * </p>
+   *
+   * @param container the container with updated token.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  public abstract void updateContainerResource(Container container)
       throws YarnException, IOException;
 
   /**
@@ -107,9 +130,9 @@ public abstract class NMClient extends AbstractService {
    *
    * @param containerId the Id of the started container
    * @param nodeId the Id of the <code>NodeManager</code>
-   * 
-   * @throws YarnException
-   * @throws IOException
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
    */
   public abstract void stopContainer(ContainerId containerId, NodeId nodeId)
       throws YarnException, IOException;
@@ -120,12 +143,60 @@ public abstract class NMClient extends AbstractService {
    * @param containerId the Id of the started container
    * @param nodeId the Id of the <code>NodeManager</code>
    * 
-   * @return the status of a container
-   * @throws YarnException
-   * @throws IOException
+   * @return the status of a container.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
    */
   public abstract ContainerStatus getContainerStatus(ContainerId containerId,
       NodeId nodeId) throws YarnException, IOException;
+
+  /**
+   * <p>Re-Initialize the Container.</p>
+   *
+   * @param containerId the Id of the container to Re-Initialize.
+   * @param containerLaunchContex the updated ContainerLaunchContext.
+   * @param autoCommit commit re-initialization automatically ?
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  public abstract void reInitializeContainer(ContainerId containerId,
+      ContainerLaunchContext containerLaunchContex, boolean autoCommit)
+      throws YarnException, IOException;
+
+  /**
+   * <p>Restart the specified container.</p>
+   *
+   * @param containerId the Id of the container to restart.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  public abstract void restartContainer(ContainerId containerId)
+      throws YarnException, IOException;
+
+  /**
+   * <p>Rollback last reInitialization of the specified container.</p>
+   *
+   * @param containerId the Id of the container to restart.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  public abstract void rollbackLastReInitialization(ContainerId containerId)
+      throws YarnException, IOException;
+
+  /**
+   * <p>Commit last reInitialization of the specified container.</p>
+   *
+   * @param containerId the Id of the container to commit reInitialize.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  public abstract void commitLastReInitialization(ContainerId containerId)
+      throws YarnException, IOException;
 
   /**
    * <p>Set whether the containers that are started by this client, and are
@@ -163,6 +234,17 @@ public abstract class NMClient extends AbstractService {
    */
   public NMTokenCache getNMTokenCache() {
     return nmTokenCache;
+  }
+
+  /**
+   * Get the NodeId of the node on which container is running. It returns
+   * null if the container if container is not found or if it is not running.
+   *
+   * @param containerId Container Id of the container.
+   * @return NodeId of the container on which it is running.
+   */
+  public NodeId getNodeIdOfStartedContainer(ContainerId containerId) {
+    return null;
   }
 
 }

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.AbstractService;
@@ -33,6 +31,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEnt
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,8 +71,8 @@ abstract class KeyValueBasedTimelineStore
 
   private boolean serviceStopped = false;
 
-  private static final Log LOG
-      = LogFactory.getLog(KeyValueBasedTimelineStore.class);
+  private static final Logger LOG
+      = LoggerFactory.getLogger(KeyValueBasedTimelineStore.class);
 
   public KeyValueBasedTimelineStore() {
     super(KeyValueBasedTimelineStore.class.getName());

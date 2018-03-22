@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class implements a reducer class that can be used to perform field
@@ -70,14 +70,15 @@ public class FieldSelectionReducer<K, V>
 
   private int allReduceValueFieldsFrom = -1;
 
-  public static final Log LOG = LogFactory.getLog("FieldSelectionMapReduce");
+  public static final Logger LOG =
+      LoggerFactory.getLogger("FieldSelectionMapReduce");
 
   public void setup(Context context) 
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     
     this.fieldSeparator = 
-      conf.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "\t");
+      conf.get(FieldSelectionHelper.DATA_FIELD_SEPARATOR, "\t");
     
     this.reduceOutputKeyValueSpec = 
       conf.get(FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, "0-:");

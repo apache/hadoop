@@ -38,6 +38,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
 import org.apache.hadoop.tools.util.DistCpUtils;
@@ -53,7 +54,6 @@ import com.google.common.annotations.VisibleForTesting;
 public class RetriableFileCopyCommand extends RetriableCommand {
 
   private static Log LOG = LogFactory.getLog(RetriableFileCopyCommand.class);
-  private static int BUFFER_SIZE = 8 * 1024;
   private boolean skipCrc = false;
   private FileAction action;
 
@@ -118,17 +118,21 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           .contains(FileAttribute.CHECKSUMTYPE) ? sourceFS
           .getFileChecksum(sourcePath) : null;
 
-      final long offset = action == FileAction.APPEND ? targetFS.getFileStatus(
-          target).getLen() : 0;
+      long offset = (action == FileAction.APPEND) ?
+          targetFS.getFileStatus(target).getLen() : source.getChunkOffset();
       long bytesRead = copyToFile(targetPath, targetFS, source,
           offset, context, fileAttributes, sourceChecksum);
 
-      compareFileLengths(source, targetPath, configuration, bytesRead
-          + offset);
+      if (!source.isSplit()) {
+        compareFileLengths(source, targetPath, configuration, bytesRead
+            + offset);
+      }
       //At this point, src&dest lengths are same. if length==0, we skip checksum
       if ((bytesRead != 0) && (!skipCrc)) {
-        compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
-            targetFS, targetPath);
+        if (!source.isSplit()) {
+          compareCheckSums(sourceFS, source.getPath(), sourceChecksum,
+              targetFS, targetPath);
+        }
       }
       // it's not append case, thus we first write to a temporary file, rename
       // it to the target path.
@@ -165,22 +169,28 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     FsPermission permission = FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(targetFS.getConf()));
+    int copyBufferSize = context.getConfiguration().getInt(
+        DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
+        DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
+      // If there is an erasure coding policy set on the target directory,
+      // files will be written to the target directory using the same EC policy.
+      // The replication factor of the source file is ignored and not preserved.
       final short repl = getReplicationFactor(fileAttributes, source,
           targetFS, targetPath);
       final long blockSize = getBlockSize(fileAttributes, source,
           targetFS, targetPath);
       FSDataOutputStream out = targetFS.create(targetPath, permission,
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
-          BUFFER_SIZE, repl, blockSize, context,
+          copyBufferSize, repl, blockSize, context,
           getChecksumOpt(fileAttributes, sourceChecksum));
       outStream = new BufferedOutputStream(out);
     } else {
       outStream = new BufferedOutputStream(targetFS.append(targetPath,
-          BUFFER_SIZE));
+          copyBufferSize));
     }
-    return copyBytes(source, sourceOffset, outStream, BUFFER_SIZE,
+    return copyBytes(source, sourceOffset, outStream, copyBufferSize,
         context);
   }
 
@@ -189,9 +199,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
                                   throws IOException {
     final Path sourcePath = source.getPath();
     FileSystem fs = sourcePath.getFileSystem(configuration);
-    if (fs.getFileStatus(sourcePath).getLen() != targetLen)
-      throw new IOException("Mismatch in length of source:" + sourcePath
-                + " and target:" + target);
+    long srcLen = fs.getFileStatus(sourcePath).getLen();
+    if (srcLen != targetLen)
+      throw new IOException("Mismatch in length of source:" + sourcePath + " (" + srcLen +
+          ") and target:" + target + " (" + targetLen + ")");
   }
 
   private void compareCheckSums(FileSystem sourceFS, Path source,
@@ -199,15 +210,30 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     if (!DistCpUtils.checksumsAreEqual(sourceFS, source, sourceChecksum,
         targetFS, target)) {
-      StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
-          .append(source).append(" and ").append(target).append(".");
-      if (sourceFS.getFileStatus(source).getBlockSize() !=
+      StringBuilder errorMessage =
+          new StringBuilder("Checksum mismatch between ")
+              .append(source).append(" and ").append(target).append(".");
+      boolean addSkipHint = false;
+      String srcScheme = sourceFS.getScheme();
+      String targetScheme = targetFS.getScheme();
+      if (!srcScheme.equals(targetScheme)
+          && !(srcScheme.contains("hdfs") && targetScheme.contains("hdfs"))) {
+        // the filesystems are different and they aren't both hdfs connectors
+        errorMessage.append("Source and destination filesystems are of"
+            + " different types\n")
+            .append("Their checksum algorithms may be incompatible");
+        addSkipHint = true;
+      } else if (sourceFS.getFileStatus(source).getBlockSize() !=
           targetFS.getFileStatus(target).getBlockSize()) {
-        errorMessage.append(" Source and target differ in block-size.")
-            .append(" Use -pb to preserve block-sizes during copy.")
-            .append(" Alternatively, skip checksum-checks altogether, using -skipCrc.")
+        errorMessage.append(" Source and target differ in block-size.\n")
+            .append(" Use -pb to preserve block-sizes during copy.");
+        addSkipHint = true;
+      }
+      if (addSkipHint) {
+        errorMessage.append(" You can skip checksum-checks altogether "
+            + " with -skipcrccheck.\n")
             .append(" (NOTE: By skipping checksums, one runs the risk of " +
-                "masking data-corruption during file-transfer.)");
+                "masking data-corruption during file-transfer.)\n");
       }
       throw new IOException(errorMessage.toString());
     }
@@ -245,17 +271,28 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     ThrottledInputStream inStream = null;
     long totalBytesRead = 0;
 
+    long chunkLength = source2.getChunkLength();
+    boolean finished = false;
     try {
       inStream = getInputStream(source, context.getConfiguration());
-      int bytesRead = readBytes(inStream, buf, sourceOffset);
+      seekIfRequired(inStream, sourceOffset);
+      int bytesRead = readBytes(inStream, buf);
       while (bytesRead >= 0) {
+        if (chunkLength > 0 &&
+            (totalBytesRead + bytesRead) >= chunkLength) {
+          bytesRead = (int)(chunkLength - totalBytesRead);
+          finished = true;
+        }
         totalBytesRead += bytesRead;
         if (action == FileAction.APPEND) {
           sourceOffset += bytesRead;
         }
         outStream.write(buf, 0, bytesRead);
         updateContextStatus(totalBytesRead, context, source2);
-        bytesRead = readBytes(inStream, buf, sourceOffset);
+        if (finished) {
+          break;
+        }
+        bytesRead = readBytes(inStream, buf);
       }
       outStream.close();
       outStream = null;
@@ -278,13 +315,20 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     context.setStatus(message.toString());
   }
 
-  private static int readBytes(ThrottledInputStream inStream, byte buf[],
-      long position) throws IOException {
+  private static int readBytes(ThrottledInputStream inStream, byte buf[])
+      throws IOException {
     try {
-      if (position == 0) {
-        return inStream.read(buf);
-      } else {
-        return inStream.read(position, buf, 0, buf.length);
+      return inStream.read(buf);
+    } catch (IOException e) {
+      throw new CopyReadException(e);
+    }
+  }
+
+  private static void seekIfRequired(ThrottledInputStream inStream,
+      long sourceOffset) throws IOException {
+    try {
+      if (sourceOffset != inStream.getPos()) {
+        inStream.seek(sourceOffset);
       }
     } catch (IOException e) {
       throw new CopyReadException(e);

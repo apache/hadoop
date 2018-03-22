@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -493,7 +492,8 @@ public class TestIntegration {
       List<Path> sources = new ArrayList<Path>();
       sources.add(sourcePath);
 
-      DistCpOptions options = new DistCpOptions(sources, target);
+      DistCpOptions options = new DistCpOptions.Builder(sources, target)
+          .build();
 
       Configuration conf = getConf();
       Path stagingDir = JobSubmissionFiles.getStagingDir(
@@ -559,14 +559,16 @@ public class TestIntegration {
   private void runTest(Path listFile, Path target, boolean targetExists, 
       boolean sync, boolean delete,
       boolean overwrite) throws IOException {
-    DistCpOptions options = new DistCpOptions(listFile, target);
-    options.setSyncFolder(sync);
-    options.setDeleteMissing(delete);
-    options.setOverwrite(overwrite);
-    options.setTargetPathExists(targetExists);
-    options.setNumListstatusThreads(numListstatusThreads);
+    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+        .withSyncFolder(sync)
+        .withDeleteMissing(delete)
+        .withOverwrite(overwrite)
+        .withNumListstatusThreads(numListstatusThreads)
+        .build();
     try {
-      new DistCp(getConf(), options).execute();
+      final DistCp distCp = new DistCp(getConf(), options);
+      distCp.context.setTargetPathExists(targetExists);
+      distCp.execute();
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       throw new IOException(e);

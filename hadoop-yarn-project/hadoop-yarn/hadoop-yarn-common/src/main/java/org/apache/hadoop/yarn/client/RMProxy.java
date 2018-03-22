@@ -57,21 +57,28 @@ import com.google.common.annotations.VisibleForTesting;
 public class RMProxy<T> {
 
   private static final Log LOG = LogFactory.getLog(RMProxy.class);
+  private UserGroupInformation user;
 
-  protected RMProxy() {}
+  protected RMProxy() {
+    try {
+      this.user = UserGroupInformation.getCurrentUser();
+    } catch (IOException ioe) {
+      throw new YarnRuntimeException("Unable to determine user", ioe);
+    }
+  }
 
   /**
    * Verify the passed protocol is supported.
    */
   @Private
-  protected void checkAllowedProtocols(Class<?> protocol) {}
+  public void checkAllowedProtocols(Class<?> protocol) {}
 
   /**
    * Get the ResourceManager address from the provided Configuration for the
    * given protocol.
    */
   @Private
-  protected InetSocketAddress getRMAddress(
+  public InetSocketAddress getRMAddress(
       YarnConfiguration conf, Class<?> protocol) throws IOException {
     throw new UnsupportedOperationException("This method should be invoked " +
         "from an instance of ClientRMProxy or ServerRMProxy");
@@ -86,11 +93,12 @@ public class RMProxy<T> {
    */
   @Private
   protected static <T> T createRMProxy(final Configuration configuration,
-      final Class<T> protocol, RMProxy instance) throws IOException {
+      final Class<T> protocol, RMProxy<T> instance) throws IOException {
     YarnConfiguration conf = (configuration instanceof YarnConfiguration)
         ? (YarnConfiguration) configuration
         : new YarnConfiguration(configuration);
-    RetryPolicy retryPolicy = createRetryPolicy(conf, HAUtil.isHAEnabled(conf));
+    RetryPolicy retryPolicy = createRetryPolicy(conf,
+        (HAUtil.isHAEnabled(conf) || HAUtil.isFederationFailoverEnabled(conf)));
     return newProxyInstance(conf, protocol, instance, retryPolicy);
   }
 
@@ -103,7 +111,7 @@ public class RMProxy<T> {
    */
   @Private
   protected static <T> T createRMProxy(final Configuration configuration,
-      final Class<T> protocol, RMProxy instance, final long retryTime,
+      final Class<T> protocol, RMProxy<T> instance, final long retryTime,
       final long retryInterval) throws IOException {
     YarnConfiguration conf = (configuration instanceof YarnConfiguration)
         ? (YarnConfiguration) configuration
@@ -114,42 +122,18 @@ public class RMProxy<T> {
   }
 
   private static <T> T newProxyInstance(final YarnConfiguration conf,
-      final Class<T> protocol, RMProxy instance, RetryPolicy retryPolicy)
+      final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy)
           throws IOException{
-    if (HAUtil.isHAEnabled(conf)) {
+    if (HAUtil.isHAEnabled(conf) || HAUtil.isFederationEnabled(conf)) {
       RMFailoverProxyProvider<T> provider =
           instance.createRMFailoverProxyProvider(conf, protocol);
       return (T) RetryProxy.create(protocol, provider, retryPolicy);
     } else {
       InetSocketAddress rmAddress = instance.getRMAddress(conf, protocol);
       LOG.info("Connecting to ResourceManager at " + rmAddress);
-      T proxy = RMProxy.<T>getProxy(conf, protocol, rmAddress);
+      T proxy = instance.getProxy(conf, protocol, rmAddress);
       return (T) RetryProxy.create(protocol, proxy, retryPolicy);
     }
-  }
-
-  /**
-   * @deprecated
-   * This method is deprecated and is not used by YARN internally any more.
-   * To create a proxy to the RM, use ClientRMProxy#createRMProxy or
-   * ServerRMProxy#createRMProxy.
-   *
-   * Create a proxy to the ResourceManager at the specified address.
-   *
-   * @param conf Configuration to generate retry policy
-   * @param protocol Protocol for the proxy
-   * @param rmAddress Address of the ResourceManager
-   * @param <T> Type information of the proxy
-   * @return Proxy to the RM
-   * @throws IOException
-   */
-  @Deprecated
-  public static <T> T createRMProxy(final Configuration conf,
-      final Class<T> protocol, InetSocketAddress rmAddress) throws IOException {
-    RetryPolicy retryPolicy = createRetryPolicy(conf, HAUtil.isHAEnabled(conf));
-    T proxy = RMProxy.<T>getProxy(conf, protocol, rmAddress);
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
-    return (T) RetryProxy.create(protocol, proxy, retryPolicy);
   }
 
   /**
@@ -157,10 +141,10 @@ public class RMProxy<T> {
    * RetryProxy.
    */
   @Private
-  static <T> T getProxy(final Configuration conf,
+  public <T> T getProxy(final Configuration conf,
       final Class<T> protocol, final InetSocketAddress rmAddress)
       throws IOException {
-    return UserGroupInformation.getCurrentUser().doAs(
+    return user.doAs(
       new PrivilegedAction<T>() {
         @Override
         public T run() {

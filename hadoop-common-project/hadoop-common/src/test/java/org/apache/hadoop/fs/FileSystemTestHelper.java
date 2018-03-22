@@ -237,7 +237,7 @@ public class FileSystemTestHelper {
     return containsPath(fSys, new Path(path), dirList);
   }
   
-  public static enum fileType {isDir, isFile, isSymlink};
+  public enum fileType {isDir, isFile, isSymlink};
   public static void checkFileStatus(FileSystem aFs, String path,
       fileType expectedType) throws IOException {
     FileStatus s = aFs.getFileStatus(new Path(path));

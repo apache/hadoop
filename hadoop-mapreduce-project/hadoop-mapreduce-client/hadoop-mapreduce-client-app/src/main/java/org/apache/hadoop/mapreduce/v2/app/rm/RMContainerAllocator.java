@@ -35,8 +35,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -90,6 +88,8 @@ import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Allocates the container from the ResourceManager scheduler.
@@ -97,7 +97,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class RMContainerAllocator extends RMContainerRequestor
     implements ContainerAllocator {
 
-  static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
+  static final Logger LOG = LoggerFactory.getLogger(RMContainerAllocator.class);
   
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;
@@ -237,10 +237,10 @@ public class RMContainerAllocator extends RMContainerRequestor
     // Init startTime to current time. If all goes well, it will be reset after
     // first attempt to contact RM.
     retrystartTime = System.currentTimeMillis();
-    this.scheduledRequests.setNumOpportunisticMapsPer100(
-        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE,
-            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENTAGE));
-    LOG.info(this.scheduledRequests.getNumOpportunisticMapsPer100() +
+    this.scheduledRequests.setNumOpportunisticMapsPercent(
+        conf.getInt(MRJobConfig.MR_NUM_OPPORTUNISTIC_MAPS_PERCENT,
+            MRJobConfig.DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENT));
+    LOG.info(this.scheduledRequests.getNumOpportunisticMapsPercent() +
         "% of the mappers will be scheduled using OPPORTUNISTIC containers");
   }
 
@@ -848,7 +848,8 @@ public class RMContainerAllocator extends RMContainerRequestor
       updateAMRMToken(response.getAMRMToken());
     }
 
-    List<ContainerStatus> finishedContainers = response.getCompletedContainersStatuses();
+    List<ContainerStatus> finishedContainers =
+        response.getCompletedContainersStatuses();
 
     // propagate preemption requests
     final PreemptionMessage preemptReq = response.getPreemptionMessage();
@@ -877,16 +878,13 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     handleUpdatedNodes(response);
     handleJobPriorityChange(response);
-    // handle receiving the timeline collector address for this app
-    String collectorAddr = response.getCollectorAddr();
+    // Handle receiving the timeline collector address and token for this app.
     MRAppMaster.RunningAppContext appContext =
         (MRAppMaster.RunningAppContext)this.getContext();
-    if (collectorAddr != null && !collectorAddr.isEmpty()
-        && appContext.getTimelineClient() != null) {
-      appContext.getTimelineClient().setTimelineServiceAddress(
-          response.getCollectorAddr());
+    if (appContext.getTimelineV2Client() != null) {
+      appContext.getTimelineV2Client().
+          setTimelineCollectorInfo(response.getCollectorInfo());
     }
-
     for (ContainerStatus cont : finishedContainers) {
       processFinishedContainer(cont);
     }
@@ -919,7 +917,8 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   private void applyConcurrentTaskLimits() {
     int numScheduledMaps = scheduledRequests.maps.size();
-    if (maxRunningMaps > 0 && numScheduledMaps > 0) {
+    if (maxRunningMaps > 0 && numScheduledMaps > 0 &&
+        getJob().getTotalMaps() > maxRunningMaps) {
       int maxRequestedMaps = Math.max(0,
           maxRunningMaps - assignedRequests.maps.size());
       int numScheduledFailMaps = scheduledRequests.earlierFailedMaps.size();
@@ -936,7 +935,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
 
     int numScheduledReduces = scheduledRequests.reduces.size();
-    if (maxRunningReduces > 0 && numScheduledReduces > 0) {
+    if (maxRunningReduces > 0 && numScheduledReduces > 0 &&
+        getJob().getTotalReduces() > maxRunningReduces) {
       int maxRequestedReduces = Math.max(0,
           maxRunningReduces - assignedRequests.reduces.size());
       int reduceRequestLimit = Math.min(maxRequestedReduces,
@@ -1056,14 +1056,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     final Map<TaskAttemptId, ContainerRequest> maps =
       new LinkedHashMap<TaskAttemptId, ContainerRequest>();
     int mapsMod100 = 0;
-    int numOpportunisticMapsPer100 = 0;
+    int numOpportunisticMapsPercent = 0;
 
-    void setNumOpportunisticMapsPer100(int numMaps) {
-      this.numOpportunisticMapsPer100 = numMaps;
+    void setNumOpportunisticMapsPercent(int numMaps) {
+      this.numOpportunisticMapsPercent = numMaps;
     }
 
-    int getNumOpportunisticMapsPer100() {
-      return this.numOpportunisticMapsPer100;
+    int getNumOpportunisticMapsPercent() {
+      return this.numOpportunisticMapsPercent;
     }
 
     @VisibleForTesting
@@ -1110,7 +1110,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         maps.put(event.getAttemptID(), request);
         addContainerReq(request);
       } else {
-        if (mapsMod100 < numOpportunisticMapsPer100) {
+        if (mapsMod100 < numOpportunisticMapsPercent) {
           request =
               new ContainerRequest(event, PRIORITY_OPPORTUNISTIC_MAP,
                   mapNodeLabelExpression);

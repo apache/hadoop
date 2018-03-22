@@ -26,11 +26,11 @@ import java.util.LinkedList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import org.apache.hadoop.security.NetgroupCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A JNI-based implementation of {@link GroupMappingServiceProvider} 
@@ -42,7 +42,7 @@ import org.apache.hadoop.security.NetgroupCache;
 public class JniBasedUnixGroupsNetgroupMapping
   extends JniBasedUnixGroupsMapping {
   
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
     JniBasedUnixGroupsNetgroupMapping.class);
 
   native String[] getUsersForNetgroupJNI(String group);
@@ -112,7 +112,7 @@ public class JniBasedUnixGroupsNetgroupMapping
   protected synchronized List<String> getUsersForNetgroup(String netgroup) {
     String[] users = null;
     try {
-      // JNI code does not expect '@' at the begining of the group name
+      // JNI code does not expect '@' at the beginning of the group name
       users = getUsersForNetgroupJNI(netgroup.substring(1));
     } catch (Exception e) {
       if (LOG.isDebugEnabled()) {

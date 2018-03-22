@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
@@ -81,6 +82,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.HashMultimap;
 
+@NotThreadSafe
 public class TestShortCircuitCache {
   static final Log LOG = LogFactory.getLog(TestShortCircuitCache.class);
   
@@ -723,8 +725,8 @@ public class TestShortCircuitCache {
         throw new IOException("injected error into sendShmResponse");
       }
     }).when(failureInjector).sendShortCircuitShmResponse();
-    DataNodeFaultInjector prevInjector = DataNodeFaultInjector.instance;
-    DataNodeFaultInjector.instance = failureInjector;
+    DataNodeFaultInjector prevInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector.set(failureInjector);
 
     try {
       // The first read will try to allocate a shared memory segment and slot.
@@ -741,7 +743,7 @@ public class TestShortCircuitCache {
         cluster.getDataNodes().get(0).getShortCircuitRegistry());
 
     LOG.info("Clearing failure injector and performing another read...");
-    DataNodeFaultInjector.instance = prevInjector;
+    DataNodeFaultInjector.set(prevInjector);
 
     fs.getClient().getClientContext().getDomainSocketFactory().clearPathMap();
 

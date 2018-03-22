@@ -197,7 +197,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   public synchronized long getAndIncrementEpoch() throws Exception {
     Path epochNodePath = getNodePath(rootDirPath, EPOCH_NODE);
-    long currentEpoch = 0;
+    long currentEpoch = baseEpoch;
     FileStatus status = getFileStatusWithRetries(epochNodePath);
     if (status != null) {
       // load current epoch
@@ -378,12 +378,10 @@ public class FileSystemRMStateStore extends RMStateStore {
           }
         } else if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
           RMDelegationTokenIdentifierData identifierData =
-              new RMDelegationTokenIdentifierData();
-          identifierData.readFields(fsIn);
+              RMStateStoreUtils.readRMDelegationTokenIdentifierData(fsIn);
           RMDelegationTokenIdentifier identifier =
               identifierData.getTokenIdentifier();
           long renewDate = identifierData.getRenewDate();
-
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
             renewDate);
           if (LOG.isDebugEnabled()) {
@@ -740,7 +738,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         try {
           return run();
         } catch (IOException e) {
-          LOG.info("Exception while executing a FS operation.", e);
+          LOG.info("Exception while executing an FS operation.", e);
           if (++retry > fsNumRetries) {
             LOG.info("Maxed out FS retries. Giving up!");
             throw e;
@@ -785,7 +783,7 @@ public class FileSystemRMStateStore extends RMStateStore {
    * atomic for underlying file system.
    */
   protected void writeFile(Path outputPath, byte[] data, boolean
-          makeUnradableByAdmin) throws Exception {
+          makeUnreadableByAdmin) throws Exception {
     Path tempPath =
         new Path(outputPath.getParent(), outputPath.getName() + ".tmp");
     FSDataOutputStream fsOut = null;
@@ -793,7 +791,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     // final status.
     try {
       fsOut = fs.create(tempPath, true);
-      if (makeUnradableByAdmin) {
+      if (makeUnreadableByAdmin) {
         setUnreadableBySuperuserXattrib(tempPath);
       }
       fsOut.write(data);
@@ -811,10 +809,10 @@ public class FileSystemRMStateStore extends RMStateStore {
    * atomic for underlying file system.
    */
   protected void updateFile(Path outputPath, byte[] data, boolean
-          makeUnradableByAdmin) throws Exception {
+          makeUnreadableByAdmin) throws Exception {
     Path newPath = new Path(outputPath.getParent(), outputPath.getName() + ".new");
     // use writeFileWithRetries to make sure .new file is created atomically
-    writeFileWithRetries(newPath, data, makeUnradableByAdmin);
+    writeFileWithRetries(newPath, data, makeUnreadableByAdmin);
     replaceFile(newPath, outputPath);
   }
 

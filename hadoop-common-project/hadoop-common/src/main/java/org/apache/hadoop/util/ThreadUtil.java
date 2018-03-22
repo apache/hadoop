@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +27,7 @@ import java.io.InputStream;
 @InterfaceStability.Evolving
 public class ThreadUtil {
   
-  private static final Log LOG = LogFactory.getLog(ThreadUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThreadUtil.class);
 
   /**
    * Cause the current thread to sleep as close as possible to the provided

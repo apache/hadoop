@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!--
+    This is the template for user-defined EC policies configuration.
+    All policies and schemas are defined within the 'configuration' tag
+    which is the top level element for this XML document. The 'layoutversion'
+    tag contains the version of EC policy XML file format, and user-defined EC
+    schemas are included within the 'schemas' tag. The 'policies' tag
+    contains all the user defined EC policies, and each policy consists of
+    schema id and cellsize.
+-->
+<configuration>
+<!-- The version of EC policy XML file format, it must be an integer -->
+<layoutversion>1</layoutversion>
+<schemas>
+  <!-- schema id is only used to reference internally in this document -->
+  <schema id="XORk2m1">
+    <!-- The combination of codec, k, m and options as the schema ID, defines
+     a unique schema, for example 'xor-2-1'. schema ID is case insensitive -->
+    <!-- codec with this specific name should exist already in this system -->
+    <codec>xor</codec>
+    <k>2</k>
+    <m>1</m>
+    <options> </options>
+  </schema>
+  <schema id="RSk12m4">
+    <codec>RS</codec>
+    <k>12</k>
+    <m>4</m>
+    <options> </options>
+  </schema>
+  <schema id="RS-legacyk12m4">
+    <codec>RS-legacy</codec>
+    <k>12</k>
+    <m>4</m>
+    <options> </options>
+  </schema>
+</schemas>
+<policies>
+  <policy>
+    <!-- the combination of schema ID and cellsize(in unit k) defines a unique
+     policy, for example 'xor-2-1-256k', case insensitive -->
+    <!-- schema is referred by its id -->
+    <schema>XORk2m1</schema>
+    <!-- cellsize must be an positive integer multiple of 1024(1k) -->
+    <!-- maximum cellsize is defined by 'dfs.namenode.ec.policies.max.cellsize' property -->
+    <cellsize>131072</cellsize>
+  </policy>
+  <policy>
+    <schema>RS-legacyk12m4</schema>
+    <cellsize>262144</cellsize>
+  </policy>
+</policies>
+</configuration>

@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseS
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,15 +39,18 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
@@ -73,6 +75,8 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.eclipse.jetty.server.Response;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -647,8 +651,8 @@ public class TestRMWebServices extends JerseyTestBase {
     when(mockAppsResponse.getApplicationList())
       .thenReturn(Arrays.asList(new ApplicationReport[] { mockReport }));
     ClientRMService mockClientSvc = mock(ClientRMService.class);
-    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class),
-        anyBoolean())).thenReturn(mockAppsResponse);
+    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class)))
+        .thenReturn(mockAppsResponse);
     ResourceManager mockRM = mock(ResourceManager.class);
     RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null,
         null, null, null, null, null);
@@ -665,12 +669,12 @@ public class TestRMWebServices extends JerseyTestBase {
     // verify we don't get any apps when querying
     HttpServletRequest mockHsr = mock(HttpServletRequest.class);
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
-        null, null, null, null, null, null, null, emptySet, emptySet);
+        null, null, null, null, null, null, null, emptySet, emptySet, null);
     assertTrue(appsInfo.getApps().isEmpty());
 
     // verify we don't get an NPE when specifying a final status query
     appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
-        null, null, null, null, null, null, null, emptySet, emptySet);
+        null, null, null, null, null, null, null, emptySet, emptySet, null);
     assertTrue(appsInfo.getApps().isEmpty());
   }
 
@@ -752,5 +756,84 @@ public class TestRMWebServices extends JerseyTestBase {
       }
       tickcount--;
     }
+  }
+
+  private HttpServletRequest mockHttpServletRequestByUserName(String username) {
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getRemoteUser()).thenReturn(username);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(username);
+    when(mockHsr.getUserPrincipal()).thenReturn(principal);
+    return mockHsr;
+  }
+
+  @Test
+  public void testCheckUserAccessToQueue() throws Exception {
+
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+
+    // Inject a mock scheduler implementation.
+    // Only admin user has ADMINISTER_QUEUE access.
+    // For SUBMIT_APPLICATION ACL, both of admin/yarn user have acess
+    ResourceScheduler mockScheduler = new FifoScheduler() {
+      @Override
+      public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+          QueueACL acl, String queueName) {
+        if (acl == QueueACL.ADMINISTER_QUEUE) {
+          if (callerUGI.getUserName().equals("admin")) {
+            return true;
+          }
+        } else {
+          if (ImmutableSet.of("admin", "yarn").contains(callerUGI.getUserName())) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+
+    when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
+
+    RMWebServices webSvc =
+        new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+
+    // Case 1: Only queue admin user can access other user's information
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
+        Response.SC_FORBIDDEN);
+
+    // Case 2: request an unknown ACL causes BAD_REQUEST
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
+        "XYZ_ACL", mockHsr).getStatus(), Response.SC_BAD_REQUEST);
+
+    // Case 3: get FORBIDDEN for rejected ACL
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
+        Response.SC_FORBIDDEN);
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
+        Response.SC_FORBIDDEN);
+
+    // Case 4: get OK for listed ACLs
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
+        Response.SC_OK);
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
+        Response.SC_OK);
+
+    // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
+    mockHsr = mockHttpServletRequestByUserName("admin");
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
+        Response.SC_OK);
+    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
+        Response.SC_FORBIDDEN);
   }
 }

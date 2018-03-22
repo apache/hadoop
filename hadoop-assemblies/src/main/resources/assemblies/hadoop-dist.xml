@@ -94,20 +94,6 @@
       <outputDirectory>/share/hadoop/${hadoop.component}/webapps</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>${basedir}/src/main/conf</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/templates</outputDirectory>
-      <includes>
-        <include>*-site.xml</include>
-      </includes>
-    </fileSet>
-    <fileSet>
-      <directory>${basedir}/src/main/packages/templates/conf</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/templates/conf</outputDirectory>
-      <includes>
-        <include>*</include>
-      </includes>
-    </fileSet>
-    <fileSet>
       <directory>${project.build.directory}</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}</outputDirectory>
       <includes>

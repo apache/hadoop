@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class UpdateContainerRequest extends AbstractResourceRequest {
+public abstract class UpdateContainerRequest {
 
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
@@ -143,6 +143,22 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
   @InterfaceStability.Unstable
   public abstract void setExecutionType(ExecutionType executionType);
 
+  /**
+   * Set the <code>Resource</code> capability of the request.
+   * @param capability <code>Resource</code> capability of the request
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public abstract void setCapability(Resource capability);
+
+  /**
+   * Get the <code>Resource</code> capability of the request.
+   * @return <code>Resource</code> capability of the request
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public abstract Resource getCapability();
+
   @Override
   public int hashCode() {
     final int prime = 2153;
@@ -150,12 +166,25 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
     ContainerId cId = getContainerId();
     ExecutionType execType = getExecutionType();
     Resource capability = getCapability();
+    ContainerUpdateType updateType = getContainerUpdateType();
     result =
         prime * result + ((capability == null) ? 0 : capability.hashCode());
     result = prime * result + ((cId == null) ? 0 : cId.hashCode());
     result = prime * result + getContainerVersion();
     result = prime * result + ((execType == null) ? 0 : execType.hashCode());
+    result = prime * result + ((updateType== null) ? 0 : updateType.hashCode());
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "UpdateReq{" +
+        "containerId=" + getContainerId() + ", " +
+        "containerVersion=" + getContainerVersion() + ", " +
+        "targetExecType=" + getExecutionType() + ", " +
+        "targetCapability=" + getCapability() + ", " +
+        "updateType=" + getContainerUpdateType() + ", " +
+        "}";
   }
 
   @Override
@@ -195,6 +224,14 @@ public abstract class UpdateContainerRequest extends AbstractResourceRequest {
         return false;
       }
     } else if (!execType.equals(other.getExecutionType())) {
+      return false;
+    }
+    ContainerUpdateType updateType = getContainerUpdateType();
+    if (updateType == null) {
+      if (other.getContainerUpdateType() != null) {
+        return false;
+      }
+    } else if (!updateType.equals(other.getContainerUpdateType())) {
       return false;
     }
     return true;

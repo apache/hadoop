@@ -39,6 +39,16 @@
   </property>
 
   <property>
+    <name>yarn.scheduler.capacity.root.sls_queue_1.reservable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.sls_queue_1.show-reservations-as-queues</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>yarn.scheduler.capacity.root.sls_queue_2.capacity</name>
     <value>25</value>
   </property>

@@ -23,9 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.BoundedByteArrayOutputStream;
@@ -40,10 +37,14 @@ import org.apache.hadoop.mapred.Reporter;
 
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class InMemoryMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
-  private static final Log LOG = LogFactory.getLog(InMemoryMapOutput.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(InMemoryMapOutput.class);
   private final byte[] memory;
   private BoundedByteArrayOutputStream byteStream;
   // Decompression of map-outputs

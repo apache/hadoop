@@ -108,6 +108,22 @@ public abstract class ContainerLaunchContext {
   public abstract void setTokens(ByteBuffer tokens);
 
   /**
+   * Get the configuration used by RM to renew tokens.
+   * @return The configuration used by RM to renew the tokens.
+   */
+  @Public
+  @Unstable
+  public abstract ByteBuffer getTokensConf();
+
+  /**
+   * Set the configuration used by RM to renew the tokens.
+   * @param tokensConf The configuration used by RM to renew the tokens
+   */
+  @Public
+  @Unstable
+  public abstract void setTokensConf(ByteBuffer tokensConf);
+
+  /**
    * Get <code>LocalResource</code> required by the container.
    * @return all <code>LocalResource</code> required by the container
    */

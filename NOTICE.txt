@@ -8,16 +8,11 @@ following notices:
 * Copyright 2011 FuseSource Corp. http://fusesource.com
 
 The binary distribution of this product bundles binaries of
-org.fusesource.hawtjni:hawtjni-runtime (https://github.com/fusesource/hawtjni),
-which has the following notices:
-* This product includes software developed by FuseSource Corp.
-  http://fusesource.com
-* This product includes software developed at
-  Progress Software Corporation and/or its  subsidiaries or affiliates.
-* This product includes software developed by IBM Corporation and others.
-
-The binary distribution of this product bundles binaries of
-AWS Java SDK 1.10.6,
+AWS SDK for Java - Bundle 1.11.134,
+AWS Java SDK for AWS KMS 1.11.134,
+AWS Java SDK for Amazon S3 1.11.134,
+AWS Java SDK for AWS STS 1.11.134,
+JMES Path Query library 1.0,
 which has the following notices:
  * This software includes third party software subject to the following
  copyrights: - XML parsing and utility functions from JetS3t - Copyright
@@ -257,6 +252,13 @@ provides utilities for the java.lang API, which can be obtained at:
   * HOMEPAGE:
     * https://commons.apache.org/proper/commons-lang/
 
+This product contains a modified portion of 'JDOM 1.1', which can be obtained at:
+
+  * LICENSE:
+    * https://github.com/hunterhacker/jdom/blob/jdom-1.1/core/LICENSE.txt
+  * HOMEPAGE:
+    * http://www.jdom.org/
+
 The binary distribution of this product bundles binaries of
 Commons Codec 1.4,
 which has the following notices:
@@ -283,7 +285,7 @@ which has the following notices:
     Copyright 2002-2012 Ramnivas Laddad, Juergen Hoeller, Chris Beams
 
 The binary distribution of this product bundles binaries of
-Java Concurrency in Practice book annotations 1.0,
+"Java Concurrency in Practice" book annotations 1.0,
 which has the following notices:
  * Copyright (c) 2005 Brian Goetz and Tim Peierls Released under the Creative
   Commons Attribution License (http://creativecommons.org/licenses/by/2.5)
@@ -292,7 +294,15 @@ which has the following notices:
   notice.
 
 The binary distribution of this product bundles binaries of
-Jetty 6.1.26,
+Jetty :: Http Utility 9.3.19.,
+Jetty :: IO Utility 9.3.19.,
+Jetty :: Security 9.3.19.,
+Jetty :: Server Core 9.3.19.,
+Jetty :: Servlet Handling 9.3.19.,
+Jetty :: Utilities 9.3.19.,
+Jetty :: Utilities :: Ajax,
+Jetty :: Webapp Application Support 9.3.19.,
+Jetty :: XML utilities 9.3.19.,
 which has the following notices:
  * ==============================================================
     Jetty Web Container
@@ -453,3 +463,145 @@ which has the following notices:
      - voluntary contributions made by Paul Eng on behalf of the
        Apache Software Foundation that were originally developed at iClick, Inc.,
        software copyright (c) 1999.
+
+The binary distribution of this product bundles binaries of
+Logback Classic Module 1.1.2,
+Logback Core Module 1.1.2,
+which has the following notices:
+ * Logback: the reliable, generic, fast and flexible logging framework.
+   Copyright (C) 1999-2012, QOS.ch. All rights reserved.
+
+The binary distribution of this product bundles binaries of
+Apache HBase - Annotations 1.2.6,
+Apache HBase - Client 1.2.6,
+Apache HBase - Common 1.2.6,
+Apache HBase - Hadoop Compatibility 1.2.6,
+Apache HBase - Hadoop Two Compatibility 1.2.6,
+Apache HBase - Prefix Tree 1.2.6,
+Apache HBase - Procedure 1.2.6,
+Apache HBase - Protocol 1.2.6,
+Apache HBase - Server 1.2.6,
+which has the following notices:
+ * Apache HBase
+   Copyright 2007-2015 The Apache Software Foundation
+
+   This product includes software developed at
+   The Apache Software Foundation (http://www.apache.org/).
+
+   --
+   This product incorporates portions of the 'Hadoop' project
+
+   Copyright 2007-2009 The Apache Software Foundation
+
+   Licensed under the Apache License v2.0
+   --
+   Our Orca logo we got here: http://www.vectorfree.com/jumping-orca
+   It is licensed Creative Commons Attribution 3.0.
+   See https://creativecommons.org/licenses/by/3.0/us/
+   We changed the logo by stripping the colored background, inverting
+   it and then rotating it some.
+
+   Later we found that vectorfree.com image is not properly licensed.
+   The original is owned by vectorportal.com. The original was
+   relicensed so we could use it as Creative Commons Attribution 3.0.
+   The license is bundled with the download available here:
+   http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
+   --
+   This product includes portions of the Bootstrap project v3.0.0
+
+   Copyright 2013 Twitter, Inc.
+
+   Licensed under the Apache License v2.0
+
+   This product uses the Glyphicons Halflings icon set.
+
+   http://glyphicons.com/
+
+   Copyright Jan Kovařík
+
+   Licensed under the Apache License v2.0 as a part of the Bootstrap project.
+
+   --
+   This product includes portions of the Guava project v14, specifically
+   'hbase-common/src/main/java/org/apache/hadoop/hbase/io/LimitInputStream.java'
+
+   Copyright (C) 2007 The Guava Authors
+
+   Licensed under the Apache License, Version 2.0
+
+The binary distribution of this product bundles binaries of
+Phoenix Core 4.7.0,
+which has the following notices:
+   Apache Phoenix
+   Copyright 2013-2016 The Apache Software Foundation
+
+   This product includes software developed by The Apache Software
+   Foundation (http://www.apache.org/).
+
+   This also includes:
+
+   The phoenix-spark module has been adapted from the phoenix-spark library
+   distributed under the terms of the Apache 2 license. Original source copyright:
+   Copyright 2014 Simply Measured, Inc.
+   Copyright 2015 Interset Software Inc.
+
+   The file bin/daemon.py is based on the file of the same name in python-daemon 2.0.5
+   (https://pypi.python.org/pypi/python-daemon/). Original source copyright:
+   # Copyright © 2008–2015 Ben Finney <ben+python@benfinney.id.au>
+   # Copyright © 2007–2008 Robert Niederreiter, Jens Klein
+   # Copyright © 2004–2005 Chad J. Schroeder
+   # Copyright © 2003 Clark Evans
+   # Copyright © 2002 Noah Spurrier
+   # Copyright © 2001 Jürgen Hermann
+
+The binary distribution of this product bundles binaries of
+Plexus Cipher: encryption/decryption Component 1.4,
+which has the following notices:
+ * The code in this component contains a class - Base64 taken from http://juliusdavies.ca/svn/not-yet-commons-ssl/tags/commons-ssl-0.3.10/src/java/org/apache/commons/ssl/Base64.java
+   which is Apache license: http://www.apache.org/licenses/LICENSE-2.0
+
+   The PBE key processing routine PBECipher.createCipher() is adopted from http://juliusdavies.ca/svn/not-yet-commons-ssl/tags/commons-ssl-0.3.10/src/java/org/apache/commons/ssl/OpenSSL.java
+    which is also Apache APL-2.0 license: http://www.apache.org/licenses/LICENSE-2.0
+
+The binary distribution of this product bundles binaries of
+software.amazon.ion:ion-java 1.0.1,
+which has the following notices:
+ * Amazon Ion Java Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+The binary distribution of this product bundles binaries of
+joda-time:joda-time:2.9.9
+which has the following notices:
+ * =============================================================================
+   = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+   =============================================================================
+   This product includes software developed by
+   Joda.org (http://www.joda.org/).
+
+The binary distribution of this product bundles binaries of
+Ehcache 3.3.1,
+which has the following notices:
+ * Ehcache V3 Copyright 2014-2016 Terracotta, Inc.
+
+The binary distribution of this product bundles binaries of
+snakeyaml (https://bitbucket.org/asomov/snakeyaml),
+which has the following notices:
+ * Copyright (c) 2008, http://www.snakeyaml.org
+
+The binary distribution of this product bundles binaries of
+swagger-annotations (https://github.com/swagger-api/swagger-core),
+which has the following notices:
+ * Copyright 2016 SmartBear Software
+
+The binary distribution of this product bundles binaries of
+metrics-core 3.2.4
+which has the following notices:
+ * Copyright 2010-2013 Coda Hale and Yammer, Inc.
+
+   This product includes software developed by Coda Hale and Yammer, Inc.
+
+   This product includes code derived from the JSR-166 project (ThreadLocalRandom, Striped64,
+   LongAdder), which was released with the following comments:
+
+   Written by Doug Lea with assistance from members of JCP JSR-166
+   Expert Group and released to the public domain, as explained at
+   http://creativecommons.org/publicdomain/zero/1.0/

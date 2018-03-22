@@ -26,9 +26,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Assume;
-import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 
 /**
  * This test starts a 1 NameNode 1 DataNode MiniDFSCluster with
@@ -48,16 +53,18 @@ import org.junit.Test;
  *   dfs.datanode.keytab.file
  */
 public class TestStartSecureDataNode {
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
   final static private int NUM_OF_DATANODES = 1;
 
-  @Before
-  public void testExternalKdcRunning() {
+  private void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
     Assume.assumeTrue(isExternalKdcRunning());
   }
 
   @Test
   public void testSecureNameNode() throws Exception {
+    testExternalKdcRunning();
     MiniDFSCluster cluster = null;
     try {
       String nnPrincipal =
@@ -102,6 +109,57 @@ public class TestStartSecureDataNode {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  /**
+   * This test doesn't require KDC or other security settings as it expects
+   * {@link java.net.BindException}. Testing is done with unprivileged port
+   * for {@code dfs.datanode.address}.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testStreamingAddrBindException() throws Exception {
+    ServerSocket ss = new ServerSocket();
+    try {
+      ss.bind(new InetSocketAddress("localhost", 0));
+      thrown.expect(BindException.class);
+      thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
+
+      Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+          "localhost:" + ss.getLocalPort());
+      SecureDataNodeStarter.getSecureResources(conf);
+    } finally {
+      ss.close();
+    }
+  }
+
+  /**
+   * This test doesn't require KDC or other security settings as it expects
+   * {@link java.net.BindException}. Testing is done with unprivileged port
+   * for {@code dfs.datanode.http.address}.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testWebServerAddrBindException() throws Exception {
+    ServerSocket ss = new ServerSocket();
+    try {
+      ss.bind(new InetSocketAddress("localhost", 0));
+      thrown.expect(BindException.class);
+      thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
+
+      Configuration conf = new HdfsConfiguration();
+      conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+          "localhost:" + NetUtils.getFreeSocketPort());
+      conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
+          "localhost:" + ss.getLocalPort());
+
+      SecureDataNodeStarter.getSecureResources(conf);
+    } finally {
+      ss.close();
     }
   }
 }

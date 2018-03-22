@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -52,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -102,8 +102,6 @@ public class TestRMWebApp {
         try {
           ResourceManager mockRm = mockRm(3, 1, 2, 8*GiB);
           binder.bind(ResourceManager.class).toInstance(mockRm);
-          binder.bind(ApplicationBaseProtocol.class)
-              .toInstance(mockRm.getClientRMService());
         } catch (IOException e) {
           throw new IllegalStateException(e);
         }
@@ -229,12 +227,15 @@ public class TestRMWebApp {
     setupQueueConfiguration(conf);
 
     CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(new YarnConfiguration());
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    cs.setConf(yarnConf);
     RMContext rmContext = new RMContextImpl(null, null, null, null, null,
         null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM(), null);
-    rmContext.setNodeLabelManager(new NullRMNodeLabelsManager());
+    RMNodeLabelsManager labelManager = new NullRMNodeLabelsManager();
+    labelManager.init(yarnConf);
+    rmContext.setNodeLabelManager(labelManager);
     cs.setRMContext(rmContext);
     cs.init(conf);
     return cs;
@@ -268,7 +269,7 @@ public class TestRMWebApp {
       when(clientRMService.getApplications(any(GetApplicationsRequest.class)))
           .thenReturn(response);
     } catch (YarnException e) {
-      Assert.fail("Exception is not expteced.");
+      Assert.fail("Exception is not expected.");
     }
     return clientRMService;
   }

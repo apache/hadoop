@@ -30,9 +30,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -65,7 +65,7 @@ public class TasksBlock extends HtmlBlock {
             th("State").
             th("Start Time").
             th("Finish Time").
-            th("Elapsed Time")._()._().
+            th("Elapsed Time").__().__().
         tbody();
     StringBuilder tasksTableData = new StringBuilder("[\n");
 
@@ -117,8 +117,8 @@ public class TasksBlock extends HtmlBlock {
     }
     tasksTableData.append("]");
     html.script().$type("text/javascript").
-    _("var tasksTableData=" + tasksTableData)._();
+        __("var tasksTableData=" + tasksTableData).__();
 
-    tbody._()._();
+    tbody.__().__();
   }
 }

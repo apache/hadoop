@@ -23,8 +23,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,6 +34,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.MachineList;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An authorization manager which handles service-level authorization
@@ -69,8 +69,9 @@ public class ServiceAuthorizationManager {
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
     "hadoop.security.authorization";
   
-  public static final Log AUDITLOG =
-    LogFactory.getLog("SecurityLogger."+ServiceAuthorizationManager.class.getName());
+  public static final Logger AUDITLOG =
+      LoggerFactory.getLogger(
+          "SecurityLogger." + ServiceAuthorizationManager.class.getName());
 
   private static final String AUTHZ_SUCCESSFUL_FOR = "Authorization successful for ";
   private static final String AUTHZ_FAILED_FOR = "Authorization failed for ";
