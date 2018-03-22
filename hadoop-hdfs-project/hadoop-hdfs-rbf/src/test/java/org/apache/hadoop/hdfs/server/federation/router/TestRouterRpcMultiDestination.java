@@ -38,9 +38,9 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.NamenodeContext;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
@@ -54,7 +54,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
   @Override
   public void testSetup() throws Exception {
 
-    RouterDFSCluster cluster = getCluster();
+    MiniRouterDFSCluster cluster = getCluster();
 
     // Create mock locations
     getCluster().installMockLocations();
