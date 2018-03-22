@@ -322,7 +322,7 @@ fi
 hadoop_add_client_opts
 
 if [[ ${HADOOP_WORKER_MODE} = true ]]; then
-  hadoop_common_worker_mode_execute "${HADOOP_OZONE_HOME}/bin/oz" "${HADOOP_USER_PARAMS[@]}"
+  hadoop_common_worker_mode_execute "${HADOOP_HDFS_HOME}/bin/oz" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
