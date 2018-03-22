@@ -91,6 +91,7 @@ public class DatanodeHttpServer implements Closeable {
         .setFindPort(true);
 
     this.infoServer = builder.build();
+    this.infoServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
 
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
