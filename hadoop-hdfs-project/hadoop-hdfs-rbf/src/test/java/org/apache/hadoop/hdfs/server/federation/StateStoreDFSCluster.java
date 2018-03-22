@@ -42,7 +42,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
  * Test utility to mimic a federated HDFS cluster with a router and a state
  * store.
  */
-public class StateStoreDFSCluster extends RouterDFSCluster {
+public class StateStoreDFSCluster extends MiniRouterDFSCluster {
 
   private static final Class<?> DEFAULT_FILE_RESOLVER =
       MountTableResolver.class;
