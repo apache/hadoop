@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 /**
@@ -31,7 +32,9 @@ import java.util.Comparator;
  * breaker, newest has priority. Expired NNs are excluded.
  */
 public class NamenodePriorityComparator
-    implements Comparator<FederationNamenodeContext> {
+    implements Comparator<FederationNamenodeContext>, Serializable {
+
+  private static final long serialVersionUID = 2304924292036293331L;
 
   @Override
   public int compare(FederationNamenodeContext o1,
