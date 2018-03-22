@@ -533,6 +533,9 @@ public class JsonUtil {
 
   public static String toJsonString(
       SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
+    if (snapshottableDirectoryList == null) {
+      return toJsonString("SnapshottableDirectoryList", null);
+    }
     Object[] a = new Object[snapshottableDirectoryList.length];
     for (int i = 0; i < snapshottableDirectoryList.length; i++) {
       a[i] = toJsonMap(snapshottableDirectoryList[i]);

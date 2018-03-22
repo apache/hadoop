@@ -755,14 +755,16 @@ public class TestWebHDFS {
       final Path bar = new Path("/bar");
       dfs.mkdirs(foo);
       dfs.mkdirs(bar);
+      SnapshottableDirectoryStatus[] statuses =
+          webHdfs.getSnapshottableDirectoryList();
+      Assert.assertNull(statuses);
       dfs.allowSnapshot(foo);
       dfs.allowSnapshot(bar);
       Path file0 = new Path(foo, "file0");
       DFSTestUtil.createFile(dfs, file0, 100, (short) 1, 0);
       Path file1 = new Path(bar, "file1");
       DFSTestUtil.createFile(dfs, file1, 100, (short) 1, 0);
-      SnapshottableDirectoryStatus[] statuses =
-          webHdfs.getSnapshottableDirectoryList();
+      statuses = webHdfs.getSnapshottableDirectoryList();
       SnapshottableDirectoryStatus[] dfsStatuses =
           dfs.getSnapshottableDirListing();
 

@@ -43,6 +43,9 @@ import org.junit.*;
 import java.io.IOException;
 import java.util.*;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.tools.util.TestDistCpUtils.*;
+
 public class TestCopyCommitter {
   private static final Log LOG = LogFactory.getLog(TestCopyCommitter.class);
 
@@ -80,56 +83,42 @@ public class TestCopyCommitter {
   }
 
   @Before
-  public void createMetaFolder() {
+  public void createMetaFolder() throws IOException {
     config.set(DistCpConstants.CONF_LABEL_META_FOLDER, "/meta");
     // Unset listing file path since the config is shared by
     // multiple tests, and some test doesn't set it, such as
     // testNoCommitAction, but the distcp code will check it.
     config.set(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH, "");
     Path meta = new Path("/meta");
-    try {
-      cluster.getFileSystem().mkdirs(meta);
-    } catch (IOException e) {
-      LOG.error("Exception encountered while creating meta folder", e);
-      Assert.fail("Unable to create meta folder");
-    }
+    cluster.getFileSystem().mkdirs(meta);
   }
 
   @After
-  public void cleanupMetaFolder() {
+  public void cleanupMetaFolder() throws IOException {
     Path meta = new Path("/meta");
-    try {
-      if (cluster.getFileSystem().exists(meta)) {
-        cluster.getFileSystem().delete(meta, true);
-        Assert.fail("Expected meta folder to be deleted");
-      }
-    } catch (IOException e) {
-      LOG.error("Exception encountered while cleaning up folder", e);
-      Assert.fail("Unable to clean up meta folder");
+    if (cluster.getFileSystem().exists(meta)) {
+      cluster.getFileSystem().delete(meta, true);
+      Assert.fail("Expected meta folder to be deleted");
     }
   }
 
   @Test
-  public void testNoCommitAction() {
+  public void testNoCommitAction() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
-    JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
+    JobContext jobContext = new JobContextImpl(
+        taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
-    try {
-      OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
-      committer.commitJob(jobContext);
-      Assert.assertEquals(taskAttemptContext.getStatus(), "Commit Successful");
+    OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
+    committer.commitJob(jobContext);
+    Assert.assertEquals("Commit Successful", taskAttemptContext.getStatus());
 
-      //Test for idempotent commit
-      committer.commitJob(jobContext);
-      Assert.assertEquals(taskAttemptContext.getStatus(), "Commit Successful");
-    } catch (IOException e) {
-      LOG.error("Exception encountered ", e);
-      Assert.fail("Commit failed");
-    }
+    //Test for idempotent commit
+    committer.commitJob(jobContext);
+    Assert.assertEquals("Commit Successful", taskAttemptContext.getStatus());
   }
 
   @Test
-  public void testPreserveStatus() {
+  public void testPreserveStatus() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
@@ -161,19 +150,12 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
 
       committer.commitJob(jobContext);
-      if (!checkDirectoryPermissions(fs, targetBase, sourcePerm)) {
-        Assert.fail("Permission don't match");
-      }
+      checkDirectoryPermissions(fs, targetBase, sourcePerm);
 
       //Test for idempotent commit
       committer.commitJob(jobContext);
-      if (!checkDirectoryPermissions(fs, targetBase, sourcePerm)) {
-        Assert.fail("Permission don't match");
-      }
+      checkDirectoryPermissions(fs, targetBase, sourcePerm);
 
-    } catch (IOException e) {
-      LOG.error("Exception encountered while testing for preserve status", e);
-      Assert.fail("Preserve status failure");
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
@@ -182,7 +164,7 @@ public class TestCopyCommitter {
   }
 
   @Test
-  public void testDeleteMissing() {
+  public void testDeleteMissing() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
@@ -213,24 +195,13 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
 
       committer.commitJob(jobContext);
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, targetBase, sourceBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, sourceBase, targetBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      verifyFoldersAreInSync(fs, sourceBase, targetBase);
 
       //Test for idempotent commit
       committer.commitJob(jobContext);
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, targetBase, sourceBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, sourceBase, targetBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
-    } catch (Throwable e) {
-      LOG.error("Exception encountered while testing for delete missing", e);
-      Assert.fail("Delete missing failure");
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      verifyFoldersAreInSync(fs, sourceBase, targetBase);
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
@@ -238,7 +209,7 @@ public class TestCopyCommitter {
   }
 
   @Test
-  public void testDeleteMissingFlatInterleavedFiles() {
+  public void testDeleteMissingFlatInterleavedFiles() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
@@ -253,20 +224,20 @@ public class TestCopyCommitter {
       fs = FileSystem.get(conf);
       sourceBase = "/tmp1/" + String.valueOf(rand.nextLong());
       targetBase = "/tmp1/" + String.valueOf(rand.nextLong());
-      TestDistCpUtils.createFile(fs, sourceBase + "/1");
-      TestDistCpUtils.createFile(fs, sourceBase + "/3");
-      TestDistCpUtils.createFile(fs, sourceBase + "/4");
-      TestDistCpUtils.createFile(fs, sourceBase + "/5");
-      TestDistCpUtils.createFile(fs, sourceBase + "/7");
-      TestDistCpUtils.createFile(fs, sourceBase + "/8");
-      TestDistCpUtils.createFile(fs, sourceBase + "/9");
+      createFile(fs, sourceBase + "/1");
+      createFile(fs, sourceBase + "/3");
+      createFile(fs, sourceBase + "/4");
+      createFile(fs, sourceBase + "/5");
+      createFile(fs, sourceBase + "/7");
+      createFile(fs, sourceBase + "/8");
+      createFile(fs, sourceBase + "/9");
 
-      TestDistCpUtils.createFile(fs, targetBase + "/2");
-      TestDistCpUtils.createFile(fs, targetBase + "/4");
-      TestDistCpUtils.createFile(fs, targetBase + "/5");
-      TestDistCpUtils.createFile(fs, targetBase + "/7");
-      TestDistCpUtils.createFile(fs, targetBase + "/9");
-      TestDistCpUtils.createFile(fs, targetBase + "/A");
+      createFile(fs, targetBase + "/2");
+      createFile(fs, targetBase + "/4");
+      createFile(fs, targetBase + "/5");
+      createFile(fs, targetBase + "/7");
+      createFile(fs, targetBase + "/9");
+      createFile(fs, targetBase + "/A");
 
       final DistCpOptions options = new DistCpOptions.Builder(
           Collections.singletonList(new Path(sourceBase)), new Path("/out"))
@@ -282,20 +253,13 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
 
       committer.commitJob(jobContext);
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, targetBase, sourceBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
-      Assert.assertEquals(fs.listStatus(new Path(targetBase)).length, 4);
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      Assert.assertEquals(4, fs.listStatus(new Path(targetBase)).length);
 
       //Test for idempotent commit
       committer.commitJob(jobContext);
-      if (!TestDistCpUtils.checkIfFoldersAreInSync(fs, targetBase, sourceBase)) {
-        Assert.fail("Source and target folders are not in sync");
-      }
-      Assert.assertEquals(fs.listStatus(new Path(targetBase)).length, 4);
-    } catch (IOException e) {
-      LOG.error("Exception encountered while testing for delete missing", e);
-      Assert.fail("Delete missing failure");
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      Assert.assertEquals(4, fs.listStatus(new Path(targetBase)).length);
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
@@ -304,7 +268,7 @@ public class TestCopyCommitter {
   }
 
   @Test
-  public void testAtomicCommitMissingFinal() {
+  public void testAtomicCommitMissingFinal() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
@@ -322,19 +286,16 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, finalPath);
       conf.setBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, true);
 
-      Assert.assertTrue(fs.exists(new Path(workPath)));
-      Assert.assertFalse(fs.exists(new Path(finalPath)));
+      assertPathExists(fs, "Work path", new Path(workPath));
+      assertPathDoesNotExist(fs, "Final path", new Path(finalPath));
       committer.commitJob(jobContext);
-      Assert.assertFalse(fs.exists(new Path(workPath)));
-      Assert.assertTrue(fs.exists(new Path(finalPath)));
+      assertPathDoesNotExist(fs, "Work path", new Path(workPath));
+      assertPathExists(fs, "Final path", new Path(finalPath));
 
       //Test for idempotent commit
       committer.commitJob(jobContext);
-      Assert.assertFalse(fs.exists(new Path(workPath)));
-      Assert.assertTrue(fs.exists(new Path(finalPath)));
-    } catch (IOException e) {
-      LOG.error("Exception encountered while testing for preserve status", e);
-      Assert.fail("Atomic commit failure");
+      assertPathDoesNotExist(fs, "Work path", new Path(workPath));
+      assertPathExists(fs, "Final path", new Path(finalPath));
     } finally {
       TestDistCpUtils.delete(fs, workPath);
       TestDistCpUtils.delete(fs, finalPath);
@@ -343,7 +304,7 @@ public class TestCopyCommitter {
   }
 
   @Test
-  public void testAtomicCommitExistingFinal() {
+  public void testAtomicCommitExistingFinal() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
         taskAttemptContext.getTaskAttemptID().getJobID());
@@ -363,20 +324,17 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, finalPath);
       conf.setBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, true);
 
-      Assert.assertTrue(fs.exists(new Path(workPath)));
-      Assert.assertTrue(fs.exists(new Path(finalPath)));
+      assertPathExists(fs, "Work path", new Path(workPath));
+      assertPathExists(fs, "Final path", new Path(finalPath));
       try {
         committer.commitJob(jobContext);
         Assert.fail("Should not be able to atomic-commit to pre-existing path.");
       } catch(Exception exception) {
-        Assert.assertTrue(fs.exists(new Path(workPath)));
-        Assert.assertTrue(fs.exists(new Path(finalPath)));
+        assertPathExists(fs, "Work path", new Path(workPath));
+        assertPathExists(fs, "Final path", new Path(finalPath));
         LOG.info("Atomic-commit Test pass.");
       }
 
-    } catch (IOException e) {
-      LOG.error("Exception encountered while testing for atomic commit.", e);
-      Assert.fail("Atomic commit failure");
     } finally {
       TestDistCpUtils.delete(fs, workPath);
       TestDistCpUtils.delete(fs, finalPath);
@@ -389,11 +347,11 @@ public class TestCopyCommitter {
         new TaskAttemptID("200707121733", 1, TaskType.MAP, 1, 1));
   }
 
-  private boolean checkDirectoryPermissions(FileSystem fs, String targetBase,
-                                            FsPermission sourcePerm) throws IOException {
+  private void checkDirectoryPermissions(FileSystem fs, String targetBase,
+      FsPermission sourcePerm) throws IOException {
     Path base = new Path(targetBase);
 
-    Stack<Path> stack = new Stack<Path>();
+    Stack<Path> stack = new Stack<>();
     stack.push(base);
     while (!stack.isEmpty()) {
       Path file = stack.pop();
@@ -404,11 +362,10 @@ public class TestCopyCommitter {
       for (FileStatus status : fStatus) {
         if (status.isDirectory()) {
           stack.push(status.getPath());
-          Assert.assertEquals(status.getPermission(), sourcePerm);
+          Assert.assertEquals(sourcePerm, status.getPermission());
         }
       }
     }
-    return true;
   }
 
   private static class NullInputFormat extends InputFormat {

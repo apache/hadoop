@@ -638,7 +638,7 @@ over that of the `hadoop.security` list (i.e. they are prepended to the common l
 </property>
 ```
 
-This was added to suppport binding different credential providers on a per
+This was added to support binding different credential providers on a per
 bucket basis, without adding alternative secrets in the credential list.
 However, some applications (e.g Hive) prevent the list of credential providers
 from being dynamically updated by users. As per-bucket secrets are now supported,
@@ -938,7 +938,7 @@ The S3A client makes a best-effort attempt at recovering from network failures;
 this section covers the details of what it does.
 
 The S3A divides exceptions returned by the AWS SDK into different categories,
-and chooses a differnt retry policy based on their type and whether or
+and chooses a different retry policy based on their type and whether or
 not the failing operation is idempotent.
 
 
@@ -969,7 +969,7 @@ These failures will be retried with a fixed sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
-### Only retrible on idempotent operations
+### Only retriable on idempotent operations
 
 Some network failures are considered to be retriable if they occur on
 idempotent operations; there's no way to know if they happened
@@ -997,11 +997,11 @@ it's a no-op if reprocessed. As indeed, is `Filesystem.delete()`.
 1. Any filesystem supporting an atomic `FileSystem.create(path, overwrite=false)`
 operation to reject file creation if the path exists MUST NOT consider
 delete to be idempotent, because a `create(path, false)` operation will
-only succeed if the first `delete()` call has already succeded.
+only succeed if the first `delete()` call has already succeeded.
 1. And a second, retried `delete()` call could delete the new data.
 
-Because S3 is eventially consistent *and* doesn't support an
-atomic create-no-overwrite operation, the choice is more ambigious.
+Because S3 is eventually consistent *and* doesn't support an
+atomic create-no-overwrite operation, the choice is more ambiguous.
 
 Currently S3A considers delete to be
 idempotent because it is convenient for many workflows, including the
@@ -1045,11 +1045,11 @@ Notes
 1. There is also throttling taking place inside the AWS SDK; this is managed
 by the value `fs.s3a.attempts.maximum`.
 1. Throttling events are tracked in the S3A filesystem metrics and statistics.
-1. Amazon KMS may thottle a customer based on the total rate of uses of
+1. Amazon KMS may throttle a customer based on the total rate of uses of
 KMS *across all user accounts and applications*.
 
 Throttling of S3 requests is all too common; it is caused by too many clients
-trying to access the same shard of S3 Storage. This generatlly
+trying to access the same shard of S3 Storage. This generally
 happen if there are too many reads, those being the most common in Hadoop
 applications. This problem is exacerbated by Hive's partitioning
 strategy used when storing data, such as partitioning by year and then month.
@@ -1087,7 +1087,7 @@ of data asked for in every GET request, as well as how much data is
 skipped in the existing stream before aborting it and creating a new stream.
 1. If the DynamoDB tables used by S3Guard are being throttled, increase
 the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
-1. KMS: "consult AWS about increating your capacity".
+1. KMS: "consult AWS about increasing your capacity".
 
 
 
@@ -1173,14 +1173,14 @@ fs.s3a.bucket.nightly.server-side-encryption-algorithm
 ```
 
 When accessing the bucket `s3a://nightly/`, the per-bucket configuration
-options for that backet will be used, here the access keys and token,
+options for that bucket will be used, here the access keys and token,
 and including the encryption algorithm and key.
 
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 
 S3 Buckets are hosted in different "regions", the default being "US-East".
-The S3A client talks to this region by default, issing HTTP requests
+The S3A client talks to this region by default, issuing HTTP requests
 to the server `s3.amazonaws.com`.
 
 S3A can work with buckets from any region. Each region has its own
@@ -1331,12 +1331,12 @@ The "fast" output stream
     to the available disk space.
 1.  Generates output statistics as metrics on the filesystem, including
     statistics of active and pending block uploads.
-1.  Has the time to `close()` set by the amount of remaning data to upload, rather
+1.  Has the time to `close()` set by the amount of remaining data to upload, rather
     than the total size of the file.
 
 Because it starts uploading while data is still being written, it offers
 significant benefits when very large amounts of data are generated.
-The in memory buffering mechanims may also offer speedup when running adjacent to
+The in memory buffering mechanisms may also offer speedup when running adjacent to
 S3 endpoints, as disks are not used for intermediate data storage.
 
 
@@ -1400,7 +1400,7 @@ upload operation counts, so identifying when there is a backlog of work/
 a mismatch between data generation rates and network bandwidth. Per-stream
 statistics can also be logged by calling `toString()` on the current stream.
 
-* Files being written are still invisible untl the write
+* Files being written are still invisible until the write
 completes in the `close()` call, which will block until the upload is completed.
 
 
@@ -1526,7 +1526,7 @@ compete with other filesystem operations.
 
 We recommend a low value of `fs.s3a.fast.upload.active.blocks`; enough
 to start background upload without overloading other parts of the system,
-then experiment to see if higher values deliver more throughtput —especially
+then experiment to see if higher values deliver more throughput —especially
 from VMs running on EC2.
 
 ```xml
@@ -1569,10 +1569,10 @@ from VMs running on EC2.
 There are two mechanisms for cleaning up after leftover multipart
 uploads:
 - Hadoop s3guard CLI commands for listing and deleting uploads by their
-age. Doumented in the [S3Guard](./s3guard.html) section.
+age. Documented in the [S3Guard](./s3guard.html) section.
 - The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
-If an large stream writeoperation is interrupted, there may be
+If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
