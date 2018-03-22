@@ -76,7 +76,7 @@ public class RemoteMethod {
     }
 
     this.params = pParams;
-    this.types = pTypes;
+    this.types = Arrays.copyOf(pTypes, pTypes.length);
     this.methodName = method;
   }
 
@@ -111,7 +111,7 @@ public class RemoteMethod {
    * @return An array of calling types.
    */
   public Class<?>[] getTypes() {
-    return this.types;
+    return Arrays.copyOf(this.types, this.types.length);
   }
 
   /**
