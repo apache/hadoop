@@ -1260,7 +1260,16 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String GPU_EXCLUDE_OWNERLESS_GPUS = YARN_PREFIX
     + "gpu_exclude_ownerless_gpu.enable";
-  public static final boolean DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS = true;
+  public static final boolean DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS = false;
+
+
+  /**
+   * The GPU memory threshold to indicate whether this Gpus is ready to server job.
+   * usually, these memory are used by some unkown process.
+   */
+  public static final String GPU_NOT_READY_MEMORY_THRESHOLD = YARN_PREFIX
+    + "gpu_not_ready_memory_threshold-mb";
+  public static final int DEFAULT_GPU_NOT_READY_MEMORY_THRESHOLD = 20;
 
 
   /**

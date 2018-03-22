@@ -131,6 +131,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   // Exclude the Gpus are being used by un-know program.
   // Usually, the Gpu memory status is non-zero, but the process of this GPU is empty.
   private boolean excludeOwnerlessUsingGpus;
+  private int gpuNotReadyMemoryThreshold;
 
   /**
    * this parameter is circle controller for updating local allocated ports
@@ -183,9 +184,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       conf.getBoolean(YarnConfiguration.GPU_EXCLUDE_OWNERLESS_GPUS,
         YarnConfiguration.DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS);
 
+    gpuNotReadyMemoryThreshold =
+      conf.getInt(YarnConfiguration.GPU_NOT_READY_MEMORY_THRESHOLD,
+        YarnConfiguration.DEFAULT_GPU_NOT_READY_MEMORY_THRESHOLD);
+
     resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
-    int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus);
-    long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus);
+    int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
+    long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
 
     ValueRanges ports = null;
 
@@ -228,7 +233,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     super.serviceInit(conf);
     LOG.info("Initialized nodeManager for " + nodeId + ":" +
       " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
-      " virtual-cores=" + virtualCores + " gpus=" + GPUs + " gpu-attribute=" + GPUAttribute + " ports=" + ports);
+      " virtual-cores=" + virtualCores + " gpus=" + GPUs + " gpu-attribute=" + GPUAttribute + " ports=" + ports + " excludeOwnerlessUsingGpus:" + excludeOwnerlessUsingGpus + " enablePortsAsResource:" + enablePortsAsResource);
   }
 
   @Override
@@ -655,8 +660,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               }
             }
 
-            int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus);
-            long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus);
+            int GPUs = resourceCalculatorPlugin.getNumGPUs(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
+            long GPUAttribute = resourceCalculatorPlugin.getGpuAttributeCapacity(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
             totalResource.setGPUAttribute(GPUAttribute);
             totalResource.setGPUs(GPUs);
             nodeStatus.setResource(totalResource);

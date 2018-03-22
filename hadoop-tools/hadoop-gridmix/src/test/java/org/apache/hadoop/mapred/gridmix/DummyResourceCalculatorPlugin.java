@@ -111,14 +111,14 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs(boolean excludeOwnerlessUsingGpu) {
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpu, int gpuNotReadyMemoryThreshold) {
     return getConf().getInt(NUM_GPUS, -1);
   }
   
 
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpu) {
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpu, int gpuNotReadyMemoryThreshold) {
     // not support;
     return 0;
   }

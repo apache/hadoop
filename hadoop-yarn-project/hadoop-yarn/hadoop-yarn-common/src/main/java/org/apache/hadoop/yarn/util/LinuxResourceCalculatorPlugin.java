@@ -18,24 +18,18 @@
 
 package org.apache.hadoop.yarn.util;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Plugin to calculate resource information on Linux systems.
@@ -444,15 +438,15 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs(boolean excludeOwnerlessUsingGpus) {
-    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
     return numGPUs;
   }
 
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus) {
-    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
     return gpuAttributeCapacity;
   }
 
@@ -465,11 +459,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   private InputStreamReader getInputGpuInfoStreamReader() throws Exception {
     if (procfsGpuFile == null) {
-      LOG.info("exec:" + REFRESH_GPU_INFO_CMD);
       Process pos = Runtime.getRuntime().exec(REFRESH_GPU_INFO_CMD);
       pos.waitFor();
       return new InputStreamReader(pos.getInputStream());
-
     } else {
       LOG.info("read GPU info from file:" + procfsGpuFile);
       return new InputStreamReader(
@@ -477,16 +469,15 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
   }
 
-  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus) {
+  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
-      LOG.info("lastUpdateTime:" + lastRefreshGpuTime + " now:" + now);
       lastRefreshGpuTime = now;
       try {
         String ln = "";
         Long gpuAttributeUsed = 0L;
-        Long gpuAttributeProcess = 0xFFFFFFFFFFFFFFFFL;
+        Long gpuAttributeProcess = 0L;
         Long gpuAttributeCapacity = 0L;
         Map<String, String> usingMap = new HashMap<String, String>();
 
@@ -513,7 +504,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               int usedMem = Integer.parseInt(mat.group(1));
-              if (usedMem == 0) {
+              if (usedMem > gpuNotReadyMemoryThreshold) {
                 gpuAttributeUsed |= (1L << currentIndex);
               }
             }
@@ -522,20 +513,20 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               long index = Long.parseLong(mat.group(1));
-              gpuAttributeProcess -= (1 << index);
+              gpuAttributeProcess |= (1 << index);
             }
           }
         }
         input.close();
         ir.close();
-        Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
+        Long ownerLessGpus = (gpuAttributeUsed & ~gpuAttributeProcess);
         if ((ownerLessGpus != 0)) {
+          LOG.info("GpuAttributeCapacity:" + Long.toBinaryString(gpuAttributeCapacity) + " GpuAttributeUsed:" + Long.toBinaryString(gpuAttributeUsed) + " GpuAttributeProcess:" + Long.toBinaryString(gpuAttributeProcess));
           if (excludeOwnerlessUsingGpus) {
-            gpuAttributeCapacity -= ownerLessGpus;
+            gpuAttributeCapacity = (gpuAttributeCapacity & ~ownerLessGpus);
             LOG.error("GPU:" + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
-
           } else {
-            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
+            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ignore it and schedule jobs on these GPU. ");
           }
         }
         numGPUs = Long.bitCount(gpuAttributeCapacity);
@@ -550,7 +541,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   private InputStreamReader getInputPortsStreamReader(String cmdLine) throws Exception {
     if (procfsPortsFile == null) {
-      LOG.info("exec:" + cmdLine);
       Process pos = Runtime.getRuntime().exec(cmdLine);
       pos.waitFor();
       return new InputStreamReader(pos.getInputStream());
@@ -566,17 +556,14 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshPortsTime > REFRESH_INTERVAL_MS) {
-      LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
-
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader input = new BufferedReader(ir);
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
         while ((ln = input.readLine()) != null) {
-          LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
             String port = mat.group().substring(1);
@@ -589,12 +576,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         }
         input.close();
         ir.close();
-        LOG.info("used Ports:" + usedPorts);
       } catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
     } else {
-      LOG.info("getlastTime result usedPorts=" + usedPorts);
     }
   }
 
@@ -618,8 +603,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
       plugin.getCumulativeCpuTime());
-    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true));
-    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true));
+    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true, 0));
+    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true, 0));
     System.out.println("used Ports : " + plugin.getPortsUsage());
 
     try {
