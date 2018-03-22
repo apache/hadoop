@@ -27,8 +27,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.NamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.service.Service.STATE;
@@ -42,9 +42,9 @@ import org.junit.rules.TestName;
  * Test the service that heartbeats the state of the namenodes to the State
  * Store.
  */
-public class TestNamenodeHeartbeat {
+public class TestRouterNamenodeHeartbeat {
 
-  private static RouterDFSCluster cluster;
+  private static MiniRouterDFSCluster cluster;
   private static ActiveNamenodeResolver namenodeResolver;
   private static List<NamenodeHeartbeatService> services;
 
@@ -54,7 +54,7 @@ public class TestNamenodeHeartbeat {
   @BeforeClass
   public static void globalSetUp() throws Exception {
 
-    cluster = new RouterDFSCluster(true, 2);
+    cluster = new MiniRouterDFSCluster(true, 2);
 
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
@@ -91,7 +91,7 @@ public class TestNamenodeHeartbeat {
   @Test
   public void testNamenodeHeartbeatService() throws IOException {
 
-    RouterDFSCluster testCluster = new RouterDFSCluster(true, 1);
+    MiniRouterDFSCluster testCluster = new MiniRouterDFSCluster(true, 1);
     Configuration heartbeatConfig = testCluster.generateNamenodeConfiguration(
         NAMESERVICES[0]);
     NamenodeHeartbeatService server = new NamenodeHeartbeatService(
