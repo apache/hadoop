@@ -121,6 +121,7 @@ public class DatanodeHttpServer implements Closeable {
     builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
 
     this.infoServer = builder.build();
+    this.infoServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
 
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
