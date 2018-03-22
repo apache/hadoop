@@ -22,13 +22,11 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -465,11 +463,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   private InputStreamReader getInputGpuInfoStreamReader() throws Exception {
     if (procfsGpuFile == null) {
-      LOG.info("exec:" + REFRESH_GPU_INFO_CMD);
       Process pos = Runtime.getRuntime().exec(REFRESH_GPU_INFO_CMD);
       pos.waitFor();
       return new InputStreamReader(pos.getInputStream());
-
     } else {
       LOG.info("read GPU info from file:" + procfsGpuFile);
       return new InputStreamReader(
@@ -481,7 +477,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
-      LOG.info("lastUpdateTime:" + lastRefreshGpuTime + " now:" + now);
       lastRefreshGpuTime = now;
       try {
         String ln = "";
@@ -550,7 +545,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   private InputStreamReader getInputPortsStreamReader(String cmdLine) throws Exception {
     if (procfsPortsFile == null) {
-      LOG.info("exec:" + cmdLine);
       Process pos = Runtime.getRuntime().exec(cmdLine);
       pos.waitFor();
       return new InputStreamReader(pos.getInputStream());
@@ -566,17 +560,14 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshPortsTime > REFRESH_INTERVAL_MS) {
-      LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
-
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader input = new BufferedReader(ir);
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
         while ((ln = input.readLine()) != null) {
-          LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
             String port = mat.group().substring(1);
@@ -589,12 +580,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         }
         input.close();
         ir.close();
-        LOG.info("used Ports:" + usedPorts);
       } catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
     } else {
-      LOG.info("getlastTime result usedPorts=" + usedPorts);
     }
   }
 
