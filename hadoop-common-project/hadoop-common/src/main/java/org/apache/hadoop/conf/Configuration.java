@@ -816,8 +816,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-    this.resources = (ArrayList<Resource>) other.resources.clone();
     synchronized(other) {
+      // Make sure we clone a finalized state
+      // Resources like input streams can be processed only once
+      other.getProps();
+      this.resources = (ArrayList<Resource>) other.resources.clone();
       if (other.properties != null) {
         this.properties = (Properties)other.properties.clone();
       }
