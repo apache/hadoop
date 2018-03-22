@@ -23,7 +23,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.creat
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.deleteFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileStatus;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
-import static org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.TEST_STRING;
+import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -62,9 +62,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.NamenodeContext;
-import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -91,7 +91,7 @@ public class TestRouterRpc {
       LoggerFactory.getLogger(TestRouterRpc.class);
 
   /** Federated HDFS cluster. */
-  private static RouterDFSCluster cluster;
+  private static MiniRouterDFSCluster cluster;
 
   /** Random Router for this federated cluster. */
   private RouterContext router;
@@ -119,7 +119,9 @@ public class TestRouterRpc {
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    cluster = new RouterDFSCluster(false, 2);
+    cluster = new MiniRouterDFSCluster(false, 2);
+    // We need 6 DNs to test Erasure Coding with RS-6-3-64k
+    cluster.setNumDatanodesPerNameservice(6);
 
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
@@ -196,7 +198,7 @@ public class TestRouterRpc {
     testRouter.close();
   }
 
-  protected RouterDFSCluster getCluster() {
+  protected MiniRouterDFSCluster getCluster() {
     return TestRouterRpc.cluster;
   }
 
