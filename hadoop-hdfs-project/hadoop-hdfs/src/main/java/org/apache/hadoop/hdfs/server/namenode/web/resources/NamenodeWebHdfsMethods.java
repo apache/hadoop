@@ -143,7 +143,7 @@ public class NamenodeWebHdfsMethods {
         Boolean.valueOf(request.getHeader(WebHdfsFileSystem.EZ_HEADER));
   }
 
-  private void init(final UserGroupInformation ugi,
+  protected void init(final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username, final DoAsParam doAsUser,
       final UriFsPathParam path, final HttpOpParam<?> op,
@@ -184,6 +184,14 @@ public class NamenodeWebHdfsMethods {
     return cp;
   }
 
+  protected String getScheme() {
+    return scheme;
+  }
+
+  protected ServletContext getContext() {
+    return context;
+  }
+
   private <T> T doAs(final UserGroupInformation ugi,
       final PrivilegedExceptionAction<T> action)
           throws IOException, InterruptedException {
@@ -206,7 +214,7 @@ public class NamenodeWebHdfsMethods {
       }
       @Override
       public String getHostAddress() {
-        return remoteAddr;
+        return getRemoteAddr();
       }
       @Override
       public InetAddress getHostInetAddress() {
@@ -217,8 +225,8 @@ public class NamenodeWebHdfsMethods {
         }
       }
     };
-    final NameNode namenode = (NameNode)context.getAttribute("name.node");
-    namenode.queueExternalCall(call);
+
+    queueExternalCall(call);
     T result = null;
     try {
       result = call.get();
@@ -233,6 +241,16 @@ public class NamenodeWebHdfsMethods {
       }
     }
     return result;
+  }
+
+  protected String getRemoteAddr() {
+    return remoteAddr;
+  }
+
+  protected void queueExternalCall(ExternalCall call)
+      throws IOException, InterruptedException {
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    namenode.queueExternalCall(call);
   }
 
   @VisibleForTesting
@@ -306,7 +324,7 @@ public class NamenodeWebHdfsMethods {
    * sorted based on availability and network distances, thus it is sufficient
    * to return the first element of the node here.
    */
-  private static DatanodeInfo bestNode(DatanodeInfo[] nodes,
+  protected static DatanodeInfo bestNode(DatanodeInfo[] nodes,
       HashSet<Node> excludes) throws IOException {
     for (DatanodeInfo dn: nodes) {
       if (false == dn.isDecommissioned() && false == excludes.contains(dn)) {
@@ -470,7 +488,7 @@ public class NamenodeWebHdfsMethods {
 
   /** Validate all required params. */
   @SuppressWarnings("rawtypes")
-  private void validateOpParams(HttpOpParam<?> op, Param... params) {
+  protected void validateOpParams(HttpOpParam<?> op, Param... params) {
     for (Param param : params) {
       if (param.getValue() == null || param.getValueString() == null || param
           .getValueString().isEmpty()) {
@@ -570,7 +588,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response put(
+  protected Response put(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -602,14 +620,13 @@ public class NamenodeWebHdfsMethods {
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName
       ) throws IOException, URISyntaxException {
-
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
-    final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final ClientProtocol cp = getRpcClientProtocol();
 
     switch(op.getValue()) {
     case CREATE:
     {
+      final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final URI uri = redirectURI(null, namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L, blockSize.getValue(conf),
           exclDatanodes.getValue(), permission, unmaskedPermission,
@@ -840,7 +857,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response post(
+  protected Response post(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -1014,7 +1031,7 @@ public class NamenodeWebHdfsMethods {
     return encodedValue;
   }
 
-  private Response get(
+  protected Response get(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -1344,7 +1361,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response delete(
+  protected Response delete(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
