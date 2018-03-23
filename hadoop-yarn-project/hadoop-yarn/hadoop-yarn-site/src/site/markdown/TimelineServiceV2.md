@@ -486,6 +486,8 @@ You can provide the flow context via YARN application tags:
 
     appContext.setApplicationTags(tags);
 
+Note : The Resource Manager converts YARN application tags to lowercase before storing them. Hence one should convert
+Flow names and Flow versions to lowercase before using them in REST API queries.
 
 ## Timeline Service v.2 REST API
 
