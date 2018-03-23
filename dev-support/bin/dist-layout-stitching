@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # project.version
 VERSION=$1
 
@@ -130,9 +129,9 @@ run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-nfs/target/hadoop-hdfs-nfs-${V
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-${VERSION}" .
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-native-client/target/hadoop-hdfs-native-client-${VERSION}" .
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-rbf/target/hadoop-hdfs-rbf-${VERSION}" .
+
 run copy "${ROOT}/hadoop-yarn-project/target/hadoop-yarn-project-${VERSION}" .
 run copy "${ROOT}/hadoop-mapreduce-project/target/hadoop-mapreduce-${VERSION}" .
-run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 
 #copy httpfs and kms as is
 run cp -pr "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-httpfs/target/hadoop-hdfs-httpfs-${VERSION}"/* .
@@ -156,6 +155,8 @@ run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
 run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${VERSION}" .
 run copy "${ROOT}/hadoop-cblock/server/target/hadoop-cblock-server-${VERSION}" .
 run copy "${ROOT}/hadoop-cblock/tools/target/hadoop-cblock-tools-${VERSION}" .
+
+run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 
 echo
 echo "Hadoop dist layout available at: ${BASEDIR}/hadoop-${VERSION}"
