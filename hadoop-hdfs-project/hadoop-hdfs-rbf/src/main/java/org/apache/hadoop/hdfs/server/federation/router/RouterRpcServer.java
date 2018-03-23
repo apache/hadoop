@@ -544,7 +544,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @return The remote location for this file.
    * @throws IOException If the file has no creation location.
    */
-  private RemoteLocation getCreateLocation(final String src)
+  protected RemoteLocation getCreateLocation(final String src)
       throws IOException {
 
     final List<RemoteLocation> locations = getLocationsForPath(src, true);
