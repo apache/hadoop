@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.service.AbstractService;
 
@@ -85,6 +86,9 @@ public class RouterHttpServer extends AbstractService {
         DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
 
     this.httpServer = builder.build();
+
+    NameNodeHttpServer.initWebHdfs(conf, httpAddress.getHostName(), httpServer,
+        RouterWebHdfsMethods.class.getPackage().getName());
 
     this.httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, this.router);
     this.httpServer.setAttribute(JspHelper.CURRENT_CONF, this.conf);

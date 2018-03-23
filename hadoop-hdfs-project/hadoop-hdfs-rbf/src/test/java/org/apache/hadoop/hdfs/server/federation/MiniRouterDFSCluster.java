@@ -181,6 +181,11 @@ public class MiniRouterDFSCluster {
       return this.fileContext;
     }
 
+    public String getHttpAddress() {
+      InetSocketAddress httpAddress = router.getHttpServerAddress();
+      return NetUtils.getHostPortString(httpAddress);
+    }
+
     public void initRouter() throws URISyntaxException {
       // Store the bound points for the router interfaces
       InetSocketAddress rpcAddress = router.getRpcServerAddress();
