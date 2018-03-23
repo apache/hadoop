@@ -19,7 +19,6 @@
 package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,7 +27,6 @@ import java.util.Arrays;
  * This class provides utilities for working with CRCs.
  */
 @InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
-@InterfaceStability.Evolving
 public final class CrcUtil {
   public static final int MULTIPLICATIVE_IDENTITY = 0x80000000;
   public static final int GZIP_POLYNOMIAL = 0xEDB88320;
@@ -94,7 +92,15 @@ public final class CrcUtil {
    */
   public static byte[] intToBytes(int value) {
     byte[] buf = new byte[4];
-    writeInt(buf, 0, value);
+    try {
+      writeInt(buf, 0, value);
+    } catch (IOException ioe) {
+      // Since this should only be able to occur from code bugs within this
+      // class rather than user input, we throw as a RuntimeException
+      // rather than requiring this method to declare throwing IOException
+      // for something the caller can't control.
+      throw new RuntimeException(ioe);
+    }
     return buf;
   }
 
@@ -103,7 +109,13 @@ public final class CrcUtil {
    * starting at {@code offset}. buf.length must be greater than or
    * equal to offset + 4.
    */
-  public static void writeInt(byte[] buf, int offset, int value) {
+  public static void writeInt(byte[] buf, int offset, int value)
+      throws IOException {
+    if (offset + 4  > buf.length) {
+      throw new IOException(String.format(
+          "writeInt out of bounds: buf.length=%d, offset=%d",
+          buf.length, offset));
+    }
     buf[offset + 0] = (byte)((value >>> 24) & 0xff);
     buf[offset + 1] = (byte)((value >>> 16) & 0xff);
     buf[offset + 2] = (byte)((value >>> 8) & 0xff);
@@ -114,7 +126,13 @@ public final class CrcUtil {
    * Reads 4-byte big-endian int value from {@code buf} starting at
    * {@code offset}. buf.length must be greater than or equal to offset + 4.
    */
-  public static int readInt(byte[] buf, int offset) {
+  public static int readInt(byte[] buf, int offset)
+      throws IOException {
+    if (offset + 4  > buf.length) {
+      throw new IOException(String.format(
+          "readInt out of bounds: buf.length=%d, offset=%d",
+          buf.length, offset));
+    }
     int value = ((buf[offset + 0] & 0xff) << 24) |
                 ((buf[offset + 1] & 0xff) << 16) |
                 ((buf[offset + 2] & 0xff) << 8)  |
@@ -124,53 +142,41 @@ public final class CrcUtil {
 
   /**
    * For use with debug statements; verifies bytes.length on creation,
-   * expecting it to represent exactly one CRC, and returns an object
-   * whose toString() method lazily evaluates the contents into a hex
+   * expecting it to represent exactly one CRC, and returns a hex
    * formatted value.
    */
-  public static Object newSingleCrcWrapperFromByteArray(final byte[] bytes)
+  public static String toSingleCrcString(final byte[] bytes)
       throws IOException {
     if (bytes.length != 4) {
       throw new IOException((String.format(
           "Unexpected byte[] length '%d' for single CRC. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }
-    return new Object() {
-      @Override
-      public String toString() {
-        return String.format("0x%08x", readInt(bytes, 0));
-      }
-    };
+    return String.format("0x%08x", readInt(bytes, 0));
   }
 
   /**
    * For use with debug statements; verifies bytes.length on creation,
-   * expecting it to be divisible by CRC byte size, and returns an object
-   * whose toString() method lazily evaluates the contents into a list of
+   * expecting it to be divisible by CRC byte size, and returns a list of
    * hex formatted values.
    */
-  public static Object newMultiCrcWrapperFromByteArray(final byte[] bytes)
+  public static String toMultiCrcString(final byte[] bytes)
       throws IOException {
     if (bytes.length % 4 != 0) {
       throw new IOException((String.format(
           "Unexpected byte[] length '%d' not divisible by 4. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }
-    return new Object() {
-      @Override
-      public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append('[');
-        for (int i = 0; i < bytes.length; i += 4) {
-          sb.append(String.format("0x%08x", readInt(bytes, i)));
-          if (i != bytes.length - 4) {
-            sb.append(", ");
-          }
-        }
-        sb.append(']');
-        return sb.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    for (int i = 0; i < bytes.length; i += 4) {
+      sb.append(String.format("0x%08x", readInt(bytes, i)));
+      if (i != bytes.length - 4) {
+        sb.append(", ");
       }
-    };
+    }
+    sb.append(']');
+    return sb.toString();
   }
 
   /**

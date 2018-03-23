@@ -18,14 +18,12 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Encapsulates various options related to how fine-grained data checksums are
  * combined into block-level checksums.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class BlockChecksumOptions {
   private final BlockChecksumType blockChecksumType;
   private final long stripeLength;
@@ -37,8 +35,7 @@ public class BlockChecksumOptions {
   }
 
   public BlockChecksumOptions(BlockChecksumType blockChecksumType) {
-    this.blockChecksumType = blockChecksumType;
-    this.stripeLength = 0;
+    this(blockChecksumType, 0);
   }
 
   public BlockChecksumType getBlockChecksumType() {

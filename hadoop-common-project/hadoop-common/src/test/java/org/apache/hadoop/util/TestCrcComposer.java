@@ -84,7 +84,7 @@ public class TestCrcComposer {
     return (int) checksum.getValue();
   }
 
-  private byte[] intArrayToByteArray(int[] values) {
+  private byte[] intArrayToByteArray(int[] values) throws IOException {
     byte[] bytes = new byte[values.length * 4];
     for (int i = 0; i < values.length; ++i) {
       CrcUtil.writeInt(bytes, i * 4, values[i]);

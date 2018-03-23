@@ -160,7 +160,7 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testIntSerialization() {
+  public void testIntSerialization() throws IOException {
     byte[] bytes = CrcUtil.intToBytes(0xCAFEBEEF);
     assertEquals(0xCAFEBEEF, CrcUtil.readInt(bytes, 0));
 
@@ -175,28 +175,28 @@ public class TestCrcUtil {
   }
 
   @Test
-  public void testNewSingleCrcWrapperFromByteArrayBadLength()
+  public void testToSingleCrcStringBadLength()
       throws IOException {
     exception.expect(IOException.class);
-    CrcUtil.newSingleCrcWrapperFromByteArray(new byte[8]);
+    CrcUtil.toSingleCrcString(new byte[8]);
   }
 
   @Test
-  public void testNewSingleCrcWrapperFromByteArray() throws IOException {
+  public void testToSingleCrcString() throws IOException {
     byte[] buf = CrcUtil.intToBytes(0xcafebeef);
     assertEquals(
-        "0xcafebeef", CrcUtil.newSingleCrcWrapperFromByteArray(buf).toString());
+        "0xcafebeef", CrcUtil.toSingleCrcString(buf));
   }
 
   @Test
-  public void testNewMultiCrcWrapperFromByteArrayBadLength()
+  public void testToMultiCrcStringBadLength()
       throws IOException {
     exception.expect(IOException.class);
-    CrcUtil.newMultiCrcWrapperFromByteArray(new byte[6]);
+    CrcUtil.toMultiCrcString(new byte[6]);
   }
 
   @Test
-  public void testNewMultiCrcWrapperFromByteArrayMultipleElements()
+  public void testToMultiCrcStringMultipleElements()
       throws IOException {
     byte[] buf = new byte[12];
     CrcUtil.writeInt(buf, 0, 0xcafebeef);
@@ -204,24 +204,24 @@ public class TestCrcUtil {
     CrcUtil.writeInt(buf, 8, 0xddddefef);
     assertEquals(
         "[0xcafebeef, 0xababcccc, 0xddddefef]",
-        CrcUtil.newMultiCrcWrapperFromByteArray(buf).toString());
+        CrcUtil.toMultiCrcString(buf));
   }
 
   @Test
-  public void testNewMultiCrcWrapperFromByteArraySingleElement()
+  public void testToMultiCrcStringSingleElement()
       throws IOException {
     byte[] buf = new byte[4];
     CrcUtil.writeInt(buf, 0, 0xcafebeef);
     assertEquals(
         "[0xcafebeef]",
-        CrcUtil.newMultiCrcWrapperFromByteArray(buf).toString());
+        CrcUtil.toMultiCrcString(buf));
   }
 
   @Test
-  public void testNewMultiCrcWrapperFromByteArrayNoElements()
+  public void testToMultiCrcStringNoElements()
       throws IOException {
     assertEquals(
         "[]",
-        CrcUtil.newMultiCrcWrapperFromByteArray(new byte[0]).toString());
+        CrcUtil.toMultiCrcString(new byte[0]));
   }
 }

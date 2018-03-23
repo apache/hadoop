@@ -271,7 +271,7 @@ final class FileChecksumHelper {
       case COMPOSITE_CRC:
         return makeCompositeCrcResult();
       default:
-        return null;
+        throw new IOException("Unknown ChecksumCombineMode: " + combineMode);
       }
     }
 
@@ -504,14 +504,16 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        Object blockChecksumForDebug = null;
+        String blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
         case MD5CRC:
           //read md5
           final MD5Hash md5 =
               new MD5Hash(checksumData.getBlockChecksum().toByteArray());
           md5.write(getBlockChecksumBuf());
-          blockChecksumForDebug = md5;
+          if (LOG.isDebugEnabled()) {
+            blockChecksumForDebug = md5.toString();
+          }
           break;
         case COMPOSITE_CRC:
           BlockChecksumType returnedType = PBHelperClient.convert(
@@ -523,8 +525,7 @@ final class FileChecksumHelper {
           }
           byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
           if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug =
-                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+            blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
           }
           getBlockChecksumBuf().write(crcBytes);
           break;
@@ -561,8 +562,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from {}: blockChecksum={}",
-              datanode, blockChecksumForDebug);
+          LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
+              datanode, blockChecksumForDebug, getBlockChecksumType());
         }
       }
     }
@@ -698,14 +699,16 @@ final class FileChecksumHelper {
           setCrcPerBlock(cpb);
         }
 
-        Object blockChecksumForDebug = null;
+        String blockChecksumForDebug = null;
         switch (getBlockChecksumType()) {
         case MD5CRC:
           //read md5
           final MD5Hash md5 = new MD5Hash(
               checksumData.getBlockChecksum().toByteArray());
           md5.write(getBlockChecksumBuf());
-          blockChecksumForDebug = md5;
+          if (LOG.isDebugEnabled()) {
+            blockChecksumForDebug = md5.toString();
+          }
           break;
         case COMPOSITE_CRC:
           BlockChecksumType returnedType = PBHelperClient.convert(
@@ -717,8 +720,7 @@ final class FileChecksumHelper {
           }
           byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
           if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug =
-                CrcUtil.newSingleCrcWrapperFromByteArray(crcBytes);
+            blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
           }
           getBlockChecksumBuf().write(crcBytes);
           break;
@@ -755,8 +757,8 @@ final class FileChecksumHelper {
             LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
                 + ", crcPerBlock=" + getCrcPerBlock());
           }
-          LOG.debug("got reply from {}: blockChecksum={}",
-              datanode, blockChecksumForDebug);
+          LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
+              datanode, blockChecksumForDebug, getBlockChecksumType());
         }
       }
     }

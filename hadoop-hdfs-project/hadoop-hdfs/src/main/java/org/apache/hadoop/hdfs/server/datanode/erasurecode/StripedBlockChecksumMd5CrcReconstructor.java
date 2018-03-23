@@ -53,11 +53,20 @@ public class StripedBlockChecksumMd5CrcReconstructor
   @Override
   void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum)
       throws IOException {
+    if (digester == null) {
+      throw new IOException(String.format(
+          "Called updatedDigester with checksumBytes.length=%d, "
+          + "dataBytesPerChecksum=%d but digester is null",
+          checksumBytes.length, dataBytesPerChecksum));
+    }
     digester.update(checksumBytes, 0, checksumBytes.length);
   }
 
   @Override
   void commitDigest() throws IOException {
+    if (digester == null) {
+      throw new IOException("Called commitDigest() but digester is null");
+    }
     byte[] digest = digester.digest();
     md5 = new MD5Hash(digest);
     md5.write(getChecksumWriter());

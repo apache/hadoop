@@ -397,9 +397,12 @@ final class BlockChecksumHelper {
 
       byte[] composedCrcs = crcComposer.digest();
       setOutBytes(composedCrcs);
-      LOG.debug("block={}, getBytesPerCRC={}, crcPerBlock={}, compositeCrc={}",
-          getBlock(), getBytesPerCRC(), getCrcPerBlock(),
-          CrcUtil.newMultiCrcWrapperFromByteArray(composedCrcs));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "block={}, getBytesPerCRC={}, crcPerBlock={}, compositeCrc={}",
+            getBlock(), getBytesPerCRC(), getCrcPerBlock(),
+            CrcUtil.toMultiCrcString(composedCrcs));
+      }
     }
   }
 
@@ -569,7 +572,7 @@ final class BlockChecksumHelper {
             flatBlockChecksumData.length,
             numDataUnits,
             checksumLen,
-            CrcUtil.newSingleCrcWrapperFromByteArray(digest));
+            CrcUtil.toSingleCrcString(digest));
       }
       return digest;
     }
@@ -663,9 +666,11 @@ final class BlockChecksumHelper {
           byte[] checksumBytes =
               checksumData.getBlockChecksum().toByteArray();
           blockChecksumBuf.write(checksumBytes, 0, checksumBytes.length);
-          LOG.debug("got reply from datanode:{} for blockIdx:{}, checksum:{}",
-              targetDatanode, blockIdx,
-              CrcUtil.newMultiCrcWrapperFromByteArray(checksumBytes));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("got reply from datanode:{} for blockIdx:{}, checksum:{}",
+                targetDatanode, blockIdx,
+                CrcUtil.toMultiCrcString(checksumBytes));
+          }
           break;
         default:
           throw new IOException(

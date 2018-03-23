@@ -59,12 +59,21 @@ public class StripedBlockChecksumCompositeCrcReconstructor
   @Override
   void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum)
       throws IOException {
+    if (digester == null) {
+      throw new IOException(String.format(
+          "Called updatedDigester with checksumBytes.length=%d, "
+          + "dataBytesPerChecksum=%d but digester is null",
+          checksumBytes.length, dataBytesPerChecksum));
+    }
     digester.update(
         checksumBytes, 0, checksumBytes.length, dataBytesPerChecksum);
   }
 
   @Override
   void commitDigest() throws IOException {
+    if (digester == null) {
+      throw new IOException("Called commitDigest() but digester is null");
+    }
     digestValue = digester.digest();
     getChecksumWriter().write(digestValue, 0, digestValue.length);
   }

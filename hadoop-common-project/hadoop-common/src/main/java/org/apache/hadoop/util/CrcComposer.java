@@ -19,7 +19,6 @@
 package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,6 @@ import java.io.IOException;
  * same size.
  */
 @InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
-@InterfaceStability.Evolving
 public class CrcComposer {
   private static final int CRC_SIZE_BYTES = 4;
   private static final Logger LOG = LoggerFactory.getLogger(CrcComposer.class);
