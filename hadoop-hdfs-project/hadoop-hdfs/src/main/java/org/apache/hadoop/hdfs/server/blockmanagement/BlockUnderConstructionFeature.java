@@ -60,7 +60,7 @@ public class BlockUnderConstructionFeature {
   /**
    * The block source to use in the event of copy-on-write truncate.
    */
-  private BlockInfo truncateBlock;
+  private Block truncateBlock;
 
   public BlockUnderConstructionFeature(Block blk,
       BlockUCState state, DatanodeStorageInfo[] targets, BlockType blockType) {
@@ -193,11 +193,11 @@ public class BlockUnderConstructionFeature {
   }
 
   /** Get recover block */
-  public BlockInfo getTruncateBlock() {
+  public Block getTruncateBlock() {
     return truncateBlock;
   }
 
-  public void setTruncateBlock(BlockInfo recoveryBlock) {
+  public void setTruncateBlock(Block recoveryBlock) {
     this.truncateBlock = recoveryBlock;
   }
 

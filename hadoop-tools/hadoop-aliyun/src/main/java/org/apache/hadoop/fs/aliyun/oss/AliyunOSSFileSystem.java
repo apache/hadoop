@@ -24,11 +24,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -72,9 +70,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
   private int maxReadAheadPartNumber;
-  private int maxConcurrentCopyTasksPerDir;
   private ListeningExecutorService boundedThreadPool;
-  private ListeningExecutorService boundedCopyThreadPool;
 
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -94,7 +90,6 @@ public class AliyunOSSFileSystem extends FileSystem {
     try {
       store.close();
       boundedThreadPool.shutdown();
-      boundedCopyThreadPool.shutdown();
     } finally {
       super.close();
     }
@@ -336,23 +331,6 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
         threadNum, totalTasks, 60L, TimeUnit.SECONDS, "oss-read-shared");
-
-    maxConcurrentCopyTasksPerDir = AliyunOSSUtils.intPositiveOption(conf,
-        Constants.MAX_CONCURRENT_COPY_TASKS_PER_DIR_KEY,
-        Constants.MAX_CONCURRENT_COPY_TASKS_PER_DIR_DEFAULT);
-
-    int maxCopyThreads = AliyunOSSUtils.intPositiveOption(conf,
-        Constants.MAX_COPY_THREADS_NUM_KEY,
-        Constants.MAX_COPY_THREADS_DEFAULT);
-
-    int maxCopyTasks = AliyunOSSUtils.intPositiveOption(conf,
-        Constants.MAX_COPY_TASKS_KEY,
-        Constants.MAX_COPY_TASKS_DEFAULT);
-
-    this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        maxCopyThreads, maxCopyTasks, 60L,
-        TimeUnit.SECONDS, "oss-copy-unbounded");
-
     setConf(conf);
   }
 
@@ -675,30 +653,14 @@ public class AliyunOSSFileSystem extends FileSystem {
     }
 
     store.storeEmptyFile(dstKey);
-    AliyunOSSCopyFileContext copyFileContext = new AliyunOSSCopyFileContext();
-    ExecutorService executorService = MoreExecutors.listeningDecorator(
-        new SemaphoredDelegatingExecutor(boundedCopyThreadPool,
-            maxConcurrentCopyTasksPerDir, true));
     ObjectListing objects = store.listObjects(srcKey, maxKeys, null, true);
     statistics.incrementReadOps(1);
     // Copy files from src folder to dst
-    int copiesToFinish = 0;
     while (true) {
       for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
         String newKey =
             dstKey.concat(objectSummary.getKey().substring(srcKey.length()));
-
-        //copy operation just copies metadata, oss will support shallow copy
-        executorService.execute(new AliyunOSSCopyFileTask(
-            store, objectSummary.getKey(), newKey, copyFileContext));
-        copiesToFinish++;
-        // No need to call lock() here.
-        // It's ok to copy one more file if the rename operation failed
-        // Reduce the call of lock() can also improve our performance
-        if (copyFileContext.isCopyFailure()) {
-          //some error occurs, break
-          break;
-        }
+        store.copyFile(objectSummary.getKey(), newKey);
       }
       if (objects.isTruncated()) {
         String nextMarker = objects.getNextMarker();
@@ -708,16 +670,7 @@ public class AliyunOSSFileSystem extends FileSystem {
         break;
       }
     }
-    //wait operations in progress to finish
-    copyFileContext.lock();
-    try {
-      copyFileContext.awaitAllFinish(copiesToFinish);
-    } catch (InterruptedException e) {
-      LOG.warn("interrupted when wait copies to finish");
-    } finally {
-      copyFileContext.unlock();
-    }
-    return !copyFileContext.isCopyFailure();
+    return true;
   }
 
   @Override

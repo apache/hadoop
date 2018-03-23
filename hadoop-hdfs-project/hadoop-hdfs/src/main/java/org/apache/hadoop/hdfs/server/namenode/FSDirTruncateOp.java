@@ -104,7 +104,7 @@ final class FSDirTruncateOp {
       final BlockInfo last = file.getLastBlock();
       if (last != null && last.getBlockUCState()
           == BlockUCState.UNDER_RECOVERY) {
-        final BlockInfo truncatedBlock = last.getUnderConstructionFeature()
+        final Block truncatedBlock = last.getUnderConstructionFeature()
             .getTruncateBlock();
         if (truncatedBlock != null) {
           final long truncateLength = file.computeFileSize(false, false)
@@ -259,8 +259,7 @@ final class FSDirTruncateOp {
       oldBlock = file.getLastBlock();
       assert !oldBlock.isComplete() : "oldBlock should be under construction";
       BlockUnderConstructionFeature uc = oldBlock.getUnderConstructionFeature();
-      uc.setTruncateBlock(new BlockInfoContiguous(oldBlock,
-          oldBlock.getReplication()));
+      uc.setTruncateBlock(new Block(oldBlock));
       uc.getTruncateBlock().setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
       uc.getTruncateBlock().setGenerationStamp(newBlock.getGenerationStamp());
       truncatedBlockUC = oldBlock;

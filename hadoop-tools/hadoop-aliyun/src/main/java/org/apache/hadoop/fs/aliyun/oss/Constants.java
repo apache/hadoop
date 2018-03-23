@@ -110,22 +110,6 @@ public final class Constants {
       "fs.oss.multipart.download.ahead.part.max.number";
   public static final int MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT = 4;
 
-  // The maximum queue number for copies
-  // New copies will be blocked when queue is full
-  public static final String MAX_COPY_TASKS_KEY = "fs.oss.max.copy.tasks";
-  public static final int MAX_COPY_TASKS_DEFAULT = 1024 * 10240;
-
-  // The maximum number of threads allowed in the pool for copies
-  public static final String MAX_COPY_THREADS_NUM_KEY =
-      "fs.oss.max.copy.threads";
-  public static final int MAX_COPY_THREADS_DEFAULT = 25;
-
-  // The maximum number of concurrent tasks allowed to copy one directory.
-  // So we will not block other copies
-  public static final String MAX_CONCURRENT_COPY_TASKS_PER_DIR_KEY =
-      "fs.oss.max.copy.tasks.per.dir";
-  public static final int MAX_CONCURRENT_COPY_TASKS_PER_DIR_DEFAULT = 5;
-
   // Comma separated list of directories
   public static final String BUFFER_DIR_KEY = "fs.oss.buffer.dir";
 

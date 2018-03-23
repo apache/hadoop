@@ -44,7 +44,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Appender;
@@ -249,7 +248,7 @@ public abstract class GenericTestUtils {
    * @return the absolute directory for tests. Caller is expected to create it.
    */
   public static File getRandomizedTestDir() {
-    return new File(getRandomizedTempPath());
+    return new File(getRandomizedTempPath()).getAbsoluteFile();
   }
 
   /**
@@ -260,9 +259,7 @@ public abstract class GenericTestUtils {
    * @return a string to use in paths
    */
   public static String getTempPath(String subpath) {
-    String prop = (Path.WINDOWS) ? DEFAULT_TEST_DATA_PATH
-        : System.getProperty(SYSPROP_TEST_DATA_DIR, DEFAULT_TEST_DATA_PATH);
-
+    String prop = System.getProperty(SYSPROP_TEST_DATA_DIR, DEFAULT_TEST_DATA_PATH);
     if (prop.isEmpty()) {
       // corner case: property is there but empty
       prop = DEFAULT_TEST_DATA_PATH;

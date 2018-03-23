@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -367,7 +366,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNode("host1", "/rack1", 123, 1024));
     verify(spyAllocationTagsManager, Mockito.times(1)).getNodeCardinalityByOp(
-        eq(NodeId.fromString("host1:123")), any(AllocationTags.class),
+        eq(NodeId.fromString("host1:123")), eq(TestUtils.getMockApplicationId(1)),
+        eq(ImmutableSet.of("mapper", "reducer")),
         any(LongBinaryOperator.class));
 
     allocator = new SingleConstraintAppPlacementAllocator();
@@ -388,8 +388,9 @@ public class TestSingleConstraintAppPlacementAllocator {
     allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNode("host1", "/rack1", 123, 1024));
     verify(spyAllocationTagsManager, Mockito.atLeast(1)).getNodeCardinalityByOp(
-        eq(NodeId.fromString("host1:123")), any(AllocationTags.class),
-        any(LongBinaryOperator.class));
+        eq(NodeId.fromString("host1:123")),
+        eq(TestUtils.getMockApplicationId(1)), eq(ImmutableSet
+            .of("mapper", "reducer")), any(LongBinaryOperator.class));
 
     SchedulerNode node1 = mock(SchedulerNode.class);
     when(node1.getPartition()).thenReturn("x");

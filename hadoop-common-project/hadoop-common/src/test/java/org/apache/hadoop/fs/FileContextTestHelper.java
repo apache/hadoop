@@ -43,7 +43,7 @@ public final class FileContextTestHelper {
    * Create a context with test root relative to the test directory
    */
   public FileContextTestHelper() {
-    this(GenericTestUtils.getRandomizedTestDir().getPath());
+    this(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
   }
 
   /**
@@ -83,7 +83,7 @@ public final class FileContextTestHelper {
         absTestRootDir = testRootDir;
       } else {
         absTestRootDir = fc.getWorkingDirectory().toString() + "/"
-            + new Path(testRootDir).toUri();
+            + testRootDir;
       }
     }
     return absTestRootDir;

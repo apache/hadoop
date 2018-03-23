@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -1053,11 +1054,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       if(uc == null) {
         return;
       }
-      BlockInfo truncateBlock = uc.getTruncateBlock();
+      Block truncateBlock = uc.getTruncateBlock();
       if(truncateBlock == null || truncateBlock.equals(toDelete)) {
         return;
       }
-      addDeleteBlock(truncateBlock);
+      assert truncateBlock instanceof BlockInfo : "should be BlockInfo";
+      addDeleteBlock((BlockInfo) truncateBlock);
     }
 
     public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {

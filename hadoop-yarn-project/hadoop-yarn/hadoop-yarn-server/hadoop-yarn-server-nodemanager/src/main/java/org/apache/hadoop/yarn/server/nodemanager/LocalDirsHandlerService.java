@@ -166,12 +166,7 @@ public class LocalDirsHandlerService extends AbstractService {
 
     @Override
     public void run() {
-      try {
-        checkDirs();
-      } catch (Throwable t) {
-        // Prevent uncaught exceptions from killing this thread
-        LOG.warn("Error while checking local directories: ", t);
-      }
+      checkDirs();
     }
   }
 

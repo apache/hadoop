@@ -58,11 +58,19 @@ if(WIN32)
     # Omit unneeded headers.
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWIN32_LEAN_AND_MEAN")
     set(OS_DIR ${CMAKE_SOURCE_DIR}/main/native/libhdfs/os/windows)
-    set(OUT_DIR target/bin)
+
+    # IMPORTANT: OUT_DIR MUST be relative to maven's
+    # project.build.directory (=target) and match dist-copynativelibs
+    # in order to be in a release
+    set(OUT_DIR bin)
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
     set(OS_DIR ${CMAKE_SOURCE_DIR}/main/native/libhdfs/os/posix)
-    set(OUT_DIR target/usr/local/lib)
+
+    # IMPORTANT: OUT_DIR MUST be relative to maven's
+    # project.build.directory (=target) and match dist-copynativelibs
+    # in order to be in a release
+    set(OUT_DIR native/target/usr/local/lib)
 endif()
 
 # Configure JNI.
@@ -90,11 +98,6 @@ endfunction()
 
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
-add_subdirectory(main/native/libhdfspp)
-
-if(REQUIRE_LIBWEBHDFS)
-    add_subdirectory(contrib/libwebhdfs)
-endif()
 
 # Find Linux FUSE
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")

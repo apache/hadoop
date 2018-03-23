@@ -305,14 +305,6 @@ public class MockAM {
   public AllocateResponse allocateIntraAppAntiAffinity(
       ResourceSizing resourceSizing, Priority priority, long allocationId,
       Set<String> allocationTags, String... targetTags) throws Exception {
-    return allocateAppAntiAffinity(resourceSizing, priority, allocationId,
-        null, allocationTags, targetTags);
-  }
-
-  public AllocateResponse allocateAppAntiAffinity(
-      ResourceSizing resourceSizing, Priority priority, long allocationId,
-      String namespace, Set<String> allocationTags, String... targetTags)
-      throws Exception {
     return this.allocate(null,
         Arrays.asList(SchedulingRequest.newBuilder().executionType(
             ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
@@ -321,8 +313,7 @@ public class MockAM {
                 PlacementConstraints
                     .targetNotIn(PlacementConstraints.NODE,
                         PlacementConstraints.PlacementTargets
-                            .allocationTagWithNamespace(namespace, targetTags))
-                    .build())
+                            .allocationTagToIntraApp(targetTags)).build())
             .resourceSizing(resourceSizing).build()), null);
   }
 

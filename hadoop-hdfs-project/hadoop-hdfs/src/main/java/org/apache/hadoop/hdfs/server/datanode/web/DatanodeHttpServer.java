@@ -120,7 +120,6 @@ public class DatanodeHttpServer implements Closeable {
 
     this.infoServer = builder.build();
 
-    this.infoServer.setAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
     this.infoServer.setAttribute("datanode", datanode);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",

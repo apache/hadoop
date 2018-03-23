@@ -833,23 +833,6 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   @GET
-  @Path(RMWSConsts.CHECK_USER_ACCESS_TO_QUEUE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-                MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  @Override
-  public Response checkUserAccessToQueue(
-      @PathParam(RMWSConsts.QUEUE) String queue,
-      @QueryParam(RMWSConsts.USER) String username,
-      @QueryParam(RMWSConsts.QUEUE_ACL_TYPE)
-      @DefaultValue("SUBMIT_APPLICATIONS") String queueAclType,
-      @Context HttpServletRequest hsr) throws AuthorizationException {
-    init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
-    return pipeline.getRootInterceptor().checkUserAccessToQueue(queue,
-        username, queueAclType, hsr);
-  }
-
-  @GET
   @Path(RMWSConsts.APPS_APPID_APPATTEMPTS_APPATTEMPTID)
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })

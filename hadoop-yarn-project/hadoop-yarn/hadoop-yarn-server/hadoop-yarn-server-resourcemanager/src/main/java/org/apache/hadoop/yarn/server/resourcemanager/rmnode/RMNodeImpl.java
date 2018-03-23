@@ -866,12 +866,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getDispatcher().getEventHandler().handle(
         new NodesListManagerEvent(
             NodesListManagerEventType.NODE_USABLE, rmNode));
-      List<LogAggregationReport> logAggregationReportsForApps =
-          startEvent.getLogAggregationReportsForApps();
-      if (logAggregationReportsForApps != null
-          && !logAggregationReportsForApps.isEmpty()) {
-        rmNode.handleLogAggregationStatus(logAggregationReportsForApps);
-      }
     }
   }
 

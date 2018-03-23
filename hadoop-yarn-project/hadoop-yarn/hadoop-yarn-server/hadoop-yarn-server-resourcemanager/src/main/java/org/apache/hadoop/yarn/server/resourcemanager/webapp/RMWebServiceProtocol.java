@@ -658,22 +658,4 @@ public interface RMWebServiceProtocol {
    * @return all the attempts info for a specific application
    */
   AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId);
-
-  /**
-   * This method verifies if an user has access to a specified queue.
-   *
-   * @return Response containing the status code.
-   *
-   * @param queue queue
-   * @param username user
-   * @param queueAclType acl type of queue, it could be
-   *                     SUBMIT_APPLICATIONS/ADMINISTER_QUEUE
-   * @param hsr request
-   *
-   * @throws AuthorizationException if the user is not authorized to invoke this
-   *                                method.
-   */
-  Response checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr)
-      throws AuthorizationException;
 }

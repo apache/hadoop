@@ -23,7 +23,7 @@ import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagNamespace;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespace;
 import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.SchedulingRequestPBImpl;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.exceptions.InvalidAllocationTagException;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -338,18 +339,18 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
         try {
           AllocationTagNamespace tagNS =
               AllocationTagNamespace.parse(targetExpression.getTargetKey());
-          if (AllocationTagNamespaceType.APP_LABEL
+          if (!AllocationTagNamespaceType.SELF
               .equals(tagNS.getNamespaceType())) {
             throwExceptionWithMetaInfo(
-                "As of now, allocation tag namespace ["
-                    + AllocationTagNamespaceType.APP_LABEL.toString()
-                    + "] is not supported. Please make changes to placement "
-                    + "constraints accordingly. If this is null, it will be "
-                    + "set to "
+                "As of now, the only accepted target key for targetKey of "
+                    + "allocation_tag target expression is: ["
+                    + AllocationTagNamespaceType.SELF.toString()
+                    + "]. Please make changes to placement constraints "
+                    + "accordingly. If this is null, it will be set to "
                     + AllocationTagNamespaceType.SELF.toString()
                     + " by default.");
           }
-        } catch (InvalidAllocationTagsQueryException e) {
+        } catch (InvalidAllocationTagException e) {
           throwExceptionWithMetaInfo(
               "Invalid allocation tag namespace, message: " + e.getMessage());
         }
