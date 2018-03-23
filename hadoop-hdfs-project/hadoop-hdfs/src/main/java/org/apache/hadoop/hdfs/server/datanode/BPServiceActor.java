@@ -230,9 +230,9 @@ class BPServiceActor implements Runnable {
         LOG.debug(this + " received versionRequest response: " + nsInfo);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.warn("Problem connecting to server: " + nnAddr);
+        LOG.warn("Problem connecting to server: " + nnAddr, e);
       } catch(IOException e ) {  // namenode is not available
-        LOG.warn("Problem connecting to server: " + nnAddr);
+        LOG.warn("Problem connecting to server: " + nnAddr, e);
       }
       
       // try again in a second
