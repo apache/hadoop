@@ -49,7 +49,6 @@ export default DS.JSONAPISerializer.extend({
           progress: payload.progress,
           applicationType: payload.applicationType,
           diagnostics: (payload.diagnostics && payload.diagnostics !== 'null')? payload.diagnostics : '',
-          amContainerLogs: payload.amContainerLogs,
           amHostHttpAddress: payload.amHostHttpAddress,
           masterNodeId: payload.masterNodeId,
           logAggregationStatus: payload.logAggregationStatus,

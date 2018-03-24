@@ -55,6 +55,7 @@ import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -284,9 +285,12 @@ public class SLSRunner extends Configured implements Tool {
 
   private void startNM() throws YarnException, IOException {
     // nm configuration
-    int heartbeatInterval =
-        getConf().getInt(SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS,
-            SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS_DEFAULT);
+    int heartbeatInterval = getConf().getInt(
+        SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS,
+        SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS_DEFAULT);
+    float resourceUtilizationRatio = getConf().getFloat(
+        SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO,
+        SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO_DEFAULT);
     // nm information (fetch from topology file, or from sls/rumen json file)
     Set<String> nodeSet = new HashSet<String>();
     if (nodeFile.isEmpty()) {
@@ -324,7 +328,7 @@ public class SLSRunner extends Configured implements Tool {
       // we randomize the heartbeat start time from zero to 1 interval
       NMSimulator nm = new NMSimulator();
       nm.init(hostName, nodeManagerResource, random.nextInt(heartbeatInterval),
-          heartbeatInterval, rm);
+          heartbeatInterval, rm, resourceUtilizationRatio);
       nmMap.put(nm.getNode().getNodeID(), nm);
       runner.schedule(nm);
       rackSet.add(nm.getNode().getRackName());
@@ -499,9 +503,15 @@ public class SLSRunner extends Configured implements Tool {
       }
       count = Math.max(count, 1);
 
+      ExecutionType executionType = ExecutionType.GUARANTEED;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_EXECUTION_TYPE)) {
+        executionType = ExecutionType.valueOf(
+            jsonTask.get(SLSConfiguration.TASK_EXECUTION_TYPE).toString());
+      }
       for (int i = 0; i < count; i++) {
         containers.add(
-            new ContainerSimulator(res, duration, hostname, priority, type));
+            new ContainerSimulator(res, duration, hostname, priority, type,
+                executionType));
       }
     }
 
@@ -670,7 +680,8 @@ public class SLSRunner extends Configured implements Tool {
             .newInstance((int) task.getMemory(), (int) task.getVcores());
         containerList.add(
             new ContainerSimulator(containerResource, containerLifeTime,
-                hostname, task.getPriority(), task.getType()));
+                hostname, task.getPriority(), task.getType(),
+                task.getExecutionType()));
       }
 
 

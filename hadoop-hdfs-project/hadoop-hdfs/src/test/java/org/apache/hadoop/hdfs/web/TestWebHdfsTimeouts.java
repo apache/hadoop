@@ -66,10 +66,10 @@ public class TestWebHdfsTimeouts {
 
   private static final Log LOG = LogFactory.getLog(TestWebHdfsTimeouts.class);
 
-  private static final int CLIENTS_TO_CONSUME_BACKLOG = 100;
+  private static final int CLIENTS_TO_CONSUME_BACKLOG = 129;
   private static final int CONNECTION_BACKLOG = 1;
-  private static final int SHORT_SOCKET_TIMEOUT = 5;
-  private static final int TEST_TIMEOUT = 10000;
+  private static final int SHORT_SOCKET_TIMEOUT = 200;
+  private static final int TEST_TIMEOUT = 100000;
 
   private List<SocketChannel> clients;
   private WebHdfsFileSystem fs;

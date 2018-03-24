@@ -31,6 +31,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <require.fuse>false</require.fuse>
+    <require.libwebhdfs>false</require.libwebhdfs>
+    <require.valgrind>false</require.valgrind>
+    <native_ctest_args></native_ctest_args>
+    <native_cmake_args></native_cmake_args>
+    <native_make_args></native_make_args>
     <hadoop.component>hdfs</hadoop.component>
   </properties>
 
@@ -85,6 +90,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/native/config/*</exclude>
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/main/native/fuse-dfs/util/tree.h</exclude>
+            <exclude>src/main/native/libhdfspp/third_party/**</exclude>
             <exclude>src/contrib/**</exclude>
           </excludes>
         </configuration>
@@ -138,17 +144,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 </goals>
                 <configuration>
                   <target>
-                    <condition property="generator" value="Visual Studio 10" else="Visual Studio 10 Win64">
-                      <equals arg1="Win32" arg2="${env.PLATFORM}" />
-                    </condition>
                     <mkdir dir="${project.build.directory}/native"/>
                     <exec executable="cmake" dir="${project.build.directory}/native"
                           failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_FUSE=${require.fuse} -G '${generator}'"/>
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DHADOOP_BUILD=1 -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
+                      <arg line="${native_cmake_args}"/>
                     </exec>
                     <exec executable="msbuild" dir="${project.build.directory}/native"
                           failonerror="true">
                       <arg line="ALL_BUILD.vcxproj /nologo /p:Configuration=RelWithDebInfo /p:LinkIncremental=false"/>
+                      <arg line="${native_make_args}"/>
                     </exec>
                     <!-- Copy for inclusion in distribution. -->
                     <copy todir="${project.build.directory}/bin">
@@ -167,11 +172,15 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <property name="compile_classpath" refid="maven.compile.classpath"/>
                     <property name="test_classpath" refid="maven.test.classpath"/>
                     <exec executable="ctest" failonerror="true" dir="${project.build.directory}/native">
+                      <arg line="--output-on-failure"/>
+                      <arg line="${native_ctest_args}"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                       <!-- HADOOP_HOME required to find winutils. -->
                       <env key="HADOOP_HOME" value="${hadoop.common.build.dir}"/>
                       <!-- Make sure hadoop.dll and jvm.dll are on PATH. -->
                       <env key="PATH" value="${env.PATH};${hadoop.common.build.dir}/bin;${java.home}/jre/bin/server;${java.home}/bin/server"/>
+                      <!-- Make sure libhadoop.so is on LD_LIBRARY_PATH. -->
+                      <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>
                     </exec>
                   </target>
                 </configuration>
@@ -192,29 +201,26 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-maven-plugins</artifactId>
-            <executions>
-              <execution>
-                <id>cmake-compile</id>
-                <phase>compile</phase>
-                <goals><goal>cmake-compile</goal></goals>
-                <configuration>
-                  <source>${basedir}/src</source>
-                  <vars>
-                    <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
-                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
-                    <REQUIRE_FUSE>${require.fuse}</REQUIRE_FUSE>
-                  </vars>
-                  <output>${project.build.directory}</output>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
+              <execution>
+                <id>make</id>
+                <phase>compile</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}"/>
+                    <exec executable="cmake" dir="${project.build.directory}" failonerror="true">
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}  -DHADOOP_BUILD=1 -DREQUIRE_LIBWEBHDFS=${require.libwebhdfs} -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} "/>
+                      <arg line="${native_cmake_args}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}" failonerror="true">
+                      <arg line="${native_make_args}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
               <execution>
                 <id>native_tests</id>
                 <phase>test</phase>
@@ -225,10 +231,84 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <property name="compile_classpath" refid="maven.compile.classpath"/>
                     <property name="test_classpath" refid="maven.test.classpath"/>
                     <exec executable="ctest" failonerror="true" dir="${project.build.directory}/">
+                      <arg line="--output-on-failure"/>
+                      <arg line="${native_ctest_args}"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                       <!-- Make sure libhadoop.so is on LD_LIBRARY_PATH. -->
                       <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>
                     </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>test-patch</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <runningWithNative>true</runningWithNative>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>make_altern</id>
+                <phase>compile</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/altern"/>
+                    <condition property="c_compiler" value="clang" else="gcc">
+                      <contains string="${env.CC}" substring="gcc"/>
+                    </condition>
+                    <condition property="cxx_compiler" value="clang++" else="g++">
+                      <contains string="${env.CXX}" substring="g++"/>
+                    </condition>
+                    <exec executable="cmake" dir="${project.build.directory}/altern" failonerror="true">
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/altern/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}  -DHADOOP_BUILD=1 -DREQUIRE_LIBWEBHDFS=${require.libwebhdfs} -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} "/>
+                      <arg line="-DCMAKE_C_COMPILER=${c_compiler} -DCMAKE_CXX_COMPILER=${cxx_compiler}"/>
+                      <arg line="${native_cmake_args}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}/altern" failonerror="true">
+                      <arg line="${native_make_args}"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>native_tests_altern</id>
+                <phase>test</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <target>
+                    <property name="compile_classpath" refid="maven.compile.classpath"/>
+                    <property name="test_classpath" refid="maven.test.classpath"/>
+                    <exec executable="ctest" failonerror="true" dir="${project.build.directory}/altern">
+                      <arg line="--output-on-failure"/>
+                      <arg line="${native_ctest_args}"/>
+                      <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
+                      <!-- Make sure libhadoop.so is on LD_LIBRARY_PATH. -->
+                      <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/altern/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>clean_altern</id>
+                <phase>test</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <delete dir="${project.build.directory}/altern" includeemptydirs="true"/>
                   </target>
                 </configuration>
               </execution>

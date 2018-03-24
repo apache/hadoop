@@ -839,6 +839,20 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
+                <id>convert-ms-winutils</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\winutils</argument>
+                    <argument>${project.build.directory}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
                 <id>compile-ms-winutils</id>
                 <phase>compile</phase>
                 <goals>
@@ -854,6 +868,20 @@
                     <argument>/p:IntermediateOutputPath=${project.build.directory}/winutils/</argument>
                     <argument>/p:WsceConfigDir=${wsce.config.dir}</argument>
                     <argument>/p:WsceConfigFile=${wsce.config.file}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>convert-ms-native-dll</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
+                  <arguments>
+                    <argument>${basedir}\src\main\native</argument>
+                    <argument>${project.build.directory}</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -979,30 +1007,13 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>
-                <phase>test-compile</phase>
-                <configuration>
-                  <target>
-                    <script language="javascript"><![CDATA[
-                      var baseDirs = [
-                          "${test.build.data}",
-                          "${test.build.dir}",
-                          "${hadoop.tmp.dir}" ];
-                      for (var i in baseDirs) {
-                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
-                          var mkdir = project.createTask("mkdir");
-                          mkdir.setDir(new java.io.File(baseDirs[i], j));
-                          mkdir.perform();
-                        }
-                      }
-                    ]]></script>
-                  </target>
-                </configuration>
+                <id>parallel-tests-createdir</id>
                 <goals>
-                  <goal>run</goal>
+                  <goal>parallel-tests-createdir</goal>
                 </goals>
               </execution>
             </executions>
@@ -1015,6 +1026,7 @@
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
+                <testsThreadCount>${testsThreadCount}</testsThreadCount>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
                 <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>

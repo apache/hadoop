@@ -84,6 +84,13 @@ public class DiskBalancerCLI extends Configured implements Tool {
    * Executes a given plan file on the target datanode.
    */
   public static final String EXECUTE = "execute";
+
+  /**
+   * Skips date check(now by default the plan is valid for 24 hours), and force
+   * execute the plan.
+   */
+  public static final String SKIPDATECHECK = "skipDateCheck";
+
   /**
    * The report command prints out a disk fragmentation report about the data
    * cluster. By default it prints the DEFAULT_TOP machines names with high
@@ -342,7 +349,15 @@ public class DiskBalancerCLI extends Configured implements Tool {
             "submits it for execution by the datanode.")
         .create();
     getExecuteOptions().addOption(execute);
+
+
+    Option skipDateCheck = OptionBuilder.withLongOpt(SKIPDATECHECK)
+        .withDescription("skips the date check and force execute the plan")
+        .create();
+    getExecuteOptions().addOption(skipDateCheck);
+
     opt.addOption(execute);
+    opt.addOption(skipDateCheck);
   }
 
   /**

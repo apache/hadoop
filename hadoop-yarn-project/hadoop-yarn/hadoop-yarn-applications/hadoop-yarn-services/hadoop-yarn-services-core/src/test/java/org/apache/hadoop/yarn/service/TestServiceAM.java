@@ -210,6 +210,49 @@ public class TestServiceAM extends ServiceTestUtils{
             .getState());
   }
 
+  // Test to verify that the AM doesn't wait for containers of a different app
+  // even though it corresponds to the same service.
+  @Test(timeout = 200000)
+  public void testContainersFromDifferentApp()
+      throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testContainersFromDifferentApp");
+    String comp1Name = "comp1";
+    String comp1InstName = "comp1-0";
+
+    org.apache.hadoop.yarn.service.api.records.Component compA =
+        createComponent(comp1Name, 1, "sleep");
+    exampleApp.addComponent(compA);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    ContainerId containerId = am.createContainerId(1);
+    // saves the container in the registry
+    am.feedRegistryComponent(containerId, comp1Name, comp1InstName);
+
+    ApplicationId changedAppId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 2);
+    exampleApp.setId(changedAppId.toString());
+    am.init(conf);
+    am.start();
+    // 1 pending instance since the container in registry belongs to a different
+    // app.
+    Assert.assertEquals(1,
+        am.getComponent(comp1Name).getPendingInstances().size());
+
+    am.feedContainerToComp(exampleApp, 1, comp1Name);
+    GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
+        .getContainerStatus() != null, 2000, 200000);
+
+    Assert.assertEquals("container state",
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState());
+    am.stop();
+  }
+
   @Test
   public void testScheduleWithMultipleResourceTypes()
       throws TimeoutException, InterruptedException, IOException {

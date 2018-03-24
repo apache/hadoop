@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -974,6 +975,54 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @VisibleForTesting
   public void setOverrideWithQueueMappings(boolean overrideWithQueueMappings) {
     setBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE, overrideWithQueueMappings);
+  }
+
+  public List<QueueMappingEntity> getQueueMappingEntity(
+      String queueMappingSuffix) {
+    String queueMappingName = buildQueueMappingRuleProperty(queueMappingSuffix);
+
+    List<QueueMappingEntity> mappings =
+        new ArrayList<QueueMappingEntity>();
+    Collection<String> mappingsString =
+        getTrimmedStringCollection(queueMappingName);
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 2 || mapping[1].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      QueueMappingEntity m = new QueueMappingEntity(mapping[0], mapping[1]);
+
+      mappings.add(m);
+    }
+
+    return mappings;
+  }
+
+  private String buildQueueMappingRuleProperty (String queueMappingSuffix) {
+    StringBuilder queueMapping = new StringBuilder();
+    queueMapping.append(YarnConfiguration.QUEUE_PLACEMENT_RULES)
+        .append(".").append(queueMappingSuffix);
+    return queueMapping.toString();
+  }
+
+  @VisibleForTesting
+  public void setQueueMappingEntities(List<QueueMappingEntity> queueMappings,
+      String queueMappingSuffix) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMappingEntity mapping : queueMappings) {
+      queueMappingStrs.add(mapping.toString());
+    }
+
+    String mappingRuleProp = buildQueueMappingRuleProperty(queueMappingSuffix);
+    setStrings(mappingRuleProp, StringUtils.join(",", queueMappingStrs));
   }
 
   /**

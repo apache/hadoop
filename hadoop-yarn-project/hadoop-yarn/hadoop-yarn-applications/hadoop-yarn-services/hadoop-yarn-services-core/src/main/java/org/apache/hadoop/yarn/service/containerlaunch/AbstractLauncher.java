@@ -169,10 +169,11 @@ public class AbstractLauncher {
     return containerLaunchContext;
   }
 
-  public void setRetryContext(int maxRetries, int retryInterval) {
+  public void setRetryContext(int maxRetries, int retryInterval,
+      long failuresValidityInterval) {
     ContainerRetryContext retryContext = ContainerRetryContext
-        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, maxRetries,
-            retryInterval);
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null,
+            maxRetries, retryInterval, failuresValidityInterval);
     containerLaunchContext.setContainerRetryContext(retryContext);
   }
 

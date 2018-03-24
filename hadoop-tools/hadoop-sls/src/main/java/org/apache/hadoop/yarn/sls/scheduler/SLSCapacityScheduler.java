@@ -327,7 +327,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   @Override
   public void serviceStop() throws Exception {
     try {
-      schedulerMetrics.tearDown();
+      if (metricsON) {
+        schedulerMetrics.tearDown();
+      }
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -69,9 +69,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer2 server;
@@ -147,7 +144,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
@@ -194,6 +191,27 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // Start the client threads when they are all ready
     ready.await();
     start.countDown();
+  }
+
+  /**
+   * Test that the number of acceptors and selectors can be configured by
+   * trying to configure more of them than would be allowed based on the
+   * maximum thread count.
+   */
+  @Test
+  public void testAcceptorSelectorConfigurability() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
+    conf.setInt(HttpServer2.HTTP_ACCEPTOR_COUNT_KEY, MAX_THREADS - 2);
+    conf.setInt(HttpServer2.HTTP_SELECTOR_COUNT_KEY, MAX_THREADS - 2);
+    HttpServer2 badserver = createTestServer(conf);
+    try {
+      badserver.start();
+      // Should not succeed
+      fail();
+    } catch (IOException ioe) {
+      assertTrue(ioe.getCause() instanceof IllegalStateException);
+    }
   }
   
   @Test public void testEcho() throws Exception {
@@ -464,7 +482,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     String serverURL = "http://"
         + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
-        "logLevel", "jmx" }) {
+        "logLevel" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
         assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
             + servlet, user));
@@ -472,18 +490,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       assertEquals(HttpURLConnection.HTTP_FORBIDDEN, getHttpStatusCode(
           serverURL + servlet, "userE"));
     }
-
-    // hadoop.security.authorization is set as true while
-    // hadoop.http.authentication.type's value is `simple`(default value)
-    // in this case, static user has administrator access
-    final String staticUser = conf.get(HADOOP_HTTP_STATIC_USER,
-        DEFAULT_HADOOP_HTTP_STATIC_USER);
-    for (String servlet : new String[] {"conf", "logs", "stacks",
-        "logLevel", "jmx"}) {
-      assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
-          serverURL + servlet, staticUser));
-    }
-
     myServer.stop();
   }
   

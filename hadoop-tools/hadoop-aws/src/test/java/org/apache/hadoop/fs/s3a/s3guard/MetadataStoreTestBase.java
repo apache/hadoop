@@ -839,7 +839,7 @@ public abstract class MetadataStoreTestBase extends Assert {
     return basicFileStatus(path, size, isDir, modTime, accessTime);
   }
 
-  FileStatus basicFileStatus(Path path, int size, boolean isDir,
+  public static FileStatus basicFileStatus(Path path, int size, boolean isDir,
       long newModTime, long newAccessTime) throws IOException {
     return new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE, newModTime,
         newAccessTime, PERMISSION, OWNER, GROUP, path);

@@ -223,7 +223,7 @@ functionality, except the mount table is managed on the server-side by the
 routing layer rather than on the client. This simplifies access to a federated
 cluster for existing HDFS clients.
 
-See [HDFS-10467](https://issues.apache.org/jira/browse/HADOOP-10467) and the
+See [HDFS-10467](https://issues.apache.org/jira/browse/HDFS-10467) and the
 HDFS Router-based Federation
 [documentation](./hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html) for
 more details.

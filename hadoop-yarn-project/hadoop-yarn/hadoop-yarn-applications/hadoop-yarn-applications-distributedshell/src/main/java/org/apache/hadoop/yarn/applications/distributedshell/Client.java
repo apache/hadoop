@@ -373,6 +373,9 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("container_failures_validity_interval", true,
+        "Failures which are out of the time window will not be added to"
+            + " the number of container retry attempts");
     opts.addOption("docker_client_config", true,
         "The docker client configuration path. The scheme should be supplied"
             + " (i.e. file:// or hdfs://)."
@@ -578,6 +581,10 @@ public class Client {
     if (cliParser.hasOption("container_retry_interval")) {
       containerRetryOptions.add("--container_retry_interval "
           + cliParser.getOptionValue("container_retry_interval"));
+    }
+    if (cliParser.hasOption("container_failures_validity_interval")) {
+      containerRetryOptions.add("--container_failures_validity_interval "
+          + cliParser.getOptionValue("container_failures_validity_interval"));
     }
 
     if (cliParser.hasOption("flow_name")) {

@@ -43,7 +43,8 @@ public class VersionInfo {
     String versionInfoFile = component + "-version-info.properties";
     InputStream is = null;
     try {
-      is = ThreadUtil.getResourceAsStream(versionInfoFile);
+      is = ThreadUtil.getResourceAsStream(VersionInfo.class.getClassLoader(),
+          versionInfoFile);
       info.load(is);
     } catch (IOException ex) {
       LoggerFactory.getLogger(getClass()).warn("Could not read '" +

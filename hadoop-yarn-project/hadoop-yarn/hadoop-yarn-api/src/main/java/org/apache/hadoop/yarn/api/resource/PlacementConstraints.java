@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.api.resource;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
@@ -49,13 +49,6 @@ public final class PlacementConstraints {
   public static final String NODE = PlacementConstraint.NODE_SCOPE;
   public static final String RACK = PlacementConstraint.RACK_SCOPE;
   public static final String NODE_PARTITION = "yarn_node_partition/";
-
-  private static final String APPLICATION_LABEL_PREFIX =
-      "yarn_application_label/";
-
-  @InterfaceAudience.Private
-  public static final String APPLICATION_LABEL_INTRA_APPLICATION =
-      APPLICATION_LABEL_PREFIX + "%intra_app%";
 
   /**
    * Creates a constraint that requires allocations to be placed on nodes that
@@ -115,6 +108,25 @@ public final class PlacementConstraints {
   }
 
   /**
+   * Similar to {@link #cardinality(String, int, int, String...)}, but let you
+   * attach a namespace to the given allocation tags.
+   *
+   * @param scope the scope of the constraint
+   * @param namespace the namespace of the allocation tags
+   * @param minCardinality determines the minimum number of allocations within
+   *                       the scope
+   * @param maxCardinality determines the maximum number of allocations within
+   *                       the scope
+   * @param allocationTags allocation tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint cardinality(String scope, String namespace,
+      int minCardinality, int maxCardinality, String... allocationTags) {
+    return new SingleConstraint(scope, minCardinality, maxCardinality,
+        PlacementTargets.allocationTagWithNamespace(namespace, allocationTags));
+  }
+
+  /**
    * Similar to {@link #cardinality(String, int, int, String...)}, but
    * determines only the minimum cardinality (the maximum cardinality is
    * unbound).
@@ -132,6 +144,23 @@ public final class PlacementConstraints {
   }
 
   /**
+   * Similar to {@link #minCardinality(String, int, String...)}, but let you
+   * attach a namespace to the allocation tags.
+   *
+   * @param scope the scope of the constraint
+   * @param namespace the namespace of these tags
+   * @param minCardinality determines the minimum number of allocations within
+   *                       the scope
+   * @param allocationTags the constraint targets allocations with these tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint minCardinality(String scope,
+      String namespace, int minCardinality, String... allocationTags) {
+    return cardinality(scope, namespace, minCardinality, Integer.MAX_VALUE,
+        allocationTags);
+  }
+
+  /**
    * Similar to {@link #cardinality(String, int, int, String...)}, but
    * determines only the maximum cardinality (the minimum cardinality is 0).
    *
@@ -144,6 +173,23 @@ public final class PlacementConstraints {
   public static AbstractConstraint maxCardinality(String scope,
       int maxCardinality, String... allocationTags) {
     return cardinality(scope, 0, maxCardinality, allocationTags);
+  }
+
+  /**
+   * Similar to {@link #maxCardinality(String, int, String...)}, but let you
+   * specify a namespace for the tags, see supported namespaces in
+   * {@link AllocationTagNamespaceType}.
+   *
+   * @param scope the scope of the constraint
+   * @param tagNamespace the namespace of these tags
+   * @param maxCardinality determines the maximum number of allocations within
+   *          the scope
+   * @param allocationTags allocation tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint maxCardinality(String scope,
+      String tagNamespace, int maxCardinality, String... allocationTags) {
+    return cardinality(scope, tagNamespace, 0, maxCardinality, allocationTags);
   }
 
   /**
@@ -224,6 +270,20 @@ public final class PlacementConstraints {
     }
 
     /**
+     * Constructs a target expression on a set of allocation tags under
+     * a certain namespace.
+     *
+     * @param namespace namespace of the allocation tags
+     * @param allocationTags allocation tags
+     * @return a target expression
+     */
+    public static TargetExpression allocationTagWithNamespace(String namespace,
+        String... allocationTags) {
+      return new TargetExpression(TargetType.ALLOCATION_TAG,
+          namespace, allocationTags);
+    }
+
+    /**
      * Constructs a target expression on an allocation tag. It is satisfied if
      * there are allocations with one of the given tags. Comparing to
      * {@link PlacementTargets#allocationTag(String...)}, this only checks tags
@@ -236,7 +296,7 @@ public final class PlacementConstraints {
     public static TargetExpression allocationTagToIntraApp(
         String... allocationTags) {
       return new TargetExpression(TargetType.ALLOCATION_TAG,
-          APPLICATION_LABEL_INTRA_APPLICATION, allocationTags);
+          AllocationTagNamespaceType.SELF.toString(), allocationTags);
     }
   }
 

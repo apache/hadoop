@@ -66,7 +66,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -473,13 +472,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  protected void updateEnvForWhitelistVars(Map<String, String> env) {
-    if (linuxContainerRuntime.useWhitelistEnv(env)) {
-      super.updateEnvForWhitelistVars(env);
-    }
-  }
-
-  @Override
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
@@ -493,6 +485,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             container.getResource());
     String resourcesOptions = resourcesHandler.getResourcesOption(containerId);
     String tcCommandFile = null;
+    List<String> numaArgs = null;
 
     try {
       if (resourceHandlerChain != null) {
@@ -513,6 +506,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
               break;
             case TC_MODIFY_STATE:
               tcCommandFile = op.getArguments().get(0);
+              break;
+            case ADD_NUMA_PARAMS:
+              numaArgs = op.getArguments();
               break;
             default:
               LOG.warn("PrivilegedOperation type unsupported in launch: "
@@ -544,7 +540,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (pidFilePath != null) {
 
         ContainerRuntimeContext runtimeContext = buildContainerRuntimeContext(
-            ctx, pidFilePath, resourcesOptions, tcCommandFile);
+            ctx, pidFilePath, resourcesOptions, tcCommandFile, numaArgs);
 
         linuxContainerRuntime.launchContainer(runtimeContext);
       } else {
@@ -618,11 +614,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   private ContainerRuntimeContext buildContainerRuntimeContext(
-      ContainerStartContext ctx, Path pidFilePath,
-      String resourcesOptions, String tcCommandFile) {
+      ContainerStartContext ctx, Path pidFilePath, String resourcesOptions,
+      String tcCommandFile, List<String> numaArgs) {
 
     List<String> prefixCommands = new ArrayList<>();
     addSchedPriorityCommand(prefixCommands);
+    addNumaArgsToCommand(prefixCommands, numaArgs);
 
     Container container = ctx.getContainer();
 
@@ -668,6 +665,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public String[] getIpAndHost(Container container)
       throws ContainerExecutionException {
     return linuxContainerRuntime.getIpAndHost(container);
+  }
+
+  private void addNumaArgsToCommand(List<String> prefixCommands,
+      List<String> numaArgs) {
+    if (numaArgs != null) {
+      prefixCommands.addAll(numaArgs);
+    }
   }
 
   @Override

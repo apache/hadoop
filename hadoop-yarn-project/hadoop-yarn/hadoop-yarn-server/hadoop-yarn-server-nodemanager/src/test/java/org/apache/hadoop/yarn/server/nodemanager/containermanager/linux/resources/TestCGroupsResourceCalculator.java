@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import static org.mockito.Mockito.*;
 
@@ -62,7 +63,7 @@ public class TestCGroupsResourceCalculator {
           new File(procfs, CGroupsResourceCalculator.CGROUP),
           "7:devices:/yarn/container_1\n" +
               "6:cpuacct,cpu:/yarn/container_1\n" +
-              "5:pids:/yarn/container_1\n");
+              "5:pids:/yarn/container_1\n", StandardCharsets.UTF_8);
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
               "1234", basePath,
@@ -84,7 +85,7 @@ public class TestCGroupsResourceCalculator {
           "7:devices:/yarn/container_1\n" +
               "6:cpuacct,cpu:/yarn/container_1\n" +
               "5:pids:/yarn/container_1\n" +
-              "4:memory:/yarn/container_1\n");
+              "4:memory:/yarn/container_1\n", StandardCharsets.UTF_8);
 
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
@@ -118,12 +119,12 @@ public class TestCGroupsResourceCalculator {
           "7:devices:/yarn/container_1\n" +
               "6:cpuacct,cpu:/yarn/container_1\n" +
               "5:pids:/yarn/container_1\n" +
-              "4:memory:/yarn/container_1\n");
+              "4:memory:/yarn/container_1\n", StandardCharsets.UTF_8);
       FileUtils.writeStringToFile(
           new File(cgcpuacctContainerDir, CGroupsResourceCalculator.CPU_STAT),
           "Can you handle this?\n" +
               "user 5415\n" +
-              "system 3632");
+              "system 3632", StandardCharsets.UTF_8);
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
               "1234", basePath,
@@ -159,10 +160,10 @@ public class TestCGroupsResourceCalculator {
       FileUtils.writeStringToFile(
           new File(procfs, CGroupsResourceCalculator.CGROUP),
               "6:cpuacct,cpu:/yarn/container_1\n" +
-              "4:memory:/yarn/container_1\n");
+              "4:memory:/yarn/container_1\n", StandardCharsets.UTF_8);
       FileUtils.writeStringToFile(
           new File(cgMemoryContainerDir, CGroupsResourceCalculator.MEM_STAT),
-          "418496512\n");
+          "418496512\n", StandardCharsets.UTF_8);
 
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
@@ -182,7 +183,7 @@ public class TestCGroupsResourceCalculator {
       // Test the case where memsw is available
       FileUtils.writeStringToFile(
           new File(cgMemoryContainerDir, CGroupsResourceCalculator.MEMSW_STAT),
-          "418496513\n");
+          "418496513\n", StandardCharsets.UTF_8);
       calculator.updateProcessTree();
       Assert.assertEquals("Incorrect swap usage",
           418496513,
@@ -206,7 +207,7 @@ public class TestCGroupsResourceCalculator {
       FileUtils.writeStringToFile(
           new File(cgcpuacctRootDir, CGroupsResourceCalculator.CPU_STAT),
               "user 5415\n" +
-              "system 3632");
+              "system 3632", StandardCharsets.UTF_8);
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
               null, basePath,
@@ -241,7 +242,7 @@ public class TestCGroupsResourceCalculator {
     try {
       FileUtils.writeStringToFile(
           new File(cgMemoryRootDir, CGroupsResourceCalculator.MEM_STAT),
-          "418496512\n");
+              "418496512\n", StandardCharsets.UTF_8);
 
       CGroupsResourceCalculator calculator =
           new CGroupsResourceCalculator(
@@ -262,7 +263,7 @@ public class TestCGroupsResourceCalculator {
       // Test the case where memsw is available
       FileUtils.writeStringToFile(
           new File(cgMemoryRootDir, CGroupsResourceCalculator.MEMSW_STAT),
-          "418496513\n");
+          "418496513\n", StandardCharsets.UTF_8);
       calculator.updateProcessTree();
       Assert.assertEquals("Incorrect swap usage",
           418496513,

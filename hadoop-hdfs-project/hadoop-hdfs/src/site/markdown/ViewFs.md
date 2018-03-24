@@ -180,6 +180,145 @@ Recall that one cannot rename files or directories across namenodes or clusters 
 
 This will NOT work in the new world if `/user` and `/data` are actually stored on different namenodes within a cluster.
 
+Multi-Filesystem I/0 with Nfly Mount Points
+-----------------
+
+HDFS and other distributed filesystems provide data resilience via some sort of
+redundancy such as block replication or more sophisticated distributed encoding.
+However, modern setups may be comprised of multiple Hadoop clusters, enterprise
+filers, hosted on and off premise. Nfly mount points make it possible for a
+single logical file to be synchronously replicated by multiple filesystems.
+It's designed for a relatively small files up to a gigabyte. In general it's a
+function of a single core/single network link performance since the logic
+resides in a single client JVM using ViewFs such as FsShell or a
+MapReduce task.
+
+### Basic Configuration
+
+Consider the following example to understand the basic configuration of Nfly.
+Suppose we want to keep the directory `ads` replicated on three filesystems
+represented by URIs: `uri1`, `uri2` and `uri3`.
+
+```xml
+  <property>
+    <name>fs.viewfs.mounttable.global.linkNfly../ads</name>
+    <value>uri1,uri2,uri3</value>
+  </property>
+```
+Note 2 consecutive `..` in the property name. They arise because of empty
+settings for advanced tweaking of the mount point which we will show in
+subsequent sections. The property value is a comma-separated list of URIs.
+
+URIs may point to different clusters in different regions
+`hdfs://datacenter-east/ads`, `s3a://models-us-west/ads`, `hdfs://datacenter-west/ads`
+or in the simplest case to different directories under the same filesystem,
+e.g., `file:/tmp/ads1`, `file:/tmp/ads2`, `file:/tmp/ads3`
+
+All *modifications* performed under the global path `viewfs://global/ads` are
+propagated to all destination URIs if the underlying system is available.
+
+For instance if we create a file via hadoop shell
+```bash
+hadoop fs -touchz viewfs://global/ads/z1
+```
+
+We will find it via local filesystem in the latter configuration
+```bash
+ls -al /tmp/ads*/z1
+-rw-r--r--  1 user  wheel  0 Mar 11 12:17 /tmp/ads1/z1
+-rw-r--r--  1 user  wheel  0 Mar 11 12:17 /tmp/ads2/z1
+-rw-r--r--  1 user  wheel  0 Mar 11 12:17 /tmp/ads3/z1
+```
+
+A read from the global path is processed by the first filesystem that does not
+result in an exception. The order in which filesystems are accessed depends on
+whether they are available at this moment or and whether a topological order
+exists.
+
+### Advanced Configuration
+
+Mount points `linkNfly` can be further configured using parameters passed as a
+comma-separated list of key=value pairs. Following parameters are currently
+supported.
+
+`minReplication=int` determines the minimum number of destinations that have to
+process a write modification without exceptions, if below nfly write is failed.
+It is an configuration error to have minReplication higher than the number of
+target URIs. The default is 2.
+
+If minReplication is lower than the number of target URIs we may have some
+target URIs without latest writes. It can be compensated by employing more
+expensive read operations controlled by the following settings
+
+`readMostRecent=boolean` if set to `true` causes Nfly client to check the path
+under all target URIs instead of just the first one based on the topology order.
+Among all available at the moment the one with the most recent modification time
+is processed.
+
+`repairOnRead=boolean` if set to `true` causes Nfly to copy most recent replica
+to stale targets such that subsequent reads can be done cheaply again from the
+closest replica.
+
+### Network Topology
+
+Nfly seeks to satisfy reads from the "closest" target URI.
+
+To this end, Nfly extends the notion of
+<a href="hadoop-project-dist/hadoop-common/RackAwareness.html">Rack Awareness</a>
+to the authorities of target URIs.
+
+Nfly applies NetworkTopology to resolve authorities of the URIs. Most commonly
+a script based mapping is used in a heterogeneous setup. We could have a script
+providing the following topology mapping
+
+| URI                           | Topology                 |
+|-------------------------------|------------------------- |
+| `hdfs://datacenter-east/ads`  | /us-east/onpremise-hdfs  |
+| `s3a://models-us-west/ads`    | /us-west/aws             |
+| `hdfs://datacenter-west/ads`  | /us-west/onpremise-hdfs  |
+
+
+If a target URI does not have the authority part as in `file:/` Nfly injects
+client's local node name.
+
+### Example Nfly Configuration
+
+```xml
+  <property>
+    <name>fs.viewfs.mounttable.global.linkNfly.minReplication=3,readMostRecent=true,repairOnRead=false./ads</name>
+    <value>hdfs://datacenter-east/ads,hdfs://datacenter-west/ads,s3a://models-us-west/ads,file:/tmp/ads</value>
+  </property>
+```
+
+### How Nfly File Creation works
+
+```java
+FileSystem fs = FileSystem.get("viewfs://global/", ...);
+FSDataOutputStream out = fs.create("viewfs://global/ads/f1");
+out.write(...);
+out.close();
+```
+The code above would result in the following execution.
+
+1. create an invisible file `_nfly_tmp_f1` under each target URI i.e.,
+`hdfs://datacenter-east/ads/_nfly_tmp_f1`, `hdfs://datacenter-west/ads/_nfly_tmp_f1`, etc.
+This is done by calling `create` on underlying filesystems and returns a
+`FSDataOutputStream` object `out` that wraps all four output streams.
+
+2. Thus each subsequent write on `out` can be forwarded to each wrapped stream.
+
+3. On `out.close` all streams are closed, and the files are renamed from `_nfly_tmp_f1` to `f1`.
+All files receive the same *modification time* corresponding to the client
+system time as of beginning of this step.
+
+4. If at least `minReplication` destinations have gone through steps 1-3 without
+failures Nfly considers the transaction logically committed; Otherwise it tries
+to clean up the temporary files in a best-effort attempt.
+
+Note that because 4 is a best-effort step and the client JVM could crash and never
+resume its work, it's a good idea to provision some sort of cron job to purge such
+`_nfly_tmp` files.
+
 ### FAQ
 
 1.  **As I move from non-federated world to the federated world, I will have to keep track of namenodes for different volumes; how do I do that?**

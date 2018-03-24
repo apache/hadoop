@@ -26,7 +26,8 @@
               "count": { "val": 2},
               "time": {"val": 60000},
               "max_memory": {"val": 4096},
-              "max_vcores": {"val": 4}
+              "max_vcores": {"val": 4},
+              "execution_type": "GUARANTEED"
             }
           ]
         }

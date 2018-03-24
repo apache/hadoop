@@ -166,6 +166,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   // APIs on an uninitialized filesystem.
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.LOG_EVENT);
+  // Only used for very specific code paths which behave differently for
+  // S3Guard. Retries FileNotFound, so be careful if you use this.
+  private Invoker s3guardInvoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      Invoker.LOG_EVENT);
   private final Retried onRetry = this::operationRetried;
   private String bucket;
   private int maxKeys;
@@ -251,6 +255,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
+      s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
+          onRetry);
       writeHelper = new WriteOperationHelper(this, getConf());
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
@@ -697,18 +703,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
 
     return new FSDataInputStream(
-        new S3AInputStream(new S3ObjectAttributes(
-          bucket,
-          pathToKey(f),
-          serverSideEncryptionAlgorithm,
-          getServerSideEncryptionKey(bucket, getConf())),
-            fileStatus.getLen(),
-            s3,
+        new S3AInputStream(new S3AReadOpContext(hasMetadataStore(),
+            invoker,
+            s3guardInvoker,
             statistics,
             instrumentation,
+            fileStatus),
+            new S3ObjectAttributes(bucket,
+                pathToKey(f),
+                serverSideEncryptionAlgorithm,
+                getServerSideEncryptionKey(bucket, getConf())),
+            fileStatus.getLen(),
+            s3,
             readAhead,
-            inputPolicy,
-            invoker));
+            inputPolicy));
   }
 
   /**
@@ -1564,6 +1572,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     long len = request.getPartSize();
     incrementPutStartStatistics(len);
     try {
+      setOptionalUploadPartRequestParameters(request);
       UploadPartResult uploadPartResult = s3.uploadPart(request);
       incrementPutCompletedStatistics(true, len);
       return uploadPartResult;
@@ -2556,6 +2565,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
+   * Sets server side encryption parameters to the part upload
+   * request when encryption is enabled.
+   * @param request upload part request
+   */
+  protected void setOptionalUploadPartRequestParameters(
+      UploadPartRequest request) {
+    switch (serverSideEncryptionAlgorithm) {
+    case SSE_C:
+      if (isNotBlank(getServerSideEncryptionKey(bucket, getConf()))) {
+        request.setSSECustomerKey(generateSSECustomerKey());
+      }
+      break;
+    default:
+    }
+  }
+
+  /**
    * Initiate a multipart upload from the preconfigured request.
    * Retry policy: none + untranslated.
    * @param request request to initiate
@@ -2967,17 +2993,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * Get the etag of a object at the path via HEAD request and return it
-   * as a checksum object. This has the whatever guarantees about equivalence
-   * the S3 implementation offers.
+   * When enabled, get the etag of a object at the path via HEAD request and
+   * return it as a checksum object.
    * <ol>
    *   <li>If a tag has not changed, consider the object unchanged.</li>
    *   <li>Two tags being different does not imply the data is different.</li>
    * </ol>
    * Different S3 implementations may offer different guarantees.
+   *
+   * This check is (currently) only made if
+   * {@link Constants#ETAG_CHECKSUM_ENABLED} is set; turning it on
+   * has caused problems with Distcp (HADOOP-15273).
+   *
    * @param f The file path
    * @param length The length of the file range for checksum calculation
-   * @return The EtagChecksum or null if checksums are not supported.
+   * @return The EtagChecksum or null if checksums are not enabled or supported.
    * @throws IOException IO failure
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html">Common Response Headers</a>
    */
@@ -2986,15 +3016,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public EtagChecksum getFileChecksum(Path f, final long length)
       throws IOException {
     Preconditions.checkArgument(length >= 0);
-    Path path = qualify(f);
-    LOG.debug("getFileChecksum({})", path);
-    return once("getFileChecksum", path.toString(),
-        () -> {
-          // this always does a full HEAD to the object
-          ObjectMetadata headers = getObjectMetadata(path);
-          String eTag = headers.getETag();
-          return eTag != null ? new EtagChecksum(eTag) : null;
-        });
+    entryPoint(INVOCATION_GET_FILE_CHECKSUM);
+
+    if (getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
+        ETAG_CHECKSUM_ENABLED_DEFAULT)) {
+      Path path = qualify(f);
+      LOG.debug("getFileChecksum({})", path);
+      return once("getFileChecksum", path.toString(),
+          () -> {
+            // this always does a full HEAD to the object
+            ObjectMetadata headers = getObjectMetadata(path);
+            String eTag = headers.getETag();
+            return eTag != null ? new EtagChecksum(eTag) : null;
+          });
+    } else {
+      // disabled
+      return null;
+    }
   }
 
   /**

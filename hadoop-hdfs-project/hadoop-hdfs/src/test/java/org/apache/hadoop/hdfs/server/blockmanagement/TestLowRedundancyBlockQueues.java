@@ -18,22 +18,37 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
+/**
+ * Test {@link LowRedundancyBlocks}.
+ */
+@RunWith(Parameterized.class)
 public class TestLowRedundancyBlockQueues {
 
-  private final ErasureCodingPolicy ecPolicy =
-      StripedFileTestUtil.getDefaultECPolicy();
+  private final ErasureCodingPolicy ecPolicy;
+
+  public TestLowRedundancyBlockQueues(ErasureCodingPolicy policy) {
+    ecPolicy = policy;
+  }
+
+  @Parameterized.Parameters(name = "{index}: {0}")
+  public static Collection<Object[]> policies() {
+    return StripedFileTestUtil.getECPolicies();
+  }
 
   private BlockInfo genBlockInfo(long id) {
     return new BlockInfoContiguous(new Block(id), (short) 3);

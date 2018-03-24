@@ -301,6 +301,9 @@ public abstract class RMStateStore extends AbstractService {
       context.setQueue(srcCtx.getQueue());
       context.setAMContainerResourceRequests(
           srcCtx.getAMContainerResourceRequests());
+      context.setApplicationName(srcCtx.getApplicationName());
+      context.setPriority(srcCtx.getPriority());
+      context.setApplicationTags(srcCtx.getApplicationTags());
       context.setApplicationType(srcCtx.getApplicationType());
       ContainerLaunchContextPBImpl amContainerSpec =
               new ContainerLaunchContextPBImpl();

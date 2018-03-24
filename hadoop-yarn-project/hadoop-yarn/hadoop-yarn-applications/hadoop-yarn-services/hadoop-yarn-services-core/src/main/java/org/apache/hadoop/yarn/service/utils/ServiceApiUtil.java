@@ -89,6 +89,12 @@ public class ServiceApiUtil {
           RestApiErrorMessages.ERROR_APPLICATION_NAME_INVALID);
     }
 
+    if (StringUtils.isEmpty(service.getVersion())) {
+      throw new IllegalArgumentException(String.format(
+          RestApiErrorMessages.ERROR_APPLICATION_VERSION_INVALID,
+          service.getName()));
+    }
+
     validateNameFormat(service.getName(), conf);
 
     // If the service has no components, throw error

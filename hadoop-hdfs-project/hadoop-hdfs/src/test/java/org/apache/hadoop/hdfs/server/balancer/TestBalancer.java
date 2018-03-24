@@ -2072,7 +2072,7 @@ public class TestBalancer {
         endGetBlocksTime = Time.monotonicNow();
         numGetBlocksCalls++;
         return blk;
-      }}).when(fsnSpy).getBlocks(any(DatanodeID.class), anyLong());
+      }}).when(fsnSpy).getBlocks(any(DatanodeID.class), anyLong(), anyLong());
   }
 
   /**

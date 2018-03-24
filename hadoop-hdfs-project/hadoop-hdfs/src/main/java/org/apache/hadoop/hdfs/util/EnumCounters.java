@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import java.util.Arrays;
-import java.util.HashMap;
-
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.ArrayUtils;
+
+import java.util.Arrays;
 
 /**
  * Counters for an enum type.
@@ -31,7 +30,7 @@ import org.apache.commons.lang.ArrayUtils;
  * enum Fruit { APPLE, ORANGE, GRAPE }
  * </pre>
  * An {@link EnumCounters} object can be created for counting the numbers of
- * APPLE, ORANGLE and GRAPE.
+ * APPLE, ORANGE and GRAPE.
  *
  * @param <E> the enum type
  */
@@ -177,70 +176,5 @@ public class EnumCounters<E extends Enum<E>> {
       }
     }
     return false;
-  }
-
-  /**
-   * A factory for creating counters.
-   * 
-   * @param <E> the enum type
-   * @param <C> the counter type
-   */
-  public static interface Factory<E extends Enum<E>,
-                                  C extends EnumCounters<E>> {
-    /** Create a new counters instance. */
-    public C newInstance(); 
-  }
-
-  /**
-   * A key-value map which maps the keys to {@link EnumCounters}.
-   * Note that null key is supported.
-   *
-   * @param <K> the key type
-   * @param <E> the enum type
-   * @param <C> the counter type
-   */
-  public static class Map<K, E extends Enum<E>, C extends EnumCounters<E>> {
-    /** The factory for creating counters. */
-    private final Factory<E, C> factory;
-    /** Key-to-Counts map. */
-    private final java.util.Map<K, C> counts = new HashMap<K, C>();
-    
-    /** Construct a map. */
-    public Map(final Factory<E, C> factory) {
-      this.factory = factory;
-    }
-
-    /** @return the counters for the given key. */
-    public final C getCounts(final K key) {
-      C c = counts.get(key);
-      if (c == null) {
-        c = factory.newInstance();
-        counts.put(key, c); 
-      }
-      return c;
-    }
-    
-    /** @return the sum of the values of all the counters. */
-    public final C sum() {
-      final C sum = factory.newInstance();
-      for(C c : counts.values()) {
-        sum.add(c);
-      }
-      return sum;
-    }
-    
-    /** @return the sum of the values of all the counters for e. */
-    public final long sum(final E e) {
-      long sum = 0;
-      for(C c : counts.values()) {
-        sum += c.get(e);
-      }
-      return sum;
-    }
-
-    @Override
-    public String toString() {
-      return counts.toString();
-    }
   }
 }

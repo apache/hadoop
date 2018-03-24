@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.Assert;
@@ -340,6 +341,35 @@ public class TestGpuResourceHandler {
     // Store assigned resource will not be invoked.
     verify(mockNMStateStore, never()).storeAssignedResources(
         eq(container), eq(ResourceInformation.GPU_URI), anyList());
+  }
+
+  @Test
+  public void testAllocationStoredWithNULLStateStore() throws Exception {
+    NMNullStateStoreService mockNMNULLStateStore = mock(NMNullStateStoreService.class);
+
+    Context nmnctx = mock(Context.class);
+    when(nmnctx.getNMStateStore()).thenReturn(mockNMNULLStateStore);
+
+    GpuResourceHandlerImpl gpuNULLStateResourceHandler =
+        new GpuResourceHandlerImpl(nmnctx, mockCGroupsHandler,
+        mockPrivilegedExecutor);
+
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:0,1:1,2:3,3:4");
+    GpuDiscoverer.getInstance().initialize(conf);
+
+    gpuNULLStateResourceHandler.bootstrap(conf);
+    Assert.assertEquals(4,
+        gpuNULLStateResourceHandler.getGpuAllocator().getAvailableGpus());
+
+    /* Start container 1, asks 3 containers */
+    Container container = mockContainerWithGpuRequest(1, 3);
+    gpuNULLStateResourceHandler.preStart(container);
+
+    verify(nmnctx.getNMStateStore()).storeAssignedResources(container,
+        ResourceInformation.GPU_URI, Arrays
+            .asList(new GpuDevice(0, 0), new GpuDevice(1, 1),
+                new GpuDevice(2, 3)));
   }
 
   @Test

@@ -50,7 +50,6 @@ public class TestDataNodeVolumeFailureToleration {
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Configuration conf;
-  private String dataDir;
 
   // Sleep at least 3 seconds (a 1s heartbeat plus padding) to allow
   // for heartbeats to propagate from the datanodes to the namenode.
@@ -80,7 +79,6 @@ public class TestDataNodeVolumeFailureToleration {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    dataDir = cluster.getDataDirectory();
   }
 
   @After
@@ -161,7 +159,7 @@ public class TestDataNodeVolumeFailureToleration {
     long dnCapacity = DFSTestUtil.getDatanodeCapacity(dm, 0);
 
     // Fail a volume on the 2nd DN
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn2Vol1);
 
     // Should only get two replicas (the first DN and the 3rd)

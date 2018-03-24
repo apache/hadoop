@@ -104,6 +104,10 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       return parentQueue;
     }
 
+    public boolean hasParentQueue() {
+      return parentQueue != null;
+    }
+
     public MappingType getType() {
       return type;
     }
@@ -137,6 +141,10 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     }
   }
 
+  public UserGroupMappingPlacementRule(){
+    this(false, null, null);
+  }
+
   public UserGroupMappingPlacementRule(boolean overrideWithQueueMappings,
       List<QueueMapping> newMappings, Groups groups) {
     this.mappings = newMappings;
@@ -164,6 +172,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       if (mapping.type == MappingType.GROUP) {
         for (String userGroups : groups.getGroups(user)) {
           if (userGroups.equals(mapping.source)) {
+            if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
+              return getPlacementContext(mapping, user);
+            }
             return getPlacementContext(mapping);
           }
         }
@@ -218,8 +229,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   @VisibleForTesting
-  public static UserGroupMappingPlacementRule get(
-      CapacitySchedulerContext schedulerContext) throws IOException {
+  @Override
+  public boolean initialize(CapacitySchedulerContext schedulerContext)
+      throws IOException {
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(
@@ -294,11 +306,12 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // initialize groups if mappings are present
     if (newMappings.size() > 0) {
       Groups groups = new Groups(conf);
-      return new UserGroupMappingPlacementRule(overrideWithQueueMappings,
-          newMappings, groups);
+      this.mappings = newMappings;
+      this.groups = groups;
+      this.overrideWithQueueMappings = overrideWithQueueMappings;
+      return true;
     }
-
-    return null;
+    return false;
   }
 
   private static QueueMapping validateAndGetQueueMapping(

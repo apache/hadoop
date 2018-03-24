@@ -30,7 +30,6 @@ export default DS.Model.extend({
   finishedTime: DS.attr("finishedTime"),
   progress: DS.attr("number"),
   diagnostics: DS.attr("string"),
-  amContainerLogs: DS.attr("string"),
   amHostHttpAddress: DS.attr("string"),
   masterNodeId: DS.attr("string"),
   logAggregationStatus: DS.attr("string"),
@@ -96,10 +95,6 @@ export default DS.Model.extend({
       ) + " (× Secs)"
     );
   }.property("memorySeconds", "vcoreSeconds"),
-
-  masterNodeURL: function() {
-    return `#/yarn-node/${this.get("masterNodeId")}/${this.get("amHostHttpAddress")}/info/`;
-  }.property("masterNodeId", "amHostHttpAddress"),
 
   progressStyle: function() {
     return "width: " + this.get("progress") + "%";

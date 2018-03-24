@@ -358,7 +358,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     } catch (SSLException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "
           + "with endpoint", e);
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e
+      GenericTestUtils.assertExceptionContains("recognized SSL message", e
           .getCause());
     }
   }
@@ -379,7 +379,7 @@ public class TestLogLevel extends KerberosSecurityTestcase {
     } catch (SSLException e) {
       GenericTestUtils.assertExceptionContains("Error while authenticating "
           + "with endpoint", e);
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e
+      GenericTestUtils.assertExceptionContains("recognized SSL message", e
           .getCause());
     }
   }

@@ -1,4 +1,4 @@
-# <!---
+<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -340,6 +340,8 @@ a service resource has the following attributes.
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
 |name|A unique service name. If Registry DNS is enabled, the max length is 63 characters.|true|string||
+|version|Version of the service.|true|string||
+|description|Description of the service.|false|string||
 |id|A unique service id.|false|string||
 |artifact|The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).|false|Artifact||
 |resource|The default resource for all components of the service (optional).|false|Resource||
@@ -384,6 +386,8 @@ POST URL - http://localhost:8088/app/v1/services
 ```json
 {
   "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example",
   "components" :
     [
       {
@@ -417,6 +421,8 @@ Note, lifetime value of -1 means unlimited lifetime.
 ```json
 {
     "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
     "components": [
@@ -441,7 +447,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051512412,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-0"
+                    "component_instance_name": "hello-0"
                 },
                 {
                     "id": "container_e03_1503963985568_0002_01_000002",
@@ -450,7 +456,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051536450,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-1"
+                    "component_instance_name": "hello-1"
                 }
             ],
             "launch_command": "./start_nginx.sh",
@@ -523,6 +529,8 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 ```json
 {
   "name": "hbase-app-1",
+  "version": "1.0.0",
+  "description": "hbase service",
   "lifetime": "3600",
   "components": [
     {

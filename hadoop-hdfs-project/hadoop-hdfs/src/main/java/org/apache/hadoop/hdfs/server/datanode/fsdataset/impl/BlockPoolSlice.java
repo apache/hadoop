@@ -812,7 +812,6 @@ class BlockPoolSlice {
           break;
         }
       }
-      inputStream.close();
       // Now it is safe to add the replica into volumeMap
       // In case of any exception during parsing this cache file, fall back
       // to scan all the files on disk.
@@ -835,12 +834,13 @@ class BlockPoolSlice {
       return false;
     }
     finally {
+      // close the inputStream
+      IOUtils.closeStream(inputStream);
+
       if (!fileIoProvider.delete(volume, replicaFile)) {
         LOG.info("Failed to delete replica cache file: " +
             replicaFile.getPath());
       }
-      // close the inputStream
-      IOUtils.closeStream(inputStream);
     }
   }
 

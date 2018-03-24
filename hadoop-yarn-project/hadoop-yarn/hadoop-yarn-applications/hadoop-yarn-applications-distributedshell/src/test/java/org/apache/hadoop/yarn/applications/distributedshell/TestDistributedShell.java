@@ -494,6 +494,15 @@ public class TestDistributedShell {
     Assert.assertEquals(2, entities.getEntities().size());
     Assert.assertEquals(entities.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_CONTAINER.toString());
+
+    String entityId = entities.getEntities().get(0).getEntityId();
+    org.apache.hadoop.yarn.api.records.timeline.TimelineEntity entity =
+        yarnCluster.getApplicationHistoryServer().getTimelineStore()
+            .getEntity(entityId,
+                ApplicationMaster.DSEntity.DS_CONTAINER.toString(), null);
+    Assert.assertNotNull(entity);
+    Assert.assertEquals(entityId, entity.getEntityId());
+
     if (haveDomain) {
       Assert.assertEquals(domain.getId(),
           entities.getEntities().get(0).getDomainId());

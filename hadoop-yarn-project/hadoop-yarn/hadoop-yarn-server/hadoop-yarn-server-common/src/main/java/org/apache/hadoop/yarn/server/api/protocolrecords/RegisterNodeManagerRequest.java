@@ -112,4 +112,9 @@ public abstract class RegisterNodeManagerRequest {
    * @param physicalResource Physical resources in the node.
    */
   public abstract void setPhysicalResource(Resource physicalResource);
+
+  public abstract List<LogAggregationReport> getLogAggregationReportsForApps();
+
+  public abstract void setLogAggregationReportsForApps(
+      List<LogAggregationReport> logAggregationReportsForApps);
 }

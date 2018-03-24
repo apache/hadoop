@@ -24,9 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -330,7 +328,7 @@ public class HdfsAdmin {
         throw new HadoopIllegalArgumentException(
             "can not have both PROVISION_TRASH and NO_TRASH flags");
       }
-      this.provisionEZTrash(path);
+      dfs.provisionEZTrash(path, TRASH_PERMISSION);
     }
   }
 
@@ -341,7 +339,7 @@ public class HdfsAdmin {
    * @throws IOException if the trash directory can not be created.
    */
   public void provisionEncryptionZoneTrash(Path path) throws IOException {
-    this.provisionEZTrash(path);
+    dfs.provisionEZTrash(path, TRASH_PERMISSION);
   }
 
   /**
@@ -601,46 +599,6 @@ public class HdfsAdmin {
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     dfs.disableErasureCodingPolicy(ecPolicyName);
-  }
-
-  private void provisionEZTrash(Path path) throws IOException {
-    // make sure the path is an EZ
-    EncryptionZone ez = dfs.getEZForPath(path);
-    if (ez == null) {
-      throw new IllegalArgumentException(path + " is not an encryption zone.");
-    }
-
-    String ezPath = ez.getPath();
-    if (!path.toString().equals(ezPath)) {
-      throw new IllegalArgumentException(path + " is not the root of an " +
-          "encryption zone. Do you mean " + ez.getPath() + "?");
-    }
-
-    // check if the trash directory exists
-
-    Path trashPath = new Path(ez.getPath(), FileSystem.TRASH_PREFIX);
-
-    try {
-      FileStatus trashFileStatus = dfs.getFileStatus(trashPath);
-      String errMessage = "Will not provision new trash directory for " +
-          "encryption zone " + ez.getPath() + ". Path already exists.";
-      if (!trashFileStatus.isDirectory()) {
-        errMessage += "\r\n" +
-            "Warning: " + trashPath.toString() + " is not a directory";
-      }
-      if (!trashFileStatus.getPermission().equals(TRASH_PERMISSION)) {
-        errMessage += "\r\n" +
-            "Warning: the permission of " +
-            trashPath.toString() + " is not " + TRASH_PERMISSION;
-      }
-      throw new FileAlreadyExistsException(errMessage);
-    } catch (FileNotFoundException ignored) {
-      // no trash path
-    }
-
-    // Update the permission bits
-    dfs.mkdir(trashPath, TRASH_PERMISSION);
-    dfs.setPermission(trashPath, TRASH_PERMISSION);
   }
 
   /**

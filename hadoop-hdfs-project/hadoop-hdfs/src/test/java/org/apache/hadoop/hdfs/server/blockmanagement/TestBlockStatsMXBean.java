@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -160,6 +161,10 @@ public class TestBlockStatsMXBean {
 
   @Test
   public void testStorageTypeStatsWhenStorageFailed() throws Exception {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeNotWindows();
+
     DFSTestUtil.createFile(cluster.getFileSystem(),
         new Path("/blockStatsFile1"), 1024, (short) 1, 0L);
     Map<StorageType, StorageTypeStats> storageTypeStatsMap = cluster
@@ -174,10 +179,9 @@ public class TestBlockStatsMXBean {
 
     storageTypeStats = storageTypeStatsMap.get(StorageType.ARCHIVE);
     assertEquals(3, storageTypeStats.getNodesInService());
-    String dataDir = cluster.getDataDirectory();
-    File dn1ArcVol1 = new File(dataDir, "data" + (3 * 0 + 2));
-    File dn2ArcVol1 = new File(dataDir, "data" + (3 * 1 + 2));
-    File dn3ArcVol1 = new File(dataDir, "data" + (3 * 2 + 2));
+    File dn1ArcVol1 = cluster.getInstanceStorageDir(0, 1);
+    File dn2ArcVol1 = cluster.getInstanceStorageDir(1, 1);
+    File dn3ArcVol1 = cluster.getInstanceStorageDir(2, 1);
     DataNodeTestUtils.injectDataDirFailure(dn1ArcVol1);
     DataNodeTestUtils.injectDataDirFailure(dn2ArcVol1);
     DataNodeTestUtils.injectDataDirFailure(dn3ArcVol1);

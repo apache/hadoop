@@ -29,6 +29,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
@@ -47,16 +48,17 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
   private PerNodeTimelineCollectorsAuxService auxService;
   private Configuration conf;
+  private ApplicationId appId;
 
   public TestPerNodeTimelineCollectorsAuxService() {
-    ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
     conf = new YarnConfiguration();
     // enable timeline service v.2
@@ -107,15 +109,6 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerType()).thenReturn(
         ContainerType.APPLICATION_MASTER);
     auxService.stopContainer(context);
-    // auxService should have the app's collector and need to remove only after
-    // a configured period
-    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
-    for (int i = 0; i < 4; i++) {
-      Thread.sleep(500L);
-      if (!auxService.hasApplication(appAttemptId.getApplicationId())) {
-        break;
-      }
-    }
 
     // auxService should not have that app
     assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()));
@@ -155,21 +148,53 @@ public class TestPerNodeTimelineCollectorsAuxService {
   private PerNodeTimelineCollectorsAuxService
       createCollectorAndAddApplication() {
     PerNodeTimelineCollectorsAuxService service = createCollector();
+
+    ContainerInitializationContext context =
+        createContainerInitalizationContext(1);
+    service.initializeContainer(context);
+    return service;
+  }
+
+  ContainerInitializationContext createContainerInitalizationContext(
+      int attempt) {
+    appAttemptId = ApplicationAttemptId.newInstance(appId, attempt);
     // create an AM container
     ContainerId containerId = getAMContainerId();
     ContainerInitializationContext context =
         mock(ContainerInitializationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
-    when(context.getContainerType()).thenReturn(
-        ContainerType.APPLICATION_MASTER);
-    service.initializeContainer(context);
-    return service;
+    when(context.getContainerType())
+        .thenReturn(ContainerType.APPLICATION_MASTER);
+    return context;
+  }
+
+  ContainerTerminationContext createContainerTerminationContext(int attempt) {
+    appAttemptId = ApplicationAttemptId.newInstance(appId, attempt);
+    // create an AM container
+    ContainerId containerId = getAMContainerId();
+    ContainerTerminationContext context =
+        mock(ContainerTerminationContext.class);
+    when(context.getContainerId()).thenReturn(containerId);
+    when(context.getContainerType())
+        .thenReturn(ContainerType.APPLICATION_MASTER);
+    return context;
   }
 
   private PerNodeTimelineCollectorsAuxService createCollector() {
     NodeTimelineCollectorManager collectorManager = createCollectorManager();
     PerNodeTimelineCollectorsAuxService service =
-        spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
+        spy(new PerNodeTimelineCollectorsAuxService(collectorManager) {
+          @Override
+          protected Future removeApplicationCollector(ContainerId containerId) {
+            Future future = super.removeApplicationCollector(containerId);
+            try {
+              future.get();
+            } catch (Exception e) {
+              Assert.fail("Expeption thrown while removing collector");
+            }
+            return future;
+          }
+        });
     service.init(conf);
     service.start();
     return service;
@@ -200,4 +225,40 @@ public class TestPerNodeTimelineCollectorsAuxService {
   private ContainerId getContainerId(long id) {
     return ContainerId.newContainerId(appAttemptId, id);
   }
+
+  @Test(timeout = 60000)
+  public void testRemoveAppWhenSecondAttemptAMCotainerIsLaunchedSameNode()
+      throws Exception {
+    // add first attempt collector
+    auxService = createCollectorAndAddApplication();
+    // auxService should have a single app
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
+
+    // add second attempt collector before first attempt master container stop
+    ContainerInitializationContext containerInitalizationContext =
+        createContainerInitalizationContext(2);
+    auxService.initializeContainer(containerInitalizationContext);
+
+    assertTrue("Applicatin not found in collectors.",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
+
+    // first attempt stop container
+    ContainerTerminationContext context = createContainerTerminationContext(1);
+    auxService.stopContainer(context);
+
+    // 2nd attempt container removed, still collector should hold application id
+    assertTrue("collector has removed application though 2nd attempt"
+            + " is running this node",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
+
+    // second attempt stop container
+    context = createContainerTerminationContext(2);
+    auxService.stopContainer(context);
+
+    // auxService should not have that app
+    assertFalse("Application is not removed from collector",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
+    auxService.close();
+  }
+
 }
