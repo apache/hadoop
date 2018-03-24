@@ -3427,7 +3427,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
 
-  private static final String FEDERATION_GPG_PREFIX =
+  public static final String FEDERATION_GPG_PREFIX =
       FEDERATION_PREFIX + "gpg.";
 
   // The number of threads to use for the GPG scheduled executor service
@@ -3444,6 +3444,40 @@ public class YarnConfiguration extends Configuration {
   public static final String GPG_SUBCLUSTER_EXPIRATION_MS =
       FEDERATION_GPG_PREFIX + "subcluster.heartbeat.expiration-ms";
   public static final long DEFAULT_GPG_SUBCLUSTER_EXPIRATION_MS = 1800000;
+
+  public static final String FEDERATION_GPG_POLICY_PREFIX =
+      FEDERATION_GPG_PREFIX + "policy.generator.";
+
+  /** The interval at which the policy generator runs, default is one hour. */
+  public static final String GPG_POLICY_GENERATOR_INTERVAL_MS =
+      FEDERATION_GPG_POLICY_PREFIX + "interval-ms";
+  public static final long DEFAULT_GPG_POLICY_GENERATOR_INTERVAL_MS = -1;
+
+  /**
+   * The configured policy generator class, runs NoOpGlobalPolicy by
+   * default.
+   */
+  public static final String GPG_GLOBAL_POLICY_CLASS =
+      FEDERATION_GPG_POLICY_PREFIX + "class";
+  public static final String DEFAULT_GPG_GLOBAL_POLICY_CLASS =
+      "org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator."
+          + "NoOpGlobalPolicy";
+
+  /**
+   * Whether or not the policy generator is running in read only (won't modify
+   * policies), default is false.
+   */
+  public static final String GPG_POLICY_GENERATOR_READONLY =
+      FEDERATION_GPG_POLICY_PREFIX + "readonly";
+  public static final boolean DEFAULT_GPG_POLICY_GENERATOR_READONLY =
+      false;
+
+  /**
+   * Which sub-clusters the policy generator should blacklist.
+   */
+  public static final String GPG_POLICY_GENERATOR_BLACKLIST =
+      FEDERATION_GPG_POLICY_PREFIX + "blacklist";
+
 
   ////////////////////////////////
   // Other Configs

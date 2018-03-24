@@ -3671,6 +3671,46 @@
 
   <property>
     <description>
+      The interval at which the policy generator runs, default is one hour
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval-ms</name>
+    <value>3600000</value>
+  </property>
+
+  <property>
+    <description>
+      The configured policy generator class, runs NoOpGlobalPolicy by default
+    </description>
+    <name>yarn.federation.gpg.policy.generator.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.NoOpGlobalPolicy</value>
+  </property>
+
+  <property>
+    <description>
+      Whether or not the policy generator is running in read only (won't modify policies), default is false
+    </description>
+    <name>yarn.federation.gpg.policy.generator.readonly</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Whether or not the policy generator is running in read only (won't modify policies), default is false
+    </description>
+    <name>yarn.federation.gpg.policy.generator.readonly</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Which subclusters the gpg should blacklist, default is none
+    </description>
+    <name>yarn.federation.gpg.policy.generator.blacklist</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
        It is TimelineClient 1.5 configuration whether to store active
        application’s timeline data with in user directory i.e
        ${yarn.timeline-service.entity-group-fs-store.active-dir}/${user.name}

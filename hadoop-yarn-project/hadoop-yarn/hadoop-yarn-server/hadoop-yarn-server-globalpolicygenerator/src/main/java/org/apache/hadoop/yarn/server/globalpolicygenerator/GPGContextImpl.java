@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 public class GPGContextImpl implements GPGContext {
 
   private FederationStateStoreFacade facade;
+  private GPGPolicyFacade policyFacade;
 
   @Override
   public FederationStateStoreFacade getStateStoreFacade() {
@@ -38,4 +39,13 @@ public class GPGContextImpl implements GPGContext {
     this.facade = federationStateStoreFacade;
   }
 
+  @Override
+  public GPGPolicyFacade getPolicyFacade(){
+    return policyFacade;
+  }
+
+  @Override
+  public void setPolicyFacade(GPGPolicyFacade gpgPolicyfacade){
+    policyFacade = gpgPolicyfacade;
+  }
 }

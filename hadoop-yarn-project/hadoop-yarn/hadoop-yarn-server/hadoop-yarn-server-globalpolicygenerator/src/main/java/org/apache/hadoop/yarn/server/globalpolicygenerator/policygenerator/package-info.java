@@ -16,20 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.globalpolicygenerator;
-
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
-
 /**
- * Context for Global Policy Generator.
+ * Classes comprising the policy generator for the GPG. Responsibilities include
+ * generating and updating policies based on the cluster status.
  */
-public interface GPGContext {
 
-  FederationStateStoreFacade getStateStoreFacade();
-
-  void setStateStoreFacade(FederationStateStoreFacade facade);
-
-  GPGPolicyFacade getPolicyFacade();
-
-  void setPolicyFacade(GPGPolicyFacade facade);
-}
+package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
