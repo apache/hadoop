@@ -721,6 +721,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <module>hadoop-ozone</module>
         <module>hadoop-cblock</module>
         <module>hadoop-hdsl</module>
+        <module>hadoop-ozone/acceptance-test</module>
       </modules>
     </profile>
   </profiles>
