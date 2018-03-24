@@ -50,9 +50,6 @@
         <exclude>**/build/**</exclude>
         <exclude>**/file:/**</exclude>
         <exclude>**/SecurityAuth.audit*</exclude>
-        <exclude>hadoop-ozone/**</exclude>
-        <exclude>hadoop-hdsl/**</exclude>
-        <exclude>hadoop-cblock/**</exclude>
       </excludes>
     </fileSet>
   </fileSets>
