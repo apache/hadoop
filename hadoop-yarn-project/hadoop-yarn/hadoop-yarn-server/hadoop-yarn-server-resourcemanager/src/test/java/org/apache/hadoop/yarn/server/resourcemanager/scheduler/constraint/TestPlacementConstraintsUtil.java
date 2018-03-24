@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTagWithNamespace;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.AbstractMap;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -507,5 +509,399 @@ public class TestPlacementConstraintsUtil {
         createSchedulingRequest(sourceTag1), schedulerNode2, pcm, tm));
     Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
         createSchedulingRequest(sourceTag1), schedulerNode3, pcm, tm));
+  }
+
+  @Test
+  public void testGlobalAppConstraints()
+      throws InvalidAllocationTagsQueryException {
+    AllocationTagsManager tm = new AllocationTagsManager(rmContext);
+    PlacementConstraintManagerService pcm =
+        new MemoryPlacementConstraintManager();
+    rmContext.setAllocationTagsManager(tm);
+    rmContext.setPlacementConstraintManager(pcm);
+
+    long ts = System.currentTimeMillis();
+    ApplicationId application1 = BuilderUtils.newApplicationId(ts, 100);
+    ApplicationId application2 = BuilderUtils.newApplicationId(ts, 101);
+    ApplicationId application3 = BuilderUtils.newApplicationId(ts, 102);
+
+    // Register App1 with anti-affinity constraint map.
+    RMNode n0r1 = rmNodes.get(0);
+    RMNode n1r1 = rmNodes.get(1);
+    RMNode n2r2 = rmNodes.get(2);
+    RMNode n3r2 = rmNodes.get(3);
+
+    /**
+     * Place container:
+     *  n0: app1/A(1), app2/A(1)
+     *  n1: app3/A(3)
+     *  n2: app1/A(2)
+     *  n3: ""
+     */
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application2), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n2r2.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+    tm.addContainer(n2r2.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+
+    SchedulerNode schedulerNode0 = newSchedulerNode(n0r1.getHostName(),
+        n0r1.getRackName(), n0r1.getNodeID());
+    SchedulerNode schedulerNode1 = newSchedulerNode(n1r1.getHostName(),
+        n1r1.getRackName(), n1r1.getNodeID());
+    SchedulerNode schedulerNode2 = newSchedulerNode(n2r2.getHostName(),
+        n2r2.getRackName(), n2r2.getNodeID());
+    SchedulerNode schedulerNode3 = newSchedulerNode(n3r2.getHostName(),
+        n3r2.getRackName(), n3r2.getNodeID());
+
+    AllocationTagNamespace namespaceAll =
+        new AllocationTagNamespace.All();
+
+    //***************************
+    // 1) all, anti-affinity
+    //***************************
+    // Anti-affinity with "A" from any application including itself.
+    PlacementConstraint constraint1 = PlacementConstraints.targetNotIn(
+        NODE, allocationTagWithNamespace(namespaceAll.toString(), "A"))
+        .build();
+    Map<Set<String>, PlacementConstraint> constraintMap = new HashMap<>();
+    Set<String> srcTags1 = ImmutableSet.of("A");
+    constraintMap.put(srcTags1, constraint1);
+    pcm.registerApplication(application1, constraintMap);
+
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode0, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode1, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode2, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application1);
+
+    //***************************
+    // 2) all, max cardinality
+    //***************************
+    PlacementConstraint constraint2 = PlacementConstraints
+        .maxCardinality(NODE, namespaceAll.toString(), 2, "A")
+        .build();
+    constraintMap.clear();
+    Set<String> srcTags2 = ImmutableSet.of("foo");
+    constraintMap.put(srcTags2, constraint2);
+    pcm.registerApplication(application2, constraintMap);
+
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode0, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode1, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode2, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application2);
+
+    //***************************
+    // 3) all, min cardinality
+    //***************************
+    PlacementConstraint constraint3 = PlacementConstraints
+        .minCardinality(NODE, namespaceAll.toString(), 3, "A")
+        .build();
+    constraintMap.clear();
+    Set<String> srcTags3 = ImmutableSet.of("foo");
+    constraintMap.put(srcTags3, constraint3);
+    pcm.registerApplication(application3, constraintMap);
+
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application3, createSchedulingRequest(srcTags3),
+        schedulerNode0, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application3, createSchedulingRequest(srcTags3),
+        schedulerNode1, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application3, createSchedulingRequest(srcTags3),
+        schedulerNode2, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application3, createSchedulingRequest(srcTags3),
+        schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application3);
+  }
+
+  @Test
+  public void testNotSelfAppConstraints()
+      throws InvalidAllocationTagsQueryException {
+    AllocationTagsManager tm = new AllocationTagsManager(rmContext);
+    PlacementConstraintManagerService pcm =
+        new MemoryPlacementConstraintManager();
+    rmContext.setAllocationTagsManager(tm);
+    rmContext.setPlacementConstraintManager(pcm);
+
+    long ts = System.currentTimeMillis();
+    ApplicationId application1 = BuilderUtils.newApplicationId(ts, 100);
+    ApplicationId application2 = BuilderUtils.newApplicationId(ts, 101);
+    ApplicationId application3 = BuilderUtils.newApplicationId(ts, 102);
+
+    // Register App1 with anti-affinity constraint map.
+    RMNode n0r1 = rmNodes.get(0);
+    RMNode n1r1 = rmNodes.get(1);
+    RMNode n2r2 = rmNodes.get(2);
+    RMNode n3r2 = rmNodes.get(3);
+
+    /**
+     * Place container:
+     *  n0: app1/A(1), app2/A(1)
+     *  n1: app3/A(3)
+     *  n2: app1/A(2)
+     *  n3: ""
+     */
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application2), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n1r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("A"));
+    tm.addContainer(n2r2.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+    tm.addContainer(n2r2.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("A"));
+
+    SchedulerNode schedulerNode0 = newSchedulerNode(n0r1.getHostName(),
+        n0r1.getRackName(), n0r1.getNodeID());
+    SchedulerNode schedulerNode1 = newSchedulerNode(n1r1.getHostName(),
+        n1r1.getRackName(), n1r1.getNodeID());
+    SchedulerNode schedulerNode2 = newSchedulerNode(n2r2.getHostName(),
+        n2r2.getRackName(), n2r2.getNodeID());
+    SchedulerNode schedulerNode3 = newSchedulerNode(n3r2.getHostName(),
+        n3r2.getRackName(), n3r2.getNodeID());
+
+    AllocationTagNamespace notSelf =
+        new AllocationTagNamespace.NotSelf();
+
+    //***************************
+    // 1) not-self, app1
+    //***************************
+    // Anti-affinity with "A" from app2 and app3,
+    // n0 and n1 both have tag "A" from either app2 or app3, so they are
+    // not qualified for the placement.
+    PlacementConstraint constraint1 = PlacementConstraints.targetNotIn(
+        NODE, allocationTagWithNamespace(notSelf.toString(), "A"))
+        .build();
+    Map<Set<String>, PlacementConstraint> constraintMap = new HashMap<>();
+    Set<String> srcTags1 = ImmutableSet.of("A");
+    constraintMap.put(srcTags1, constraint1);
+    pcm.registerApplication(application1, constraintMap);
+
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode0, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode1, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode2, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags1),
+        schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application1);
+
+    //***************************
+    // 2) not-self, app1
+    //***************************
+    // Affinity with "A" from app2 and app3,
+    // N0 and n1 are qualified for the placement.
+    PlacementConstraint constraint2 = PlacementConstraints.targetIn(
+        NODE, allocationTagWithNamespace(notSelf.toString(), "A"))
+        .build();
+    Map<Set<String>, PlacementConstraint> cm2 = new HashMap<>();
+    Set<String> srcTags2 = ImmutableSet.of("A");
+    cm2.put(srcTags2, constraint2);
+    pcm.registerApplication(application1, cm2);
+
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags2),
+        schedulerNode0, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags2),
+        schedulerNode1, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags2),
+        schedulerNode2, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application1, createSchedulingRequest(srcTags2),
+        schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application1);
+  }
+
+  @Test
+  public void testInterAppConstraintsByAppID()
+      throws InvalidAllocationTagsQueryException {
+    AllocationTagsManager tm = new AllocationTagsManager(rmContext);
+    PlacementConstraintManagerService pcm =
+        new MemoryPlacementConstraintManager();
+    rmContext.setAllocationTagsManager(tm);
+    rmContext.setPlacementConstraintManager(pcm);
+
+    long ts = System.currentTimeMillis();
+    ApplicationId application1 = BuilderUtils.newApplicationId(ts, 123);
+
+    // Register App1 with anti-affinity constraint map.
+    RMNode n0r1 = rmNodes.get(0);
+    RMNode n1r1 = rmNodes.get(1);
+    RMNode n2r2 = rmNodes.get(2);
+    RMNode n3r2 = rmNodes.get(3);
+
+    /**
+     * Place container:
+     *  n0: app1/hbase-m(1)
+     *  n1: ""
+     *  n2: app1/hbase-m(1)
+     *  n3: ""
+     */
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("hbase-m"));
+    tm.addContainer(n2r2.getNodeID(),
+        newContainerId(application1), ImmutableSet.of("hbase-m"));
+    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n0r1.getNodeID())
+        .get("hbase-m").longValue());
+    Assert.assertEquals(1L, tm.getAllocationTagsWithCount(n2r2.getNodeID())
+        .get("hbase-m").longValue());
+
+    SchedulerNode schedulerNode0 =newSchedulerNode(n0r1.getHostName(),
+        n0r1.getRackName(), n0r1.getNodeID());
+    SchedulerNode schedulerNode1 =newSchedulerNode(n1r1.getHostName(),
+        n1r1.getRackName(), n1r1.getNodeID());
+    SchedulerNode schedulerNode2 =newSchedulerNode(n2r2.getHostName(),
+        n2r2.getRackName(), n2r2.getNodeID());
+    SchedulerNode schedulerNode3 =newSchedulerNode(n3r2.getHostName(),
+        n3r2.getRackName(), n3r2.getNodeID());
+
+    AllocationTagNamespace namespace =
+        new AllocationTagNamespace.AppID(application1);
+    Map<Set<String>, PlacementConstraint> constraintMap = new HashMap<>();
+    PlacementConstraint constraint2 = PlacementConstraints
+        .targetNotIn(NODE, allocationTagWithNamespace(namespace.toString(),
+            "hbase-m"))
+        .build();
+    Set<String> srcTags2 = new HashSet<>();
+    srcTags2.add("app2");
+    constraintMap.put(srcTags2, constraint2);
+
+    ts = System.currentTimeMillis();
+    ApplicationId application2 = BuilderUtils.newApplicationId(ts, 124);
+    pcm.registerApplication(application2, constraintMap);
+
+    // Anti-affinity with app1/hbase-m so it should not be able to be placed
+    // onto n0 and n2 as they already have hbase-m allocated.
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode0, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode1, pcm, tm));
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode2, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(
+        application2, createSchedulingRequest(srcTags2),
+        schedulerNode3, pcm, tm));
+
+    // Intra-app constraint
+    // Test with default and empty namespace
+    AllocationTagNamespace self = new AllocationTagNamespace.Self();
+    PlacementConstraint constraint3 = PlacementConstraints
+        .targetNotIn(NODE, allocationTagWithNamespace(self.toString(),
+            "hbase-m"))
+        .build();
+    Set<String> srcTags3 = new HashSet<>();
+    srcTags3.add("app3");
+    constraintMap.put(srcTags3, constraint3);
+
+    ts = System.currentTimeMillis();
+    ApplicationId application3 = BuilderUtils.newApplicationId(ts, 124);
+    pcm.registerApplication(application3, constraintMap);
+
+    /**
+     * Place container:
+     *  n0: app1/hbase-m(1), app3/hbase-m
+     *  n1: ""
+     *  n2: app1/hbase-m(1)
+     *  n3: ""
+     */
+    tm.addContainer(n0r1.getNodeID(),
+        newContainerId(application3), ImmutableSet.of("hbase-m"));
+
+    // Anti-affinity to self/hbase-m
+    Assert.assertFalse(PlacementConstraintsUtil
+        .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
+            schedulerNode0, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil
+        .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
+            schedulerNode1, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil
+        .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
+            schedulerNode2, pcm, tm));
+    Assert.assertTrue(PlacementConstraintsUtil
+        .canSatisfyConstraints(application3, createSchedulingRequest(srcTags3),
+            schedulerNode3, pcm, tm));
+
+    pcm.unregisterApplication(application3);
+  }
+
+  @Test
+  public void testInvalidAllocationTagNamespace() {
+    AllocationTagsManager tm = new AllocationTagsManager(rmContext);
+    PlacementConstraintManagerService pcm =
+        new MemoryPlacementConstraintManager();
+    rmContext.setAllocationTagsManager(tm);
+    rmContext.setPlacementConstraintManager(pcm);
+
+    long ts = System.currentTimeMillis();
+    ApplicationId application1 = BuilderUtils.newApplicationId(ts, 123);
+    RMNode n0r1 = rmNodes.get(0);
+    SchedulerNode schedulerNode0 = newSchedulerNode(n0r1.getHostName(),
+        n0r1.getRackName(), n0r1.getNodeID());
+
+    PlacementConstraint constraint1 = PlacementConstraints
+        .targetNotIn(NODE, allocationTagWithNamespace("unknown_namespace",
+            "hbase-m"))
+        .build();
+    Set<String> srcTags1 = new HashSet<>();
+    srcTags1.add("app1");
+
+    try {
+      PlacementConstraintsUtil.canSatisfyConstraints(application1,
+          createSchedulingRequest(srcTags1, constraint1), schedulerNode0,
+          pcm, tm);
+      Assert.fail("This should fail because we gave an invalid namespace");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof InvalidAllocationTagsQueryException);
+      Assert.assertTrue(e.getMessage()
+          .contains("Invalid namespace prefix: unknown_namespace"));
+    }
   }
 }

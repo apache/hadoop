@@ -75,6 +75,8 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -148,6 +150,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
+  static final Logger LOG = Logger.getLogger(TestEncryptionZones.class);
 
   protected Configuration conf;
   private FileSystemTestHelper fsHelper;
@@ -538,6 +541,50 @@ public class TestEncryptionZones {
     cluster.restartNameNode(true);
     assertNumZones(numZones);
     assertZonePresent(null, rootDir.toString());
+  }
+
+  @Test
+  public void testEZwithFullyQualifiedPath() throws Exception {
+    /* Test failure of create EZ on a directory that doesn't exist. */
+    final Path zoneParent = new Path("/zones");
+    final Path zone1 = new Path(zoneParent, "zone1");
+    final Path zone1FQP = new Path(cluster.getURI().toString(), zone1);
+    final Path zone2 = new Path(zoneParent, "zone2");
+    final Path zone2FQP = new Path(cluster.getURI().toString(), zone2);
+
+    int numZones = 0;
+    EnumSet<CreateEncryptionZoneFlag> withTrash = EnumSet
+        .of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+
+    // Create EZ with Trash using FQP
+    fsWrapper.mkdir(zone1FQP, FsPermission.getDirDefault(), true);
+    dfsAdmin.createEncryptionZone(zone1FQP, TEST_KEY, withTrash);
+    assertNumZones(++numZones);
+    assertZonePresent(TEST_KEY, zone1.toString());
+    // Check that zone1 contains a .Trash directory
+    final Path zone1Trash = new Path(zone1, fs.TRASH_PREFIX);
+    assertTrue("CreateEncryptionZone with trash enabled should create a " +
+        ".Trash directory in the EZ", fs.exists(zone1Trash));
+
+    // getEncryptionZoneForPath for FQP should return the path component
+    EncryptionZone ezForZone1 = dfsAdmin.getEncryptionZoneForPath(zone1FQP);
+    assertTrue("getEncryptionZoneForPath for fully qualified path should " +
+        "return the path component",
+        ezForZone1.getPath().equals(zone1.toString()));
+
+    // Create EZ without Trash
+    fsWrapper.mkdir(zone2FQP, FsPermission.getDirDefault(), true);
+    dfsAdmin.createEncryptionZone(zone2FQP, TEST_KEY, NO_TRASH);
+    assertNumZones(++numZones);
+    assertZonePresent(TEST_KEY, zone2.toString());
+
+    // Provision Trash on zone2 using FQP
+    dfsAdmin.provisionEncryptionZoneTrash(zone2FQP);
+    EncryptionZone ezForZone2 = dfsAdmin.getEncryptionZoneForPath(zone2FQP);
+    Path ezTrashForZone2 = new Path(ezForZone2.getPath(),
+        FileSystem.TRASH_PREFIX);
+    assertTrue("provisionEZTrash with fully qualified path should create " +
+        "trash directory ", fsWrapper.exists(ezTrashForZone2));
   }
 
   /**
@@ -1416,6 +1463,77 @@ public class TestEncryptionZones {
     fs.deleteSnapshot(zoneParent, snap1.getName());
     assertEquals("Got unexpected ez path", zone.toString(),
         dfsAdmin.getEncryptionZoneForPath(snap3Zone).getPath().toString());
+  }
+
+  /**
+   * Test correctness of encryption zones on a existing snapshot path.
+   * Specifically, test the file in encryption zones with no encryption info
+   */
+  @Test
+  public void testSnapshotWithFile() throws Exception {
+    final int len = 8196;
+    final Path zoneParent = new Path("/zones");
+    final Path zone = new Path(zoneParent, "zone");
+    final Path zoneFile = new Path(zone, "zoneFile");
+    fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+    String contents = DFSTestUtil.readFile(fs, zoneFile);
+
+    // Create the snapshot which contains the file
+    dfsAdmin.allowSnapshot(zoneParent);
+    final Path snap1 = fs.createSnapshot(zoneParent, "snap1");
+
+    // Now delete the file and create encryption zone
+    fsWrapper.delete(zoneFile, false);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
+    assertEquals("Got unexpected ez path", zone.toString(),
+        dfsAdmin.getEncryptionZoneForPath(zone).getPath());
+
+    // The file in snapshot shouldn't have any encryption info
+    final Path snapshottedZoneFile = new Path(
+        snap1 + "/" + zone.getName() + "/" + zoneFile.getName());
+    FileEncryptionInfo feInfo = getFileEncryptionInfo(snapshottedZoneFile);
+    assertNull("Expected null ez info", feInfo);
+    assertEquals("Contents of snapshotted file have changed unexpectedly",
+        contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
+  }
+
+  /**
+   * Check the correctness of the diff reports.
+   */
+  private void verifyDiffReport(Path dir, String from, String to,
+      DiffReportEntry... entries) throws IOException {
+    DFSTestUtil.verifySnapshotDiffReport(fs, dir, from, to, entries);
+  }
+
+  /**
+   * Test correctness of snapshotDiff for encryption zone.
+   * snapshtoDiff should work when the path parameter is prefixed with
+   * /.reserved/raw for path that's both snapshottable and encryption zone.
+   */
+  @Test
+  public void testSnapshotDiffOnEncryptionZones() throws Exception {
+    final String TEST_KEY2 = "testkey2";
+    DFSTestUtil.createKey(TEST_KEY2, cluster, conf);
+
+    final int len = 8196;
+    final Path zone = new Path("/zone");
+    final Path rawZone = new Path("/.reserved/raw/zone");
+    final Path zoneFile = new Path(zone, "zoneFile");
+    fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
+    dfsAdmin.allowSnapshot(zone);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+    fs.createSnapshot(zone, "snap1");
+    fsWrapper.delete(zoneFile, true);
+    fs.createSnapshot(zone, "snap2");
+    verifyDiffReport(zone, "snap1", "snap2",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+
+    verifyDiffReport(rawZone, "snap1", "snap2",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
   }
 
   /**

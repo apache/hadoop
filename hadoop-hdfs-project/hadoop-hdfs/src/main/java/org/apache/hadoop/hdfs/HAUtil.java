@@ -147,10 +147,10 @@ public class HAUtil {
   }
   
   /**
-   * Get the NN ID of the other node in an HA setup.
+   * Get the NN ID of the other nodes in an HA setup.
    * 
    * @param conf the configuration of this node
-   * @return the NN ID of the other node in this nameservice
+   * @return a list of NN IDs of other nodes in this nameservice
    */
   public static List<String> getNameNodeIdOfOtherNodes(Configuration conf, String nsId) {
     Preconditions.checkArgument(nsId != null,
@@ -183,26 +183,26 @@ public class HAUtil {
   }
 
   /**
-   * Given the configuration for this node, return a Configuration object for
-   * the other node in an HA setup.
+   * Given the configuration for this node, return a list of configurations
+   * for the other nodes in an HA setup.
    * 
    * @param myConf the configuration of this node
-   * @return the configuration of the other node in an HA setup
+   * @return a list of configuration of other nodes in an HA setup
    */
   public static List<Configuration> getConfForOtherNodes(
       Configuration myConf) {
     
     String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
-    List<String> otherNn = getNameNodeIdOfOtherNodes(myConf, nsId);
+    List<String> otherNodes = getNameNodeIdOfOtherNodes(myConf, nsId);
 
     // Look up the address of the other NNs
-    List<Configuration> confs = new ArrayList<Configuration>(otherNn.size());
+    List<Configuration> confs = new ArrayList<Configuration>(otherNodes.size());
     myConf = new Configuration(myConf);
     // unset independent properties
     for (String idpKey : HA_SPECIAL_INDEPENDENT_KEYS) {
       myConf.unset(idpKey);
     }
-    for (String nn : otherNn) {
+    for (String nn : otherNodes) {
       Configuration confForOtherNode = new Configuration(myConf);
       NameNode.initializeGenericKeys(confForOtherNode, nsId, nn);
       confs.add(confForOtherNode);

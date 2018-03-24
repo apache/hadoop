@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -134,6 +131,14 @@ public final class HttpServer2 implements FilterContainer {
       "hadoop.http.socket.backlog.size";
   public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 128;
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
+  public static final String HTTP_ACCEPTOR_COUNT_KEY =
+      "hadoop.http.acceptor.count";
+  // -1 to use default behavior of setting count based on CPU core count
+  public static final int HTTP_ACCEPTOR_COUNT_DEFAULT = -1;
+  public static final String HTTP_SELECTOR_COUNT_KEY =
+      "hadoop.http.selector.count";
+  // -1 to use default behavior of setting count based on CPU core count
+  public static final int HTTP_SELECTOR_COUNT_DEFAULT = -1;
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
   public static final String FILTER_INITIALIZER_PROPERTY
@@ -465,7 +470,9 @@ public final class HttpServer2 implements FilterContainer {
 
     private ServerConnector createHttpChannelConnector(
         Server server, HttpConfiguration httpConfig) {
-      ServerConnector conn = new ServerConnector(server);
+      ServerConnector conn = new ServerConnector(server,
+          conf.getInt(HTTP_ACCEPTOR_COUNT_KEY, HTTP_ACCEPTOR_COUNT_DEFAULT),
+          conf.getInt(HTTP_SELECTOR_COUNT_KEY, HTTP_SELECTOR_COUNT_DEFAULT));
       ConnectionFactory connFactory = new HttpConnectionFactory(httpConfig);
       conn.addConnectionFactory(connFactory);
       configureChannelConnector(conn);
@@ -1349,24 +1356,6 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
-   * check whether user is static and unauthenticated, if the
-   * answer is TRUE, that means http sever is in non-security
-   * environment.
-   * @param servletContext the servlet context.
-   * @param request the servlet request.
-   * @return TRUE/FALSE based on the logic described above.
-   */
-  public static boolean isStaticUserAndNoneAuthType(
-      ServletContext servletContext, HttpServletRequest request) {
-    Configuration conf =
-        (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
-    final String authType = request.getAuthType();
-    final String staticUser = conf.get(HADOOP_HTTP_STATIC_USER,
-        DEFAULT_HADOOP_HTTP_STATIC_USER);
-    return authType == null && staticUser.equals(request.getRemoteUser());
-  }
-
-  /**
    * Checks the user has privileges to access to instrumentation servlets.
    * <p/>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to FALSE
@@ -1463,14 +1452,9 @@ public final class HttpServer2 implements FilterContainer {
 
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-      // If user is a static user and auth Type is null, that means
-      // there is a non-security environment and no need authorization,
-      // otherwise, do the authorization.
-      final ServletContext servletContext = getServletContext();
-      if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-          !HttpServer2.isInstrumentationAccessAllowed(servletContext,
-              request, response)) {
+      throws ServletException, IOException {
+      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
+                                                      request, response)) {
         return;
       }
       response.setContentType("text/plain; charset=UTF-8");

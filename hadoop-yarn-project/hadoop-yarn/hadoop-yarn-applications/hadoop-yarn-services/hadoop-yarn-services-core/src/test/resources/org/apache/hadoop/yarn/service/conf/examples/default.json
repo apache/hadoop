@@ -1,5 +1,6 @@
 {
   "name": "default-app-1",
+  "version": "1.0.0",
   "lifetime": "3600",
   "components" :
   [

@@ -31,6 +31,8 @@ public class YarnServiceConf {
   // Retry settings for container failures
   public static final String CONTAINER_RETRY_MAX = "yarn.service.container-failure.retry.max";
   public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval-ms";
+  public static final String CONTAINER_FAILURES_VALIDITY_INTERVAL =
+      "yarn.service.container-failure.validity-interval-ms";
 
   public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
   public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";

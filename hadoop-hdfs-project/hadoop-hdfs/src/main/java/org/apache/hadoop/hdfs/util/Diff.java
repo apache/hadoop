@@ -73,10 +73,6 @@ import com.google.common.base.Preconditions;
  * @param <E> The element type, which must implement {@link Element} interface.
  */
 public class Diff<K, E extends Diff.Element<K>> {
-  public enum ListType {
-    CREATED, DELETED
-  }
-
   /** An interface for the elements in a {@link Diff}. */
   public static interface Element<K> extends Comparable<K> {
     /** @return the key of this object. */
@@ -156,26 +152,73 @@ public class Diff<K, E extends Diff.Element<K>> {
     this.deleted = deleted;
   }
 
-  /** @return the created list, which is never null. */
-  public List<E> getList(final ListType type) {
-    final List<E> list = type == ListType.CREATED? created: deleted;
-    return list == null? Collections.<E>emptyList(): list;
+  public List<E> getCreatedUnmodifiable() {
+    return created != null? Collections.unmodifiableList(created)
+        : Collections.emptyList();
   }
 
-  public int searchIndex(final ListType type, final K name) {
-    return search(getList(type), name);
+  public E setCreated(int index, E element) {
+    final E old = created.set(index, element);
+    if (old.compareTo(element.getKey()) != 0) {
+      throw new AssertionError("Element mismatched: element=" + element
+          + " but old=" + old);
+    }
+    return old;
+  }
+
+  public void clearCreated() {
+    if (created != null) {
+      created.clear();
+    }
+  }
+
+  public List<E> getDeletedUnmodifiable() {
+    return deleted != null? Collections.unmodifiableList(deleted)
+        : Collections.emptyList();
+  }
+
+  public boolean containsDeleted(final K key) {
+    if (deleted != null) {
+      return search(deleted, key) >= 0;
+    }
+    return false;
+  }
+
+  public boolean containsDeleted(final E element) {
+    return getDeleted(element.getKey()) == element;
   }
 
   /**
    * @return null if the element is not found;
-   *         otherwise, return the element in the created/deleted list.
+   *         otherwise, return the element in the deleted list.
    */
-  public E search(final ListType type, final K name) {
-    final List<E> list = getList(type); 
-    final int c = search(list, name);
-    return c < 0 ? null : list.get(c);
+  public E getDeleted(final K key) {
+    if (deleted != null) {
+      final int c = search(deleted, key);
+      if (c >= 0) {
+        return deleted.get(c);
+      }
+    }
+    return null;
   }
-  
+
+  public boolean removeDeleted(final E element) {
+    if (deleted != null) {
+      final int i = search(deleted, element.getKey());
+      if (i >= 0 && deleted.get(i) == element) {
+        deleted.remove(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public void clearDeleted() {
+    if (deleted != null) {
+      deleted.clear();
+    }
+  }
+
   /** @return true if no changes contained in the diff */
   public boolean isEmpty() {
     return (created == null || created.isEmpty())
@@ -183,26 +226,36 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
   
   /**
-   * Insert the given element to the created/deleted list.
+   * Add the given element to the created list,
+   * provided the element does not exist, i.e. i < 0.
+   *
    * @param i the insertion point defined
    *          in {@link Collections#binarySearch(List, Object)}
+   * @throws AssertionError if i >= 0.
    */
-  private void insert(final ListType type, final E element, final int i) {
-    List<E> list = type == ListType.CREATED? created: deleted; 
+  private void addCreated(final E element, final int i) {
     if (i >= 0) {
       throw new AssertionError("Element already exists: element=" + element
-          + ", " + type + "=" + list);
+          + ", created=" + created);
     }
-    if (list == null) {
-      list = new ArrayList<E>(DEFAULT_ARRAY_INITIAL_CAPACITY);
-      if (type == ListType.CREATED) {
-        created = list;
-      } else if (type == ListType.DELETED){
-        deleted = list;
-      }
+    if (created == null) {
+      created = new ArrayList<>(DEFAULT_ARRAY_INITIAL_CAPACITY);
     }
-    list.add(-i - 1, element);
+    created.add(-i - 1, element);
   }
+
+  /** Similar to {@link #addCreated(Element, int)} but for the deleted list. */
+  private void addDeleted(final E element, final int i) {
+    if (i >= 0) {
+      throw new AssertionError("Element already exists: element=" + element
+          + ", deleted=" + deleted);
+    }
+    if (deleted == null) {
+      deleted = new ArrayList<>(DEFAULT_ARRAY_INITIAL_CAPACITY);
+    }
+    deleted.add(-i - 1, element);
+  }
+
 
   /**
    * Create an element in current state.
@@ -210,7 +263,7 @@ public class Diff<K, E extends Diff.Element<K>> {
    */
   public int create(final E element) {
     final int c = search(created, element.getKey());
-    insert(ListType.CREATED, element, c);
+    addCreated(element, c);
     return c;
   }
 
@@ -236,7 +289,7 @@ public class Diff<K, E extends Diff.Element<K>> {
     } else {
       // not in c-list, it must be in previous
       d = search(deleted, element.getKey());
-      insert(ListType.DELETED, element, d);
+      addDeleted(element, d);
     }
     return new UndoInfo<E>(c, previous, d);
   }
@@ -277,8 +330,8 @@ public class Diff<K, E extends Diff.Element<K>> {
       d = search(deleted, oldElement.getKey());
       if (d < 0) {
         // Case 2.3: neither in c-list nor d-list
-        insert(ListType.CREATED, newElement, c);
-        insert(ListType.DELETED, oldElement, d);
+        addCreated(newElement, c);
+        addDeleted(oldElement, d);
       }
     }
     return new UndoInfo<E>(c, previous, d);
@@ -348,7 +401,7 @@ public class Diff<K, E extends Diff.Element<K>> {
    */
   public List<E> apply2Previous(final List<E> previous) {
     return apply2Previous(previous,
-        getList(ListType.CREATED), getList(ListType.DELETED));
+        getCreatedUnmodifiable(), getDeletedUnmodifiable());
   }
 
   private static <K, E extends Diff.Element<K>> List<E> apply2Previous(
@@ -408,7 +461,7 @@ public class Diff<K, E extends Diff.Element<K>> {
    */
   public List<E> apply2Current(final List<E> current) {
     return apply2Previous(current,
-        getList(ListType.DELETED), getList(ListType.CREATED));
+        getDeletedUnmodifiable(), getCreatedUnmodifiable());
   }
   
   /**
@@ -443,8 +496,10 @@ public class Diff<K, E extends Diff.Element<K>> {
    */
   public void combinePosterior(final Diff<K, E> posterior,
       final Processor<E> deletedProcesser) {
-    final Iterator<E> createdIterator = posterior.getList(ListType.CREATED).iterator();
-    final Iterator<E> deletedIterator = posterior.getList(ListType.DELETED).iterator();
+    final Iterator<E> createdIterator
+        = posterior.getCreatedUnmodifiable().iterator();
+    final Iterator<E> deletedIterator
+        = posterior.getDeletedUnmodifiable().iterator();
 
     E c = createdIterator.hasNext()? createdIterator.next(): null;
     E d = deletedIterator.hasNext()? deletedIterator.next(): null;
@@ -479,7 +534,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   @Override
   public String toString() {
     return getClass().getSimpleName()
-        +  "{created=" + getList(ListType.CREATED)
-        + ", deleted=" + getList(ListType.DELETED) + "}";
+        +  "{created=" + getCreatedUnmodifiable()
+        + ", deleted=" + getDeletedUnmodifiable() + "}";
   }
 }

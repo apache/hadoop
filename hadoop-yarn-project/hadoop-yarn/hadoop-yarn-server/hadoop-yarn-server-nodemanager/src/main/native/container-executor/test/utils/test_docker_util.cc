@@ -551,13 +551,16 @@ namespace ContainerExecutor {
   }
 
   TEST_F(TestDockerUtil, test_check_mount_permitted) {
-    const char *permitted_mounts[] = {"/etc", "/usr/bin/cut", "/tmp/", NULL};
+    const char *permitted_mounts[] = {"/etc", "/usr/bin/cut", "/tmp/", "regex:nvidia_driver.*", NULL};
     std::vector<std::pair<std::string, int> > test_data;
     test_data.push_back(std::make_pair<std::string, int>("/etc", 1));
     test_data.push_back(std::make_pair<std::string, int>("/etc/", 1));
     test_data.push_back(std::make_pair<std::string, int>("/etc/passwd", 1));
     test_data.push_back(std::make_pair<std::string, int>("/usr/bin/cut", 1));
     test_data.push_back(std::make_pair<std::string, int>("//usr/", 0));
+    test_data.push_back(std::make_pair<std::string, int>("nvidia_driver_375.66", 1));
+    test_data.push_back(std::make_pair<std::string, int>("nvidia_local_driver", 0));
+    test_data.push_back(std::make_pair<std::string, int>("^/usr/.*$", -1));
     test_data.push_back(std::make_pair<std::string, int>("/etc/random-file", -1));
 
     std::vector<std::pair<std::string, int> >::const_iterator itr;
@@ -568,9 +571,9 @@ namespace ContainerExecutor {
   }
 
   TEST_F(TestDockerUtil, test_normalize_mounts) {
-    const int entries = 4;
-    const char *permitted_mounts[] = {"/home", "/etc", "/usr/bin/cut", NULL};
-    const char *expected[] = {"/home/", "/etc/", "/usr/bin/cut", NULL};
+    const int entries = 5;
+    const char *permitted_mounts[] = {"/home", "/etc", "/usr/bin/cut", "regex:/dev/nvidia.*", NULL};
+    const char *expected[] = {"/home/", "/etc/", "/usr/bin/cut", "regex:/dev/nvidia.*", NULL};
     char **ptr = static_cast<char **>(malloc(entries * sizeof(char *)));
     for (int i = 0; i < entries; ++i) {
       if (permitted_mounts[i] != NULL) {
@@ -579,7 +582,7 @@ namespace ContainerExecutor {
         ptr[i] = NULL;
       }
     }
-    normalize_mounts(ptr);
+    normalize_mounts(ptr, 1);
     for (int i = 0; i < entries; ++i) {
       ASSERT_STREQ(expected[i], ptr[i]);
     }
@@ -742,7 +745,7 @@ namespace ContainerExecutor {
     int ret = 0;
     std::string container_executor_cfg_contents = "[docker]\n"
         "  docker.privileged-containers.registries=hadoop\n"
-        "  docker.allowed.devices=/dev/test-device,/dev/device2";
+        "  docker.allowed.devices=/dev/test-device,/dev/device2,regex:/dev/nvidia.*,regex:/dev/gpu-uvm.*";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  devices=/dev/test-device:/dev/test-device",
@@ -754,6 +757,14 @@ namespace ContainerExecutor {
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n"
             "  devices=/dev/test-device:/dev/test-device,/dev/device2:/dev/device2",
         "--device='/dev/test-device:/dev/test-device' --device='/dev/device2:/dev/device2' "));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n"
+            "devices=/dev/nvidiactl:/dev/nvidiactl",
+        "--device='/dev/nvidiactl:/dev/nvidiactl' "));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n"
+            "devices=/dev/nvidia1:/dev/nvidia1,/dev/gpu-uvm-tools:/dev/gpu-uvm-tools",
+        "--device='/dev/nvidia1:/dev/nvidia1' --device='/dev/gpu-uvm-tools:/dev/gpu-uvm-tools' "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image", ""));
     write_container_executor_cfg(container_executor_cfg_contents);
@@ -785,6 +796,36 @@ namespace ContainerExecutor {
     ASSERT_EQ(0, strlen(buff));
 
     write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  devices=/dev/device3:/dev/device3");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    strcpy(buff, "test string");
+    ret = set_devices(&cmd_cfg, &container_cfg, buff, buff_len);
+    ASSERT_EQ(INVALID_DOCKER_DEVICE, ret);
+    ASSERT_EQ(0, strlen(buff));
+
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  devices=/dev/device1");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    strcpy(buff, "test string");
+    ret = set_devices(&cmd_cfg, &container_cfg, buff, buff_len);
+    ASSERT_EQ(INVALID_DOCKER_DEVICE, ret);
+    ASSERT_EQ(0, strlen(buff));
+
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  devices=/dev/testnvidia:/dev/testnvidia");
+    ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    strcpy(buff, "test string");
+    ret = set_devices(&cmd_cfg, &container_cfg, buff, buff_len);
+    ASSERT_EQ(INVALID_DOCKER_DEVICE, ret);
+    ASSERT_EQ(0, strlen(buff));
+
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  devices=/dev/gpu-nvidia-uvm:/dev/gpu-nvidia-uvm");
     ret = read_config(docker_command_file.c_str(), &cmd_cfg);
     if (ret != 0) {
       FAIL();
@@ -1063,6 +1104,7 @@ namespace ContainerExecutor {
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name='container_e1_12312_11111_02_000001' --user='test' --cap-drop='ALL' 'hadoop/docker-image' 'bash' 'test_script.sh' 'arg1' 'arg2' "));
 
+    // Test non-privileged conatiner with launch command
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=test\n  hostname=host-id\n"
@@ -1084,6 +1126,7 @@ namespace ContainerExecutor {
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm"
             " --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --hostname='host-id' 'nothadoop/docker-image' "));
 
+    // Test non-privileged container and drop all privileges
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=test\n  hostname=host-id\n"
@@ -1105,6 +1148,7 @@ namespace ContainerExecutor {
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge'"
             " --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --hostname='host-id' 'nothadoop/docker-image' "));
 
+    // Test privileged container
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=test\n  hostname=host-id\n"
@@ -1112,7 +1156,7 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
+        "run --name='container_e1_12312_11111_02_000001' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
             " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
             "--cap-add='CHOWN' --cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'hadoop/docker-image' "
             "'bash' 'test_script.sh' 'arg1' 'arg2' "));
@@ -1125,9 +1169,9 @@ namespace ContainerExecutor {
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
+        "run --name='container_e1_12312_11111_02_000001' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
             " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
-            "--cap-add='CHOWN' --cap-add='SETUID' --hostname='host-id' --group-add '1000' --group-add '1001' "
+            "--cap-add='CHOWN' --cap-add='SETUID' --hostname='host-id' "
             "--device='/dev/test:/dev/test' 'hadoop/docker-image' 'bash' 'test_script.sh' 'arg1' 'arg2' "));
 
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(

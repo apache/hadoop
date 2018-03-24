@@ -173,20 +173,20 @@ public class Container extends BaseResource {
   }
 
   /**
-   * Name of the component that this container instance belongs to.
+   * Name of the component instance that this container instance belongs to.
    **/
-  public Container componentName(String componentName) {
-    this.componentInstanceName = componentName;
+  public Container componentInstanceName(String componentInstanceName) {
+    this.componentInstanceName = componentInstanceName;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Name of the component that this container instance belongs to.")
-  @JsonProperty("component_name")
+  @ApiModelProperty(example = "null", value = "Name of the component instance that this container instance belongs to.")
+  @JsonProperty("component_instance_name")
   public String getComponentInstanceName() {
     return componentInstanceName;
   }
 
-  @XmlElement(name = "component_name")
+  @XmlElement(name = "component_instance_name")
   public void setComponentInstanceName(String componentInstanceName) {
     this.componentInstanceName = componentInstanceName;
   }

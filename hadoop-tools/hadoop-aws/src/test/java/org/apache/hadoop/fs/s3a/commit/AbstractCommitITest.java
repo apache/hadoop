@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
@@ -90,7 +91,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   @Override
   protected Path path(String filepath) throws IOException {
     return useInconsistentClient() ?
-           super.path(InconsistentAmazonS3Client.DEFAULT_DELAY_KEY_SUBSTRING
+           super.path(FailureInjectionPolicy.DEFAULT_DELAY_KEY_SUBSTRING
                + "/" + filepath)
            : super.path(filepath);
   }

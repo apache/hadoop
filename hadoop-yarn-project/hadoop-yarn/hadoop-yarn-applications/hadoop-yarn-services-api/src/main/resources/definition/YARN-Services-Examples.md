@@ -21,6 +21,8 @@ POST URL - http://localhost:9191/ws/v1/services
 ```json
 {
   "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example",
   "components" :
     [
       {
@@ -48,6 +50,8 @@ Note, lifetime value of -1 means unlimited lifetime.
 ```json
 {
     "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
     "components": [
@@ -72,7 +76,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051512412,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-0"
+                    "component_instance_name": "hello-0"
                 },
                 {
                     "id": "container_e03_1503963985568_0002_01_000002",
@@ -81,7 +85,7 @@ Note, lifetime value of -1 means unlimited lifetime.
                     "state": "READY",
                     "launch_time": 1504051536450,
                     "bare_host": "10.22.8.143",
-                    "component_name": "hello-1"
+                    "component_instance_name": "hello-1"
                 }
             ],
             "launch_command": "./start_nginx.sh",
@@ -154,6 +158,8 @@ POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
 ```json
 {
   "name": "hbase-app-1",
+  "version": "1.0.0",
+  "description": "hbase service",
   "lifetime": "3600",
   "components": [
     {

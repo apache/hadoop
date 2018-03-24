@@ -48,7 +48,8 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
@@ -102,11 +103,14 @@ public class HadoopArchiveLogs implements Tool {
   @VisibleForTesting
   Set<AppInfo> eligibleApplications;
 
+  private Set<Path> workingDirs;
+
   private JobConf conf;
 
   public HadoopArchiveLogs(Configuration conf) {
     setConf(conf);
     eligibleApplications = new HashSet<>();
+    workingDirs = new HashSet<>();
   }
 
   public static void main(String[] args) {
@@ -138,47 +142,71 @@ public class HadoopArchiveLogs implements Tool {
     handleOpts(args);
 
     FileSystem fs = null;
-    Path remoteRootLogDir = new Path(conf.get(
-        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
-    Path workingDir = new Path(remoteRootLogDir, "archive-logs-work");
-    if (verbose) {
-      LOG.info("Remote Log Dir Root: " + remoteRootLogDir);
-      LOG.info("Log Suffix: " + suffix);
-      LOG.info("Working Dir: " + workingDir);
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(conf);
+    List<LogAggregationFileController> fileControllers = factory
+        .getConfiguredLogAggregationFileControllerList();
+    if (fileControllers == null || fileControllers.isEmpty()) {
+      LOG.info("Can not find any valid fileControllers.");
+      if (verbose) {
+        LOG.info("The configurated fileControllers:"
+            + YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS);
+      }
+      return 0;
     }
     try {
       fs = FileSystem.get(conf);
-      if (prepareWorkingDir(fs, workingDir)) {
-
-        checkFilesAndSeedApps(fs, remoteRootLogDir, suffix);
+      // find eligibleApplications for all the fileControllers
+      int previousTotal = 0;
+      for (LogAggregationFileController fileController : fileControllers) {
+        Path remoteRootLogDir = fileController.getRemoteRootLogDir();
+        String suffix = fileController.getRemoteRootLogDirSuffix();
+        Path workingDir = new Path(remoteRootLogDir, "archive-logs-work");
+        if (verbose) {
+          LOG.info("LogAggregationFileController:" + fileController
+              .getClass().getName());
+          LOG.info("Remote Log Dir Root: " + remoteRootLogDir);
+          LOG.info("Log Suffix: " + suffix);
+          LOG.info("Working Dir: " + workingDir);
+        }
+        checkFilesAndSeedApps(fs, remoteRootLogDir, suffix, workingDir);
 
         filterAppsByAggregatedStatus();
 
-        checkMaxEligible();
-
-        if (eligibleApplications.isEmpty()) {
-          LOG.info("No eligible applications to process");
-          exitCode = 0;
-        } else {
-          StringBuilder sb =
-              new StringBuilder("Will process the following applications:");
-          for (AppInfo app : eligibleApplications) {
-            sb.append("\n\t").append(app.getAppId());
-          }
-          LOG.info(sb.toString());
-
-          File localScript = File.createTempFile("hadoop-archive-logs-", ".sh");
-          generateScript(localScript, workingDir, remoteRootLogDir, suffix);
-
-          exitCode = runDistributedShell(localScript) ? 0 : 1;
+        if (eligibleApplications.size() > previousTotal) {
+          workingDirs.add(workingDir);
+          previousTotal = eligibleApplications.size();
         }
       }
+      checkMaxEligible();
+      if (workingDirs.isEmpty() || eligibleApplications.isEmpty()) {
+        LOG.info("No eligible applications to process");
+        return 0;
+      }
+      for (Path workingDir : workingDirs) {
+        if (!prepareWorkingDir(fs, workingDir)) {
+          LOG.error("Failed to create the workingDir:"
+              + workingDir.toString());
+          return 1;
+        }
+      }
+      StringBuilder sb =
+          new StringBuilder("Will process the following applications:");
+      for (AppInfo app : eligibleApplications) {
+        sb.append("\n\t").append(app.getAppId());
+      }
+      LOG.info(sb.toString());
+      File localScript = File.createTempFile("hadoop-archive-logs-", ".sh");
+      generateScript(localScript);
+
+      exitCode = runDistributedShell(localScript) ? 0 : 1;
     } finally {
       if (fs != null) {
         // Cleanup working directory
-        fs.delete(workingDir, true);
+        for (Path workingDir : workingDirs) {
+          fs.delete(workingDir, true);
+        }
         fs.close();
       }
     }
@@ -296,8 +324,8 @@ public class HadoopArchiveLogs implements Tool {
     try {
       client.init(getConf());
       client.start();
-      for (Iterator<AppInfo> it = eligibleApplications.iterator();
-           it.hasNext();) {
+      for (Iterator<AppInfo> it = eligibleApplications
+          .iterator(); it.hasNext();) {
         AppInfo app = it.next();
         try {
           ApplicationReport report = client.getApplicationReport(
@@ -335,7 +363,7 @@ public class HadoopArchiveLogs implements Tool {
 
   @VisibleForTesting
   void checkFilesAndSeedApps(FileSystem fs, Path remoteRootLogDir,
-       String suffix) throws IOException {
+       String suffix, Path workingDir) throws IOException {
     for (RemoteIterator<FileStatus> userIt =
          fs.listStatusIterator(remoteRootLogDir); userIt.hasNext();) {
       Path userLogPath = userIt.next().getPath();
@@ -375,8 +403,13 @@ public class HadoopArchiveLogs implements Tool {
                   LOG.info("Adding " + appLogPath.getName() + " for user " +
                       userLogPath.getName());
                 }
-                eligibleApplications.add(
-                    new AppInfo(appLogPath.getName(), userLogPath.getName()));
+                AppInfo context = new AppInfo();
+                context.setAppId(appLogPath.getName());
+                context.setUser(userLogPath.getName());
+                context.setSuffix(suffix);
+                context.setRemoteRootLogDir(remoteRootLogDir);
+                context.setWorkingDir(workingDir);
+                eligibleApplications.add(context);
               }
             } else {
               if (verbose) {
@@ -406,14 +439,17 @@ public class HadoopArchiveLogs implements Tool {
   @VisibleForTesting
   void checkMaxEligible() {
     // If we have too many eligible apps, remove the newest ones first
-    if (maxEligible > 0 && eligibleApplications.size() > maxEligible) {
+    if (maxEligible > 0 && eligibleApplications.size()
+        > maxEligible) {
       if (verbose) {
-        LOG.info("Too many applications (" + eligibleApplications.size() +
+        LOG.info("Too many applications (" + eligibleApplications
+            .size() +
             " > " + maxEligible + ")");
       }
       List<AppInfo> sortedApplications =
           new ArrayList<AppInfo>(eligibleApplications);
-      Collections.sort(sortedApplications, new Comparator<AppInfo>() {
+      Collections.sort(sortedApplications, new Comparator<
+          AppInfo>() {
         @Override
         public int compare(AppInfo o1, AppInfo o2) {
           int lCompare = Long.compare(o1.getFinishTime(), o2.getFinishTime());
@@ -440,20 +476,25 @@ public class HadoopArchiveLogs implements Tool {
   if [ "$YARN_SHELL_ID" == "1" ]; then
         appId="application_1440448768987_0001"
         user="rkanter"
+        workingDir="/tmp/logs/archive-logs-work"
+        remoteRootLogDir="/tmp/logs"
+        suffix="logs"
   elif [ "$YARN_SHELL_ID" == "2" ]; then
         appId="application_1440448768987_0002"
         user="rkanter"
+        workingDir="/tmp/logs/archive-logs-work"
+        remoteRootLogDir="/tmp/logs"
+        suffix="logs"
   else
         echo "Unknown Mapping!"
         exit 1
   fi
   export HADOOP_CLIENT_OPTS="-Xmx1024m"
   export HADOOP_CLASSPATH=/dist/share/hadoop/tools/lib/hadoop-archive-logs-2.8.0-SNAPSHOT.jar:/dist/share/hadoop/tools/lib/hadoop-archives-2.8.0-SNAPSHOT.jar
-  "$HADOOP_HOME"/bin/hadoop org.apache.hadoop.tools.HadoopArchiveLogsRunner -appId "$appId" -user "$user" -workingDir /tmp/logs/archive-logs-work -remoteRootLogDir /tmp/logs -suffix logs
+  "$HADOOP_HOME"/bin/hadoop org.apache.hadoop.tools.HadoopArchiveLogsRunner -appId "$appId" -user "$user" -workingDir "$workingDir" -remoteRootLogDir "$remoteRootLogDir" -suffix "$suffix"
    */
   @VisibleForTesting
-  void generateScript(File localScript, Path workingDir,
-        Path remoteRootLogDir, String suffix) throws IOException {
+  void generateScript(File localScript) throws IOException {
     if (verbose) {
       LOG.info("Generating script at: " + localScript.getAbsolutePath());
     }
@@ -467,13 +508,19 @@ public class HadoopArchiveLogs implements Tool {
       fw = new FileWriterWithEncoding(localScript, "UTF-8");
       fw.write("#!/bin/bash\nset -e\nset -x\n");
       int containerCount = 1;
-      for (AppInfo app : eligibleApplications) {
+      for (AppInfo context : eligibleApplications) {
         fw.write("if [ \"$YARN_SHELL_ID\" == \"");
         fw.write(Integer.toString(containerCount));
         fw.write("\" ]; then\n\tappId=\"");
-        fw.write(app.getAppId());
+        fw.write(context.getAppId());
         fw.write("\"\n\tuser=\"");
-        fw.write(app.getUser());
+        fw.write(context.getUser());
+        fw.write("\"\n\tworkingDir=\"");
+        fw.write(context.getWorkingDir().toString());
+        fw.write("\"\n\tremoteRootLogDir=\"");
+        fw.write(context.getRemoteRootLogDir().toString());
+        fw.write("\"\n\tsuffix=\"");
+        fw.write(context.getSuffix());
         fw.write("\"\nel");
         containerCount++;
       }
@@ -486,11 +533,11 @@ public class HadoopArchiveLogs implements Tool {
       fw.write("\n\"$HADOOP_HOME\"/bin/hadoop ");
       fw.write(HadoopArchiveLogsRunner.class.getName());
       fw.write(" -appId \"$appId\" -user \"$user\" -workingDir ");
-      fw.write(workingDir.toString());
+      fw.write("\"$workingDir\"");
       fw.write(" -remoteRootLogDir ");
-      fw.write(remoteRootLogDir.toString());
+      fw.write("\"$remoteRootLogDir\"");
       fw.write(" -suffix ");
-      fw.write(suffix);
+      fw.write("\"$suffix\"");
       if (!proxy) {
         fw.write(" -noProxy\n");
       }
@@ -542,21 +589,57 @@ public class HadoopArchiveLogs implements Tool {
   @VisibleForTesting
   static class AppInfo {
     private String appId;
+    private Path remoteRootLogDir;
+    private String suffix;
+    private Path workingDir;
     private String user;
     private long finishTime;
 
+    AppInfo() {}
+
     AppInfo(String appId, String user) {
-      this.appId = appId;
-      this.user = user;
-      this.finishTime = 0L;
+      this.setAppId(appId);
+      this.setUser(user);
     }
 
     public String getAppId() {
       return appId;
     }
 
+    public void setAppId(String appId) {
+      this.appId = appId;
+    }
+
+    public Path getRemoteRootLogDir() {
+      return remoteRootLogDir;
+    }
+
+    public void setRemoteRootLogDir(Path remoteRootLogDir) {
+      this.remoteRootLogDir = remoteRootLogDir;
+    }
+
+    public String getSuffix() {
+      return suffix;
+    }
+
+    public void setSuffix(String suffix) {
+      this.suffix = suffix;
+    }
+
+    public Path getWorkingDir() {
+      return workingDir;
+    }
+
+    public void setWorkingDir(Path workingDir) {
+      this.workingDir = workingDir;
+    }
+
     public String getUser() {
       return user;
+    }
+
+    public void setUser(String user) {
+      this.user = user;
     }
 
     public long getFinishTime() {
@@ -582,14 +665,39 @@ public class HadoopArchiveLogs implements Tool {
           ? !appId.equals(appInfo.appId) : appInfo.appId != null) {
         return false;
       }
-      return !(user != null
-          ? !user.equals(appInfo.user) : appInfo.user != null);
+
+      if (user != null
+          ? !user.equals(appInfo.user) : appInfo.user != null) {
+        return false;
+      }
+
+      if (suffix != null
+          ? !suffix.equals(appInfo.suffix) : appInfo.suffix != null) {
+        return false;
+      }
+
+      if (workingDir != null ? !workingDir.equals(
+          appInfo.workingDir) : appInfo.workingDir != null) {
+        return false;
+      }
+
+      if (remoteRootLogDir != null ? !remoteRootLogDir.equals(
+          appInfo.remoteRootLogDir) : appInfo.remoteRootLogDir != null) {
+        return false;
+      }
+
+      return Long.compare(finishTime, appInfo.finishTime) == 0;
     }
 
     @Override
     public int hashCode() {
       int result = appId != null ? appId.hashCode() : 0;
       result = 31 * result + (user != null ? user.hashCode() : 0);
+      result = 31 * result + (suffix != null ? suffix.hashCode() : 0);
+      result = 31 * result + (workingDir != null ? workingDir.hashCode() : 0);
+      result = 31 * result + (remoteRootLogDir != null ?
+          remoteRootLogDir.hashCode() : 0);
+      result = 31 * result + Long.valueOf(finishTime).hashCode();
       return result;
     }
   }

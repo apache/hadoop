@@ -41,6 +41,7 @@ import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.lib.server.Service;
 import org.apache.hadoop.lib.server.ServiceException;
@@ -406,6 +412,19 @@ public class TestHttpFSServer extends HFSTestCase {
    * @throws Exception
    */
   private void createWithHttp(String filename, String perms) throws Exception {
+    createWithHttp(filename, perms, null);
+  }
+
+  /**
+   * Talks to the http interface to create a file.
+   *
+   * @param filename The file to create
+   * @param perms The permission field, if any (may be null)
+   * @param unmaskedPerms The unmaskedPermission field, if any (may be null)
+   * @throws Exception
+   */
+  private void createWithHttp(String filename, String perms,
+      String unmaskedPerms) throws Exception {
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
     if (filename.charAt(0) == '/') {
@@ -421,12 +440,50 @@ public class TestHttpFSServer extends HFSTestCase {
               "/webhdfs/v1/{0}?user.name={1}&permission={2}&op=CREATE",
               filename, user, perms);
     }
+    if (unmaskedPerms != null) {
+      pathOps = pathOps+"&unmaskedpermission="+unmaskedPerms;
+    }
     URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.addRequestProperty("Content-Type", "application/octet-stream");
     conn.setRequestMethod("PUT");
     conn.connect();
     Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+  }
+
+  /**
+   * Talks to the http interface to create a directory.
+   *
+   * @param dirname The directory to create
+   * @param perms The permission field, if any (may be null)
+   * @param unmaskedPerms The unmaskedPermission field, if any (may be null)
+   * @throws Exception
+   */
+  private void createDirWithHttp(String dirname, String perms,
+      String unmaskedPerms) throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // Remove leading / from filename
+    if (dirname.charAt(0) == '/') {
+      dirname = dirname.substring(1);
+    }
+    String pathOps;
+    if (perms == null) {
+      pathOps = MessageFormat.format(
+              "/webhdfs/v1/{0}?user.name={1}&op=MKDIRS",
+              dirname, user);
+    } else {
+      pathOps = MessageFormat.format(
+              "/webhdfs/v1/{0}?user.name={1}&permission={2}&op=MKDIRS",
+              dirname, user, perms);
+    }
+    if (unmaskedPerms != null) {
+      pathOps = pathOps+"&unmaskedpermission="+unmaskedPerms;
+    }
+    URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
   }
 
   /**
@@ -575,6 +632,27 @@ public class TestHttpFSServer extends HFSTestCase {
     } else {
       return new byte[0];
     }
+  }
+
+  /**
+   *
+   * @param stat AclStatus object from a call to getAclStatus
+   * @param name The name of the ACL being searched for
+   * @return The AclEntry if found, or null otherwise
+   * @throws IOException
+   */
+  private AclEntry findAclWithName(AclStatus stat, String name)
+      throws IOException{
+    AclEntry relevantAcl = null;
+    Iterator<AclEntry> it = stat.getEntries().iterator();
+    while (it.hasNext()) {
+      AclEntry e = it.next();
+      if (e.getName().equals(name)) {
+        relevantAcl = e;
+        break;
+      }
+    }
+    return relevantAcl;
   }
 
   /**
@@ -835,6 +913,102 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(1, is.read());
     Assert.assertEquals(2, is.read());
     Assert.assertEquals(-1, is.read());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCreateFileWithUnmaskedPermissions() throws Exception {
+    createHttpFSServer(false, false);
+
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    // Create a folder with a default acl default:user2:rw-
+    fs.mkdirs(new Path("/tmp"));
+    AclEntry acl = new org.apache.hadoop.fs.permission.AclEntry.Builder()
+        .setType(AclEntryType.USER)
+        .setScope(AclEntryScope.DEFAULT)
+        .setName("user2")
+        .setPermission(FsAction.READ_WRITE)
+        .build();
+    fs.setAcl(new Path("/tmp"), new ArrayList<AclEntry>(Arrays.asList(acl)));
+
+    String notUnmaskedFile = "/tmp/notUnmasked";
+    String unmaskedFile = "/tmp/unmasked";
+
+    // Create a file inside the folder. It should inherit the default acl
+    // but the mask should affect the ACL permissions. The mask is controlled
+    // by the group permissions, which are 0, and hence the mask will make
+    // the effective permission of the inherited ACL be NONE.
+    createWithHttp(notUnmaskedFile, "700");
+
+    // Pull the relevant ACL from the FS object and check the mask has affected
+    // its permissions.
+    AclStatus aclStatus = fs.getAclStatus(new Path(notUnmaskedFile));
+    AclEntry theAcl = findAclWithName(aclStatus, "user2");
+
+    Assert.assertNotNull(theAcl);
+    Assert.assertEquals(FsAction.NONE,
+        aclStatus.getEffectivePermission(theAcl));
+
+    // Create another file, this time pass a mask of 777. Now the inherited
+    // permissions should be as expected
+    createWithHttp(unmaskedFile, "700", "777");
+
+    aclStatus = fs.getAclStatus(new Path(unmaskedFile));
+    theAcl = findAclWithName(aclStatus, "user2");
+
+    Assert.assertNotNull(theAcl);
+    Assert.assertEquals(FsAction.READ_WRITE,
+        aclStatus.getEffectivePermission(theAcl));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testMkdirWithUnmaskedPermissions() throws Exception {
+    createHttpFSServer(false, false);
+
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    // Create a folder with a default acl default:user2:rw-
+    fs.mkdirs(new Path("/tmp"));
+    AclEntry acl = new org.apache.hadoop.fs.permission.AclEntry.Builder()
+        .setType(AclEntryType.USER)
+        .setScope(AclEntryScope.DEFAULT)
+        .setName("user2")
+        .setPermission(FsAction.READ_WRITE)
+        .build();
+    fs.setAcl(new Path("/tmp"), new ArrayList<AclEntry>(Arrays.asList(acl)));
+
+    String notUnmaskedDir = "/tmp/notUnmaskedDir";
+    String unmaskedDir = "/tmp/unmaskedDir";
+
+    // Create a file inside the folder. It should inherit the default acl
+    // but the mask should affect the ACL permissions. The mask is controlled
+    // by the group permissions, which are 0, and hence the mask will make
+    // the effective permission of the inherited ACL be NONE.
+    createDirWithHttp(notUnmaskedDir, "700", null);
+
+    // Pull the relevant ACL from the FS object and check the mask has affected
+    // its permissions.
+    AclStatus aclStatus = fs.getAclStatus(new Path(notUnmaskedDir));
+    AclEntry theAcl = findAclWithName(aclStatus, "user2");
+
+    Assert.assertNotNull(theAcl);
+    Assert.assertEquals(FsAction.NONE,
+        aclStatus.getEffectivePermission(theAcl));
+
+    // Create another file, this time pass a mask of 777. Now the inherited
+    // permissions should be as expected
+    createDirWithHttp(unmaskedDir, "700", "777");
+
+    aclStatus = fs.getAclStatus(new Path(unmaskedDir));
+    theAcl = findAclWithName(aclStatus, "user2");
+
+    Assert.assertNotNull(theAcl);
+    Assert.assertEquals(FsAction.READ_WRITE,
+        aclStatus.getEffectivePermission(theAcl));
   }
 
   @Test

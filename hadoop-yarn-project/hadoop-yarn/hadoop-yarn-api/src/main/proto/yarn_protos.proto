@@ -754,6 +754,7 @@ message ContainerRetryContextProto {
   repeated int32 error_codes = 2;
   optional int32 max_retries = 3 [default = 0];
   optional int32 retry_interval = 4 [default = 0];
+  optional int64 failures_validity_interval = 5 [default = -1];
 }
 
 enum ContainerRetryPolicyProto {

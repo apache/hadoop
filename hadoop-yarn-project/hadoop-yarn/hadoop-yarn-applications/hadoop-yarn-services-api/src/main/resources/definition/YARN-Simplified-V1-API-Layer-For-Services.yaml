@@ -197,10 +197,17 @@ definitions:
     description: a service resource has the following attributes.
     required:
       - name
+      - version
     properties:
       name:
         type: string
         description: A unique service name. If Registry DNS is enabled, the max length is 63 characters.
+      version:
+        type: string
+        description: Version of the service.
+      description:
+        type: string
+        description: Description of the service.
       id:
         type: string
         description: A unique service id.

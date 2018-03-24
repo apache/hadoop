@@ -141,6 +141,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -2145,6 +2146,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
+   * @see ClientProtocol#getSnapshotDiffReport
+   */
+  public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
+      String fromSnapshot, String toSnapshot) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
+      return namenode
+          .getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  /**
+   * Get the difference between two snapshots of a directory iteratively.
    * @see ClientProtocol#getSnapshotDiffReportListing
    */
   public SnapshotDiffReportListing getSnapshotDiffReportListing(
@@ -2922,7 +2937,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param num Number of threads for hedged reads thread pool.
    * If zero, skip hedged reads thread pool creation.
    */
-  private synchronized void initThreadsNumForHedgedReads(int num) {
+  private static synchronized void initThreadsNumForHedgedReads(int num) {
     if (num <= 0 || HEDGED_READ_THREAD_POOL != null) return;
     HEDGED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),

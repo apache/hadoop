@@ -1649,7 +1649,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Mark a path to be deleted when its FileSystem is closed.
    * When the JVM shuts down cleanly, all cached FileSystem objects will be
-   * closed automatically —these the marked paths will be deleted as a result.
+   * closed automatically. These the marked paths will be deleted as a result.
    *
    * If a FileSystem instance is not cached, i.e. has been created with
    * {@link #createFileSystem(URI, Configuration)}, then the paths will

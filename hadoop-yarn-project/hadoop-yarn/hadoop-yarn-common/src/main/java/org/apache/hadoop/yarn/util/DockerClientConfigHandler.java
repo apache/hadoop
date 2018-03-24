@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 /**
@@ -178,6 +179,6 @@ public final class DockerClientConfigHandler {
     rootNode.put(CONFIG_AUTHS_KEY, registryUrlNode);
     String json =
         mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
-    FileUtils.writeStringToFile(outConfigFile, json, Charset.defaultCharset());
+    FileUtils.writeStringToFile(outConfigFile, json, StandardCharsets.UTF_8);
   }
 }

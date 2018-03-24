@@ -542,4 +542,15 @@ public final class Constants {
    */
   public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
+  /**
+   * Should etags be exposed as checksums?
+   */
+  public static final String ETAG_CHECKSUM_ENABLED =
+      "fs.s3a.etag.checksum.enabled";
+
+  /**
+   * Default value: false.
+   */
+  public static final boolean ETAG_CHECKSUM_ENABLED_DEFAULT = false;
+
 }

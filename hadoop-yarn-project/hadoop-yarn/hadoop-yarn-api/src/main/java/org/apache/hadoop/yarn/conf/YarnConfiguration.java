@@ -268,6 +268,8 @@ public class YarnConfiguration extends Configuration {
   /** UserGroupMappingPlacementRule configuration string. */
   public static final String USER_GROUP_PLACEMENT_RULE = "user-group";
 
+  public static final String APP_NAME_PLACEMENT_RULE = "app-name";
+
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
     RM_PREFIX + "webapp.ui-actions.enabled";
@@ -1328,7 +1330,10 @@ public class YarnConfiguration extends Configuration {
    * How long for ResourceManager to wait for NodeManager to report its
    * log aggregation status. If waiting time of which the log aggregation status
    * is reported from NodeManager exceeds the configured value, RM will report
-   * log aggregation status for this NodeManager as TIME_OUT
+   * log aggregation status for this NodeManager as TIME_OUT.
+   *
+   * This configuration will be used in NodeManager as well to decide
+   * whether and when to delete the cached log aggregation status.
    */
   public static final String LOG_AGGREGATION_STATUS_TIME_OUT_MS =
       YARN_PREFIX + "log-aggregation-status.time-out.ms";
@@ -3585,6 +3590,22 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS =
       DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS;
 
+  /**
+   * Settings for NUMA awareness.
+   */
+  public static final String NM_NUMA_AWARENESS_ENABLED = NM_PREFIX
+      + "numa-awareness.enabled";
+  public static final boolean DEFAULT_NM_NUMA_AWARENESS_ENABLED = false;
+  public static final String NM_NUMA_AWARENESS_READ_TOPOLOGY = NM_PREFIX
+      + "numa-awareness.read-topology";
+  public static final boolean DEFAULT_NM_NUMA_AWARENESS_READ_TOPOLOGY = false;
+  public static final String NM_NUMA_AWARENESS_NODE_IDS = NM_PREFIX
+      + "numa-awareness.node-ids";
+  public static final String NM_NUMA_AWARENESS_NUMACTL_CMD = NM_PREFIX
+      + "numa-awareness.numactl.cmd";
+  public static final String DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD =
+      "/usr/bin/numactl";
+
   public YarnConfiguration() {
     super();
   }
@@ -3789,6 +3810,17 @@ public class YarnConfiguration extends Configuration {
   public static boolean systemMetricsPublisherEnabled(Configuration conf) {
     return conf.getBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED,
         YarnConfiguration.DEFAULT_SYSTEM_METRICS_PUBLISHER_ENABLED);
+  }
+
+  /**
+   * Returns whether the NUMA awareness is enabled.
+   *
+   * @param conf the configuration
+   * @return whether the NUMA awareness is enabled.
+   */
+  public static boolean numaAwarenessEnabled(Configuration conf) {
+    return conf.getBoolean(NM_NUMA_AWARENESS_ENABLED,
+        DEFAULT_NM_NUMA_AWARENESS_ENABLED);
   }
 
   /* For debugging. mp configurations to system output as XML format. */

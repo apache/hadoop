@@ -228,9 +228,9 @@ public class ContractTestUtils extends Assert {
   public static void verifyFileContents(FileSystem fs,
                                         Path path,
                                         byte[] original) throws IOException {
+    assertIsFile(fs, path);
     FileStatus stat = fs.getFileStatus(path);
     String statText = stat.toString();
-    assertTrue("not a file " + statText, stat.isFile());
     assertEquals("wrong length " + statText, original.length, stat.getLen());
     byte[] bytes = readDataset(fs, path, original.length);
     compareByteArrays(original, bytes, original.length);
@@ -851,6 +851,36 @@ public class ContractTestUtils extends Assert {
                 status.isDirectory());
     assertFalse("File claims to be a symlink " + fileInfo,
                        status.isSymlink());
+  }
+
+  /**
+   * Assert that a varargs list of paths exist.
+   * @param fs filesystem
+   * @param message message for exceptions
+   * @param paths paths
+   * @throws IOException IO failure
+   */
+  public static void assertPathsExist(FileSystem fs,
+      String message,
+      Path... paths) throws IOException {
+    for (Path path : paths) {
+      assertPathExists(fs, message, path);
+    }
+  }
+
+  /**
+   * Assert that a varargs list of paths do not exist.
+   * @param fs filesystem
+   * @param message message for exceptions
+   * @param paths paths
+   * @throws IOException IO failure
+   */
+  public static void assertPathsDoNotExist(FileSystem fs,
+      String message,
+      Path... paths) throws IOException {
+    for (Path path : paths) {
+      assertPathDoesNotExist(fs, message, path);
+    }
   }
 
   /**

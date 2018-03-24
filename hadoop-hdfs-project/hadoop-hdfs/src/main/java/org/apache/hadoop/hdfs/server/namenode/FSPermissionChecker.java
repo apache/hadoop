@@ -573,7 +573,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         && mode.getGroupAction().implies(access)) {
       return;
     }
-    if (mode.getOtherAction().implies(access)) {
+    if (!getUser().equals(pool.getOwnerName())
+        && !isMemberOfGroup(pool.getGroupName())
+        && mode.getOtherAction().implies(access)) {
       return;
     }
     throw new AccessControlException("Permission denied while accessing pool "

@@ -456,14 +456,14 @@ public class TestPendingReconstruction {
             "STORAGE_ID", "TEST");
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[1],
             "STORAGE_ID", "TEST");
+        BlockManagerTestUtil.computeAllPendingWork(bm);
+        BlockManagerTestUtil.updateState(bm);
+        assertEquals(bm.getPendingReconstructionBlocksCount(), 1L);
+        BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
+        assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
       } finally {
         cluster.getNamesystem().writeUnlock();
       }
-      BlockManagerTestUtil.computeAllPendingWork(bm);
-      BlockManagerTestUtil.updateState(bm);
-      assertEquals(bm.getPendingReconstructionBlocksCount(), 1L);
-      BlockInfo storedBlock = bm.getStoredBlock(block.getBlock().getLocalBlock());
-      assertEquals(bm.pendingReconstruction.getNumReplicas(storedBlock), 2);
 
       // 4. delete the file
       fs.delete(filePath, true);

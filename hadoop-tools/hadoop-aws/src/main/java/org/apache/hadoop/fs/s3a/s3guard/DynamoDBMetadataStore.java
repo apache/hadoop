@@ -688,9 +688,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @Override
   @Retries.OnceRaw
   public void put(Collection<PathMetadata> metas) throws IOException {
-    LOG.debug("Saving batch to table {} in region {}", tableName, region);
 
-    processBatchWriteRequest(null, pathMetadataToItem(completeAncestry(metas)));
+    Item[] items = pathMetadataToItem(completeAncestry(metas));
+    LOG.debug("Saving batch of {} items to table {}, region {}", items.length,
+        tableName, region);
+    processBatchWriteRequest(null, items);
   }
 
   /**
@@ -1076,6 +1078,15 @@ public class DynamoDBMetadataStore implements MetadataStore {
         });
   }
 
+  @Retries.RetryTranslated
+  @VisibleForTesting
+  void provisionTableBlocking(Long readCapacity, Long writeCapacity)
+      throws IOException {
+    provisionTable(readCapacity, writeCapacity);
+    waitForTableActive(table);
+  }
+
+  @VisibleForTesting
   Table getTable() {
     return table;
   }
@@ -1173,15 +1184,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
             S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
             currentWrite);
 
-    ProvisionedThroughput throughput = new ProvisionedThroughput()
-        .withReadCapacityUnits(newRead)
-        .withWriteCapacityUnits(newWrite);
     if (newRead != currentRead || newWrite != currentWrite) {
       LOG.info("Current table capacity is read: {}, write: {}",
           currentRead, currentWrite);
       LOG.info("Changing capacity of table to read: {}, write: {}",
           newRead, newWrite);
-      table.updateTable(throughput);
+      provisionTableBlocking(newRead, newWrite);
     } else {
       LOG.info("Table capacity unchanged at read: {}, write: {}",
           newRead, newWrite);

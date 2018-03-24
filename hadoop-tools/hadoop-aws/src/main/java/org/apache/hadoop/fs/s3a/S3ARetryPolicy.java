@@ -76,9 +76,29 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
  * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
  */
+@SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
+  /** Final retry policy we end up with. */
   private final RetryPolicy retryPolicy;
+
+  // Retry policies for mapping exceptions to
+
+  /** Base policy from configuration. */
+  protected final RetryPolicy fixedRetries;
+
+  /** Rejection of all non-idempotent calls except specific failures. */
+  protected final RetryPolicy retryIdempotentCalls;
+
+  /** Policy for throttle requests, which are considered repeatable, even for
+   * non-idempotent calls, as the service rejected the call entirely. */
+  protected final RetryPolicy throttlePolicy;
+
+  /** No retry on network and tangible API issues. */
+  protected final RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
+
+  /** Client connectivity: fixed retries without care for idempotency. */
+  protected final RetryPolicy connectivityFailure;
 
   /**
    * Instantiate.
@@ -88,7 +108,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     Preconditions.checkArgument(conf != null, "Null configuration");
 
     // base policy from configuration
-    RetryPolicy fixedRetries = retryUpToMaximumCountWithFixedSleep(
+    fixedRetries = retryUpToMaximumCountWithFixedSleep(
         conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_INTERVAL,
             RETRY_INTERVAL_DEFAULT,
@@ -97,25 +117,33 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.
-    RetryPolicy retryIdempotentCalls = new FailNonIOEs(
+    retryIdempotentCalls = new FailNonIOEs(
         new IdempotencyRetryFilter(fixedRetries));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
     // rejected the call entirely
-    RetryPolicy throttlePolicy = exponentialBackoffRetry(
+    throttlePolicy = exponentialBackoffRetry(
         conf.getInt(RETRY_THROTTLE_LIMIT, RETRY_THROTTLE_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_THROTTLE_INTERVAL,
             RETRY_THROTTLE_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS),
         TimeUnit.MILLISECONDS);
 
-    // no retry on network and tangible API issues
-    RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
-
     // client connectivity: fixed retries without care for idempotency
-    RetryPolicy connectivityFailure = fixedRetries;
+    connectivityFailure = fixedRetries;
 
+    Map<Class<? extends Exception>, RetryPolicy> policyMap =
+        createExceptionMap();
+    retryPolicy = retryByException(retryIdempotentCalls, policyMap);
+  }
+
+  /**
+   * Subclasses can override this like a constructor to change behavior: call
+   * superclass method, then modify it as needed, and return it.
+   * @return Map from exception type to RetryPolicy
+   */
+  protected Map<Class<? extends Exception>, RetryPolicy> createExceptionMap() {
     // the policy map maps the exact classname; subclasses do not
     // inherit policies.
     Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
@@ -126,7 +154,6 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(InterruptedException.class, fail);
     // note this does not pick up subclasses (like socket timeout)
     policyMap.put(InterruptedIOException.class, fail);
-    policyMap.put(AWSRedirectException.class, fail);
     // interesting question: should this be retried ever?
     policyMap.put(AccessDeniedException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
@@ -169,7 +196,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     // trigger sleep
     policyMap.put(ProvisionedThroughputExceededException.class, throttlePolicy);
 
-    retryPolicy = retryByException(retryIdempotentCalls, policyMap);
+    return policyMap;
   }
 
   @Override

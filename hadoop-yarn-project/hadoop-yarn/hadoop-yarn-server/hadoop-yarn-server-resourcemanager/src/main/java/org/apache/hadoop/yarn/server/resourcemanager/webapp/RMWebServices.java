@@ -55,8 +55,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import com.google.common.base.Joiner;
-import org.apache.commons.codec.binary.Base64;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -140,7 +139,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -2519,5 +2517,56 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
               "MutableConfScheduler.")
           .build();
     }
+  }
+
+  @GET
+  @Path(RMWSConsts.CHECK_USER_ACCESS_TO_QUEUE)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+                MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response checkUserAccessToQueue(
+      @PathParam(RMWSConsts.QUEUE) String queue,
+      @QueryParam(RMWSConsts.USER) String username,
+      @QueryParam(RMWSConsts.QUEUE_ACL_TYPE)
+        @DefaultValue("SUBMIT_APPLICATIONS") String queueAclType,
+      @Context HttpServletRequest hsr) throws AuthorizationException {
+    init();
+
+    // Check if the specified queue acl is valid.
+    QueueACL queueACL;
+    try {
+      queueACL = QueueACL.valueOf(queueAclType);
+    } catch (IllegalArgumentException e) {
+      return Response.status(Status.BAD_REQUEST).entity(
+          "Specified queueAclType=" + queueAclType
+              + " is not a valid type, valid queue acl types={"
+              + "SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}").build();
+    }
+
+    // For the user who invokes this REST call, he/she should have admin access
+    // to the queue. Otherwise we will reject the call.
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI != null && !this.rm.getResourceScheduler().checkAccess(
+        callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {
+      return Response.status(Status.FORBIDDEN).entity(
+          "User=" + callerUGI.getUserName() + " doesn't haven access to queue="
+              + queue + " so it cannot check ACLs for other users.")
+          .build();
+    }
+
+    // Create UGI for the to-be-checked user.
+    UserGroupInformation user = UserGroupInformation.createRemoteUser(username);
+    if (user == null) {
+      return Response.status(Status.FORBIDDEN).entity(
+          "Failed to retrieve UserGroupInformation for user=" + username)
+          .build();
+    }
+
+    if (!this.rm.getResourceScheduler().checkAccess(user, queueACL, queue)) {
+      return Response.status(Status.FORBIDDEN).entity(
+          "User=" + username + " doesn't have access to queue=" + queue
+              + " with acl-type=" + queueAclType).build();
+    }
+
+    return Response.status(Status.OK).build();
   }
 }

@@ -105,6 +105,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -524,6 +525,27 @@ public class TestContainer {
     }
   }
   
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLocalizationFailureWhileRunning()
+      throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      assertEquals(ContainerState.RUNNING, wc.c.getContainerState());
+      // Now in RUNNING, handle ContainerResourceFailedEvent, cause NPE before
+      wc.handleContainerResourceFailedEvent();
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
   @Test
   @SuppressWarnings("unchecked") // mocked generic
   public void testCleanupOnKillRequest() throws Exception {
@@ -1088,6 +1110,38 @@ public class TestContainer {
     }
   }
 
+  @Test
+  public void testContainerRetryFailureValidityInterval() throws Exception {
+    ContainerRetryContext containerRetryContext = ContainerRetryContext
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, 1, 0, 10);
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(25, 314159265358980L, 4200, "test",
+          containerRetryContext);
+      ControlledClock clock = new ControlledClock();
+      wc.getRetryPolicy().setClock(clock);
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      wc.containerFailed(12);
+      assertEquals(ContainerState.RUNNING, wc.c.getContainerState());
+      clock.setTime(20);
+      wc.containerFailed(12);
+      assertEquals(ContainerState.RUNNING, wc.c.getContainerState());
+      clock.setTime(40);
+      wc.containerFailed(12);
+      assertEquals(ContainerState.RUNNING, wc.c.getContainerState());
+      clock.setTime(45);
+      wc.containerFailed(12);
+      assertEquals(ContainerState.EXITED_WITH_FAILURE,
+          wc.c.getContainerState());
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
   private void verifyCleanupCall(WrappedContainer wc) throws Exception {
     ResourcesReleasedMatcher matchesReq =
         new ResourcesReleasedMatcher(wc.localResources, EnumSet.of(
@@ -1400,6 +1454,11 @@ public class TestContainer {
       drainDispatcherEvents();
     }
 
+    public void handleContainerResourceFailedEvent() {
+      c.handle(new ContainerResourceFailedEvent(cId, null, null));
+      drainDispatcherEvents();
+    }
+
     // Localize resources 
     // Skip some resources so as to consider them failed
     public Map<Path, List<String>> doLocalizeResources(
@@ -1547,6 +1606,10 @@ public class TestContainer {
 
     public String getDiagnostics() {
       return c.cloneAndGetContainerStatus().getDiagnostics();
+    }
+
+    public SlidingWindowRetryPolicy getRetryPolicy() {
+      return ((ContainerImpl)c).getRetryPolicy();
     }
   }
 }

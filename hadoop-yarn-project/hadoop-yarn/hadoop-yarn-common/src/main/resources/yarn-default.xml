@@ -1286,7 +1286,9 @@
     How long for ResourceManager to wait for NodeManager to report its
     log aggregation status. If waiting time of which the log aggregation
     status is reported from NodeManager exceeds the configured value, RM
-    will report log aggregation status for this NodeManager as TIME_OUT
+    will report log aggregation status for this NodeManager as TIME_OUT.
+    This configuration will be used in NodeManager as well to decide
+    whether and when to delete the cached log aggregation status.
     </description>
     <name>yarn.log-aggregation-status.time-out.ms</name>
     <value>600000</value>
@@ -3709,6 +3711,57 @@
     </description>
     <name>yarn.timeline-service.reader.bind-host</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+    Whether to enable the NUMA awareness for containers in Node Manager.
+    </description>
+    <name>yarn.nodemanager.numa-awareness.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    Whether to read the NUMA topology from the system or from the
+    configurations. If the value is true then NM reads the NUMA topology from
+    system using the command 'numactl --hardware'. If the value is false then NM
+    reads the topology from the configurations
+    'yarn.nodemanager.numa-awareness.node-ids'(for node id's),
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.memory'(for each node memory),
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.cpus'(for each node cpus).
+    </description>
+    <name>yarn.nodemanager.numa-awareness.read-topology</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    NUMA node id's in the form of comma separated list. Memory and No of CPUs
+    will be read using the properties
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.memory' and
+    'yarn.nodemanager.numa-awareness.&lt;NODE_ID&gt;.cpus' for each id specified
+    in this value. This property value will be read only when
+    'yarn.nodemanager.numa-awareness.read-topology=false'.
+
+    For example, if yarn.nodemanager.numa-awareness.node-ids=0,1
+    then need to specify memory and cpus for node id's '0' and '1' like below,
+    yarn.nodemanager.numa-awareness.0.memory=73717
+    yarn.nodemanager.numa-awareness.0.cpus=4
+    yarn.nodemanager.numa-awareness.1.memory=73727
+    yarn.nodemanager.numa-awareness.1.cpus=4
+    </description>
+    <name>yarn.nodemanager.numa-awareness.node-ids</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    The numactl command path which controls NUMA policy for processes or
+    shared memory.
+    </description>
+    <name>yarn.nodemanager.numa-awareness.numactl.cmd</name>
+    <value>/usr/bin/numactl</value>
   </property>
 
 </configuration>

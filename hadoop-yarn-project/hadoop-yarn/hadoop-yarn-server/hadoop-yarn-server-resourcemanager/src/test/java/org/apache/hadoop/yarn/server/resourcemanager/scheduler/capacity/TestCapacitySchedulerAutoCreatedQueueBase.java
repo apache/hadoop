@@ -22,6 +22,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -58,6 +62,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .SimpleGroupsMapping;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -127,6 +133,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final int NODE2_VCORES = 32;
   public static final int NODE3_VCORES = 48;
 
+  public static final String TEST_GROUP = "testusergroup";
+  public static final String TEST_GROUPUSER = "testuser";
   public static final String USER = "user_";
   public static final String USER0 = USER + 0;
   public static final String USER1 = USER + 1;
@@ -253,6 +261,35 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setQueueMappings(existingMappings);
     //override with queue mappings
     conf.setOverrideWithQueueMappings(overrideWithQueueMappings);
+    return conf;
+  }
+
+  public static CapacitySchedulerConfiguration setupGroupQueueMappings
+      (String parentQueue, CapacitySchedulerConfiguration conf, String
+          leafQueueName) {
+
+    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
+        conf.getQueueMappings();
+
+    //set queue mapping
+    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
+        new ArrayList<>();
+
+    //setup group mapping
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
+    conf.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
+        TEST_GROUPUSER +"=" + TEST_GROUP + ";invalid_user=invalid_group");
+
+    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
+        new UserGroupMappingPlacementRule.QueueMapping(
+            UserGroupMappingPlacementRule.QueueMapping.MappingType.GROUP,
+            TEST_GROUP,
+            getQueueMapping(parentQueue, leafQueueName));
+
+    queueMappings.add(userQueueMapping);
+    existingMappings.addAll(queueMappings);
+    conf.setQueueMappings(existingMappings);
     return conf;
   }
 
@@ -505,15 +542,17 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   protected void validateInitialQueueEntitlement(CSQueue parentQueue,
-      String leafQueueName, float expectedTotalChildQueueAbsCapacity)
+      String leafQueueName, float expectedTotalChildQueueAbsCapacity,
+      Set<String> nodeLabels)
       throws SchedulerDynamicEditException {
     validateInitialQueueEntitlement(cs, parentQueue, leafQueueName,
-        expectedTotalChildQueueAbsCapacity);
+        expectedTotalChildQueueAbsCapacity, nodeLabels);
   }
 
   protected void validateInitialQueueEntitlement(
       CapacityScheduler capacityScheduler, CSQueue parentQueue,
-      String leafQueueName, float expectedTotalChildQueueAbsCapacity)
+      String leafQueueName, float expectedTotalChildQueueAbsCapacity,
+      Set<String> nodeLabels)
       throws SchedulerDynamicEditException {
     ManagedParentQueue autoCreateEnabledParentQueue =
         (ManagedParentQueue) parentQueue;
@@ -532,7 +571,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     QueueCapacities cap = autoCreateEnabledParentQueue.getLeafQueueTemplate()
         .getQueueCapacities();
 
-    for (String label : accessibleNodeLabelsOnC) {
+    for (String label : nodeLabels) {
       validateCapacitiesByLabel(autoCreateEnabledParentQueue, leafQueue, label);
 
       QueueEntitlement expectedEntitlement = new QueueEntitlement(

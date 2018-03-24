@@ -120,6 +120,11 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public void storeContainerRestartTimes(ContainerId containerId,
+      List<Long> restartTimes) throws IOException {
+  }
+
+  @Override
   public void storeContainerWorkDir(ContainerId containerId,
       String workDir) throws IOException {
   }
@@ -272,6 +277,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
   public void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException {
+    updateContainerResourceMapping(container, resourceType, assignedResources);
   }
 
   @Override

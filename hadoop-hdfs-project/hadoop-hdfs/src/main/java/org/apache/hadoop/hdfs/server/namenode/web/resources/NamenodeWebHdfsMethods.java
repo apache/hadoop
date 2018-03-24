@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
@@ -78,6 +79,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -140,7 +143,7 @@ public class NamenodeWebHdfsMethods {
         Boolean.valueOf(request.getHeader(WebHdfsFileSystem.EZ_HEADER));
   }
 
-  private void init(final UserGroupInformation ugi,
+  protected void init(final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username, final DoAsParam doAsUser,
       final UriFsPathParam path, final HttpOpParam<?> op,
@@ -181,6 +184,14 @@ public class NamenodeWebHdfsMethods {
     return cp;
   }
 
+  protected String getScheme() {
+    return scheme;
+  }
+
+  protected ServletContext getContext() {
+    return context;
+  }
+
   private <T> T doAs(final UserGroupInformation ugi,
       final PrivilegedExceptionAction<T> action)
           throws IOException, InterruptedException {
@@ -203,7 +214,7 @@ public class NamenodeWebHdfsMethods {
       }
       @Override
       public String getHostAddress() {
-        return remoteAddr;
+        return getRemoteAddr();
       }
       @Override
       public InetAddress getHostInetAddress() {
@@ -214,8 +225,8 @@ public class NamenodeWebHdfsMethods {
         }
       }
     };
-    final NameNode namenode = (NameNode)context.getAttribute("name.node");
-    namenode.queueExternalCall(call);
+
+    queueExternalCall(call);
     T result = null;
     try {
       result = call.get();
@@ -232,6 +243,16 @@ public class NamenodeWebHdfsMethods {
     return result;
   }
 
+  protected String getRemoteAddr() {
+    return remoteAddr;
+  }
+
+  protected void queueExternalCall(ExternalCall call)
+      throws IOException, InterruptedException {
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    namenode.queueExternalCall(call);
+  }
+
   @VisibleForTesting
   static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
@@ -239,7 +260,7 @@ public class NamenodeWebHdfsMethods {
       final String remoteAddr, final HdfsFileStatus status) throws IOException {
     FSNamesystem fsn = namenode.getNamesystem();
     if (fsn == null) {
-      throw new IOException("Namesystem has not been intialized yet.");
+      throw new IOException("Namesystem has not been initialized yet.");
     }
     final BlockManager bm = fsn.getBlockManager();
     
@@ -303,7 +324,7 @@ public class NamenodeWebHdfsMethods {
    * sorted based on availability and network distances, thus it is sufficient
    * to return the first element of the node here.
    */
-  private static DatanodeInfo bestNode(DatanodeInfo[] nodes,
+  protected static DatanodeInfo bestNode(DatanodeInfo[] nodes,
       HashSet<Node> excludes) throws IOException {
     for (DatanodeInfo dn: nodes) {
       if (false == dn.isDecommissioned() && false == excludes.contains(dn)) {
@@ -467,7 +488,7 @@ public class NamenodeWebHdfsMethods {
 
   /** Validate all required params. */
   @SuppressWarnings("rawtypes")
-  private void validateOpParams(HttpOpParam<?> op, Param... params) {
+  protected void validateOpParams(HttpOpParam<?> op, Param... params) {
     for (Param param : params) {
       if (param.getValue() == null || param.getValueString() == null || param
           .getValueString().isEmpty()) {
@@ -567,7 +588,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response put(
+  protected Response put(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -599,14 +620,13 @@ public class NamenodeWebHdfsMethods {
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName
       ) throws IOException, URISyntaxException {
-
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
-    final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final ClientProtocol cp = getRpcClientProtocol();
 
     switch(op.getValue()) {
     case CREATE:
     {
+      final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final URI uri = redirectURI(null, namenode, ugi, delegation, username,
           doAsUser, fullpath, op.getValue(), -1L, blockSize.getValue(conf),
           exclDatanodes.getValue(), permission, unmaskedPermission,
@@ -837,7 +857,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response post(
+  protected Response post(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -922,6 +942,10 @@ public class NamenodeWebHdfsMethods {
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
           final FsActionParam fsAction,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -932,8 +956,9 @@ public class NamenodeWebHdfsMethods {
           final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
-        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService, noredirect, startAfter);
+        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
+        fsAction, snapshotName, oldSnapshotName, tokenKind, tokenService,
+        noredirect, startAfter);
   }
 
   /** Handle HTTP GET request. */
@@ -968,6 +993,10 @@ public class NamenodeWebHdfsMethods {
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
           final FsActionParam fsAction,
+      @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
+          final SnapshotNameParam snapshotName,
+      @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
+          final OldSnapshotNameParam oldSnapshotName,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -980,15 +1009,17 @@ public class NamenodeWebHdfsMethods {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService, startAfter);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
-          return get(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
-              xattrNames, xattrEncoding, excludeDatanodes, fsAction, tokenKind,
-              tokenService, noredirect, startAfter);
+        String absolutePath = path.getAbsolutePath() == null ? null :
+            URLDecoder.decode(path.getAbsolutePath(), "UTF-8");
+        return get(ugi, delegation, username, doAsUser, absolutePath,
+            op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
+            excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+            tokenKind, tokenService, noredirect, startAfter);
       }
     });
   }
@@ -1000,7 +1031,7 @@ public class NamenodeWebHdfsMethods {
     return encodedValue;
   }
 
-  private Response get(
+  protected Response get(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
@@ -1015,6 +1046,8 @@ public class NamenodeWebHdfsMethods {
       final XAttrEncodingParam xattrEncoding,
       final ExcludeDatanodesParam excludeDatanodes,
       final FsActionParam fsAction,
+      final SnapshotNameParam snapshotName,
+      final OldSnapshotNameParam oldSnapshotName,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
@@ -1185,6 +1218,19 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(serverDefaultsResponse)
           .type(MediaType.APPLICATION_JSON).build();
     }
+    case GETSNAPSHOTDIFF: {
+      SnapshotDiffReport diffReport =
+          cp.getSnapshotDiffReport(fullpath, oldSnapshotName.getValue(),
+              snapshotName.getValue());
+      final String js = JsonUtil.toJsonString(diffReport);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTTABLEDIRECTORYLIST: {
+      SnapshottableDirectoryStatus[] snapshottableDirectoryList =
+          cp.getSnapshottableDirListing();
+      final String js = JsonUtil.toJsonString(snapshottableDirectoryList);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
@@ -1315,7 +1361,7 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private Response delete(
+  protected Response delete(
       final UserGroupInformation ugi,
       final DelegationParam delegation,
       final UserParam username,
