@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumCombineMode;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
 import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -311,9 +312,9 @@ final class FileChecksumHelper {
 
         crcComposer.update(blockCrc, block.getBlockSize());
         if (LOG.isDebugEnabled()) {
-          LOG.debug(String.format(
-              "Added blockCrc 0x%08x for block index %d of size %d",
-              blockCrc, i, block.getBlockSize()));
+          LOG.debug(
+              "Added blockCrc 0x{} for block index {} of size {}",
+              Integer.toString(blockCrc, 16), i, block.getBlockSize());
         }
       }
 
@@ -335,9 +336,11 @@ final class FileChecksumHelper {
           blockChecksumBytes, 4 * (locatedBlocks.size() - 1));
       crcComposer.update(lastBlockCrc, consumedLastBlockLength);
       if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format(
-            "Added lastBlockCrc 0x%08x for block index %d of size %d",
-            lastBlockCrc, locatedBlocks.size() - 1, consumedLastBlockLength));
+        LOG.debug(
+            "Added lastBlockCrc 0x{} for block index {} of size {}",
+            Integer.toString(lastBlockCrc, 16),
+            locatedBlocks.size() - 1,
+            consumedLastBlockLength);
       }
 
       int compositeCrc = CrcUtil.readInt(crcComposer.digest(), 0);
@@ -392,7 +395,8 @@ final class FileChecksumHelper {
         LocatedBlock locatedBlock = getLocatedBlocks().get(blockIdx);
 
         if (!checksumBlock(locatedBlock)) {
-          throw new IOException("Fail to get block MD5 for " + locatedBlock);
+          throw new PathIOException(
+              getSrc(), "Fail to get block MD5 for " + locatedBlock);
         }
       }
     }
@@ -604,8 +608,8 @@ final class FileChecksumHelper {
         LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
 
         if (!checksumBlockGroup(blockGroup)) {
-          throw new IOException(
-              "Fail to get block checksum for " + locatedBlock);
+          throw new PathIOException(
+              getSrc(), "Fail to get block checksum for " + locatedBlock);
         }
       }
     }

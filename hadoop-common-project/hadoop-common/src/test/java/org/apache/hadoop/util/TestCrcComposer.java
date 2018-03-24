@@ -22,10 +22,9 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.*;
 
@@ -49,9 +48,6 @@ public class TestCrcComposer {
 
   private byte[] crcBytesByChunk;
   private byte[] crcBytesByCell;
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setup() throws IOException {
@@ -213,7 +209,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testUpdateMismatchesStripe() throws IOException {
+  public void testUpdateMismatchesStripe() throws Exception {
     CrcComposer digester =
         CrcComposer.newStripedCrcComposer(type, chunkSize, cellSize);
 
@@ -222,16 +218,20 @@ public class TestCrcComposer {
     // Going from chunkSize to chunkSize + cellSize will cross a cellSize
     // boundary in a single CRC, which is not allowed, since we'd lack a
     // CRC corresponding to the actual cellSize boundary.
-    exception.expect(IOException.class);
-    digester.update(crcsByChunk[1], cellSize);
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "stripe",
+        () -> digester.update(crcsByChunk[1], cellSize));
   }
 
   @Test
   public void testUpdateByteArrayLengthUnalignedWithCrcSize()
-      throws IOException {
+      throws Exception {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
 
-    exception.expect(IOException.class);
-    digester.update(crcBytesByChunk, 0, 6, chunkSize);
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "length",
+        () -> digester.update(crcBytesByChunk, 0, 6, chunkSize));
   }
 }

@@ -20,9 +20,8 @@ package org.apache.hadoop.util;
 import java.io.IOException;
 import java.util.Random;
 
-import org.junit.Rule;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.*;
 
@@ -31,9 +30,6 @@ import static org.junit.Assert.*;
  */
 public class TestCrcUtil {
   private Random rand = new Random(1234);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testComposeCrc32() throws IOException {
@@ -176,9 +172,11 @@ public class TestCrcUtil {
 
   @Test
   public void testToSingleCrcStringBadLength()
-      throws IOException {
-    exception.expect(IOException.class);
-    CrcUtil.toSingleCrcString(new byte[8]);
+      throws Exception {
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "length",
+        () -> CrcUtil.toSingleCrcString(new byte[8]));
   }
 
   @Test
@@ -190,9 +188,11 @@ public class TestCrcUtil {
 
   @Test
   public void testToMultiCrcStringBadLength()
-      throws IOException {
-    exception.expect(IOException.class);
-    CrcUtil.toMultiCrcString(new byte[6]);
+      throws Exception {
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "length",
+        () -> CrcUtil.toMultiCrcString(new byte[6]));
   }
 
   @Test

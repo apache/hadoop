@@ -534,10 +534,6 @@ public class TestFileChecksum {
         bytesPerCRC - 1);
   }
 
-  /**
-   * Test to verify that the checksum can be computed for small file with less
-   * than file length.
-   */
   @Test(timeout = 90000)
   public void testMixedBytesPerChecksum() throws Exception {
     int fileLength = bytesPerCRC * 3;

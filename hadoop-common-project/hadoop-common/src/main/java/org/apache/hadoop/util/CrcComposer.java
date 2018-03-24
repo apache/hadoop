@@ -82,11 +82,13 @@ public class CrcComposer {
       int precomputedMonomialForHint,
       long bytesPerCrcHint,
       long stripeLength) {
-    LOG.debug(String.format(
-        "crcPolynomial=0x%08x, precomputedMonomialForHint=0x%08x, "
-        + "bytesPerCrcHint=%d, stripeLength=%d",
-        crcPolynomial, precomputedMonomialForHint, bytesPerCrcHint,
-        stripeLength));
+    LOG.debug(
+        "crcPolynomial=0x{}, precomputedMonomialForHint=0x{}, "
+        + "bytesPerCrcHint={}, stripeLength={}",
+        Integer.toString(crcPolynomial, 16),
+        Integer.toString(precomputedMonomialForHint, 16),
+        bytesPerCrcHint,
+        stripeLength);
     this.crcPolynomial = crcPolynomial;
     this.precomputedMonomialForHint = precomputedMonomialForHint;
     this.bytesPerCrcHint = bytesPerCrcHint;
