@@ -1791,7 +1791,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return The checksum
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  @InterfaceAudience.LimitedPrivate( { "HDFS" })
+  @InterfaceAudience.LimitedPrivate({ "HDFS" })
   public FileChecksum getFileChecksumWithCombineMode(String src, long length)
       throws IOException {
     ChecksumCombineMode combineMode = getConf().getChecksumCombineMode();

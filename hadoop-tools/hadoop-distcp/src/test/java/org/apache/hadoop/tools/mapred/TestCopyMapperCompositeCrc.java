@@ -29,13 +29,13 @@ import org.junit.BeforeClass;
 public class TestCopyMapperCompositeCrc extends TestCopyMapper {
   @BeforeClass
   public static void setup() throws Exception {
-    configuration = TestCopyMapper.getConfigurationForCluster();
+    Configuration configuration = TestCopyMapper.getConfigurationForCluster();
     configuration.set(
         HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY, "COMPOSITE_CRC");
-    cluster = new MiniDFSCluster.Builder(configuration)
+    TestCopyMapper.setCluster(new MiniDFSCluster.Builder(configuration)
                 .numDataNodes(1)
                 .format(true)
-                .build();
+                .build());
   }
 
   @Override

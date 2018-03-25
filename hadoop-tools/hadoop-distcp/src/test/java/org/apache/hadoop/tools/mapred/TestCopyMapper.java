@@ -68,19 +68,18 @@ public class TestCopyMapper {
   private static final int DEFAULT_FILE_SIZE = 1024;
   private static final long NON_DEFAULT_BLOCK_SIZE = 4096;
 
+  private static MiniDFSCluster cluster;
+
   private static final String SOURCE_PATH = "/tmp/source";
   private static final String TARGET_PATH = "/tmp/target";
 
-  protected static MiniDFSCluster cluster;
-  protected static Configuration configuration;
-
   @BeforeClass
   public static void setup() throws Exception {
-    configuration = getConfigurationForCluster();
-    cluster = new MiniDFSCluster.Builder(configuration)
+    Configuration configuration = getConfigurationForCluster();
+    setCluster(new MiniDFSCluster.Builder(configuration)
                 .numDataNodes(1)
                 .format(true)
-                .build();
+                .build());
   }
 
   /**
@@ -101,9 +100,15 @@ public class TestCopyMapper {
     return false;
   }
 
-  protected static Configuration getConfigurationForCluster() throws IOException {
+  protected static void setCluster(MiniDFSCluster c) {
+    cluster = c;
+  }
+
+  protected static Configuration getConfigurationForCluster()
+      throws IOException {
     Configuration configuration = new Configuration();
-    System.setProperty("test.build.data", "target/tmp/build/TEST_COPY_MAPPER/data");
+    System.setProperty(
+        "test.build.data", "target/tmp/build/TEST_COPY_MAPPER/data");
     configuration.set("hadoop.log.dir", "target/tmp");
     configuration.set("dfs.namenode.fs-limits.min-block-size", "0");
     LOG.debug("fs.default.name  == " + configuration.get("fs.default.name"));
@@ -153,7 +158,8 @@ public class TestCopyMapper {
     }
   }
 
-  private static void createSourceDataWithDifferentBlockSize() throws Exception {
+  private static void createSourceDataWithDifferentBlockSize()
+      throws Exception {
     mkdirs(SOURCE_PATH + "/1");
     mkdirs(SOURCE_PATH + "/2");
     mkdirs(SOURCE_PATH + "/2/3/4");
@@ -545,7 +551,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -614,7 +620,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -689,7 +695,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -770,7 +776,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered ", e);
             Assert.fail("Test failed: " + e.getMessage());
@@ -927,7 +933,7 @@ public class TestCopyMapper {
         @Override
         public FileSystem run() {
           try {
-            return FileSystem.get(configuration);
+            return FileSystem.get(cluster.getConfiguration(0));
           } catch (IOException e) {
             LOG.error("Exception encountered when get FileSystem.", e);
             throw new RuntimeException(e);
