@@ -563,12 +563,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         builder.append("Exception from container-launch.\n");
         builder.append("Container id: " + containerId + "\n");
         builder.append("Exit code: " + exitCode + "\n");
+        builder.append("Exception message: " + e.getMessage() + "\n");
         if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
-          builder.append("Exception message: " + e.getErrorOutput() + "\n");
+          builder.append("Shell error output: " + e.getErrorOutput() + "\n");
         }
         //Skip stack trace
         String output = e.getOutput();
-        if (output != null && !e.getOutput().isEmpty()) {
+        if (output != null && !output.isEmpty()) {
           builder.append("Shell output: " + output + "\n");
         }
         String diagnostics = builder.toString();
