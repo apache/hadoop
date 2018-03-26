@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.EnumMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.resolver.order.AvailableSpaceResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.HashFirstResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.HashResolver;
@@ -77,6 +78,8 @@ public class MultipleDestinationMountTableResolver extends MountTableResolver {
     addResolver(DestinationOrder.LOCAL, new LocalResolver(conf, router));
     addResolver(DestinationOrder.RANDOM, new RandomResolver());
     addResolver(DestinationOrder.HASH_ALL, new HashResolver());
+    addResolver(DestinationOrder.SPACE,
+        new AvailableSpaceResolver(conf, router));
   }
 
   @Override
