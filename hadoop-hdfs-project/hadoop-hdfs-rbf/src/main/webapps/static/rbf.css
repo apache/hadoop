@@ -1,0 +1,138 @@
+/*
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.  See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+@import url("hadoop.css");
+
+.federationhealth-namenode-capacity-bar {
+    margin-bottom:0;
+    width: 60%;
+}
+
+.federationhealth-namenode-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.federationhealth-namenode-active:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
+.federationhealth-namenode-unavailable:before {
+    color: #c7254e;
+    content: "\e101";
+}
+
+.federationhealth-namenode-standby:before {
+    color: #2e6da6;
+    content: "\e017";
+}
+
+.federationhealth-namenode-safemode:before {
+    color: #bc5f04;
+    content: "\e090";
+}
+
+.federationhealth-namenode-legend {
+    list-style-type: none;
+    text-align: right;
+}
+
+.federationhealth-namenode-legend li {
+    display: inline;
+    padding: 10pt;
+    padding-left: 10pt;
+}
+
+.federationhealth-namenode-legend li:before {
+    padding-right: 5pt;
+}
+
+
+.federationhealth-router-capacity-bar {
+    margin-bottom:0;
+    width: 60%;
+}
+
+.federationhealth-router-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.federationhealth-router-active:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
+.federationhealth-router-unavailable:before {
+    color: #c7254e;
+    content: "\e101";
+}
+
+.federationhealth-router-safemode:before {
+    color: #bc5f04;
+    content: "\e090";
+}
+
+.federationhealth-router-legend {
+    list-style-type: none;
+    text-align: right;
+}
+
+.federationhealth-router-legend li {
+    display: inline;
+    padding: 10pt;
+    padding-left: 10pt;
+}
+
+.federationhealth-router-legend li:before {
+    padding-right: 5pt;
+}
+
+.mount-table-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.mount-table-read-only-true:before {
+    color: #c7254e;
+    content: "\e033";
+}
+
+.mount-table-read-only-false:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
