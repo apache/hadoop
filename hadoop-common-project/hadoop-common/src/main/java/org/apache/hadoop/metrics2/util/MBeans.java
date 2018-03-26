@@ -18,27 +18,33 @@
 package org.apache.hadoop.metrics2.util;
 
 import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This util class provides a method to register an MBean using
  * our standard naming convention as described in the doc
- *  for {link {@link #register(String, String, Object)}
+ *  for {link {@link #register(String, String, Object)}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class MBeans {
+public final class MBeans {
   private static final Logger LOG = LoggerFactory.getLogger(MBeans.class);
   private static final String DOMAIN_PREFIX = "Hadoop:";
   private static final String SERVICE_PREFIX = "service=";
@@ -48,10 +54,13 @@ public class MBeans {
       "^" + DOMAIN_PREFIX + SERVICE_PREFIX + "([^,]+)," +
       NAME_PREFIX + "(.+)$");
 
+  private MBeans() {
+  }
+
   /**
    * Register the MBean using our standard MBeanName format
    * "hadoop:service=<serviceName>,name=<nameName>"
-   * Where the <serviceName> and <nameName> are the supplied parameters
+   * Where the <serviceName> and <nameName> are the supplied parameters.
    *
    * @param serviceName
    * @param nameName
@@ -60,8 +69,30 @@ public class MBeans {
    */
   static public ObjectName register(String serviceName, String nameName,
                                     Object theMbean) {
+    return register(serviceName, nameName, new HashMap<String, String>(),
+        theMbean);
+  }
+
+  /**
+   * Register the MBean using our standard MBeanName format
+   * "hadoop:service=<serviceName>,name=<nameName>"
+   * Where the <serviceName> and <nameName> are the supplied parameters.
+   *
+   * @param serviceName
+   * @param nameName
+   * @param properties - Key value pairs to define additional JMX ObjectName
+   *                     properties.
+   * @param theMbean    - the MBean to register
+   * @return the named used to register the MBean
+   */
+  static public ObjectName register(String serviceName, String nameName,
+                                    Map<String, String> properties,
+                                    Object theMbean) {
     final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    ObjectName name = getMBeanName(serviceName, nameName);
+    Preconditions.checkNotNull(properties,
+        "JMX bean properties should not be null for "
+            + "bean registration.");
+    ObjectName name = getMBeanName(serviceName, nameName, properties);
     if (name != null) {
       try {
         mbs.registerMBean(theMbean, name);
@@ -116,9 +147,18 @@ public class MBeans {
     DefaultMetricsSystem.removeMBeanName(mbeanName);
   }
 
-  static private ObjectName getMBeanName(String serviceName, String nameName) {
+  @VisibleForTesting
+  static ObjectName getMBeanName(String serviceName, String nameName,
+      Map<String, String> additionalParameters) {
+
+    String additionalKeys = additionalParameters.entrySet()
+        .stream()
+        .map(entry -> entry.getKey() + "=" + entry.getValue())
+        .collect(Collectors.joining(","));
+
     String nameStr = DOMAIN_PREFIX + SERVICE_PREFIX + serviceName + "," +
-        NAME_PREFIX + nameName;
+        NAME_PREFIX + nameName +
+        (additionalKeys.isEmpty() ? "" : "," + additionalKeys);
     try {
       return DefaultMetricsSystem.newMBeanName(nameStr);
     } catch (Exception e) {
