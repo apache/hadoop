@@ -138,6 +138,12 @@ public class Component implements EventHandler<ComponentEvent> {
           // For flex down, go to STABLE state
           .addTransition(STABLE, EnumSet.of(STABLE, FLEXING),
               FLEX, new FlexComponentTransition())
+          .addTransition(STABLE, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
+          .addTransition(FLEXING, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
+          .addTransition(UPGRADING, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
           .installTopology();
 
   public Component(
@@ -352,6 +358,14 @@ public class Component implements EventHandler<ComponentEvent> {
       component.componentSpec.setState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
       component.getScheduler().getApp().setState(ServiceState.STARTED);
+    }
+  }
+
+  private static class ComponentNeedsUpgradeTransition extends BaseTransition {
+    @Override
+    public void transition(Component component, ComponentEvent event) {
+      component.componentSpec.setState(org.apache.hadoop.yarn.service.api.
+          records.ComponentState.NEEDS_UPGRADE);
     }
   }
 

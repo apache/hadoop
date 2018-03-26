@@ -22,9 +22,9 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
-import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
@@ -275,6 +276,14 @@ public class ServiceApiUtil {
     return jsonSerDeser.load(fs.getFileSystem(), serviceJson);
   }
 
+  public static Service loadServiceUpgrade(SliderFileSystem fs,
+      String serviceName, String version) throws IOException {
+    Path versionPath = fs.buildClusterUpgradeDirPath(serviceName, version);
+    Path versionedDef = new Path(versionPath, serviceName + ".json");
+    LOG.info("Loading service definition from {}", versionedDef);
+    return jsonSerDeser.load(fs.getFileSystem(), versionedDef);
+  }
+
   public static Service loadServiceFrom(SliderFileSystem fs,
       Path appDefPath) throws IOException {
     LOG.info("Loading service definition from " + appDefPath);
@@ -427,6 +436,23 @@ public class ServiceApiUtil {
       return sortedComponents;
     }
     return sortByDependencies(components, sortedComponents);
+  }
+
+  public static void createDirAndPersistApp(SliderFileSystem fs, Path appDir,
+      Service service)
+      throws IOException, SliderException {
+    FsPermission appDirPermission = new FsPermission("750");
+    fs.createWithPermissions(appDir, appDirPermission);
+    Path appJson = writeAppDefinition(fs, appDir, service);
+    LOG.info("Persisted service {} version {} at {}", service.getName(),
+        service.getVersion(), appJson);
+  }
+
+  public static Path writeAppDefinition(SliderFileSystem fs, Path appDir,
+      Service service) throws IOException {
+    Path appJson = new Path(appDir, service.getName() + ".json");
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
   }
 
   public static String $(String s) {

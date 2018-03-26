@@ -110,6 +110,9 @@ public class ServiceScheduler extends CompositeService {
       LoggerFactory.getLogger(ServiceScheduler.class);
   private Service app;
 
+   // This encapsulates the <code>app</code> with methods to upgrade the app.
+  private ServiceManager serviceManager;
+
   // component_name -> component
   private final Map<String, Component> componentsByName =
       new ConcurrentHashMap<>();
@@ -192,6 +195,7 @@ public class ServiceScheduler extends CompositeService {
     addIfService(nmClient);
 
     dispatcher = new AsyncDispatcher("Component  dispatcher");
+    dispatcher.register(ServiceEventType.class, new ServiceEventHandler());
     dispatcher.register(ComponentEventType.class,
         new ComponentEventHandler());
     dispatcher.register(ComponentInstanceEventType.class,
@@ -300,6 +304,7 @@ public class ServiceScheduler extends CompositeService {
 
     // Since AM has been started and registered, the service is in STARTED state
     app.setState(ServiceState.STARTED);
+    serviceManager = new ServiceManager(context);
 
     // recover components based on containers sent from RM
     recoverComponents(response);
@@ -507,6 +512,20 @@ public class ServiceScheduler extends CompositeService {
       componentsById.put(allocateId, component);
       componentsByName.put(component.getName(), component);
       allocateId++;
+    }
+  }
+
+  private final class ServiceEventHandler
+      implements EventHandler<ServiceEvent> {
+    @Override
+    public void handle(ServiceEvent event) {
+      try {
+        serviceManager.handle(event);
+      } catch (Throwable t) {
+        LOG.error(MessageFormat
+            .format("[SERVICE]: Error in handling event type {0}",
+                event.getType()), t);
+      }
     }
   }
 

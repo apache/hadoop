@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service.component;
+package org.apache.hadoop.yarn.service;
 
-public enum ComponentState {
-  INIT,
-  FLEXING,
-  STABLE,
-  UPGRADING
+/**
+ * Types of {@link ServiceEvent}.
+ */
+public enum ServiceEventType {
+  START,
+  UPGRADE,
+  STOP_UPGRADE
 }

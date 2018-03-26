@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
-import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -86,7 +86,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   @Test (timeout = 200000)
   public void testCreateFlexStopDestroyService() throws Exception {
     setupInternal(NUM_NMS);
-    ServiceClient client = createClient();
+    ServiceClient client = createClient(getConf());
     Service exampleApp = createExampleApplication();
     client.actionCreate(exampleApp);
     SliderFileSystem fileSystem = new SliderFileSystem(getConf());
@@ -141,7 +141,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   @Test (timeout = 200000)
   public void testComponentStartOrder() throws Exception {
     setupInternal(NUM_NMS);
-    ServiceClient client = createClient();
+    ServiceClient client = createClient(getConf());
     Service exampleApp = new Service();
     exampleApp.setName("teststartorder");
     exampleApp.setVersion("v1");
@@ -169,7 +169,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     String userB = "userb";
 
     setupInternal(NUM_NMS);
-    ServiceClient client = createClient();
+    ServiceClient client = createClient(getConf());
     String origBasePath = getConf().get(YARN_SERVICE_BASE_PATH);
 
     Service userAApp = new Service();
@@ -221,7 +221,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     System.setProperty("user.name", user);
 
     setupInternal(NUM_NMS);
-    ServiceClient client = createClient();
+    ServiceClient client = createClient(getConf());
 
     Service appA = new Service();
     appA.setName(sameAppName);
@@ -290,7 +290,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     setConf(conf);
     setupInternal(NUM_NMS);
 
-    ServiceClient client = createClient();
+    ServiceClient client = createClient(getConf());
     Service exampleApp = createExampleApplication();
     client.actionCreate(exampleApp);
     Multimap<String, String> containersBeforeFailure =
@@ -331,6 +331,28 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     LOG.info("Stop/destroy service {}", exampleApp);
     client.actionStop(exampleApp.getName(), true);
     client.actionDestroy(exampleApp.getName());
+  }
+
+  @Test(timeout = 200000)
+  public void testUpgradeService() throws Exception {
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+
+    Service service = createExampleApplication();
+    client.actionCreate(service);
+    waitForServiceToBeStarted(client, service);
+
+    //upgrade the service
+    service.setVersion("v2");
+    client.actionUpgrade(service);
+
+    //wait for service to be in upgrade state
+    waitForServiceToBeInState(client, service, ServiceState.UPGRADING);
+    SliderFileSystem fs = new SliderFileSystem(getConf());
+    Service fromFs = ServiceApiUtil.loadServiceUpgrade(fs,
+        service.getName(), service.getVersion());
+    Assert.assertEquals(service.getName(), fromFs.getName());
+    Assert.assertEquals(service.getVersion(), fromFs.getVersion());
   }
 
   // Check containers launched are in dependency order
@@ -470,16 +492,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
    */
   private void waitForServiceToBeStable(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> {
-      try {
-        Service retrievedApp = client.getStatus(exampleApp.getName());
-        System.out.println(retrievedApp);
-        return retrievedApp.getState() == ServiceState.STABLE;
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, 2000, 200000);
+    waitForServiceToBeInState(client, exampleApp, ServiceState.STABLE);
   }
 
   /**
@@ -492,32 +505,31 @@ public class TestYarnNativeServices extends ServiceTestUtils {
    */
   private void waitForServiceToBeStarted(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
+    waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
+  }
+
+  /**
+   * Wait until service is started. It does not have to reach a stable state.
+   *
+   * @param client
+   * @param exampleApp
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  private void waitForServiceToBeInState(ServiceClient client,
+      Service exampleApp, ServiceState desiredState) throws TimeoutException,
+      InterruptedException {
     GenericTestUtils.waitFor(() -> {
       try {
         Service retrievedApp = client.getStatus(exampleApp.getName());
         System.out.println(retrievedApp);
-        return retrievedApp.getState() == ServiceState.STARTED;
+        return retrievedApp.getState() == desiredState;
       } catch (Exception e) {
         e.printStackTrace();
         return false;
       }
     }, 2000, 200000);
   }
-
-  private ServiceClient createClient() throws Exception {
-    ServiceClient client = new ServiceClient() {
-      @Override protected Path addJarResource(String appName,
-          Map<String, LocalResource> localResources)
-          throws IOException, SliderException {
-        // do nothing, the Unit test will use local jars
-        return null;
-      }
-    };
-    client.init(getConf());
-    client.start();
-    return client;
-  }
-
 
   private int countTotalContainers(Service service) {
     int totalContainers = 0;

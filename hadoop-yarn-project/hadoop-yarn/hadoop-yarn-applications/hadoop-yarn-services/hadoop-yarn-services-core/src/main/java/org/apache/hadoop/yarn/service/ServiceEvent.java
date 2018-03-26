@@ -16,11 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service.component;
+package org.apache.hadoop.yarn.service;
 
-public enum ComponentState {
-  INIT,
-  FLEXING,
-  STABLE,
-  UPGRADING
+import org.apache.hadoop.yarn.event.AbstractEvent;
+
+/**
+ * Events are handled by {@link ServiceManager} to manage the service
+ * state.
+ */
+public class ServiceEvent extends AbstractEvent<ServiceEventType> {
+
+  private final ServiceEventType type;
+  private String version;
+
+  public ServiceEvent(ServiceEventType serviceEventType) {
+    super(serviceEventType);
+    this.type = serviceEventType;
+  }
+
+  public ServiceEventType getType() {
+    return type;
+  }
+
+  public String getVersion() {
+    return version;
+  }
+
+  public ServiceEvent setVersion(String version) {
+    this.version = version;
+    return this;
+  }
 }

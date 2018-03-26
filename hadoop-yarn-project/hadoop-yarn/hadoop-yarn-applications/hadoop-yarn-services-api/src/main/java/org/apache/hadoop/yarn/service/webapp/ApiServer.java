@@ -375,6 +375,12 @@ public class ApiServer {
           && updateServiceData.getLifetime() > 0) {
         return updateLifetime(appName, updateServiceData, ugi);
       }
+
+      // If an UPGRADE is requested
+      if (updateServiceData.getState() != null &&
+          updateServiceData.getState() == ServiceState.UPGRADING) {
+        return upgradeService(updateServiceData, ugi);
+      }
     } catch (UndeclaredThrowableException e) {
       return formatResponse(Status.BAD_REQUEST,
           e.getCause().getMessage());
@@ -473,6 +479,24 @@ public class ApiServer {
     status.setDiagnostics("Service " + appName + " is successfully started.");
     status.setState(ServiceState.ACCEPTED);
     return formatResponse(Status.OK, status);
+  }
+
+  private Response upgradeService(Service service,
+      final UserGroupInformation ugi) throws IOException, InterruptedException {
+    ServiceStatus status = new ServiceStatus();
+    ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      sc.actionUpgrade(service);
+      sc.close();
+      return null;
+    });
+    LOG.info("Service {} version {} upgrade initialized");
+    status.setDiagnostics("Service " + service.getName() +
+        " version " + service.getVersion() + " saved.");
+    status.setState(ServiceState.ACCEPTED);
+    return formatResponse(Status.ACCEPTED, status);
   }
 
   /**
