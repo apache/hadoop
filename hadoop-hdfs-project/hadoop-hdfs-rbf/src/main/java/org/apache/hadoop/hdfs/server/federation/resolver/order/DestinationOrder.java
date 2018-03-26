@@ -26,5 +26,6 @@ public enum DestinationOrder {
   HASH, // Follow consistent hashing in the first folder level
   LOCAL, // Local first
   RANDOM, // Random order
-  HASH_ALL // Follow consistent hashing
+  HASH_ALL, // Follow consistent hashing
+  SPACE // Available space based order
 }

@@ -258,6 +258,8 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       return DestinationOrder.RANDOM;
     case HASH_ALL:
       return DestinationOrder.HASH_ALL;
+    case SPACE:
+      return DestinationOrder.SPACE;
     default:
       return DestinationOrder.HASH;
     }
@@ -271,6 +273,8 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       return DestOrder.RANDOM;
     case HASH_ALL:
       return DestOrder.HASH_ALL;
+    case SPACE:
+      return DestOrder.SPACE;
     default:
       return DestOrder.HASH;
     }
