@@ -114,19 +114,19 @@
           var n = nodes[i];
           n.usedPercentage = Math.round(n.used * 1.0 / n.totalSpace * 100);
           n.title = "Unavailable";
-          n.iconState = "down";
+          n.iconState = "unavailable";
           if (n.isSafeMode === true) {
             n.title = capitalise(n.state) + " (safe mode)"
-            n.iconState = "decommissioned";
+            n.iconState = "safemode";
           } else if (n.state === "ACTIVE") {
             n.title = capitalise(n.state);
-            n.iconState = "alive";
+            n.iconState = "active";
           } else if (nodes[i].state === "STANDBY") {
             n.title = capitalise(n.state);
-            n.iconState = "down-decommissioned";
+            n.iconState = "standby";
           } else if (nodes[i].state === "UNAVAILABLE") {
             n.title = capitalise(n.state);
-            n.iconState = "down";
+            n.iconState = "unavailable";
           }
           if (n.namenodeId === "null") {
             n.namenodeId = "";
@@ -180,22 +180,22 @@
         for (var i = 0, e = nodes.length; i < e; ++i) {
           var n = nodes[i];
           n.title = "Unavailable"
-          n.iconState = "down";
+          n.iconState = "unavailable";
           if (n.status === "INITIALIZING") {
             n.title = capitalise(n.status);
-            n.iconState = "alive";
+            n.iconState = "active";
           } else if (n.status === "RUNNING") {
             n.title = capitalise(n.status);
-            n.iconState = "alive";
+            n.iconState = "active";
           } else if (n.status === "SAFEMODE") {
             n.title = capitalise(n.status);
-            n.iconState = "down-decommissioned";
+            n.iconState = "safemode";
           } else if (n.status === "STOPPING") {
             n.title = capitalise(n.status);
-            n.iconState = "decommissioned";
+            n.iconState = "unavailable";
           } else if (n.status === "SHUTDOWN") {
             n.title = capitalise(n.status);
-            n.iconState = "down";
+            n.iconState = "unavailable";
           }
         }
       }
@@ -307,7 +307,18 @@
     var HELPERS = {}
 
     function workaround(resource) {
+      function augment_read_only(mountTable) {
+        for (var i = 0, e = mountTable.length; i < e; ++i) {
+          if (mountTable[i].readonly == true) {
+            mountTable[i].readonly = "true"
+          } else {
+            mountTable[i].readonly = "false"
+          }
+        }
+      }
+
       resource.MountTable = JSON.parse(resource.MountTable)
+      augment_read_only(resource.MountTable)
       return resource;
     }
 
