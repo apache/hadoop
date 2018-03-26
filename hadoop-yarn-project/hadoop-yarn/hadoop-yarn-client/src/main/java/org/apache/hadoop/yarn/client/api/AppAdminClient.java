@@ -229,4 +229,20 @@ public abstract class AppAdminClient extends CompositeService {
   @Unstable
   public abstract String getStatusString(String appIdOrName) throws
       IOException, YarnException;
+
+  /**
+   * Upgrade a long running service.
+   *
+   * @param appName the name of the application
+   * @param fileName specification of application upgrade to save.
+   *
+   * @return exit code
+   * @throws IOException IOException
+   * @throws YarnException exception in client or server
+   */
+  @Public
+  @Unstable
+  public abstract int actionUpgrade(String appName, String fileName)
+      throws IOException, YarnException;
+
 }

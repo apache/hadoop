@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.component;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -32,6 +33,7 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
   private ComponentInstance instance;
   private ContainerStatus status;
   private ContainerId containerId;
+  private org.apache.hadoop.yarn.service.api.records.Component targetSpec;
 
   public ContainerId getContainerId() {
     return containerId;
@@ -89,6 +91,16 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
 
   public ComponentEvent setStatus(ContainerStatus status) {
     this.status = status;
+    return this;
+  }
+
+  public org.apache.hadoop.yarn.service.api.records.Component getTargetSpec() {
+    return targetSpec;
+  }
+
+  public ComponentEvent setTargetSpec(
+      org.apache.hadoop.yarn.service.api.records.Component targetSpec) {
+    this.targetSpec = Preconditions.checkNotNull(targetSpec);
     return this;
   }
 }

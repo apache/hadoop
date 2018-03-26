@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -112,10 +111,38 @@ public class CoreFileSystem {
   public Path buildClusterDirPath(String clustername) {
     Preconditions.checkNotNull(clustername);
     Path path = getBaseApplicationPath();
-    return new Path(path, YarnServiceConstants.SERVICES_DIRECTORY + "/" + clustername);
+    return new Path(path, YarnServiceConstants.SERVICES_DIRECTORY + "/"
+        + clustername);
   }
 
+  /**
+   * Build up the upgrade path string for a cluster. No attempt to
+   * create the directory is made.
+   *
+   * @param clusterName name of the cluster
+   * @param version version of the cluster
+   * @return the upgrade path to the cluster
+   */
+  public Path buildClusterUpgradeDirPath(String clusterName, String version) {
+    Preconditions.checkNotNull(clusterName);
+    Preconditions.checkNotNull(version);
+    return new Path(buildClusterDirPath(clusterName),
+        YarnServiceConstants.UPGRADE_DIR + "/" + version);
+  }
 
+  /**
+   * Delete the upgrade cluster directory.
+   * @param clusterName name of the cluster
+   * @param version     version of the cluster
+   * @throws IOException
+   */
+  public void deleteClusterUpgradeDir(String clusterName, String version)
+      throws IOException {
+    Preconditions.checkNotNull(clusterName);
+    Preconditions.checkNotNull(version);
+    Path upgradeCluster = buildClusterUpgradeDirPath(clusterName, version);
+    fileSystem.delete(upgradeCluster, true);
+  }
   /**
    * Build up the path string for keytab install location -no attempt to
    * create the directory is made

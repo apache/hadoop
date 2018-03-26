@@ -25,6 +25,10 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.RestartServiceRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.RestartServiceResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 
 import java.io.IOException;
@@ -63,6 +67,26 @@ public class ClientAMProtocolPBServiceImpl implements ClientAMProtocolPB {
       throws ServiceException {
     try {
       return real.stop(request);
+    } catch (IOException | YarnException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public UpgradeServiceResponseProto upgradeService(RpcController controller,
+      UpgradeServiceRequestProto request) throws ServiceException {
+    try {
+      return real.upgrade(request);
+    } catch (IOException | YarnException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RestartServiceResponseProto restartService(RpcController controller,
+      RestartServiceRequestProto request) throws ServiceException {
+    try {
+      return real.restart(request);
     } catch (IOException | YarnException e) {
       throw new ServiceException(e);
     }
