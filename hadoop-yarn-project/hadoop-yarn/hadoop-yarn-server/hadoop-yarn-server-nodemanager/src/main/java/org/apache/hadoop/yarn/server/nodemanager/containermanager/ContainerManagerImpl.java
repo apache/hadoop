@@ -632,7 +632,9 @@ public class ContainerManagerImpl extends CompositeService implements
       server.start();
       connectAddress = NetUtils.getConnectAddress(server);
     }
-    NodeId nodeId = buildNodeId(connectAddress, hostOverride);
+    boolean useIp = conf.getBoolean(YarnConfiguration.NM_USE_IP,
+            YarnConfiguration.DEFAULT_NM_USE_IP);
+    NodeId nodeId = buildNodeId(connectAddress, hostOverride, useIp);
     ((NodeManager.NMContext)context).setNodeId(nodeId);
     this.context.getNMTokenSecretManager().setNodeId(nodeId);
     this.context.getContainerTokenSecretManager().setNodeId(nodeId);
@@ -646,7 +648,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
       // check that the node ID is as previously advertised
       connectAddress = NetUtils.getConnectAddress(server);
-      NodeId serverNode = buildNodeId(connectAddress, hostOverride);
+      NodeId serverNode = buildNodeId(connectAddress, hostOverride, useIp);
       if (!serverNode.equals(nodeId)) {
         throw new IOException("Node mismatch after server started, expected '"
             + nodeId + "' but found '" + serverNode + "'");
@@ -658,14 +660,20 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   private NodeId buildNodeId(InetSocketAddress connectAddress,
-      String hostOverride) {
+      String hostOverride, boolean useIp) {
     if (hostOverride != null) {
       connectAddress = NetUtils.getConnectAddress(
           new InetSocketAddress(hostOverride, connectAddress.getPort()));
     }
-    return NodeId.newInstance(
-        connectAddress.getAddress().getCanonicalHostName(),
-        connectAddress.getPort());
+    if (useIp) {
+      return NodeId.newInstance(
+              connectAddress.getAddress().getHostAddress(),
+              connectAddress.getPort());
+    } else {
+      return NodeId.newInstance(
+              connectAddress.getAddress().getCanonicalHostName(),
+              connectAddress.getPort());
+    }
   }
 
   void refreshServiceAcls(Configuration configuration, 
