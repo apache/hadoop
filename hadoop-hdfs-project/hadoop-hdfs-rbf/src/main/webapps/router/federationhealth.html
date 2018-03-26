@@ -21,7 +21,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9" />
 <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
 <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
-<link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+<link rel="stylesheet" type="text/css" href="/static/rbf.css" />
 <title>Router Information</title>
 </head>
 <body>
@@ -115,11 +115,11 @@
 <script type="text/x-dust-template" id="tmpl-namenode">
 <div class="page-header"><h1>Nameservice Information</h1></div>
 <div>
-  <ul class="dfshealth-node-legend">
-    <li class="dfshealth-node-icon dfshealth-node-alive">Active</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Standby</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">Safe mode</li>
-    <li class="dfshealth-node-icon dfshealth-node-down">Unavailable</li>
+  <ul class="federationhealth-namenode-legend">
+    <li class="federationhealth-namenode-icon federationhealth-namenode-active">Active</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-standby">Standby</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-safemode">Safe mode</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-unavailable">Unavailable</li>
   </ul>
 </div>
 <small>
@@ -151,14 +151,14 @@
   <tbody>
     {#Nameservices}
     <tr>
-      <td class="dfshealth-node-icon dfshealth-node-{iconState}" title="{title}"></td>
+      <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
       <td><a href="http://{webAddress}">{nameserviceId}</a></td>
       <td><a href="http://{webAddress}">{namenodeId}</a></td>
       <td>{lastHeartbeat}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
           <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{totalSpace|fmt_bytes}</div>
-          <div class="clearfix progress dfshealth-node-capacity-bar" title="Used: {used|fmt_bytes}">
+          <div class="clearfix progress federationhealth-namenode-capacity-bar" title="Used: {used|fmt_bytes}">
             <div class="progress-bar {#helper_usage_bar value="{usedPercentage}"/}" style="width: {usedPercentage}%">
             </div>
           </div>
@@ -181,11 +181,11 @@
 
 <div class="page-header"><h1>Namenode Information</h1></div>
 <div>
-  <ul class="dfshealth-node-legend">
-    <li class="dfshealth-node-icon dfshealth-node-alive">Active</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Standby</li>
-    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">Safe mode</li>
-    <li class="dfshealth-node-icon dfshealth-node-down">Unavailable</li>
+  <ul class="federationhealth-namenode-legend">
+    <li class="federationhealth-namenode-icon federationhealth-namenode-active">Active</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-standby">Standby</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-safemode">Safe mode</li>
+    <li class="federationhealth-namenode-icon federationhealth-namenode-unavailable">Unavailable</li>
   </ul>
 </div>
 <small>
@@ -217,7 +217,7 @@
   <tbody>
     {#Namenodes}
     <tr>
-      <td class="dfshealth-node-icon dfshealth-node-{iconState}" title="{title}"></td>
+      <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
       <td>{nameserviceId}</td>
       <td>{namenodeId}</td>
       <td><a href="http://{webAddress}">{webAddress}</a></td>
@@ -225,7 +225,7 @@
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
           <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{totalSpace|fmt_bytes}</div>
-          <div class="clearfix progress dfshealth-node-capacity-bar" title="Used: {used|fmt_bytes}">
+          <div class="clearfix progress federationhealth-namenode-capacity-bar" title="Used: {used|fmt_bytes}">
             <div class="progress-bar {#helper_usage_bar value="{usedPercentage}"/}" style="width: {usedPercentage}%">
             </div>
           </div>
@@ -251,10 +251,10 @@
 <script type="text/x-dust-template" id="tmpl-router">
 <div class="page-header"><h1>Routers Information</h1></div>
 <div>
-  <ul class="dfshealth-node-legend">
-    <li class="dfshealth-node-icon dfshealth-node-alive">Active</li>
-    <li class="dfshealth-node-icon dfshealth-node-decommissioned">Safe mode</li>
-    <li class="dfshealth-node-icon dfshealth-node-down">Unavailable</li>
+  <ul class="federationhealth-router-legend">
+    <li class="federationhealth-router-icon federationhealth-router-active">Active</li>
+    <li class="federationhealth-router-icon federationhealth-router-safemode">Safe mode</li>
+    <li class="federationhealth-router-icon federationhealth-router-unavailable">Unavailable</li>
   </ul>
 </div>
 <table class="table">
@@ -277,7 +277,7 @@
   <tbody>
     {#Routers}
     <tr>
-      <td class="dfshealth-node-icon dfshealth-node-{iconState}" title="{title}"></td>
+      <td class="federationhealth-router-icon federationhealth-router-{iconState}" title="{title}"></td>
       <td>{address}</td>
       <td>{status}</td>
       <td>{lastHeartbeat} sec ago</td>
@@ -395,7 +395,7 @@
       <td>{nameserviceId}</td>
       <td>{path}</td>
       <td>{order}</td>
-      <td class="dfshealth-node-icon dfshealth-mount-read-only-{readonly}"/>
+      <td class="mount-table-icon mount-table-read-only-{readonly}"/>
       <td>{ownerName}</td>
       <td>{groupName}</td>
       <td>{mode}</td>
