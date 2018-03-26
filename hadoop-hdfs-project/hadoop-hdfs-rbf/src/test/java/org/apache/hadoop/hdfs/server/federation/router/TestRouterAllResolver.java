@@ -60,8 +60,10 @@ public class TestRouterAllResolver {
 
   /** Directory that will be in a HASH_ALL mount point. */
   private static final String TEST_DIR_HASH_ALL = "/hashall";
-  /** Directory that will be in a HASH_ALL mount point. */
+  /** Directory that will be in a RANDOM mount point. */
   private static final String TEST_DIR_RANDOM = "/random";
+  /** Directory that will be in a SPACE mount point. */
+  private static final String TEST_DIR_SPACE = "/space";
 
   /** Number of namespaces. */
   private static final int NUM_NAMESPACES = 2;
@@ -103,6 +105,7 @@ public class TestRouterAllResolver {
     // Setup the test mount point
     createMountTableEntry(TEST_DIR_HASH_ALL, DestinationOrder.HASH_ALL);
     createMountTableEntry(TEST_DIR_RANDOM, DestinationOrder.RANDOM);
+    createMountTableEntry(TEST_DIR_SPACE, DestinationOrder.SPACE);
 
     // Get filesystems for federated and each namespace
     routerFs = routerContext.getFileSystem();
@@ -133,6 +136,11 @@ public class TestRouterAllResolver {
   @Test
   public void testRandomAll() throws Exception {
     testAll(TEST_DIR_RANDOM);
+  }
+
+  @Test
+  public void testSpaceAll() throws Exception {
+    testAll(TEST_DIR_SPACE);
   }
 
   /**
