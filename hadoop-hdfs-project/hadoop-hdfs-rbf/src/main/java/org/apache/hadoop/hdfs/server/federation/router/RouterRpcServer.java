@@ -534,29 +534,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   }
 
   /**
-   * Get the permissions for the parent of a child with given permissions. If
-   * the child has r--, we will set it to r-x.
+   * Get the permissions for the parent of a child with given permissions.
+   * Add implicit u+wx permission for parent. This is based on
+   * @{FSDirMkdirOp#addImplicitUwx}.
    * @param mask The permission mask of the child.
    * @return The permission mask of the parent.
    */
   private static FsPermission getParentPermission(final FsPermission mask) {
     FsPermission ret = new FsPermission(
-        applyExecute(mask.getUserAction()),
-        applyExecute(mask.getGroupAction()),
-        applyExecute(mask.getOtherAction()));
+        mask.getUserAction().or(FsAction.WRITE_EXECUTE),
+        mask.getGroupAction(),
+        mask.getOtherAction());
     return ret;
-  }
-
-  /**
-   * Apply the execute permissions if it can be read.
-   * @param action Input permission.
-   * @return Output permission.
-   */
-  private static FsAction applyExecute(final FsAction action) {
-    if (action.and(FsAction.READ) == FsAction.READ) {
-      return action.or(FsAction.EXECUTE);
-    }
-    return action;
   }
 
   /**
