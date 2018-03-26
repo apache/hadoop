@@ -109,6 +109,78 @@ public class TestDatanodeReplicaTrash {
   }
 
   @Test
+  public void testDeleteWithTrashSubDirLimit() throws Exception {
+
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ENABLE_REPLICA_TRASH_KEY,
+        true);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 2);
+    conf.setInt(DFSConfigKeys
+        .DFS_DATANODE_REPLICA_TRASH_SUBDIR_MAX_BLOCKS, 2);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).storagesPerDatanode(1).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      final ClientProtocol client = cluster.getNameNode().getRpcServer();
+      final Path f = new Path(FILE_NAME);
+      int len = 10240;
+      DFSTestUtil.createFile(dfs, f, len, (short) 1, RANDOM.nextLong());
+
+      LocatedBlocks blockLocations = client.getBlockLocations(f.toString(),
+          0, 1024);
+      String bpId =  blockLocations.getLocatedBlocks().get(0).getBlock()
+          .getBlockPoolId();
+
+      Collection<String> locations = conf.getTrimmedStringCollection(
+          DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+
+      String loc;
+      File replicaTrashDir = null;
+
+      // Here no of storages per datanode is set to 1
+      Assert.assertEquals(locations.size(), 1);
+      for (String location : locations) {
+        loc = location.replace("[DISK]file:", "");
+        replicaTrashDir = new File(loc + File.separator + Storage
+            .STORAGE_DIR_CURRENT + File.separator + bpId + File
+            .separator + DataStorage.STORAGE_DIR_REPLICA_TRASH);
+      }
+
+      //Before Delete replica-trash dir should be empty
+      Assert.assertTrue(replicaTrashDir.list().length == 0);
+
+      dfs.delete(f, true);
+      LOG.info("File is being deleted");
+
+
+      List<DataNode> datanodes = cluster.getDataNodes();
+      for (DataNode datanode : datanodes) {
+        DataNodeTestUtils.triggerHeartbeat(datanode);
+      }
+
+      final File replicaTrash = replicaTrashDir;
+      //After delete, replica-trash dir should not be empty
+      //No of sub directories in replica-trash should be 10, as no of blocks
+      // for 10KB file is 20(10240/512)
+      LambdaTestUtils.await(30000, 1000,
+          () -> {
+          File[] subDirs = replicaTrash.listFiles(
+              file -> file.isDirectory());
+          if (subDirs != null) {
+            return subDirs.length == 10;
+          } else {
+            return false;
+          }
+        });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+
+  @Test
   public void testDeleteWithReplicaTrashDisable() throws Exception {
 
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);

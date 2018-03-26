@@ -99,6 +99,12 @@ class FsDatasetAsyncDiskService {
   private int numDeletedBlocks = 0;
   private final Configuration conf;
   private final boolean replicaTrashEnabled;
+  private int replicaTrashSubDirMaxBlocks;
+
+  //Holds information about current replica trash directory
+  private Map<String, ReplicaTrashCurDirInfo> replicaTrashCurDirInfoMap = new
+      HashMap<>();
+
   
   /**
    * Create a AsyncDiskServices with a set of volumes (specified by their
@@ -116,6 +122,12 @@ class FsDatasetAsyncDiskService {
     this.replicaTrashEnabled = conf.getBoolean(DFSConfigKeys
         .DFS_DATANODE_ENABLE_REPLICA_TRASH_KEY, DFSConfigKeys
         .DFS_DATANODE_ENABLE_REPLICA_TRASH_DEFAULT);
+    int blockInvalidate = conf.getInt(DFSConfigKeys
+        .DFS_BLOCK_INVALIDATE_LIMIT_KEY, DFSConfigKeys
+        .DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
+    this.replicaTrashSubDirMaxBlocks = conf.getInt(DFSConfigKeys
+        .DFS_DATANODE_REPLICA_TRASH_SUBDIR_MAX_BLOCKS,
+        blockInvalidate);
   }
 
   private void addExecutorForVolume(final FsVolumeImpl volume) {
@@ -319,8 +331,37 @@ class FsDatasetAsyncDiskService {
       replicaTrashBaseDir = matcher.replaceFirst("$1$2" + DataStorage
             .STORAGE_DIR_REPLICA_TRASH);
 
-      File replicaTrashDir = new File(replicaTrashBaseDir + File
-          .separator + dateFormat.format(date));
+      String key = volume.getStorageID() + "-" + block.getBlockPoolId();
+      String subDir = dateFormat.format(date);
+      ReplicaTrashCurDirInfo current =  replicaTrashCurDirInfoMap.get(key);
+      File replicaTrashDir;
+      synchronized (replicaTrashCurDirInfoMap) {
+        if (current == null) {
+          // first time moving blocks in this volume
+          ReplicaTrashCurDirInfo replicaTrashInfo = new
+              ReplicaTrashCurDirInfo();
+          replicaTrashInfo.setCurReplicaTrashSubDir(subDir);
+          replicaTrashInfo.setIteration(0);
+          replicaTrashInfo.setBlocks(0);
+          replicaTrashCurDirInfoMap.put(key, replicaTrashInfo);
+          current = replicaTrashInfo;
+        } else if (current.getCurReplicaTrashSubDir().equals(subDir)) {
+          if (current.getBlocks() == replicaTrashSubDirMaxBlocks) {
+            //reached max entries in a sub directory
+            current.incrementIteration();
+            current.setBlocks(0);
+          }
+        } else {
+          //date change, reset to current date
+          current.setCurReplicaTrashSubDir(subDir);
+          current.setIteration(0);
+          current.setBlocks(0);
+        }
+        current.incrementBlocks();
+      }
+      replicaTrashDir = new File(replicaTrashBaseDir + File
+          .separator + current.getCurReplicaTrashSubDir() + "_" + current
+          .getIteration());
 
       try {
         volume.getFileIoProvider().mkdirsWithExistsCheck(
@@ -412,6 +453,60 @@ class FsDatasetAsyncDiskService {
       }
       updateDeletedBlockId(block);
       IOUtils.cleanup(null, volumeRef);
+    }
+  }
+
+  /**
+   * Information about current replica trash directory details.
+   */
+  static class ReplicaTrashCurDirInfo {
+    private String curReplicaTrashSubDir;
+    private int blocks;
+    private int iteration;
+
+    /**
+     * @return current replica trash sub directory
+     */
+    public String getCurReplicaTrashSubDir() {
+      return curReplicaTrashSubDir;
+    }
+
+    /** Sets current replica trash sub directory. */
+    public void setCurReplicaTrashSubDir(String currentDir) {
+      this.curReplicaTrashSubDir = currentDir;
+    }
+
+    /**
+     * @return Num of Blocks
+     */
+    public int getBlocks() {
+      return blocks;
+    }
+
+    /** Sets number of blocks in the current replica trash sub directory. */
+    public void setBlocks(int val) {
+      this.blocks = val;
+    }
+
+    /**
+     * @return current iteration
+     */
+    public int getIteration() {
+      return iteration;
+    }
+
+    /** Sets current iteration. */
+    public void setIteration(int val) {
+      this.iteration = val;
+    }
+
+    /** Increment number of blocks. */
+    public void incrementBlocks() {
+      ++blocks;
+    }
+    /** Increnent current iteration. */
+    public void incrementIteration() {
+      ++iteration;
     }
   }
   

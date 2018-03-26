@@ -3810,6 +3810,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.replica.trash.subdir.max.blocks</name>
+  <value>${dfs.block.invalidate.limit}</value>
+  <description>
+    Maximum number of blocks per sub directory in replica-trash. This limits
+    number of blocks under each subdirectory in replica-trash. If this
+    property is not set, the default value will be dfs.block.invalidate.limit.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
   <value>50</value>
   <description>
