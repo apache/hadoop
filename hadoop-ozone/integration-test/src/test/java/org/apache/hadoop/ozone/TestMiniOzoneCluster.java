@@ -20,22 +20,23 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
+import org.apache.hadoop.util.ServicePlugin;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -89,30 +90,23 @@ public class TestMiniOzoneCluster {
         .numDataNodes(numberOfNodes)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();
-
-    // make sure datanode.id file is correct
-    File idPath = new File(
-        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
-    assertTrue(idPath.exists());
-    List<DatanodeID> ids = ContainerUtils.readDatanodeIDsFrom(idPath);
-    assertEquals(numberOfNodes, ids.size());
-
     List<DataNode> datanodes = cluster.getDataNodes();
-    assertEquals(datanodes.size(), numberOfNodes);
+    assertEquals(numberOfNodes, datanodes.size());
     for(DataNode dn : datanodes) {
-      // Each datanode ID should match an entry in the ID file
-      assertTrue("Datanode ID not found in ID file",
-          ids.contains(dn.getDatanodeId()));
-
       // Create a single member pipe line
       String containerName = OzoneUtils.getRequestID();
-      DatanodeID dnId = dn.getDatanodeId();
+      DatanodeDetails datanodeDetails = null;
+      for (ServicePlugin plugin : dn.getPlugins()) {
+        if (plugin instanceof HdslDatanodeService) {
+          datanodeDetails = ((HdslDatanodeService) plugin).getDatanodeDetails();
+        }
+      }
       final PipelineChannel pipelineChannel =
-          new PipelineChannel(dnId.getDatanodeUuid(),
+          new PipelineChannel(datanodeDetails.getUuidString(),
               HdslProtos.LifeCycleState.OPEN,
               HdslProtos.ReplicationType.STAND_ALONE,
               HdslProtos.ReplicationFactor.ONE, "test");
-      pipelineChannel.addMember(dnId);
+      pipelineChannel.addMember(datanodeDetails);
       Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
 
       // Verify client is able to connect to the container
@@ -126,9 +120,9 @@ public class TestMiniOzoneCluster {
   @Test
   public void testDatanodeIDPersistent() throws Exception {
     // Generate IDs for testing
-    DatanodeID id1 = DFSTestUtil.getLocalDatanodeID(1);
-    DatanodeID id2 = DFSTestUtil.getLocalDatanodeID(2);
-    DatanodeID id3 = DFSTestUtil.getLocalDatanodeID(3);
+    DatanodeDetails id1 = TestUtils.getDatanodeDetails();
+    DatanodeDetails id2 = TestUtils.getDatanodeDetails();
+    DatanodeDetails id3 = TestUtils.getDatanodeDetails();
     id1.setContainerPort(1);
     id2.setContainerPort(2);
     id3.setContainerPort(3);
@@ -136,51 +130,37 @@ public class TestMiniOzoneCluster {
     // Write a single ID to the file and read it out
     File validIdsFile = new File(WRITE_TMP, "valid-values.id");
     validIdsFile.delete();
-    ContainerUtils.writeDatanodeIDTo(id1, validIdsFile);
-    List<DatanodeID> validIds = ContainerUtils
-        .readDatanodeIDsFrom(validIdsFile);
-    assertEquals(1, validIds.size());
-    DatanodeID id11 = validIds.iterator().next();
-    assertEquals(id11, id1);
-    assertEquals(id11.getProtoBufMessage(), id1.getProtoBufMessage());
+    ContainerUtils.writeDatanodeDetailsTo(id1, validIdsFile);
+    DatanodeDetails validId = ContainerUtils.readDatanodeDetailsFrom(
+        validIdsFile);
 
-    // Write should avoid duplicate entries
-    File noDupIDFile = new File(WRITE_TMP, "no-dup-values.id");
-    noDupIDFile.delete();
-    ContainerUtils.writeDatanodeIDTo(id1, noDupIDFile);
-    ContainerUtils.writeDatanodeIDTo(id1, noDupIDFile);
-    ContainerUtils.writeDatanodeIDTo(id1, noDupIDFile);
-    ContainerUtils.writeDatanodeIDTo(id2, noDupIDFile);
-    ContainerUtils.writeDatanodeIDTo(id3, noDupIDFile);
-
-    List<DatanodeID> noDupIDs =ContainerUtils
-        .readDatanodeIDsFrom(noDupIDFile);
-    assertEquals(3, noDupIDs.size());
-    assertTrue(noDupIDs.contains(id1));
-    assertTrue(noDupIDs.contains(id2));
-    assertTrue(noDupIDs.contains(id3));
+    assertEquals(id1, validId);
+    assertEquals(id1.getProtoBufMessage(), validId.getProtoBufMessage());
 
     // Write should fail if unable to create file or directory
     File invalidPath = new File(WRITE_TMP, "an/invalid/path");
     try {
-      ContainerUtils.writeDatanodeIDTo(id1, invalidPath);
+      ContainerUtils.writeDatanodeDetailsTo(id1, invalidPath);
+      Assert.fail();
     } catch (Exception e) {
-      e.printStackTrace();
       assertTrue(e instanceof IOException);
     }
 
     // Read should return an empty value if file doesn't exist
     File nonExistFile = new File(READ_TMP, "non_exist.id");
     nonExistFile.delete();
-    List<DatanodeID> emptyIDs =
-        ContainerUtils.readDatanodeIDsFrom(nonExistFile);
-    assertTrue(emptyIDs.isEmpty());
+    try {
+      ContainerUtils.readDatanodeDetailsFrom(nonExistFile);
+      Assert.fail();
+    } catch (Exception e) {
+      assertTrue(e instanceof IOException);
+    }
 
     // Read should fail if the file is malformed
     File malformedFile = new File(READ_TMP, "malformed.id");
     createMalformedIDFile(malformedFile);
     try {
-      ContainerUtils.readDatanodeIDsFrom(malformedFile);
+      ContainerUtils.readDatanodeDetailsFrom(malformedFile);
       fail("Read a malformed ID file should fail");
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
@@ -202,11 +182,11 @@ public class TestMiniOzoneCluster {
         true);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
@@ -225,11 +205,11 @@ public class TestMiniOzoneCluster {
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
     try (
         DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf);
         DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            DFSTestUtil.getLocalDatanodeID(), ozoneConf);
+            TestUtils.getDatanodeDetails(), ozoneConf)
     ) {
       HashSet<Integer> ports = new HashSet<Integer>();
       assertTrue(ports.add(sm1.getContainer().getContainerServerPort()));
@@ -244,8 +224,8 @@ public class TestMiniOzoneCluster {
   private void createMalformedIDFile(File malformedFile)
       throws IOException{
     malformedFile.delete();
-    DatanodeID id1 = DFSTestUtil.getLocalDatanodeID(1);
-    ContainerUtils.writeDatanodeIDTo(id1, malformedFile);
+    DatanodeDetails id = TestUtils.getDatanodeDetails();
+    ContainerUtils.writeDatanodeDetailsTo(id, malformedFile);
 
     FileOutputStream out = new FileOutputStream(malformedFile);
     out.write("malformed".getBytes());

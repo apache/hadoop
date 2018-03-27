@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.container.placement;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.container.MockNodeManager;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
@@ -41,10 +41,10 @@ public class TestContainerPlacement {
 
   private DescriptiveStatistics computeStatistics(NodeManager nodeManager) {
     DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
-    for (DatanodeID id : nodeManager.getNodes(HEALTHY)) {
+    for (DatanodeDetails dd : nodeManager.getNodes(HEALTHY)) {
       float weightedValue =
-          nodeManager.getNodeStat(id).get().getScmUsed().get() / (float)
-              nodeManager.getNodeStat(id).get().getCapacity().get();
+          nodeManager.getNodeStat(dd).get().getScmUsed().get() / (float)
+              nodeManager.getNodeStat(dd).get().getCapacity().get();
       descriptiveStatistics.addValue(weightedValue);
     }
     return descriptiveStatistics;
@@ -82,11 +82,11 @@ public class TestContainerPlacement {
 
     for (int x = 0; x < opsCount; x++) {
       long containerSize = random.nextInt(100) * OzoneConsts.GB;
-      List<DatanodeID> nodesCapacity =
+      List<DatanodeDetails> nodesCapacity =
           capacityPlacer.chooseDatanodes(nodesRequired, containerSize);
       assertEquals(nodesRequired, nodesCapacity.size());
 
-      List<DatanodeID> nodesRandom = randomPlacer.chooseDatanodes(nodesRequired,
+      List<DatanodeDetails> nodesRandom = randomPlacer.chooseDatanodes(nodesRequired,
           containerSize);
 
       // One fifth of all calls are delete
@@ -116,16 +116,16 @@ public class TestContainerPlacement {
   }
 
   private void deleteContainer(MockNodeManager nodeManager,
-      List<DatanodeID> nodes, long containerSize) {
-    for (DatanodeID id : nodes) {
-      nodeManager.delContainer(id, containerSize);
+      List<DatanodeDetails> nodes, long containerSize) {
+    for (DatanodeDetails dd : nodes) {
+      nodeManager.delContainer(dd, containerSize);
     }
   }
 
   private void createContainer(MockNodeManager nodeManager,
-      List<DatanodeID> nodes, long containerSize) {
-    for (DatanodeID id : nodes) {
-      nodeManager.addContainer(id, containerSize);
+      List<DatanodeDetails> nodes, long containerSize) {
+    for (DatanodeDetails dd : nodes) {
+      nodeManager.addContainer(dd, containerSize);
     }
   }
 }

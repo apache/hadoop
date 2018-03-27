@@ -28,8 +28,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.HdslUtils;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -48,6 +48,7 @@ import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
 import org.apache.hadoop.hdsl.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
@@ -665,11 +666,11 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       throw new IllegalArgumentException("Not Supported yet");
     }
 
-    List<DatanodeID> datanodes = queryNode(nodeStatuses);
+    List<DatanodeDetails> datanodes = queryNode(nodeStatuses);
     HdslProtos.NodePool.Builder poolBuilder =
         HdslProtos.NodePool.newBuilder();
 
-    for (DatanodeID datanode : datanodes) {
+    for (DatanodeDetails datanode : datanodes) {
       HdslProtos.Node node = HdslProtos.Node.newBuilder()
           .setNodeID(datanode.getProtoBufMessage())
           .addAllNodeStates(nodeStatuses)
@@ -746,15 +747,15 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @return List of Datanodes.
    */
 
-  public List<DatanodeID> queryNode(EnumSet<NodeState> nodeStatuses) {
+  public List<DatanodeDetails> queryNode(EnumSet<NodeState> nodeStatuses) {
     Preconditions.checkNotNull(nodeStatuses, "Node Query set cannot be null");
     Preconditions.checkState(nodeStatuses.size() > 0, "No valid arguments " +
         "in the query set");
-    List<DatanodeID> resultList = new LinkedList<>();
-    Set<DatanodeID> currentSet = new TreeSet<>();
+    List<DatanodeDetails> resultList = new LinkedList<>();
+    Set<DatanodeDetails> currentSet = new TreeSet<>();
 
     for (NodeState nodeState : nodeStatuses) {
-      Set<DatanodeID> nextSet = queryNodeState(nodeState);
+      Set<DatanodeDetails> nextSet = queryNodeState(nodeState);
       if ((nextSet == null) || (nextSet.size() == 0)) {
         // Right now we only support AND operation. So intersect with
         // any empty set is null.
@@ -779,13 +780,13 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @param nodeState - NodeState that we are interested in matching.
    * @return Set of Datanodes that match the NodeState.
    */
-  private Set<DatanodeID> queryNodeState(NodeState nodeState) {
+  private Set<DatanodeDetails> queryNodeState(NodeState nodeState) {
     if (nodeState == NodeState.RAFT_MEMBER ||
         nodeState == NodeState.FREE_NODE) {
       throw new IllegalStateException("Not implemented yet");
     }
-    Set<DatanodeID> returnSet = new TreeSet<>();
-    List<DatanodeID> tmp = getScmNodeManager().getNodes(nodeState);
+    Set<DatanodeDetails> returnSet = new TreeSet<>();
+    List<DatanodeDetails> tmp = getScmNodeManager().getNodes(nodeState);
     if ((tmp != null) && (tmp.size() > 0)) {
       returnSet.addAll(tmp);
     }
@@ -945,20 +946,22 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   /**
    * Used by data node to send a Heartbeat.
    *
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetails - Datanode Details.
    * @param nodeReport - Node Report
    * @param reportState - Container report ready info.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   @Override
-  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport, ReportState reportState) throws IOException {
+  public SCMHeartbeatResponseProto sendHeartbeat(
+      DatanodeDetailsProto datanodeDetails, SCMNodeReport nodeReport,
+      ReportState reportState) throws IOException {
     List<SCMCommand> commands =
-        getScmNodeManager().sendHeartbeat(datanodeID, nodeReport, reportState);
+        getScmNodeManager().sendHeartbeat(datanodeDetails, nodeReport,
+            reportState);
     List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
-      cmdResponses.add(getCommandResponse(cmd, datanodeID.getDatanodeUuid()
+      cmdResponses.add(getCommandResponse(cmd, datanodeDetails.getUuid()
           .toString()));
     }
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
@@ -968,17 +971,17 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   /**
    * Register Datanode.
    *
-   * @param datanodeID - DatanodID.
+   * @param datanodeDetails - DatanodID.
    * @param scmAddresses - List of SCMs this datanode is configured to
    * communicate.
    * @return SCM Command.
    */
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
-      register(DatanodeID datanodeID, String[] scmAddresses)
-      throws IOException {
+      register(DatanodeDetailsProto datanodeDetails, String[] scmAddresses) {
     // TODO : Return the list of Nodes that forms the SCM HA.
-    return getRegisteredResponse(scmNodeManager.register(datanodeID), null);
+    return getRegisteredResponse(
+        scmNodeManager.register(datanodeDetails), null);
   }
 
   /**
@@ -1020,7 +1023,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     // Update container stat entry, this will trigger a removal operation if it
     // exists in cache.
     synchronized (containerReportCache) {
-      String datanodeUuid = reports.getDatanodeID().getDatanodeUuid();
+      String datanodeUuid = reports.getDatanodeDetails().getUuid();
       if (datanodeUuid != null && newStat != null) {
         containerReportCache.put(datanodeUuid, newStat);
         // update global view container metrics

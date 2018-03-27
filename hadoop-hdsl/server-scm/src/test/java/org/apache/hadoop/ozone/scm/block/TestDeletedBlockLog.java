@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone.scm.block;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
@@ -260,8 +260,26 @@ public class TestDeletedBlockLog {
 
     int count = 0;
     String containerName = null;
-    DatanodeID dnID1 = new DatanodeID(null, null, "node1", 0, 0, 0, 0);
-    DatanodeID dnID2 = new DatanodeID(null, null, "node2", 0, 0, 0, 0);
+    DatanodeDetails dnDd1 = DatanodeDetails.newBuilder()
+        .setUuid("node1")
+        .setIpAddress("127.0.0.1")
+        .setHostName("localhost")
+        .setInfoPort(0)
+        .setInfoSecurePort(0)
+        .setContainerPort(0)
+        .setRatisPort(0)
+        .setOzoneRestPort(0)
+        .build();
+    DatanodeDetails dnId2 = DatanodeDetails.newBuilder()
+        .setUuid("node2")
+        .setIpAddress("127.0.0.1")
+        .setHostName("localhost")
+        .setInfoPort(0)
+        .setInfoSecurePort(0)
+        .setContainerPort(0)
+        .setRatisPort(0)
+        .setOzoneRestPort(0)
+        .build();
     Mapping mappingService = mock(ContainerMapping.class);
     // Creates {TXNum} TX in the log.
     for (Map.Entry<String, List<String>> entry : generateData(txNum)
@@ -273,9 +291,9 @@ public class TestDeletedBlockLog {
 
       // make TX[1-6] for datanode1; TX[7-10] for datanode2
       if (count <= (maximumAllowedTXNum + 1)) {
-        mockContainerInfo(mappingService, containerName, dnID1);
+        mockContainerInfo(mappingService, containerName, dnDd1);
       } else {
-        mockContainerInfo(mappingService, containerName, dnID2);
+        mockContainerInfo(mappingService, containerName, dnId2);
       }
     }
 
@@ -285,9 +303,9 @@ public class TestDeletedBlockLog {
     deletedBlockLog.getTransactions(transactions);
 
     List<Long> txIDs = new LinkedList<>();
-    for (DatanodeID dnID : transactions.getDatanodes()) {
+    for (UUID id : transactions.getDatanodeIDs()) {
       List<DeletedBlocksTransaction> txs = transactions
-          .getDatanodeTransactions(dnID);
+          .getDatanodeTransactions(id);
       for (DeletedBlocksTransaction tx : txs) {
         txIDs.add(tx.getTxID());
       }
@@ -303,9 +321,9 @@ public class TestDeletedBlockLog {
     Assert.assertFalse(transactions.isFull());
     // The number of TX in dnID1 won't more than maximum value.
     Assert.assertEquals(maximumAllowedTXNum,
-        transactions.getDatanodeTransactions(dnID1).size());
+        transactions.getDatanodeTransactions(dnDd1.getUuid()).size());
 
-    int size = transactions.getDatanodeTransactions(dnID2).size();
+    int size = transactions.getDatanodeTransactions(dnId2.getUuid()).size();
     // add duplicated container in dnID2, this should be failed.
     DeletedBlocksTransaction.Builder builder =
         DeletedBlocksTransaction.newBuilder();
@@ -316,7 +334,7 @@ public class TestDeletedBlockLog {
 
     // The number of TX in dnID2 should not be changed.
     Assert.assertEquals(size,
-        transactions.getDatanodeTransactions(dnID2).size());
+        transactions.getDatanodeTransactions(dnId2.getUuid()).size());
 
     // Add new TX in dnID2, then dnID2 will reach maximum value.
     containerName = "newContainer";
@@ -324,18 +342,18 @@ public class TestDeletedBlockLog {
     builder.setTxID(12);
     builder.setContainerName(containerName);
     builder.setCount(0);
-    mockContainerInfo(mappingService, containerName, dnID2);
+    mockContainerInfo(mappingService, containerName, dnId2);
     transactions.addTransaction(builder.build());
     // Since all node are full, then transactions is full.
     Assert.assertTrue(transactions.isFull());
   }
 
   private void mockContainerInfo(Mapping mappingService, String containerName,
-      DatanodeID dnID) throws IOException {
+      DatanodeDetails dd) throws IOException {
     PipelineChannel pipelineChannel =
         new PipelineChannel("fake", LifeCycleState.OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "fake");
-    pipelineChannel.addMember(dnID);
+    pipelineChannel.addMember(dd);
     Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
 
     ContainerInfo.Builder builder = new ContainerInfo.Builder();

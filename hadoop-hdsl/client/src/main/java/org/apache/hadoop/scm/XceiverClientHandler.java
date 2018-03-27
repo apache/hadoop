@@ -154,7 +154,7 @@ public class XceiverClientHandler extends
 
     // Setting the datanode ID in the commands, so that we can distinguish
     // commands when the cluster simulator is running.
-    if(!request.hasDatanodeID()) {
+    if(!request.hasDatanodeUuid()) {
       throw new IllegalArgumentException("Invalid Datanode ID");
     }
 

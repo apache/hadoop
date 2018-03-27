@@ -19,8 +19,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -48,6 +47,7 @@ import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -154,7 +154,7 @@ public class TestDatanodeStateMachine {
   public void testStartStopDatanodeStateMachine() throws IOException,
       InterruptedException, TimeoutException {
     try (DatanodeStateMachine stateMachine =
-        new DatanodeStateMachine(DFSTestUtil.getLocalDatanodeID(), conf)) {
+        new DatanodeStateMachine(getNewDatanodeDetails(), conf)) {
       stateMachine.startDaemon();
       SCMConnectionManager connectionManager =
           stateMachine.getConnectionManager();
@@ -204,12 +204,13 @@ public class TestDatanodeStateMachine {
     File idPath = new File(
         conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
     idPath.delete();
-    DatanodeID dnID = DFSTestUtil.getLocalDatanodeID();
-    dnID.setContainerPort(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
-    ContainerUtils.writeDatanodeIDTo(dnID, idPath);
+    DatanodeDetails datanodeDetails = getNewDatanodeDetails();
+    datanodeDetails.setContainerPort(
+        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
 
-    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-        DFSTestUtil.getLocalDatanodeID(), conf)) {
+    try (DatanodeStateMachine stateMachine =
+             new DatanodeStateMachine(datanodeDetails, conf)) {
       DatanodeStateMachine.DatanodeStates currentState =
           stateMachine.getContext().getState();
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -341,7 +342,7 @@ public class TestDatanodeStateMachine {
       perTestConf.setStrings(entry.getKey(), entry.getValue());
       LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-          DFSTestUtil.getLocalDatanodeID(), perTestConf)) {
+          getNewDatanodeDetails(), perTestConf)) {
         DatanodeStateMachine.DatanodeStates currentState =
             stateMachine.getContext().getState();
         Assert.assertEquals(DatanodeStateMachine.DatanodeStates.INIT,
@@ -357,5 +358,18 @@ public class TestDatanodeStateMachine {
         Assert.fail("Unexpected exception found");
       }
     });
+  }
+
+  private DatanodeDetails getNewDatanodeDetails() {
+    return DatanodeDetails.newBuilder()
+        .setUuid(UUID.randomUUID().toString())
+        .setHostName("localhost")
+        .setIpAddress("127.0.0.1")
+        .setInfoPort(0)
+        .setInfoSecurePort(0)
+        .setContainerPort(0)
+        .setRatisPort(0)
+        .setOzoneRestPort(0)
+        .build();
   }
 }

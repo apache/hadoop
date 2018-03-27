@@ -16,11 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common.states.datanode;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdsl.HdslUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
@@ -29,15 +25,10 @@ import org.apache.hadoop.ozone.container.common.states.DatanodeState;
 import org.apache.hadoop.ozone.container.common.states.endpoint.HeartbeatEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint.RegisterEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint.VersionEndpointTask;
-import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -66,75 +57,6 @@ public class RunningDatanodeState implements DatanodeState {
     this.connectionManager = connectionManager;
     this.conf = conf;
     this.context = context;
-  }
-
-  /**
-   * Reads a datanode ID from the persisted information.
-   *
-   * @param idPath - Path to the ID File.
-   * @return DatanodeID
-   * @throws IOException
-   */
-  private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-      readPersistedDatanodeID(Path idPath) throws IOException {
-    Preconditions.checkNotNull(idPath);
-    DatanodeID datanodeID = null;
-    List<DatanodeID> datanodeIDs =
-        ContainerUtils.readDatanodeIDsFrom(idPath.toFile());
-    int containerPort = this.context.getContainerPort();
-    for(DatanodeID dnId : datanodeIDs) {
-      if(dnId.getContainerPort() == containerPort) {
-        datanodeID = dnId;
-        break;
-      }
-    }
-
-    if (datanodeID == null) {
-      throw new IOException("No valid datanode ID found from "
-          + idPath.toFile().getAbsolutePath()
-          + " that matches container port "
-          + containerPort);
-    } else {
-      StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-          containerIDProto =
-          StorageContainerDatanodeProtocolProtos
-              .ContainerNodeIDProto
-              .newBuilder()
-              .setDatanodeID(datanodeID.getProtoBufMessage())
-              .build();
-      return containerIDProto;
-    }
-  }
-
-  /**
-   * Returns ContainerNodeIDProto or null in case of Error.
-   *
-   * @return ContainerNodeIDProto
-   */
-  private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
-      getContainerNodeID() {
-    String dataNodeIDPath = HdslUtils.getDatanodeIDPath(conf);
-    if (dataNodeIDPath == null || dataNodeIDPath.isEmpty()) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-
-      // This is an unrecoverable error.
-      this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
-      return null;
-    }
-    StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto nodeID;
-    // try to read an existing ContainerNode ID.
-    try {
-      nodeID = readPersistedDatanodeID(Paths.get(dataNodeIDPath));
-      if (nodeID != null) {
-        LOG.trace("Read Node ID :", nodeID.getDatanodeID().getDatanodeUuid());
-        return nodeID;
-      }
-    } catch (IOException ex) {
-      LOG.trace("Not able to find container Node ID, creating it.", ex);
-    }
-    this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
-    return null;
   }
 
   /**
@@ -178,13 +100,13 @@ public class RunningDatanodeState implements DatanodeState {
       return  RegisterEndpointTask.newBuilder()
           .setConfig(conf)
           .setEndpointStateMachine(endpoint)
-          .setNodeID(getContainerNodeID())
+          .setDatanodeDetails(context.getParent().getDatanodeDetails())
           .build();
     case HEARTBEAT:
       return HeartbeatEndpointTask.newBuilder()
           .setConfig(conf)
           .setEndpointStateMachine(endpoint)
-          .setNodeID(getContainerNodeID())
+          .setDatanodeDetails(context.getParent().getDatanodeDetails())
           .setContext(context)
           .build();
     case SHUTDOWN:

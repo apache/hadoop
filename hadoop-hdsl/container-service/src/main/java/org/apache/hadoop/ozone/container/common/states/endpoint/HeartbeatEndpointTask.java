@@ -20,7 +20,8 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.ozone.container.common.helpers
     .DeletedContainerBlocksSummary;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -30,8 +31,6 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
-import org.apache.hadoop.hdsl.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.hdsl.protocol.proto
      .StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
@@ -53,7 +52,7 @@ public class HeartbeatEndpointTask
       LoggerFactory.getLogger(HeartbeatEndpointTask.class);
   private final EndpointStateMachine rpcEndpoint;
   private final Configuration conf;
-  private ContainerNodeIDProto containerNodeIDProto;
+  private DatanodeDetailsProto datanodeDetailsProto;
   private StateContext context;
 
   /**
@@ -73,18 +72,18 @@ public class HeartbeatEndpointTask
    *
    * @return ContainerNodeIDProto
    */
-  public ContainerNodeIDProto getContainerNodeIDProto() {
-    return containerNodeIDProto;
+  public DatanodeDetailsProto getDatanodeDetailsProto() {
+    return datanodeDetailsProto;
   }
 
   /**
    * Set container node ID proto.
    *
-   * @param containerNodeIDProto - the node id.
+   * @param datanodeDetailsProto - the node id.
    */
-  public void setContainerNodeIDProto(ContainerNodeIDProto
-      containerNodeIDProto) {
-    this.containerNodeIDProto = containerNodeIDProto;
+  public void setDatanodeDetailsProto(DatanodeDetailsProto
+      datanodeDetailsProto) {
+    this.datanodeDetailsProto = datanodeDetailsProto;
   }
 
   /**
@@ -97,14 +96,12 @@ public class HeartbeatEndpointTask
   public EndpointStateMachine.EndPointStates call() throws Exception {
     rpcEndpoint.lock();
     try {
-      Preconditions.checkState(this.containerNodeIDProto != null);
-      DatanodeID datanodeID = DatanodeID.getFromProtoBuf(this
-          .containerNodeIDProto.getDatanodeID());
+      Preconditions.checkState(this.datanodeDetailsProto != null);
 
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(datanodeID, this.context.getNodeReport(),
+          .sendHeartbeat(datanodeDetailsProto, this.context.getNodeReport(),
               this.context.getContainerReportState());
-      processResponse(reponse, datanodeID);
+      processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
@@ -129,12 +126,12 @@ public class HeartbeatEndpointTask
    * @param response - SCMHeartbeat response.
    */
   private void processResponse(SCMHeartbeatResponseProto response,
-      final DatanodeID datanodeID) {
+      final DatanodeDetailsProto datanodeDetails) {
     for (SCMCommandResponseProto commandResponseProto : response
         .getCommandsList()) {
       // Verify the response is indeed for this datanode.
       Preconditions.checkState(commandResponseProto.getDatanodeUUID()
-          .equalsIgnoreCase(datanodeID.getDatanodeUuid().toString()),
+          .equalsIgnoreCase(datanodeDetails.getUuid()),
           "Unexpected datanode ID in the response.");
       switch (commandResponseProto.getCmdType()) {
       case sendContainerReport:
@@ -190,7 +187,7 @@ public class HeartbeatEndpointTask
   public static class Builder {
     private EndpointStateMachine endPointStateMachine;
     private Configuration conf;
-    private ContainerNodeIDProto containerNodeIDProto;
+    private DatanodeDetails datanodeDetails;
     private StateContext context;
 
     /**
@@ -224,11 +221,11 @@ public class HeartbeatEndpointTask
     /**
      * Sets the NodeID.
      *
-     * @param nodeID - NodeID proto
+     * @param dnDetails - NodeID proto
      * @return Builder
      */
-    public Builder setNodeID(ContainerNodeIDProto nodeID) {
-      this.containerNodeIDProto = nodeID;
+    public Builder setDatanodeDetails(DatanodeDetails dnDetails) {
+      this.datanodeDetails = dnDetails;
       return this;
     }
 
@@ -255,15 +252,15 @@ public class HeartbeatEndpointTask
             " construct HeartbeatEndpointTask task");
       }
 
-      if (containerNodeIDProto == null) {
-        LOG.error("No nodeID specified.");
+      if (datanodeDetails == null) {
+        LOG.error("No datanode specified.");
         throw new IllegalArgumentException("A vaild Node ID is needed to " +
             "construct HeartbeatEndpointTask task");
       }
 
       HeartbeatEndpointTask task = new HeartbeatEndpointTask(this
           .endPointStateMachine, this.conf, this.context);
-      task.setContainerNodeIDProto(containerNodeIDProto);
+      task.setDatanodeDetailsProto(datanodeDetails.getProtoBufMessage());
       return task;
     }
   }

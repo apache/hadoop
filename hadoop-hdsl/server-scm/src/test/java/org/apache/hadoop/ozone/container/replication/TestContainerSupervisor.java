@@ -17,8 +17,8 @@
 package org.apache.hadoop.ozone.container.replication;
 
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.testutils.ReplicationDatanodeStateManager;
 import org.apache.hadoop.ozone.container.testutils.ReplicationNodeManagerMock;
 import org.apache.hadoop.ozone.container.testutils.ReplicationNodePoolManagerMock;
@@ -66,7 +66,7 @@ public class TestContainerSupervisor {
   static final int POOL_COUNT = 3;
   private LogCapturer logCapturer = LogCapturer.captureLogs(
       LogFactory.getLog(ContainerSupervisor.class));
-  private List<DatanodeID> datanodes = new LinkedList<>();
+  private List<DatanodeDetails> datanodes = new LinkedList<>();
   private NodeManager nodeManager;
   private NodePoolManager poolManager;
   private CommandQueue commandQueue;
@@ -82,11 +82,11 @@ public class TestContainerSupervisor {
   @Before
   public void setUp() throws Exception {
     GenericTestUtils.setLogLevel(ContainerSupervisor.LOG, Level.DEBUG);
-    Map<DatanodeID, NodeState> nodeStateMap = new HashMap<>();
+    Map<DatanodeDetails, NodeState> nodeStateMap = new HashMap<>();
     // We are setting up 3 pools with 24 nodes each in this cluster.
     // First we create 72 Datanodes.
     for (int x = 0; x < MAX_DATANODES; x++) {
-      DatanodeID datanode = TestUtils.getDatanodeID();
+      DatanodeDetails datanode = TestUtils.getDatanodeDetails();
       datanodes.add(datanode);
       nodeStateMap.put(datanode, HEALTHY);
     }
@@ -105,7 +105,7 @@ public class TestContainerSupervisor {
     for (int y = 1; y <= POOL_COUNT; y++) {
       String poolName = String.format(POOL_NAME_TEMPLATE, y);
       for (int z = 0; z < POOL_SIZE; z++) {
-        DatanodeID id = datanodes.get(y * z);
+        DatanodeDetails id = datanodes.get(y * z);
         poolManager.addNode(poolName, id);
       }
     }
@@ -245,7 +245,7 @@ public class TestContainerSupervisor {
         LogFactory.getLog(InProgressPool.class));
     GenericTestUtils.setLogLevel(InProgressPool.LOG, Level.DEBUG);
     try {
-      DatanodeID id = TestUtils.getDatanodeID();
+      DatanodeDetails id = TestUtils.getDatanodeDetails();
       ((ReplicationNodeManagerMock) (nodeManager)).addNode(id, HEALTHY);
       poolManager.addNode("PoolNew", id);
       GenericTestUtils.waitFor(() ->
@@ -260,7 +260,8 @@ public class TestContainerSupervisor {
       containerSupervisor.handleContainerReport(clist.get(0));
       GenericTestUtils.waitFor(() ->
           inProgressLog.getOutput().contains("NewContainer1") && inProgressLog
-              .getOutput().contains(id.getDatanodeUuid()), 200, 10 * 1000);
+              .getOutput().contains(id.getUuidString()),
+          200, 10 * 1000);
     } finally {
       inProgressLog.stopCapturing();
     }

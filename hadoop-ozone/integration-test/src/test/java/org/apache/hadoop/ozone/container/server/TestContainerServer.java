@@ -19,10 +19,10 @@
 package org.apache.hadoop.ozone.container.server;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.RatisTestHelper;
@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerHandler;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientRatis;
@@ -90,11 +91,13 @@ public class TestContainerServer {
 
   @Test
   public void testClientServer() throws Exception {
+    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     runTestClientServer(1,
         (pipeline, conf) -> conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
             pipeline.getLeader().getContainerPort()),
         XceiverClient::new,
-        (dn, conf) -> new XceiverServer(conf, new TestContainerDispatcher()),
+        (dn, conf) -> new XceiverServer(datanodeDetails, conf,
+            new TestContainerDispatcher()),
         (dn, p) -> {});
   }
 
@@ -116,11 +119,10 @@ public class TestContainerServer {
   }
 
   static XceiverServerRatis newXceiverServerRatis(
-      DatanodeID dn, OzoneConfiguration conf) throws IOException {
-    final String id = dn.getXferAddr();
+      DatanodeDetails dn, OzoneConfiguration conf) throws IOException {
     conf.setInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
         dn.getRatisPort());
-    final String dir = TEST_DIR + id.replace(':', '_');
+    final String dir = TEST_DIR + dn.getUuid();
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
@@ -128,8 +130,8 @@ public class TestContainerServer {
   }
 
   static void initXceiverServerRatis(
-      RpcType rpc, DatanodeID id, Pipeline pipeline) throws IOException {
-    final RaftPeer p = RatisHelper.toRaftPeer(id);
+      RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
+    final RaftPeer p = RatisHelper.toRaftPeer(dd);
     final RaftClient client = RatisHelper.newRaftClient(rpc, p);
     client.reinitialize(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
@@ -149,9 +151,9 @@ public class TestContainerServer {
       BiConsumer<Pipeline, OzoneConfiguration> initConf,
       CheckedBiFunction<Pipeline, OzoneConfiguration, XceiverClientSpi,
           IOException> createClient,
-      CheckedBiFunction<DatanodeID, OzoneConfiguration, XceiverServerSpi,
+      CheckedBiFunction<DatanodeDetails, OzoneConfiguration, XceiverServerSpi,
           IOException> createServer,
-      CheckedBiConsumer<DatanodeID, Pipeline, IOException> initServer)
+      CheckedBiConsumer<DatanodeDetails, Pipeline, IOException> initServer)
       throws Exception {
     final List<XceiverServerSpi> servers = new ArrayList<>();
     XceiverClientSpi client = null;
@@ -162,7 +164,7 @@ public class TestContainerServer {
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for(DatanodeID dn : pipeline.getMachines()) {
+      for(DatanodeDetails dn : pipeline.getMachines()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
@@ -203,7 +205,8 @@ public class TestContainerServer {
       Dispatcher dispatcher =
               new Dispatcher(mock(ContainerManager.class), conf);
       dispatcher.init();
-      server = new XceiverServer(conf, dispatcher);
+      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      server = new XceiverServer(datanodeDetails, conf, dispatcher);
       client = new XceiverClient(pipeline, conf);
 
       server.start();

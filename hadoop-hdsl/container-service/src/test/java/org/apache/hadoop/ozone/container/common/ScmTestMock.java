@@ -17,7 +17,8 @@
 package org.apache.hadoop.ozone.container.common;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
@@ -50,7 +51,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private AtomicInteger containerReportsCount = new AtomicInteger(0);
 
   // Map of datanode to containers
-  private Map<DatanodeID, Map<String, ContainerInfo>> nodeContainers =
+  private Map<DatanodeDetails, Map<String, ContainerInfo>> nodeContainers =
       new HashMap();
   /**
    * Returns the number of heartbeats made to this class.
@@ -161,15 +162,16 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   /**
    * Used by data node to send a Heartbeat.
    *
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetailsProto - DatanodeDetailsProto.
    * @param nodeReport - node report.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
-      sendHeartbeat(DatanodeID datanodeID, SCMNodeReport nodeReport,
-      ReportState scmReportState) throws IOException {
+      sendHeartbeat(DatanodeDetailsProto datanodeDetailsProto,
+                    SCMNodeReport nodeReport, ReportState scmReportState)
+      throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
     this.reportState = scmReportState;
@@ -183,21 +185,22 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   /**
    * Register Datanode.
    *
-   * @param datanodeID - DatanodID.
+   * @param datanodeDetailsProto DatanodDetailsProto.
    * @param scmAddresses - List of SCMs this datanode is configured to
    * communicate.
    * @return SCM Command.
    */
   @Override
   public StorageContainerDatanodeProtocolProtos
-      .SCMRegisteredCmdResponseProto register(DatanodeID datanodeID,
-      String[] scmAddresses) throws IOException {
+      .SCMRegisteredCmdResponseProto register(
+          DatanodeDetailsProto datanodeDetailsProto, String[] scmAddresses)
+      throws IOException {
     rpcCount.incrementAndGet();
     sleepIfNeeded();
     return StorageContainerDatanodeProtocolProtos
         .SCMRegisteredCmdResponseProto
         .newBuilder().setClusterID(UUID.randomUUID().toString())
-        .setDatanodeUUID(datanodeID.getDatanodeUuid()).setErrorCode(
+        .setDatanodeUUID(datanodeDetailsProto.getUuid()).setErrorCode(
             StorageContainerDatanodeProtocolProtos
                 .SCMRegisteredCmdResponseProto.ErrorCode.success).build();
   }
@@ -216,7 +219,8 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
     Preconditions.checkNotNull(reports);
     containerReportsCount.incrementAndGet();
 
-    DatanodeID datanode = DatanodeID.getFromProtoBuf(reports.getDatanodeID());
+    DatanodeDetails datanode = DatanodeDetails.getFromProtoBuf(
+        reports.getDatanodeDetails());
     if (reports.getReportsCount() > 0) {
       Map containers = nodeContainers.get(datanode);
       if (containers == null) {

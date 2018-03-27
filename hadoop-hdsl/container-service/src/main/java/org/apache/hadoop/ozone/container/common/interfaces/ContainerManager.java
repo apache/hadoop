@@ -21,9 +21,9 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
@@ -48,11 +48,11 @@ public interface ContainerManager extends RwLock {
    *
    * @param config        - Configuration.
    * @param containerDirs - List of Metadata Container locations.
-   * @param datanodeID - Datanode ID
+   * @param datanodeDetails - DatanodeDetails
    * @throws StorageContainerException
    */
   void init(Configuration config, List<StorageLocation> containerDirs,
-      DatanodeID datanodeID) throws IOException;
+            DatanodeDetails datanodeDetails) throws IOException;
 
   /**
    * Creates a container with the given name.

@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.ozone.scm.container;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 
-import static org.apache.hadoop.ozone.scm.TestUtils.getDatanodeID;
+import static org.apache.hadoop.ozone.scm.TestUtils.getDatanodeDetails;
 import org.mockito.Mockito;
 import org.assertj.core.util.Preconditions;
 
@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState
@@ -69,13 +70,13 @@ public class MockNodeManager implements NodeManager {
       new NodeData(OzoneConsts.TB, 200L * OzoneConsts.GB, NodeData.STALE),
       new NodeData(OzoneConsts.TB, 200L * OzoneConsts.GB, NodeData.DEAD)
   };
-  private final List<DatanodeID> healthyNodes;
-  private final List<DatanodeID> staleNodes;
-  private final List<DatanodeID> deadNodes;
-  private final Map<String, SCMNodeStat> nodeMetricMap;
+  private final List<DatanodeDetails> healthyNodes;
+  private final List<DatanodeDetails> staleNodes;
+  private final List<DatanodeDetails> deadNodes;
+  private final Map<UUID, SCMNodeStat> nodeMetricMap;
   private final SCMNodeStat aggregateStat;
   private boolean chillmode;
-  private final Map<DatanodeID, List<SCMCommand>> commandMap;
+  private final Map<UUID, List<SCMCommand>> commandMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
@@ -85,8 +86,8 @@ public class MockNodeManager implements NodeManager {
     aggregateStat = new SCMNodeStat();
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
-        DatanodeID id = getDatanodeID();
-        populateNodeMetric(id, x);
+        DatanodeDetails dd = getDatanodeDetails();
+        populateNodeMetric(dd, x);
       }
     }
     chillmode = false;
@@ -96,28 +97,28 @@ public class MockNodeManager implements NodeManager {
   /**
    * Invoked from ctor to create some node Metrics.
    *
-   * @param datanodeID - Datanode ID
+   * @param datanodeDetails - Datanode details
    */
-  private void populateNodeMetric(DatanodeID datanodeID, int x) {
+  private void populateNodeMetric(DatanodeDetails datanodeDetails, int x) {
     SCMNodeStat newStat = new SCMNodeStat();
     long remaining =
         NODES[x % NODES.length].capacity - NODES[x % NODES.length].used;
     newStat.set(
         (NODES[x % NODES.length].capacity),
         (NODES[x % NODES.length].used), remaining);
-    this.nodeMetricMap.put(datanodeID.toString(), newStat);
+    this.nodeMetricMap.put(datanodeDetails.getUuid(), newStat);
     aggregateStat.add(newStat);
 
     if (NODES[x % NODES.length].getCurrentState() == NodeData.HEALTHY) {
-      healthyNodes.add(datanodeID);
+      healthyNodes.add(datanodeDetails);
     }
 
     if (NODES[x % NODES.length].getCurrentState() == NodeData.STALE) {
-      staleNodes.add(datanodeID);
+      staleNodes.add(datanodeDetails);
     }
 
     if (NODES[x % NODES.length].getCurrentState() == NodeData.DEAD) {
-      deadNodes.add(datanodeID);
+      deadNodes.add(datanodeDetails);
     }
 
   }
@@ -137,7 +138,8 @@ public class MockNodeManager implements NodeManager {
    * @throws UnregisteredNodeException
    */
   @Override
-  public void removeNode(DatanodeID node) throws UnregisteredNodeException {
+  public void removeNode(DatanodeDetails node)
+      throws UnregisteredNodeException {
 
   }
 
@@ -148,7 +150,7 @@ public class MockNodeManager implements NodeManager {
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeID> getNodes(HdslProtos.NodeState nodestate) {
+  public List<DatanodeDetails> getNodes(HdslProtos.NodeState nodestate) {
     if (nodestate == HEALTHY) {
       return healthyNodes;
     }
@@ -172,7 +174,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public int getNodeCount(HdslProtos.NodeState nodestate) {
-    List<DatanodeID> nodes = getNodes(nodestate);
+    List<DatanodeDetails> nodes = getNodes(nodestate);
     if (nodes != null) {
       return nodes.size();
     }
@@ -182,10 +184,10 @@ public class MockNodeManager implements NodeManager {
   /**
    * Get all datanodes known to SCM.
    *
-   * @return List of DatanodeIDs known to SCM.
+   * @return List of DatanodeDetails known to SCM.
    */
   @Override
-  public List<DatanodeID> getAllNodes() {
+  public List<DatanodeDetails> getAllNodes() {
     return null;
   }
 
@@ -261,18 +263,18 @@ public class MockNodeManager implements NodeManager {
    * @return a list of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<String, SCMNodeStat> getNodeStats() {
+  public Map<UUID, SCMNodeStat> getNodeStats() {
     return nodeMetricMap;
   }
 
   /**
    * Return the node stat of the specified datanode.
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails - datanode details.
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   @Override
-  public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
-    return new SCMNodeMetric(nodeMetricMap.get(datanodeID.toString()));
+  public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
+    return new SCMNodeMetric(nodeMetricMap.get(datanodeDetails.getUuid()));
   }
 
   @Override
@@ -293,36 +295,36 @@ public class MockNodeManager implements NodeManager {
   /**
    * Returns the node state of a specific node.
    *
-   * @param id - DatanodeID
+   * @param dd - DatanodeDetails
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public HdslProtos.NodeState getNodeState(DatanodeID id) {
+  public HdslProtos.NodeState getNodeState(DatanodeDetails dd) {
     return null;
   }
 
   @Override
-  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
-    if(commandMap.containsKey(id)) {
-      List<SCMCommand> commandList = commandMap.get(id);
+  public void addDatanodeCommand(UUID dnId, SCMCommand command) {
+    if(commandMap.containsKey(dnId)) {
+      List<SCMCommand> commandList = commandMap.get(dnId);
       Preconditions.checkNotNull(commandList);
       commandList.add(command);
     } else {
       List<SCMCommand> commandList = new LinkedList<>();
       commandList.add(command);
-      commandMap.put(id, commandList);
+      commandMap.put(dnId, commandList);
     }
   }
 
   // Returns the number of commands that is queued to this node manager.
-  public int getCommandCount(DatanodeID id) {
-    List<SCMCommand> list = commandMap.get(id);
+  public int getCommandCount(DatanodeDetails dd) {
+    List<SCMCommand> list = commandMap.get(dd);
     return (list == null) ? 0 : list.size();
   }
 
-  public void clearCommandQueue(DatanodeID id) {
-    if(commandMap.containsKey(id)) {
-      commandMap.put(id, new LinkedList<>());
+  public void clearCommandQueue(UUID dnId) {
+    if(commandMap.containsKey(dnId)) {
+      commandMap.put(dnId, new LinkedList<>());
     }
   }
 
@@ -373,29 +375,29 @@ public class MockNodeManager implements NodeManager {
    * Register the node if the node finds that it is not registered with any
    * SCM.
    *
-   * @param datanodeID - Send datanodeID with Node info, but datanode UUID is
-   * empty. Server returns a datanodeID for the given node.
+   * @param datanodeDetails DatanodeDetailsProto
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(DatanodeID datanodeID) {
+  public SCMCommand register(HdslProtos.DatanodeDetailsProto datanodeDetails) {
     return null;
   }
 
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetails - Datanode ID.
    * @param nodeReport - node report.
    * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
+  public List<SCMCommand> sendHeartbeat(
+      HdslProtos.DatanodeDetailsProto datanodeDetails,
       SCMNodeReport nodeReport, ReportState containerReportState) {
-    if ((datanodeID != null) && (nodeReport != null) && (nodeReport
+    if ((datanodeDetails != null) && (nodeReport != null) && (nodeReport
         .getStorageReportCount() > 0)) {
-      SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+      SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
 
       long totalCapacity = 0L;
       long totalRemaining = 0L;
@@ -409,7 +411,8 @@ public class MockNodeManager implements NodeManager {
       aggregateStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
       aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeID.toString(), stat);
+      nodeMetricMap.put(DatanodeDetails
+          .getFromProtoBuf(datanodeDetails).getUuid(), stat);
 
     }
     return null;
@@ -427,32 +430,32 @@ public class MockNodeManager implements NodeManager {
   /**
    * Makes it easy to add a container.
    *
-   * @param datanodeID datanode ID
+   * @param datanodeDetails datanode details
    * @param size number of bytes.
    */
-  public void addContainer(DatanodeID datanodeID, long size) {
-    SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+  public void addContainer(DatanodeDetails datanodeDetails, long size) {
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
     if (stat != null) {
       aggregateStat.subtract(stat);
       stat.getCapacity().add(size);
       aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeID.toString(), stat);
+      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
     }
   }
 
   /**
    * Makes it easy to simulate a delete of a container.
    *
-   * @param datanodeID datanode ID
+   * @param datanodeDetails datanode Details
    * @param size number of bytes.
    */
-  public void delContainer(DatanodeID datanodeID, long size) {
-    SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
+  public void delContainer(DatanodeDetails datanodeDetails, long size) {
+    SCMNodeStat stat = this.nodeMetricMap.get(datanodeDetails.getUuid());
     if (stat != null) {
       aggregateStat.subtract(stat);
       stat.getCapacity().subtract(size);
       aggregateStat.add(stat);
-      nodeMetricMap.put(datanodeID.toString(), stat);
+      nodeMetricMap.put(datanodeDetails.getUuid(), stat);
     }
   }
 

@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.scm.container.placement.algorithms;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.slf4j.Logger;
@@ -62,9 +62,9 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    * @throws SCMException  SCMException
    */
   @Override
-  public List<DatanodeID> chooseDatanodes(final int nodesRequired,
-      final long sizeRequired) throws SCMException {
-    List<DatanodeID> healthyNodes =
+  public List<DatanodeDetails> chooseDatanodes(
+      final int nodesRequired, final long sizeRequired) throws SCMException {
+    List<DatanodeDetails> healthyNodes =
         super.chooseDatanodes(nodesRequired, sizeRequired);
 
     if (healthyNodes.size() == nodesRequired) {
@@ -80,8 +80,8 @@ public final class SCMContainerPlacementRandom extends SCMCommonPolicy
    * @param healthyNodes - all healthy datanodes.
    * @return one randomly chosen datanode that from two randomly chosen datanode
    */
-  public DatanodeID chooseNode(final List<DatanodeID> healthyNodes) {
-    DatanodeID selectedNode =
+  public DatanodeDetails chooseNode(final List<DatanodeDetails> healthyNodes) {
+    DatanodeDetails selectedNode =
         healthyNodes.get(getRand().nextInt(healthyNodes.size()));
     healthyNodes.remove(selectedNode);
     return selectedNode;

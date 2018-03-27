@@ -18,7 +18,6 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
@@ -69,8 +68,7 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
     }
 
     try {
-      return impl.register(DatanodeID.getFromProtoBuf(request
-          .getDatanodeID()), addressArray);
+      return impl.register(request.getDatanodeDetails(), addressArray);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -81,8 +79,8 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
       sendHeartbeat(RpcController controller,
       SCMHeartbeatRequestProto request) throws ServiceException {
     try {
-      return impl.sendHeartbeat(DatanodeID.getFromProtoBuf(request
-          .getDatanodeID()), request.getNodeReport(),
+      return impl.sendHeartbeat(request.getDatanodeDetails(),
+          request.getNodeReport(),
           request.getContainerReportState());
     } catch (IOException e) {
       throw new ServiceException(e);

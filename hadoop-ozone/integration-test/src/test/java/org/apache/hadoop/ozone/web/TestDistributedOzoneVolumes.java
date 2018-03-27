@@ -67,7 +67,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    port = dataNode.getDatanodeId().getOzoneRestPort();
+    port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
   }
 
   /**

@@ -18,15 +18,15 @@ package org.apache.hadoop.ozone.container.common.states.datanode;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.HdslUtils;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
-import org.apache.hadoop.scm.ScmConfigKeys;
 
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,32 +97,22 @@ public class InitDatanodeState implements DatanodeState,
     }
 
     // If datanode ID is set, persist it to the ID file.
-    persistContainerDatanodeID();
+    persistContainerDatanodeDetails();
 
     return this.context.getState().getNextState();
   }
 
   /**
-   * Update Ozone container port to the datanode ID,
-   * and persist the ID to a local file.
+   * Persist DatanodeDetails to datanode.id file.
    */
-  private void persistContainerDatanodeID() throws IOException {
-    String dataNodeIDPath = HdslUtils.getDatanodeIDPath(conf);
-    if (Strings.isNullOrEmpty(dataNodeIDPath)) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-      this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
-      return;
-    }
+  private void persistContainerDatanodeDetails() throws IOException {
+    String dataNodeIDPath = HdslUtils.getDatanodeIdFilePath(conf);
     File idPath = new File(dataNodeIDPath);
-    int containerPort = this.context.getContainerPort();
-    int ratisPort = this.context.getRatisPort();
-    DatanodeID datanodeID = this.context.getParent().getDatanodeID();
-    if (datanodeID != null) {
-      datanodeID.setContainerPort(containerPort);
-      datanodeID.setRatisPort(ratisPort);
-      ContainerUtils.writeDatanodeIDTo(datanodeID, idPath);
-      LOG.info("Datanode ID is persisted to {}", dataNodeIDPath);
+    DatanodeDetails datanodeDetails = this.context.getParent()
+        .getDatanodeDetails();
+    if (datanodeDetails != null && !idPath.exists()) {
+      ContainerUtils.writeDatanodeDetailsTo(datanodeDetails, idPath);
+      LOG.info("DatanodeDetails is persisted to {}", dataNodeIDPath);
     }
   }
 

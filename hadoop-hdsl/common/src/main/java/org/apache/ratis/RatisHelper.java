@@ -18,7 +18,7 @@
 
 package org.apache.ratis;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.client.RaftClient;
@@ -47,19 +47,19 @@ import java.util.stream.Collectors;
 public interface RatisHelper {
   Logger LOG = LoggerFactory.getLogger(RatisHelper.class);
 
-  static String toRaftPeerIdString(DatanodeID id) {
-    return id.getIpAddr() + "_" + id.getRatisPort();
+  static String toRaftPeerIdString(DatanodeDetails id) {
+    return id.getUuidString() + "_" + id.getRatisPort();
   }
 
-  static String toRaftPeerAddressString(DatanodeID id) {
-    return id.getIpAddr() + ":" + id.getRatisPort();
+  static String toRaftPeerAddressString(DatanodeDetails id) {
+    return id.getIpAddress() + ":" + id.getRatisPort();
   }
 
-  static RaftPeerId toRaftPeerId(DatanodeID id) {
+  static RaftPeerId toRaftPeerId(DatanodeDetails id) {
     return RaftPeerId.valueOf(toRaftPeerIdString(id));
   }
 
-  static RaftPeer toRaftPeer(DatanodeID id) {
+  static RaftPeer toRaftPeer(DatanodeDetails id) {
     return new RaftPeer(toRaftPeerId(id), toRaftPeerAddressString(id));
   }
 
@@ -67,7 +67,8 @@ public interface RatisHelper {
     return toRaftPeers(pipeline.getMachines());
   }
 
-  static <E extends DatanodeID> List<RaftPeer> toRaftPeers(List<E> datanodes) {
+  static <E extends DatanodeDetails> List<RaftPeer> toRaftPeers(
+      List<E> datanodes) {
     return datanodes.stream().map(RatisHelper::toRaftPeer)
         .collect(Collectors.toList());
   }
@@ -85,7 +86,7 @@ public interface RatisHelper {
     return EMPTY_GROUP;
   }
 
-  static RaftGroup newRaftGroup(List<DatanodeID> datanodes) {
+  static RaftGroup newRaftGroup(List<DatanodeDetails> datanodes) {
     final List<RaftPeer> newPeers = datanodes.stream()
         .map(RatisHelper::toRaftPeer)
         .collect(Collectors.toList());

@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -878,7 +877,7 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
         .getNodesList();
 
     for (HdslProtos.Node node : nodes) {
-      HdfsProtos.DatanodeIDProto datanode = node.getNodeID();
+      HdslProtos.DatanodeDetailsProto datanode = node.getNodeID();
 
       ServiceInfo.Builder dnServiceInfoBuilder = ServiceInfo.newBuilder()
           .setNodeType(HdslProtos.NodeType.DATANODE)

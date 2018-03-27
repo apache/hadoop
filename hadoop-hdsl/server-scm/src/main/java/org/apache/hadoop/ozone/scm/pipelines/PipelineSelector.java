@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.scm.pipelines;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
@@ -83,16 +83,17 @@ public class PipelineSelector {
    * The first of the list will be the leader node.
    * @return pipeline corresponding to nodes
    */
-  public static PipelineChannel newPipelineFromNodes(List<DatanodeID> nodes,
-      LifeCycleState state, ReplicationType replicationType,
-      ReplicationFactor replicationFactor, String name) {
+  public static PipelineChannel newPipelineFromNodes(
+      List<DatanodeDetails> nodes, LifeCycleState state,
+      ReplicationType replicationType, ReplicationFactor replicationFactor,
+      String name) {
     Preconditions.checkNotNull(nodes);
     Preconditions.checkArgument(nodes.size() > 0);
-    String leaderId = nodes.get(0).getDatanodeUuid();
+    String leaderId = nodes.get(0).getUuidString();
     PipelineChannel
         pipelineChannel = new PipelineChannel(leaderId, state, replicationType,
         replicationFactor, name);
-    for (DatanodeID node : nodes) {
+    for (DatanodeDetails node : nodes) {
       pipelineChannel.addMember(node);
     }
     return pipelineChannel;
@@ -178,11 +179,11 @@ public class PipelineSelector {
    */
 
   public void createPipeline(ReplicationType replicationType, String
-      pipelineID, List<DatanodeID> datanodes) throws IOException {
+      pipelineID, List<DatanodeDetails> datanodes) throws IOException {
     PipelineManager manager = getPipelineManager(replicationType);
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
     LOG.debug("Creating a pipeline: {} with nodes:{}", pipelineID,
-        datanodes.stream().map(DatanodeID::toString)
+        datanodes.stream().map(DatanodeDetails::toString)
             .collect(Collectors.joining(",")));
     manager.createPipeline(pipelineID, datanodes);
   }
@@ -203,7 +204,7 @@ public class PipelineSelector {
    * list members in the pipeline .
    */
 
-  public List<DatanodeID> getDatanodes(ReplicationType replicationType,
+  public List<DatanodeDetails> getDatanodes(ReplicationType replicationType,
       String pipelineID) throws IOException {
     PipelineManager manager = getPipelineManager(replicationType);
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
@@ -216,11 +217,11 @@ public class PipelineSelector {
    */
 
   public void updateDatanodes(ReplicationType replicationType, String
-      pipelineID, List<DatanodeID> newDatanodes) throws IOException {
+      pipelineID, List<DatanodeDetails> newDatanodes) throws IOException {
     PipelineManager manager = getPipelineManager(replicationType);
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
     LOG.debug("Updating pipeline: {} with new nodes:{}", pipelineID,
-        newDatanodes.stream().map(DatanodeID::toString)
+        newDatanodes.stream().map(DatanodeDetails::toString)
             .collect(Collectors.joining(",")));
     manager.updatePipeline(pipelineID, newDatanodes);
   }

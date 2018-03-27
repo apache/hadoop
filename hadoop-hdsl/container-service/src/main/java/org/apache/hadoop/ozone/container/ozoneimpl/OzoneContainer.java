@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
@@ -81,8 +81,9 @@ public class OzoneContainer {
    * @param ozoneConfig - Config
    * @throws IOException
    */
-  public OzoneContainer(DatanodeID datanodeID, Configuration ozoneConfig) throws
-      IOException {
+  public OzoneContainer(
+      DatanodeDetails datanodeDetails, Configuration ozoneConfig)
+      throws IOException {
     this.ozoneConfig = ozoneConfig;
     List<StorageLocation> locations = new LinkedList<>();
     String[] paths = ozoneConfig.getStrings(
@@ -97,7 +98,7 @@ public class OzoneContainer {
     }
 
     manager = new ContainerManagerImpl();
-    manager.init(this.ozoneConfig, locations, datanodeID);
+    manager.init(this.ozoneConfig, locations, datanodeDetails);
     this.chunkManager = new ChunkManagerImpl(manager);
     manager.setChunkManager(this.chunkManager);
 
@@ -116,9 +117,9 @@ public class OzoneContainer {
     this.dispatcher = new Dispatcher(manager, this.ozoneConfig);
 
     server = new XceiverServerSpi[]{
-        new XceiverServer(this.ozoneConfig, this.dispatcher),
+        new XceiverServer(datanodeDetails, this.ozoneConfig, this.dispatcher),
       XceiverServerRatis
-          .newXceiverServerRatis(datanodeID, ozoneConfig, dispatcher)
+          .newXceiverServerRatis(datanodeDetails, this.ozoneConfig, dispatcher)
     };
   }
 

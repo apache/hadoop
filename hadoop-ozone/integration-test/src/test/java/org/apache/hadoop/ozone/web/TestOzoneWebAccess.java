@@ -79,7 +79,7 @@ public class TestOzoneWebAccess {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    port = dataNode.getDatanodeId().getOzoneRestPort();
+    port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
   }
 
   /**

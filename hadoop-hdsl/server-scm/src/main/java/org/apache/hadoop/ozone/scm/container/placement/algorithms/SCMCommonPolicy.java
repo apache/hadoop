@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.scm.container.placement.algorithms;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
@@ -101,9 +101,9 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * @throws SCMException SCM exception.
    */
 
-  public List<DatanodeID> chooseDatanodes(int nodesRequired, final long
+  public List<DatanodeDetails> chooseDatanodes(int nodesRequired, final long
       sizeRequired) throws SCMException {
-    List<DatanodeID> healthyNodes =
+    List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HdslProtos.NodeState.HEALTHY);
     String msg;
     if (healthyNodes.size() == 0) {
@@ -121,7 +121,7 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
       throw new SCMException(msg,
           SCMException.ResultCodes.FAILED_TO_FIND_SUITABLE_NODE);
     }
-    List<DatanodeID> healthyList = healthyNodes.stream().filter(d ->
+    List<DatanodeDetails> healthyList = healthyNodes.stream().filter(d ->
         hasEnoughSpace(d, sizeRequired)).collect(Collectors.toList());
 
     if (healthyList.size() < nodesRequired) {
@@ -140,11 +140,12 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
   /**
    * Returns true if this node has enough space to meet our requirement.
    *
-   * @param datanodeID DatanodeID
+   * @param datanodeDetails DatanodeDetails
    * @return true if we have enough space.
    */
-  private boolean hasEnoughSpace(DatanodeID datanodeID, long sizeRequired) {
-    SCMNodeMetric nodeMetric = nodeManager.getNodeStat(datanodeID);
+  private boolean hasEnoughSpace(DatanodeDetails datanodeDetails,
+                                 long sizeRequired) {
+    SCMNodeMetric nodeMetric = nodeManager.getNodeStat(datanodeDetails);
     return (nodeMetric != null) && nodeMetric.get().getRemaining()
         .hasResources(sizeRequired);
   }
@@ -159,12 +160,13 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * @return List of Datanodes that can be used for placement.
    * @throws SCMException
    */
-  public List<DatanodeID> getResultSet(int nodesRequired, List<DatanodeID>
-      healthyNodes) throws SCMException {
-    List<DatanodeID> results = new LinkedList<>();
+  public List<DatanodeDetails> getResultSet(
+      int nodesRequired, List<DatanodeDetails> healthyNodes)
+      throws SCMException {
+    List<DatanodeDetails> results = new LinkedList<>();
     for (int x = 0; x < nodesRequired; x++) {
       // invoke the choose function defined in the derived classes.
-      DatanodeID nodeId = chooseNode(healthyNodes);
+      DatanodeDetails nodeId = chooseNode(healthyNodes);
       if (nodeId != null) {
         results.add(nodeId);
       }
@@ -186,9 +188,10 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
    * PlacementRandom.
    *
    * @param healthyNodes - Set of healthy nodes we can choose from.
-   * @return DatanodeID
+   * @return DatanodeDetails
    */
-  public abstract DatanodeID chooseNode(List<DatanodeID> healthyNodes);
+  public abstract DatanodeDetails chooseNode(
+      List<DatanodeDetails> healthyNodes);
 
 
 }

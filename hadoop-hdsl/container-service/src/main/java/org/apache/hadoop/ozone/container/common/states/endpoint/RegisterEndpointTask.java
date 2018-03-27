@@ -18,12 +18,11 @@ package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine;
 
-import org.apache.hadoop.hdsl.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,7 @@ public final class RegisterEndpointTask implements
   private final EndpointStateMachine rpcEndPoint;
   private final Configuration conf;
   private Future<EndpointStateMachine.EndPointStates> result;
-  private ContainerNodeIDProto containerNodeIDProto;
+  private DatanodeDetailsProto datanodeDetailsProto;
 
   /**
    * Creates a register endpoint task.
@@ -59,22 +58,22 @@ public final class RegisterEndpointTask implements
   }
 
   /**
-   * Get the ContainerNodeID Proto.
+   * Get the DatanodeDetailsProto Proto.
    *
-   * @return ContainerNodeIDProto
+   * @return DatanodeDetailsProto
    */
-  public ContainerNodeIDProto getContainerNodeIDProto() {
-    return containerNodeIDProto;
+  public DatanodeDetailsProto getDatanodeDetailsProto() {
+    return datanodeDetailsProto;
   }
 
   /**
    * Set the contiainerNodeID Proto.
    *
-   * @param containerNodeIDProto - Container Node ID.
+   * @param datanodeDetailsProto - Container Node ID.
    */
-  public void setContainerNodeIDProto(ContainerNodeIDProto
-      containerNodeIDProto) {
-    this.containerNodeIDProto = containerNodeIDProto;
+  public void setDatanodeDetailsProto(
+      DatanodeDetailsProto datanodeDetailsProto) {
+    this.datanodeDetailsProto = datanodeDetailsProto;
   }
 
   /**
@@ -86,7 +85,7 @@ public final class RegisterEndpointTask implements
   @Override
   public EndpointStateMachine.EndPointStates call() throws Exception {
 
-    if (getContainerNodeIDProto() == null) {
+    if (getDatanodeDetailsProto() == null) {
       LOG.error("Container ID proto cannot be null in RegisterEndpoint task, " +
           "shutting down the endpoint.");
       return rpcEndPoint.setState(EndpointStateMachine.EndPointStates.SHUTDOWN);
@@ -94,11 +93,9 @@ public final class RegisterEndpointTask implements
 
     rpcEndPoint.lock();
     try {
-      DatanodeID dnNodeID = DatanodeID.getFromProtoBuf(
-          getContainerNodeIDProto().getDatanodeID());
 
       // TODO : Add responses to the command Queue.
-      rpcEndPoint.getEndPoint().register(dnNodeID,
+      rpcEndPoint.getEndPoint().register(datanodeDetailsProto,
           conf.getStrings(ScmConfigKeys.OZONE_SCM_NAMES));
       EndpointStateMachine.EndPointStates nextState =
           rpcEndPoint.getState().getNextState();
@@ -129,7 +126,7 @@ public final class RegisterEndpointTask implements
   public static class Builder {
     private EndpointStateMachine endPointStateMachine;
     private Configuration conf;
-    private ContainerNodeIDProto containerNodeIDProto;
+    private DatanodeDetails datanodeDetails;
 
     /**
      * Constructs the builder class.
@@ -162,11 +159,11 @@ public final class RegisterEndpointTask implements
     /**
      * Sets the NodeID.
      *
-     * @param nodeID - NodeID proto
+     * @param dnDetails - NodeID proto
      * @return Builder
      */
-    public Builder setNodeID(ContainerNodeIDProto nodeID) {
-      this.containerNodeIDProto = nodeID;
+    public Builder setDatanodeDetails(DatanodeDetails dnDetails) {
+      this.datanodeDetails = dnDetails;
       return this;
     }
 
@@ -183,15 +180,15 @@ public final class RegisterEndpointTask implements
             " construct RegisterEndpoint task");
       }
 
-      if (containerNodeIDProto == null) {
-        LOG.error("No nodeID specified.");
+      if (datanodeDetails == null) {
+        LOG.error("No datanode specified.");
         throw new IllegalArgumentException("A vaild Node ID is needed to " +
             "construct RegisterEndpoint task");
       }
 
       RegisterEndpointTask task = new RegisterEndpointTask(this
           .endPointStateMachine, this.conf);
-      task.setContainerNodeIDProto(containerNodeIDProto);
+      task.setDatanodeDetailsProto(datanodeDetails.getProtoBufMessage());
       return task;
     }
   }

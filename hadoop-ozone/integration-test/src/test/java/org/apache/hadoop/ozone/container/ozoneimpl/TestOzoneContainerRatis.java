@@ -87,7 +87,8 @@ public class TestOzoneContainerRatis {
       final List<DataNode> datanodes = cluster.getDataNodes();
       final Pipeline pipeline = ContainerTestHelper.createPipeline(
           containerName,
-          CollectionUtils.as(datanodes, DataNode::getDatanodeId));
+          CollectionUtils.as(datanodes,
+              MiniOzoneClassicCluster::getDatanodeDetails));
       LOG.info("pipeline=" + pipeline);
 
       // Create Ratis cluster
@@ -97,7 +98,7 @@ public class TestOzoneContainerRatis {
 //      LOG.info("Created RatisCluster " + ratisId);
 //
 //      // check Ratis cluster members
-//      final List<DatanodeID> dns = manager.getMembers(ratisId);
+//      final List<DatanodeDetails> dns = manager.getMembers(ratisId);
 //      Assert.assertEquals(pipeline.getMachines(), dns);
 //
 //      // run test

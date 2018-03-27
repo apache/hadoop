@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.scm.container.replication;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
 import org.apache.hadoop.hdsl.protocol.proto
@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -62,7 +63,7 @@ public final class InProgressPool {
   private final NodePoolManager poolManager;
   private final ExecutorService executorService;
   private final Map<String, Integer> containerCountMap;
-  private final Map<String, Boolean> processedNodeSet;
+  private final Map<UUID, Boolean> processedNodeSet;
   private final long startTime;
   private ProgressStatus status;
   private AtomicInteger nodeCount;
@@ -165,9 +166,9 @@ public final class InProgressPool {
    * Starts the reconciliation process for all the nodes in the pool.
    */
   public void startReconciliation() {
-    List<DatanodeID> datanodeIDList =
+    List<DatanodeDetails> datanodeDetailsList =
         this.poolManager.getNodes(pool.getPoolName());
-    if (datanodeIDList.size() == 0) {
+    if (datanodeDetailsList.size() == 0) {
       LOG.error("Datanode list for {} is Empty. Pool with no nodes ? ",
           pool.getPoolName());
       this.status = ProgressStatus.Error;
@@ -181,14 +182,14 @@ public final class InProgressPool {
        Ask each datanode to send us commands.
      */
     SendContainerCommand cmd = SendContainerCommand.newBuilder().build();
-    for (DatanodeID id : datanodeIDList) {
-      NodeState currentState = getNodestate(id);
+    for (DatanodeDetails dd : datanodeDetailsList) {
+      NodeState currentState = getNodestate(dd);
       if (currentState == HEALTHY || currentState == STALE) {
         nodeCount.incrementAndGet();
         // Queue commands to all datanodes in this pool to send us container
         // report. Since we ignore dead nodes, it is possible that we would have
         // over replicated the container if the node comes back.
-        nodeManager.addDatanodeCommand(id, cmd);
+        nodeManager.addDatanodeCommand(dd.getUuid(), cmd);
       }
     }
     this.status = ProgressStatus.InProgress;
@@ -198,10 +199,10 @@ public final class InProgressPool {
   /**
    * Gets the node state.
    *
-   * @param id - datanode ID.
+   * @param datanode - datanode information.
    * @return NodeState.
    */
-  private NodeState getNodestate(DatanodeID id) {
+  private NodeState getNodestate(DatanodeDetails datanode) {
     NodeState  currentState = INVALID;
     int maxTry = 100;
     // We need to loop to make sure that we will retry if we get
@@ -212,7 +213,7 @@ public final class InProgressPool {
     while (currentState == INVALID && currentTry < maxTry) {
       // Retry to make sure that we deal with the case of node state not
       // known.
-      currentState = nodeManager.getNodeState(id);
+      currentState = nodeManager.getNodeState(datanode);
       currentTry++;
       if (currentState == INVALID) {
         // Sleep to make sure that this is not a tight loop.
@@ -222,7 +223,7 @@ public final class InProgressPool {
     if (currentState == INVALID) {
       LOG.error("Not able to determine the state of Node: {}, Exceeded max " +
           "try and node manager returns INVALID state. This indicates we " +
-          "are dealing with a node that we don't know about.", id);
+          "are dealing with a node that we don't know about.", datanode);
     }
     return currentState;
   }
@@ -248,13 +249,13 @@ public final class InProgressPool {
   private Runnable processContainerReport(
       ContainerReportsRequestProto reports) {
     return () -> {
-      DatanodeID datanodeID =
-          DatanodeID.getFromProtoBuf(reports.getDatanodeID());
-      if (processedNodeSet.computeIfAbsent(datanodeID.getDatanodeUuid(),
+      DatanodeDetails datanodeDetails =
+          DatanodeDetails.getFromProtoBuf(reports.getDatanodeDetails());
+      if (processedNodeSet.computeIfAbsent(datanodeDetails.getUuid(),
           (k) -> true)) {
         nodeProcessed.incrementAndGet();
         LOG.debug("Total Nodes processed : {} Node Name: {} ", nodeProcessed,
-            datanodeID.getDatanodeUuid());
+            datanodeDetails.getUuid());
         for (ContainerInfo info : reports.getReportsList()) {
           containerProcessedCount.incrementAndGet();
           LOG.debug("Total Containers processed: {} Container Name: {}",

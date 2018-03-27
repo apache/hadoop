@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -35,6 +34,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -115,7 +115,7 @@ public class TestBlockDeletingService {
     ContainerManager containerManager = new ContainerManagerImpl();
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containersDir.getAbsolutePath()));
-    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
+    containerManager.init(conf, pathLists, TestUtils.getDatanodeDetails());
     return containerManager;
   }
 

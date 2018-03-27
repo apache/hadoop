@@ -28,15 +28,15 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -89,7 +89,7 @@ public class TestContainerDeletionChoosingPolicy {
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containerDir.getAbsolutePath()));
     containerManager = new ContainerManagerImpl();
-    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
+    containerManager.init(conf, pathLists, TestUtils.getDatanodeDetails());
 
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
@@ -135,8 +135,8 @@ public class TestContainerDeletionChoosingPolicy {
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containerDir.getAbsolutePath()));
     containerManager = new ContainerManagerImpl();
-    DatanodeID datanodeID = DFSTestUtil.getLocalDatanodeID();
-    containerManager.init(conf, pathLists, datanodeID);
+    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+    containerManager.init(conf, pathLists, datanodeDetails);
 
     int numContainers = 10;
     Random random = new Random();
@@ -172,7 +172,7 @@ public class TestContainerDeletionChoosingPolicy {
     containerManager.writeLock();
     containerManager.shutdown();
     containerManager.writeUnlock();
-    containerManager.init(conf, pathLists, datanodeID);
+    containerManager.init(conf, pathLists, datanodeDetails);
 
     List<ContainerData> result0 = containerManager
         .chooseContainerForBlockDeletion(5);

@@ -19,8 +19,8 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CloseContainerHandler;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler.CommandDispatcher;
@@ -54,7 +54,7 @@ public class DatanodeStateMachine implements Closeable {
   private final long heartbeatFrequency;
   private StateContext context;
   private final OzoneContainer container;
-  private DatanodeID datanodeID = null;
+  private DatanodeDetails datanodeDetails;
   private final CommandDispatcher commandDispatcher;
   private long commandsHandled;
   private AtomicLong nextHB;
@@ -64,12 +64,13 @@ public class DatanodeStateMachine implements Closeable {
   /**
    * Constructs a a datanode state machine.
    *
-   * @param datanodeID - DatanodeID used to identify a datanode
+   * @param datanodeDetails - DatanodeDetails used to identify a datanode
    * @param conf - Configuration.
    */
-  public DatanodeStateMachine(DatanodeID datanodeID,
+  public DatanodeStateMachine(DatanodeDetails datanodeDetails,
       Configuration conf) throws IOException {
     this.conf = conf;
+    this.datanodeDetails = datanodeDetails;
     executorService = HadoopExecutors.newCachedThreadPool(
                 new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Datanode State Machine Thread - %d").build());
@@ -77,8 +78,8 @@ public class DatanodeStateMachine implements Closeable {
     context = new StateContext(this.conf, DatanodeStates.getInitState(), this);
     heartbeatFrequency = TimeUnit.SECONDS.toMillis(
         getScmHeartbeatInterval(conf));
-    container = new OzoneContainer(datanodeID, new OzoneConfiguration(conf));
-    this.datanodeID = datanodeID;
+    container = new OzoneContainer(this.datanodeDetails,
+        new OzoneConfiguration(conf));
     nextHB = new AtomicLong(Time.monotonicNow());
 
      // When we add new handlers just adding a new handler here should do the
@@ -94,19 +95,16 @@ public class DatanodeStateMachine implements Closeable {
         .build();
   }
 
-  public void setDatanodeID(DatanodeID datanodeID) {
-    this.datanodeID = datanodeID;
-  }
-
   /**
    *
-   * Return DatanodeID if set, return null otherwise.
+   * Return DatanodeDetails if set, return null otherwise.
    *
-   * @return datanodeID
+   * @return DatanodeDetails
    */
-  public DatanodeID getDatanodeID() {
-    return this.datanodeID;
+  public DatanodeDetails getDatanodeDetails() {
+    return datanodeDetails;
   }
+
 
   /**
    * Returns the Connection manager for this state machine.

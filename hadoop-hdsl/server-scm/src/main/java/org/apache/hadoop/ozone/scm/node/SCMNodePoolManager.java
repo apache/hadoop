@@ -20,9 +20,9 @@ package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.utils.MetadataStore;
@@ -60,7 +60,8 @@ public final class SCMNodePoolManager implements NodePoolManager {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMNodePoolManager.class);
-  private static final List<DatanodeID> EMPTY_NODE_LIST = new ArrayList<>();
+  private static final List<DatanodeDetails> EMPTY_NODE_LIST =
+      new ArrayList<>();
   private static final List<String> EMPTY_NODEPOOL_LIST = new ArrayList<>();
   public static final String DEFAULT_NODEPOOL = "DefaultNodePool";
 
@@ -68,7 +69,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
   private MetadataStore nodePoolStore;
 
   // In-memory node pool to nodes mapping
-  private HashMap<String, Set<DatanodeID>> nodePools;
+  private HashMap<String, Set<DatanodeDetails>> nodePools;
 
   // Read-write lock for nodepool operations
   private ReadWriteLock lock;
@@ -104,11 +105,11 @@ public final class SCMNodePoolManager implements NodePoolManager {
     try {
       nodePoolStore.iterate(null, (key, value) -> {
         try {
-          DatanodeID nodeId = DatanodeID.getFromProtoBuf(
-              HdfsProtos.DatanodeIDProto.PARSER.parseFrom(key));
+          DatanodeDetails nodeId = DatanodeDetails.getFromProtoBuf(
+              HdslProtos.DatanodeDetailsProto.PARSER.parseFrom(key));
           String poolName = DFSUtil.bytes2String(value);
 
-          Set<DatanodeID> nodePool = null;
+          Set<DatanodeDetails> nodePool = null;
           if (nodePools.containsKey(poolName)) {
             nodePool = nodePools.get(poolName);
           } else {
@@ -138,7 +139,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
    * @param node - name of the datanode.
    */
   @Override
-  public void addNode(final String pool, final DatanodeID node)
+  public void addNode(final String pool, final DatanodeDetails node)
       throws IOException {
     Preconditions.checkNotNull(pool, "pool name is null");
     Preconditions.checkNotNull(node, "node is null");
@@ -149,11 +150,11 @@ public final class SCMNodePoolManager implements NodePoolManager {
           DFSUtil.string2Bytes(pool));
 
       // add to the in-memory store
-      Set<DatanodeID> nodePool = null;
+      Set<DatanodeDetails> nodePool = null;
       if (nodePools.containsKey(pool)) {
         nodePool = nodePools.get(pool);
       } else {
-        nodePool = new HashSet<DatanodeID>();
+        nodePool = new HashSet<DatanodeDetails>();
         nodePools.put(pool, nodePool);
       }
       nodePool.add(node);
@@ -169,7 +170,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
    * @throws SCMException
    */
   @Override
-  public void removeNode(final String pool, final DatanodeID node)
+  public void removeNode(final String pool, final DatanodeDetails node)
       throws SCMException {
     Preconditions.checkNotNull(pool, "pool name is null");
     Preconditions.checkNotNull(node, "node is null");
@@ -187,12 +188,13 @@ public final class SCMNodePoolManager implements NodePoolManager {
 
       // Remove from the in-memory store
       if (nodePools.containsKey(pool)) {
-        Set<DatanodeID> nodePool = nodePools.get(pool);
+        Set<DatanodeDetails> nodePool = nodePools.get(pool);
         nodePool.remove(node);
       } else {
         throw new SCMException(String.format("Unable to find node %s from" +
             " pool %s in MAP.", DFSUtil.bytes2String(kName), pool),
-            FAILED_TO_FIND_NODE_IN_POOL);      }
+            FAILED_TO_FIND_NODE_IN_POOL);
+      }
     } catch (IOException e) {
       throw new SCMException("Failed to remove node " + node.toString()
           + " from node pool " + pool, e,
@@ -226,7 +228,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
    * @return all datanodes of the specified node pool.
    */
   @Override
-  public List<DatanodeID> getNodes(final String pool) {
+  public List<DatanodeDetails> getNodes(final String pool) {
     Preconditions.checkNotNull(pool, "pool name is null");
     if (nodePools.containsKey(pool)) {
       return nodePools.get(pool).stream().collect(Collectors.toList());
@@ -237,21 +239,22 @@ public final class SCMNodePoolManager implements NodePoolManager {
 
   /**
    * Get the node pool name if the node has been added to a node pool.
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails - datanode ID.
    * @return node pool name if it has been assigned.
    * null if the node has not been assigned to any node pool yet.
    * TODO: Put this in a in-memory map if performance is an issue.
    */
   @Override
-  public String getNodePool(final DatanodeID datanodeID) throws SCMException {
-    Preconditions.checkNotNull(datanodeID, "node is null");
+  public String getNodePool(final DatanodeDetails datanodeDetails)
+      throws SCMException {
+    Preconditions.checkNotNull(datanodeDetails, "node is null");
     try {
       byte[]  result = nodePoolStore.get(
-          datanodeID.getProtoBufMessage().toByteArray());
+          datanodeDetails.getProtoBufMessage().toByteArray());
       return result == null ? null : DFSUtil.bytes2String(result);
     } catch (IOException e) {
       throw new SCMException("Failed to get node pool for node "
-          + datanodeID.toString(), e,
+          + datanodeDetails.toString(), e,
           SCMException.ResultCodes.IO_EXCEPTION);
     }
   }

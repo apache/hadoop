@@ -21,12 +21,12 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -153,7 +153,7 @@ public class TestContainerPersistence {
       FileUtils.forceMkdir(new File(location.getNormalizedUri()));
     }
 
-    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
+    containerManager.init(conf, pathLists, TestUtils.getDatanodeDetails());
   }
 
   @After

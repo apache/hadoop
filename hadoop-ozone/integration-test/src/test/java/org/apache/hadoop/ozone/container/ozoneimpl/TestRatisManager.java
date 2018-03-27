@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -83,15 +83,17 @@ public class TestRatisManager {
       cluster.waitOzoneReady();
 
       final List<DataNode> datanodes = cluster.getDataNodes();
-      final List<DatanodeID> allIds = datanodes.stream()
-          .map(DataNode::getDatanodeId).collect(Collectors.toList());
+      final List<DatanodeDetails> datanodeDetailsSet = datanodes.stream()
+          .map(MiniOzoneClassicCluster::getDatanodeDetails).collect(
+              Collectors.toList());
 
       //final RatisManager manager = RatisManager.newRatisManager(conf);
 
       final int[] idIndex = {3, 4, 5};
       for (int i = 0; i < idIndex.length; i++) {
         final int previous = i == 0 ? 0 : idIndex[i - 1];
-        final List<DatanodeID> subIds = allIds.subList(previous, idIndex[i]);
+        final List<DatanodeDetails> subIds = datanodeDetailsSet.subList(
+            previous, idIndex[i]);
 
         // Create Ratis cluster
         final String ratisId = "ratis" + i;
@@ -99,7 +101,7 @@ public class TestRatisManager {
         LOG.info("Created RatisCluster " + ratisId);
 
         // check Ratis cluster members
-        //final List<DatanodeID> dns = manager.getMembers(ratisId);
+        //final List<DatanodeDetails> dns = manager.getMembers(ratisId);
         //Assert.assertEquals(subIds, dns);
       }
 
@@ -119,7 +121,7 @@ public class TestRatisManager {
       //manager.updatePipeline(ratisId, allIds);
 
       // check Ratis cluster members
-      //final List<DatanodeID> dns = manager.getMembers(ratisId);
+      //final List<DatanodeDetails> dns = manager.getMembers(ratisId);
       //Assert.assertEquals(allIds, dns);
     } finally {
       cluster.shutdown();

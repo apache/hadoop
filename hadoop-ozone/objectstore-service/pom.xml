@@ -59,6 +59,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdsl-container-service</artifactId>
+    </dependency>
+
   </dependencies>
   <build>
     <plugins>

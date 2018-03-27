@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.container.testutils;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -61,7 +61,7 @@ public class ReplicationDatanodeStateManager {
   public List<ContainerReportsRequestProto> getContainerReport(
       String containerName, String poolName, int dataNodeCount) {
     List<ContainerReportsRequestProto> containerList = new LinkedList<>();
-    List<DatanodeID> nodesInPool = poolManager.getNodes(poolName);
+    List<DatanodeDetails> nodesInPool = poolManager.getNodes(poolName);
 
     if (nodesInPool == null) {
       return containerList;
@@ -74,7 +74,7 @@ public class ReplicationDatanodeStateManager {
 
     int containerID = 1;
     while (containerList.size() < dataNodeCount && nodesInPool.size() > 0) {
-      DatanodeID id = nodesInPool.get(r.nextInt(nodesInPool.size()));
+      DatanodeDetails id = nodesInPool.get(r.nextInt(nodesInPool.size()));
       nodesInPool.remove(id);
       containerID++;
       // We return container reports only for nodes that are healthy.
@@ -86,7 +86,7 @@ public class ReplicationDatanodeStateManager {
             .build();
         ContainerReportsRequestProto containerReport =
             ContainerReportsRequestProto.newBuilder().addReports(info)
-            .setDatanodeID(id.getProtoBufMessage())
+            .setDatanodeDetails(id.getProtoBufMessage())
             .setType(ContainerReportsRequestProto.reportType.fullReport)
             .build();
         containerList.add(containerReport);

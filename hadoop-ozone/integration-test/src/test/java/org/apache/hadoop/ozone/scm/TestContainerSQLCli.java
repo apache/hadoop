@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -214,8 +214,8 @@ public class TestContainerSQLCli {
 
     // verify the sqlite db
     HashMap<String, String> expectedPool = new HashMap<>();
-    for (DatanodeID dnid : nodeManager.getAllNodes()) {
-      expectedPool.put(dnid.getDatanodeUuid(), "DefaultNodePool");
+    for (DatanodeDetails dnid : nodeManager.getAllNodes()) {
+      expectedPool.put(dnid.getUuidString(), "DefaultNodePool");
     }
     Connection conn = connectDB(dbOutPath);
     String sql = "SELECT * FROM nodePool";
@@ -234,7 +234,7 @@ public class TestContainerSQLCli {
   public void testConvertContainerDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
     // TODO : the following will fail due to empty Datanode list, need to fix.
-    //String dnUUID = cluster.getDataNodes().get(0).getDatanodeUuid();
+    //String dnUUID = cluster.getDataNodes().get(0).getUuid();
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + SCM_CONTAINER_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
@@ -279,8 +279,8 @@ public class TestContainerSQLCli {
       count += 1;
     }
     // the two containers maybe on the same datanode, maybe not.
-    int expected = pipeline1.getLeader().getDatanodeUuid().equals(
-        pipeline2.getLeader().getDatanodeUuid())? 1 : 2;
+    int expected = pipeline1.getLeader().getUuid().equals(
+        pipeline2.getLeader().getUuid())? 1 : 2;
     assertEquals(expected, count);
     Files.delete(Paths.get(dbOutPath));
   }

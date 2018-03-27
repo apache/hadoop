@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
@@ -288,11 +288,11 @@ public class ContainerSupervisor implements Closeable {
    */
   public void handleContainerReport(
       ContainerReportsRequestProto containerReport) {
-    DatanodeID datanodeID = DatanodeID.getFromProtoBuf(
-        containerReport.getDatanodeID());
+    DatanodeDetails datanodeDetails = DatanodeDetails.getFromProtoBuf(
+        containerReport.getDatanodeDetails());
     inProgressPoolListLock.readLock().lock();
     try {
-      String poolName = poolManager.getNodePool(datanodeID);
+      String poolName = poolManager.getNodePool(datanodeDetails);
       for (InProgressPool ppool : inProgressPoolList) {
         if (ppool.getPoolName().equalsIgnoreCase(poolName)) {
           ppool.handleContainerReport(containerReport);
@@ -302,11 +302,12 @@ public class ContainerSupervisor implements Closeable {
       // TODO: Decide if we can do anything else with this report.
       LOG.debug("Discarding the container report for pool {}. " +
               "That pool is not currently in the pool reconciliation process." +
-              " Container Name: {}", poolName, containerReport.getDatanodeID());
+              " Container Name: {}", poolName,
+          containerReport.getDatanodeDetails());
     } catch (SCMException e) {
       LOG.warn("Skipping processing container report from datanode {}, "
               + "cause: failed to get the corresponding node pool",
-          datanodeID.toString(), e);
+          datanodeDetails.toString(), e);
     } finally {
       inProgressPoolListLock.readLock().unlock();
     }

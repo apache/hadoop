@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -85,9 +86,11 @@ public class TestCloseContainerHandler {
 
     Assert.assertFalse(isContainerClosed(cluster, containerName));
 
+    DatanodeDetails datanodeDetails = MiniOzoneClassicCluster
+        .getDatanodeDetails(cluster.getDataNodes().get(0));
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
-        .addDatanodeCommand(cluster.getDataNodes().get(0).getDatanodeId(),
+        .addDatanodeCommand(datanodeDetails.getUuid(),
             new CloseContainerCommand(containerName));
 
     GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerName),

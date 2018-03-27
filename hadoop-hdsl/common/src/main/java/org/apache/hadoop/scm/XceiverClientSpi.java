@@ -19,11 +19,11 @@
 package org.apache.hadoop.scm;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
@@ -118,7 +118,7 @@ public abstract class XceiverClientSpi implements Closeable {
    * @param datanodes - Datanodes
    */
   public abstract void createPipeline(String pipelineID,
-      List<DatanodeID> datanodes) throws IOException;
+      List<DatanodeDetails> datanodes) throws IOException;
 
   /**
    * Returns pipeline Type.

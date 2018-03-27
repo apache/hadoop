@@ -19,8 +19,7 @@ package org.apache.hadoop.scm.container.common.helpers;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
@@ -36,7 +35,7 @@ public class PipelineChannel {
   @JsonIgnore
   private String leaderID;
   @JsonIgnore
-  private Map<String, DatanodeID> datanodes;
+  private Map<String, DatanodeDetails> datanodes;
   private LifeCycleState lifeCycleState;
   private ReplicationType type;
   private ReplicationFactor factor;
@@ -57,7 +56,7 @@ public class PipelineChannel {
     return leaderID;
   }
 
-  public Map<String, DatanodeID> getDatanodes() {
+  public Map<String, DatanodeDetails> getDatanodes() {
     return datanodes;
   }
 
@@ -77,15 +76,16 @@ public class PipelineChannel {
     return name;
   }
 
-  public void addMember(DatanodeID dataNodeId) {
-    datanodes.put(dataNodeId.getDatanodeUuid(), dataNodeId);
+  public void addMember(DatanodeDetails datanodeDetails) {
+    datanodes.put(datanodeDetails.getUuid().toString(),
+        datanodeDetails);
   }
 
   @JsonIgnore
   public HdslProtos.PipelineChannel getProtobufMessage() {
     HdslProtos.PipelineChannel.Builder builder =
         HdslProtos.PipelineChannel.newBuilder();
-    for (DatanodeID datanode : datanodes.values()) {
+    for (DatanodeDetails datanode : datanodes.values()) {
       builder.addMembers(datanode.getProtoBufMessage());
     }
     builder.setLeaderID(leaderID);
@@ -113,8 +113,9 @@ public class PipelineChannel {
             transportProtos.getFactor(),
             transportProtos.getName());
 
-    for (HdfsProtos.DatanodeIDProto dataID : transportProtos.getMembersList()) {
-      pipelineChannel.addMember(DatanodeID.getFromProtoBuf(dataID));
+    for (HdslProtos.DatanodeDetailsProto dataID :
+        transportProtos.getMembersList()) {
+      pipelineChannel.addMember(DatanodeDetails.getFromProtoBuf(dataID));
     }
     return pipelineChannel;
   }

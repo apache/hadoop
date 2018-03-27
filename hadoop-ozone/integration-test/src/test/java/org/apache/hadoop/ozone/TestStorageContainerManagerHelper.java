@@ -23,9 +23,9 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
@@ -159,18 +159,19 @@ public class TestStorageContainerManagerHelper {
       throws IOException {
     Pipeline pipeline = cluster.getStorageContainerManager()
         .getContainer(containerName);
-    DatanodeID leadDN = pipeline.getLeader();
+    DatanodeDetails leadDN = pipeline.getLeader();
     OzoneContainer containerServer =
-        getContainerServerByDatanodeID(leadDN.getDatanodeUuid());
+        getContainerServerByDatanodeUuid(leadDN.getUuidString());
     ContainerData containerData = containerServer.getContainerManager()
         .readContainer(containerName);
     return KeyUtils.getDB(containerData, conf);
   }
 
-  private OzoneContainer getContainerServerByDatanodeID(String dnUUID)
+  private OzoneContainer getContainerServerByDatanodeUuid(String dnUUID)
       throws IOException {
     for (DataNode dn : cluster.getDataNodes()) {
-      if (dn.getDatanodeId().getDatanodeUuid().equals(dnUUID)) {
+      if (MiniOzoneClassicCluster.getDatanodeDetails(dn).getUuidString()
+          .equals(dnUUID)) {
         return MiniOzoneTestHelper.getOzoneContainer(dn);
       }
     }

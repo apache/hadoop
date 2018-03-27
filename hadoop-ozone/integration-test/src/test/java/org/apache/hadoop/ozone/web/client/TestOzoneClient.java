@@ -98,7 +98,7 @@ public class TestOzoneClient {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     endpoint = String.format("http://localhost:%d",
-        dataNode.getDatanodeId().getOzoneRestPort());
+        MiniOzoneClassicCluster.getOzoneRestPort(dataNode));
   }
 
   @AfterClass

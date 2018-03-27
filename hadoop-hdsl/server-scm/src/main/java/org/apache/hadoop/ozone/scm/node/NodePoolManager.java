@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.scm.node;
 
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 
 import java.io.Closeable;
@@ -36,7 +36,7 @@ public interface NodePoolManager extends Closeable {
    * @param pool - name of the node pool.
    * @param node - data node.
    */
-  void addNode(String pool, DatanodeID node) throws IOException;
+  void addNode(String pool, DatanodeDetails node) throws IOException;
 
   /**
    * Remove a node from a node pool.
@@ -44,7 +44,7 @@ public interface NodePoolManager extends Closeable {
    * @param node - data node.
    * @throws SCMException
    */
-  void removeNode(String pool, DatanodeID node)
+  void removeNode(String pool, DatanodeDetails node)
       throws SCMException;
 
   /**
@@ -60,13 +60,13 @@ public interface NodePoolManager extends Closeable {
    * @return a list of datanode ids or an empty list if the node pool was not
    *  found.
    */
-  List<DatanodeID> getNodes(String pool);
+  List<DatanodeDetails> getNodes(String pool);
 
   /**
    * Get the node pool name if the node has been added to a node pool.
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails - datanode ID.
    * @return node pool name if it has been assigned.
    * null if the node has not been assigned to any node pool yet.
    */
-  String getNodePool(DatanodeID datanodeID) throws SCMException;
+  String getNodePool(DatanodeDetails datanodeDetails) throws SCMException;
 }

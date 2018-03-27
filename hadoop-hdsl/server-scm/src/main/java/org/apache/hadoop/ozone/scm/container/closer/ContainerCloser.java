@@ -22,8 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -128,9 +127,10 @@ public class ContainerCloser {
     // to SCM. In that case also, data node will ignore this command.
 
     HdslProtos.Pipeline pipeline = info.getPipeline();
-    for (HdfsProtos.DatanodeIDProto datanodeID :
+    for (HdslProtos.DatanodeDetailsProto datanodeDetails :
         pipeline.getPipelineChannel().getMembersList()) {
-      nodeManager.addDatanodeCommand(DatanodeID.getFromProtoBuf(datanodeID),
+      nodeManager.addDatanodeCommand(
+          DatanodeDetails.getFromProtoBuf(datanodeDetails).getUuid(),
           new CloseContainerCommand(info.getContainerName()));
     }
     if (!commandIssued.containsKey(info.getContainerName())) {
