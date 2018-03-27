@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
@@ -45,23 +45,23 @@ public interface StorageContainerDatanodeProtocol {
 
   /**
    * Used by data node to send a Heartbeat.
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetails - Datanode Details.
    * @param nodeReport - node report state
    * @param reportState - container report state.
    * @return - SCMHeartbeatResponseProto
    * @throws IOException
    */
-  SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
+  SCMHeartbeatResponseProto sendHeartbeat(DatanodeDetailsProto datanodeDetails,
       SCMNodeReport nodeReport, ReportState reportState) throws IOException;
 
   /**
    * Register Datanode.
-   * @param datanodeID - DatanodID.
+   * @param datanodeDetails - Datanode Details.
    * @param scmAddresses - List of SCMs this datanode is configured to
    *                     communicate.
    * @return SCM Command.
    */
-  SCMRegisteredCmdResponseProto register(DatanodeID datanodeID,
+  SCMRegisteredCmdResponseProto register(DatanodeDetailsProto datanodeDetails,
       String[] scmAddresses) throws IOException;
 
   /**

@@ -22,9 +22,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
@@ -39,8 +39,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
 import static org.apache.hadoop.hdsl.protocol.proto.ContainerProtos
@@ -397,15 +395,12 @@ public final class ContainerUtils {
   }
 
   /**
-   * Write datanode ID protobuf messages to an ID file.
-   * The old ID file will be overwritten.
+   * Persistent a {@link DatanodeDetails} to a local file.
    *
-   * @param ids A set of {@link DatanodeID}
-   * @param path Local ID file path
-   * @throws IOException When read/write error occurs
+   * @throws IOException when read/write error occurs
    */
-  private synchronized static void writeDatanodeIDs(List<DatanodeID> ids,
-      File path) throws IOException {
+  public synchronized static void writeDatanodeDetailsTo(
+      DatanodeDetails datanodeDetails, File path) throws IOException {
     if (path.exists()) {
       if (!path.delete() || !path.createNewFile()) {
         throw new IOException("Unable to overwrite the datanode ID file.");
@@ -417,61 +412,30 @@ public final class ContainerUtils {
       }
     }
     try (FileOutputStream out = new FileOutputStream(path)) {
-      for (DatanodeID id : ids) {
-        HdfsProtos.DatanodeIDProto dnId = id.getProtoBufMessage();
-        dnId.writeDelimitedTo(out);
-      }
+      HdslProtos.DatanodeDetailsProto proto =
+          datanodeDetails.getProtoBufMessage();
+      proto.writeTo(out);
     }
   }
 
   /**
-   * Persistent a {@link DatanodeID} to a local file.
-   * It reads the IDs first and append a new entry only if the ID is new.
-   * This is to avoid on some dirty environment, this file gets too big.
-   *
-   * @throws IOException when read/write error occurs
-   */
-  public synchronized static void writeDatanodeIDTo(DatanodeID dnID,
-      File path) throws IOException {
-    List<DatanodeID> ids = ContainerUtils.readDatanodeIDsFrom(path);
-    // Only create or overwrite the file
-    // if the ID doesn't exist in the ID file
-    for (DatanodeID id : ids) {
-      if (id.getProtoBufMessage()
-          .equals(dnID.getProtoBufMessage())) {
-        return;
-      }
-    }
-    ids.add(dnID);
-    writeDatanodeIDs(ids, path);
-  }
-
-  /**
-   * Read {@link DatanodeID} from a local ID file and return a set of
-   * datanode IDs. If the ID file doesn't exist, an empty set is returned.
+   * Read {@link DatanodeDetails} from a local ID file.
    *
    * @param path ID file local path
-   * @return A set of {@link DatanodeID}
+   * @return {@link DatanodeDetails}
    * @throws IOException If the id file is malformed or other I/O exceptions
    */
-  public synchronized static List<DatanodeID> readDatanodeIDsFrom(File path)
+  public synchronized static DatanodeDetails readDatanodeDetailsFrom(File path)
       throws IOException {
-    List<DatanodeID> ids = new ArrayList<DatanodeID>();
     if (!path.exists()) {
-      return ids;
+      throw new IOException("Datanode ID file not found.");
     }
     try(FileInputStream in = new FileInputStream(path)) {
-      while(in.available() > 0) {
-        try {
-          HdfsProtos.DatanodeIDProto id =
-              HdfsProtos.DatanodeIDProto.parseDelimitedFrom(in);
-          ids.add(DatanodeID.getFromProtoBuf(id));
-        } catch (IOException e) {
-          throw new IOException("Failed to parse Datanode ID from "
-              + path.getAbsolutePath(), e);
-        }
-      }
+      return DatanodeDetails.getFromProtoBuf(
+          HdslProtos.DatanodeDetailsProto.parseFrom(in));
+    } catch (IOException e) {
+      throw new IOException("Failed to parse DatanodeDetails from "
+          + path.getAbsolutePath(), e);
     }
-    return ids;
   }
 }

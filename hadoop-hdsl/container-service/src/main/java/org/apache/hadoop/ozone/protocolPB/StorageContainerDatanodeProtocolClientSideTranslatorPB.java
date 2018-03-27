@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -118,17 +118,18 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   /**
    * Send by datanode to SCM.
    *
-   * @param datanodeID - DatanodeID
+   * @param datanodeDetailsProto - Datanode Details
    * @param nodeReport - node report
    * @throws IOException
    */
 
   @Override
-  public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
+  public SCMHeartbeatResponseProto sendHeartbeat(
+      DatanodeDetailsProto datanodeDetailsProto,
       SCMNodeReport nodeReport, ReportState reportState) throws IOException {
     SCMHeartbeatRequestProto.Builder req = SCMHeartbeatRequestProto
         .newBuilder();
-    req.setDatanodeID(datanodeID.getProtoBufMessage());
+    req.setDatanodeDetails(datanodeDetailsProto);
     req.setNodeReport(nodeReport);
     req.setContainerReportState(reportState);
     final SCMHeartbeatResponseProto resp;
@@ -143,15 +144,16 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
   /**
    * Register Datanode.
    *
-   * @param datanodeID - DatanodID.
+   * @param datanodeDetailsProto - Datanode Details
    * @return SCM Command.
    */
   @Override
-  public SCMRegisteredCmdResponseProto register(DatanodeID datanodeID,
+  public SCMRegisteredCmdResponseProto register(
+      DatanodeDetailsProto datanodeDetailsProto,
       String[] scmAddresses) throws IOException {
     SCMRegisterRequestProto.Builder req =
         SCMRegisterRequestProto.newBuilder();
-    req.setDatanodeID(datanodeID.getProtoBufMessage());
+    req.setDatanodeDetails(datanodeDetailsProto);
     final SCMRegisteredCmdResponseProto response;
     try {
       response = rpcProxy.register(NULL_RPC_CONTROLLER, req.build());

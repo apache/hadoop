@@ -20,9 +20,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
@@ -41,7 +42,7 @@ public class DatanodeDeletedBlockTransactions {
   private int currentTXNum;
   private Mapping mappingService;
   // A list of TXs mapped to a certain datanode ID.
-  private final ArrayListMultimap<DatanodeID, DeletedBlocksTransaction>
+  private final ArrayListMultimap<UUID, DeletedBlocksTransaction>
       transactions;
 
   DatanodeDeletedBlockTransactions(Mapping mappingService,
@@ -67,7 +68,8 @@ public class DatanodeDeletedBlockTransactions {
       return;
     }
 
-    for (DatanodeID dnID : info.getPipeline().getMachines()) {
+    for (DatanodeDetails dd : info.getPipeline().getMachines()) {
+      UUID dnID = dd.getUuid();
       if (transactions.containsKey(dnID)) {
         List<DeletedBlocksTransaction> txs = transactions.get(dnID);
         if (txs != null && txs.size() < maximumAllowedTXNum) {
@@ -93,7 +95,7 @@ public class DatanodeDeletedBlockTransactions {
     }
   }
 
-  Set<DatanodeID> getDatanodes() {
+  Set<UUID> getDatanodeIDs() {
     return transactions.keySet();
   }
 
@@ -101,18 +103,18 @@ public class DatanodeDeletedBlockTransactions {
     return transactions.isEmpty();
   }
 
-  boolean hasTransactions(DatanodeID dnID) {
-    return transactions.containsKey(dnID) && !transactions.get(dnID).isEmpty();
+  boolean hasTransactions(UUID dnId) {
+    return transactions.containsKey(dnId) &&
+        !transactions.get(dnId).isEmpty();
   }
 
-  List<DeletedBlocksTransaction> getDatanodeTransactions(
-      DatanodeID dnID) {
-    return transactions.get(dnID);
+  List<DeletedBlocksTransaction> getDatanodeTransactions(UUID dnId) {
+    return transactions.get(dnId);
   }
 
-  List<String> getTransactionIDList(DatanodeID dnID) {
-    if (hasTransactions(dnID)) {
-      return transactions.get(dnID).stream()
+  List<String> getTransactionIDList(UUID dnId) {
+    if (hasTransactions(dnId)) {
+      return transactions.get(dnId).stream()
           .map(DeletedBlocksTransaction::getTxID).map(String::valueOf)
           .collect(Collectors.toList());
     } else {

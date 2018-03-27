@@ -20,15 +20,18 @@ package org.apache.hadoop.ozone.web;
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeServicePlugin;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.ozone.HdslDatanodeService;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreRestHttpServer;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.util.ServicePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,20 +43,22 @@ public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
   private static final Logger LOG =
       LoggerFactory.getLogger(ObjectStoreRestPlugin.class);
 
+  private final boolean isOzoneEnabled;
+
+  private Configuration conf;
   private ObjectStoreHandler handler;
-
-  private volatile int restServicePort = -1;
-
   private ObjectStoreRestHttpServer objectStoreRestHttpServer;
 
   public ObjectStoreRestPlugin() {
-    OzoneConfiguration.activate();
+      OzoneConfiguration.activate();
+      this.conf = new OzoneConfiguration();
+      this.isOzoneEnabled = OzoneUtils.isOzoneEnabled(conf);
   }
 
   @Override
   public void start(Object service) {
     DataNode dataNode = (DataNode) service;
-    if (OzoneUtils.isOzoneEnabled(dataNode.getConf())) {
+    if (isOzoneEnabled) {
       try {
         handler = new ObjectStoreHandler(dataNode.getConf());
         ServerSocketChannel httpServerChannel =
@@ -66,20 +71,23 @@ public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
                 handler);
 
         objectStoreRestHttpServer.start();
+        getDatanodeDetails(dataNode).setOzoneRestPort(
+            objectStoreRestHttpServer.getHttpAddress().getPort());
       } catch (IOException e) {
         throw new RuntimeException("Can't start the Object Store Rest server",
             e);
       }
-      synchronized (this) {
-        try {
-          restServicePort =
-              objectStoreRestHttpServer.getHttpAddress().getPort();
-        } finally {
-          //in case fo waiting for the port information: we can continue.
-          this.notify();
-        }
+    }
+  }
+
+  public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
+    for (ServicePlugin plugin : dataNode.getPlugins()) {
+      if (plugin instanceof HdslDatanodeService) {
+        return ((HdslDatanodeService) plugin).getDatanodeDetails();
       }
     }
+    throw new RuntimeException("Not able to find HdslDatanodeService in the" +
+        " list of plugins loaded by DataNode.");
   }
 
   @Override
@@ -97,17 +105,4 @@ public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
     IOUtils.closeQuietly(handler);
   }
 
-  @Override
-  public void onDatanodeIdCreation(DatanodeID dataNodeId) {
-    synchronized (this) {
-      if (restServicePort == -1) {
-        try {
-          this.wait();
-        } catch (InterruptedException e) {
-          LOG.error("Wait for starting up http server is interrupted.");
-        }
-      }
-    }
-    dataNodeId.setOzoneRestPort(restServicePort);
-  }
 }

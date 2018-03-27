@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -100,7 +100,7 @@ public class Pipeline {
    * @return First Machine.
    */
   @JsonIgnore
-  public DatanodeID getLeader() {
+  public DatanodeDetails getLeader() {
     return pipelineChannel.getDatanodes().get(pipelineChannel.getLeaderID());
   }
 
@@ -120,7 +120,7 @@ public class Pipeline {
    * @return List of Machines.
    */
   @JsonIgnore
-  public List<DatanodeID> getMachines() {
+  public List<DatanodeDetails> getMachines() {
     return new ArrayList<>(pipelineChannel.getDatanodes().values());
   }
 
@@ -131,7 +131,7 @@ public class Pipeline {
    */
   public List<String> getDatanodeHosts() {
     List<String> dataHosts = new ArrayList<>();
-    for (DatanodeID id : pipelineChannel.getDatanodes().values()) {
+    for (DatanodeDetails id : pipelineChannel.getDatanodes().values()) {
       dataHosts.add(id.getHostName());
     }
     return dataHosts;

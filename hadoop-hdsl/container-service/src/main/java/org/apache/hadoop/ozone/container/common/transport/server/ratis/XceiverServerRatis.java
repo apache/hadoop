@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.transport.server
@@ -62,7 +62,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final RaftServer server;
   private ThreadPoolExecutor writeChunkExecutor;
 
-  private XceiverServerRatis(DatanodeID id, int port, String storageDir,
+  private XceiverServerRatis(DatanodeDetails dd, int port, String storageDir,
       ContainerDispatcher dispatcher, Configuration conf) throws IOException {
 
     final String rpcType = conf.get(
@@ -80,7 +80,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT);
 
-    Objects.requireNonNull(id, "id == null");
+    Objects.requireNonNull(dd, "id == null");
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(rpc, port,
         storageDir, maxChunkSize, raftSegmentSize, raftSegmentPreallocatedSize);
@@ -93,7 +93,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     ContainerStateMachine stateMachine =
         new ContainerStateMachine(dispatcher, writeChunkExecutor);
     this.server = RaftServer.newBuilder()
-        .setServerId(RatisHelper.toRaftPeerId(id))
+        .setServerId(RatisHelper.toRaftPeerId(dd))
         .setGroup(RatisHelper.emptyRaftGroup())
         .setProperties(serverProperties)
         .setStateMachine(stateMachine)
@@ -131,9 +131,9 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     return properties;
   }
 
-  public static XceiverServerRatis newXceiverServerRatis(DatanodeID datanodeID,
-      Configuration ozoneConf, ContainerDispatcher dispatcher)
-      throws IOException {
+  public static XceiverServerRatis newXceiverServerRatis(
+      DatanodeDetails datanodeDetails, Configuration ozoneConf,
+      ContainerDispatcher dispatcher) throws IOException {
     final String ratisDir = File.separator + "ratis";
     int localPort = ozoneConf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_PORT,
@@ -168,14 +168,15 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         // directories, so we need to pass different local directory for each
         // local instance. So we map ratis directories under datanode ID.
         storageDir =
-            storageDir.concat(File.separator + datanodeID.getDatanodeUuid());
+            storageDir.concat(File.separator +
+                datanodeDetails.getUuidString());
       } catch (IOException e) {
         LOG.error("Unable find a random free port for the server, "
             + "fallback to use default port {}", localPort, e);
       }
     }
-    datanodeID.setRatisPort(localPort);
-    return new XceiverServerRatis(datanodeID, localPort, storageDir,
+    datanodeDetails.setRatisPort(localPort);
+    return new XceiverServerRatis(datanodeDetails, localPort, storageDir,
         dispatcher, ozoneConf);
   }
 

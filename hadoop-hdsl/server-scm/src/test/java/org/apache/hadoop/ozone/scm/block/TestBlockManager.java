@@ -112,8 +112,8 @@ public class TestBlockManager {
         type, factor, containerOwner);
     Assert.assertNotNull(block);
     Pipeline pipeline = blockManager.getBlock(block.getKey());
-    Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
-        block.getPipeline().getLeader().getDatanodeUuid());
+    Assert.assertEquals(pipeline.getLeader().getUuid(),
+        block.getPipeline().getLeader().getUuid());
   }
 
   @Test
@@ -131,8 +131,8 @@ public class TestBlockManager {
     // cleaned yet.
     String deletedKeyName = blockManager.getDeletedKeyName(block.getKey());
     Pipeline pipeline = blockManager.getBlock(deletedKeyName);
-    Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
-        block.getPipeline().getLeader().getDatanodeUuid());
+    Assert.assertEquals(pipeline.getLeader().getUuid(),
+        block.getPipeline().getLeader().getUuid());
   }
 
   @Test

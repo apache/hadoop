@@ -26,12 +26,11 @@ import java.util.UUID;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
@@ -79,7 +78,7 @@ public class TestSCMMetrics {
 
       ContainerReportsRequestProto request = createContainerReport(numReport,
           stat, null);
-      String fstDatanodeID = request.getDatanodeID().getDatanodeUuid();
+      String fstDatanodeUuid = request.getDatanodeDetails().getUuid();
       scmManager.sendContainerReport(request);
 
       // verify container stat metrics
@@ -102,7 +101,7 @@ public class TestSCMMetrics {
 
       // add one new report
       request = createContainerReport(1, stat, null);
-      String sndDatanodeID = request.getDatanodeID().getDatanodeUuid();
+      String sndDatanodeUuid = request.getDatanodeDetails().getUuid();
       scmManager.sendContainerReport(request);
 
       scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -126,11 +125,11 @@ public class TestSCMMetrics {
       // the aggregation.
       stat = new ContainerStat(100, 50, 3, 50, 60, 5, 6);
       scmManager.sendContainerReport(createContainerReport(1, stat,
-          fstDatanodeID));
+          fstDatanodeUuid));
 
       stat = new ContainerStat(1, 1, 1, 1, 1, 1, 1);
       scmManager.sendContainerReport(createContainerReport(1, stat,
-          sndDatanodeID));
+          sndDatanodeUuid));
 
       // the global container metrics value should be updated
       scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -172,7 +171,8 @@ public class TestSCMMetrics {
       StorageContainerManager scmManager = cluster.getStorageContainerManager();
 
       DataNode dataNode = cluster.getDataNodes().get(0);
-      String datanodeUuid = dataNode.getDatanodeId().getDatanodeUuid();
+      String datanodeUuid = MiniOzoneClassicCluster.getDatanodeDetails(dataNode)
+          .getUuidString();
       ContainerReportsRequestProto request = createContainerReport(numReport,
           stat, datanodeUuid);
       scmManager.sendContainerReport(request);
@@ -236,14 +236,23 @@ public class TestSCMMetrics {
       reportsBuilder.addReports(report.getProtoBufMessage());
     }
 
-    DatanodeID datanodeID;
+    DatanodeDetails datanodeDetails;
     if (datanodeUuid == null) {
-      datanodeID = TestUtils.getDatanodeID();
+      datanodeDetails = TestUtils.getDatanodeDetails();
     } else {
-      datanodeID = new DatanodeID("null", "null", datanodeUuid, 0, 0, 0, 0);
+      datanodeDetails = DatanodeDetails.newBuilder()
+          .setUuid(datanodeUuid)
+          .setIpAddress("127.0.0.1")
+          .setHostName("localhost")
+          .setInfoPort(0)
+          .setInfoSecurePort(0)
+          .setContainerPort(0)
+          .setRatisPort(0)
+          .setOzoneRestPort(0)
+          .build();
     }
 
-    reportsBuilder.setDatanodeID(datanodeID.getProtoBufMessage());
+    reportsBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage());
     reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.reportType.fullReport);
     return reportsBuilder.build();

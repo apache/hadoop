@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.Time;
 
@@ -27,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CommandQueue {
   // This list is used as default return value.
   private static final List<SCMCommand> DEFAULT_LIST = new LinkedList<>();
-  private final Map<DatanodeID, Commands> commandMap;
+  private final Map<UUID, Commands> commandMap;
   private final Lock lock;
   private long commandsInQueue;
 
@@ -82,14 +82,14 @@ public class CommandQueue {
    * commands returns a empty list otherwise the current set of
    * commands are returned and command map set to empty list again.
    *
-   * @param datanodeID DatanodeID
+   * @param datanodeUuid Datanode UUID
    * @return List of SCM Commands.
    */
   @SuppressWarnings("unchecked")
-  List<SCMCommand> getCommand(final DatanodeID datanodeID) {
+  List<SCMCommand> getCommand(final UUID datanodeUuid) {
     lock.lock();
     try {
-      Commands cmds = commandMap.remove(datanodeID);
+      Commands cmds = commandMap.remove(datanodeUuid);
       List<SCMCommand> cmdList = null;
       if(cmds != null) {
         cmdList = cmds.getCommands();
@@ -106,17 +106,17 @@ public class CommandQueue {
   /**
    * Adds a Command to the SCM Queue to send the command to container.
    *
-   * @param datanodeID DatanodeID
+   * @param datanodeUuid DatanodeDetails.Uuid
    * @param command    - Command
    */
-  public void addCommand(final DatanodeID datanodeID, final SCMCommand
+  public void addCommand(final UUID datanodeUuid, final SCMCommand
       command) {
     lock.lock();
     try {
-      if (commandMap.containsKey(datanodeID)) {
-        commandMap.get(datanodeID).add(command);
+      if (commandMap.containsKey(datanodeUuid)) {
+        commandMap.get(datanodeUuid).add(command);
       } else {
-        commandMap.put(datanodeID, new Commands(command));
+        commandMap.put(datanodeUuid, new Commands(command));
       }
       commandsInQueue++;
     } finally {

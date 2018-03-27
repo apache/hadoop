@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.hdsl.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
@@ -50,20 +50,19 @@ public interface StorageContainerNodeProtocol {
 
   /**
    * Register the node if the node finds that it is not registered with any SCM.
-   * @param datanodeID - Send datanodeID with Node info, but datanode UUID is
-   *                   empty. Server returns a datanodeID for the given node.
+   * @param datanodeDetails DatanodeDetails
    * @return  SCMHeartbeatResponseProto
    */
-  SCMCommand register(DatanodeID datanodeID);
+  SCMCommand register(DatanodeDetailsProto datanodeDetails);
 
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetails - Datanode ID.
    * @param nodeReport - node report.
    * @param reportState - container report.
    * @return SCMheartbeat response list
    */
-  List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
+  List<SCMCommand> sendHeartbeat(DatanodeDetailsProto datanodeDetails,
       SCMNodeReport nodeReport, ReportState reportState);
 
 }

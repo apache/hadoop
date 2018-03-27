@@ -1577,13 +1577,6 @@ public class DataNode extends ReconfigurableBase
           + bpRegistration.getDatanodeUuid()
           + ". Expecting " + storage.getDatanodeUuid());
     }
-
-    for (ServicePlugin plugin : plugins) {
-      if (plugin instanceof DataNodeServicePlugin) {
-        ((DataNodeServicePlugin) plugin)
-            .onDatanodeSuccessfulNamenodeRegisration(bpRegistration);
-      }
-    }
     registerBlockPoolWithSecretManager(bpRegistration, blockPoolId);
   }
   

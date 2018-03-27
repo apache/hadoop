@@ -23,8 +23,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerData;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.scm.client.ScmClient;
@@ -94,7 +94,7 @@ public class InfoContainerHandler extends OzoneCommandHandler {
     // Print pipeline of an existing container.
     logOut("LeaderID: %s", pipeline.getLeader().getHostName());
     String machinesStr = pipeline.getMachines().stream().map(
-        DatanodeID::getHostName).collect(Collectors.joining(","));
+        DatanodeDetails::getHostName).collect(Collectors.joining(","));
     logOut("Datanodes: [%s]", machinesStr);
   }
 

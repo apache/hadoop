@@ -20,8 +20,10 @@ package org.apache.hadoop.ozone.scm.node;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.DatanodeDetailsProto;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
@@ -62,11 +64,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -115,13 +119,13 @@ public class SCMNodeManager
   /**
    * Key = NodeID, value = timestamp.
    */
-  private final ConcurrentHashMap<String, Long> healthyNodes;
-  private final ConcurrentHashMap<String, Long> staleNodes;
-  private final ConcurrentHashMap<String, Long> deadNodes;
+  private final ConcurrentHashMap<UUID, Long> healthyNodes;
+  private final ConcurrentHashMap<UUID, Long> staleNodes;
+  private final ConcurrentHashMap<UUID, Long> deadNodes;
   private final Queue<HeartbeatQueueItem> heartbeatQueue;
-  private final ConcurrentHashMap<String, DatanodeID> nodes;
+  private final ConcurrentHashMap<UUID, DatanodeDetails> nodes;
   // Individual live node stats
-  private final ConcurrentHashMap<String, SCMNodeStat> nodeStats;
+  private final ConcurrentHashMap<UUID, SCMNodeStat> nodeStats;
   // Aggregated node stats
   private SCMNodeStat scmStat;
   // TODO: expose nodeStats and scmStat as metrics
@@ -170,7 +174,7 @@ public class SCMNodeManager
     deadNodes = new ConcurrentHashMap<>();
     staleNodes = new ConcurrentHashMap<>();
     nodes = new ConcurrentHashMap<>();
-    nodeStats = new ConcurrentHashMap();
+    nodeStats = new ConcurrentHashMap<>();
     scmStat = new SCMNodeStat();
 
     healthyNodeCount = new AtomicInteger(0);
@@ -228,7 +232,7 @@ public class SCMNodeManager
    * @throws UnregisteredNodeException
    */
   @Override
-  public void removeNode(DatanodeID node) throws UnregisteredNodeException {
+  public void removeNode(DatanodeDetails node) {
     // TODO : Fix me when adding the SCM CLI.
 
   }
@@ -242,9 +246,9 @@ public class SCMNodeManager
    * @return List of Datanodes that are known to SCM in the requested state.
    */
   @Override
-  public List<DatanodeID> getNodes(NodeState nodestate)
+  public List<DatanodeDetails> getNodes(NodeState nodestate)
       throws IllegalArgumentException {
-    Map<String, Long> set;
+    Map<UUID, Long> set;
     switch (nodestate) {
     case HEALTHY:
       synchronized (this) {
@@ -272,11 +276,11 @@ public class SCMNodeManager
   /**
    * Returns all datanodes that are known to SCM.
    *
-   * @return List of DatanodeIDs
+   * @return List of DatanodeDetails
    */
   @Override
-  public List<DatanodeID> getAllNodes() {
-    Map<String, DatanodeID> set;
+  public List<DatanodeDetails> getAllNodes() {
+    Map<UUID, DatanodeDetails> set;
     synchronized (this) {
       set = Collections.unmodifiableMap(new HashMap<>(nodes));
     }
@@ -406,11 +410,11 @@ public class SCMNodeManager
   /**
    * Returns the node state of a specific node.
    *
-   * @param id - DatanodeID
+   * @param datanodeDetails - Datanode Details
    * @return Healthy/Stale/Dead/Unknown.
    */
   @Override
-  public NodeState getNodeState(DatanodeID id) {
+  public NodeState getNodeState(DatanodeDetails datanodeDetails) {
     // There is a subtle race condition here, hence we also support
     // the NODEState.UNKNOWN. It is possible that just before we check the
     // healthyNodes, we have removed the node from the healthy list but stil
@@ -419,15 +423,16 @@ public class SCMNodeManager
     // then the node is in 2 states to avoid this race condition. Instead we
     // just deal with the possibilty of getting a state called unknown.
 
-    if(healthyNodes.containsKey(id.getDatanodeUuid())) {
+    UUID id = datanodeDetails.getUuid();
+    if(healthyNodes.containsKey(id)) {
       return HEALTHY;
     }
 
-    if(staleNodes.containsKey(id.getDatanodeUuid())) {
+    if(staleNodes.containsKey(id)) {
       return STALE;
     }
 
-    if(deadNodes.containsKey(id.getDatanodeUuid())) {
+    if(deadNodes.containsKey(id)) {
       return DEAD;
     }
 
@@ -477,7 +482,7 @@ public class SCMNodeManager
     // Iterate over the Stale nodes and decide if we need to move any node to
     // dead State.
     long currentTime = monotonicNow();
-    for (Map.Entry<String, Long> entry : staleNodes.entrySet()) {
+    for (Map.Entry<UUID, Long> entry : staleNodes.entrySet()) {
       if (currentTime - entry.getValue() > deadNodeIntervalMs) {
         synchronized (this) {
           moveStaleNodeToDead(entry);
@@ -488,7 +493,7 @@ public class SCMNodeManager
     // Iterate over the healthy nodes and decide if we need to move any node to
     // Stale State.
     currentTime = monotonicNow();
-    for (Map.Entry<String, Long> entry : healthyNodes.entrySet()) {
+    for (Map.Entry<UUID, Long> entry : healthyNodes.entrySet()) {
       if (currentTime - entry.getValue() > staleNodeIntervalMs) {
         synchronized (this) {
           moveHealthyNodeToStale(entry);
@@ -555,7 +560,7 @@ public class SCMNodeManager
    *
    * @param entry - Map Entry
    */
-  private void moveHealthyNodeToStale(Map.Entry<String, Long> entry) {
+  private void moveHealthyNodeToStale(Map.Entry<UUID, Long> entry) {
     LOG.trace("Moving healthy node to stale: {}", entry.getKey());
     healthyNodes.remove(entry.getKey());
     healthyNodeCount.decrementAndGet();
@@ -564,7 +569,7 @@ public class SCMNodeManager
 
     if (scmManager != null) {
       // remove stale node's container report
-      scmManager.removeContainerReport(entry.getKey());
+      scmManager.removeContainerReport(entry.getKey().toString());
     }
   }
 
@@ -573,7 +578,7 @@ public class SCMNodeManager
    *
    * @param entry - Map Entry
    */
-  private void moveStaleNodeToDead(Map.Entry<String, Long> entry) {
+  private void moveStaleNodeToDead(Map.Entry<UUID, Long> entry) {
     LOG.trace("Moving stale node to dead: {}", entry.getKey());
     staleNodes.remove(entry.getKey());
     staleNodeCount.decrementAndGet();
@@ -594,8 +599,8 @@ public class SCMNodeManager
   private void handleHeartbeat(HeartbeatQueueItem hbItem) {
     lastHBProcessedCount++;
 
-    DatanodeID datanodeID = hbItem.getDatanodeID();
-    String datanodeUuid = datanodeID.getDatanodeUuid();
+    DatanodeDetails datanodeDetails = hbItem.getDatanodeDetails();
+    UUID datanodeUuid = datanodeDetails.getUuid();
     SCMNodeReport nodeReport = hbItem.getNodeReport();
     long recvTimestamp = hbItem.getRecvTimestamp();
     long processTimestamp = Time.monotonicNow();
@@ -610,7 +615,7 @@ public class SCMNodeManager
     if (healthyNodes.containsKey(datanodeUuid)) {
       healthyNodes.put(datanodeUuid, processTimestamp);
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeID,
+      updateCommandQueue(datanodeUuid,
           hbItem.getContainerReportState().getState());
       return;
     }
@@ -623,7 +628,7 @@ public class SCMNodeManager
       healthyNodeCount.incrementAndGet();
       staleNodeCount.decrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeID,
+      updateCommandQueue(datanodeUuid,
           hbItem.getContainerReportState().getState());
       return;
     }
@@ -636,22 +641,22 @@ public class SCMNodeManager
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
       updateNodeStat(datanodeUuid, nodeReport);
-      updateCommandQueue(datanodeID,
+      updateCommandQueue(datanodeUuid,
           hbItem.getContainerReportState().getState());
       return;
     }
 
     LOG.warn("SCM receive heartbeat from unregistered datanode {}",
         datanodeUuid);
-    this.commandQueue.addCommand(hbItem.getDatanodeID(),
+    this.commandQueue.addCommand(datanodeUuid,
         new ReregisterCommand());
   }
 
-  private void updateNodeStat(String datanodeUuid, SCMNodeReport nodeReport) {
-    SCMNodeStat stat = nodeStats.get(datanodeUuid);
+  private void updateNodeStat(UUID dnId, SCMNodeReport nodeReport) {
+    SCMNodeStat stat = nodeStats.get(dnId);
     if (stat == null) {
       LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
-          "dead datanode {}", datanodeUuid);
+          "dead datanode {}", dnId);
       stat = new SCMNodeStat();
     }
 
@@ -667,17 +672,17 @@ public class SCMNodeManager
       }
       scmStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
-      nodeStats.put(datanodeUuid, stat);
+      nodeStats.put(dnId, stat);
       scmStat.add(stat);
     }
   }
 
-  private void updateCommandQueue(DatanodeID datanodeID,
+  private void updateCommandQueue(UUID dnId,
                                   ReportState.states containerReportState) {
     if (containerReportState != null) {
       switch (containerReportState) {
       case completeContinerReport:
-        commandQueue.addCommand(datanodeID,
+        commandQueue.addCommand(dnId,
             SendContainerCommand.newBuilder().build());
         return;
       case deltaContainerReport:
@@ -736,26 +741,36 @@ public class SCMNodeManager
    * Register the node if the node finds that it is not registered with any
    * SCM.
    *
-   * @param datanodeID - Send datanodeID with Node info. This function
-   *                   generates and assigns new datanode ID for the datanode.
-   *                   This allows SCM to be run independent of Namenode if
-   *                   required.
+   * @param datanodeDetailsProto - Send datanodeDetails with Node info.
+   *                   This function generates and assigns new datanode ID
+   *                   for the datanode. This allows SCM to be run independent
+   *                   of Namenode if required.
    *
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(DatanodeID datanodeID) {
+  public SCMCommand register(DatanodeDetailsProto datanodeDetailsProto) {
 
-    SCMCommand responseCommand = verifyDatanodeUUID(datanodeID);
+    DatanodeDetails datanodeDetails = DatanodeDetails.getFromProtoBuf(
+        datanodeDetailsProto);
+    InetAddress dnAddress = Server.getRemoteIp();
+    if (dnAddress != null) {
+      // Mostly called inside an RPC, update ip and peer hostname
+      String hostname = dnAddress.getHostName();
+      String ip = dnAddress.getHostAddress();
+      datanodeDetails.setHostName(hostname);
+      datanodeDetails.setIpAddress(ip);
+    }
+    SCMCommand responseCommand = verifyDatanodeUUID(datanodeDetails);
     if (responseCommand != null) {
       return responseCommand;
     }
-
-    nodes.put(datanodeID.getDatanodeUuid(), datanodeID);
+    UUID dnId = datanodeDetails.getUuid();
+    nodes.put(dnId, datanodeDetails);
     totalNodes.incrementAndGet();
-    healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
+    healthyNodes.put(dnId, monotonicNow());
     healthyNodeCount.incrementAndGet();
-    nodeStats.put(datanodeID.getDatanodeUuid(), new SCMNodeStat());
+    nodeStats.put(dnId, new SCMNodeStat());
 
     if(inStartupChillMode.get() &&
         totalNodes.get() >= getMinimumChillModeNodes()) {
@@ -767,9 +782,9 @@ public class SCMNodeManager
     // For now, all nodes are added to the "DefaultNodePool" upon registration
     // if it has not been added to any node pool yet.
     try {
-      if (nodePoolManager.getNodePool(datanodeID) == null) {
+      if (nodePoolManager.getNodePool(datanodeDetails) == null) {
         nodePoolManager.addNode(SCMNodePoolManager.DEFAULT_NODEPOOL,
-            datanodeID);
+            datanodeDetails);
       }
     } catch (IOException e) {
       // TODO: make sure registration failure is handled correctly.
@@ -778,10 +793,10 @@ public class SCMNodeManager
           .build();
     }
     LOG.info("Data node with ID: {} Registered.",
-        datanodeID.getDatanodeUuid());
+        datanodeDetails.getUuid());
     return RegisteredCommand.newBuilder()
         .setErrorCode(ErrorCode.success)
-        .setDatanodeUUID(datanodeID.getDatanodeUuid())
+        .setDatanodeUUID(datanodeDetails.getUuidString())
         .setClusterID(this.clusterID)
         .build();
   }
@@ -789,18 +804,18 @@ public class SCMNodeManager
   /**
    * Verifies the datanode does not have a valid UUID already.
    *
-   * @param datanodeID - Datanode UUID.
+   * @param datanodeDetails - Datanode Details.
    * @return SCMCommand
    */
-  private SCMCommand verifyDatanodeUUID(DatanodeID datanodeID) {
-    if (datanodeID.getDatanodeUuid() != null &&
-        nodes.containsKey(datanodeID.getDatanodeUuid())) {
+  private SCMCommand verifyDatanodeUUID(DatanodeDetails datanodeDetails) {
+    if (datanodeDetails.getUuid() != null &&
+        nodes.containsKey(datanodeDetails.getUuid())) {
       LOG.trace("Datanode is already registered. Datanode: {}",
-          datanodeID.toString());
+          datanodeDetails.toString());
       return RegisteredCommand.newBuilder()
           .setErrorCode(ErrorCode.success)
           .setClusterID(this.clusterID)
-          .setDatanodeUUID(datanodeID.getDatanodeUuid())
+          .setDatanodeUUID(datanodeDetails.getUuidString())
           .build();
     }
     return null;
@@ -809,24 +824,28 @@ public class SCMNodeManager
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
-   * @param datanodeID - Datanode ID.
+   * @param datanodeDetailsProto - DatanodeDetailsProto.
    * @param nodeReport - node report.
    * @param containerReportState - container report state.
    * @return SCMheartbeat response.
    * @throws IOException
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport, ReportState containerReportState) {
+  public List<SCMCommand> sendHeartbeat(
+      DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
+      ReportState containerReportState) {
+
+    DatanodeDetails datanodeDetails = DatanodeDetails
+        .getFromProtoBuf(datanodeDetailsProto);
 
     // Checking for NULL to make sure that we don't get
     // an exception from ConcurrentList.
     // This could be a problem in tests, if this function is invoked via
     // protobuf, transport layer will guarantee that this is not null.
-    if (datanodeID != null) {
+    if (datanodeDetails != null) {
       heartbeatQueue.add(
           new HeartbeatQueueItem.Builder()
-              .setDatanodeID(datanodeID)
+              .setDatanodeDetails(datanodeDetails)
               .setNodeReport(nodeReport)
               .setContainerReportState(containerReportState)
               .build());
@@ -834,7 +853,7 @@ public class SCMNodeManager
       LOG.error("Datanode ID in heartbeat is null");
     }
 
-    return commandQueue.getCommand(datanodeID);
+    return commandQueue.getCommand(datanodeDetails.getUuid());
   }
 
   /**
@@ -851,18 +870,18 @@ public class SCMNodeManager
    * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<String, SCMNodeStat> getNodeStats() {
+  public Map<UUID, SCMNodeStat> getNodeStats() {
     return Collections.unmodifiableMap(nodeStats);
   }
 
   /**
    * Return the node stat of the specified datanode.
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails - datanode ID.
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   @Override
-  public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
-    return new SCMNodeMetric(nodeStats.get(datanodeID.getDatanodeUuid()));
+  public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
+    return new SCMNodeMetric(nodeStats.get(datanodeDetails));
   }
 
   @Override
@@ -880,8 +899,8 @@ public class SCMNodeManager
   }
 
   @Override
-  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
-    this.commandQueue.addCommand(id, command);
+  public void addDatanodeCommand(UUID dnId, SCMCommand command) {
+    this.commandQueue.addCommand(dnId, command);
   }
 
   @VisibleForTesting

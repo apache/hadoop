@@ -28,8 +28,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
@@ -37,7 +37,6 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Volu
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.Pipeline;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -98,18 +97,16 @@ public class SQLCLI  extends Configured implements Tool {
       "CREATE TABLE datanodeInfo (" +
           "hostName TEXT NOT NULL, " +
           "datanodeUUId TEXT PRIMARY KEY NOT NULL," +
-          "ipAddr TEXT, " +
-          "xferPort INTEGER," +
+          "ipAddress TEXT, " +
           "infoPort INTEGER," +
-          "ipcPort INTEGER," +
           "infoSecurePort INTEGER," +
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
       "INSERT INTO containerInfo (containerName, leaderUUID) " +
           "VALUES (\"%s\", \"%s\")";
   private static final String INSERT_DATANODE_INFO =
-      "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddr, xferPort, " +
-          "infoPort, ipcPort, infoSecurePort, containerPort) " +
+      "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
+          "infoPort, infoSecurePort, containerPort) " +
           "VALUES (\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, %d)";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
@@ -536,23 +533,21 @@ public class SQLCLI  extends Configured implements Tool {
         pipeline.getPipelineChannel().getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
-    for (HdfsProtos.DatanodeIDProto dnID :
+    for (HdslProtos.DatanodeDetailsProto dd :
         pipeline.getPipelineChannel().getMembersList()) {
-      String uuid = dnID.getDatanodeUuid();
+      String uuid = dd.getUuid();
       if (!uuidChecked.contains(uuid)) {
         // we may also not use this checked set, but catch exception instead
         // but this seems a bit cleaner.
-        String ipAddr = dnID.getIpAddr();
-        String hostName = dnID.getHostName();
-        int xferPort = dnID.hasXferPort() ? dnID.getXferPort() : 0;
-        int infoPort = dnID.hasInfoPort() ? dnID.getInfoPort() : 0;
+        String ipAddr = dd.getIpAddress();
+        String hostName = dd.getHostName();
+        int infoPort = dd.hasInfoPort() ? dd.getInfoPort() : 0;
         int securePort =
-            dnID.hasInfoSecurePort() ? dnID.getInfoSecurePort() : 0;
-        int ipcPort = dnID.hasIpcPort() ? dnID.getIpcPort() : 0;
-        int containerPort = dnID.getContainerPort();
+            dd.hasInfoSecurePort() ? dd.getInfoSecurePort() : 0;
+        int containerPort = dd.getContainerPort();
         String insertMachineInfo = String.format(
-            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, xferPort, infoPort,
-            ipcPort, securePort, containerPort);
+            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, infoPort,
+            securePort, containerPort);
         executeSQL(conn, insertMachineInfo);
         uuidChecked.add(uuid);
       }
@@ -633,8 +628,9 @@ public class SQLCLI  extends Configured implements Tool {
       executeSQL(conn, CREATE_DATANODE_INFO);
 
       dbStore.iterate(null, (key, value) -> {
-        DatanodeID nodeId = DatanodeID
-            .getFromProtoBuf(HdfsProtos.DatanodeIDProto.PARSER.parseFrom(key));
+        DatanodeDetails nodeId = DatanodeDetails
+            .getFromProtoBuf(HdslProtos.DatanodeDetailsProto
+                .PARSER.parseFrom(key));
         String blockPool = DFSUtil.bytes2String(value);
         try {
           insertNodePoolDB(conn, blockPool, nodeId);
@@ -647,17 +643,17 @@ public class SQLCLI  extends Configured implements Tool {
   }
 
   private void insertNodePoolDB(Connection conn, String blockPool,
-      DatanodeID datanodeID) throws SQLException {
+      DatanodeDetails datanodeDetails) throws SQLException {
     String insertNodePool = String.format(INSERT_NODE_POOL,
-        datanodeID.getDatanodeUuid(), blockPool);
+        datanodeDetails.getUuidString(), blockPool);
     executeSQL(conn, insertNodePool);
 
-    String insertDatanodeID = String.format(INSERT_DATANODE_INFO,
-        datanodeID.getHostName(), datanodeID.getDatanodeUuid(),
-        datanodeID.getIpAddr(), datanodeID.getXferPort(),
-        datanodeID.getInfoPort(), datanodeID.getIpcPort(),
-        datanodeID.getInfoSecurePort(), datanodeID.getContainerPort());
-    executeSQL(conn, insertDatanodeID);
+    String insertDatanodeDetails = String.format(INSERT_DATANODE_INFO,
+        datanodeDetails.getHostName(), datanodeDetails.getUuid(),
+        datanodeDetails.getIpAddress(), datanodeDetails.getInfoPort(),
+        datanodeDetails.getInfoSecurePort(),
+        datanodeDetails.getContainerPort());
+    executeSQL(conn, insertDatanodeDetails);
   }
 
   /**

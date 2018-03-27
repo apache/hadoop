@@ -255,7 +255,7 @@ public class HdslUtils {
    * @param conf - Configuration
    * @return the path of datanode id as string
    */
-  public static String getDatanodeIDPath(Configuration conf) {
+  public static String getDatanodeIdFilePath(Configuration conf) {
     String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
     if (dataNodeIDPath == null) {
       String metaPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);

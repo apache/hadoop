@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
@@ -232,7 +232,8 @@ public class TestSCMCli {
   @Test
   public void testInfoContainer() throws Exception {
     // The cluster has one Datanode server.
-    DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
+    DatanodeDetails datanodeDetails = MiniOzoneClassicCluster
+        .getDatanodeDetails(cluster.getDataNodes().get(0));
     String formatStr =
         "Container Name: %s\n" +
         "Container State: %s\n" +
@@ -276,7 +277,7 @@ public class TestSCMCli {
     String openStatus = data.isOpen() ? "OPEN" : "CLOSED";
     String expected = String.format(formatStr, cname, openStatus,
         data.getDBPath(), data.getContainerPath(), "",
-        datanodeID.getHostName(), datanodeID.getHostName());
+        datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
 
     out.reset();
@@ -297,7 +298,7 @@ public class TestSCMCli {
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
     expected = String.format(formatStr, cname, openStatus,
         data.getDBPath(), data.getContainerPath(), "",
-        datanodeID.getHostName(), datanodeID.getHostName());
+        datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
 
     out.reset();
@@ -315,7 +316,7 @@ public class TestSCMCli {
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
     expected = String.format(formatStrWithHash, cname, openStatus,
         data.getHash(), data.getDBPath(), data.getContainerPath(),
-        "", datanodeID.getHostName(), datanodeID.getHostName());
+        "", datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
   }
 

@@ -20,16 +20,15 @@ package org.apache.hadoop.ozone.scm.node;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.PathUtils;
 
-import static org.apache.hadoop.ozone.scm.TestUtils.getDatanodeIDs;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -79,21 +78,22 @@ public class TestSCMNodePoolManager {
       NodePoolManager npMgr = createNodePoolManager(conf);
 
       final int nodeCount = 4;
-      final List<DatanodeID> nodes = getDatanodeIDs(nodeCount);
+      final List<DatanodeDetails> nodes = TestUtils
+          .getListOfDatanodeDetails(nodeCount);
       assertEquals(0, npMgr.getNodePools().size());
-      for (DatanodeID node: nodes) {
+      for (DatanodeDetails node: nodes) {
         npMgr.addNode(defaultPool, node);
       }
-      List<DatanodeID> nodesRetrieved = npMgr.getNodes(defaultPool);
+      List<DatanodeDetails> nodesRetrieved = npMgr.getNodes(defaultPool);
       assertEquals(nodeCount, nodesRetrieved.size());
       assertTwoDatanodeListsEqual(nodes, nodesRetrieved);
 
-      DatanodeID nodeRemoved = nodes.remove(2);
+      DatanodeDetails nodeRemoved = nodes.remove(2);
       npMgr.removeNode(defaultPool, nodeRemoved);
-      List<DatanodeID> nodesAfterRemove = npMgr.getNodes(defaultPool);
+      List<DatanodeDetails> nodesAfterRemove = npMgr.getNodes(defaultPool);
       assertTwoDatanodeListsEqual(nodes, nodesAfterRemove);
 
-      List<DatanodeID> nonExistSet = npMgr.getNodes("NonExistSet");
+      List<DatanodeDetails> nonExistSet = npMgr.getNodes("NonExistSet");
       assertEquals(0, nonExistSet.size());
     } finally {
       FileUtil.fullyDelete(testDir);
@@ -111,16 +111,17 @@ public class TestSCMNodePoolManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     final String defaultPool = "DefaultPool";
     final int nodeCount = 4;
-    final List<DatanodeID> nodes = getDatanodeIDs(nodeCount);
+    final List<DatanodeDetails> nodes = TestUtils
+        .getListOfDatanodeDetails(nodeCount);
 
     try {
       try {
         SCMNodePoolManager npMgr = createNodePoolManager(conf);
         assertEquals(0, npMgr.getNodePools().size());
-        for (DatanodeID node : nodes) {
+        for (DatanodeDetails node : nodes) {
           npMgr.addNode(defaultPool, node);
         }
-        List<DatanodeID> nodesRetrieved = npMgr.getNodes(defaultPool);
+        List<DatanodeDetails> nodesRetrieved = npMgr.getNodes(defaultPool);
         assertEquals(nodeCount, nodesRetrieved.size());
         assertTwoDatanodeListsEqual(nodes, nodesRetrieved);
         npMgr.close();
@@ -132,7 +133,7 @@ public class TestSCMNodePoolManager {
       // try reload with a new NodePoolManager instance
       try {
         SCMNodePoolManager npMgr = createNodePoolManager(conf);
-        List<DatanodeID> nodesRetrieved = npMgr.getNodes(defaultPool);
+        List<DatanodeDetails> nodesRetrieved = npMgr.getNodes(defaultPool);
         assertEquals(nodeCount, nodesRetrieved.size());
         assertTwoDatanodeListsEqual(nodes, nodesRetrieved);
       } finally {
@@ -148,8 +149,8 @@ public class TestSCMNodePoolManager {
    * @param list1 - datanode list 1.
    * @param list2 - datanode list 2.
    */
-  private void assertTwoDatanodeListsEqual(List<DatanodeID> list1,
-      List<DatanodeID> list2) {
+  private void assertTwoDatanodeListsEqual(List<DatanodeDetails> list1,
+      List<DatanodeDetails> list2) {
     assertEquals(list1.size(), list2.size());
     Collections.sort(list1);
     Collections.sort(list2);

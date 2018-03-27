@@ -32,12 +32,6 @@ option java_generate_equals_and_hash = true;
 
 package hadoop.hdsl;
 
-import "hdfs.proto";
-
-import "HdfsServer.proto";
-
-import "DatanodeProtocol.proto";
-
 import "hdsl.proto";
 
 
@@ -46,7 +40,7 @@ import "hdsl.proto";
 * registering with the node manager.
 */
 message SCMHeartbeatRequestProto {
-  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  required DatanodeDetailsProto datanodeDetails = 1;
   optional SCMNodeReport nodeReport = 2;
   optional ReportState containerReportState = 3;
 }
@@ -125,7 +119,7 @@ message ContainerReportsRequestProto {
     fullReport = 0;
     deltaReport = 1;
   }
-  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  required DatanodeDetailsProto datanodeDetails = 1;
   repeated ContainerInfo reports = 2;
   required reportType type = 3;
 }
@@ -146,11 +140,11 @@ message SCMStorageReport {
   optional uint64 capacity = 2 [default = 0];
   optional uint64 scmUsed = 3 [default = 0];
   optional uint64 remaining = 4 [default = 0];
-  optional hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
+  //optional hadoop.hdfs.StorageTypeProto storageType = 5 [default = DISK];
 }
 
 message SCMRegisterRequestProto {
-  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
+  required DatanodeDetailsProto datanodeDetails = 1;
   optional SCMNodeAddressList addressList = 2;
 }
 
@@ -194,17 +188,6 @@ message SCMRegisteredCmdResponseProto {
  * With recieving this command, datanode will transit to REGISTER state.
  */
 message SCMReregisterCmdResponseProto {}
-
-/**
- * Container ID maintains the container's Identity along with cluster ID
- * after the registration is done.
- */
-message ContainerNodeIDProto {
-  required hadoop.hdfs.DatanodeIDProto datanodeID = 1;
-  optional string clusterID = 2;
-}
-
-
 
 /**
 This command tells the data node to send in the container report when possible
@@ -326,7 +309,8 @@ message ContainerBlocksDeletionACKProto {
  * it needs to do a registration.
  *
  * If registration is need datanode moves into REGISTER state. It will
- * send a register call with datanodeID data structure and presist that info.
+ * send a register call with DatanodeDetailsProto data structure and presist
+ * that info.
  *
  * The response to the command contains clusterID. This information is
  * also persisted by the datanode and moves into heartbeat state.

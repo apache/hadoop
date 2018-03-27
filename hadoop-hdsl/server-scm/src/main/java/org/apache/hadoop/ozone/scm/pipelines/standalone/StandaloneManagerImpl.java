@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.scm.pipelines.standalone;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
@@ -47,7 +47,7 @@ public class StandaloneManagerImpl extends PipelineManager {
   private final NodeManager nodeManager;
   private final ContainerPlacementPolicy placementPolicy;
   private final long containerSize;
-  private final Set<DatanodeID> standAloneMembers;
+  private final Set<DatanodeDetails> standAloneMembers;
 
   /**
    * Constructor for Standalone Node Manager Impl.
@@ -72,10 +72,10 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @return PipelineChannel.
    */
   public PipelineChannel allocatePipelineChannel(ReplicationFactor factor) {
-    List<DatanodeID> newNodesList = new LinkedList<>();
-    List<DatanodeID> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+    List<DatanodeDetails> newNodesList = new LinkedList<>();
+    List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
     int count = getReplicationCount(factor);
-    for (DatanodeID datanode : datanodes) {
+    for (DatanodeDetails datanode : datanodes) {
       Preconditions.checkNotNull(datanode);
       if (!standAloneMembers.contains(datanode)) {
         newNodesList.add(datanode);
@@ -103,7 +103,8 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @param datanodes - The list of datanodes that make this pipeline.
    */
   @Override
-  public void createPipeline(String pipelineID, List<DatanodeID> datanodes) {
+  public void createPipeline(String pipelineID,
+                             List<DatanodeDetails> datanodes) {
     //return newPipelineFromNodes(datanodes, pipelineID);
   }
 
@@ -124,7 +125,8 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @return the datanode
    */
   @Override
-  public List<DatanodeID> getMembers(String pipelineID) throws IOException {
+  public List<DatanodeDetails> getMembers(String pipelineID)
+      throws IOException {
     return null;
   }
 
@@ -135,7 +137,7 @@ public class StandaloneManagerImpl extends PipelineManager {
    * @param newDatanodes
    */
   @Override
-  public void updatePipeline(String pipelineID, List<DatanodeID>
+  public void updatePipeline(String pipelineID, List<DatanodeDetails>
       newDatanodes) throws IOException {
 
   }

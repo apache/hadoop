@@ -21,13 +21,13 @@ package org.apache.hadoop.ozone.scm.container.closer;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.MockNodeManager;
 import org.apache.hadoop.ozone.scm.container.TestContainerMapping;
@@ -97,7 +97,7 @@ public class TestContainerCloser {
     long currentCount = mapping.getCloser().getCloseCount();
     long runCount = mapping.getCloser().getThreadRunCount();
 
-    DatanodeID datanodeID = info.getPipeline().getLeader();
+    DatanodeDetails datanode = info.getPipeline().getLeader();
     // Send a container report with used set to 1 GB. This should not close.
     sendContainerReport(info, 1 * GIGABYTE);
 
@@ -108,7 +108,7 @@ public class TestContainerCloser {
     Assert.assertEquals(0, mapping.getCloser().getCloseCount());
 
     // Assert that the Close command was not queued for this Datanode.
-    Assert.assertEquals(0, nodeManager.getCommandCount(datanodeID));
+    Assert.assertEquals(0, nodeManager.getCommandCount(datanode));
 
     long newUsed = (long) (size * 0.91f);
     sendContainerReport(info, newUsed);
@@ -121,7 +121,7 @@ public class TestContainerCloser {
         mapping.getCloser().getCloseCount() - currentCount);
 
     // Assert that the Close command was Queued for this Datanode.
-    Assert.assertEquals(1, nodeManager.getCommandCount(datanodeID));
+    Assert.assertEquals(1, nodeManager.getCommandCount(datanode));
   }
 
   @Test
@@ -146,7 +146,7 @@ public class TestContainerCloser {
     long runCount = mapping.getCloser().getThreadRunCount();
 
 
-    DatanodeID datanodeID = info.getPipeline().getLeader();
+    DatanodeDetails datanodeDetails = info.getPipeline().getLeader();
 
     // Send this command twice and assert we have only one command in the queue.
     sendContainerReport(info, 5 * GIGABYTE);
@@ -154,7 +154,7 @@ public class TestContainerCloser {
 
     // Assert that the Close command was Queued for this Datanode.
     Assert.assertEquals(1,
-        nodeManager.getCommandCount(datanodeID));
+        nodeManager.getCommandCount(datanodeDetails));
     // And close count will be one.
     Assert.assertEquals(1,
         mapping.getCloser().getCloseCount() - currentCount);
@@ -163,7 +163,7 @@ public class TestContainerCloser {
     //send another close and the system will queue this to the command queue.
     sendContainerReport(info, 5 * GIGABYTE);
     Assert.assertEquals(2,
-        nodeManager.getCommandCount(datanodeID));
+        nodeManager.getCommandCount(datanodeDetails));
     // but the close count will still be one, since from the point of view of
     // closer we are closing only one container even if we have send multiple
     // close commands to the datanode.
@@ -213,8 +213,8 @@ public class TestContainerCloser {
         .setReadBytes(2000000000L)
         .setWriteBytes(2000000000L)
         .setContainerID(1L);
-    reports.setDatanodeID(
-        DFSTestUtil.getLocalDatanodeID().getProtoBufMessage());
+    reports.setDatanodeDetails(
+        TestUtils.getDatanodeDetails().getProtoBufMessage());
     reports.addReports(ciBuilder);
     mapping.processContainerReports(reports.build());
   }

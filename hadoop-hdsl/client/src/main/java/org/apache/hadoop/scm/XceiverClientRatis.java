@@ -21,10 +21,10 @@ package org.apache.hadoop.scm;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.RatisHelper;
@@ -84,7 +84,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * {@inheritDoc}
    */
-  public void createPipeline(String clusterId, List<DatanodeID> datanodes)
+  public void createPipeline(String clusterId, List<DatanodeDetails> datanodes)
       throws IOException {
     RaftGroup group = RatisHelper.newRaftGroup(datanodes);
     LOG.debug("initializing pipeline:{} with nodes:{}", clusterId,
@@ -102,14 +102,14 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     return HdslProtos.ReplicationType.RATIS;
   }
 
-  private void reinitialize(List<DatanodeID> datanodes, RaftGroup group)
+  private void reinitialize(List<DatanodeDetails> datanodes, RaftGroup group)
       throws IOException {
     if (datanodes.isEmpty()) {
       return;
     }
 
     IOException exception = null;
-    for (DatanodeID d : datanodes) {
+    for (DatanodeDetails d : datanodes) {
       try {
         reinitialize(d, group);
       } catch (IOException ioe) {
@@ -133,7 +133,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * @param group    - Raft group
    * @throws IOException - on Failure.
    */
-  private void reinitialize(DatanodeID datanode, RaftGroup group)
+  private void reinitialize(DatanodeDetails datanode, RaftGroup group)
       throws IOException {
     final RaftPeer p = RatisHelper.toRaftPeer(datanode);
     try (RaftClient client = RatisHelper.newRaftClient(rpcType, p)) {

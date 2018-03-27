@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.scm.pipelines;
 
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
@@ -154,7 +154,7 @@ public abstract class PipelineManager {
    * @param datanodes - The list of datanodes that make this pipeline.
    */
   public abstract void createPipeline(String pipelineID,
-      List<DatanodeID> datanodes) throws IOException;
+      List<DatanodeDetails> datanodes) throws IOException;
 
   /**
    * Close the  pipeline with the given clusterId.
@@ -165,12 +165,12 @@ public abstract class PipelineManager {
    * list members in the pipeline .
    * @return the datanode
    */
-  public abstract List<DatanodeID> getMembers(String pipelineID)
+  public abstract List<DatanodeDetails> getMembers(String pipelineID)
       throws IOException;
 
   /**
    * Update the datanode list of the pipeline.
    */
   public abstract void updatePipeline(String pipelineID,
-      List<DatanodeID> newDatanodes) throws IOException;
+      List<DatanodeDetails> newDatanodes) throws IOException;
 }

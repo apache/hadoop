@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.hdsl.protocol.proto
@@ -34,7 +34,6 @@ import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import static org.apache.hadoop.ozone.scm.TestUtils.getDatanodeID;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -118,7 +117,7 @@ public class TestContainerMapping {
     5 separate nodes  from the list of 10 datanodes that got allocated a
     container.
      */
-    Set<String> pipelineList = new TreeSet<>();
+    Set<UUID> pipelineList = new TreeSet<>();
     for (int x = 0; x < 30; x++) {
       ContainerInfo containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
@@ -128,7 +127,7 @@ public class TestContainerMapping {
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
       pipelineList.add(containerInfo.getPipeline().getLeader()
-          .getDatanodeUuid());
+          .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
   }
@@ -142,8 +141,8 @@ public class TestContainerMapping {
         containerOwner).getPipeline();
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = mapping.getContainer(containerName).getPipeline();
-    Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
-        newPipeline.getLeader().getDatanodeUuid());
+    Assert.assertEquals(pipeline.getLeader().getUuid(),
+        newPipeline.getLeader().getUuid());
   }
 
   @Test
@@ -209,7 +208,7 @@ public class TestContainerMapping {
   public void testFullContainerReport() throws IOException {
     String containerName = UUID.randomUUID().toString();
     ContainerInfo info = createContainer(containerName);
-    DatanodeID datanodeID = getDatanodeID();
+    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
@@ -232,7 +231,7 @@ public class TestContainerMapping {
 
     ContainerReportsRequestProto.Builder crBuilder =
         ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
         .setType(reportType).addAllReports(reports);
 
     mapping.processContainerReports(crBuilder.build());
@@ -246,7 +245,7 @@ public class TestContainerMapping {
   public void testContainerCloseWithContainerReport() throws IOException {
     String containerName = UUID.randomUUID().toString();
     ContainerInfo info = createContainer(containerName);
-    DatanodeID datanodeID = TestUtils.getDatanodeID();
+    DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
     List<StorageContainerDatanodeProtocolProtos.ContainerInfo> reports =
@@ -270,7 +269,7 @@ public class TestContainerMapping {
 
     ContainerReportsRequestProto.Builder crBuilder =
         ContainerReportsRequestProto.newBuilder();
-    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
         .setType(reportType).addAllReports(reports);
 
     mapping.processContainerReports(crBuilder.build());

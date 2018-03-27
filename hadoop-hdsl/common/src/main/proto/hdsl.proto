@@ -28,11 +28,21 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdsl;
 
-import "hdfs.proto";
+message DatanodeDetailsProto {
+    // TODO: make the port as a seperate proto message and use it here
+    required string uuid = 1;  // UUID assigned to the Datanode.
+    required string ipAddress = 2;     // IP address
+    required string hostName = 3;      // hostname
+    optional uint32 infoPort = 4;      // datanode http port
+    optional uint32 infoSecurePort = 5 [default = 0]; // datanode https port
+    optional uint32 containerPort = 6 [default = 0];  // Ozone stand_alone protocol
+    optional uint32 ratisPort = 7 [default = 0];      //Ozone ratis port
+    optional uint32 ozoneRestPort = 8 [default = 0];
+}
 
 message PipelineChannel {
     required string leaderID = 1;
-    repeated hadoop.hdfs.DatanodeIDProto members = 2;
+    repeated DatanodeDetailsProto members = 2;
     optional LifeCycleState state = 3 [default = OPEN];
     optional ReplicationType type = 4 [default = STAND_ALONE];
     optional ReplicationFactor factor = 5 [default = ONE];
@@ -82,7 +92,7 @@ enum QueryScope {
 }
 
 message Node {
-    required hadoop.hdfs.DatanodeIDProto nodeID = 1;
+    required DatanodeDetailsProto nodeID = 1;
     repeated NodeState nodeStates = 2;
 }
 

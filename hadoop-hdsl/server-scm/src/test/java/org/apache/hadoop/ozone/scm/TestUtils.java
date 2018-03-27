@@ -21,8 +21,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 
 /**
@@ -33,70 +32,79 @@ public class TestUtils {
   private TestUtils() {
   }
 
-  public static DatanodeID getDatanodeID(SCMNodeManager nodeManager) {
+  public static DatanodeDetails getDatanodeDetails(SCMNodeManager nodeManager) {
 
-    return getDatanodeID(nodeManager, UUID.randomUUID().toString());
+    return getDatanodeDetails(nodeManager, UUID.randomUUID().toString());
   }
 
   /**
-   * Create a new DatanodeID with NodeID set to the string.
+   * Create a new DatanodeDetails with NodeID set to the string.
    *
    * @param uuid - node ID, it is generally UUID.
    * @return DatanodeID.
    */
-  public static DatanodeID getDatanodeID(SCMNodeManager nodeManager,
+  public static DatanodeDetails getDatanodeDetails(SCMNodeManager nodeManager,
       String uuid) {
-    DatanodeID tempDataNode = getDatanodeID(uuid);
-    RegisteredCommand command =
-        (RegisteredCommand) nodeManager.register(tempDataNode);
-    return new DatanodeID(command.getDatanodeUUID(), tempDataNode);
+    DatanodeDetails datanodeDetails = getDatanodeDetails(uuid);
+    nodeManager.register(datanodeDetails.getProtoBufMessage());
+    return datanodeDetails;
   }
 
   /**
-   * Get specified number of datanode IDs and registered them with node manager.
+   * Get specified number of DatanodeDetails and registered them with node
+   * manager.
    *
    * @param nodeManager - node manager to register the datanode ids.
-   * @param count       - number of datanode IDs needed.
+   * @param count       - number of DatanodeDetails needed.
    * @return
    */
-  public static List<DatanodeID> getRegisteredDatanodeIDs(
+  public static List<DatanodeDetails> getListOfRegisteredDatanodeDetails(
       SCMNodeManager nodeManager, int count) {
-    ArrayList<DatanodeID> datanodes = new ArrayList<>();
+    ArrayList<DatanodeDetails> datanodes = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      datanodes.add(getDatanodeID(nodeManager));
+      datanodes.add(getDatanodeDetails(nodeManager));
     }
     return datanodes;
   }
 
   /**
-   * Get a datanode ID.
+   * Get a datanode details.
    *
-   * @return DatanodeID
+   * @return DatanodeDetails
    */
-  public static DatanodeID getDatanodeID() {
-    return getDatanodeID(UUID.randomUUID().toString());
+  public static DatanodeDetails getDatanodeDetails() {
+    return getDatanodeDetails(UUID.randomUUID().toString());
   }
 
-  private static DatanodeID getDatanodeID(String uuid) {
+  private static DatanodeDetails getDatanodeDetails(String uuid) {
     Random random = new Random();
     String ipAddress =
         random.nextInt(256) + "." + random.nextInt(256) + "." + random
             .nextInt(256) + "." + random.nextInt(256);
 
     String hostName = uuid;
-    return new DatanodeID(ipAddress, hostName, uuid, 0, 0, 0, 0);
+    DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
+    builder.setUuid(uuid)
+        .setHostName("localhost")
+        .setIpAddress(ipAddress)
+        .setInfoPort(0)
+        .setInfoSecurePort(0)
+        .setContainerPort(0)
+        .setRatisPort(0)
+        .setOzoneRestPort(0);
+    return builder.build();
   }
 
   /**
-   * Get specified number of datanode IDs.
+   * Get specified number of list of DatanodeDetails.
    *
    * @param count - number of datanode IDs needed.
    * @return
    */
-  public static List<DatanodeID> getDatanodeIDs(int count) {
-    ArrayList<DatanodeID> datanodes = new ArrayList<>();
+  public static List<DatanodeDetails> getListOfDatanodeDetails(int count) {
+    ArrayList<DatanodeDetails> datanodes = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      datanodes.add(getDatanodeID());
+      datanodes.add(getDatanodeDetails());
     }
     return datanodes;
   }

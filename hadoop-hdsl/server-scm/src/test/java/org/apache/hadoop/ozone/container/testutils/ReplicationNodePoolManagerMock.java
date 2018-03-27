@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.testutils;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 
@@ -33,7 +33,7 @@ import java.util.Set;
  */
 public class ReplicationNodePoolManagerMock implements NodePoolManager {
 
-  private final Map<DatanodeID, String> nodeMemberShip;
+  private final Map<DatanodeDetails, String> nodeMemberShip;
 
   /**
    * A node pool manager for testing.
@@ -49,7 +49,7 @@ public class ReplicationNodePoolManagerMock implements NodePoolManager {
    * @param node - data node.
    */
   @Override
-  public void addNode(String pool, DatanodeID node) {
+  public void addNode(String pool, DatanodeDetails node) {
     nodeMemberShip.put(node, pool);
   }
 
@@ -61,7 +61,8 @@ public class ReplicationNodePoolManagerMock implements NodePoolManager {
    * @throws SCMException
    */
   @Override
-  public void removeNode(String pool, DatanodeID node) throws SCMException {
+  public void removeNode(String pool, DatanodeDetails node)
+      throws SCMException {
     nodeMemberShip.remove(node);
 
   }
@@ -75,7 +76,7 @@ public class ReplicationNodePoolManagerMock implements NodePoolManager {
   @Override
   public List<String> getNodePools() {
     Set<String> poolSet = new HashSet<>();
-    for (Map.Entry<DatanodeID, String> entry : nodeMemberShip.entrySet()) {
+    for (Map.Entry<DatanodeDetails, String> entry : nodeMemberShip.entrySet()) {
       poolSet.add(entry.getValue());
     }
     return new ArrayList<>(poolSet);
@@ -90,9 +91,9 @@ public class ReplicationNodePoolManagerMock implements NodePoolManager {
    * found.
    */
   @Override
-  public List<DatanodeID> getNodes(String pool) {
-    Set<DatanodeID> datanodeSet = new HashSet<>();
-    for (Map.Entry<DatanodeID, String> entry : nodeMemberShip.entrySet()) {
+  public List<DatanodeDetails> getNodes(String pool) {
+    Set<DatanodeDetails> datanodeSet = new HashSet<>();
+    for (Map.Entry<DatanodeDetails, String> entry : nodeMemberShip.entrySet()) {
       if (entry.getValue().equals(pool)) {
         datanodeSet.add(entry.getKey());
       }
@@ -103,13 +104,13 @@ public class ReplicationNodePoolManagerMock implements NodePoolManager {
   /**
    * Get the node pool name if the node has been added to a node pool.
    *
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails DatanodeDetails.
    * @return node pool name if it has been assigned. null if the node has not
    * been assigned to any node pool yet.
    */
   @Override
-  public String getNodePool(DatanodeID datanodeID) {
-    return nodeMemberShip.get(datanodeID);
+  public String getNodePool(DatanodeDetails datanodeDetails) {
+    return nodeMemberShip.get(datanodeDetails);
   }
 
   /**

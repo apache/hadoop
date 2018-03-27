@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
@@ -35,6 +36,7 @@ import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
+import org.apache.hadoop.ozone.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -79,7 +81,8 @@ public class TestContainerMetrics {
 
       Dispatcher dispatcher = new Dispatcher(containerManager, conf);
       dispatcher.init();
-      server = new XceiverServer(conf, dispatcher);
+      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      server = new XceiverServer(datanodeDetails, conf, dispatcher);
       client = new XceiverClient(pipeline, conf);
 
       server.start();

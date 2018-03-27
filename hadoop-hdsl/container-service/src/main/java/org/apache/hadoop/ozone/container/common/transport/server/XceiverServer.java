@@ -27,6 +27,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
@@ -57,7 +58,7 @@ public final class XceiverServer implements XceiverServerSpi {
    *
    * @param conf - Configuration
    */
-  public XceiverServer(Configuration conf,
+  public XceiverServer(DatanodeDetails datanodeDetails, Configuration conf,
                        ContainerDispatcher dispatcher) {
     Preconditions.checkNotNull(conf);
 
@@ -78,6 +79,7 @@ public final class XceiverServer implements XceiverServerSpi {
             + "fallback to use default port {}", this.port, e);
       }
     }
+    datanodeDetails.setContainerPort(port);
     this.storageContainer = dispatcher;
   }
 

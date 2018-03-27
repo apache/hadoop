@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
@@ -39,6 +39,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_CONTA
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -114,7 +115,7 @@ public class SCMBlockDeletingService extends BackgroundService {
       // to delete blocks.
       LOG.debug("Running DeletedBlockTransactionScanner");
       DatanodeDeletedBlockTransactions transactions = null;
-      List<DatanodeID> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+      List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
       if (datanodes != null) {
         transactions = new DatanodeDeletedBlockTransactions(mappingService,
             blockDeleteLimitSize, datanodes.size());
@@ -133,22 +134,22 @@ public class SCMBlockDeletingService extends BackgroundService {
       }
 
       if (transactions != null && !transactions.isEmpty()) {
-        for (DatanodeID datanodeID : transactions.getDatanodes()) {
+        for (UUID dnId : transactions.getDatanodeIDs()) {
           List<DeletedBlocksTransaction> dnTXs = transactions
-              .getDatanodeTransactions(datanodeID);
+              .getDatanodeTransactions(dnId);
           if (dnTXs != null && !dnTXs.isEmpty()) {
             dnTxCount += dnTXs.size();
             // TODO commandQueue needs a cap.
             // We should stop caching new commands if num of un-processed
             // command is bigger than a limit, e.g 50. In case datanode goes
             // offline for sometime, the cached commands be flooded.
-            nodeManager.addDatanodeCommand(datanodeID,
+            nodeManager.addDatanodeCommand(dnId,
                 new DeleteBlocksCommand(dnTXs));
             LOG.debug(
                 "Added delete block command for datanode {} in the queue,"
                     + " number of delete block transactions: {}, TxID list: {}",
-                datanodeID, dnTXs.size(), String.join(",",
-                    transactions.getTransactionIDList(datanodeID)));
+                dnId, dnTXs.size(), String.join(",",
+                    transactions.getTransactionIDList(dnId)));
           }
         }
       }
@@ -157,7 +158,7 @@ public class SCMBlockDeletingService extends BackgroundService {
         LOG.info(
             "Totally added {} delete blocks command for"
                 + " {} datanodes, task elapsed time: {}ms",
-            dnTxCount, transactions.getDatanodes().size(),
+            dnTxCount, transactions.getDatanodeIDs().size(),
             Time.monotonicNow() - startTime);
       }
 

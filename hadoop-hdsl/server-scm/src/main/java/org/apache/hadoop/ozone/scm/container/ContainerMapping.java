@@ -415,7 +415,7 @@ public class ContainerMapping implements Mapping {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
                   " {}, for container: {}, reason: container doesn't exist in" +
-                  "container database.", reports.getDatanodeID(),
+                  "container database.", reports.getDatanodeDetails(),
               datanodeState.getContainerName());
         }
       } finally {

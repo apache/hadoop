@@ -124,7 +124,7 @@ public class TestKeySpaceManagerRestInterface {
       switch (type) {
       case HTTP:
       case HTTPS:
-        Assert.assertEquals(datanode.getDatanodeId().getOzoneRestPort(),
+        Assert.assertEquals(MiniOzoneClassicCluster.getOzoneRestPort(datanode),
             (int) ports.get(type));
         break;
       default:

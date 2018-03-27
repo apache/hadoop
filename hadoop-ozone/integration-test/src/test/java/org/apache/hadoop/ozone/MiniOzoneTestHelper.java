@@ -46,10 +46,10 @@ public class MiniOzoneTestHelper {
     return findHdslPlugin(dataNode).getDatanodeStateMachine();
   }
 
-  private static HdslServerPlugin findHdslPlugin(DataNode dataNode) {
+  private static HdslDatanodeService findHdslPlugin(DataNode dataNode) {
     for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HdslServerPlugin) {
-        return (HdslServerPlugin) plugin;
+      if (plugin instanceof HdslDatanodeService) {
+        return (HdslDatanodeService) plugin;
       }
     }
     throw new IllegalStateException("Can't find the Hdsl server plugin in the"

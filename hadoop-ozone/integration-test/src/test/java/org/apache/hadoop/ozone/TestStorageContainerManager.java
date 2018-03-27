@@ -309,7 +309,8 @@ public class TestStorageContainerManager {
       ReportState reportState = ReportState.newBuilder()
           .setState(ReportState.states.noContainerReports).setCount(0).build();
       List<SCMCommand> commands = nodeManager.sendHeartbeat(
-          nodeManager.getNodes(NodeState.HEALTHY).get(0), null, reportState);
+          nodeManager.getNodes(NodeState.HEALTHY).get(0).getProtoBufMessage(),
+          null, reportState);
 
       if (commands != null) {
         for (SCMCommand cmd : commands) {

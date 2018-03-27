@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.scm.pipelines.ratis;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
@@ -52,7 +52,7 @@ public class RatisManagerImpl extends PipelineManager {
   private static final String PREFIX = "Ratis-";
   private final Configuration conf;
   private final NodeManager nodeManager;
-  private final Set<DatanodeID> ratisMembers;
+  private final Set<DatanodeDetails> ratisMembers;
 
   /**
    * Constructs a Ratis Pipeline Manager.
@@ -74,12 +74,12 @@ public class RatisManagerImpl extends PipelineManager {
    * @return PipelineChannel.
    */
   public PipelineChannel allocatePipelineChannel(ReplicationFactor factor) {
-    List<DatanodeID> newNodesList = new LinkedList<>();
-    List<DatanodeID> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
+    List<DatanodeDetails> newNodesList = new LinkedList<>();
+    List<DatanodeDetails> datanodes = nodeManager.getNodes(NodeState.HEALTHY);
     int count = getReplicationCount(factor);
     //TODO: Add Raft State to the Nodes, so we can query and skip nodes from
     // data from datanode instead of maintaining a set.
-    for (DatanodeID datanode : datanodes) {
+    for (DatanodeDetails datanode : datanodes) {
       Preconditions.checkNotNull(datanode);
       if (!ratisMembers.contains(datanode)) {
         newNodesList.add(datanode);
@@ -116,7 +116,8 @@ public class RatisManagerImpl extends PipelineManager {
    * @param datanodes - The list of datanodes that make this pipeline.
    */
   @Override
-  public void createPipeline(String pipelineID, List<DatanodeID> datanodes) {
+  public void createPipeline(String pipelineID,
+                             List<DatanodeDetails> datanodes) {
 
   }
 
@@ -137,7 +138,8 @@ public class RatisManagerImpl extends PipelineManager {
    * @return the datanode
    */
   @Override
-  public List<DatanodeID> getMembers(String pipelineID) throws IOException {
+  public List<DatanodeDetails> getMembers(String pipelineID)
+      throws IOException {
     return null;
   }
 
@@ -148,7 +150,8 @@ public class RatisManagerImpl extends PipelineManager {
    * @param newDatanodes
    */
   @Override
-  public void updatePipeline(String pipelineID, List<DatanodeID> newDatanodes)
+  public void updatePipeline(String pipelineID,
+                             List<DatanodeDetails> newDatanodes)
       throws IOException {
 
   }

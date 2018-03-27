@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.ozone.scm.container.placement.algorithms;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,6 +36,6 @@ public interface ContainerPlacementPolicy {
    * @return list of datanodes chosen.
    * @throws IOException
    */
-  List<DatanodeID> chooseDatanodes(int nodesRequired, long sizeRequired)
+  List<DatanodeDetails> chooseDatanodes(int nodesRequired, long sizeRequired)
       throws IOException;
 }

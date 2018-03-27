@@ -117,7 +117,7 @@ public class TestOzoneShell {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = dataNode.getDatanodeId().getOzoneRestPort();
+    final int port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
     url = String.format("http://localhost:%d", port);
     client = new OzoneRestClient(String.format("http://localhost:%d", port));
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);

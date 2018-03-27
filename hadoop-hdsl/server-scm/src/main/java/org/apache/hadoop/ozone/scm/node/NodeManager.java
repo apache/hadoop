@@ -18,8 +18,8 @@
 package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * A node manager supports a simple interface for managing a datanode.
@@ -60,14 +61,14 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * @param node - DataNode.
    * @throws UnregisteredNodeException
    */
-  void removeNode(DatanodeID node) throws UnregisteredNodeException;
+  void removeNode(DatanodeDetails node) throws UnregisteredNodeException;
 
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
    * @param nodeState - State of the node
    * @return List of Datanodes that are Heartbeating SCM.
    */
-  List<DatanodeID> getNodes(NodeState nodeState);
+  List<DatanodeDetails> getNodes(NodeState nodeState);
 
   /**
    * Returns the Number of Datanodes that are communicating with SCM.
@@ -79,9 +80,9 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   /**
    * Get all datanodes known to SCM.
    *
-   * @return List of DatanodeIDs known to SCM.
+   * @return List of DatanodeDetails known to SCM.
    */
-  List<DatanodeID> getAllNodes();
+  List<DatanodeDetails> getAllNodes();
 
   /**
    * Chill mode is the period when node manager waits for a minimum
@@ -113,14 +114,14 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    * Return a map of node stats.
    * @return a map of individual node stats (live/stale but not dead).
    */
-  Map<String, SCMNodeStat> getNodeStats();
+  Map<UUID, SCMNodeStat> getNodeStats();
 
   /**
    * Return the node stat of the specified datanode.
-   * @param datanodeID - datanode ID.
+   * @param datanodeDetails DatanodeDetails.
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
-  SCMNodeMetric getNodeStat(DatanodeID datanodeID);
+  SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails);
 
   /**
    * Returns the NodePoolManager associated with the NodeManager.
@@ -137,16 +138,16 @@ public interface NodeManager extends StorageContainerNodeProtocol,
 
   /**
    * Returns the node state of a specific node.
-   * @param id - DatanodeID
+   * @param datanodeDetails DatanodeDetails
    * @return Healthy/Stale/Dead.
    */
-  NodeState getNodeState(DatanodeID id);
+  NodeState getNodeState(DatanodeDetails datanodeDetails);
 
   /**
    * Add a {@link SCMCommand} to the command queue, which are
    * handled by HB thread asynchronously.
-   * @param id
+   * @param dnId datanode uuid
    * @param command
    */
-  void addDatanodeCommand(DatanodeID id, SCMCommand command);
+  void addDatanodeCommand(UUID dnId, SCMCommand command);
 }

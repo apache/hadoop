@@ -17,8 +17,9 @@
 package org.apache.hadoop.ozone.container.testutils;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
@@ -37,20 +38,22 @@ import org.apache.hadoop.ozone.scm.node.NodeManager;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
 import org.mockito.Mockito;
 
 /**
  * A Node Manager to test replication.
  */
 public class ReplicationNodeManagerMock implements NodeManager {
-  private final Map<DatanodeID, NodeState> nodeStateMap;
+  private final Map<DatanodeDetails, NodeState> nodeStateMap;
   private final CommandQueue commandQueue;
 
   /**
    * A list of Datanodes and current states.
    * @param nodeState A node state map.
    */
-  public ReplicationNodeManagerMock(Map<DatanodeID, NodeState> nodeState,
+  public ReplicationNodeManagerMock(Map<DatanodeDetails, NodeState> nodeState,
                                     CommandQueue commandQueue) {
     Preconditions.checkNotNull(nodeState);
     this.nodeStateMap = nodeState;
@@ -94,7 +97,8 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @throws UnregisteredNodeException
    */
   @Override
-  public void removeNode(DatanodeID node) throws UnregisteredNodeException {
+  public void removeNode(DatanodeDetails node)
+      throws UnregisteredNodeException {
     nodeStateMap.remove(node);
 
   }
@@ -106,7 +110,7 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return List of Datanodes that are Heartbeating SCM.
    */
   @Override
-  public List<DatanodeID> getNodes(NodeState nodestate) {
+  public List<DatanodeDetails> getNodes(NodeState nodestate) {
     return null;
   }
 
@@ -124,10 +128,10 @@ public class ReplicationNodeManagerMock implements NodeManager {
   /**
    * Get all datanodes known to SCM.
    *
-   * @return List of DatanodeIDs known to SCM.
+   * @return List of DatanodeDetails known to SCM.
    */
   @Override
-  public List<DatanodeID> getAllNodes() {
+  public List<DatanodeDetails> getAllNodes() {
     return null;
   }
 
@@ -185,18 +189,18 @@ public class ReplicationNodeManagerMock implements NodeManager {
    * @return a map of individual node stats (live/stale but not dead).
    */
   @Override
-  public Map<String, SCMNodeStat> getNodeStats() {
+  public Map<UUID, SCMNodeStat> getNodeStats() {
     return null;
   }
 
   /**
    * Return the node stat of the specified datanode.
    *
-   * @param datanodeID - datanode ID.
+   * @param dd - datanode details.
    * @return node stat if it is live/stale, null if it is dead or does't exist.
    */
   @Override
-  public SCMNodeMetric getNodeStat(DatanodeID datanodeID) {
+  public SCMNodeMetric getNodeStat(DatanodeDetails dd) {
     return null;
   }
 
@@ -218,12 +222,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
   /**
    * Returns the node state of a specific node.
    *
-   * @param id - DatanodeID
+   * @param dd - DatanodeDetails
    * @return Healthy/Stale/Dead.
    */
   @Override
-  public NodeState getNodeState(DatanodeID id) {
-    return nodeStateMap.get(id);
+  public NodeState getNodeState(DatanodeDetails dd) {
+    return nodeStateMap.get(dd);
   }
 
   /**
@@ -275,25 +279,25 @@ public class ReplicationNodeManagerMock implements NodeManager {
   /**
    * Register the node if the node finds that it is not registered with any SCM.
    *
-   * @param datanodeID - Send datanodeID with Node info, but datanode UUID is
-   * empty. Server returns a datanodeID for the given node.
+   * @param dd DatanodeDetailsProto
+   *
    * @return SCMHeartbeatResponseProto
    */
   @Override
-  public SCMCommand register(DatanodeID datanodeID) {
+  public SCMCommand register(HdslProtos.DatanodeDetailsProto dd) {
     return null;
   }
 
   /**
    * Send heartbeat to indicate the datanode is alive and doing well.
    *
-   * @param datanodeID - Datanode ID.
+   * @param dd - Datanode Details.
    * @param nodeReport - node report.
    * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
-  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
+  public List<SCMCommand> sendHeartbeat(HdslProtos.DatanodeDetailsProto dd,
       SCMNodeReport nodeReport, ReportState containerReportState) {
     return null;
   }
@@ -308,16 +312,16 @@ public class ReplicationNodeManagerMock implements NodeManager {
   /**
    * Adds a node to the existing Node manager. This is used only for test
    * purposes.
-   * @param id - DatanodeID
+   * @param id DatanodeDetails
    * @param state State you want to put that node to.
    */
-  public void addNode(DatanodeID id, NodeState state) {
+  public void addNode(DatanodeDetails id, NodeState state) {
     nodeStateMap.put(id, state);
   }
 
   @Override
-  public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
-    this.commandQueue.addCommand(id, command);
+  public void addDatanodeCommand(UUID dnId, SCMCommand command) {
+    this.commandQueue.addCommand(dnId, command);
   }
 
 }

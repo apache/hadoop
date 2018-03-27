@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hdsl.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.hdsl.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
@@ -111,7 +111,7 @@ public class ContainerManagerImpl implements ContainerManager {
   private ChunkManager chunkManager;
   private KeyManager keyManager;
   private Configuration conf;
-  private DatanodeID datanodeID;
+  private DatanodeDetails datanodeDetails;
 
   private ContainerDeletionChoosingPolicy containerDeletionChooser;
   private ContainerReportManager containerReportManager;
@@ -121,24 +121,24 @@ public class ContainerManagerImpl implements ContainerManager {
    *
    * @param config - Configuration.
    * @param containerDirs - List of Metadata Container locations.
-   * @param datanode - Datanode ID.
+   * @param dnDetails - DatanodeDetails.
    * @throws IOException
    */
   @Override
   public void init(
       Configuration config, List<StorageLocation> containerDirs,
-      DatanodeID datanode) throws IOException {
+      DatanodeDetails dnDetails) throws IOException {
     Preconditions.checkNotNull(config, "Config must not be null");
     Preconditions.checkNotNull(containerDirs, "Container directories cannot " +
         "be null");
-    Preconditions.checkNotNull(datanode, "Datanode ID cannot " +
+    Preconditions.checkNotNull(dnDetails, "Datanode Details cannot " +
         "be null");
 
     Preconditions.checkState(containerDirs.size() > 0, "Number of container" +
         " directories must be greater than zero.");
 
     this.conf = config;
-    this.datanodeID = datanode;
+    this.datanodeDetails = dnDetails;
 
     readLock();
     try {
@@ -747,7 +747,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
   }
 
-    @Override
+  @Override
   public void readLockInterruptibly() throws InterruptedException {
     this.lock.readLock().lockInterruptibly();
   }
@@ -883,7 +883,7 @@ public class ContainerManagerImpl implements ContainerManager {
         ContainerReportsRequestProto.newBuilder();
 
     // TODO: support delta based container report
-    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+    crBuilder.setDatanodeDetails(datanodeDetails.getProtoBufMessage())
         .setType(ContainerReportsRequestProto.reportType.fullReport);
 
     for (ContainerStatus container: containers) {

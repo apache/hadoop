@@ -119,8 +119,8 @@ public final class OzoneUtils {
    * @param conf - Configuration
    * @return the path of datanode id as string
    */
-  public static String getDatanodeIDPath(Configuration conf) {
-    return HdslUtils.getDatanodeIDPath(conf);
+  public static String getDatanodeIdFilePath(Configuration conf) {
+    return HdslUtils.getDatanodeIdFilePath(conf);
   }
 
   /**

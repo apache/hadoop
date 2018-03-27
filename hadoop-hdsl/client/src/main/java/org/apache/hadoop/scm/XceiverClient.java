@@ -28,9 +28,9 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -84,7 +84,7 @@ public class XceiverClient extends XceiverClientSpi {
         .channel(NioSocketChannel.class)
         .handler(new LoggingHandler(LogLevel.INFO))
         .handler(new XceiverClientInitializer(this.pipeline, semaphore));
-    DatanodeID leader = this.pipeline.getLeader();
+    DatanodeDetails leader = this.pipeline.getLeader();
 
     // read port from the data node, on failure use default configured
     // port.
@@ -174,7 +174,7 @@ public class XceiverClient extends XceiverClientSpi {
    * @param datanodes - Datanodes
    */
   @Override
-  public void createPipeline(String pipelineID, List<DatanodeID> datanodes)
+  public void createPipeline(String pipelineID, List<DatanodeDetails> datanodes)
       throws IOException {
     // For stand alone pipeline, there is no notion called setup pipeline.
     return;

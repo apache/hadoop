@@ -21,11 +21,10 @@ package org.apache.hadoop.ozone.scm.node;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.hdsl.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdsl.protocol.proto
@@ -132,16 +131,16 @@ public class TestContainerPlacement {
     SCMNodeManager nodeManager = createNodeManager(conf);
     ContainerMapping containerManager =
         createContainerManager(conf, nodeManager);
-    List<DatanodeID> datanodes =
-        TestUtils.getRegisteredDatanodeIDs(nodeManager, nodeCount);
+    List<DatanodeDetails> datanodes =
+        TestUtils.getListOfRegisteredDatanodeDetails(nodeManager, nodeCount);
     try {
-      for (DatanodeID datanodeID : datanodes) {
+      for (DatanodeDetails datanodeDetails : datanodes) {
         SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
         SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
         srb.setStorageUuid(UUID.randomUUID().toString());
         srb.setCapacity(capacity).setScmUsed(used).
             setRemaining(remaining).build();
-        nodeManager.sendHeartbeat(datanodeID,
+        nodeManager.sendHeartbeat(datanodeDetails.getProtoBufMessage(),
             nrb.addStorageReport(srb).build(), reportState);
       }
 
