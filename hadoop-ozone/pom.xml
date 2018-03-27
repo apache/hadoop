@@ -55,8 +55,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <excludes>
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
-
-            <exclude>dev-support/findbugsExcludeFile.xml</exclude>
             <exclude>dev-support/checkstyle*</exclude>
             <exclude>dev-support/jdiff/**</exclude>
             <exclude>dev-support/*tests</exclude>
