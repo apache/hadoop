@@ -367,7 +367,7 @@ public class ContainersMonitorImpl extends AbstractService implements
    * @param curMemUsageOfAgedProcesses
    *          Memory usage of processes older than an iteration in a container
    *          tree
-   * @param vmemLimit
+   * @param memLimit
    *          The limit specified for the container
    * @return true if the memory usage is more than twice the specified limit,
    *         or if processes in the tree, older than this thread's monitoring
@@ -376,18 +376,18 @@ public class ContainersMonitorImpl extends AbstractService implements
   private boolean isProcessTreeOverLimit(String containerId,
                                   long currentMemUsage,
                                   long curMemUsageOfAgedProcesses,
-                                  long vmemLimit) {
+                                  long memLimit) {
     boolean isOverLimit = false;
 
-    if (currentMemUsage > (2 * vmemLimit)) {
+    if (currentMemUsage > (2 * memLimit)) {
       LOG.warn("Process tree for container: " + containerId
-          + " running over twice " + "the configured limit. Limit=" + vmemLimit
+          + " running over twice " + "the configured limit. Limit=" + memLimit
           + ", current usage = " + currentMemUsage);
       isOverLimit = true;
-    } else if (curMemUsageOfAgedProcesses > vmemLimit) {
+    } else if (curMemUsageOfAgedProcesses > memLimit) {
       LOG.warn("Process tree for container: " + containerId
           + " has processes older than 1 "
-          + "iteration running over the configured limit. Limit=" + vmemLimit
+          + "iteration running over the configured limit. Limit=" + memLimit
           + ", current usage = " + curMemUsageOfAgedProcesses);
       isOverLimit = true;
     }
