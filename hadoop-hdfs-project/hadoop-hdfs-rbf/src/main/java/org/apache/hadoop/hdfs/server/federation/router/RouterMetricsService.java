@@ -95,6 +95,15 @@ public class RouterMetricsService extends AbstractService {
   }
 
   /**
+   * Get the Namenode metrics.
+   *
+   * @return Namenode metrics.
+   */
+  public NamenodeBeanMetrics getNamenodeMetrics() {
+    return this.nnMetrics;
+  }
+
+  /**
    * Get the JVM metrics for the Router.
    *
    * @return JVM metrics.
