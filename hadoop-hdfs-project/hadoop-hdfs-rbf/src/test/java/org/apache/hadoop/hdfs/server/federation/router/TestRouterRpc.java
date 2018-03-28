@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verif
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -61,16 +63,18 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -127,7 +131,14 @@ public class TestRouterRpc {
     cluster.startCluster();
 
     // Start routers with only an RPC service
-    cluster.addRouterOverrides((new RouterConfigBuilder()).rpc().build());
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+    // We decrease the DN cache times to make the test faster
+    routerConf.setTimeDuration(
+        NamenodeBeanMetrics.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
     // Register and verify all NNs with all routers
@@ -896,5 +907,31 @@ public class TestRouterRpc {
     assertNotNull(routerFailure);
 
     assertEquals(routerFailure.getClass(), nnFailure.getClass());
+  }
+
+  @Test
+  public void testNamenodeMetrics() throws Exception {
+    final NamenodeBeanMetrics metrics =
+        router.getRouter().getNamenodeMetrics();
+    final String jsonString0 = metrics.getLiveNodes();
+
+    // We should have 12 nodes in total
+    JSONObject jsonObject = new JSONObject(jsonString0);
+    assertEquals(12, jsonObject.names().length());
+
+    // We should be caching this information
+    String jsonString1 = metrics.getLiveNodes();
+    assertEquals(jsonString0, jsonString1);
+
+    // We wait until the cached value is updated
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return !jsonString0.equals(metrics.getLiveNodes());
+      }
+    }, 500, 5 * 1000);
+
+    // The cache should be updated now
+    assertNotEquals(jsonString0, metrics.getLiveNodes());
   }
 }
