@@ -52,7 +52,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -726,10 +725,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   static final String AZURE_CHMOD_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
 
-  static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
-      "fs.azure.block.location.impersonatedhost";
-  private static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT =
-      "localhost";
   static final String AZURE_RINGBUFFER_CAPACITY_PROPERTY_NAME =
       "fs.azure.ring.buffer.capacity";
   static final String AZURE_OUTPUT_STREAM_BUFFER_SIZE_PROPERTY_NAME =
@@ -3467,47 +3462,6 @@ public class NativeAzureFileSystem extends FileSystem {
         String.format("Rename operation for %s is not permitted."
         + " Details : Stickybit check failed.", srcPath));
     }
-  }
-
-  /**
-   * Return an array containing hostnames, offset and size of
-   * portions of the given file. For WASB we'll just lie and give
-   * fake hosts to make sure we get many splits in MR jobs.
-   */
-  @Override
-  public BlockLocation[] getFileBlockLocations(FileStatus file,
-      long start, long len) throws IOException {
-    if (file == null) {
-      return null;
-    }
-
-    if ((start < 0) || (len < 0)) {
-      throw new IllegalArgumentException("Invalid start or len parameter");
-    }
-
-    if (file.getLen() < start) {
-      return new BlockLocation[0];
-    }
-    final String blobLocationHost = getConf().get(
-        AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME,
-        AZURE_BLOCK_LOCATION_HOST_DEFAULT);
-    final String[] name = { blobLocationHost };
-    final String[] host = { blobLocationHost };
-    long blockSize = file.getBlockSize();
-    if (blockSize <= 0) {
-      throw new IllegalArgumentException(
-          "The block size for the given file is not a positive number: "
-              + blockSize);
-    }
-    int numberOfLocations = (int) (len / blockSize)
-        + ((len % blockSize == 0) ? 0 : 1);
-    BlockLocation[] locations = new BlockLocation[numberOfLocations];
-    for (int i = 0; i < locations.length; i++) {
-      long currentOffset = start + (i * blockSize);
-      long currentLength = Math.min(blockSize, start + len - currentOffset);
-      locations[i] = new BlockLocation(name, host, currentOffset, currentLength);
-    }
-    return locations;
   }
 
   /**
