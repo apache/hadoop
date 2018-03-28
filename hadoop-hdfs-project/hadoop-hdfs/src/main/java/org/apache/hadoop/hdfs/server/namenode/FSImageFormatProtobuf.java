@@ -418,15 +418,22 @@ public final class FSImageFormatProtobuf {
       sectionOutputStream.flush();
     }
 
-    void save(File file, FSImageCompression compression) throws IOException {
+    /**
+     * @return number of non-fatal errors detected while writing the image.
+     * @throws IOException on fatal error.
+     */
+    long save(File file, FSImageCompression compression) throws IOException {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
         LOG.info("Saving image file {} using {}", file, compression);
         long startTime = monotonicNow();
-        saveInternal(fout, compression, file.getAbsolutePath());
-        LOG.info("Image file {} of size {} bytes saved in {} seconds.", file,
-            file.length(), (monotonicNow() - startTime) / 1000);
+        long numErrors = saveInternal(
+            fout, compression, file.getAbsolutePath());
+        LOG.info("Image file {} of size {} bytes saved in {} seconds {}.", file,
+            file.length(), (monotonicNow() - startTime) / 1000,
+            (numErrors > 0 ? (" with" + numErrors + " errors") : ""));
+        return numErrors;
       } finally {
         fout.close();
       }
@@ -450,7 +457,11 @@ public final class FSImageFormatProtobuf {
       saver.serializeFilesUCSection(sectionOutputStream);
     }
 
-    private void saveSnapshots(FileSummary.Builder summary) throws IOException {
+    /**
+     * @return number of non-fatal errors detected while saving the image.
+     * @throws IOException on fatal error.
+     */
+    private long saveSnapshots(FileSummary.Builder summary) throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
           this, summary, context, context.getSourceNamesystem());
 
@@ -461,9 +472,14 @@ public final class FSImageFormatProtobuf {
         snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
       }
       snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
+      return snapshotSaver.getNumImageErrors();
     }
 
-    private void saveInternal(FileOutputStream fout,
+    /**
+     * @return number of non-fatal errors detected while writing the FsImage.
+     * @throws IOException on fatal error.
+     */
+    private long saveInternal(FileOutputStream fout,
         FSImageCompression compression, String filePath) throws IOException {
       StartupProgress prog = NameNode.getStartupProgress();
       MessageDigest digester = MD5Hash.getDigester();
@@ -496,7 +512,7 @@ public final class FSImageFormatProtobuf {
       Step step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
       saveInodes(b);
-      saveSnapshots(b);
+      long numErrors = saveSnapshots(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
 
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
@@ -519,6 +535,7 @@ public final class FSImageFormatProtobuf {
       saveFileSummary(underlyingOutputStream, summary);
       underlyingOutputStream.close();
       savedDigest = new MD5Hash(digester.digest());
+      return numErrors;
     }
 
     private void saveSecretManagerSection(FileSummary.Builder summary)
