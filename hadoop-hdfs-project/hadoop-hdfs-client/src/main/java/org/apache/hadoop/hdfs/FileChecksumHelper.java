@@ -311,11 +311,9 @@ final class FileChecksumHelper {
         int blockCrc = CrcUtil.readInt(blockChecksumBytes, i * 4);
 
         crcComposer.update(blockCrc, block.getBlockSize());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Added blockCrc 0x{} for block index {} of size {}",
-              Integer.toString(blockCrc, 16), i, block.getBlockSize());
-        }
+        LOG.debug(
+            "Added blockCrc 0x{} for block index {} of size {}",
+            Integer.toString(blockCrc, 16), i, block.getBlockSize());
       }
 
       // NB: In some cases the located blocks have their block size adjusted
@@ -335,13 +333,11 @@ final class FileChecksumHelper {
       int lastBlockCrc = CrcUtil.readInt(
           blockChecksumBytes, 4 * (locatedBlocks.size() - 1));
       crcComposer.update(lastBlockCrc, consumedLastBlockLength);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Added lastBlockCrc 0x{} for block index {} of size {}",
-            Integer.toString(lastBlockCrc, 16),
-            locatedBlocks.size() - 1,
-            consumedLastBlockLength);
-      }
+      LOG.debug(
+          "Added lastBlockCrc 0x{} for block index {} of size {}",
+          Integer.toString(lastBlockCrc, 16),
+          locatedBlocks.size() - 1,
+          consumedLastBlockLength);
 
       int compositeCrc = CrcUtil.readInt(crcComposer.digest(), 0);
       return new CompositeCrcFileChecksum(
@@ -561,14 +557,12 @@ final class FileChecksumHelper {
           }
         }
 
-        if (LOG.isDebugEnabled()) {
-          if (blockIdx == 0) {
-            LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
-                + ", crcPerBlock=" + getCrcPerBlock());
-          }
-          LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
-              datanode, blockChecksumForDebug, getBlockChecksumType());
+        if (blockIdx == 0) {
+          LOG.debug("set bytesPerCRC={}, crcPerBlock={}",
+              getBytesPerCRC(), getCrcPerBlock());
         }
+        LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
+            datanode, blockChecksumForDebug, getBlockChecksumType());
       }
     }
   }
@@ -756,14 +750,12 @@ final class FileChecksumHelper {
           }
         }
 
-        if (LOG.isDebugEnabled()) {
-          if (bgIdx == 0) {
-            LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
-                + ", crcPerBlock=" + getCrcPerBlock());
-          }
-          LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
-              datanode, blockChecksumForDebug, getBlockChecksumType());
+        if (bgIdx == 0) {
+          LOG.debug("set bytesPerCRC={}, crcPerBlock={}",
+              getBytesPerCRC(), getCrcPerBlock());
         }
+        LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
+            datanode, blockChecksumForDebug, getBlockChecksumType());
       }
     }
   }

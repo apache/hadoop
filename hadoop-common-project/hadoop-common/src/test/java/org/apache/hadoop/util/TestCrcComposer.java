@@ -24,7 +24,9 @@ import java.util.Random;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import static org.junit.Assert.*;
 
@@ -32,6 +34,9 @@ import static org.junit.Assert.*;
  * Unittests for CrcComposer.
  */
 public class TestCrcComposer {
+  @Rule
+  public Timeout globalTimeout = new Timeout(10000);
+
   private Random rand = new Random(1234);
 
   private DataChecksum.Type type = DataChecksum.Type.CRC32C;
