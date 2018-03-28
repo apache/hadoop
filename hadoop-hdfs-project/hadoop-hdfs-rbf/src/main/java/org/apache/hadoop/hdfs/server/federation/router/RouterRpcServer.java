@@ -1202,18 +1202,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
-    return getDatanodeReport(type, 0);
+    return getDatanodeReport(type, true, 0);
   }
 
   /**
    * Get the datanode report with a timeout.
    * @param type Type of the datanode.
+   * @param requireResponse If we require all the namespaces to report.
    * @param timeOutMs Time out for the reply in milliseconds.
    * @return List of datanodes.
    * @throws IOException If it cannot get the report.
    */
   public DatanodeInfo[] getDatanodeReport(
-      DatanodeReportType type, long timeOutMs) throws IOException {
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+          throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
 
     Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
@@ -1222,8 +1224,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
 
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, DatanodeInfo[]> results =
-        rpcClient.invokeConcurrent(
-            nss, method, true, false, timeOutMs, DatanodeInfo[].class);
+        rpcClient.invokeConcurrent(nss, method, requireResponse, false,
+            timeOutMs, DatanodeInfo[].class);
     for (Entry<FederationNamespaceInfo, DatanodeInfo[]> entry :
         results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();
@@ -1243,9 +1245,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     }
     // Map -> Array
     Collection<DatanodeInfo> datanodes = datanodesMap.values();
-    DatanodeInfo[] combinedData = new DatanodeInfo[datanodes.size()];
-    combinedData = datanodes.toArray(combinedData);
-    return combinedData;
+    return toArray(datanodes, DatanodeInfo.class);
   }
 
   @Override // ClientProtocol
@@ -2147,7 +2147,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @param clazz Class of the values.
    * @return Array with the values in set.
    */
-  private static <T> T[] toArray(Set<T> set, Class<T> clazz) {
+  private static <T> T[] toArray(Collection<T> set, Class<T> clazz) {
     @SuppressWarnings("unchecked")
     T[] combinedData = (T[]) Array.newInstance(clazz, set.size());
     combinedData = set.toArray(combinedData);
