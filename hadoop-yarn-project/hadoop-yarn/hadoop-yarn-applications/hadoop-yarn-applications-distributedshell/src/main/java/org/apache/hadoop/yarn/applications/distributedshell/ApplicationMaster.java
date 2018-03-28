@@ -1147,7 +1147,6 @@ public class ApplicationMaster {
     public void onError(Throwable e) {
       LOG.error("Error in RMCallbackHandler: ", e);
       done = true;
-      amRMClient.stop();
     }
   }
 
