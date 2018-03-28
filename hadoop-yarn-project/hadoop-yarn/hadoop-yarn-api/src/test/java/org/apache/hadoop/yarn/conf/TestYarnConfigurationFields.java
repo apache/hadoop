@@ -79,6 +79,8 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.FEDERATION_FAILOVER_ENABLED);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.FEDERATION_FLUSH_CACHE_FOR_RM_ADDR);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.RM_EPOCH);
     configurationPropsToSkipCompare
