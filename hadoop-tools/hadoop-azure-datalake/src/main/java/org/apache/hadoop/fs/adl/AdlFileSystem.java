@@ -46,7 +46,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -908,45 +907,6 @@ public class AdlFileSystem extends FileSystem {
   @Deprecated
   public long getBlockSize(Path f) throws IOException {
     return ADL_BLOCK_SIZE;
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final FileStatus status,
-      final long offset, final long length) throws IOException {
-    if (status == null) {
-      return null;
-    }
-
-    if ((offset < 0) || (length < 0)) {
-      throw new IllegalArgumentException("Invalid start or len parameter");
-    }
-
-    if (status.getLen() < offset) {
-      return new BlockLocation[0];
-    }
-
-    final String[] name = {"localhost"};
-    final String[] host = {"localhost"};
-    long blockSize = ADL_BLOCK_SIZE;
-    int numberOfLocations =
-        (int) (length / blockSize) + ((length % blockSize == 0) ? 0 : 1);
-    BlockLocation[] locations = new BlockLocation[numberOfLocations];
-    for (int i = 0; i < locations.length; i++) {
-      long currentOffset = offset + (i * blockSize);
-      long currentLength = Math.min(blockSize, offset + length - currentOffset);
-      locations[i] = new BlockLocation(name, host, currentOffset,
-          currentLength);
-    }
-
-    return locations;
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final Path p, final long offset,
-      final long length) throws IOException {
-    // read ops incremented in getFileStatus
-    FileStatus fileStatus = getFileStatus(p);
-    return getFileBlockLocations(fileStatus, offset, length);
   }
 
   /**
