@@ -2816,6 +2816,15 @@
   </property>
 
   <property>
+   <description>
+    Whether to flush FederationStateStoreFacade cache to get subcluster info
+    when FederationRMFailoverProxyProvider is performing failover.
+   </description>
+   <name>yarn.federation.flush-cache-for-rm-addr</name>
+   <value>true</value>
+  </property>
+
+  <property>
     <description>The registry base directory for federation.</description>
     <name>yarn.federation.registry.base-dir</name>
     <value>yarnfederation/</value>
