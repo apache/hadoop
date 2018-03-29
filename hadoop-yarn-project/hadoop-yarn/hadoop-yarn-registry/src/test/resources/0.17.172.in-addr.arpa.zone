@@ -19,18 +19,18 @@
 $ORIGIN .
 $TTL 1800 ; 30 minutes
 0.17.172.in-addr.arpa IN SOA ns.hwhq.hortonworks.com. it.hortonworks.com. (
-	2015081000 ; serial
-	10800      ; refresh (3 hours)
-	900        ; retry (15 minutes)
-	1814400    ; expire (3 weeks)
-	10800      ; minimum (3 hours)
+  2015081000 ; serial
+  10800      ; refresh (3 hours)
+  900        ; retry (15 minutes)
+  1814400    ; expire (3 weeks)
+  10800      ; minimum (3 hours)
 )
-	NS	ns.hwhq.hortonworks.com.
-	NS	ns2.hwhq.hortonworks.com.
+ NS ns.hwhq.hortonworks.com.
+ NS ns2.hwhq.hortonworks.com.
 
 $ORIGIN 0.17.172.in-addr.arpa.
-5 	PTR 	cn005.hwx.test.
-6 	PTR 	cn006.hwx.test.
-7 	PTR 	cn007.hwx.test.
-8	PTR 	cn008.hwx.test.
-9 	PTR 	cn009.hwx.test.
+5  PTR  cn005.dev.test.
+6  PTR  cn006.dev.test.
+7  PTR  cn007.dev.test.
+8  PTR  cn008.dev.test.
+9  PTR  cn009.dev.test.
