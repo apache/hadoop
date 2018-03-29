@@ -93,8 +93,6 @@ public class RMContextImpl implements RMContext {
    */
   private RMActiveServiceContext activeServiceContext;
 
-  private ResourceProfilesManager resourceProfilesManager;
-
   private String proxyHostAndPort = null;
 
   /**
@@ -591,7 +589,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public ResourceProfilesManager getResourceProfilesManager() {
-    return this.resourceProfilesManager;
+    return this.activeServiceContext.getResourceProfilesManager();
   }
 
   String getProxyHostAndPort(Configuration conf) {
@@ -619,7 +617,7 @@ public class RMContextImpl implements RMContext {
 
   @Override
   public void setResourceProfilesManager(ResourceProfilesManager mgr) {
-    this.resourceProfilesManager = mgr;
+    this.activeServiceContext.setResourceProfilesManager(mgr);
   }
   // Note: Read java doc before adding any services over here.
 }
