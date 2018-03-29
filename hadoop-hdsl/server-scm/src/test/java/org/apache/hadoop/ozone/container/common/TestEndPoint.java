@@ -214,7 +214,7 @@ public class TestEndPoint {
       SCMRegisteredCmdResponseProto responseProto = rpcEndPoint.getEndPoint()
           .register(nodeToRegister.getProtoBufMessage(), scmAddressArray);
       Assert.assertNotNull(responseProto);
-      Assert.assertEquals(nodeToRegister.getUuid(),
+      Assert.assertEquals(nodeToRegister.getUuidString(),
           responseProto.getDatanodeUUID());
       Assert.assertNotNull(responseProto.getClusterID());
     }
@@ -230,11 +230,10 @@ public class TestEndPoint {
     RegisterEndpointTask endpointTask =
         new RegisterEndpointTask(rpcEndPoint, conf);
     if (!clearDatanodeDetails) {
-      HdslProtos.DatanodeDetailsProto datanodeDetails =
-          HdslProtos.DatanodeDetailsProto.newBuilder()
-              .setUuid(UUID.randomUUID().toString())
-              .build();
-      endpointTask.setDatanodeDetailsProto(datanodeDetails);
+      DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
+      HdslProtos.DatanodeDetailsProto datanodeDetailsProto =
+          datanodeDetails.getProtoBufMessage();
+      endpointTask.setDatanodeDetailsProto(datanodeDetailsProto);
     }
     endpointTask.call();
     return rpcEndPoint;
