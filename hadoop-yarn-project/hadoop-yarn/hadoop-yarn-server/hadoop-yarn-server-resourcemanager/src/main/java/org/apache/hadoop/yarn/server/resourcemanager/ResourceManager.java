@@ -245,13 +245,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
-
-    // add resource profiles here because it's used by AbstractYarnScheduler
-    ResourceProfilesManager resourceProfilesManager =
-        createResourceProfileManager();
-    resourceProfilesManager.init(conf);
-    rmContext.setResourceProfilesManager(resourceProfilesManager);
-
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -640,6 +633,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
           createPlacementConstraintManager();
       addService(placementConstraintManager);
       rmContext.setPlacementConstraintManager(placementConstraintManager);
+
+      // add resource profiles here because it's used by AbstractYarnScheduler
+      ResourceProfilesManager resourceProfilesManager =
+          createResourceProfileManager();
+      resourceProfilesManager.init(conf);
+      rmContext.setResourceProfilesManager(resourceProfilesManager);
 
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();
