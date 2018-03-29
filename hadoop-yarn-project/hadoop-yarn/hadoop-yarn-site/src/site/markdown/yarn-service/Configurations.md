@@ -141,12 +141,12 @@ User can use these constants in their configurations to be dynamically substitut
 ```
 Here, `COMPONENT_INSTANCE_NAME` and `SERVICE_NAME` are the constants to be substituted by the system.
 
-Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `hwxdev.site`.
+Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `dev.test`.
 Then, the config will be substituted by the service AM and written in the config file `/etc/hadoop/hbase-site.xml` inside the container as below:
 ```
 <property>
   <name>hbase.regionserver.hostname</name>
-  <value>regionserver-0.hbase.devuser.hwxdev.site</value>
+  <value>regionserver-0.hbase.devuser.dev.test</value>
 </property>
 ```
 where `regionserver-0` is the actual component instance name assigned by the system for this container.
