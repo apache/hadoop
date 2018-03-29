@@ -24,7 +24,7 @@ export default DS.JSONAPISerializer.extend({
     normalizeSingleResponse(store, primaryModelClass, payload, id,
       requestType) {
       var children = [];
-      if (payload.queues) {
+      if (payload.queues && payload.queues.queue) {
         payload.queues.queue.forEach(function(queue) {
           children.push(queue.queueName);
         });
@@ -122,7 +122,7 @@ export default DS.JSONAPISerializer.extend({
       data.push(result.queue);
       includedData = includedData.concat(result.includedData);
 
-      if (payload.queues) {
+      if (payload.queues && payload.queues.queue) {
         for (var i = 0; i < payload.queues.queue.length; i++) {
           var queue = payload.queues.queue[i];
           queue.myParent = payload.queueName;
