@@ -205,7 +205,7 @@ final class FSDirEncryptionZoneOp {
   }
 
   static EncryptionZone getEZForPath(final FSDirectory fsd,
-      final INodesInPath iip) {
+      final INodesInPath iip) throws IOException {
     fsd.readLock();
     try {
       return fsd.ezManager.getEZINodeForPath(iip);
@@ -360,8 +360,9 @@ final class FSDirEncryptionZoneOp {
 
   private static ZoneEncryptionInfoProto getZoneEncryptionInfoProto(
       final INodesInPath iip) throws IOException {
-    final XAttr fileXAttr = FSDirXAttrOp
-        .unprotectedGetXAttrByPrefixedName(iip, CRYPTO_XATTR_ENCRYPTION_ZONE);
+    final XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(
+        iip.getLastINode(), iip.getPathSnapshotId(),
+        CRYPTO_XATTR_ENCRYPTION_ZONE);
     if (fileXAttr == null) {
       throw new IOException(
           "Could not find reencryption XAttr for file " + iip.getPath());
@@ -460,8 +461,8 @@ final class FSDirEncryptionZoneOp {
       final CipherSuite suite = encryptionZone.getSuite();
       final String keyName = encryptionZone.getKeyName();
       XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(
-          iip, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
-
+          iip.getLastINode(), iip.getPathSnapshotId(),
+          CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
       if (fileXAttr == null) {
         NameNode.LOG.warn("Could not find encryption XAttr for file " +
             iip.getPath() + " in encryption zone " + encryptionZone.getPath());
@@ -494,7 +495,7 @@ final class FSDirEncryptionZoneOp {
    */
   static FileEncryptionInfo getFileEncryptionInfo(FSDirectory dir,
       INodesInPath iip, EncryptionKeyInfo ezInfo)
-          throws RetryStartFileException {
+          throws RetryStartFileException, IOException {
     FileEncryptionInfo feInfo = null;
     final EncryptionZone zone = getEZForPath(dir, iip);
     if (zone != null) {
@@ -517,7 +518,8 @@ final class FSDirEncryptionZoneOp {
   }
 
   static boolean isInAnEZ(final FSDirectory fsd, final INodesInPath iip)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
+      throws UnresolvedLinkException, SnapshotAccessControlException,
+      IOException {
     if (!fsd.ezManager.hasCreatedEncryptionZone()) {
       return false;
     }
