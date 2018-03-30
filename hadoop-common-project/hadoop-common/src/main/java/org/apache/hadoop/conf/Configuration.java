@@ -2332,7 +2332,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return password or null if not found
    * @throws IOException
    */
-  protected char[] getPasswordFromCredentialProviders(String name)
+  public char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
     char[] pass = null;
     try {
