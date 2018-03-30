@@ -100,9 +100,6 @@ The mount points of a mount table are specified in the standard Hadoop configura
 </property>
 ```
 
-<<<<<<< HEAD
-The authority following the `viewfs://` scheme in the URI is the mount table name. It is recommanded that the mount table of a cluster should be named by the cluster name. Then Hadoop system will look for a mount table with the name "clusterX" in the Hadoop configuration files. Operations arrange all gateways and service machines to contain the mount tables for ALL clusters such that, for each cluster, the default file system is set to the ViewFs mount table for that cluster as described above.
-=======
 The authority following the `viewfs://` scheme in the URI is the mount table name. It is recommended that the mount table of a cluster should be named by the cluster name. Then Hadoop system will look for a mount table with the name "clusterX" in the Hadoop configuration files. Operations arrange all gateways and service machines to contain the mount tables for ALL clusters such that, for each cluster, the default file system is set to the ViewFs mount table for that cluster as described above.
 
 The mount points of a mount table are specified in the standard Hadoop configuration files. All the mount table config entries for `viewfs` are prefixed by `fs.viewfs.mounttable.`. The mount points that are linking other filesystems are specified using `link` tags. The recommendation is to have mount points name same as in the linked filesystem target locations. For all namespaces that are not configured in the mount table, we can have them fallback to a default filesystem via `linkFallback`.
@@ -144,7 +141,6 @@ Alternatively we can have the mount table's root merged with the root of another
   </property>
 </configuration>
 ```
->>>>>>> 4304fcd5bdf... HDFS-12990. Change default NameNode RPC port back to 8020. Contributed by Xiao Chen.
 
 ### Pathname Usage Patterns
 
