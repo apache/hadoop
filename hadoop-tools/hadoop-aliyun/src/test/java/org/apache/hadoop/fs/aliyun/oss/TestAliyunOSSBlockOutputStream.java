@@ -30,10 +30,13 @@ import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
+
 /**
- * Tests regular and multi-part upload functionality for AliyunOSSOutputStream.
+ * Tests regular and multi-part upload functionality for
+ * AliyunOSSBlockOutputStream.
  */
-public class TestAliyunOSSOutputStream {
+public class TestAliyunOSSBlockOutputStream {
   private FileSystem fs;
   private static String testRootPath =
       AliyunOSSTestUtils.generateUniqueTestPath();
@@ -45,7 +48,7 @@ public class TestAliyunOSSOutputStream {
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(Constants.MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, 5 * 1024 * 1024);
-    conf.setInt(Constants.MULTIPART_UPLOAD_SIZE_KEY, 5 * 1024 * 1024);
+    conf.setInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 5 * 1024 * 1024);
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
@@ -56,18 +59,39 @@ public class TestAliyunOSSOutputStream {
     }
   }
 
-  protected Path getTestPath() {
+  private Path getTestPath() {
     return new Path(testRootPath + "/test-aliyun-oss");
   }
 
   @Test
+  public void testZeroByteUpload() throws IOException {
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 0);
+  }
+
+  @Test
   public void testRegularUpload() throws IOException {
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024 - 1);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024 + 1);
   }
 
   @Test
   public void testMultiPartUpload() throws IOException {
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        6 * 1024 * 1024 - 1);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 6 * 1024 * 1024);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        6 * 1024 * 1024 + 1);
+  }
+
+  @Test
+  public void testHugeUpload() throws IOException {
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        MULTIPART_UPLOAD_PART_SIZE_DEFAULT - 1);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
+        MULTIPART_UPLOAD_PART_SIZE_DEFAULT + 1);
   }
 
   @Test
