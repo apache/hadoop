@@ -109,6 +109,27 @@ public class LdapGroupsMapping
   public static final String LDAP_KEYSTORE_PASSWORD_FILE_KEY = LDAP_KEYSTORE_PASSWORD_KEY + ".file";
   public static final String LDAP_KEYSTORE_PASSWORD_FILE_DEFAULT = "";
 
+
+  /**
+   * File path to the location of the SSL truststore to use
+   */
+  public static final String LDAP_TRUSTSTORE_KEY = LDAP_CONFIG_PREFIX +
+      ".ssl.truststore";
+
+  /**
+   * The key of the credential entry containing the password for
+   * the LDAP SSL truststore
+   */
+  public static final String LDAP_TRUSTSTORE_PASSWORD_KEY =
+      LDAP_CONFIG_PREFIX +".ssl.truststore.password";
+
+  /**
+   * The path to a file containing the password for
+   * the LDAP SSL truststore
+   */
+  public static final String LDAP_TRUSTSTORE_PASSWORD_FILE_KEY =
+      LDAP_TRUSTSTORE_PASSWORD_KEY + ".file";
+
   /*
    * User to bind to the LDAP server with
    */
@@ -226,6 +247,8 @@ public class LdapGroupsMapping
   private boolean useSsl;
   private String keystore;
   private String keystorePass;
+  private String truststore;
+  private String truststorePass;
   private String bindUser;
   private String bindPassword;
   private String userbaseDN;
@@ -526,8 +549,19 @@ public class LdapGroupsMapping
       // Set up SSL security, if necessary
       if (useSsl) {
         env.put(Context.SECURITY_PROTOCOL, "ssl");
-        System.setProperty("javax.net.ssl.keyStore", keystore);
-        System.setProperty("javax.net.ssl.keyStorePassword", keystorePass);
+        if (!keystore.isEmpty()) {
+          System.setProperty("javax.net.ssl.keyStore", keystore);
+        }
+        if (!keystorePass.isEmpty()) {
+          System.setProperty("javax.net.ssl.keyStorePassword", keystorePass);
+        }
+        if (!truststore.isEmpty()) {
+          System.setProperty("javax.net.ssl.trustStore", truststore);
+        }
+        if (!truststorePass.isEmpty()) {
+          System.setProperty("javax.net.ssl.trustStorePassword",
+              truststorePass);
+        }
       }
 
       env.put(Context.SECURITY_PRINCIPAL, bindUser);
@@ -572,15 +606,10 @@ public class LdapGroupsMapping
     if (ldapUrl == null || ldapUrl.isEmpty()) {
       throw new RuntimeException("LDAP URL is not configured");
     }
-    
+
     useSsl = conf.getBoolean(LDAP_USE_SSL_KEY, LDAP_USE_SSL_DEFAULT);
-    keystore = conf.get(LDAP_KEYSTORE_KEY, LDAP_KEYSTORE_DEFAULT);
-    
-    keystorePass = getPassword(conf, LDAP_KEYSTORE_PASSWORD_KEY,
-        LDAP_KEYSTORE_PASSWORD_DEFAULT);
-    if (keystorePass.isEmpty()) {
-      keystorePass = extractPassword(conf.get(LDAP_KEYSTORE_PASSWORD_FILE_KEY,
-          LDAP_KEYSTORE_PASSWORD_FILE_DEFAULT));
+    if (useSsl) {
+      loadSslConf(conf);
     }
     
     bindUser = conf.get(BIND_USER_KEY, BIND_USER_DEFAULT);
@@ -643,6 +672,47 @@ public class LdapGroupsMapping
     this.conf = conf;
   }
 
+  private void loadSslConf(Configuration sslConf) {
+    keystore = sslConf.get(LDAP_KEYSTORE_KEY, LDAP_KEYSTORE_DEFAULT);
+    keystorePass = getPassword(sslConf, LDAP_KEYSTORE_PASSWORD_KEY,
+        LDAP_KEYSTORE_PASSWORD_DEFAULT);
+    if (keystorePass.isEmpty()) {
+      keystorePass = extractPassword(sslConf.get(
+          LDAP_KEYSTORE_PASSWORD_FILE_KEY,
+          LDAP_KEYSTORE_PASSWORD_FILE_DEFAULT));
+    }
+
+    truststore = sslConf.get(LDAP_TRUSTSTORE_KEY, "");
+    truststorePass = getPasswordFromCredentialProviders(
+        sslConf, LDAP_TRUSTSTORE_PASSWORD_KEY, "");
+    if (truststorePass.isEmpty()) {
+      truststorePass = extractPassword(
+          sslConf.get(LDAP_TRUSTSTORE_PASSWORD_FILE_KEY, ""));
+    }
+  }
+
+  String getPasswordFromCredentialProviders(
+      Configuration conf, String alias, String defaultPass) {
+    String password = defaultPass;
+    try {
+      char[] passchars = conf.getPasswordFromCredentialProviders(alias);
+      if (passchars != null) {
+        password = new String(passchars);
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Exception while trying to get password for alias {}: {}",
+          alias, ioe);
+    }
+    return password;
+  }
+
+  /**
+   * Passwords should not be stored in configuration. Use
+   * {@link #getPasswordFromCredentialProviders(
+   *            Configuration, String, String)}
+   * to avoid reading passwords from a configuration file.
+   */
+  @Deprecated
   String getPassword(Configuration conf, String alias, String defaultPass) {
     String password = defaultPass;
     try {
