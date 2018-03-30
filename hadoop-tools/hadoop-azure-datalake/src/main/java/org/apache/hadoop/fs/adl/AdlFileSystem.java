@@ -39,6 +39,7 @@ import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.DeviceCodeTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.MsiTokenProvider;
 import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
+import org.apache.hadoop.fs.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,17 +47,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
-import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.InvalidPathException;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -125,11 +117,20 @@ public class AdlFileSystem extends FileSystem {
    * @param originalConf  the configuration to use for the FS. The account-
    *                      specific options are patched over the base ones
    *                      before any use is made of the config.
+   * @throws InvalidCharactersException if an invalid character is found
+   *                      in the uri.
    */
   @Override
   public void initialize(URI storeUri, Configuration originalConf)
       throws IOException {
     String hostname = storeUri.getHost();
+
+    // check invalid characters in hostname
+    if (hostname == null){
+      if(storeUri.toString().contains("_")){
+        throw new InvalidCharactersException("Underscore is illegal in URI : " + storeUri);
+      }
+    }
     String accountName = getAccountNameFromFQDN(hostname);
     Configuration conf = propagateAccountOptions(originalConf, accountName);
 
