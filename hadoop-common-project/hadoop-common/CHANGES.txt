@@ -67,6 +67,9 @@ Release 2.7.6 - UNRELEASED
     Revert HADOOP-13119. Add ability to secure log servlet using proxy users.
     (Contribute by Yuanbo Liu via Eric Yang)
 
+    HADOOP-12862. LDAP Group Mapping over SSL can not specify trust store.
+    (Wei-Chiu Chuang and Konstantin Shvachko)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
