@@ -45,9 +45,6 @@ Release 2.7.6 - UNRELEASED
     HDFS-13195. DataNode conf page cannot display the current value after
     reconfig. (Mao Baolong via kihwal)
 
-    HDFS-12299. Race Between update pipeline and DN Re-Registration.
-    (Brahma Reddy Battula. Backport by Wei-Chiu Chuang)
-
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

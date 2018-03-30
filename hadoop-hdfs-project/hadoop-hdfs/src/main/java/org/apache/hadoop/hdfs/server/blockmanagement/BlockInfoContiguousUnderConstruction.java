@@ -193,9 +193,8 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
     for(int i = 0; i < numLocations; i++)
-      if (targets[i] != null) {
-        replicas.add(new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
-      }
+      replicas.add(
+        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
   }
 
   /**

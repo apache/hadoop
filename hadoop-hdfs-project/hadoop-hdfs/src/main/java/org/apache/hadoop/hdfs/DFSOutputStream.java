@@ -1345,21 +1345,6 @@ public class DFSOutputStream extends FSOutputSummer
       return false; // do not sleep, continue processing
     }
 
-    void updateBlockGS(final long newGS) {
-      block.setGenerationStamp(newGS);
-    }
-
-    /** update pipeline at the namenode */
-    @VisibleForTesting
-    public void updatePipeline(long newGS) throws IOException {
-      final ExtendedBlock oldBlock = block.getCurrentBlock();
-      // the new GS has been propagated to all DN, it should be ok to update the
-      // local block state
-      updateBlockGS(newGS);
-      dfsClient.namenode.updatePipeline(dfsClient.clientName, oldBlock,
-          block.getCurrentBlock(), nodes, storageIDs);
-    }
-
     DatanodeInfo[] getExcludedNodes() {
       return excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
           .keySet().toArray(new DatanodeInfo[0]);
