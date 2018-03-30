@@ -102,6 +102,9 @@ To secure the connection, the implementation supports LDAP over SSL (LDAPS). SSL
 In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`.
 Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file. For security purposes, this file should be readable only by the Unix user running the daemons.
 
+If the LDAP server's certificate is not signed by a well known certificate authority, specify the path to the truststore in `hadoop.security.group.mapping.ldap.ssl.truststore`.
+Similar to keystore, specify the truststore password file in `hadoop.security.group.mapping.ldap.ssl.truststore.password.file`.
+
 Composite Groups Mapping
 --------
 `CompositeGroupsMapping` works by enumerating a list of service providers in `hadoop.security.group.mapping.providers`.
