@@ -11,8 +11,11 @@ Release 2.7.6 - UNRELEASED
     HDFS-11003. Expose XmitsInProgress through DataNodeMXBean.
     (Brahma Reddy Battula)
 
-    HADOOP-15212. Add independent secret manager method for logging expired
-    tokens. (Daryn Sharp via kihwal)
+    HDFS-11187. Optimize disk access for last partial chunk checksum of
+    Finalized replica. (Gabor Bota, Wei-Chiu Chuang via Xiao Chen)
+
+    HDFS-12884. BlockUnderConstructionFeature.truncateBlock should be of type
+    BlockInfo. (chencan via shv)
 
   OPTIMIZATIONS
 

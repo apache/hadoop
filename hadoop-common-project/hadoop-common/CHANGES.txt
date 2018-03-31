@@ -18,6 +18,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-13263. Reload cached groups in background after expiry.
     (Stephen O'Donnell via Arpit Agarwal)
 
+    HADOOP-15212. Add independent secret manager method for logging expired
+    tokens. (Daryn Sharp via kihwal)
+
     HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
     (Dapeng Sun via Yongjun Zhang)
 
@@ -35,6 +38,9 @@ Release 2.7.6 - UNRELEASED
 
     HADOOP-13105. Support timeouts in LDAP queries in LdapGroupsMapping.
     (Mingliang Liu via shv)
+
+    HADOOP-15345. Backport HADOOP-12185 to branch-2.7: NetworkTopology is not
+    efficient adding/getting/removing nodes. (He Xiaoqiao via Inigo Goiri)
 
   OPTIMIZATIONS
 
@@ -57,6 +63,9 @@ Release 2.7.6 - UNRELEASED
 
     HADOOP-13508. FsPermission string constructor does not recognize
     sticky bit. (Atul Sikaria via Wei-Chiu Chuang, shv)
+
+    HADOOP-15143. NPE due to Invalid KerberosTicket in UGI.
+    (Mukul Kumar Singh via Wei-Chiu Chuang)
 
     HADOOP-15206. BZip2 drops and duplicates records when input split size
     is small. (Aki Tanaka via jlowe)
