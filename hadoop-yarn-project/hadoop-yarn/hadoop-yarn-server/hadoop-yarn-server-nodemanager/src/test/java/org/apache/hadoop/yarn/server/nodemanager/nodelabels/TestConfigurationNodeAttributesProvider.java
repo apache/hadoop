@@ -36,6 +36,7 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
@@ -181,5 +182,78 @@ public class TestConfigurationNodeAttributesProvider {
     }
 
     Assert.fail("Expecting a failure in previous check!");
+  }
+
+  @Test
+  public void testFetchAttributesFromConfiguration() {
+    Configuration conf = new Configuration();
+    // Set fetch interval to -1 to disable refresh.
+    conf.setLong(
+        YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_FETCH_INTERVAL_MS, -1);
+    conf.setStrings(
+        YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_ATTRIBUTES, "");
+  }
+
+  @Test
+  public void testParseConfiguration() throws IOException {
+    // ATTRIBUTE_NAME,ATTRIBUTE_TYPE,ATTRIBUTE_VALUE
+    String attributesStr = "hostname,STRING,host1234:uptime,STRING,321543";
+    Set<NodeAttribute> attributes = nodeAttributesProvider
+        .parseAttributes(attributesStr);
+    Assert.assertEquals(2, attributes.size());
+    Iterator<NodeAttribute> ait = attributes.iterator();
+
+    while(ait.hasNext()) {
+      NodeAttribute at = ait.next();
+      if (at.getAttributeName().equals("hostname")) {
+        Assert.assertEquals("hostname", at.getAttributeName());
+        Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+            at.getAttributePrefix());
+        Assert.assertEquals(NodeAttributeType.STRING,
+            at.getAttributeType());
+        Assert.assertEquals("host1234", at.getAttributeValue());
+      } else if (at.getAttributeName().equals("uptime")) {
+        Assert.assertEquals("uptime", at.getAttributeName());
+        Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
+            at.getAttributePrefix());
+        Assert.assertEquals(NodeAttributeType.STRING,
+            at.getAttributeType());
+        Assert.assertEquals("321543", at.getAttributeValue());
+      } else {
+        Assert.fail("Unexpected attribute");
+      }
+    }
+    // Missing type
+    attributesStr = "hostname,host1234";
+    try {
+      nodeAttributesProvider.parseAttributes(attributesStr);
+      Assert.fail("Expecting a parsing failure");
+    } catch (IOException e) {
+      Assert.assertNotNull(e);
+      Assert.assertTrue(e.getMessage().contains("Invalid value"));
+    }
+
+    // Extra prefix
+    attributesStr = "prefix/hostname,STRING,host1234";
+    try {
+      nodeAttributesProvider.parseAttributes(attributesStr);
+      Assert.fail("Expecting a parsing failure");
+    } catch (IOException e) {
+      Assert.assertNotNull(e);
+      Assert.assertTrue(e.getMessage()
+          .contains("should not contain any prefix."));
+    }
+
+    // Invalid type
+    attributesStr = "hostname,T,host1234";
+    try {
+      nodeAttributesProvider.parseAttributes(attributesStr);
+      Assert.fail("Expecting a parsing failure");
+    } catch (IOException e) {
+      e.printStackTrace();
+      Assert.assertNotNull(e);
+      Assert.assertTrue(e.getMessage()
+          .contains("Invalid node attribute type"));
+    }
   }
 }

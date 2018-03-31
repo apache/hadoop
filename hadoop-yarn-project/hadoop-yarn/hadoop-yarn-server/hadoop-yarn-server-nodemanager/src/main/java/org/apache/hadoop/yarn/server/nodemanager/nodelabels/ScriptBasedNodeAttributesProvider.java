@@ -117,6 +117,14 @@ public class ScriptBasedNodeAttributesProvider extends NodeAttributesProvider{
                 + NODE_ATTRIBUTE_DELIMITER + "ATTRIBUTE_VALUE; but get "
                 + nodeAttribute);
           }
+
+          // We don't allow script to overwrite our dist prefix,
+          // so disallow any prefix set in the script.
+          if (attributeStrs[0].contains("/")) {
+            throw new IOException("Node attributes reported by script"
+                + " should not contain any prefix.");
+          }
+
           // Automatically setup prefix for collected attributes
           NodeAttribute na = NodeAttribute
               .newInstance(NodeAttribute.PREFIX_DISTRIBUTED,
