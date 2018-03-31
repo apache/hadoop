@@ -29,6 +29,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test functionalities of {@link ConnectionManager}, which manages a pool
@@ -94,14 +95,20 @@ public class TestConnectionManager {
     // Make sure the number of connections doesn't go below minSize
     ConnectionPool pool3 = new ConnectionPool(
         conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10);
-    addConnectionsToPool(pool3, 10, 0);
-    poolMap.put(new ConnectionPoolId(TEST_USER2, TEST_NN_ADDRESS), pool3);
-    connManager.cleanup(pool3);
+    addConnectionsToPool(pool3, 8, 0);
+    poolMap.put(new ConnectionPoolId(TEST_USER3, TEST_NN_ADDRESS), pool3);
+    checkPoolConnections(TEST_USER3, 10, 0);
+    for (int i = 0; i < 10; i++) {
+      connManager.cleanup(pool3);
+    }
     checkPoolConnections(TEST_USER3, 2, 0);
     // With active connections added to pool, make sure it honors the
     // MIN_ACTIVE_RATIO again
-    addConnectionsToPool(pool3, 10, 2);
-    connManager.cleanup(pool3);
+    addConnectionsToPool(pool3, 8, 2);
+    checkPoolConnections(TEST_USER3, 10, 2);
+    for (int i = 0; i < 10; i++) {
+      connManager.cleanup(pool3);
+    }
     checkPoolConnections(TEST_USER3, 4, 2);
   }
 
@@ -145,12 +152,17 @@ public class TestConnectionManager {
 
   private void checkPoolConnections(UserGroupInformation ugi,
       int numOfConns, int numOfActiveConns) {
+    boolean connPoolFoundForUser = false;
     for (Map.Entry<ConnectionPoolId, ConnectionPool> e :
         connManager.getPools().entrySet()) {
       if (e.getKey().getUgi() == ugi) {
         assertEquals(numOfConns, e.getValue().getNumConnections());
         assertEquals(numOfActiveConns, e.getValue().getNumActiveConnections());
+        connPoolFoundForUser = true;
       }
+    }
+    if (!connPoolFoundForUser) {
+      fail("Connection pool not found for user " + ugi.getUserName());
     }
   }
 
