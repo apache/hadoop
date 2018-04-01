@@ -301,6 +301,24 @@ public class TestNodeAttributesCLI {
         NodesToAttributesMappingRequest.newInstance(
             AttributeMappingOperationType.ADD, nodeAttributesList, true);
     assertTrue(request.equals(expected));
+
+    // --------------------------------
+    // with Duplicate mappings for a host
+    // --------------------------------
+    args = new String[] { "-add", "x:key2=123,key3=abc x:key4(string)",
+        "-failOnUnknownNodes" };
+    assertTrue("Should not fail as attribute has been properly mapped",
+        0 == runTool(args));
+    nodeAttributesList = new ArrayList<>();
+    attributes = new ArrayList<>();
+    attributes
+        .add(NodeAttribute.newInstance("key4", NodeAttributeType.STRING, ""));
+    nodeAttributesList.add(NodeToAttributes.newInstance("x", attributes));
+
+    expected =
+        NodesToAttributesMappingRequest.newInstance(
+            AttributeMappingOperationType.ADD, nodeAttributesList, true);
+    assertTrue(request.equals(expected));
   }
 
   private void assertFailureMessageContains(String... messages) {

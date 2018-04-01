@@ -45,13 +45,12 @@ import org.apache.hadoop.yarn.util.Records;
 @Unstable
 public abstract class NodeAttribute {
 
-  public static final String DEFAULT_PREFIX = "";
   public static final String PREFIX_DISTRIBUTED = "nm.yarn.io";
   public static final String PREFIX_CENTRALIZED = "rm.yarn.io";
 
   public static NodeAttribute newInstance(String attributeName,
       NodeAttributeType attributeType, String attributeValue) {
-    return newInstance(DEFAULT_PREFIX, attributeName, attributeType,
+    return newInstance(PREFIX_CENTRALIZED, attributeName, attributeType,
         attributeValue);
   }
 

@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.client.cli;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappin
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 /**
  * CLI to map attributes to Nodes.
@@ -311,7 +314,7 @@ public class NodeAttributesCLI extends Configured implements Tool {
    */
   private List<NodeToAttributes> buildNodeLabelsMapFromStr(String args,
       boolean validateForAttributes, AttributeMappingOperationType operation) {
-    List<NodeToAttributes> nodeToAttributesList = new ArrayList<>();
+    Map<String,NodeToAttributes> nodeToAttributesMap = new HashMap<>();
     for (String nodeToAttributesStr : args.split("[ \n]")) {
       // for each node to attribute mapping
       nodeToAttributesStr = nodeToAttributesStr.trim();
@@ -384,8 +387,9 @@ public class NodeAttributesCLI extends Configured implements Tool {
           // TODO when we support different type of attribute type we need to
           // cross verify whether input attributes itself is not violating
           // attribute Name to Type mapping.
-          attributesList.add(NodeAttribute.newInstance(attributeName.trim(),
-              attributeType, attributeValue.trim()));
+          attributesList
+              .add(NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED,
+                  attributeName.trim(), attributeType, attributeValue.trim()));
         }
       }
       if (validateForAttributes) {
@@ -393,14 +397,14 @@ public class NodeAttributesCLI extends Configured implements Tool {
             "Attributes cannot be null or empty for Operation "
                 + operation.name() + " on the node " + node);
       }
-      nodeToAttributesList
-          .add(NodeToAttributes.newInstance(node, attributesList));
+      nodeToAttributesMap
+          .put(node,NodeToAttributes.newInstance(node, attributesList));
     }
 
-    if (nodeToAttributesList.isEmpty()) {
+    if (nodeToAttributesMap.isEmpty()) {
       throw new IllegalArgumentException(NO_MAPPING_ERR_MSG);
     }
-    return nodeToAttributesList;
+    return Lists.newArrayList(nodeToAttributesMap.values());
   }
 
   public static void main(String[] args) throws Exception {
