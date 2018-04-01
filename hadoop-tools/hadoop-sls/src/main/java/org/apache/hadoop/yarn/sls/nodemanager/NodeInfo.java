@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -216,6 +217,18 @@ public class NodeInfo {
 
     @Override
     public Map<String, Long> getAllocationTagsWithCount() {
+      return null;
+    }
+
+
+    @Override
+    public void setNodeAttributes(String prefix,
+        Set<NodeAttribute> nodeAttributes) {
+
+    }
+
+    @Override
+    public Map<String, Set<NodeAttribute>> getAllNodeAttributes() {
       return null;
     }
 

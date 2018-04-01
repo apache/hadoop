@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -62,6 +63,7 @@ public class NodeInfo {
   protected ResourceUtilizationInfo resourceUtilization;
   protected ResourceInfo usedResource;
   protected ResourceInfo availableResource;
+  protected NodeAttributesInfo nodeAttributesInfo;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -111,6 +113,19 @@ public class NodeInfo {
     if (labelSet != null) {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
+    }
+
+    // add attributes
+    Map<String, Set<NodeAttribute>> nodeAttributes =
+        ni.getAllNodeAttributes();
+    nodeAttributesInfo = new NodeAttributesInfo();
+    if (nodeAttributes != null) {
+      for (Set<NodeAttribute> attrs : nodeAttributes.values()) {
+        for (NodeAttribute attribute : attrs) {
+          NodeAttributeInfo info = new NodeAttributeInfo(attribute);
+          this.nodeAttributesInfo.addNodeAttributeInfo(info);
+        }
+      }
     }
 
     // add allocation tags

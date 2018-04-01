@@ -28,6 +28,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -282,6 +283,16 @@ public class MockNodes {
 
     @Override
     public Map<String, Long> getAllocationTagsWithCount() {
+      return null;
+    }
+    
+    public void setNodeAttributes(String prefix,
+        Set<NodeAttribute> nodeAttributes) {
+
+    }
+
+    @Override
+    public Map<String, Set<NodeAttribute>> getAllNodeAttributes() {
       return null;
     }
 

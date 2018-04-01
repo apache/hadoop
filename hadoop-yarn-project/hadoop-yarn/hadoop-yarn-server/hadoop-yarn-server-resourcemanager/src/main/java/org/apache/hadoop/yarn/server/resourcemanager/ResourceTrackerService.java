@@ -673,6 +673,10 @@ public class ResourceTrackerService extends AbstractService implements
         this.rmContext.getNodeAttributesManager()
             .replaceNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
                 ImmutableMap.of(nodeId.getHost(), nodeAttributes));
+
+        // Update node attributes to RMNode
+        rmNode.setNodeAttributes(NodeAttribute.PREFIX_DISTRIBUTED,
+            nodeAttributes);
       }
     }
 
