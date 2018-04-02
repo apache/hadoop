@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -798,42 +799,47 @@ public class TestRMWebServices extends JerseyTestBase {
     RMWebServices webSvc =
         new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
 
+    boolean caughtException = false;
+
     // Case 1: Only queue admin user can access other user's information
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
-        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
-        Response.SC_FORBIDDEN);
+    try {
+      webSvc.checkUserAccessToQueue("queue", "jack",
+          QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr);
+    } catch (ForbiddenException e) {
+      caughtException = true;
+    }
+    Assert.assertTrue(caughtException);
 
     // Case 2: request an unknown ACL causes BAD_REQUEST
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
-        "XYZ_ACL", mockHsr).getStatus(), Response.SC_BAD_REQUEST);
+    caughtException = false;
+    try {
+      webSvc.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr);
+    } catch (BadRequestException e) {
+      caughtException = true;
+    }
+    Assert.assertTrue(caughtException);
 
     // Case 3: get FORBIDDEN for rejected ACL
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
-        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
-        Response.SC_FORBIDDEN);
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "jack",
-        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
-        Response.SC_FORBIDDEN);
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "jack",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
 
     // Case 4: get OK for listed ACLs
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "admin",
-        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
-        Response.SC_OK);
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "admin",
-        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
-        Response.SC_OK);
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "admin",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
 
     // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
     mockHsr = mockHttpServletRequestByUserName("admin");
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "yarn",
-        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).getStatus(),
-        Response.SC_OK);
-    Assert.assertEquals(webSvc.checkUserAccessToQueue("queue", "yarn",
-        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).getStatus(),
-        Response.SC_FORBIDDEN);
+    Assert.assertTrue(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr).isAllowed());
+    Assert.assertFalse(webSvc.checkUserAccessToQueue("queue", "yarn",
+        QueueACL.ADMINISTER_QUEUE.name(), mockHsr).isAllowed());
   }
 }
