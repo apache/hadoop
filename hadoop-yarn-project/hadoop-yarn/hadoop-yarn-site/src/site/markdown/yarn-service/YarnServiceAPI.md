@@ -14,17 +14,17 @@
 
 # YARN Service API 
 
-Bringing a new service on YARN today is not a simple experience. The APIs of existing 
+Bringing a new service on YARN today is not a simple experience. The APIs of existing
 frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
 or writing a complex spec (for declarative frameworks).
 
-This simplified REST API can be used to create and manage the lifecycle of YARN services. 
-In most cases, the application owner will not be forced to make any changes to their applications. 
+This simplified REST API can be used to create and manage the lifecycle of YARN services.
+In most cases, the application owner will not be forced to make any changes to their applications.
 This is primarily true if the application is packaged with containerization technologies like Docker.
 
 This document describes the API specifications (aka. YarnFile) for deploying/managing
 containerized services on YARN. The same JSON spec can be used for both REST API
-and CLI to manage the services. 
+and CLI to manage the services.
 
 
 ### Version information
@@ -131,29 +131,6 @@ Update the runtime properties of a service. Currently the following operations a
 |default|Unexpected error|ServiceStatus|
 
 
-### Destroy a service
-```
-DELETE /app/v1/services/{service_name}
-```
-
-#### Description
-
-Destroy a service and release all resources. This API might have to return JSON data providing location of logs (TBD), etc.
-
-#### Parameters
-|Type|Name|Description|Required|Schema|Default|
-|----|----|----|----|----|----|
-|PathParameter|service_name|Service name|true|string||
-
-
-#### Responses
-|HTTP Code|Description|Schema|
-|----|----|----|
-|204|Destroy was successful|No Content|
-|404|Service does not exist|No Content|
-|default|Unexpected error|ServiceStatus|
-
-
 ### Get details of a service.
 ```
 GET /app/v1/services/{service_name}
@@ -173,6 +150,29 @@ Return the details (including containers) of a running service
 |HTTP Code|Description|Schema|
 |----|----|----|
 |200|a service object|object|
+|404|Service does not exist|No Content|
+|default|Unexpected error|ServiceStatus|
+
+
+### Destroy a service
+```
+DELETE /app/v1/services/{service_name}
+```
+
+#### Description
+
+Destroy a service and release all resources. This API might have to return JSON data providing location of logs (TBD), etc.
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|PathParameter|service_name|Service name|true|string||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|204|Destroy was successful|No Content|
 |404|Service does not exist|No Content|
 |default|Unexpected error|ServiceStatus|
 
@@ -201,6 +201,7 @@ Set a component's desired number of instanes
 |404|Service does not exist|No Content|
 |default|Unexpected error|ServiceStatus|
 
+
 ## Definitions
 ### Artifact
 
@@ -227,8 +228,9 @@ One or more components of the service. If the service is HBase say, then the com
 |launch_command|The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any).|false|string||
 |resource|Resource of this component (optional). If not specified, the service level global resource takes effect.|false|Resource||
 |number_of_containers|Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.|false|integer (int64)||
+|containers|Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.|false|Container array||
 |run_privileged_container|Run all containers of this component in privileged mode (YARN-4262).|false|boolean||
-|placement_policy|Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the service level placement_policy takes effect. Refer to the description at the global level for more details.|false|PlacementPolicy||
+|placement_policy|Advanced scheduling and placement policies for all containers of this component.|false|PlacementPolicy||
 |configuration|Config properties for this component.|false|Configuration||
 |quicklinks|A list of quicklink keys defined at the service level, and to be resolved by this component.|false|string array||
 
@@ -248,7 +250,7 @@ A config file that needs to be created and made available as a volume in a servi
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|type|Config file in the standard format like xml, properties, json, yaml, template.|false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, ENV, HADOOP_XML)||
+|type|Config file in the standard format like xml, properties, json, yaml, template.|false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, HADOOP_XML)||
 |dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.|false|string||
 |src_file|This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.|false|string||
 |properties|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
@@ -291,6 +293,7 @@ The current state of the container of a service.
 |----|----|----|----|----|
 |state|enum of the state of the container|false|enum (INIT, STARTED, READY)||
 
+
 ### KerberosPrincipal
 
 The kerberos principal info of the user who launches the service.
@@ -301,13 +304,47 @@ The kerberos principal info of the user who launches the service.
 |keytab|The URI of the kerberos keytab. It supports two modes, URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host; URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.|false|string||
 
 
-### PlacementPolicy
+### PlacementConstraint
 
-Placement policy of an instance of a service. This feature is in the works in YARN-6592.
+Placement constraint details.
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|label|Assigns a service to a named partition of the cluster where the service desires to run (optional). If not specified all services are submitted to a default label of the service owner. One or more labels can be setup for each service owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.|false|string||
+|name|An optional name associated to this constraint.|false|string||
+|type|The type of placement.|true|PlacementType||
+|scope|The scope of placement.|true|PlacementScope||
+|target_tags|The name of the components that this component's placement policy is depending upon are added as target tags. So for affinity say, this component's containers are requesting to be placed on hosts where containers of the target tag component(s) are running on. Target tags can also contain the name of this component, in which case it implies that for anti-affinity say, no more than one container of this component can be placed on a host. Similarly, for cardinality, it would mean that containers of this component is requesting to be placed on hosts where at least minCardinality but no more than maxCardinality containers of the target tag component(s) are running.|false|string array||
+|node_attributes|Node attributes are a set of key:value(s) pairs associated with nodes.|false|object||
+|node_partitions|Node partitions where the containers of this component can run.|false|string array||
+|min_cardinality|When placement type is cardinality, the minimum number of containers of the depending component that a host should have, where containers of this component can be allocated on.|false|integer (int64)||
+|max_cardinality|When placement type is cardinality, the maximum number of containers of the depending component that a host should have, where containers of this component can be allocated on.|false|integer (int64)||
+
+
+### PlacementPolicy
+
+Advanced placement policy of the components of a service.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|constraints|Placement constraint details.|true|PlacementConstraint array||
+
+
+### PlacementScope
+
+The scope of placement for the containers of a component.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|type||false|enum (NODE, RACK)||
+
+
+### PlacementType
+
+The type of placement - affinity/anti-affinity/affinity-with-cardinality with containers of another component or containers of the same component (self).
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|type||false|enum (AFFINITY, ANTI_AFFINITY, AFFINITY_WITH_CARDINALITY)||
 
 
 ### ReadinessCheck
@@ -333,6 +370,16 @@ Resource determines the amount of resources (vcores, memory, network, etc.) usab
 |additional|A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below. |  false | object ||
 
 
+### ResourceInformation
+
+ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|value|Integer value of the resource.|false|integer (int64)||
+|unit|Unit of the resource, acceptable values are - p/n/u/m/k/M/G/T/P/Ki/Mi/Gi/Ti/Pi. By default it is empty means no unit.|false|string||
+
+
 ### Service
 
 a service resource has the following attributes.
@@ -348,13 +395,12 @@ a service resource has the following attributes.
 |launch_time|The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.|false|string (date)||
 |number_of_running_containers|In get response this provides the total number of running containers for this service (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.|false|integer (int64)||
 |lifetime|Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.|false|integer (int64)||
-|placement_policy|(TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.|false|PlacementPolicy||
 |components|Components of a service.|false|Component array||
 |configuration|Config properties of a service. Configurations provided at the service/global level are available to all the components. Specific properties can be overridden at the component level.|false|Configuration||
 |state|State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.|false|ServiceState||
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
-|kerberos_principal | The principal info of the user who launches the service|false||
+|kerberos_principal | The principal info of the user who launches the service|false|KerberosPrincipal||
 
 ### ServiceState
 
@@ -362,7 +408,7 @@ The current state of a service.
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|state|enum of the state of the service|false|enum (ACCEPTED, STARTED, READY, STOPPED, FAILED)||
+|state|enum of the state of the service|false|enum (ACCEPTED, STARTED, STABLE, STOPPED, FAILED, FLEX)||
 
 
 ### ServiceStatus
@@ -392,7 +438,7 @@ POST URL - http://localhost:8088/app/v1/services
     [
       {
         "name": "hello",
-        "number_of_containers": 1,
+        "number_of_containers": 2,
         "artifact": {
           "id": "nginx:latest",
           "type": "DOCKER"
@@ -400,13 +446,7 @@ POST URL - http://localhost:8088/app/v1/services
         "launch_command": "./start_nginx.sh",
         "resource": {
           "cpus": 1,
-          "memory": "256",
-          "additional" : {
-            "yarn.io/gpu" : {
-              "value" : 4,
-              "unit" : ""
-            }
-          }     
+          "memory": "256"
         }
       }
     ]
@@ -425,10 +465,12 @@ Note, lifetime value of -1 means unlimited lifetime.
     "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
+    "state": "STABLE",
     "components": [
         {
             "name": "hello",
             "dependencies": [],
+            "state": "STABLE",
             "resource": {
                 "cpus": 1,
                 "memory": "256"
@@ -441,21 +483,21 @@ Note, lifetime value of -1 means unlimited lifetime.
             "quicklinks": [],
             "containers": [
                 {
-                    "id": "container_e03_1503963985568_0002_01_000001",
+                    "id": "container_e03_1503963985568_0002_01_000002",
                     "ip": "10.22.8.143",
-                    "hostname": "myhost.local",
+                    "hostname": "ctr-e03-1503963985568-0002-01-000002.example.site",
                     "state": "READY",
                     "launch_time": 1504051512412,
-                    "bare_host": "10.22.8.143",
+                    "bare_host": "host100.cloud.com",
                     "component_instance_name": "hello-0"
                 },
                 {
-                    "id": "container_e03_1503963985568_0002_01_000002",
-                    "ip": "10.22.8.143",
-                    "hostname": "myhost.local",
+                    "id": "container_e03_1503963985568_0002_01_000003",
+                    "ip": "10.22.8.144",
+                    "hostname": "ctr-e03-1503963985568-0002-01-000003.example.site",
                     "state": "READY",
                     "launch_time": 1504051536450,
-                    "bare_host": "10.22.8.143",
+                    "bare_host": "host100.cloud.com",
                     "component_instance_name": "hello-1"
                 }
             ],
@@ -511,7 +553,6 @@ PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 ##### PUT Request JSON
 ```json
 {
-    "name": "hello",
     "number_of_containers": 3
 }
 ```
@@ -621,4 +662,161 @@ POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 }
 ```
 
+### Create a service requesting GPUs in addition to CPUs and RAM
+POST URL - http://localhost:8088/app/v1/services
 
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with GPUs",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 2,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256",
+          "additional" : {
+            "yarn.io/gpu" : {
+              "value" : 4,
+              "unit" : ""
+            }
+          }
+        }
+      }
+    ]
+}
+```
+
+### Create a service with a component requesting anti-affinity placement policy
+POST URL - http://localhost:8088/app/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with anti-affinity",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 3,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256"
+        },
+        "placement_policy": {
+          "constraints": [
+            {
+              "type": "ANTI_AFFINITY",
+              "scope": "NODE",
+              "target_tags": [
+                "hello"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+}
+```
+
+##### GET Response JSON
+GET URL - http://localhost:8088/app/v1/services/hello-world
+
+Note, that the 3 containers will come up on 3 different nodes. If there are less
+than 3 NMs running in the cluster, then all 3 container requests will not be
+fulfilled and the service will be in non-STABLE state.
+
+```json
+{
+    "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example with anti-affinity",
+    "id": "application_1503963985568_0003",
+    "lifetime": -1,
+    "state": "STABLE",
+    "components": [
+        {
+            "name": "hello",
+            "dependencies": [],
+            "state": "STABLE",
+            "resource": {
+                "cpus": 1,
+                "memory": "256"
+            },
+            "placement_policy": {
+              "constraints": [
+                {
+                  "type": "ANTI_AFFINITY",
+                  "scope": "NODE",
+                  "node_attributes": {},
+                  "node_partitions": [],
+                  "target_tags": [
+                    "hello"
+                  ]
+                }
+              ]
+            },
+            "configuration": {
+                "properties": {},
+                "env": {},
+                "files": []
+            },
+            "quicklinks": [],
+            "containers": [
+                {
+                    "id": "container_e03_1503963985568_0003_01_000002",
+                    "ip": "10.22.8.143",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000002.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051512412,
+                    "bare_host": "host100.cloud.com",
+                    "component_instance_name": "hello-0"
+                },
+                {
+                    "id": "container_e03_1503963985568_0003_01_000003",
+                    "ip": "10.22.8.144",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000003.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051536450,
+                    "bare_host": "host101.cloud.com",
+                    "component_instance_name": "hello-1"
+                },
+                {
+                    "id": "container_e03_1503963985568_0003_01_000004",
+                    "ip": "10.22.8.145",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000004.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051536450,
+                    "bare_host": "host102.cloud.com",
+                    "component_instance_name": "hello-2"
+                }
+            ],
+            "launch_command": "./start_nginx.sh",
+            "number_of_containers": 1,
+            "run_privileged_container": false
+        }
+    ],
+    "configuration": {
+        "properties": {},
+        "env": {},
+        "files": []
+    },
+    "quicklinks": {}
+}
+```

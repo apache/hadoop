@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -148,6 +149,12 @@ public class ServiceScheduler extends CompositeService {
   private final Map<ContainerId, ComponentInstance> unRecoveredInstances =
       new ConcurrentHashMap<>();
   private long containerRecoveryTimeout;
+
+  // If even one component of a service uses placement constraints, then use
+  // placement scheduler to schedule containers for all components (including
+  // the ones with no constraints). Mixing of container requests and scheduling
+  // requests for a single service is not recommended.
+  private boolean hasAtLeastOnePlacementConstraint;
 
   public ServiceScheduler(ServiceContext context) {
     super(context.service.getName());
@@ -286,6 +293,9 @@ public class ServiceScheduler extends CompositeService {
   public void serviceStart() throws Exception {
     super.serviceStart();
     InetSocketAddress bindAddress = context.clientAMService.getBindAddress();
+    // When yarn.resourcemanager.placement-constraints.handler is set to
+    // placement-processor then constraints need to be added during
+    // registerApplicationMaster.
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(bindAddress.getHostName(),
             bindAddress.getPort(), "N/A");
@@ -512,6 +522,12 @@ public class ServiceScheduler extends CompositeService {
       componentsById.put(allocateId, component);
       componentsByName.put(component.getName(), component);
       allocateId++;
+      if (!hasAtLeastOnePlacementConstraint
+          && compSpec.getPlacementPolicy() != null
+          && compSpec.getPlacementPolicy().getConstraints() != null
+          && !compSpec.getPlacementPolicy().getConstraints().isEmpty()) {
+        hasAtLeastOnePlacementConstraint = true;
+      }
     }
   }
 
@@ -681,8 +697,14 @@ public class ServiceScheduler extends CompositeService {
     @Override public void onError(Throwable e) {
       LOG.error("Error in AMRMClient callback handler ", e);
     }
-  }
 
+    @Override
+    public void onRequestsRejected(
+        List<RejectedSchedulingRequest> rejectedSchedulingRequests) {
+      LOG.error("Error in AMRMClient callback handler. Following scheduling "
+          + "requests were rejected: {}", rejectedSchedulingRequests);
+    }
+  }
 
   private class NMClientCallback extends NMClientAsync.AbstractCallbackHandler {
 
@@ -809,5 +831,9 @@ public class ServiceScheduler extends CompositeService {
 
   public BoundedAppender getDiagnostics() {
     return diagnostics;
+  }
+
+  public boolean hasAtLeastOnePlacementConstraint() {
+    return hasAtLeastOnePlacementConstraint;
   }
 }

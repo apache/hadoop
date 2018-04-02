@@ -56,11 +56,6 @@ public interface UpgradeComponentsFinder {
         throw new UnsupportedOperationException("changes to queue " +
             "not supported by upgrade");
       }
-      if (!Objects.equals(currentDef.getPlacementPolicy(),
-          targetDef.getPlacementPolicy())) {
-        throw new UnsupportedOperationException("changes to placement policy " +
-            "not supported by upgrade");
-      }
 
       if (!Objects.equals(currentDef.getResource(), targetDef.getResource())) {
         throw new UnsupportedOperationException("changes to resource " +
