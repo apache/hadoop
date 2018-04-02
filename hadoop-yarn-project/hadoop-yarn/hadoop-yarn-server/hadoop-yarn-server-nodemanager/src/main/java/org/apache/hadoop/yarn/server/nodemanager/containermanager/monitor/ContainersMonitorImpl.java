@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.MemoryResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
+import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,6 +222,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     initializeOverAllocation(conf);
     if (context.isOverAllocationEnabled()) {
+      checkOverAllocationPrerequisites();
       pmemCheckEnabled = true;
       LOG.info("Force enabling physical memory checks because " +
           "overallocation is enabled");
@@ -258,6 +260,29 @@ public class ContainersMonitorImpl extends AbstractService implements
       }
     }
     super.serviceInit(this.conf);
+  }
+
+  /**
+   * Check all prerequisites for NM over-allocation.
+   */
+  private void checkOverAllocationPrerequisites() throws YarnException {
+    // LinuxContainerExecutor is required to enable overallocation
+    if (!(containerExecutor instanceof LinuxContainerExecutor)) {
+      throw new YarnException(LinuxContainerExecutor.class.getName() +
+          " is required for overallocation");
+    }
+    if (ResourceHandlerModule.getCGroupsHandler() == null) {
+      throw new YarnException("CGroups must be enabled to support" +
+          " overallocation");
+    }
+    if (ResourceHandlerModule.getCpuResourceHandler() == null) {
+      throw new YarnException(
+          "CGroups cpu isolation must be enabled to support overallocation");
+    }
+    if (ResourceHandlerModule.getMemoryResourceHandler() == null) {
+      throw new YarnException(
+          "CGroups memory isolation must be enabled for overallocation");
+    }
   }
 
   private boolean isContainerMonitorEnabled() {
