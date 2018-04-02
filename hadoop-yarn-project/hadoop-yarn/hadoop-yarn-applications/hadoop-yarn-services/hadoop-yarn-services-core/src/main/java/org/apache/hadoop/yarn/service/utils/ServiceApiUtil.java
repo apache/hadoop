@@ -27,17 +27,18 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
-import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
-import org.apache.hadoop.yarn.service.provider.ProviderFactory;
-import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
+import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
+import org.apache.hadoop.yarn.service.provider.ProviderFactory;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -202,6 +203,7 @@ public class ServiceApiUtil {
       }
       validateComponent(comp, fs.getFileSystem(), conf);
     }
+    validatePlacementPolicy(service.getComponents(), componentNames);
 
     // validate dependency tree
     sortByDependencies(service.getComponents());
@@ -261,6 +263,24 @@ public class ServiceApiUtil {
               name));
     }
     namePattern.validate(name);
+  }
+
+  private static void validatePlacementPolicy(List<Component> components,
+      Set<String> componentNames) {
+    for (Component comp : components) {
+      if (comp.getPlacementPolicy() != null) {
+        for (PlacementConstraint constraint : comp.getPlacementPolicy()
+            .getConstraints()) {
+          for (String targetTag : constraint.getTargetTags()) {
+            if (!comp.getName().equals(targetTag)) {
+              throw new IllegalArgumentException(String.format(
+                  RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
+                  targetTag, comp.getName(), comp.getName(), comp.getName()));
+            }
+          }
+        }
+      }
+    }
   }
 
   @VisibleForTesting

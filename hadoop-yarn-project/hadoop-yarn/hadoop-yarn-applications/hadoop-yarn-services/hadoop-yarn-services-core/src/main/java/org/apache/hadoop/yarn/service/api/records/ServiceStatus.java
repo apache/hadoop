@@ -85,8 +85,8 @@ public class ServiceStatus extends BaseResource {
   }
 
   /**
-   * An error code specific to a scenario which service owners should be able to use
-   * to understand the failure in addition to the diagnostic information.
+   * An error code specific to a scenario which service owners should be able to
+   * use to understand the failure in addition to the diagnostic information.
    **/
   public ServiceStatus code(Integer code) {
     this.code = code;
