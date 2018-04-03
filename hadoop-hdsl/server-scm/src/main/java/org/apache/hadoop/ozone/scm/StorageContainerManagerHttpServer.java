@@ -18,8 +18,8 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdsl.server.BaseHttpServer;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.web.OzoneHttpServer;
 import org.apache.hadoop.scm.ScmConfigKeys;
 
 import java.io.IOException;
@@ -27,7 +27,7 @@ import java.io.IOException;
 /**
  * HttpServer2 wrapper for the Ozone Storage Container Manager.
  */
-public class StorageContainerManagerHttpServer extends OzoneHttpServer {
+public class StorageContainerManagerHttpServer extends BaseHttpServer {
 
   public StorageContainerManagerHttpServer(Configuration conf)
       throws IOException {

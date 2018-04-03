@@ -20,14 +20,14 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.web.OzoneHttpServer;
+import org.apache.hadoop.hdsl.server.BaseHttpServer;
 
 import java.io.IOException;
 
 /**
  * HttpServer wrapper for the KeySpaceManager.
  */
-public class KeySpaceManagerHttpServer extends OzoneHttpServer {
+public class KeySpaceManagerHttpServer extends BaseHttpServer {
 
   public KeySpaceManagerHttpServer(Configuration conf, KeySpaceManager ksm)
       throws IOException {

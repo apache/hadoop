@@ -43,7 +43,7 @@ import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 
-import static org.apache.hadoop.ozone.web.util.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

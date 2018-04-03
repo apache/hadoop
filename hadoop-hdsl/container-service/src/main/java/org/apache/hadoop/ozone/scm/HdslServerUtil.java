@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdsl.HdslUtils.*;
-import static org.apache.hadoop.ozone.web.util.ServerUtils.sanitizeUserArgs;
+import static org.apache.hadoop.hdsl.server.ServerUtils.sanitizeUserArgs;
 import static org.apache.hadoop.scm.ScmConfigKeys.*;
 
 /**

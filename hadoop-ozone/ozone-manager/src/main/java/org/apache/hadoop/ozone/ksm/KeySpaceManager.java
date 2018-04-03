@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.jmx.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdsl.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
@@ -67,7 +67,7 @@ import static org.apache.hadoop.hdsl.HdslUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdsl.HdslUtils.getScmAddressForClients;
 import static org.apache.hadoop.hdsl.HdslUtils.isHdslEnabled;
 import static org.apache.hadoop.ozone.KsmUtils.getKsmAddress;
-import static org.apache.hadoop.ozone.web.util.ServerUtils
+import static org.apache.hadoop.hdsl.server.ServerUtils
     .updateRPCListenAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

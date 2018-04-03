@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.scm;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.jmx.ServiceRuntimeInfo;
+import org.apache.hadoop.hdsl.server.ServiceRuntimeInfo;
 
 /**
  *

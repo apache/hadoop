@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.jmx;
+package org.apache.hadoop.hdsl.server;
 
 import org.apache.hadoop.util.VersionInfo;
 

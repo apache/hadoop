@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.web.util;
+package org.apache.hadoop.hdsl.server;
 
 import java.io.File;
 import java.net.InetSocketAddress;

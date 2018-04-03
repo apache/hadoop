@@ -54,7 +54,7 @@ import org.apache.hadoop.utils.LevelDBStore;
 
 import static org.apache.hadoop.cblock.CblockUtils.getCblockServerRpcAddr;
 import static org.apache.hadoop.cblock.CblockUtils.getCblockServiceRpcAddr;
-import static org.apache.hadoop.ozone.web.util.ServerUtils
+import static org.apache.hadoop.hdsl.server.ServerUtils
     .updateRPCListenAddress;
 import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;

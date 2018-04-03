@@ -26,7 +26,7 @@ import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeType;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
-import static org.apache.hadoop.ozone.web.util.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * KSMStorage is responsible for management of the StorageDirectories used by

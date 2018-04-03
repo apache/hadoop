@@ -27,7 +27,7 @@ import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeType;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
 import static org.apache.hadoop.ozone.OzoneConsts.STORAGE_DIR;
-import static org.apache.hadoop.ozone.web.util.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * SCMStorage is responsible for management of the StorageDirectories used by
