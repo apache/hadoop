@@ -239,6 +239,10 @@ public class MiniRouterDFSCluster {
       }
       return client;
     }
+
+    public Configuration getConf() {
+      return conf;
+    }
   }
 
   /**
@@ -350,6 +354,10 @@ public class MiniRouterDFSCluster {
         suffix += "." + namenodeId;
       }
       return suffix;
+    }
+
+    public Configuration getConf() {
+      return conf;
     }
   }
 
