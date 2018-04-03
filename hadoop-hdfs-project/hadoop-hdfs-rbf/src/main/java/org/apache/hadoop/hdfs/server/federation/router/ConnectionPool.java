@@ -38,6 +38,9 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
@@ -75,6 +78,8 @@ public class ConnectionPool {
   private final String namenodeAddress;
   /** User for this connections. */
   private final UserGroupInformation ugi;
+  /** Class of the protocol. */
+  private final Class<?> protocol;
 
   /** Pool of connections. We mimic a COW array. */
   private volatile List<ConnectionContext> connections = new ArrayList<>();
@@ -91,16 +96,17 @@ public class ConnectionPool {
 
 
   protected ConnectionPool(Configuration config, String address,
-      UserGroupInformation user, int minPoolSize, int maxPoolSize)
-          throws IOException {
+      UserGroupInformation user, int minPoolSize, int maxPoolSize,
+      Class<?> proto) throws IOException {
 
     this.conf = config;
 
     // Connection pool target
     this.ugi = user;
     this.namenodeAddress = address;
+    this.protocol = proto;
     this.connectionPoolId =
-        new ConnectionPoolId(this.ugi, this.namenodeAddress);
+        new ConnectionPoolId(this.ugi, this.namenodeAddress, this.protocol);
 
     // Set configuration parameters for the pool
     this.minSize = minPoolSize;
@@ -287,7 +293,8 @@ public class ConnectionPool {
    * @throws IOException
    */
   public ConnectionContext newConnection() throws IOException {
-    return newConnection(this.conf, this.namenodeAddress, this.ugi);
+    return newConnection(
+        this.conf, this.namenodeAddress, this.ugi, this.protocol);
   }
 
   /**
@@ -299,12 +306,46 @@ public class ConnectionPool {
    * @param conf Configuration for the connection.
    * @param nnAddress Address of server supporting the ClientProtocol.
    * @param ugi User context.
-   * @return Proxy for the target ClientProtocol that contains the user's
+   * @param proto Interface of the protocol.
+   * @return proto for the target ClientProtocol that contains the user's
    *         security context.
    * @throws IOException If it cannot be created.
    */
   protected static ConnectionContext newConnection(Configuration conf,
-      String nnAddress, UserGroupInformation ugi)
+      String nnAddress, UserGroupInformation ugi, Class<?> proto)
+          throws IOException {
+    ConnectionContext ret;
+    if (proto == ClientProtocol.class) {
+      ret = newClientConnection(conf, nnAddress, ugi);
+    } else if (proto == NamenodeProtocol.class) {
+      ret = newNamenodeConnection(conf, nnAddress, ugi);
+    } else {
+      String msg = "Unsupported protocol for connection to NameNode: " +
+          ((proto != null) ? proto.getClass().getName() : "null");
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
+    }
+    return ret;
+  }
+
+  /**
+   * Creates a proxy wrapper for a client NN connection. Each proxy contains
+   * context for a single user/security context. To maximize throughput it is
+   * recommended to use multiple connection per user+server, allowing multiple
+   * writes and reads to be dispatched in parallel.
+   *
+   * Mostly based on NameNodeProxies#createNonHAProxy() but it needs the
+   * connection identifier.
+   *
+   * @param conf Configuration for the connection.
+   * @param nnAddress Address of server supporting the ClientProtocol.
+   * @param ugi User context.
+   * @return Proxy for the target ClientProtocol that contains the user's
+   *         security context.
+   * @throws IOException If it cannot be created.
+   */
+  private static ConnectionContext newClientConnection(
+      Configuration conf, String nnAddress, UserGroupInformation ugi)
           throws IOException {
     RPC.setProtocolEngine(
         conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine.class);
@@ -331,6 +372,51 @@ public class ConnectionPool {
 
     ProxyAndInfo<ClientProtocol> clientProxy =
         new ProxyAndInfo<ClientProtocol>(client, dtService, socket);
+    ConnectionContext connection = new ConnectionContext(clientProxy);
+    return connection;
+  }
+
+  /**
+   * Creates a proxy wrapper for a NN connection. Each proxy contains context
+   * for a single user/security context. To maximize throughput it is
+   * recommended to use multiple connection per user+server, allowing multiple
+   * writes and reads to be dispatched in parallel.
+   *
+   * @param conf Configuration for the connection.
+   * @param nnAddress Address of server supporting the ClientProtocol.
+   * @param ugi User context.
+   * @return Proxy for the target NamenodeProtocol that contains the user's
+   *         security context.
+   * @throws IOException If it cannot be created.
+   */
+  private static ConnectionContext newNamenodeConnection(
+      Configuration conf, String nnAddress, UserGroupInformation ugi)
+          throws IOException {
+    RPC.setProtocolEngine(
+        conf, NamenodeProtocolPB.class, ProtobufRpcEngine.class);
+
+    final RetryPolicy defaultPolicy = RetryUtils.getDefaultRetryPolicy(
+        conf,
+        HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY,
+        HdfsClientConfigKeys.Retry.POLICY_ENABLED_DEFAULT,
+        HdfsClientConfigKeys.Retry.POLICY_SPEC_KEY,
+        HdfsClientConfigKeys.Retry.POLICY_SPEC_DEFAULT,
+        HdfsConstants.SAFEMODE_EXCEPTION_CLASS_NAME);
+
+    SocketFactory factory = SocketFactory.getDefault();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SaslRpcServer.init(conf);
+    }
+    InetSocketAddress socket = NetUtils.createSocketAddr(nnAddress);
+    final long version = RPC.getProtocolVersion(NamenodeProtocolPB.class);
+    NamenodeProtocolPB proxy = RPC.getProtocolProxy(NamenodeProtocolPB.class,
+        version, socket, ugi, conf,
+        factory, RPC.getRpcTimeout(conf), defaultPolicy, null).getProxy();
+    NamenodeProtocol client = new NamenodeProtocolTranslatorPB(proxy);
+    Text dtService = SecurityUtil.buildTokenService(socket);
+
+    ProxyAndInfo<NamenodeProtocol> clientProxy =
+        new ProxyAndInfo<NamenodeProtocol>(client, dtService, socket);
     ConnectionContext connection = new ConnectionContext(clientProxy);
     return connection;
   }

@@ -42,16 +42,21 @@ public class ConnectionPoolId implements Comparable<ConnectionPoolId> {
   private final String nnId;
   /** Information about the user. */
   private final UserGroupInformation ugi;
+  /** Protocol for the connection. */
+  private final Class<?> protocol;
 
   /**
    * New connection pool identifier.
    *
    * @param ugi Information of the user issuing the request.
    * @param nnId Namenode address with port.
+   * @param proto Protocol of the connection.
    */
-  public ConnectionPoolId(final UserGroupInformation ugi, final String nnId) {
+  public ConnectionPoolId(final UserGroupInformation ugi, final String nnId,
+      final Class<?> proto) {
     this.nnId = nnId;
     this.ugi = ugi;
+    this.protocol = proto;
   }
 
   @Override
@@ -60,6 +65,7 @@ public class ConnectionPoolId implements Comparable<ConnectionPoolId> {
         .append(this.nnId)
         .append(this.ugi.toString())
         .append(this.getTokenIds())
+        .append(this.protocol)
         .toHashCode();
     return hash;
   }
@@ -76,14 +82,18 @@ public class ConnectionPoolId implements Comparable<ConnectionPoolId> {
       }
       String thisTokens = this.getTokenIds().toString();
       String otherTokens = other.getTokenIds().toString();
-      return thisTokens.equals(otherTokens);
+      if (!thisTokens.equals(otherTokens)) {
+        return false;
+      }
+      return this.protocol.equals(other.protocol);
     }
     return false;
   }
 
   @Override
   public String toString() {
-    return this.ugi + " " + this.getTokenIds() + "->" + this.nnId;
+    return this.ugi + " " + this.getTokenIds() + "->" + this.nnId + " [" +
+        this.protocol.getSimpleName() + "]";
   }
 
   @Override
@@ -96,6 +106,9 @@ public class ConnectionPoolId implements Comparable<ConnectionPoolId> {
       String thisTokens = this.getTokenIds().toString();
       String otherTokens = other.getTokenIds().toString();
       ret = thisTokens.compareTo(otherTokens);
+    }
+    if (ret == 0) {
+      ret = this.protocol.toString().compareTo(other.protocol.toString());
     }
     return ret;
   }
