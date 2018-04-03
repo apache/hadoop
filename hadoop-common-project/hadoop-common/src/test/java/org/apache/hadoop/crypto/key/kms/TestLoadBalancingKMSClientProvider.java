@@ -39,8 +39,11 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -48,9 +51,20 @@ import com.google.common.collect.Sets;
 
 public class TestLoadBalancingKMSClientProvider {
 
+  @BeforeClass
+  public static void setup() throws IOException {
+    SecurityUtil.setTokenServiceUseIp(false);
+  }
+
+  @After
+  public void teardown() throws IOException {
+    KMSClientProvider.fallbackDefaultPortForTesting = false;
+  }
+
   @Test
   public void testCreation() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KeyProvider kp = new KMSClientProvider.Factory().createProvider(new URI(
         "kms://http@host1/kms/foo"), conf);
     assertTrue(kp instanceof LoadBalancingKMSClientProvider);
@@ -231,6 +245,7 @@ public class TestLoadBalancingKMSClientProvider {
   @Test
   public void testClassCastException() throws Exception {
     Configuration conf = new Configuration();
+    KMSClientProvider.fallbackDefaultPortForTesting = true;
     KMSClientProvider p1 = new MyKMSClientProvider(
         new URI("kms://http@host1/kms/foo"), conf);
     LoadBalancingKMSClientProvider kp = new LoadBalancingKMSClientProvider(
