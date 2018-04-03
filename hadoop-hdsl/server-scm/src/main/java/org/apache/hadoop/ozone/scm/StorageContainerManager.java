@@ -33,7 +33,7 @@ import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.jmx.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdsl.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -103,7 +103,7 @@ import static org.apache.hadoop.ozone.scm.HdslServerUtil
     .getScmClientBindAddress;
 import static org.apache.hadoop.ozone.scm.HdslServerUtil
     .getScmDataNodeBindAddress;
-import static org.apache.hadoop.ozone.web.util.ServerUtils
+import static org.apache.hadoop.hdsl.server.ServerUtils
     .updateRPCListenAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

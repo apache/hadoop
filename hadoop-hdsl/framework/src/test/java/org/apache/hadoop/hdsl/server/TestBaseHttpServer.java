@@ -15,22 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.web;
+package org.apache.hadoop.hdsl.server;
 
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.conf.Configuration;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Test Common ozone web methods.
+ * Test Common ozone/hdsl web methods.
  */
-public class TestOzoneHttpServer {
+public class TestBaseHttpServer {
   @Test
   public void getBindAddress() throws Exception {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    Configuration conf = new Configuration();
     conf.set("enabled", "false");
 
-    OzoneHttpServer ozoneHttpServer = new OzoneHttpServer(conf, "test") {
+    BaseHttpServer baseHttpServer = new BaseHttpServer(conf, "test") {
       @Override
       protected String getHttpAddressKey() {
         return null;
@@ -84,13 +85,13 @@ public class TestOzoneHttpServer {
 
     conf.set("addresskey", "0.0.0.0:1234");
 
-    Assert.assertEquals("/0.0.0.0:1234", ozoneHttpServer
+    Assert.assertEquals("/0.0.0.0:1234", baseHttpServer
         .getBindAddress("bindhostkey", "addresskey",
             "default", 65).toString());
 
     conf.set("bindhostkey", "1.2.3.4");
 
-    Assert.assertEquals("/1.2.3.4:1234", ozoneHttpServer
+    Assert.assertEquals("/1.2.3.4:1234", baseHttpServer
         .getBindAddress("bindhostkey", "addresskey",
             "default", 65).toString());
   }

@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 
-import static org.apache.hadoop.ozone.web.util.ServerUtils.releaseConnection;
+import static org.apache.hadoop.hdsl.server.ServerUtils.releaseConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;

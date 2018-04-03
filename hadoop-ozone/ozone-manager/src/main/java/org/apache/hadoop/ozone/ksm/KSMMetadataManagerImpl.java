@@ -65,7 +65,7 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.ozone.web.util.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * KSM metadata manager interface.

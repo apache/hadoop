@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
-import static org.apache.hadoop.ozone.web.util.ServerUtils.releaseConnection;
+import static org.apache.hadoop.hdsl.server.ServerUtils.releaseConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;

@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.web;
+package org.apache.hadoop.hdsl.server;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -38,10 +38,10 @@ import static org.apache.hadoop.hdsl.HdslUtils.getPortNumberFromConfigKeys;
 /**
  * Base class for HTTP server of the Ozone related components.
  */
-public abstract class OzoneHttpServer {
+public abstract class BaseHttpServer {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OzoneHttpServer.class);
+      LoggerFactory.getLogger(BaseHttpServer.class);
 
   private HttpServer2 httpServer;
   private final Configuration conf;
@@ -53,7 +53,7 @@ public abstract class OzoneHttpServer {
 
   private String name;
 
-  public OzoneHttpServer(Configuration conf, String name) throws IOException {
+  public BaseHttpServer(Configuration conf, String name) throws IOException {
     this.name = name;
     this.conf = conf;
     if (isEnabled()) {
@@ -85,7 +85,7 @@ public abstract class OzoneHttpServer {
   }
 
   /**
-   * Add a servlet to OzoneHttpServer.
+   * Add a servlet to BaseHttpServer.
    * @param servletName The name of the servlet
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class

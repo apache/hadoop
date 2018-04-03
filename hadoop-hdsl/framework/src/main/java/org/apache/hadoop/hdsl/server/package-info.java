@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.util;
+package org.apache.hadoop.hdsl.server;
 
 /**
- * Shared utilities for both Ozone/HDSL server side components.
+ * Common server side utilities for all the hdsl/ozone server components.
  */

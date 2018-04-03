@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.jmx;
+package org.apache.hadoop.hdsl.server;
 
 /**
  * Common runtime information for any service components.
