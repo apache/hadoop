@@ -522,12 +522,12 @@ public class NetworkTopology {
         numOfDatanodes -= ((InnerNode)node).getNumOfLeaves();
       }
     }
-    if (numOfDatanodes == 0) {
-      LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\").",
-          scope, excludedScope);
+    if (numOfDatanodes <= 0) {
+      LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\")."
+              + " numOfDatanodes={}",
+          scope, excludedScope, numOfDatanodes);
       return null;
     }
-    Node ret = null;
     final int availableNodes;
     if (excludedScope == null) {
       availableNodes = countNumOfAvailableNodes(scope, excludedNodes);
@@ -536,22 +536,96 @@ public class NetworkTopology {
           countNumOfAvailableNodes("~" + excludedScope, excludedNodes);
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
-        + " scope={}, excludedScope={}, excludeNodes={}", availableNodes,
-        innerNode, scope, excludedScope, excludedNodes);
+        + " scope={}, excludedScope={}, excludeNodes={}. numOfDatanodes={}.",
+        availableNodes, innerNode, scope, excludedScope, excludedNodes,
+        numOfDatanodes);
+    Node ret = null;
     if (availableNodes > 0) {
-      do {
-        int leaveIndex = r.nextInt(numOfDatanodes);
-        ret = innerNode.getLeaf(leaveIndex, node);
-        if (excludedNodes == null || !excludedNodes.contains(ret)) {
-          break;
-        } else {
-          LOG.debug("Node {} is excluded, continuing.", ret);
-        }
-        // We've counted numOfAvailableNodes inside the lock, so there must be
-        // at least 1 satisfying node. Keep trying until we found it.
-      } while (true);
+      ret = chooseRandom(innerNode, node, excludedNodes, numOfDatanodes,
+          availableNodes);
     }
     LOG.debug("chooseRandom returning {}", ret);
+    return ret;
+  }
+
+  /**
+   * Randomly choose one node under <i>parentNode</i>, considering the exclude
+   * nodes and scope. Should be called with {@link #netlock}'s readlock held.
+   *
+   * @param parentNode        the parent node
+   * @param excludedScopeNode the node corresponding to the exclude scope.
+   * @param excludedNodes     a collection of nodes to be excluded from
+   * @param totalInScopeNodes total number of nodes under parentNode, excluding
+   *                          the excludedScopeNode
+   * @param availableNodes    number of available nodes under parentNode that
+   *                          could be chosen, excluding excludedNodes
+   * @return the chosen node, or null if none can be chosen
+   */
+  private Node chooseRandom(final InnerNode parentNode,
+      final Node excludedScopeNode, final Collection<Node> excludedNodes,
+      final int totalInScopeNodes, final int availableNodes) {
+    Preconditions.checkArgument(
+        totalInScopeNodes >= availableNodes && availableNodes > 0, String
+            .format("%d should >= %d, and both should be positive.",
+                totalInScopeNodes, availableNodes));
+    if (excludedNodes == null || excludedNodes.isEmpty()) {
+      // if there are no excludedNodes, randomly choose a node
+      final int index = r.nextInt(totalInScopeNodes);
+      return parentNode.getLeaf(index, excludedScopeNode);
+    }
+
+    // excludedNodes non empty.
+    // Choose the nth VALID node, where n is random. VALID meaning it can be
+    // returned, after considering exclude scope and exclude nodes.
+    // The probability of being chosen should be equal for all VALID nodes.
+    // Notably, we do NOT choose nth node, and find the next valid node
+    // if n is excluded - this will make the probability of the node immediately
+    // after an excluded node higher.
+    //
+    // Start point is always 0 and that's fine, because the nth valid node
+    // logic provides equal randomness.
+    //
+    // Consider this example, where 1,3,5 out of the 10 nodes are excluded:
+    // 1 2 3 4 5 6 7 8 9 10
+    // x   x   x
+    // We will randomly choose the nth valid node where n is [0,6].
+    // We do NOT choose a random number n and just use the closest valid node,
+    // for example both n=3 and n=4 will choose 4, making it a 2/10 probability,
+    // higher than the expected 1/7
+    // totalInScopeNodes=10 and availableNodes=7 in this example.
+    int nthValidToReturn = r.nextInt(availableNodes);
+    LOG.debug("nthValidToReturn is {}", nthValidToReturn);
+    Node ret =
+        parentNode.getLeaf(r.nextInt(totalInScopeNodes), excludedScopeNode);
+    if (!excludedNodes.contains(ret)) {
+      // return if we're lucky enough to get a valid node at a random first pick
+      LOG.debug("Chosen node {} from first random", ret);
+      return ret;
+    } else {
+      ret = null;
+    }
+    Node lastValidNode = null;
+    for (int i = 0; i < totalInScopeNodes; ++i) {
+      ret = parentNode.getLeaf(i, excludedScopeNode);
+      if (!excludedNodes.contains(ret)) {
+        if (nthValidToReturn == 0) {
+          break;
+        }
+        --nthValidToReturn;
+        lastValidNode = ret;
+      } else {
+        LOG.debug("Node {} is excluded, continuing.", ret);
+        ret = null;
+      }
+    }
+    if (ret == null && lastValidNode != null) {
+      LOG.error("BUG: Found lastValidNode {} but not nth valid node. "
+              + "parentNode={}, excludedScopeNode={}, excludedNodes={}, "
+              + "totalInScopeNodes={}, availableNodes={}, nthValidToReturn={}.",
+          lastValidNode, parentNode, excludedScopeNode, excludedNodes,
+          totalInScopeNodes, availableNodes, nthValidToReturn);
+      ret = lastValidNode;
+    }
     return ret;
   }
 
