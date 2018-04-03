@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
