@@ -481,7 +481,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       try {
         String ln = "";
         Long gpuAttributeUsed = 0L;
-        Long gpuAttributeProcess = 0xFFFFFFFFFFFFFFFFL;
+        Long gpuAttributeProcess = 0L;
         Long gpuAttributeCapacity = 0L;
         Map<String, String> usingMap = new HashMap<String, String>();
 
@@ -508,7 +508,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               int usedMem = Integer.parseInt(mat.group(1));
-              if (usedMem == 0) {
+              if (usedMem > 0) {
                 gpuAttributeUsed |= (1L << currentIndex);
               }
             }
@@ -517,20 +517,20 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               long index = Long.parseLong(mat.group(1));
-              gpuAttributeProcess -= (1 << index);
+              gpuAttributeProcess |= (1 << index);
             }
           }
         }
         input.close();
         ir.close();
-        Long ownerLessGpus = (gpuAttributeUsed & gpuAttributeCapacity) - (gpuAttributeProcess & gpuAttributeCapacity);
+        Long ownerLessGpus = (gpuAttributeUsed & ~gpuAttributeProcess);
         if ((ownerLessGpus != 0)) {
+          LOG.info("GpuAttributeCapacity:" + Long.toBinaryString(gpuAttributeCapacity) + " GpuAttributeUsed:" + Long.toBinaryString(gpuAttributeUsed) + " GpuAttributeProcess:" + Long.toBinaryString(gpuAttributeProcess) );
           if (excludeOwnerlessUsingGpus) {
-            gpuAttributeCapacity -= ownerLessGpus;
+            gpuAttributeCapacity = (gpuAttributeCapacity & ~ownerLessGpus);
             LOG.error("GPU:" + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");
-
           } else {
-            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ingore it and schedule jobs on these GPU. ");
+            LOG.error("GPU: " + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will ignore it and schedule jobs on these GPU. ");
           }
         }
         numGPUs = Long.bitCount(gpuAttributeCapacity);
