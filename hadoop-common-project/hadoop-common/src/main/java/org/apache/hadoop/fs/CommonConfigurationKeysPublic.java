@@ -700,6 +700,27 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_KEY_PROVIDER_PATH =
       "hadoop.security.key.provider.path";
 
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY =
+      "hadoop.security.key.default.bitlength";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY. */
+  public static final int HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT = 128;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY =
+      "hadoop.security.key.default.cipher";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY. */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT =
+      "AES/CTR/NoPadding";
+
   //  <!-- KMSClientProvider configurations -->
   /**
    * @see
