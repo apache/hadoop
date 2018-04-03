@@ -174,6 +174,12 @@ public final class RMWSConsts {
   public static final String GET_CONTAINER =
       "/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}";
 
+  /**
+   * Path for {code checkUserAccessToQueue#}
+   */
+  public static final String CHECK_USER_ACCESS_TO_QUEUE =
+      "/queues/{queue}/access";
+
   // ----------------QueryParams for RMWebServiceProtocol----------------
 
   public static final String TIME = "time";
@@ -183,6 +189,7 @@ public final class RMWSConsts {
   public static final String FINAL_STATUS = "finalStatus";
   public static final String USER = "user";
   public static final String QUEUE = "queue";
+  public static final String QUEUES = "queues";
   public static final String LIMIT = "limit";
   public static final String STARTED_TIME_BEGIN = "startedTimeBegin";
   public static final String STARTED_TIME_END = "startedTimeEnd";
@@ -209,6 +216,7 @@ public final class RMWSConsts {
   public static final String GET_LABELS = "get-labels";
   public static final String DESELECTS = "deSelects";
   public static final String CONTAINERS = "containers";
+  public static final String QUEUE_ACL_TYPE = "queue-acl-type";
 
   private RMWSConsts() {
     // not called

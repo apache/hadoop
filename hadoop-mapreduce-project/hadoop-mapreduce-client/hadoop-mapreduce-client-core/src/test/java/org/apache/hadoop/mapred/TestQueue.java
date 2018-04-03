@@ -153,9 +153,10 @@ public class TestQueue {
       writer = new StringWriter();
       QueueManager.dumpConfiguration(writer, conf);
       result = writer.toString();
-      assertEquals(
-          "{\"queues\":[{\"name\":\"default\",\"state\":\"running\",\"acl_submit_job\":\"*\",\"acl_administer_jobs\":\"*\",\"properties\":[],\"children\":[]},{\"name\":\"q1\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[],\"children\":[{\"name\":\"q1:q2\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[{\"key\":\"capacity\",\"value\":\"20\"},{\"key\":\"user-limit\",\"value\":\"30\"}],\"children\":[]}]}]}",
-          result);
+      assertTrue(result.contains("{\"queues\":[{\"name\":\"default\",\"state\":\"running\",\"acl_submit_job\":\"*\",\"acl_administer_jobs\":\"*\",\"properties\":[],\"children\":[]},{\"name\":\"q1\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":[],\"children\":[{\"name\":\"q1:q2\",\"state\":\"running\",\"acl_submit_job\":\" \",\"acl_administer_jobs\":\" \",\"properties\":["));
+      assertTrue(result.contains("{\"key\":\"capacity\",\"value\":\"20\"}"));
+      assertTrue(result.contains("{\"key\":\"user-limit\",\"value\":\"30\"}"));
+      assertTrue(result.contains("],\"children\":[]}]}]}"));
       // test constructor QueueAclsInfo
       QueueAclsInfo qi = new QueueAclsInfo();
       assertNull(qi.getQueueName());

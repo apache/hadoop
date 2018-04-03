@@ -1,0 +1,434 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into hdfs-site.xml and change them -->
+<!-- there.  If hdfs-site.xml does not already exist, create it.      -->
+
+<configuration>
+  <property>
+    <name>dfs.federation.router.default.nameserviceId</name>
+    <value></value>
+    <description>
+      Nameservice identifier of the default subcluster to monitor.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc.enable</name>
+    <value>true</value>
+    <description>
+      If true, the RPC service to handle client requests in the router is
+      enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc-address</name>
+    <value>0.0.0.0:8888</value>
+    <description>
+      RPC address that handles all clients requests.
+      The value of this property will take the form of router-host1:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the RPC server will bind to. If this optional address is
+      set, it overrides only the hostname portion of
+      dfs.federation.router.rpc-address. This is useful for making the name node
+      listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.handler.count</name>
+    <value>10</value>
+    <description>
+      The number of server threads for the router to handle RPC requests from
+      clients.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.handler.queue.size</name>
+    <value>100</value>
+    <description>
+      The size of the queue for the number of handlers to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.reader.count</name>
+    <value>1</value>
+    <description>
+      The number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.reader.queue.size</name>
+    <value>100</value>
+    <description>
+      The size of the queue for the number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.pool-size</name>
+    <value>1</value>
+    <description>
+      Size of the pool of connections from the router to namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.clean.ms</name>
+    <value>10000</value>
+    <description>
+      Time interval, in milliseconds, to check if the connection pool should
+      remove unused connections.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.connection.pool.clean.ms</name>
+    <value>60000</value>
+    <description>
+      Time interval, in milliseconds, to check if the connection manager should
+      remove unused connection pools.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics in the router are enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>
+    <description>
+      Class to monitor the RPC system in the router. It must implement the
+      RouterRpcMonitor interface.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin.enable</name>
+    <value>true</value>
+    <description>
+      If true, the RPC admin service to handle client requests in the router is
+      enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-address</name>
+    <value>0.0.0.0:8111</value>
+    <description>
+      RPC address that handles the admin requests.
+      The value of this property will take the form of router-host1:rpc-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the RPC admin server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.admin-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.admin.handler.count</name>
+    <value>1</value>
+    <description>
+      The number of server threads for the router to handle RPC requests from
+      admin.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http-address</name>
+    <value>0.0.0.0:50071</value>
+    <description>
+      HTTP address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:http-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.http-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-address</name>
+    <value>0.0.0.0:50072</value>
+    <description>
+      HTTPS address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:https-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTPS server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.https-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http.enable</name>
+    <value>true</value>
+    <description>
+      If the HTTP service to handle client requests in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics service in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.file.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
+    <description>
+      Class to resolve files to subclusters.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.namenode.resolver.client.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver</value>
+    <description>
+      Class to resolve the namenode for a subcluster.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router connects to the State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.serializer</name>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreSerializerPBImpl</value>
+    <description>
+      Class to serialize State Store records.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl</value>
+    <description>
+      Class to implement the State Store. There are three implementation classes currently
+      being supported:
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileImpl,
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreFileSystemImpl and
+      org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.
+      These implementation classes use the local file, filesystem and ZooKeeper as a backend respectively.
+      By default it uses the ZooKeeper as the default State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.connection.test</name>
+    <value>60000</value>
+    <description>
+      How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.cache.ttl</name>
+    <value>1m</value>
+    <description>
+      How often to refresh the State Store caches in milliseconds. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.membership.expiration</name>
+    <value>300000</value>
+    <description>
+      Expiration time in milliseconds for a membership record.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router heartbeats into the State Store.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat.interval</name>
+    <value>5000</value>
+    <description>
+      How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.heartbeat-state.interval</name>
+    <value>5s</value>
+    <description>
+      How often the Router should heartbeat its state into the State Store in
+      milliseconds. This setting supports multiple time unit suffixes as
+      described in dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration</name>
+    <value>5m</value>
+    <description>
+      Expiration time in milliseconds for a router state record. This setting
+      supports multiple time unit suffixes as described in
+      dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.enable</name>
+    <value>true</value>
+    <description>
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.extension</name>
+    <value>30s</value>
+    <description>
+      Time after startup that the Router is in safe mode. This setting
+      supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.safemode.expiration</name>
+    <value>3m</value>
+    <description>
+      Time without being able to reach the State Store to enter safe mode. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified then milliseconds is
+      assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode</name>
+    <value></value>
+    <description>
+      The identifier of the namenodes to monitor and heartbeat.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.localnamenode.enable</name>
+    <value>true</value>
+    <description>
+      If true, the Router should monitor the namenode in the local machine.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.mount-table.max-cache-size</name>
+    <value>10000</value>
+    <description>
+      Maximum number of mount table cache entries to have.
+      By default, remove cache entries if we have more than 10k.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota.enable</name>
+    <value>false</value>
+    <description>
+      Set to true to enable quota system in Router.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota-cache.update.interval</name>
+    <value>60s</value>
+    <description>
+      Interval time for updating quota usage cache in Router.
+      This property is used only if the value of
+      dfs.federation.router.quota.enable is true.
+      This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.thread-size</name>
+    <value>32</value>
+    <description>
+      Max threads size for the RouterClient to execute concurrent
+      requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.client.retry.max.attempts</name>
+    <value>3</value>
+    <description>
+      Max retry attempts for the RouterClient talking to the Router.
+    </description>
+  </property>
+
+</configuration>

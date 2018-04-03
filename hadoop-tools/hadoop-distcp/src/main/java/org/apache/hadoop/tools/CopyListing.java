@@ -143,7 +143,6 @@ public abstract class CopyListing extends Configured {
       throws DuplicateFileException, IOException {
 
     Configuration config = getConf();
-    FileSystem fs = pathToListFile.getFileSystem(config);
 
     final boolean splitLargeFile = context.splitLargeFile();
 
@@ -153,7 +152,7 @@ public abstract class CopyListing extends Configured {
     // <chunkOffset, chunkLength> is continuous.
     //
     Path checkPath = splitLargeFile?
-        pathToListFile : DistCpUtils.sortListing(fs, config, pathToListFile);
+        pathToListFile : DistCpUtils.sortListing(config, pathToListFile);
 
     SequenceFile.Reader reader = new SequenceFile.Reader(
                           config, SequenceFile.Reader.file(checkPath));

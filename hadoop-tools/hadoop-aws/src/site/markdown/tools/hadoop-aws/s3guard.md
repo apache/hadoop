@@ -506,7 +506,7 @@ Input seek policy: fs.s3a.experimental.input.fadvise=normal
 
 Note that other clients may have a S3Guard table set up to store metadata
 on this bucket; the checks are all done from the perspective of the configuration
-setttings of the current client.
+settings of the current client.
 
 ```bash
 hadoop s3guard bucket-info -guarded -auth s3a://landsat-pds
@@ -798,6 +798,6 @@ The IO load of clients of the (shared) DynamoDB table was exceeded.
 Currently S3Guard doesn't do any throttling and retries here; the way to address
 this is to increase capacity via the AWS console or the `set-capacity` command.
 
-## Other Topis
+## Other Topics
 
 For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)

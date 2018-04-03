@@ -2910,7 +2910,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param num Number of threads for hedged reads thread pool.
    * If zero, skip hedged reads thread pool creation.
    */
-  private synchronized void initThreadsNumForHedgedReads(int num) {
+  private static synchronized void initThreadsNumForHedgedReads(int num) {
     if (num <= 0 || HEDGED_READ_THREAD_POOL != null) return;
     HEDGED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),

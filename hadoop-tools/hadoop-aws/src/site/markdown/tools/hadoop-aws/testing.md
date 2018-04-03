@@ -28,7 +28,7 @@ be ignored.
 
 ## <a name="policy"></a> Policy for submitting patches which affect the `hadoop-aws` module.
 
-The Apache Jenkins infrastucture does not run any S3 integration tests,
+The Apache Jenkins infrastructure does not run any S3 integration tests,
 due to the need to keep credentials secure.
 
 ### The submitter of any patch is required to run all the integration tests and declare which S3 region/implementation they used.
@@ -319,10 +319,10 @@ mvn verify -Dparallel-tests -Dscale -DtestsThreadCount=8
 
 The most bandwidth intensive tests (those which upload data) always run
 sequentially; those which are slow due to HTTPS setup costs or server-side
-actionsare included in the set of parallelized tests.
+actions are included in the set of parallelized tests.
 
 
-### <a name="tuning_scale"></a> Tuning scale optins from Maven
+### <a name="tuning_scale"></a> Tuning scale options from Maven
 
 
 Some of the tests can be tuned from the maven build or from the
@@ -344,7 +344,7 @@ then the configuration value is used. The `unset` option is used to
 
 Only a few properties can be set this way; more will be added.
 
-| Property | Meaninging |
+| Property | Meaning |
 |-----------|-------------|
 | `fs.s3a.scale.test.timeout`| Timeout in seconds for scale tests |
 | `fs.s3a.scale.test.huge.filesize`| Size for huge file uploads |
@@ -493,7 +493,7 @@ cases must be disabled:
   <value>false</value>
 </property>
 ```
-These tests reqest a temporary set of credentials from the STS service endpoint.
+These tests request a temporary set of credentials from the STS service endpoint.
 An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
 
 ```xml
@@ -641,7 +641,7 @@ to support the declaration of a specific large test file on alternate filesystem
 
 ### Works Over Long-haul Links
 
-As well as making file size and operation counts scaleable, this includes
+As well as making file size and operation counts scalable, this includes
 making test timeouts adequate. The Scale tests make this configurable; it's
 hard coded to ten minutes in `AbstractS3ATestBase()`; subclasses can
 change this by overriding `getTestTimeoutMillis()`.
@@ -677,7 +677,7 @@ Tests can overrun `createConfiguration()` to add new options to the configuratio
 file for the S3A Filesystem instance used in their tests.
 
 However, filesystem caching may mean that a test suite may get a cached
-instance created with an differennnt configuration. For tests which don't need
+instance created with an different configuration. For tests which don't need
 specific configurations caching is good: it reduces test setup time.
 
 For those tests which do need unique options (encryption, magic files),
@@ -888,7 +888,7 @@ s3a://bucket/a/b/c/DELAY_LISTING_ME
 ```
 
 In real-life S3 inconsistency, however, we expect that all the above paths
-(including `a` and `b`) will be subject to delayed visiblity.
+(including `a` and `b`) will be subject to delayed visibility.
 
 ### Using the `InconsistentAmazonS3CClient` in downstream integration tests
 
@@ -952,7 +952,7 @@ When the `s3guard` profile is enabled, following profiles can be specified:
   DynamoDB web service; launch the server and creating the table.
   You won't be charged bills for using DynamoDB in test. As it runs in-JVM,
   the table isn't shared across other tests running in parallel.
-* `non-auth`: treat the S3Guard metadata as authorative.
+* `non-auth`: treat the S3Guard metadata as authoritative.
 
 ```bash
 mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
@@ -984,7 +984,7 @@ throttling, and compare performance for different implementations. These
 are included in the scale tests executed when `-Dscale` is passed to
 the maven command line.
 
-The two S3Guard scale testse are `ITestDynamoDBMetadataStoreScale` and
+The two S3Guard scale tests are `ITestDynamoDBMetadataStoreScale` and
 `ITestLocalMetadataStoreScale`.  To run the DynamoDB test, you will need to
 define your table name and region in your test configuration.  For example,
 the following settings allow us to run `ITestDynamoDBMetadataStoreScale` with

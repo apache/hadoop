@@ -226,14 +226,14 @@ it is committed through the standard "v1" commit algorithm.
 When the Job is committed, the Job Manager reads the lists of pending writes from its
 HDFS Job destination directory and completes those uploads.
 
-Cancelling a task is straighforward: the local directory is deleted with
+Cancelling a task is straightforward: the local directory is deleted with
 its staged data. Cancelling a job is achieved by reading in the lists of
 pending writes from the HDFS job attempt directory, and aborting those
 uploads. For extra safety, all outstanding multipart writes to the destination directory
 are aborted.
 
 The staging committer comes in two slightly different forms, with slightly
-diffrent conflict resolution policies:
+different conflict resolution policies:
 
 
 * **Directory**: the entire directory tree of data is written or overwritten,
@@ -278,7 +278,7 @@ any with the same name. Reliable use requires unique names for generated files,
 which the committers generate
 by default.
 
-The difference between the two staging ommitters are as follows:
+The difference between the two staging committers are as follows:
 
 The Directory Committer uses the entire directory tree for conflict resolution.
 If any file exists at the destination it will fail in job setup; if the resolution
@@ -301,7 +301,7 @@ It's intended for use in Apache Spark Dataset operations, rather
 than Hadoop's original MapReduce engine, and only in jobs
 where adding new data to an existing dataset is the desired goal.
 
-Preequisites for successful work
+Prerequisites for successful work
 
 1. The output is written into partitions via `PARTITIONED BY` or `partitionedBy()`
 instructions.
@@ -401,7 +401,7 @@ Generated files are initially written to a local directory underneath one of the
 directories listed in `fs.s3a.buffer.dir`.
 
 
-The staging commmitter needs a path in the cluster filesystem
+The staging committer needs a path in the cluster filesystem
 (e.g. HDFS). This must be declared in `fs.s3a.committer.staging.tmp.path`.
 
 Temporary files are saved in HDFS (or other cluster filesystem) under the path
@@ -460,7 +460,7 @@ What the partitioned committer does is, where the tooling permits, allows caller
 to add data to an existing partitioned layout*.
 
 More specifically, it does this by having a conflict resolution options which
-only act on invididual partitions, rather than across the entire output tree.
+only act on individual partitions, rather than across the entire output tree.
 
 | `fs.s3a.committer.staging.conflict-mode` | Meaning |
 | -----------------------------------------|---------|
@@ -508,7 +508,7 @@ documentation to see if it is consistent, hence compatible "out of the box".
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
   <description>
-  Enable support in the filesystem for the S3 "Magic" committter.
+  Enable support in the filesystem for the S3 "Magic" committer.
   </description>
   <value>true</value>
 </property>
@@ -706,7 +706,7 @@ This message should not appear through the committer itself &mdash;it will
 fail with the error message in the previous section, but may arise
 if other applications are attempting to create files under the path `/__magic/`.
 
-Make sure the filesytem meets the requirements of the magic committer
+Make sure the filesystem meets the requirements of the magic committer
 (a consistent S3A filesystem through S3Guard or the S3 service itself),
 and set the `fs.s3a.committer.magic.enabled` flag to indicate that magic file
 writes are supported.
@@ -741,7 +741,7 @@ at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.
 While that will not make the problem go away, it will at least make
 the failure happen at the start of a job.
 
-(Setting this option will not interfer with the Staging Committers' use of HDFS,
+(Setting this option will not interfere with the Staging Committers' use of HDFS,
 as it explicitly sets the algorithm to "2" for that part of its work).
 
 The other way to check which committer to use is to examine the `_SUCCESS` file.

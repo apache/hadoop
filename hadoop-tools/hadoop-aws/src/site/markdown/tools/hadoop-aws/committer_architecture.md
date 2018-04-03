@@ -28,7 +28,7 @@ The standard commit algorithms (the `FileOutputCommitter` and its v1 and v2 algo
 rely on directory rename being an `O(1)` atomic operation: callers output their
 work to temporary directories in the destination filesystem, then
 rename these directories to the final destination as way of committing work.
-This is the perfect solution for commiting work against any filesystem with
+This is the perfect solution for committing work against any filesystem with
 consistent listing operations and where the `FileSystem.rename()` command
 is an atomic `O(1)` operation.
 
@@ -60,7 +60,7 @@ delayed completion of multi-part PUT operations
 That is: tasks write all data as multipart uploads, *but delay the final
 commit action until until the final, single job commit action.* Only that
 data committed in the job commit action will be made visible; work from speculative
-and failed tasks will not be instiantiated. As there is no rename, there is no
+and failed tasks will not be instantiated. As there is no rename, there is no
 delay while data is copied from a temporary directory to the final directory.
 The duration of the commit will be the time needed to determine which commit operations
 to construct, and to execute them.
@@ -109,7 +109,7 @@ This is traditionally implemented via a `FileSystem.rename()` call.
 
   It is useful to differentiate between a *task-side commit*: an operation performed
   in the task process after its work, and a *driver-side task commit*, in which
-  the Job driver perfoms the commit operation. Any task-side commit work will
+  the Job driver performs the commit operation. Any task-side commit work will
   be performed across the cluster, and may take place off the critical part for
   job execution. However, unless the commit protocol requires all tasks to await
   a signal from the job driver, task-side commits cannot instantiate their output
@@ -241,7 +241,7 @@ def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
     fs.rename(taskAttemptPath, taskCommittedPath)
 ```
 
-On a genuine fileystem this is an `O(1)` directory rename.
+On a genuine filesystem this is an `O(1)` directory rename.
 
 On an object store with a mimiced rename, it is `O(data)` for the copy,
 along with overhead for listing and deleting all files (For S3, that's
@@ -257,13 +257,13 @@ def abortTask(fs, jobAttemptPath, taskAttemptPath, dest):
   fs.delete(taskAttemptPath, recursive=True)
 ```
 
-On a genuine fileystem this is an `O(1)` operation. On an object store,
+On a genuine filesystem this is an `O(1)` operation. On an object store,
 proportional to the time to list and delete files, usually in batches.
 
 
 ### Job Commit
 
-Merge all files/directories in all task commited paths into final destination path.
+Merge all files/directories in all task committed paths into final destination path.
 Optionally; create 0-byte `_SUCCESS` file in destination path.
 
 ```python
@@ -420,9 +420,9 @@ by renaming the files.
 A a key difference is that the v1 algorithm commits a source directory to
 via a directory rename, which is traditionally an `O(1)` operation.
 
-In constrast, the v2 algorithm lists all direct children of a source directory
+In contrast, the v2 algorithm lists all direct children of a source directory
 and recursively calls `mergePath()` on them, ultimately renaming the individual
-files. As such, the number of renames it performa equals the number of source
+files. As such, the number of renames it performs equals the number of source
 *files*, rather than the number of source *directories*; the number of directory
 listings being `O(depth(src))` , where `depth(path)` is a function returning the
 depth of directories under the given path.
@@ -431,7 +431,7 @@ On a normal filesystem, the v2 merge algorithm is potentially more expensive
 than the v1 algorithm. However, as the merging only takes place in task commit,
 it is potentially less of a bottleneck in the entire execution process.
 
-On an objcct store, it is suboptimal not just from its expectation that `rename()`
+On an object store, it is suboptimal not just from its expectation that `rename()`
 is an `O(1)` operation, but from its expectation that a recursive tree walk is
 an efficient way to enumerate and act on a tree of data. If the algorithm was
 switched to using `FileSystem.listFiles(path, recursive)` for a single call to
@@ -548,7 +548,7 @@ the final destination FS, while `file://` can retain the default
 
 ### Task Setup
 
-`Task.initialize()`: read in the configuration, instantate the `JobContextImpl`
+`Task.initialize()`: read in the configuration, instantiate the `JobContextImpl`
 and `TaskAttemptContextImpl` instances bonded to the current job & task.
 
 ### Task Ccommit
@@ -610,7 +610,7 @@ deleting the previous attempt's data is straightforward. However, for S3 committ
 using Multipart Upload as the means of uploading uncommitted data, it is critical
 to ensure that pending uploads are always aborted. This can be done by
 
-* Making sure that all task-side failure branvches in `Task.done()` call `committer.abortTask()`.
+* Making sure that all task-side failure branches in `Task.done()` call `committer.abortTask()`.
 * Having job commit & abort cleaning up all pending multipart writes to the same directory
 tree. That is: require that no other jobs are writing to the same tree, and so
 list all pending operations and cancel them.
@@ -653,7 +653,7 @@ rather than relying on fields initiated from the context passed to the construct
 
 #### AM: Job setup: `OutputCommitter.setupJob()`
 
-This is initated in `org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.StartTransition`.
+This is initiated in `org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.StartTransition`.
 It is queued for asynchronous execution in `org.apache.hadoop.mapreduce.v2.app.MRAppMaster.startJobs()`,
 which is invoked when the service is started. Thus: the job is set up when the
 AM is started.
@@ -686,7 +686,7 @@ the job is considered not to have attempted to commit itself yet.
 
 
 The presence of `COMMIT_SUCCESS` or `COMMIT_FAIL` are taken as evidence
-that the previous job completed successfully or unsucessfully; the AM
+that the previous job completed successfully or unsuccessfully; the AM
 then completes with a success/failure error code, without attempting to rerun
 the job.
 
@@ -871,16 +871,16 @@ base directory. As well as translating the write operation, it also supports
 a `getFileStatus()` call on the original path, returning details on the file
 at the final destination. This allows for committing applications to verify
 the creation/existence/size of the written files (in contrast to the magic
-committer covdered below).
+committer covered below).
 
 The FS targets Openstack Swift, though other object stores are supportable through
 different backends.
 
 This solution is innovative in that it appears to deliver the same semantics
 (and hence failure modes) as the Spark Direct OutputCommitter, but which
-does not need any changs in either Spark *or* the Hadoop committers. In contrast,
+does not need any change in either Spark *or* the Hadoop committers. In contrast,
 the committers proposed here combines changing the Hadoop MR committers for
-ease of pluggability, and offers a new committer exclusivley for S3, one
+ease of pluggability, and offers a new committer exclusively for S3, one
 strongly dependent upon and tightly integrated with the S3A Filesystem.
 
 The simplicity of the Stocator committer is something to appreciate.
@@ -922,7 +922,7 @@ The completion operation is apparently `O(1)`; presumably the PUT requests
 have already uploaded the data to the server(s) which will eventually be
 serving up the data for the final path. All that is needed to complete
 the upload is to construct an object by linking together the files in
-the server's local filesystem and udate an entry the index table of the
+the server's local filesystem and update an entry the index table of the
 object store.
 
 In the S3A client, all PUT calls in the sequence and the final commit are
@@ -941,11 +941,11 @@ number of appealing features
 
 The final point is not to be underestimated, es not even
 a need for a consistency layer.
-* Overall a simpler design.pecially given the need to
+* Overall a simpler design. Especially given the need to
 be resilient to the various failure modes which may arise.
 
 
-The commiter writes task outputs to a temporary directory on the local FS.
+The committer writes task outputs to a temporary directory on the local FS.
 Task outputs are directed to the local FS by `getTaskAttemptPath` and `getWorkPath`.
 On task commit, the committer enumerates files in the task attempt directory (ignoring hidden files).
 Each file is uploaded to S3 using the [multi-part upload API](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html),
@@ -966,7 +966,7 @@ is a local `file://` reference.
 within a consistent, cluster-wide filesystem. For Netflix, that is HDFS.
 1. The Standard `FileOutputCommitter` (algorithm 1) is used to manage the commit/abort of these
 files. That is: it copies only those lists of files to commit from successful tasks
-into a (transient) job commmit directory.
+into a (transient) job commit directory.
 1. The S3 job committer reads the pending file list for every task committed
 in HDFS, and completes those put requests.
 
@@ -1028,7 +1028,7 @@ complete at or near the same time, there may be a peak of bandwidth load
 slowing down the upload.
 
 Time to commit will be the same, and, given the Netflix committer has already
-implemented the paralellization logic here, a time of `O(files/threads)`.
+implemented the parallelization logic here, a time of `O(files/threads)`.
 
 ### Resilience
 
@@ -1105,7 +1105,7 @@ This is done by
 an abort of all successfully read files.
 1. List and abort all pending multipart uploads.
 
-Because of action #2, action #1 is superflous. It is retained so as to leave
+Because of action #2, action #1 is superfluous. It is retained so as to leave
 open the option of making action #2 a configurable option -which would be
 required to handle the use case of >1 partitioned commit running simultaneously/
 
@@ -1115,7 +1115,7 @@ Because the local data is managed with the v1 commit algorithm, the
 second attempt of the job will recover all the outstanding commit data
 of the first attempt; those tasks will not be rerun.
 
-This also ensures that on a job abort, the invidual tasks' .pendingset
+This also ensures that on a job abort, the individual tasks' .pendingset
 files can be read and used to initiate the abort of those uploads.
 That is: a recovered job can clean up the pending writes of the previous job
 
@@ -1129,7 +1129,7 @@ must be configured to automatically delete the pending request.
 Those uploads already executed by a failed job commit will persist; those
 yet to execute will remain outstanding.
 
-The committer currently declares itself as non-recoverble, but that
+The committer currently declares itself as non-recoverable, but that
 may not actually hold, as the recovery process could be one of:
 
 1. Enumerate all job commits from the .pendingset files (*:= Commits*).
@@ -1203,7 +1203,7 @@ that of the final job destination. When the job is committed, the pending
 writes are instantiated.
 
 With the addition of the Netflix Staging committer, the actual committer
-code now shares common formats for the persistent metadadata and shared routines
+code now shares common formats for the persistent metadata and shared routines
 for parallel committing of work, including all the error handling based on
 the Netflix experience.
 
@@ -1333,7 +1333,7 @@ during job and task committer initialization.
 
 The job/task commit protocol is expected to handle this with the task
 only committing work when the job driver tells it to. A network partition
-should trigger the task committer's cancellation of the work (this is a protcol
+should trigger the task committer's cancellation of the work (this is a protocol
 above the committers).
 
 #### Job Driver failure
@@ -1349,7 +1349,7 @@ when the job driver cleans up it will cancel pending writes under the directory.
 
 #### Multiple jobs targeting the same destination directory
 
-This leaves things in an inderminate state.
+This leaves things in an indeterminate state.
 
 
 #### Failure during task commit
@@ -1388,7 +1388,7 @@ Two options present themselves
 and test that code as appropriate.
 
 Fixing the calling code does seem to be the best strategy, as it allows the
-failure to be explictly handled in the commit protocol, rather than hidden
+failure to be explicitly handled in the commit protocol, rather than hidden
 in the committer.::OpenFile
 
 #### Preemption
@@ -1418,7 +1418,7 @@ with many millions of objects —rather than list all keys searching for those
 with `/__magic/**/*.pending` in their name, work backwards from the active uploads to
 the directories with the data.
 
-We may also want to consider having a cleanup operationn in the S3 CLI to
+We may also want to consider having a cleanup operation in the S3 CLI to
 do the full tree scan and purge of pending items; give some statistics on
 what was found. This will keep costs down and help us identify problems
 related to cleanup.
@@ -1538,7 +1538,7 @@ The S3A Committer version, would
 
 In order to support the ubiquitous `FileOutputFormat` and subclasses,
 S3A Committers will need somehow be accepted as a valid committer by the class,
-a class which explicity expects the output committer to be `FileOutputCommitter`
+a class which explicitly expects the output committer to be `FileOutputCommitter`
 
 ```java
 public Path getDefaultWorkFile(TaskAttemptContext context,
@@ -1555,10 +1555,10 @@ Here are some options which have been considered, explored and discarded
 
 1. Adding more of a factory mechanism to create `FileOutputCommitter` instances;
 subclass this for S3A output and return it. The complexity of `FileOutputCommitter`
-and of supporting more dynamic consturction makes this dangerous from an implementation
+and of supporting more dynamic construction makes this dangerous from an implementation
 and maintenance perspective.
 
-1. Add a new commit algorithmm "3", which actually reads in the configured
+1. Add a new commit algorithm "3", which actually reads in the configured
 classname of a committer which it then instantiates and then relays the commit
 operations, passing in context information. Ths new committer interface would
 add methods for methods and attributes. This is viable, but does still change
@@ -1695,7 +1695,7 @@ marker implied the classic `FileOutputCommitter` had been used; if it could be r
 then it provides some details on the commit operation which are then used
 in assertions in the test suite.
 
-It has since been extended to collet metrics and other values, and has proven
+It has since been extended to collect metrics and other values, and has proven
 equally useful in Spark integration testing.
 
 ## Integrating the Committers with Apache Spark
@@ -1727,8 +1727,8 @@ tree.
 
 Alternatively, the fact that Spark tasks provide data to the job committer on their
 completion means that a list of pending PUT commands could be built up, with the commit
-operations being excuted by an S3A-specific implementation of the `FileCommitProtocol`.
-As noted earlier, this may permit the reqirement for a consistent list operation
+operations being executed by an S3A-specific implementation of the `FileCommitProtocol`.
+As noted earlier, this may permit the requirement for a consistent list operation
 to be bypassed. It would still be important to list what was being written, as
 it is needed to aid aborting work in failed tasks, but the list of files
 created by successful tasks could be passed directly from the task to committer,
@@ -1833,7 +1833,7 @@ quotas in local FS, keeping temp dirs on different mounted FS from root.
 The intermediate `.pendingset` files are saved in HDFS under the directory in
 `fs.s3a.committer.staging.tmp.path`; defaulting to  `/tmp`. This data can
 disclose the workflow (it contains the destination paths & amount of data
-generated), and if deleted, breaks the job. If malicous code were to edit
+generated), and if deleted, breaks the job. If malicious code were to edit
 the file, by, for example, reordering the ordered etag list, the generated
 data would be committed out of order, creating invalid files. As this is
 the (usually transient) cluster FS, any user in the cluster has the potential
@@ -1848,7 +1848,7 @@ The directory defined by `fs.s3a.buffer.dir` is used to buffer blocks
 before upload, unless the job is configured to buffer the blocks in memory.
 This is as before: no incremental risk. As blocks are deleted from the filesystem
 after upload, the amount of storage needed is determined by the data generation
-bandwidth and the data upload bandwdith.
+bandwidth and the data upload bandwidth.
 
 No use is made of the cluster filesystem; there are no risks there.
 
@@ -1946,6 +1946,6 @@ which will made absolute relative to the current user. In filesystems in
 which access under user's home directories are restricted, this final, absolute
 path, will not be visible to untrusted accounts.
 
-* Maybe: define the for valid characters in a text strings, and a regext for
+* Maybe: define the for valid characters in a text strings, and a regex for
  validating, e,g, `[a-zA-Z0-9 \.\,\(\) \-\+]+` and then validate any free text
  JSON fields on load and save.

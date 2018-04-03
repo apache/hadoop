@@ -399,9 +399,21 @@ public class ResourceTrackerService extends AbstractService implements
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
+      RMNodeStartedEvent startEvent = new RMNodeStartedEvent(nodeId,
+          request.getNMContainerStatuses(),
+          request.getRunningApplications());
+      if (request.getLogAggregationReportsForApps() != null
+          && !request.getLogAggregationReportsForApps().isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Found the number of previous cached log aggregation "
+              + "status from nodemanager:" + nodeId + " is :"
+              + request.getLogAggregationReportsForApps().size());
+        }
+        startEvent.setLogAggregationReportsForApps(request
+            .getLogAggregationReportsForApps());
+      }
       this.rmContext.getDispatcher().getEventHandler().handle(
-              new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses(),
-                  request.getRunningApplications()));
+          startEvent);
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
@@ -426,7 +438,6 @@ public class ResourceTrackerService extends AbstractService implements
         this.rmContext.getRMNodes().put(nodeId, rmNode);
         this.rmContext.getDispatcher().getEventHandler()
             .handle(new RMNodeStartedEvent(nodeId, null, null));
-
       } else {
         // Reset heartbeat ID since node just restarted.
         oldNode.resetLastNodeHeartBeatResponse();

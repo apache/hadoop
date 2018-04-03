@@ -319,6 +319,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public Response checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) {
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
     return new AppAttemptInfo();

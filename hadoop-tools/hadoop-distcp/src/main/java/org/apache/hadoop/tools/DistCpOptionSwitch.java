@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import org.apache.commons.cli.Option;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -63,10 +64,10 @@ public enum DistCpOptionSwitch {
    */
   SYNC_FOLDERS(DistCpConstants.CONF_LABEL_SYNC_FOLDERS,
       new Option("update", false, "Update target, copying only missing" +
-          "files or directories")),
+          " files or directories")),
 
   /**
-   * Deletes missing files in target that are missing from source
+   * Deletes missing files in target that are missing from source.
    * This allows the target to be in sync with the source contents
    * Typically used in conjunction with SYNC_FOLDERS
    * Incompatible with ATOMIC_COMMIT
@@ -74,6 +75,21 @@ public enum DistCpOptionSwitch {
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
           "files missing in source. Delete is applicable only with update or overwrite options")),
+
+  /**
+   * Track missing files in target that are missing from source
+   * This allows for other applications to complete the synchronization,
+   * possibly with object-store-specific delete algorithms.
+   * Typically used in conjunction with SYNC_FOLDERS
+   * Incompatible with ATOMIC_COMMIT
+   */
+  @InterfaceStability.Unstable
+  TRACK_MISSING(DistCpConstants.CONF_LABEL_TRACK_MISSING,
+      new Option("xtrack", true,
+          "Save information about missing source files to the"
+              + " specified directory")),
+
+
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).

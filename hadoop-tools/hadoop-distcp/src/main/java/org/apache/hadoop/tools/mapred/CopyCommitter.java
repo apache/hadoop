@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,6 +50,8 @@ import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.apache.hadoop.tools.DistCpConstants.*;
+
 /**
  * The CopyCommitter class is DistCp's OutputCommitter implementation. It is
  * responsible for handling the completion/cleanup of the DistCp run.
@@ -62,7 +65,8 @@ import java.util.List;
  *  5. Cleanup of any partially copied files, from previous, failed attempts.
  */
 public class CopyCommitter extends FileOutputCommitter {
-  private static final Log LOG = LogFactory.getLog(CopyCommitter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CopyCommitter.class);
 
   private final TaskAttemptContext taskAttemptContext;
   private boolean syncFolder = false;
@@ -111,6 +115,9 @@ public class CopyCommitter extends FileOutputCommitter {
         deleteMissing(conf);
       } else if (conf.getBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, false)) {
         commitData(conf);
+      } else if (conf.get(CONF_LABEL_TRACK_MISSING) != null) {
+        // save missing information to a directory
+        trackMissing(conf);
       }
       taskAttemptContext.setStatus("Commit Successful");
     }
@@ -334,40 +341,64 @@ public class CopyCommitter extends FileOutputCommitter {
     LOG.info("Preserved status on " + preservedEntries + " dir entries on target");
   }
 
-  // This method deletes "extra" files from the target, if they're not
-  // available at the source.
+  /**
+   * Track all the missing files by saving the listings to the tracking
+   * directory.
+   * This is the same as listing phase of the
+   * {@link #deleteMissing(Configuration)} operation.
+   * @param conf configuration to read options from, and for FS instantiation.
+   * @throws IOException IO failure
+   */
+  private void trackMissing(Configuration conf) throws IOException {
+    // destination directory for all output files
+    Path trackDir = new Path(
+        conf.get(DistCpConstants.CONF_LABEL_TRACK_MISSING));
+
+    // where is the existing source listing?
+    Path sourceListing = new Path(
+        conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
+    LOG.info("Tracking file changes to directory {}", trackDir);
+
+    // the destination path is under the track directory
+    Path sourceSortedListing = new Path(trackDir,
+        DistCpConstants.SOURCE_SORTED_FILE);
+    LOG.info("Source listing {}", sourceSortedListing);
+
+    DistCpUtils.sortListing(conf, sourceListing, sourceSortedListing);
+
+    // Similarly, create the listing of target-files. Sort alphabetically.
+    // target listing will be deleted after the sort
+    Path targetListing = new Path(trackDir, TARGET_LISTING_FILE);
+    Path sortedTargetListing = new Path(trackDir, TARGET_SORTED_FILE);
+    // list the target
+    listTargetFiles(conf, targetListing, sortedTargetListing);
+    LOG.info("Target listing {}", sortedTargetListing);
+
+    targetListing.getFileSystem(conf).delete(targetListing, false);
+  }
+
+  /**
+   * Deletes "extra" files and directories from the target, if they're not
+   * available at the source.
+   * @param conf configuration to read options from, and for FS instantiation.
+   * @throws IOException IO failure
+   */
   private void deleteMissing(Configuration conf) throws IOException {
     LOG.info("-delete option is enabled. About to remove entries from " +
         "target that are missing in source");
+    long listingStart = System.currentTimeMillis();
 
     // Sort the source-file listing alphabetically.
     Path sourceListing = new Path(conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
     FileSystem clusterFS = sourceListing.getFileSystem(conf);
-    Path sortedSourceListing = DistCpUtils.sortListing(clusterFS, conf, sourceListing);
+    Path sortedSourceListing = DistCpUtils.sortListing(conf, sourceListing);
 
     // Similarly, create the listing of target-files. Sort alphabetically.
     Path targetListing = new Path(sourceListing.getParent(), "targetListing.seq");
-    CopyListing target = new GlobbedCopyListing(new Configuration(conf), null);
+    Path sortedTargetListing = new Path(targetListing.toString() + "_sorted");
 
-    List<Path> targets = new ArrayList<Path>(1);
-    Path targetFinalPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
-    targets.add(targetFinalPath);
-    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
-        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
-        ? DistCpConstants.RAW_NONE_PATH : DistCpConstants.NONE_PATH;
-    //
-    // Set up options to be the same from the CopyListing.buildListing's perspective,
-    // so to collect similar listings as when doing the copy
-    //
-    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
-        .withOverwrite(overwrite)
-        .withSyncFolder(syncFolder)
-        .build();
-    DistCpContext distCpContext = new DistCpContext(options);
-    distCpContext.setTargetPathExists(targetPathExists);
-
-    target.buildListing(targetListing, distCpContext);
-    Path sortedTargetListing = DistCpUtils.sortListing(clusterFS, conf, targetListing);
+    Path targetFinalPath = listTargetFiles(conf,
+        targetListing, sortedTargetListing);
     long totalLen = clusterFS.getFileStatus(sortedTargetListing).getLen();
 
     SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
@@ -377,41 +408,153 @@ public class CopyCommitter extends FileOutputCommitter {
 
     // Walk both source and target file listings.
     // Delete all from target that doesn't also exist on source.
+    long deletionStart = System.currentTimeMillis();
+    LOG.info("Listing completed in {}",
+        formatDuration(deletionStart - listingStart));
+
     long deletedEntries = 0;
+    long filesDeleted = 0;
+    long missingDeletes = 0;
+    long failedDeletes = 0;
+    long skippedDeletes = 0;
+    long deletedDirectories = 0;
+    // this is an arbitrary constant.
+    final DeletedDirTracker tracker = new DeletedDirTracker(1000);
     try {
       CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
       CopyListingFileStatus trgtFileStatus = new CopyListingFileStatus();
       Text trgtRelPath = new Text();
 
-      FileSystem targetFS = targetFinalPath.getFileSystem(conf);
+      final FileSystem targetFS = targetFinalPath.getFileSystem(conf);
+      boolean showProgress;
       boolean srcAvailable = sourceReader.next(srcRelPath, srcFileStatus);
       while (targetReader.next(trgtRelPath, trgtFileStatus)) {
         // Skip sources that don't exist on target.
         while (srcAvailable && trgtRelPath.compareTo(srcRelPath) > 0) {
           srcAvailable = sourceReader.next(srcRelPath, srcFileStatus);
         }
+        Path targetEntry = trgtFileStatus.getPath();
+        LOG.debug("Comparing {} and {}",
+            srcFileStatus.getPath(), targetEntry);
 
         if (srcAvailable && trgtRelPath.equals(srcRelPath)) continue;
 
-        // Target doesn't exist at source. Delete.
-        boolean result = targetFS.delete(trgtFileStatus.getPath(), true)
-            || !targetFS.exists(trgtFileStatus.getPath());
-        if (result) {
-          LOG.info("Deleted " + trgtFileStatus.getPath() + " - Missing at source");
-          deletedEntries++;
+        // Target doesn't exist at source. Try to delete it.
+        if (tracker.shouldDelete(trgtFileStatus)) {
+          showProgress = true;
+          try {
+            if (targetFS.delete(targetEntry, true)) {
+              // the delete worked. Unless the file is actually missing, this is the
+              LOG.info("Deleted " + targetEntry + " - missing at source");
+              deletedEntries++;
+              if (trgtFileStatus.isDirectory()) {
+                deletedDirectories++;
+              } else {
+                filesDeleted++;
+              }
+            } else {
+              // delete returned false.
+              // For all the filestores which implement the FS spec properly,
+              // this means "the file wasn't there".
+              // so track but don't worry about it.
+              LOG.info("delete({}) returned false ({})",
+                  targetEntry, trgtFileStatus);
+              missingDeletes++;
+            }
+          } catch (IOException e) {
+            if (!ignoreFailures) {
+              throw e;
+            } else {
+              // failed to delete, but ignoring errors. So continue
+              LOG.info("Failed to delete {}, ignoring exception {}",
+                  targetEntry, e.toString());
+              LOG.debug("Failed to delete {}", targetEntry, e);
+              // count and break out the loop
+              failedDeletes++;
+            }
+          }
         } else {
-          throw new IOException("Unable to delete " + trgtFileStatus.getPath());
+          LOG.debug("Skipping deletion of {}", targetEntry);
+          skippedDeletes++;
+          showProgress = false;
         }
-        taskAttemptContext.progress();
-        taskAttemptContext.setStatus("Deleting missing files from target. [" +
-            targetReader.getPosition() * 100 / totalLen + "%]");
+        if (showProgress) {
+          // update progress if there's been any FS IO/files deleted.
+          taskAttemptContext.progress();
+          taskAttemptContext.setStatus("Deleting removed files from target. [" +
+              targetReader.getPosition() * 100 / totalLen + "%]");
+        }
       }
+      // if the FS toString() call prints statistics, they get logged here
+      LOG.info("Completed deletion of files from {}", targetFS);
     } finally {
       IOUtils.closeStream(sourceReader);
       IOUtils.closeStream(targetReader);
     }
-    LOG.info("Deleted " + deletedEntries + " from target: " + targets.get(0));
+    long deletionEnd = System.currentTimeMillis();
+    long deletedFileCount = deletedEntries - deletedDirectories;
+    LOG.info("Deleted from target: files: {} directories: {};"
+            + " skipped deletions {}; deletions already missing {};"
+            + " failed deletes {}",
+        deletedFileCount, deletedDirectories, skippedDeletes,
+        missingDeletes, failedDeletes);
+    LOG.info("Number of tracked deleted directories {}", tracker.size());
+    LOG.info("Duration of deletions: {}",
+        formatDuration(deletionEnd - deletionStart));
+    LOG.info("Total duration of deletion operation: {}",
+        formatDuration(deletionEnd - listingStart));
+  }
+
+  /**
+   * Take a duration and return a human-readable duration of
+   * hours:minutes:seconds.millis.
+   * @param duration to process
+   * @return a string for logging.
+   */
+  private String formatDuration(long duration) {
+
+    long seconds = duration > 0 ? (duration / 1000) : 0;
+    long minutes = (seconds / 60);
+    long hours = (minutes / 60);
+    return String.format("%d:%02d:%02d.%03d",
+        hours, minutes % 60, seconds % 60, duration % 1000);
+  }
+
+  /**
+   * Build a listing of the target files, sorted and unsorted.
+   * @param conf configuration to work with
+   * @param targetListing target listing
+   * @param sortedTargetListing sorted version of the listing
+   * @return the target path of the operation
+   * @throws IOException IO failure.
+   */
+  private Path listTargetFiles(final Configuration conf,
+      final Path targetListing,
+      final Path sortedTargetListing) throws IOException {
+    CopyListing target = new GlobbedCopyListing(new Configuration(conf), null);
+    Path targetFinalPath = new Path(
+        conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
+    List<Path> targets = new ArrayList<>(1);
+    targets.add(targetFinalPath);
+    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
+        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
+        ? DistCpConstants.RAW_NONE_PATH
+        : DistCpConstants.NONE_PATH;
+    //
+    // Set up options to be the same from the CopyListing.buildListing's
+    // perspective, so to collect similar listings as when doing the copy
+    //
+    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
+        .withOverwrite(overwrite)
+        .withSyncFolder(syncFolder)
+        .build();
+    DistCpContext distCpContext = new DistCpContext(options);
+    distCpContext.setTargetPathExists(targetPathExists);
+
+    target.buildListing(targetListing, distCpContext);
+    DistCpUtils.sortListing(conf, targetListing, sortedTargetListing);
+    return targetFinalPath;
   }
 
   private void commitData(Configuration conf) throws IOException {
