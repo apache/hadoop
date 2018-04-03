@@ -166,11 +166,12 @@ public class ConnectionManager {
    *
    * @param ugi User group information.
    * @param nnAddress Namenode address for the connection.
+   * @param protocol Protocol for the connection.
    * @return Proxy client to connect to nnId as UGI.
    * @throws IOException If the connection cannot be obtained.
    */
-  public ConnectionContext getConnection(
-      UserGroupInformation ugi, String nnAddress) throws IOException {
+  public ConnectionContext getConnection(UserGroupInformation ugi,
+      String nnAddress, Class<?> protocol) throws IOException {
 
     // Check if the manager is shutdown
     if (!this.running) {
@@ -181,7 +182,8 @@ public class ConnectionManager {
     }
 
     // Try to get the pool if created
-    ConnectionPoolId connectionId = new ConnectionPoolId(ugi, nnAddress);
+    ConnectionPoolId connectionId =
+        new ConnectionPoolId(ugi, nnAddress, protocol);
     ConnectionPool pool = null;
     readLock.lock();
     try {
@@ -197,7 +199,7 @@ public class ConnectionManager {
         pool = this.pools.get(connectionId);
         if (pool == null) {
           pool = new ConnectionPool(
-              this.conf, nnAddress, ugi, this.minSize, this.maxSize);
+              this.conf, nnAddress, ugi, this.minSize, this.maxSize, protocol);
           this.pools.put(connectionId, pool);
         }
       } finally {

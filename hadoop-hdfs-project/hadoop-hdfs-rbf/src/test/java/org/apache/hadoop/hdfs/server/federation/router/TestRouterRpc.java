@@ -54,22 +54,29 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
@@ -83,7 +90,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 
 /**
  * The the RPC interface of the {@link Router} implemented by
@@ -109,6 +115,11 @@ public class TestRouterRpc {
   private ClientProtocol routerProtocol;
   /** Client interface to the Namenode. */
   private ClientProtocol nnProtocol;
+
+  /** NameNodeProtocol interface to the Router. */
+  private NamenodeProtocol routerNamenodeProtocol;
+  /** NameNodeProtocol interface to the Namenode. */
+  private NamenodeProtocol nnNamenodeProtocol;
 
   /** Filesystem interface to the Router. */
   private FileSystem routerFS;
@@ -166,22 +177,18 @@ public class TestRouterRpc {
     // Wait to ensure NN has fully created its test directories
     Thread.sleep(100);
 
-    // Default namenode and random router for this test
-    this.router = cluster.getRandomRouter();
-    this.ns = cluster.getNameservices().get(0);
-    this.namenode = cluster.getNamenode(ns, null);
+    // Random router for this test
+    RouterContext rndRouter = cluster.getRandomRouter();
+    this.setRouter(rndRouter);
 
-    // Handles to the ClientProtocol interface
-    this.routerProtocol = router.getClient().getNamenode();
-    this.nnProtocol = namenode.getClient().getNamenode();
-
-    // Handles to the filesystem client
-    this.nnFS = namenode.getFileSystem();
-    this.routerFS = router.getFileSystem();
+    // Pick a namenode for this test
+    String ns0 = cluster.getNameservices().get(0);
+    this.setNs(ns0);
+    this.setNamenode(cluster.getNamenode(ns0, null));
 
     // Create a test file on the NN
-    Random r = new Random();
-    String randomFile = "testfile-" + r.nextInt();
+    Random rnd = new Random();
+    String randomFile = "testfile-" + rnd.nextInt();
     this.nnFile =
         cluster.getNamenodeTestDirectoryForNS(ns) + "/" + randomFile;
     this.routerFile =
@@ -222,6 +229,8 @@ public class TestRouterRpc {
     this.router = r;
     this.routerProtocol = r.getClient().getNamenode();
     this.routerFS = r.getFileSystem();
+    this.routerNamenodeProtocol = NameNodeProxies.createProxy(router.getConf(),
+        router.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
   protected FileSystem getRouterFileSystem() {
@@ -265,6 +274,12 @@ public class TestRouterRpc {
     this.namenode = nn;
     this.nnProtocol = nn.getClient().getNamenode();
     this.nnFS = nn.getFileSystem();
+
+    // Namenode from the default namespace
+    String ns0 = cluster.getNameservices().get(0);
+    NamenodeContext nn0 = cluster.getNamenode(ns0, null);
+    this.nnNamenodeProtocol = NameNodeProxies.createProxy(nn0.getConf(),
+        nn0.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
   protected String getNs() {
@@ -933,5 +948,77 @@ public class TestRouterRpc {
 
     // The cache should be updated now
     assertNotEquals(jsonString0, metrics.getLiveNodes());
+  }
+
+  @Test
+  public void testProxyVersionRequest() throws Exception {
+    NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
+    NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+    assertEquals(nnVersion.getBlockPoolID(), rVersion.getBlockPoolID());
+    assertEquals(nnVersion.getNamespaceID(), rVersion.getNamespaceID());
+    assertEquals(nnVersion.getClusterID(), rVersion.getClusterID());
+    assertEquals(nnVersion.getLayoutVersion(), rVersion.getLayoutVersion());
+    assertEquals(nnVersion.getCTime(), rVersion.getCTime());
+  }
+
+  @Test
+  public void testProxyGetBlockKeys() throws Exception {
+    ExportedBlockKeys rKeys = routerNamenodeProtocol.getBlockKeys();
+    ExportedBlockKeys nnKeys = nnNamenodeProtocol.getBlockKeys();
+    assertEquals(nnKeys.getCurrentKey(), rKeys.getCurrentKey());
+    assertEquals(nnKeys.getKeyUpdateInterval(), rKeys.getKeyUpdateInterval());
+    assertEquals(nnKeys.getTokenLifetime(), rKeys.getTokenLifetime());
+  }
+
+  @Test
+  public void testProxyGetBlocks() throws Exception {
+    // Get datanodes
+    DatanodeInfo[] dns = routerProtocol
+        .getDatanodeReport(DatanodeReportType.ALL);
+    DatanodeInfo dn0 = dns[0];
+
+    // Verify that checking that datanode works
+    BlocksWithLocations routerBlockLocations =
+        routerNamenodeProtocol.getBlocks(dn0, 1024);
+    BlocksWithLocations nnBlockLocations =
+        nnNamenodeProtocol.getBlocks(dn0, 1024);
+    BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
+    BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
+    assertEquals(nnBlocks.length, routerBlocks.length);
+    for (int i = 0; i < routerBlocks.length; i++) {
+      assertEquals(nnBlocks[i].getBlock().getBlockId(),
+          routerBlocks[i].getBlock().getBlockId());
+    }
+  }
+
+  @Test
+  public void testProxyGetTransactionID() throws IOException {
+    long routerTransactionID = routerNamenodeProtocol.getTransactionID();
+    long nnTransactionID = nnNamenodeProtocol.getTransactionID();
+    assertEquals(nnTransactionID, routerTransactionID);
+  }
+
+  @Test
+  public void testProxyGetMostRecentCheckpointTxId() throws IOException {
+    long routerCheckPointId =
+        routerNamenodeProtocol.getMostRecentCheckpointTxId();
+    long nnCheckPointId = nnNamenodeProtocol.getMostRecentCheckpointTxId();
+    assertEquals(nnCheckPointId, routerCheckPointId);
+  }
+
+  @Test
+  public void testProxySetSafemode() throws Exception {
+    boolean routerSafemode =
+        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+    boolean nnSafemode =
+        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
+    assertEquals(nnSafemode, routerSafemode);
+  }
+
+  @Test
+  public void testProxyRestoreFailedStorage() throws Exception {
+    boolean routerSuccess = routerProtocol.restoreFailedStorage("check");
+    boolean nnSuccess = nnProtocol.restoreFailedStorage("check");
+    assertEquals(nnSuccess, routerSuccess);
   }
 }
