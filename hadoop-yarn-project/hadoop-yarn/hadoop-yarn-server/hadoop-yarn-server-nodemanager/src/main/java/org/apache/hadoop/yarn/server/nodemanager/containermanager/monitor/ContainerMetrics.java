@@ -274,7 +274,7 @@ public class ContainerMetrics implements MetricsSource {
   }
 
   public void recordProcessId(String processId) {
-    registry.tag(PROCESSID_INFO, processId);
+    registry.tag(PROCESSID_INFO, processId, true);
   }
 
   public void recordResourceLimit(int vmemLimit, int pmemLimit, int cpuVcores) {
