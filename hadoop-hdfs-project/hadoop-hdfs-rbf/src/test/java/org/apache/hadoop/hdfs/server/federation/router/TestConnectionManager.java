@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
@@ -68,14 +70,18 @@ public class TestConnectionManager {
     Map<ConnectionPoolId, ConnectionPool> poolMap = connManager.getPools();
 
     ConnectionPool pool1 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, ClientProtocol.class);
     addConnectionsToPool(pool1, 9, 4);
-    poolMap.put(new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS), pool1);
+    poolMap.put(
+        new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
+        pool1);
 
     ConnectionPool pool2 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10);
+        conf, TEST_NN_ADDRESS, TEST_USER2, 0, 10, ClientProtocol.class);
     addConnectionsToPool(pool2, 10, 10);
-    poolMap.put(new ConnectionPoolId(TEST_USER2, TEST_NN_ADDRESS), pool2);
+    poolMap.put(
+        new ConnectionPoolId(TEST_USER2, TEST_NN_ADDRESS, ClientProtocol.class),
+        pool2);
 
     checkPoolConnections(TEST_USER1, 9, 4);
     checkPoolConnections(TEST_USER2, 10, 10);
@@ -94,9 +100,11 @@ public class TestConnectionManager {
 
     // Make sure the number of connections doesn't go below minSize
     ConnectionPool pool3 = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10);
+        conf, TEST_NN_ADDRESS, TEST_USER3, 2, 10, ClientProtocol.class);
     addConnectionsToPool(pool3, 8, 0);
-    poolMap.put(new ConnectionPoolId(TEST_USER3, TEST_NN_ADDRESS), pool3);
+    poolMap.put(
+        new ConnectionPoolId(TEST_USER3, TEST_NN_ADDRESS, ClientProtocol.class),
+        pool3);
     checkPoolConnections(TEST_USER3, 10, 0);
     for (int i = 0; i < 10; i++) {
       connManager.cleanup(pool3);
@@ -119,9 +127,41 @@ public class TestConnectionManager {
     int activeConns = 5;
 
     ConnectionPool pool = new ConnectionPool(
-        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10);
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, ClientProtocol.class);
     addConnectionsToPool(pool, totalConns, activeConns);
-    poolMap.put(new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS), pool);
+    poolMap.put(
+        new ConnectionPoolId(TEST_USER1, TEST_NN_ADDRESS, ClientProtocol.class),
+        pool);
+
+    // All remaining connections should be usable
+    final int remainingSlots = totalConns - activeConns;
+    for (int i = 0; i < remainingSlots; i++) {
+      ConnectionContext cc = pool.getConnection();
+      assertTrue(cc.isUsable());
+      cc.getClient();
+      activeConns++;
+    }
+
+    checkPoolConnections(TEST_USER1, totalConns, activeConns);
+
+    // Ask for more and this returns an active connection
+    ConnectionContext cc = pool.getConnection();
+    assertTrue(cc.isActive());
+  }
+
+  @Test
+  public void getGetConnectionNamenodeProtocol() throws Exception {
+    Map<ConnectionPoolId, ConnectionPool> poolMap = connManager.getPools();
+    final int totalConns = 10;
+    int activeConns = 5;
+
+    ConnectionPool pool = new ConnectionPool(
+        conf, TEST_NN_ADDRESS, TEST_USER1, 0, 10, NamenodeProtocol.class);
+    addConnectionsToPool(pool, totalConns, activeConns);
+    poolMap.put(
+        new ConnectionPoolId(
+            TEST_USER1, TEST_NN_ADDRESS, NamenodeProtocol.class),
+        pool);
 
     // All remaining connections should be usable
     final int remainingSlots = totalConns - activeConns;
