@@ -27,10 +27,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -39,14 +38,19 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestNetworkTopology {
-  private static final Log LOG = LogFactory.getLog(TestNetworkTopology.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestNetworkTopology.class);
   private final static NetworkTopology cluster =
       NetworkTopology.getInstance(new Configuration());
   private DatanodeDescriptor dataNodes[];
@@ -83,6 +87,7 @@ public class TestNetworkTopology {
     }
     dataNodes[9].setDecommissioned();
     dataNodes[10].setDecommissioned();
+    GenericTestUtils.setLogLevel(NetworkTopology.LOG, Level.TRACE);
   }
   
   @Test
@@ -324,6 +329,7 @@ public class TestNetworkTopology {
         frequency.put(random, frequency.get(random) + 1);
       }
     }
+    LOG.info("Result:" + frequency);
     return frequency;
   }
 
@@ -471,4 +477,67 @@ public class TestNetworkTopology {
     }
   }
 
+  /**
+   * Tests chooseRandom with include scope, excluding a few nodes.
+   */
+  @Test
+  public void testChooseRandomInclude1() {
+    final String scope = "/d1";
+    final Set<Node> excludedNodes = new HashSet<>();
+    final Random r = new Random();
+    for (int i = 0; i < 4; ++i) {
+      final int index = r.nextInt(5);
+      excludedNodes.add(dataNodes[index]);
+    }
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope, excludedNodes);
+
+    verifyResults(5, excludedNodes, frequency);
+  }
+
+  /**
+   * Tests chooseRandom with include scope at rack, excluding a node.
+   */
+  @Test
+  public void testChooseRandomInclude2() {
+    String scope = dataNodes[0].getNetworkLocation();
+    Set<Node> excludedNodes = new HashSet<>();
+    final Random r = new Random();
+    int index = r.nextInt(1);
+    excludedNodes.add(dataNodes[index]);
+    final int count = 100;
+    Map<Node, Integer> frequency =
+        pickNodesAtRandom(count, scope, excludedNodes);
+
+    verifyResults(1, excludedNodes, frequency);
+  }
+
+  private void verifyResults(int upperbound, Set<Node> excludedNodes,
+      Map<Node, Integer> frequency) {
+    LOG.info("Excluded nodes are: {}", excludedNodes);
+    for (int i = 0; i < upperbound; ++i) {
+      final Node n = dataNodes[i];
+      LOG.info("Verifying node {}", n);
+      if (excludedNodes.contains(n)) {
+        assertEquals(n + " should not have been chosen.", 0,
+            (int) frequency.get(n));
+      } else {
+        assertTrue(n + " should have been chosen", frequency.get(n) > 0);
+      }
+    }
+  }
+
+  /**
+   * Tests chooseRandom with include scope, no exlucde nodes.
+   */
+  @Test
+  public void testChooseRandomInclude3() {
+    String scope = "/d1";
+    Map<Node, Integer> frequency = pickNodesAtRandom(200, scope, null);
+    LOG.info("No node is excluded.");
+    for (int i = 0; i < 5; ++i) {
+      // all nodes should be more than zero
+      assertTrue(dataNodes[i] + " should have been chosen.",
+          frequency.get(dataNodes[i]) > 0);
+    }
+  }
 }
