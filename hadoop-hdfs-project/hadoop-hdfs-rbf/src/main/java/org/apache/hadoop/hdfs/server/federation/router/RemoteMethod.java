@@ -38,22 +38,35 @@ public class RemoteMethod {
   private final Object[] params;
   /** List of method parameters types, matches parameters. */
   private final Class<?>[] types;
+  /** Class of the protocol for the method. */
+  private final Class<?> protocol;
   /** String name of the ClientProtocol method. */
   private final String methodName;
 
   /**
-   * Create a method with no parameters.
+   * Create a remote method generator for the ClientProtocol with no parameters.
    *
-   * @param method The string name of the ClientProtocol method.
+   * @param method The string name of the protocol method.
    */
   public RemoteMethod(String method) {
-    this.params = null;
-    this.types = null;
-    this.methodName = method;
+    this(ClientProtocol.class, method);
   }
 
   /**
-   * Creates a remote method generator.
+   * Create a method with no parameters.
+   *
+   * @param proto Protocol of the method.
+   * @param method The string name of the ClientProtocol method.
+   */
+  public RemoteMethod(Class<?> proto, String method) {
+    this.params = null;
+    this.types = null;
+    this.methodName = method;
+    this.protocol = proto;
+  }
+
+  /**
+   * Create a remote method generator for the ClientProtocol.
    *
    * @param method The string name of the ClientProtocol method.
    * @param pTypes A list of types to use to locate the specific method.
@@ -70,14 +83,47 @@ public class RemoteMethod {
    */
   public RemoteMethod(String method, Class<?>[] pTypes, Object... pParams)
       throws IOException {
+    this(ClientProtocol.class, method, pTypes, pParams);
+  }
+
+  /**
+   * Creates a remote method generator.
+   *
+   * @param proto Protocol of the method.
+   * @param method The string name of the ClientProtocol method.
+   * @param pTypes A list of types to use to locate the specific method.
+   * @param pParams A list of parameters for the method. The order of the
+   *          parameter list must match the order and number of the types.
+   *          Parameters are grouped into 2 categories:
+   *          <ul>
+   *          <li>Static parameters that are immutable across locations.
+   *          <li>Dynamic parameters that are determined for each location by a
+   *          RemoteParam object. To specify a dynamic parameter, pass an
+   *          instance of RemoteParam in place of the parameter value.
+   *          </ul>
+   * @throws IOException If the types and parameter lists are not valid.
+   */
+  public RemoteMethod(Class<?> proto, String method, Class<?>[] pTypes,
+      Object... pParams) throws IOException {
 
     if (pParams.length != pTypes.length) {
       throw new IOException("Invalid parameters for method " + method);
     }
 
+    this.protocol = proto;
     this.params = pParams;
     this.types = Arrays.copyOf(pTypes, pTypes.length);
     this.methodName = method;
+  }
+
+  /**
+   * Get the interface/protocol for this method. For example, ClientProtocol or
+   * NamenodeProtocol.
+   *
+   * @return Protocol for this method.
+   */
+  public Class<?> getProtocol() {
+    return this.protocol;
   }
 
   /**
@@ -89,18 +135,18 @@ public class RemoteMethod {
   public Method getMethod() throws IOException {
     try {
       if (types != null) {
-        return ClientProtocol.class.getDeclaredMethod(methodName, types);
+        return protocol.getDeclaredMethod(methodName, types);
       } else {
-        return ClientProtocol.class.getDeclaredMethod(methodName);
+        return protocol.getDeclaredMethod(methodName);
       }
     } catch (NoSuchMethodException e) {
       // Re-throw as an IOException
-      LOG.error("Cannot get method {} with types {}",
-          methodName, Arrays.toString(types), e);
+      LOG.error("Cannot get method {} with types {} from {}",
+          methodName, Arrays.toString(types), protocol.getSimpleName(), e);
       throw new IOException(e);
     } catch (SecurityException e) {
-      LOG.error("Cannot access method {} with types {}",
-          methodName, Arrays.toString(types), e);
+      LOG.error("Cannot access method {} with types {} from {}",
+          methodName, Arrays.toString(types), protocol.getSimpleName(), e);
       throw new IOException(e);
     }
   }
@@ -160,5 +206,11 @@ public class RemoteMethod {
       }
     }
     return objList;
+  }
+
+  @Override
+  public String toString() {
+    return this.protocol.getSimpleName() + "#" + this.methodName + " " +
+        Arrays.toString(this.params);
   }
 }
