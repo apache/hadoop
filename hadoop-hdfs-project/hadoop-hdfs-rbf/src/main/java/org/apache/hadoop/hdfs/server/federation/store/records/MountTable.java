@@ -421,7 +421,8 @@ public abstract class MountTable extends BaseRecord {
   public boolean isAll() {
     DestinationOrder order = getDestOrder();
     return order == DestinationOrder.HASH_ALL ||
-        order == DestinationOrder.RANDOM;
+        order == DestinationOrder.RANDOM ||
+        order == DestinationOrder.SPACE;
   }
 
   /**

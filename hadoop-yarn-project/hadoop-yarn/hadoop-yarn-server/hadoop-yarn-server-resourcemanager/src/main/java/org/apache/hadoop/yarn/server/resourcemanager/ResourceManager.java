@@ -245,13 +245,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
-
-    // add resource profiles here because it's used by AbstractYarnScheduler
-    ResourceProfilesManager resourceProfilesManager =
-        createResourceProfileManager();
-    resourceProfilesManager.init(conf);
-    rmContext.setResourceProfilesManager(resourceProfilesManager);
-
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -260,9 +253,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // load core-site.xml
     loadConfigurationXml(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
 
-    // Do refreshUserToGroupsMappings with loaded core-site.xml
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
-        .refresh();
+    // Refresh user to group mappings during init.
+    refreshUserToGroupMappingsWithConf();
 
     // Do refreshSuperUserGroupsConfiguration with loaded core-site.xml
     // Or use RM specific configurations to overwrite the common ones first
@@ -345,6 +337,21 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  private void refreshUserToGroupMappingsWithConf()
+      throws YarnException, IOException {
+    Configuration newConf = new Configuration(false);
+    InputStream confFileInputStream =
+        configurationProvider
+        .getConfigurationInputStream(newConf, YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+    if (confFileInputStream != null) {
+      newConf.addResource(confFileInputStream);
+    }
+
+    // Do refreshUserToGroupsMappings with loaded core-site.xml
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(newConf)
+        .refresh();
   }
 
   private void loadConfigurationXml(String configurationFile)
@@ -640,6 +647,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
           createPlacementConstraintManager();
       addService(placementConstraintManager);
       rmContext.setPlacementConstraintManager(placementConstraintManager);
+
+      // add resource profiles here because it's used by AbstractYarnScheduler
+      ResourceProfilesManager resourceProfilesManager =
+          createResourceProfileManager();
+      resourceProfilesManager.init(conf);
+      rmContext.setResourceProfilesManager(resourceProfilesManager);
 
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();

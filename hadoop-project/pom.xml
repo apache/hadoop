@@ -69,7 +69,7 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.7.8</jackson2.version>
+    <jackson2.version>2.9.4</jackson2.version>
 
     <!-- SLF4J version -->
     <slf4j.version>1.7.25</slf4j.version>

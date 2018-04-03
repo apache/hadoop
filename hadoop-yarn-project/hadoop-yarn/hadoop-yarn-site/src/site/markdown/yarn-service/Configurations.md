@@ -113,6 +113,7 @@ Above config make the service AM to be retried at max 10 times.
 |yarn.service.client-am.retry-interval-ms | the retry interval in milliseconds for the service client to talk to the service AM. By default, it is 2000, i.e. 2 seconds |
 |yarn.service.container-failure.retry.max | the max number of retries for the container to be auto restarted if it fails. By default, it is set to -1, which means forever.
 |yarn.service.container-failure.retry-interval-ms| the retry interval in milliseconds for the container to be restarted. By default, it is 30000, i.e. 30 seconds |
+|yarn.service.container-failure.validity-interval-ms | the failure validity interval in milliseconds which when set to a value greater than 0, will not take the failures that happened outside of this interval into failure count. By default, it is set to -1, which means that all the failures so far will be included in failure count. |
 |yarn.service.am-restart.max-attempts| the max number of attempts for the framework AM
 |yarn.service.am-resource.memory | the memory size in GB for the framework AM. By default, it is set to 1024
 |yarn.service.queue | the default queue to which the service will be submitted. By default, it is submitted to `default` queue
@@ -141,12 +142,12 @@ User can use these constants in their configurations to be dynamically substitut
 ```
 Here, `COMPONENT_INSTANCE_NAME` and `SERVICE_NAME` are the constants to be substituted by the system.
 
-Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `hwxdev.site`.
+Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `dev.test`.
 Then, the config will be substituted by the service AM and written in the config file `/etc/hadoop/hbase-site.xml` inside the container as below:
 ```
 <property>
   <name>hbase.regionserver.hostname</name>
-  <value>regionserver-0.hbase.devuser.hwxdev.site</value>
+  <value>regionserver-0.hbase.devuser.dev.test</value>
 </property>
 ```
 where `regionserver-0` is the actual component instance name assigned by the system for this container.

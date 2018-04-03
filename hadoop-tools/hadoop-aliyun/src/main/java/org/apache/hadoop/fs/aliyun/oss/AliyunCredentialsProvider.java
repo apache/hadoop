@@ -35,8 +35,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 public class AliyunCredentialsProvider implements CredentialsProvider {
   private Credentials credentials = null;
 
-  public AliyunCredentialsProvider(Configuration conf)
-      throws IOException {
+  public AliyunCredentialsProvider(Configuration conf) throws IOException {
     String accessKeyId;
     String accessKeySecret;
     String securityToken;

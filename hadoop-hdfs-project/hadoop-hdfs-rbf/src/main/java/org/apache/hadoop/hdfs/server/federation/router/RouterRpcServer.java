@@ -534,29 +534,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   }
 
   /**
-   * Get the permissions for the parent of a child with given permissions. If
-   * the child has r--, we will set it to r-x.
+   * Get the permissions for the parent of a child with given permissions.
+   * Add implicit u+wx permission for parent. This is based on
+   * @{FSDirMkdirOp#addImplicitUwx}.
    * @param mask The permission mask of the child.
    * @return The permission mask of the parent.
    */
   private static FsPermission getParentPermission(final FsPermission mask) {
     FsPermission ret = new FsPermission(
-        applyExecute(mask.getUserAction()),
-        applyExecute(mask.getGroupAction()),
-        applyExecute(mask.getOtherAction()));
+        mask.getUserAction().or(FsAction.WRITE_EXECUTE),
+        mask.getGroupAction(),
+        mask.getOtherAction());
     return ret;
-  }
-
-  /**
-   * Apply the execute permissions if it can be read.
-   * @param action Input permission.
-   * @return Output permission.
-   */
-  private static FsAction applyExecute(final FsAction action) {
-    if (action.and(FsAction.READ) == FsAction.READ) {
-      return action.or(FsAction.EXECUTE);
-    }
-    return action;
   }
 
   /**
@@ -567,7 +556,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @return The remote location for this file.
    * @throws IOException If the file has no creation location.
    */
-  private RemoteLocation getCreateLocation(final String src)
+  protected RemoteLocation getCreateLocation(final String src)
       throws IOException {
 
     final List<RemoteLocation> locations = getLocationsForPath(src, true);
@@ -1248,18 +1237,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
-    return getDatanodeReport(type, 0);
+    return getDatanodeReport(type, true, 0);
   }
 
   /**
    * Get the datanode report with a timeout.
    * @param type Type of the datanode.
+   * @param requireResponse If we require all the namespaces to report.
    * @param timeOutMs Time out for the reply in milliseconds.
    * @return List of datanodes.
    * @throws IOException If it cannot get the report.
    */
   public DatanodeInfo[] getDatanodeReport(
-      DatanodeReportType type, long timeOutMs) throws IOException {
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+          throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
 
     Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
@@ -1268,8 +1259,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
 
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, DatanodeInfo[]> results =
-        rpcClient.invokeConcurrent(
-            nss, method, true, false, timeOutMs, DatanodeInfo[].class);
+        rpcClient.invokeConcurrent(nss, method, requireResponse, false,
+            timeOutMs, DatanodeInfo[].class);
     for (Entry<FederationNamespaceInfo, DatanodeInfo[]> entry :
         results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();
@@ -1289,9 +1280,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     }
     // Map -> Array
     Collection<DatanodeInfo> datanodes = datanodesMap.values();
-    DatanodeInfo[] combinedData = new DatanodeInfo[datanodes.size()];
-    combinedData = datanodes.toArray(combinedData);
-    return combinedData;
+    return toArray(datanodes, DatanodeInfo.class);
   }
 
   @Override // ClientProtocol
@@ -2306,7 +2295,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @param clazz Class of the values.
    * @return Array with the values in set.
    */
-  private static <T> T[] toArray(Set<T> set, Class<T> clazz) {
+  private static <T> T[] toArray(Collection<T> set, Class<T> clazz) {
     @SuppressWarnings("unchecked")
     T[] combinedData = (T[]) Array.newInstance(clazz, set.size());
     combinedData = set.toArray(combinedData);

@@ -18,7 +18,7 @@
 package org.apache.hadoop.metrics2.util;
 
 /**
- * Dummy MXBean class to test arbitrary key/values with MXBeans.
+ * Sample JMX Bean interface to test JMX registration.
  */
 public interface DummyMXBean {
 

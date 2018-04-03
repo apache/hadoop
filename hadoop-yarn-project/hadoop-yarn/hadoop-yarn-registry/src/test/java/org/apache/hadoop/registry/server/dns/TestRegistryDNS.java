@@ -156,7 +156,7 @@ public class TestRegistryDNS extends Assert {
 
   protected Configuration createConfiguration() {
     Configuration conf = new Configuration();
-    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "hwx.test");
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "dev.test");
     conf.set(RegistryConstants.KEY_DNS_ZONE_SUBNET, "172.17.0");
     conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
     return conf;
@@ -179,39 +179,39 @@ public class TestRegistryDNS extends Assert {
         "/registry/users/root/services/org-apache-slider/test1/", record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery("test1.root.hwx.test.");
+    Record[] recs = assertDNSQuery("test1.root.dev.test.");
     assertEquals("wrong result", "192.168.1.5",
         ((ARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("management-api.test1.root.hwx.test.", 2);
-    assertEquals("wrong target name", "test1.root.hwx.test.",
+    recs = assertDNSQuery("management-api.test1.root.dev.test.", 2);
+    assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs[0]).getTarget().toString());
     assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
 
-    recs = assertDNSQuery("appmaster-ipc-api.test1.root.hwx.test.",
+    recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.",
         Type.SRV, 1);
     assertTrue("not an SRV record", recs[0] instanceof SRVRecord);
     assertEquals("wrong port", 1026, ((SRVRecord) recs[0]).getPort());
 
-    recs = assertDNSQuery("appmaster-ipc-api.test1.root.hwx.test.", 2);
-    assertEquals("wrong target name", "test1.root.hwx.test.",
+    recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", 2);
+    assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs[0]).getTarget().toString());
     assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
 
-    recs = assertDNSQuery("http-api.test1.root.hwx.test.", 2);
-    assertEquals("wrong target name", "test1.root.hwx.test.",
+    recs = assertDNSQuery("http-api.test1.root.dev.test.", 2);
+    assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs[0]).getTarget().toString());
     assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
 
-    recs = assertDNSQuery("http-api.test1.root.hwx.test.", Type.SRV,
+    recs = assertDNSQuery("http-api.test1.root.dev.test.", Type.SRV,
         1);
     assertTrue("not an SRV record", recs[0] instanceof SRVRecord);
     assertEquals("wrong port", 1027, ((SRVRecord) recs[0]).getPort());
 
-    assertDNSQuery("test1.root.hwx.test.", Type.TXT, 3);
-    assertDNSQuery("appmaster-ipc-api.test1.root.hwx.test.", Type.TXT, 1);
-    assertDNSQuery("http-api.test1.root.hwx.test.", Type.TXT, 1);
-    assertDNSQuery("management-api.test1.root.hwx.test.", Type.TXT, 1);
+    assertDNSQuery("test1.root.dev.test.", Type.TXT, 3);
+    assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", Type.TXT, 1);
+    assertDNSQuery("http-api.test1.root.dev.test.", Type.TXT, 1);
+    assertDNSQuery("management-api.test1.root.dev.test.", Type.TXT, 1);
   }
 
   @Test
@@ -225,11 +225,11 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Record[] recs =
-        assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+        assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
         ((ARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.dev.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
   }
 
@@ -243,7 +243,7 @@ public class TestRegistryDNS extends Assert {
          record);
 
     Name name =
-        Name.fromString("ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+        Name.fromString("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     Record question = Record.newRecord(name, Type.A, DClass.IN);
     Message query = Message.newQuery(question);
     byte[] responseBytes = registryDNS.generateReply(query, null);
@@ -263,12 +263,12 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery(
-        "ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+        "ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
         ((ARecord) recs[0]).getAddress().getHostAddress());
     assertEquals("wrong ttl", 30L, recs[0].getTTL());
 
-    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.dev.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
 
     assertEquals("wrong ttl", 30L, recs[0].getTTL());
@@ -286,7 +286,7 @@ public class TestRegistryDNS extends Assert {
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "comp-name.test1.root.hwx.test.",
+        "comp-name.test1.root.dev.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
   }
 
@@ -294,7 +294,7 @@ public class TestRegistryDNS extends Assert {
   public void testReverseLookupInLargeNetwork() throws Exception {
     setRegistryDNS(new RegistryDNS("TestRegistry"));
     Configuration conf = createConfiguration();
-    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "hwx.test");
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "dev.test");
     conf.set(KEY_DNS_ZONE_SUBNET, "172.17.0.0");
     conf.set(KEY_DNS_ZONE_MASK, "255.255.224.0");
     conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
@@ -312,7 +312,7 @@ public class TestRegistryDNS extends Assert {
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "comp-name.test1.root.hwx.test.",
+        "comp-name.test1.root.dev.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
   }
 
@@ -348,7 +348,7 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Name name =
-        Name.fromString("ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+        Name.fromString("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     Record question = Record.newRecord(name, Type.A, DClass.IN);
     Message query = Message.newQuery(question);
 
@@ -431,7 +431,7 @@ public class TestRegistryDNS extends Assert {
     //    KeyFactory keyFactory = KeyFactory.getInstance("RSA");
     //    PublicKey pubKey = keyFactory.generatePublic(keySpec);
     DNSKEYRecord dnskeyRecord =
-        new DNSKEYRecord(Name.fromString("hwxstg.site."), DClass.IN, 0,
+        new DNSKEYRecord(Name.fromString("dev.test."), DClass.IN, 0,
             DNSKEYRecord.Flags.ZONE_KEY,
             DNSKEYRecord.Protocol.DNSSEC,
             DNSSEC.Algorithm.RSASHA256,
@@ -486,11 +486,11 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Record[] recs = assertDNSQuery(
-        "ctr-e50-1451931954322-0016-01-000002.hwx.test.", Type.AAAA, 1);
+        "ctr-e50-1451931954322-0016-01-000002.dev.test.", Type.AAAA, 1);
     assertEquals("wrong result", "172.17.0.19",
         ((AAAARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", Type.AAAA, 1);
+    recs = assertDNSQuery("comp-name.test1.root.dev.test.", Type.AAAA, 1);
     assertTrue("not an ARecord", recs[0] instanceof AAAARecord);
   }
 
@@ -504,7 +504,7 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Name name = Name.fromString("missing.hwx.test.");
+    Name name = Name.fromString("missing.dev.test.");
     Record question = Record.newRecord(name, Type.A, DClass.IN);
     Message query = Message.newQuery(question);
 
@@ -533,7 +533,7 @@ public class TestRegistryDNS extends Assert {
   public void testReadMasterFile() throws Exception {
     setRegistryDNS(new RegistryDNS("TestRegistry"));
     Configuration conf = new Configuration();
-    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "hwx.test");
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "dev.test");
     conf.set(RegistryConstants.KEY_DNS_ZONE_SUBNET, "172.17.0");
     conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
     conf.set(RegistryConstants.KEY_DNS_ZONES_DIR,
@@ -561,17 +561,17 @@ public class TestRegistryDNS extends Assert {
 
     // start assessing whether correct records are available
     Record[] recs =
-        assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.hwx.test.");
+        assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
         ((ARecord) recs[0]).getAddress().getHostAddress());
 
-    recs = assertDNSQuery("comp-name.test1.root.hwx.test.", 1);
+    recs = assertDNSQuery("comp-name.test1.root.dev.test.", 1);
     assertTrue("not an ARecord", recs[0] instanceof ARecord);
 
     // lookup dyanmic reverse records
     recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
-        "comp-name.test1.root.hwx.test.",
+        "comp-name.test1.root.dev.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
 
     // now lookup static reverse records
@@ -583,7 +583,7 @@ public class TestRegistryDNS extends Assert {
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
     recs = response.getSectionArray(Section.ANSWER);
-    assertEquals("wrong result", "cn005.hwx.test.",
+    assertEquals("wrong result", "cn005.dev.test.",
         ((PTRRecord) recs[0]).getTarget().toString());
   }
 
@@ -636,7 +636,7 @@ public class TestRegistryDNS extends Assert {
   public void testExternalCNAMERecord() throws Exception {
     setRegistryDNS(new RegistryDNS("TestRegistry"));
     Configuration conf = new Configuration();
-    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "hwx.test");
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "dev.test");
     conf.set(RegistryConstants.KEY_DNS_ZONE_SUBNET, "172.17.0");
     conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
     conf.set(RegistryConstants.KEY_DNS_ZONES_DIR,

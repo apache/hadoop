@@ -311,6 +311,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
 | queueName | string | Name of the queue |
 | queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources |
+| health | A single health object | The health metrics of capacity scheduler. This metrics existed since 2.8.0, but the output was not well formatted. Hence users can not make use of this field cleanly, this is optimized from 3.2.0 onwards. |
 
 ### Elements of the queues object for a Parent queue
 
@@ -360,6 +361,31 @@ The capacity scheduler supports hierarchical queues. This one request will print
 |:---- |:---- |:---- |
 | memory | int | The amount of memory used (in MB) |
 | vCores | int | The number of virtual cores |
+
+### Elements of the health object in schedulerInfo:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| lastrun | long | The time in which application started (in ms since epoch) |
+| operationsInfo | array of operations(JSON)/operation objects(XML) | A collection of operation objects |
+| lastRunDetails | array of lastRunDetails(JSON)/lastRunDetail objects(XML) | A collection of lastRunDetail objects |
+
+### Elements of the operation object in health:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| operation | string | The type of operation |
+| nodeId | string | The id of the node to which the operation relates |
+| containerId | string | The id of the container to which the operation relates |
+| queue | string | The name of the queue to which the operation relates |
+
+### Elements of the lastRunDetail object in health:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| operation | string | The type of operation  |
+| count | long | The id of the node to which the operation relates |
+| resources | A single resource object | The resources to which the operation relates |
 
 #### Response Examples
 
@@ -632,6 +658,61 @@ Response Body:
                     }
                 ]
             },
+            "health": {
+                "lastrun": 1326381444693,
+                "operationsInfo": [
+                    {
+                        "operation": "last-allocation",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    },
+                    {
+                        "operation": "last-release",
+                        "nodeId": "host.domain.com:8041",
+                        "containerId": "container_1326821518301_0005_01_000001",
+                        "queue": "root.default"
+                    },
+                    {
+                        "operation": "last-preemption",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    },
+                    {
+                        "operation": "last-reservation",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    }
+                ],
+                "lastRunDetails": [
+                    {
+                        "operation": "releases",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    },
+                    {
+                        "operation": "allocations",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    },
+                    {
+                        "operation": "reservations",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    }
+                ]
+            },
             "type": "capacityScheduler",
             "usedCapacity": 0.0
         }
@@ -894,6 +975,57 @@ Response Body:
         </resourcesUsed>
       </queue>
     </queues>
+    <health>
+      <lastrun>1326381444693</lastrun>
+      <operationsInfo>
+        <operation>last-allocation</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-release</operation>
+        <nodeId>host.domain.com:8041</nodeId>
+        <containerId>container_1326821518301_0005_01_000001</containerId>
+        <queue>root.default</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-preemption</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-reservation</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <lastRunDetails>
+        <operation>releases</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+      <lastRunDetails>
+        <operation>allocations</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+      <lastRunDetails>
+        <operation>reservations</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+    </health>
   </schedulerInfo>
 </scheduler>
 ```

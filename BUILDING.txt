@@ -9,6 +9,7 @@ Requirements:
 * ProtocolBuffer 2.5.0
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
+* Cyrus SASL devel (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Jansson C XML parsing library ( if compiling libwebhdfs )
@@ -67,7 +68,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
-  $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev
+  $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * ProtocolBuffer 2.5.0 (required)
   $ sudo apt-get -y install protobuf-compiler
 

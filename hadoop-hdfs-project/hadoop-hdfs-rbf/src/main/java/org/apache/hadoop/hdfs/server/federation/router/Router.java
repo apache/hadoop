@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
@@ -548,6 +549,18 @@ public class Router extends CompositeService {
   public FederationMetrics getMetrics() {
     if (this.metrics != null) {
       return this.metrics.getFederationMetrics();
+    }
+    return null;
+  }
+
+  /**
+   * Get the Namenode metrics.
+   *
+   * @return Namenode metrics.
+   */
+  public NamenodeBeanMetrics getNamenodeMetrics() {
+    if (this.metrics != null) {
+      return this.metrics.getNamenodeMetrics();
     }
     return null;
   }

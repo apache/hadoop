@@ -32,17 +32,19 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This util class provides a method to register an MBean using
  * our standard naming convention as described in the doc
- *  for {link {@link #register(String, String, Object)}
+ *  for {link {@link #register(String, String, Object)}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class MBeans {
+public final class MBeans {
   private static final Logger LOG = LoggerFactory.getLogger(MBeans.class);
   private static final String DOMAIN_PREFIX = "Hadoop:";
   private static final String SERVICE_PREFIX = "service=";
@@ -52,10 +54,13 @@ public class MBeans {
       "^" + DOMAIN_PREFIX + SERVICE_PREFIX + "([^,]+)," +
       NAME_PREFIX + "(.+)$");
 
+  private MBeans() {
+  }
+
   /**
    * Register the MBean using our standard MBeanName format
    * "hadoop:service=<serviceName>,name=<nameName>"
-   * Where the <serviceName> and <nameName> are the supplied parameters
+   * Where the <serviceName> and <nameName> are the supplied parameters.
    *
    * @param serviceName
    * @param nameName
@@ -84,6 +89,9 @@ public class MBeans {
                                     Map<String, String> properties,
                                     Object theMbean) {
     final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    Preconditions.checkNotNull(properties,
+        "JMX bean properties should not be null for "
+            + "bean registration.");
     ObjectName name = getMBeanName(serviceName, nameName, properties);
     if (name != null) {
       try {

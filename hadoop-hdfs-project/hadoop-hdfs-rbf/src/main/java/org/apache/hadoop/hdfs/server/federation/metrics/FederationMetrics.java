@@ -434,7 +434,7 @@ public class FederationMetrics implements FederationMBean {
     try {
       RouterRpcServer rpcServer = this.router.getRpcServer();
       DatanodeInfo[] live = rpcServer.getDatanodeReport(
-          DatanodeReportType.LIVE, TIME_OUT);
+          DatanodeReportType.LIVE, false, TIME_OUT);
 
       if (live.length > 0) {
         float totalDfsUsed = 0;

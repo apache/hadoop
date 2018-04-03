@@ -329,6 +329,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject health = info.getJSONObject("health");
     assertNotNull(health);
     assertEquals("incorrect number of elements", 3, health.length());
+    JSONArray operationsInfo = health.getJSONArray("operationsInfo");
+    assertEquals("incorrect number of elements", 4, operationsInfo.length());
+    JSONArray lastRunDetails = health.getJSONArray("lastRunDetails");
+    assertEquals("incorrect number of elements", 3, lastRunDetails.length());
 
     JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
     assertEquals("incorrect number of elements", 2, arr.length());

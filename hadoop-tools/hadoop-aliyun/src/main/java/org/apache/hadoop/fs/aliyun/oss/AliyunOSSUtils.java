@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 
 import com.aliyun.oss.common.auth.CredentialsProvider;
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.security.ProviderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 final public class AliyunOSSUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSUtils.class);
+  private static LocalDirAllocator directoryAllocator;
 
   private AliyunOSSUtils() {
   }
@@ -75,31 +78,6 @@ final public class AliyunOSSUtils {
   }
 
   /**
-   * Skip the requested number of bytes or fail if there are no enough bytes
-   * left. This allows for the possibility that {@link InputStream#skip(long)}
-   * may not skip as many bytes as requested (most likely because of reaching
-   * EOF).
-   *
-   * @param is the input stream to skip.
-   * @param n the number of bytes to skip.
-   * @throws IOException thrown when skipped less number of bytes.
-   */
-  public static void skipFully(InputStream is, long n) throws IOException {
-    long total = 0;
-    long cur = 0;
-
-    do {
-      cur = is.skip(n - total);
-      total += cur;
-    } while((total < n) && (cur > 0));
-
-    if (total < n) {
-      throw new IOException("Failed to skip " + n + " bytes, possibly due " +
-              "to EOF.");
-    }
-  }
-
-  /**
    * Calculate a proper size of multipart piece. If <code>minPartSize</code>
    * is too small, the number of multipart pieces may exceed the limit of
    * {@link Constants#MULTIPART_UPLOAD_PART_NUM_LIMIT}.
@@ -126,7 +104,7 @@ final public class AliyunOSSUtils {
       throws IOException {
     CredentialsProvider credentials;
 
-    String className = conf.getTrimmed(ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY);
+    String className = conf.getTrimmed(CREDENTIALS_PROVIDER_KEY);
     if (StringUtils.isEmpty(className)) {
       Configuration newConf =
           ProviderUtils.excludeIncompatibleCredentialProviders(conf,
@@ -151,7 +129,7 @@ final public class AliyunOSSUtils {
         throw new IOException(String.format("%s constructor exception.  A " +
             "class specified in %s must provide an accessible constructor " +
             "accepting URI and Configuration, or an accessible default " +
-            "constructor.", className, ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY),
+            "constructor.", className, CREDENTIALS_PROVIDER_KEY),
             e);
       } catch (ReflectiveOperationException | IllegalArgumentException e) {
         throw new IOException(className + " instantiation exception.", e);
@@ -187,5 +165,86 @@ final public class AliyunOSSUtils {
   public static boolean objectRepresentsDirectory(final String name,
       final long size) {
     return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
+  }
+
+  /**
+   * Demand create the directory allocator, then create a temporary file.
+   *  @param path prefix for the temporary file
+   *  @param size the size of the file that is going to be written
+   *  @param conf the Configuration object
+   *  @return a unique temporary file
+   *  @throws IOException IO problems
+   */
+  public static File createTmpFileForWrite(String path, long size,
+      Configuration conf) throws IOException {
+    if (conf.get(BUFFER_DIR_KEY) == null) {
+      conf.set(BUFFER_DIR_KEY, conf.get("hadoop.tmp.dir") + "/oss");
+    }
+    if (directoryAllocator == null) {
+      directoryAllocator = new LocalDirAllocator(BUFFER_DIR_KEY);
+    }
+    return directoryAllocator.createTmpFileForWrite(path, size, conf);
+  }
+
+  /**
+   * Get a integer option >= the minimum allowed value.
+   * @param conf configuration
+   * @param key key to look up
+   * @param defVal default value
+   * @param min minimum value
+   * @return the value
+   * @throws IllegalArgumentException if the value is below the minimum
+   */
+  static int intOption(Configuration conf, String key, int defVal, int min) {
+    int v = conf.getInt(key, defVal);
+    Preconditions.checkArgument(v >= min,
+        String.format("Value of %s: %d is below the minimum value %d",
+            key, v, min));
+    LOG.debug("Value of {} is {}", key, v);
+    return v;
+  }
+
+  /**
+   * Get a long option >= the minimum allowed value.
+   * @param conf configuration
+   * @param key key to look up
+   * @param defVal default value
+   * @param min minimum value
+   * @return the value
+   * @throws IllegalArgumentException if the value is below the minimum
+   */
+  static long longOption(Configuration conf, String key, long defVal,
+      long min) {
+    long v = conf.getLong(key, defVal);
+    Preconditions.checkArgument(v >= min,
+        String.format("Value of %s: %d is below the minimum value %d",
+            key, v, min));
+    LOG.debug("Value of {} is {}", key, v);
+    return v;
+  }
+
+  /**
+   * Get a size property from the configuration: this property must
+   * be at least equal to {@link Constants#MULTIPART_MIN_SIZE}.
+   * If it is too small, it is rounded up to that minimum, and a warning
+   * printed.
+   * @param conf configuration
+   * @param property property name
+   * @param defVal default value
+   * @return the value, guaranteed to be above the minimum size
+   */
+  public static long getMultipartSizeProperty(Configuration conf,
+      String property, long defVal) {
+    long partSize = conf.getLong(property, defVal);
+    if (partSize < MULTIPART_MIN_SIZE) {
+      LOG.warn("{} must be at least 100 KB; configured value is {}",
+          property, partSize);
+      partSize = MULTIPART_MIN_SIZE;
+    } else if (partSize > Integer.MAX_VALUE) {
+      LOG.warn("oss: {} capped to ~2.14GB(maximum allowed size with " +
+          "current output mechanism)", MULTIPART_UPLOAD_PART_SIZE_KEY);
+      partSize = Integer.MAX_VALUE;
+    }
+    return partSize;
   }
 }
