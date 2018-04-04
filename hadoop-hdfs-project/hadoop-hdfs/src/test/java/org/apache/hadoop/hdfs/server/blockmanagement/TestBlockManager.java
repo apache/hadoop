@@ -39,6 +39,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockType;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -114,10 +116,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestBlockManager {
   private DatanodeStorageInfo[] storages;
@@ -1343,14 +1348,14 @@ public class TestBlockManager {
     spyBM.createLocatedBlocks(new BlockInfo[]{blockInfo}, 3L, false, 0L, 3L,
         false, false, null, null);
     verify(spyBM, Mockito.atLeast(0)).
-        isReplicaCorrupt(Mockito.any(BlockInfo.class),
-            Mockito.any(DatanodeDescriptor.class));
+        isReplicaCorrupt(any(BlockInfo.class),
+            any(DatanodeDescriptor.class));
     addCorruptBlockOnNodes(0, origNodes);
     spyBM.createLocatedBlocks(new BlockInfo[]{blockInfo}, 3L, false, 0L, 3L,
         false, false, null, null);
     verify(spyBM, Mockito.atLeast(1)).
-        isReplicaCorrupt(Mockito.any(BlockInfo.class),
-            Mockito.any(DatanodeDescriptor.class));
+        isReplicaCorrupt(any(BlockInfo.class),
+            any(DatanodeDescriptor.class));
   }
 
   @Test (timeout = 300000)
@@ -1506,8 +1511,8 @@ public class TestBlockManager {
         blockInfo.getGenerationStamp() + 1,
         blockInfo.getNumBytes(),
         new DatanodeStorageInfo[]{});
-    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
-    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    BlockCollection mockedBc = mock(BlockCollection.class);
+    when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
     bm.checkRedundancy(mockedBc);
     return blockInfo;
   }
@@ -1524,8 +1529,8 @@ public class TestBlockManager {
     Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
     bm.blocksMap.addBlockCollection(blockInfo, bc);
     nodesList.get(0).setInMaintenance();
-    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
-    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    BlockCollection mockedBc = mock(BlockCollection.class);
+    when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
     bm.checkRedundancy(mockedBc);
     return blockInfo;
   }
@@ -1580,8 +1585,8 @@ public class TestBlockManager {
     Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
     bm.blocksMap.addBlockCollection(blockInfo, bc);
     nodesList.get(0).startDecommission();
-    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
-    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    BlockCollection mockedBc = mock(BlockCollection.class);
+    when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
     bm.checkRedundancy(mockedBc);
     return blockInfo;
   }
@@ -1623,4 +1628,40 @@ public class TestBlockManager {
     }
   }
 
+  @Test
+  public void testLegacyBlockInInvalidateBlocks() {
+    final long legancyGenerationStampLimit = 10000;
+    BlockIdManager bim = Mockito.mock(BlockIdManager.class);
+
+    when(bim.getLegacyGenerationStampLimit())
+        .thenReturn(legancyGenerationStampLimit);
+    when(bim.isStripedBlock(any(Block.class))).thenCallRealMethod();
+    when(bim.isLegacyBlock(any(Block.class))).thenCallRealMethod();
+
+    InvalidateBlocks ibs = new InvalidateBlocks(100, 30000, bim);
+
+    Block legacy = new Block(-1, 10, legancyGenerationStampLimit / 10);
+    Block striped = new Block(
+        bm.nextBlockId(BlockType.STRIPED), 10,
+        legancyGenerationStampLimit + 10);
+
+    DatanodeInfo legacyDnInfo = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo stripedDnInfo = DFSTestUtil.getLocalDatanodeInfo();
+
+    ibs.add(legacy, legacyDnInfo, false);
+    assertEquals(1, ibs.getBlocks());
+    assertEquals(0, ibs.getECBlocks());
+
+    ibs.add(striped, stripedDnInfo, false);
+    assertEquals(1, ibs.getBlocks());
+    assertEquals(1, ibs.getECBlocks());
+
+    ibs.remove(legacyDnInfo);
+    assertEquals(0, ibs.getBlocks());
+    assertEquals(1, ibs.getECBlocks());
+
+    ibs.remove(stripedDnInfo);
+    assertEquals(0, ibs.getBlocks());
+    assertEquals(0, ibs.getECBlocks());
+  }
 }
