@@ -31,17 +31,18 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.SELF;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.NOT_SELF;
-import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.APP_LABEL;
+import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.APP_TAG;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.APP_ID;
 import static org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType.ALL;
 
 /**
- * Class to describe the namespace of an allocation tag.
- * Each namespace can be evaluated against a set of applications.
- * After evaluation, the namespace should have an implicit set of
- * applications which defines its scope.
+ * Class to describe the namespace of allocation tags, used by
+ * {@link AllocationTags}. Each namespace can be evaluated against
+ * a target set applications, represented by {@link TargetApplications}.
+ * After evaluation, the namespace is interpreted to be a set of
+ * applications based on the namespace type.
  */
-public abstract class AllocationTagNamespace implements
+public abstract class TargetApplicationsNamespace implements
     Evaluable<TargetApplications> {
 
   public final static String NAMESPACE_DELIMITER = "/";
@@ -50,7 +51,7 @@ public abstract class AllocationTagNamespace implements
   // Namespace scope value will be delay binding by eval method.
   private Set<ApplicationId> nsScope;
 
-  public AllocationTagNamespace(AllocationTagNamespaceType
+  public TargetApplicationsNamespace(AllocationTagNamespaceType
       allocationTagNamespaceType) {
     this.nsType = allocationTagNamespaceType;
   }
@@ -107,7 +108,7 @@ public abstract class AllocationTagNamespace implements
   /**
    * Namespace within application itself.
    */
-  public static class Self extends AllocationTagNamespace {
+  public static class Self extends TargetApplicationsNamespace {
 
     public Self() {
       super(SELF);
@@ -128,7 +129,7 @@ public abstract class AllocationTagNamespace implements
   /**
    * Namespace to all applications except itself.
    */
-  public static class NotSelf extends AllocationTagNamespace {
+  public static class NotSelf extends TargetApplicationsNamespace {
 
     private ApplicationId applicationId;
 
@@ -160,7 +161,7 @@ public abstract class AllocationTagNamespace implements
   /**
    * Namespace to all applications in the cluster.
    */
-  public static class All extends AllocationTagNamespace {
+  public static class All extends TargetApplicationsNamespace {
 
     public All() {
       super(ALL);
@@ -168,24 +169,32 @@ public abstract class AllocationTagNamespace implements
   }
 
   /**
-   * Namespace to all applications in the cluster.
+   * Namespace to applications that attached with a certain application tag.
    */
-  public static class AppLabel extends AllocationTagNamespace {
+  public static class AppTag extends TargetApplicationsNamespace {
 
-    public AppLabel() {
-      super(APP_LABEL);
+    private String applicationTag;
+
+    public AppTag(String appTag) {
+      super(APP_TAG);
+      this.applicationTag = appTag;
     }
 
     @Override
     public void evaluate(TargetApplications target) {
-      // TODO Implement app-label namespace evaluation
+      setScopeIfNotNull(target.getApplicationIdsByTag(applicationTag));
+    }
+
+    @Override
+    public String toString() {
+      return APP_TAG.toString() + NAMESPACE_DELIMITER + this.applicationTag;
     }
   }
 
   /**
    * Namespace defined by a certain application ID.
    */
-  public static class AppID extends AllocationTagNamespace {
+  public static class AppID extends TargetApplicationsNamespace {
 
     private ApplicationId targetAppId;
     // app-id namespace requires an extra value of an application id.
@@ -206,11 +215,11 @@ public abstract class AllocationTagNamespace implements
    * defined by each {@link AllocationTagNamespaceType}.
    *
    * @param namespaceStr namespace string.
-   * @return an instance of {@link AllocationTagNamespace}.
+   * @return an instance of {@link TargetApplicationsNamespace}.
    * @throws InvalidAllocationTagsQueryException
    * if given string is not in valid format
    */
-  public static AllocationTagNamespace parse(String namespaceStr)
+  public static TargetApplicationsNamespace parse(String namespaceStr)
       throws InvalidAllocationTagsQueryException {
     // Return the default namespace if no valid string is given.
     if (Strings.isNullOrEmpty(namespaceStr)) {
@@ -238,8 +247,13 @@ public abstract class AllocationTagNamespace implements
       }
       String appIDStr = nsValues.get(1);
       return parseAppID(appIDStr);
-    case APP_LABEL:
-      return new AppLabel();
+    case APP_TAG:
+      if (nsValues.size() != 2) {
+        throw new InvalidAllocationTagsQueryException(
+            "Missing the application tag in the namespace string: "
+                + namespaceStr);
+      }
+      return new AppTag(nsValues.get(1));
     default:
       throw new InvalidAllocationTagsQueryException(
           "Invalid namespace string " + namespaceStr);
@@ -263,7 +277,7 @@ public abstract class AllocationTagNamespace implements
             + ", valid values are: " + String.join(",", values));
   }
 
-  private static AllocationTagNamespace parseAppID(String appIDStr)
+  private static TargetApplicationsNamespace parseAppID(String appIDStr)
       throws InvalidAllocationTagsQueryException {
     try {
       ApplicationId applicationId = ApplicationId.fromString(appIDStr);

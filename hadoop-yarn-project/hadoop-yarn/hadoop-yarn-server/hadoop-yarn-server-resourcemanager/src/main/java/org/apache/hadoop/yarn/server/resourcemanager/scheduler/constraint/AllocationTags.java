@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import java.util.Set;
@@ -29,20 +28,32 @@ import java.util.Set;
  */
 public final class AllocationTags {
 
-  private AllocationTagNamespace ns;
+  private TargetApplicationsNamespace ns;
   private Set<String> tags;
+  private ApplicationId applicationId;
 
-  private AllocationTags(AllocationTagNamespace namespace,
+  private AllocationTags(TargetApplicationsNamespace namespace,
       Set<String> allocationTags) {
     this.ns = namespace;
     this.tags = allocationTags;
   }
 
+  private AllocationTags(TargetApplicationsNamespace namespace,
+      Set<String> allocationTags, ApplicationId currentAppId) {
+    this.ns = namespace;
+    this.tags = allocationTags;
+    this.applicationId = currentAppId;
+  }
+
   /**
    * @return the namespace of these tags.
    */
-  public AllocationTagNamespace getNamespace() {
+  public TargetApplicationsNamespace getNamespace() {
     return this.ns;
+  }
+
+  public ApplicationId getCurrentApplicationId() {
+    return this.applicationId;
   }
 
   /**
@@ -55,28 +66,31 @@ public final class AllocationTags {
   @VisibleForTesting
   public static AllocationTags createSingleAppAllocationTags(
       ApplicationId appId, Set<String> tags) {
-    AllocationTagNamespace namespace = new AllocationTagNamespace.AppID(appId);
+    TargetApplicationsNamespace namespace =
+        new TargetApplicationsNamespace.AppID(appId);
     return new AllocationTags(namespace, tags);
   }
 
   @VisibleForTesting
   public static AllocationTags createGlobalAllocationTags(Set<String> tags) {
-    AllocationTagNamespace namespace = new AllocationTagNamespace.All();
+    TargetApplicationsNamespace namespace =
+        new TargetApplicationsNamespace.All();
     return new AllocationTags(namespace, tags);
   }
 
   @VisibleForTesting
   public static AllocationTags createOtherAppAllocationTags(
-      ApplicationId currentApp, Set<ApplicationId> allIds, Set<String> tags)
-      throws InvalidAllocationTagsQueryException {
-    AllocationTagNamespace namespace = new AllocationTagNamespace.NotSelf();
-    TargetApplications ta = new TargetApplications(currentApp, allIds);
-    namespace.evaluate(ta);
-    return new AllocationTags(namespace, tags);
+      ApplicationId currentApp, Set<String> tags) {
+    TargetApplicationsNamespace namespace =
+        new TargetApplicationsNamespace.NotSelf();
+    return new AllocationTags(namespace, tags, currentApp);
   }
 
-  public static AllocationTags newAllocationTags(
-      AllocationTagNamespace namespace, Set<String> tags) {
-    return new AllocationTags(namespace, tags);
+  public static AllocationTags createAllocationTags(
+      ApplicationId currentApplicationId, String namespaceString,
+      Set<String> tags) throws InvalidAllocationTagsQueryException {
+    TargetApplicationsNamespace namespace = TargetApplicationsNamespace
+        .parse(namespaceString);
+    return new AllocationTags(namespace, tags, currentApplicationId);
   }
 }

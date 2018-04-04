@@ -68,6 +68,7 @@ public class MockRMApp implements RMApp {
   RMAppAttempt attempt;
   int maxAppAttempts = 1;
   List<ResourceRequest> amReqs;
+  private Set<String> applicationTags = null;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
@@ -80,6 +81,12 @@ public class MockRMApp implements RMApp {
   public MockRMApp(int newid, long time, RMAppState newState, String userName) {
     this(newid, time, newState);
     user = userName;
+  }
+
+  public MockRMApp(int newid, long time, RMAppState newState,
+      String userName, Set<String> appTags) {
+    this(newid, time, newState, userName);
+    this.applicationTags = appTags;
   }
 
   public MockRMApp(int newid, long time, RMAppState newState, String userName, String diag) {
@@ -248,7 +255,7 @@ public class MockRMApp implements RMApp {
 
   @Override
   public Set<String> getApplicationTags() {
-    return null;
+    return this.applicationTags;
   }
 
   @Override

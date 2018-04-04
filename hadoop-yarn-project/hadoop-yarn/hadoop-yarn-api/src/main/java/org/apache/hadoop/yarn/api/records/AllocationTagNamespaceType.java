@@ -26,7 +26,7 @@ public enum AllocationTagNamespaceType {
   SELF("self"),
   NOT_SELF("not-self"),
   APP_ID("app-id"),
-  APP_LABEL("app-label"),
+  APP_TAG("app-tag"),
   ALL("all");
 
   private String typeKeyword;
