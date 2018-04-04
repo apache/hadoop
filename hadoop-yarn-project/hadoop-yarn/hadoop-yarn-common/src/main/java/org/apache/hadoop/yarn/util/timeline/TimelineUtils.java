@@ -126,8 +126,7 @@ public class TimelineUtils {
    * version equal to 1.5.
    */
   public static boolean timelineServiceV1_5Enabled(Configuration conf) {
-    return timelineServiceEnabled(conf) &&
-        Math.abs(getTimelineServiceVersion(conf) - 1.5) < 0.00001;
+    return YarnConfiguration.timelineServiceV15Enabled(conf);
   }
 
   public static TimelineAbout createTimelineAbout(String about) {
