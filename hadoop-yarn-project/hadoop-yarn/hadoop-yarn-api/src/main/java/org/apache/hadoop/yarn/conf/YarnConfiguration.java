@@ -3520,6 +3520,27 @@ public class YarnConfiguration extends Configuration {
   }
 
   /**
+   * Returns whether the timeline service v.1,5 is enabled via configuration.
+   *
+   * @param conf the configuration
+   * @return whether the timeline service v.1.5 is enabled. V.1.5 refers to a
+   * version equal to 1.5.
+   */
+  public static boolean timelineServiceV15Enabled(Configuration conf) {
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (Float.compare(version, 1.5f) == 0) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
    * Returns all the active timeline service versions. It does not check
    * whether the timeline service itself is enabled.
    *
