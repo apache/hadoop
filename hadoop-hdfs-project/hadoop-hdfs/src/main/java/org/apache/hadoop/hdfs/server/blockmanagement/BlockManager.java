@@ -450,7 +450,8 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT) * 1000L;
     invalidateBlocks = new InvalidateBlocks(
         datanodeManager.getBlockInvalidateLimit(),
-        startupDelayBlockDeletionInMs);
+        startupDelayBlockDeletionInMs,
+        blockIdManager);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
@@ -1667,7 +1668,7 @@ public class BlockManager implements BlockStatsMXBean {
       corrupted.setBlockId(b.getStored().getBlockId());
     }
     corruptReplicas.addToCorruptReplicasMap(corrupted, node, b.getReason(),
-        b.getReasonCode());
+        b.getReasonCode(), b.getStored().isStriped());
 
     NumberReplicas numberOfReplicas = countNodes(b.getStored());
     boolean hasEnoughLiveReplicas = numberOfReplicas.liveReplicas() >=
