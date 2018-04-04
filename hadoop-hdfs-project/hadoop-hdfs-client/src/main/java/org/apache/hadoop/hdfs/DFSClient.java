@@ -1786,12 +1786,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * in replicated form, or striped mode. Depending on the
    * dfs.checksum.combine.mode, checksums may or may not be comparable between
    * different block layout forms.
+   *
    * @param src The file path
    * @param length the length of the range, i.e., the range is [0, length]
    * @return The checksum
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  @InterfaceAudience.LimitedPrivate({ "HDFS" })
   public FileChecksum getFileChecksumWithCombineMode(String src, long length)
       throws IOException {
     ChecksumCombineMode combineMode = getConf().getChecksumCombineMode();
@@ -1804,6 +1804,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * in replicated form, or striped mode. It can be used to checksum and compare
    * two replicated files, or two striped files, but not applicable for two
    * files of different block layout forms.
+   *
    * @param src The file path
    * @param length the length of the range, i.e., the range is [0, length]
    * @return The checksum

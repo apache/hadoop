@@ -257,6 +257,7 @@ final class FileChecksumHelper {
     /**
      * Compute block checksums block by block and append the raw bytes of the
      * block checksums into getBlockChecksumBuf().
+     *
      * @throws IOException
      */
     abstract void checksumBlocks() throws IOException;
@@ -360,6 +361,117 @@ final class FileChecksumHelper {
         IOUtils.closeStream(pair.in);
         IOUtils.closeStream(pair.out);
       }
+    }
+
+    /**
+     * Parses out various checksum properties like bytesPerCrc, crcPerBlock,
+     * and crcType from {@code checksumData} and either stores them as the
+     * authoritative value or compares them to a previously extracted value
+     * to check comppatibility.
+     *
+     * @param checksumData response from the datanode
+     * @param locatedBlock the block corresponding to the response
+     * @param datanode the datanode which produced the response
+     * @param blockIdx the block or block-group index of the response
+     */
+    void extractChecksumProperties(
+        OpBlockChecksumResponseProto checksumData,
+        LocatedBlock locatedBlock,
+        DatanodeInfo datanode,
+        int blockIdx)
+        throws IOException {
+      //read byte-per-checksum
+      final int bpc = checksumData.getBytesPerCrc();
+      if (blockIdx == 0) { //first block
+        setBytesPerCRC(bpc);
+      } else if (bpc != getBytesPerCRC()) {
+        if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
+          LOG.warn(
+              "Current bytesPerCRC={} doesn't match next bpc={}, but "
+              + "continuing anyway because we're using COMPOSITE_CRC. "
+              + "If trying to preserve CHECKSUMTYPE, only the current "
+              + "bytesPerCRC will be preserved.", getBytesPerCRC(), bpc);
+        } else {
+          throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
+              + " but bytesPerCRC=" + getBytesPerCRC());
+        }
+      }
+
+      //read crc-per-block
+      final long cpb = checksumData.getCrcPerBlock();
+      if (getLocatedBlocks().size() > 1 && blockIdx == 0) {
+        setCrcPerBlock(cpb);
+      }
+
+      // read crc-type
+      final DataChecksum.Type ct;
+      if (checksumData.hasCrcType()) {
+        ct = PBHelperClient.convert(checksumData.getCrcType());
+      } else {
+        LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
+            "inferring checksum by reading first byte");
+        ct = getClient().inferChecksumTypeByReading(locatedBlock, datanode);
+      }
+
+      if (blockIdx == 0) {
+        setCrcType(ct);
+      } else if (getCrcType() != DataChecksum.Type.MIXED &&
+          getCrcType() != ct) {
+        if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
+          throw new IOException(
+              "DataChecksum.Type.MIXED is not supported for COMPOSITE_CRC");
+        } else {
+          // if crc types are mixed in a file
+          setCrcType(DataChecksum.Type.MIXED);
+        }
+      }
+
+      if (blockIdx == 0) {
+        LOG.debug("set bytesPerCRC={}, crcPerBlock={}",
+            getBytesPerCRC(), getCrcPerBlock());
+      }
+    }
+
+    /**
+     * Parses out the raw blockChecksum bytes from {@code checksumData}
+     * according to the blockChecksumType and populates the cumulative
+     * blockChecksumBuf with it.
+     *
+     * @return a debug-string representation of the parsed checksum if
+     *     debug is enabled, otherwise null.
+     */
+    String populateBlockChecksumBuf(OpBlockChecksumResponseProto checksumData)
+        throws IOException {
+      String blockChecksumForDebug = null;
+      switch (getBlockChecksumType()) {
+      case MD5CRC:
+        //read md5
+        final MD5Hash md5 = new MD5Hash(
+            checksumData.getBlockChecksum().toByteArray());
+        md5.write(getBlockChecksumBuf());
+        if (LOG.isDebugEnabled()) {
+          blockChecksumForDebug = md5.toString();
+        }
+        break;
+      case COMPOSITE_CRC:
+        BlockChecksumType returnedType = PBHelperClient.convert(
+            checksumData.getBlockChecksumOptions().getBlockChecksumType());
+        if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
+          throw new IOException(String.format(
+              "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
+              returnedType));
+        }
+        byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
+        if (LOG.isDebugEnabled()) {
+          blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
+        }
+        getBlockChecksumBuf().write(crcBytes);
+        break;
+      default:
+        throw new IOException(
+            "Unknown BlockChecksumType: " + getBlockChecksumType());
+      }
+      return blockChecksumForDebug;
     }
   }
 
@@ -480,87 +592,9 @@ final class FileChecksumHelper {
 
         OpBlockChecksumResponseProto checksumData =
             reply.getChecksumResponse();
-
-        //read byte-per-checksum
-        final int bpc = checksumData.getBytesPerCrc();
-        if (blockIdx == 0) { //first block
-          setBytesPerCRC(bpc);
-        } else if (bpc != getBytesPerCRC()) {
-          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
-            LOG.warn(
-                "Current bytesPerCRC={} doesn't match next bpc={}, but "
-                + "continuing anyway because we're using COMPOSITE_CRC. "
-                + "If trying to preserve CHECKSUMTYPE, only the current "
-                + "bytesPerCRC will be preserved.", getBytesPerCRC(), bpc);
-          } else {
-            throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
-                + " but bytesPerCRC=" + getBytesPerCRC());
-          }
-        }
-
-        //read crc-per-block
-        final long cpb = checksumData.getCrcPerBlock();
-        if (getLocatedBlocks().size() > 1 && blockIdx == 0) {
-          setCrcPerBlock(cpb);
-        }
-
-        String blockChecksumForDebug = null;
-        switch (getBlockChecksumType()) {
-        case MD5CRC:
-          //read md5
-          final MD5Hash md5 =
-              new MD5Hash(checksumData.getBlockChecksum().toByteArray());
-          md5.write(getBlockChecksumBuf());
-          if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug = md5.toString();
-          }
-          break;
-        case COMPOSITE_CRC:
-          BlockChecksumType returnedType = PBHelperClient.convert(
-              checksumData.getBlockChecksumOptions().getBlockChecksumType());
-          if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
-            throw new IOException(String.format(
-                "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
-                returnedType));
-          }
-          byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-          if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
-          }
-          getBlockChecksumBuf().write(crcBytes);
-          break;
-        default:
-          throw new IOException(
-              "Unknown BlockChecksumType: " + getBlockChecksumType());
-        }
-
-        // read crc-type
-        final DataChecksum.Type ct;
-        if (checksumData.hasCrcType()) {
-          ct = PBHelperClient.convert(checksumData.getCrcType());
-        } else {
-          LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
-              "inferring checksum by reading first byte");
-          ct = getClient().inferChecksumTypeByReading(locatedBlock, datanode);
-        }
-
-        if (blockIdx == 0) { // first block
-          setCrcType(ct);
-        } else if (getCrcType() != DataChecksum.Type.MIXED
-            && getCrcType() != ct) {
-          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
-            throw new IOException(
-                "DataChecksum.Type.MIXED is not supported for COMPOSITE_CRC");
-          } else {
-            // if crc types are mixed in a file
-            setCrcType(DataChecksum.Type.MIXED);
-          }
-        }
-
-        if (blockIdx == 0) {
-          LOG.debug("set bytesPerCRC={}, crcPerBlock={}",
-              getBytesPerCRC(), getCrcPerBlock());
-        }
+        extractChecksumProperties(
+            checksumData, locatedBlock, datanode, blockIdx);
+        String blockChecksumForDebug = populateBlockChecksumBuf(checksumData);
         LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
             datanode, blockChecksumForDebug, getBlockChecksumType());
       }
@@ -679,81 +713,8 @@ final class FileChecksumHelper {
         DataTransferProtoUtil.checkBlockOpStatus(reply, logInfo);
 
         OpBlockChecksumResponseProto checksumData = reply.getChecksumResponse();
-
-        //read byte-per-checksum
-        final int bpc = checksumData.getBytesPerCrc();
-        if (bgIdx == 0) { //first block
-          setBytesPerCRC(bpc);
-        } else {
-          if (bpc != getBytesPerCRC()) {
-            throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
-                + " but bytesPerCRC=" + getBytesPerCRC());
-          }
-        }
-
-        //read crc-per-block
-        final long cpb = checksumData.getCrcPerBlock();
-        if (getLocatedBlocks().size() > 1 && bgIdx == 0) { // first block
-          setCrcPerBlock(cpb);
-        }
-
-        String blockChecksumForDebug = null;
-        switch (getBlockChecksumType()) {
-        case MD5CRC:
-          //read md5
-          final MD5Hash md5 = new MD5Hash(
-              checksumData.getBlockChecksum().toByteArray());
-          md5.write(getBlockChecksumBuf());
-          if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug = md5.toString();
-          }
-          break;
-        case COMPOSITE_CRC:
-          BlockChecksumType returnedType = PBHelperClient.convert(
-              checksumData.getBlockChecksumOptions().getBlockChecksumType());
-          if (returnedType != BlockChecksumType.COMPOSITE_CRC) {
-            throw new IOException(String.format(
-                "Unexpected blockChecksumType '%s', expecting COMPOSITE_CRC",
-                returnedType));
-          }
-          byte[] crcBytes = checksumData.getBlockChecksum().toByteArray();
-          if (LOG.isDebugEnabled()) {
-            blockChecksumForDebug = CrcUtil.toSingleCrcString(crcBytes);
-          }
-          getBlockChecksumBuf().write(crcBytes);
-          break;
-        default:
-          throw new IOException(
-              "Unknown BlockChecksumType: " + getBlockChecksumType());
-        }
-
-        // read crc-type
-        final DataChecksum.Type ct;
-        if (checksumData.hasCrcType()) {
-          ct = PBHelperClient.convert(checksumData.getCrcType());
-        } else {
-          LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
-              "inferring checksum by reading first byte");
-          ct = getClient().inferChecksumTypeByReading(blockGroup, datanode);
-        }
-
-        if (bgIdx == 0) {
-          setCrcType(ct);
-        } else if (getCrcType() != DataChecksum.Type.MIXED &&
-            getCrcType() != ct) {
-          if (getBlockChecksumType() == BlockChecksumType.COMPOSITE_CRC) {
-            throw new IOException(
-                "DataChecksum.Type.MIXED is not supported for COMPOSITE_CRC");
-          } else {
-            // if crc types are mixed in a file
-            setCrcType(DataChecksum.Type.MIXED);
-          }
-        }
-
-        if (bgIdx == 0) {
-          LOG.debug("set bytesPerCRC={}, crcPerBlock={}",
-              getBytesPerCRC(), getCrcPerBlock());
-        }
+        extractChecksumProperties(checksumData, blockGroup, datanode, bgIdx);
+        String blockChecksumForDebug = populateBlockChecksumBuf(checksumData);
         LOG.debug("got reply from {}: blockChecksum={}, blockChecksumType={}",
             datanode, blockChecksumForDebug, getBlockChecksumType());
       }

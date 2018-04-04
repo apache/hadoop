@@ -924,6 +924,7 @@ public class DFSTestUtil {
 
   /**
    * Append specified bytes to a given file, starting with new block.
+   *
    * @param fs The file system
    * @param p Path of the file to append
    * @param bytes The data to append
