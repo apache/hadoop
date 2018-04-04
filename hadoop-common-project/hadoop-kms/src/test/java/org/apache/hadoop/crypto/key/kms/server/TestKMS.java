@@ -35,6 +35,7 @@ import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -84,6 +85,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -110,6 +112,10 @@ public class TestKMS {
       "Truststore reloader thread";
 
   private SSLFactory sslFactory;
+
+  // Keep track of all key providers created during a test case, so they can be
+  // closed at test tearDown.
+  private List<KeyProvider> providersCreated = new LinkedList<>();
 
   @Rule
   public final Timeout testTimeout = new Timeout(180000);
@@ -144,13 +150,17 @@ public class TestKMS {
 
   protected KeyProvider createProvider(URI uri, Configuration conf)
       throws IOException {
-    return new LoadBalancingKMSClientProvider(
-        new KMSClientProvider[] { new KMSClientProvider(uri, conf) }, conf);
+    final KeyProvider ret = new LoadBalancingKMSClientProvider(
+        new KMSClientProvider[] {new KMSClientProvider(uri, conf)}, conf);
+    providersCreated.add(ret);
+    return ret;
   }
 
   private KMSClientProvider createKMSClientProvider(URI uri, Configuration conf)
       throws IOException {
-    return new KMSClientProvider(uri, conf);
+    final KMSClientProvider ret = new KMSClientProvider(uri, conf);
+    providersCreated.add(ret);
+    return ret;
   }
 
   protected <T> T runServer(String keystore, String password, File confDir,
@@ -311,13 +321,28 @@ public class TestKMS {
   }
 
   @After
-  public void tearDownMiniKdc() throws Exception {
+  public void tearDown() throws Exception {
     if (kdc != null) {
       kdc.stop();
       kdc = null;
     }
     UserGroupInformation.setShouldRenewImmediatelyForTests(false);
     UserGroupInformation.reset();
+    if (!providersCreated.isEmpty()) {
+      final MultipleIOException.Builder b = new MultipleIOException.Builder();
+      for (KeyProvider kp : providersCreated) {
+        try {
+          kp.close();
+        } catch (IOException e) {
+          LOG.error("Failed to close key provider.", e);
+          b.add(e);
+        }
+      }
+      providersCreated.clear();
+      if (!b.isEmpty()) {
+        throw b.build();
+      }
+    }
   }
 
   private <T> T doAs(String user, final PrivilegedExceptionAction<T> action)
@@ -449,6 +474,8 @@ public class TestKMS {
             }
           }
           Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
+          // Explicitly close the provider so we can verify the internal thread
+          // is shutdown
           testKp.close();
           boolean reloaderStillAlive = true;
           for (int i = 0; i < 10; i++) {
@@ -476,7 +503,6 @@ public class TestKMS {
                     .addDelegationTokens("myuser", new Credentials());
                 Assert.assertEquals(1, tokens.length);
                 Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
-                kp.close();
                 return null;
               }
             });
@@ -494,7 +520,6 @@ public class TestKMS {
               .addDelegationTokens("myuser", new Credentials());
           Assert.assertEquals(1, tokens.length);
           Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
-          kp.close();
         }
         return null;
       }
@@ -2533,7 +2558,6 @@ public class TestKMS {
 
   @Test
   public void testTGTRenewal() throws Exception {
-    tearDownMiniKdc();
     Properties kdcConf = MiniKdc.createConf();
     kdcConf.setProperty(MiniKdc.MAX_TICKET_LIFETIME, "3");
     kdcConf.setProperty(MiniKdc.MIN_TICKET_LIFETIME, "3");

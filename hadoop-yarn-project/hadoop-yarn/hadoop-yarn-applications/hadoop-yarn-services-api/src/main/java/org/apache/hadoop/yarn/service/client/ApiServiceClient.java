@@ -469,4 +469,22 @@ public class ApiServiceClient extends AppAdminClient {
     return output;
   }
 
+  @Override
+  public int actionUpgrade(String appName,
+      String fileName) throws IOException, YarnException {
+    int result;
+    try {
+      Service service =
+          loadAppJsonFromLocalFS(fileName, appName, null, null);
+      service.setState(ServiceState.UPGRADING);
+      String buffer = jsonSerDeser.toJson(service);
+      ClientResponse response = getApiClient()
+          .post(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Failed to upgrade application: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
 }

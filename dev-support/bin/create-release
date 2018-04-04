@@ -389,7 +389,7 @@ function option_parse
     hadoop_error "ERROR: Cannot set --mvncache and --dockercache simultaneously."
     exit 1
   else
-    MVNCACHE=${MVNCACHE:-"${HOME}/.m2"}
+    MVNCACHE=${MVNCACHE:-"${HOME}/.m2/repository"}
   fi
 
   if [[ "${ASFRELEASE}" = true ]]; then

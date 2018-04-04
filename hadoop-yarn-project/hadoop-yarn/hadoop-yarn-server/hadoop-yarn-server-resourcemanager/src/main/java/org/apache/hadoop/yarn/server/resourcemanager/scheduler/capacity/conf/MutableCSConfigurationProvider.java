@@ -77,6 +77,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     case YarnConfiguration.ZK_CONFIGURATION_STORE:
       this.confStore = new ZKConfigurationStore();
       break;
+    case YarnConfiguration.FS_CONFIGURATION_STORE:
+      this.confStore = new FSSchedulerConfigurationStore();
+      break;
     default:
       this.confStore = YarnConfigurationStoreFactory.getStore(config);
       break;

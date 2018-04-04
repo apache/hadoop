@@ -92,4 +92,6 @@ public interface YarnServiceConstants {
 
   String CONTENT = "content";
   String PRINCIPAL = "yarn.service.am.principal";
+
+  String UPGRADE_DIR = "upgrade";
 }

@@ -38,6 +38,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
 
@@ -53,11 +54,13 @@ import javax.crypto.KeyGenerator;
 @InterfaceStability.Unstable
 public abstract class KeyProvider {
   public static final String DEFAULT_CIPHER_NAME =
-      "hadoop.security.key.default.cipher";
-  public static final String DEFAULT_CIPHER = "AES/CTR/NoPadding";
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
+  public static final String DEFAULT_CIPHER =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT;
   public static final String DEFAULT_BITLENGTH_NAME =
-      "hadoop.security.key.default.bitlength";
-  public static final int DEFAULT_BITLENGTH = 128;
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY;
+  public static final int DEFAULT_BITLENGTH = CommonConfigurationKeysPublic.
+      HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT;
 
   private final Configuration conf;
 

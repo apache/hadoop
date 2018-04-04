@@ -378,16 +378,18 @@ class FSDirXAttrOp {
       String prefixedName) throws IOException {
     fsd.readLock();
     try {
-      return XAttrStorage.readINodeXAttrByPrefixedName(iip, prefixedName);
+      return XAttrStorage.readINodeXAttrByPrefixedName(iip.getLastINode(),
+          iip.getPathSnapshotId(), prefixedName);
     } finally {
       fsd.readUnlock();
     }
   }
 
   static XAttr unprotectedGetXAttrByPrefixedName(
-      INodesInPath iip, String prefixedName)
+      INode inode, int snapshotId, String prefixedName)
       throws IOException {
-    return XAttrStorage.readINodeXAttrByPrefixedName(iip, prefixedName);
+    return XAttrStorage.readINodeXAttrByPrefixedName(
+        inode, snapshotId, prefixedName);
   }
 
   private static void checkXAttrChangeAccess(

@@ -130,6 +130,11 @@ public class PlacementConstraint {
     public PlacementConstraint build() {
       return new PlacementConstraint(this);
     }
+
+    @Override
+    public String toString() {
+      return super.toString();
+    }
   }
 
   static final String NODE_SCOPE = "node";

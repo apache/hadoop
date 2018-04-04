@@ -26,5 +26,5 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 @ApiModel(description = "The current state of a component.")
 public enum ComponentState {
-  FLEXING, STABLE
+  FLEXING, STABLE, NEEDS_UPGRADE;
 }

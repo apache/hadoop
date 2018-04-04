@@ -326,6 +326,7 @@ public class CapacityScheduler extends
       case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
       case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
       case YarnConfiguration.ZK_CONFIGURATION_STORE:
+      case YarnConfiguration.FS_CONFIGURATION_STORE:
         this.csConfProvider = new MutableCSConfigurationProvider(rmContext);
         break;
       default:
@@ -2825,8 +2826,8 @@ public class CapacityScheduler extends
       // proposal might be outdated if AM failover just finished
       // and proposal queue was not be consumed in time
       if (app != null && attemptId.equals(app.getApplicationAttemptId())) {
-        if (app.accept(cluster, request, updatePending)) {
-          app.apply(cluster, request, updatePending);
+        if (app.accept(cluster, request, updatePending)
+            && app.apply(cluster, request, updatePending)) {
           LOG.info("Allocation proposal accepted");
           isSuccess = true;
         } else{

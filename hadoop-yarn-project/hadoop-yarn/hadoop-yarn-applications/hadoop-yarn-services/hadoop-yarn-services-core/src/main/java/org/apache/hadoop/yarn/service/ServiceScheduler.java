@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -110,6 +111,9 @@ public class ServiceScheduler extends CompositeService {
       LoggerFactory.getLogger(ServiceScheduler.class);
   private Service app;
 
+   // This encapsulates the <code>app</code> with methods to upgrade the app.
+  private ServiceManager serviceManager;
+
   // component_name -> component
   private final Map<String, Component> componentsByName =
       new ConcurrentHashMap<>();
@@ -145,6 +149,12 @@ public class ServiceScheduler extends CompositeService {
   private final Map<ContainerId, ComponentInstance> unRecoveredInstances =
       new ConcurrentHashMap<>();
   private long containerRecoveryTimeout;
+
+  // If even one component of a service uses placement constraints, then use
+  // placement scheduler to schedule containers for all components (including
+  // the ones with no constraints). Mixing of container requests and scheduling
+  // requests for a single service is not recommended.
+  private boolean hasAtLeastOnePlacementConstraint;
 
   public ServiceScheduler(ServiceContext context) {
     super(context.service.getName());
@@ -192,6 +202,7 @@ public class ServiceScheduler extends CompositeService {
     addIfService(nmClient);
 
     dispatcher = new AsyncDispatcher("Component  dispatcher");
+    dispatcher.register(ServiceEventType.class, new ServiceEventHandler());
     dispatcher.register(ComponentEventType.class,
         new ComponentEventHandler());
     dispatcher.register(ComponentInstanceEventType.class,
@@ -282,6 +293,9 @@ public class ServiceScheduler extends CompositeService {
   public void serviceStart() throws Exception {
     super.serviceStart();
     InetSocketAddress bindAddress = context.clientAMService.getBindAddress();
+    // When yarn.resourcemanager.placement-constraints.handler is set to
+    // placement-processor then constraints need to be added during
+    // registerApplicationMaster.
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(bindAddress.getHostName(),
             bindAddress.getPort(), "N/A");
@@ -300,6 +314,7 @@ public class ServiceScheduler extends CompositeService {
 
     // Since AM has been started and registered, the service is in STARTED state
     app.setState(ServiceState.STARTED);
+    serviceManager = new ServiceManager(context);
 
     // recover components based on containers sent from RM
     recoverComponents(response);
@@ -507,6 +522,26 @@ public class ServiceScheduler extends CompositeService {
       componentsById.put(allocateId, component);
       componentsByName.put(component.getName(), component);
       allocateId++;
+      if (!hasAtLeastOnePlacementConstraint
+          && compSpec.getPlacementPolicy() != null
+          && compSpec.getPlacementPolicy().getConstraints() != null
+          && !compSpec.getPlacementPolicy().getConstraints().isEmpty()) {
+        hasAtLeastOnePlacementConstraint = true;
+      }
+    }
+  }
+
+  private final class ServiceEventHandler
+      implements EventHandler<ServiceEvent> {
+    @Override
+    public void handle(ServiceEvent event) {
+      try {
+        serviceManager.handle(event);
+      } catch (Throwable t) {
+        LOG.error(MessageFormat
+            .format("[SERVICE]: Error in handling event type {0}",
+                event.getType()), t);
+      }
     }
   }
 
@@ -662,8 +697,14 @@ public class ServiceScheduler extends CompositeService {
     @Override public void onError(Throwable e) {
       LOG.error("Error in AMRMClient callback handler ", e);
     }
-  }
 
+    @Override
+    public void onRequestsRejected(
+        List<RejectedSchedulingRequest> rejectedSchedulingRequests) {
+      LOG.error("Error in AMRMClient callback handler. Following scheduling "
+          + "requests were rejected: {}", rejectedSchedulingRequests);
+    }
+  }
 
   private class NMClientCallback extends NMClientAsync.AbstractCallbackHandler {
 
@@ -790,5 +831,9 @@ public class ServiceScheduler extends CompositeService {
 
   public BoundedAppender getDiagnostics() {
     return diagnostics;
+  }
+
+  public boolean hasAtLeastOnePlacementConstraint() {
+    return hasAtLeastOnePlacementConstraint;
   }
 }

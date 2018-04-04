@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.xml.bind.annotation.XmlElement;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,7 +50,7 @@ public class Resource extends BaseResource implements Cloneable {
 
   @JsonProperty("additional")
   @XmlElement(name = "additional")
-  private Map<String, ResourceInformation> additional = null;
+  private Map<String, ResourceInformation> additional = new HashMap<>();
 
   /**
    * Each resource profile has a unique id which is associated with a

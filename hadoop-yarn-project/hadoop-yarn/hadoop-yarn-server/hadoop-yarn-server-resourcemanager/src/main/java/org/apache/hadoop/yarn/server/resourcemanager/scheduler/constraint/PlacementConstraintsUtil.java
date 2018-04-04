@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -58,35 +57,6 @@ public final class PlacementConstraintsUtil {
   }
 
   /**
-   * Try to the namespace of the allocation tags from the given target key.
-   *
-   * @param targetKey
-   * @return allocation tag namespace.
-   * @throws InvalidAllocationTagsQueryException
-   * if fail to parse the target key to a valid namespace.
-   */
-  private static AllocationTagNamespace getAllocationTagNamespace(
-      ApplicationId currentAppId, String targetKey, AllocationTagsManager atm)
-      throws InvalidAllocationTagsQueryException {
-    // Parse to a valid namespace.
-    AllocationTagNamespace namespace = AllocationTagNamespace.parse(targetKey);
-
-    // TODO Complete remove this check once we support app-label.
-    if (AllocationTagNamespaceType.APP_LABEL
-        .equals(namespace.getNamespaceType())) {
-      throw new InvalidAllocationTagsQueryException(
-          namespace.toString() + " is not supported yet!");
-    }
-
-    // Evaluate the namespace according to the given target
-    // before it can be consumed.
-    TargetApplications ta =
-        new TargetApplications(currentAppId, atm.getAllApplicationIds());
-    namespace.evaluate(ta);
-    return namespace;
-  }
-
-  /**
    * Returns true if <b>single</b> placement constraint with associated
    * allocationTags and scope is satisfied by a specific scheduler Node.
    *
@@ -104,13 +74,10 @@ public final class PlacementConstraintsUtil {
       ApplicationId targetApplicationId, SingleConstraint sc,
       TargetExpression te, SchedulerNode node, AllocationTagsManager tm)
       throws InvalidAllocationTagsQueryException {
-    // Parse the allocation tag's namespace from the given target key,
-    // then evaluate the namespace and get its scope,
-    // which is represented by one or more application IDs.
-    AllocationTagNamespace namespace = getAllocationTagNamespace(
-          targetApplicationId, te.getTargetKey(), tm);
-    AllocationTags allocationTags = AllocationTags
-        .newAllocationTags(namespace, te.getTargetValues());
+    // Creates AllocationTags that will be further consumed by allocation
+    // tags manager for cardinality check.
+    AllocationTags allocationTags = AllocationTags.createAllocationTags(
+        targetApplicationId, te.getTargetKey(), te.getTargetValues());
 
     long minScopeCardinality = 0;
     long maxScopeCardinality = 0;

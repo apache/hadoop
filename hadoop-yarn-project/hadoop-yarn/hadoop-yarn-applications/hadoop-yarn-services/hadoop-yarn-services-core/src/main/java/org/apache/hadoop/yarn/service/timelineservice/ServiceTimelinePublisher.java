@@ -268,10 +268,6 @@ public class ServiceTimelinePublisher extends CompositeService {
       }
       entityInfos.put(ServiceTimelineMetricsConstants.RUN_PRIVILEGED_CONTAINER,
           component.getRunPrivilegedContainer().toString());
-      if (component.getPlacementPolicy() != null) {
-        entityInfos.put(ServiceTimelineMetricsConstants.PLACEMENT_POLICY,
-            component.getPlacementPolicy().getLabel());
-      }
       entity.addInfo(entityInfos);
 
       putEntity(entity);

@@ -3570,6 +3570,28 @@
 
   <property>
     <description>
+      The file system directory to store the configuration files. The path
+      can be any format as long as it follows hadoop compatible schema,
+      for example value "file:///path/to/dir" means to store files on local
+      file system, value "hdfs:///path/to/dir" means to store files on HDFS.
+      If resource manager HA is enabled, recommended to use hdfs schema so
+      it works in fail-over scenario.
+    </description>
+    <name>yarn.scheduler.configuration.fs.path</name>
+    <value>file://${hadoop.tmp.dir}/yarn/system/schedconf</value>
+  </property>
+
+  <property>
+    <description>
+      The max number of configuration file in filesystem.
+      Default is 100 for either.
+    </description>
+    <name>yarn.scheduler.configuration.max.version</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
       ZK root node path for configuration store when using zookeeper-based
       configuration store.
     </description>

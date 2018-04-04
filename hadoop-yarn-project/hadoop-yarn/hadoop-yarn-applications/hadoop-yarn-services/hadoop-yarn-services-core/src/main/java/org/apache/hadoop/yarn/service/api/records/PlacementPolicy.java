@@ -17,49 +17,50 @@
 
 package org.apache.hadoop.yarn.service.api.records;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+
 /**
- * Placement policy of an instance of an service. This feature is in the
- * works in YARN-4902.
+ * Advanced placement policy of the components of a service.
  **/
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-@ApiModel(description = "Placement policy of an instance of an service. This feature is in the works in YARN-4902.")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
+@ApiModel(description = "Advanced placement policy of the components of a "
+    + "service.")
+@javax.annotation.Generated(
+    value = "class io.swagger.codegen.languages.JavaClientCodegen",
+    date = "2018-02-16T10:20:12.927-07:00")
 public class PlacementPolicy implements Serializable {
   private static final long serialVersionUID = 4341110649551172231L;
 
-  private String label = null;
+  private List<PlacementConstraint> constraints = new ArrayList<>();
 
   /**
-   * Assigns a service to a named partition of the cluster where the service
-   * desires to run (optional). If not specified all services are submitted to
-   * a default label of the service owner. One or more labels can be setup for
-   * each service owner account with required constraints like no-preemption,
-   * sla-99999, preemption-ok, etc.
+   * Placement constraint details.
    **/
-  public PlacementPolicy label(String label) {
-    this.label = label;
+  public PlacementPolicy constraints(List<PlacementConstraint> constraints) {
+    this.constraints = constraints;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Assigns a service to a named partition of the cluster where the service desires to run (optional). If not specified all services are submitted to a default label of the service owner. One or more labels can be setup for each service owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.")
-  @JsonProperty("label")
-  public String getLabel() {
-    return label;
+  @ApiModelProperty(example = "null", required = true)
+  @JsonProperty("constraints")
+  public List<PlacementConstraint> getConstraints() {
+    return constraints;
   }
 
-  public void setLabel(String label) {
-    this.label = label;
+  public void setConstraints(List<PlacementConstraint> constraints) {
+    this.constraints = constraints;
   }
 
   @Override
@@ -71,12 +72,12 @@ public class PlacementPolicy implements Serializable {
       return false;
     }
     PlacementPolicy placementPolicy = (PlacementPolicy) o;
-    return Objects.equals(this.label, placementPolicy.label);
+    return Objects.equals(this.constraints, placementPolicy.constraints);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(label);
+    return Objects.hash(constraints);
   }
 
   @Override
@@ -84,7 +85,8 @@ public class PlacementPolicy implements Serializable {
     StringBuilder sb = new StringBuilder();
     sb.append("class PlacementPolicy {\n");
 
-    sb.append("    label: ").append(toIndentedString(label)).append("\n");
+    sb.append("    constraints: ").append(toIndentedString(constraints))
+        .append("\n");
     sb.append("}");
     return sb.toString();
   }
