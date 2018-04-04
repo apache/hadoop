@@ -44,6 +44,7 @@ function updateConfigs(application) {
 
   if(!ENV.hosts.rmWebAddress) {
     ENV.hosts.rmWebAddress = rmhost;
+    ENV.hosts.protocolScheme = window.location.protocol;
   } else {
     rmhost = ENV.hosts.rmWebAddress;
   }

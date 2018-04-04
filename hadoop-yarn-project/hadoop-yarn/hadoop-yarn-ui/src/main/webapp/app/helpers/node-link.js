@@ -29,7 +29,7 @@ export default Ember.Helper.helper(function(params,hash) {
   if (nodeState === "SHUTDOWN" || nodeState === "LOST") {
     html = html + nodeHTTPAddress;
   } else {
-    html = html + '<a href="#/yarn-node/' + nodeId + "/" + nodeHTTPAddress + '">' +
+    html = html + '<a href="#/yarn-node/' + nodeId + "/" + encodeURIComponent(nodeHTTPAddress) + '">' +
         nodeHTTPAddress + '</a>';
   }
   html = html + '</td>';
