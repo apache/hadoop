@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.hadoop.ozone.tools.Freon;
+import org.apache.hadoop.ozone.freon.Freon;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**

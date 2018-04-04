@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.tools;
+package org.apache.hadoop.ozone.freon;
 /**
- * Classes related to Ozone tools.
+ * Classes related to Ozone tools tests.
  */

@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.tools;
+package org.apache.hadoop.ozone.freon;
 
 import java.io.IOException;
 import java.io.PrintStream;
