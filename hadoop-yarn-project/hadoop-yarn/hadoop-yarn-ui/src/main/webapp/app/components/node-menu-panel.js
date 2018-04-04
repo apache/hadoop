@@ -18,24 +18,8 @@
 
 import Ember from 'ember';
 
-import AbstractRoute from './abstract';
-
-export default AbstractRoute.extend({
-  model(param) {
-    // Fetches data from both NM and RM. RM is queried to get node usage info.
-    var address = decodeURIComponent(param.node_addr);
-    address = address.replace(/(^\w+:|^)\/\//, '');
-    return Ember.RSVP.hash({
-      nodeInfo: { id: param.node_id, addr: address },
-      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', address, {reload:true}),
-      node: this.store.findRecord('yarn-node', address, {reload: true}),
-      rmNode: this.store.findRecord('yarn-rm-node', param.node_id, {reload: true})
-    });
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-node');
-    this.store.unloadAll('yarn-rm-node');
-    this.store.unloadAll('yarn-nm-gpu');
-  }
+export default Ember.Component.extend({
+  encodedAddr : Ember.computed("nodeAddr", function(){
+    return encodeURIComponent(this.get('nodeAddr'));
+  })
 });

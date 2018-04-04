@@ -22,10 +22,12 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model(param) {
     // Get all containers running on specific node.
+    var address = decodeURIComponent(param.node_addr);
+    address = address.replace(/(^\w+:|^)\/\//, '');
     return Ember.RSVP.hash({
-      containers: this.store.query('yarn-node-container', { nodeHttpAddr: param.node_addr }),
-      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
+      containers: this.store.query('yarn-node-container', { nodeHttpAddr: address }),
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', address, {reload:true}),
+      nodeInfo: { id: param.node_id, addr: address }
     });
   },
 
