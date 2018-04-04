@@ -291,6 +291,11 @@ public class ContainerStateManager implements Closeable {
 
     Pipeline pipeline = selector.getReplicationPipeline(type,
         replicationFactor, containerName);
+
+    Preconditions.checkNotNull(pipeline, "Pipeline type=%s/"
+        + "replication=%s couldn't be found for the new container. "
+        + "Do you have enough nodes?", type, replicationFactor);
+
     ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setContainerName(containerName)
         .setState(HdslProtos.LifeCycleState.ALLOCATED)
