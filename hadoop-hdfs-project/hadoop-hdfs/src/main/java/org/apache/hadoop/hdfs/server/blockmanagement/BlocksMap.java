@@ -93,7 +93,7 @@ class BlocksMap {
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
-  void removeBlock(Block block) {
+  void removeBlock(BlockInfo block) {
     BlockInfo blockInfo = blocks.remove(block);
     if (blockInfo == null) {
       return;
@@ -175,7 +175,7 @@ class BlocksMap {
     if (info.hasNoStorage()    // no datanodes left
         && info.isDeleted()) { // does not belong to a file
       blocks.remove(b);  // remove block from the map
-      decrementBlockStat(b);
+      decrementBlockStat(info);
     }
     return removed;
   }
@@ -207,16 +207,16 @@ class BlocksMap {
     return capacity;
   }
 
-  private void incrementBlockStat(Block block) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+  private void incrementBlockStat(BlockInfo block) {
+    if (block.isStriped()) {
       totalECBlockGroups.increment();
     } else {
       totalReplicatedBlocks.increment();
     }
   }
 
-  private void decrementBlockStat(Block block) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+  private void decrementBlockStat(BlockInfo block) {
+    if (block.isStriped()) {
       totalECBlockGroups.decrement();
       assert totalECBlockGroups.longValue() >= 0 :
           "Total number of ec block groups should be non-negative";

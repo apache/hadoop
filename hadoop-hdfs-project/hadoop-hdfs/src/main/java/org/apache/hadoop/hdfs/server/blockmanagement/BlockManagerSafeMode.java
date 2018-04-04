@@ -486,7 +486,7 @@ class BlockManagerSafeMode {
 
     if (!blockManager.getShouldPostponeBlocksFromFuture() &&
         !inRollBack && blockManager.isGenStampInFuture(brr)) {
-      if (BlockIdManager.isStripedBlockID(brr.getBlockId())) {
+      if (blockManager.getBlockIdManager().isStripedBlock(brr)) {
         bytesInFutureECBlockGroups.add(brr.getBytesOnDisk());
       } else {
         bytesInFutureBlocks.add(brr.getBytesOnDisk());

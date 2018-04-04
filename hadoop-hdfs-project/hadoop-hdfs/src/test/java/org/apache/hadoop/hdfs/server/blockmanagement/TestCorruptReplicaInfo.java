@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -30,10 +32,12 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 /**
@@ -46,27 +50,31 @@ public class TestCorruptReplicaInfo {
   
   private static final Log LOG = LogFactory.getLog(
       TestCorruptReplicaInfo.class);
-  private final Map<Long, Block> replicaMap = new HashMap<>();
-  private final Map<Long, Block> stripedBlocksMap = new HashMap<>();
+  private final Map<Long, BlockInfo> replicaMap = new HashMap<>();
+  private final Map<Long, BlockInfo> stripedBlocksMap = new HashMap<>();
 
   // Allow easy block creation by block id. Return existing
   // replica block if one with same block id already exists.
-  private Block getReplica(Long blockId) {
+  private BlockInfo getReplica(Long blockId) {
     if (!replicaMap.containsKey(blockId)) {
-      replicaMap.put(blockId, new Block(blockId, 0, 0));
+      short replFactor = 3;
+      replicaMap.put(blockId,
+          new BlockInfoContiguous(new Block(blockId, 0, 0), replFactor));
     }
     return replicaMap.get(blockId);
   }
 
-  private Block getReplica(int blkId) {
+  private BlockInfo getReplica(int blkId) {
     return getReplica(Long.valueOf(blkId));
   }
 
-  private Block getStripedBlock(int blkId) {
+  private BlockInfo getStripedBlock(int blkId) {
     Long stripedBlockId = (1L << 63) + blkId;
     assertTrue(BlockIdManager.isStripedBlockID(stripedBlockId));
     if (!stripedBlocksMap.containsKey(stripedBlockId)) {
-      stripedBlocksMap.put(stripedBlockId, new Block(stripedBlockId, 1024, 0));
+      stripedBlocksMap.put(stripedBlockId,
+          new BlockInfoStriped(new Block(stripedBlockId, 1024, 0),
+              StripedFileTestUtil.getDefaultECPolicy()));
     }
     return stripedBlocksMap.get(stripedBlockId);
   }
@@ -88,6 +96,10 @@ public class TestCorruptReplicaInfo {
   public void testCorruptReplicaInfo()
       throws IOException, InterruptedException {
     CorruptReplicasMap crm = new CorruptReplicasMap();
+    BlockIdManager bim = Mockito.mock(BlockIdManager.class);
+    when(bim.isLegacyBlock(any(Block.class))).thenReturn(false);
+    when(bim.isStripedBlock(any(Block.class))).thenCallRealMethod();
+    assertTrue(!bim.isLegacyBlock(new Block(-1)));
 
     // Make sure initial values are returned correctly
     assertEquals("Total number of corrupt blocks must initially be 0!",
@@ -97,10 +109,11 @@ public class TestCorruptReplicaInfo {
     assertEquals("Number of corrupt striped block groups must initially be 0!",
         0, crm.getCorruptECBlockGroups());
     assertNull("Param n cannot be less than 0",
-        crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, -1, null));
+        crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, -1, null));
     assertNull("Param n cannot be greater than 100",
-        crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 101, null));
-    long[] l = crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 0, null);
+        crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, 101, null));
+    long[] l = crm.getCorruptBlockIdsForTesting(
+        bim, BlockType.CONTIGUOUS, 0, null);
     assertNotNull("n = 0 must return non-null", l);
     assertEquals("n = 0 must return an empty list", 0, l.length);
 
@@ -156,22 +169,25 @@ public class TestCorruptReplicaInfo {
         2 * blockCount, crm.size());
     assertTrue("First five corrupt replica blocks ids are not right!",
         Arrays.equals(Arrays.copyOfRange(replicaIds, 0, 5),
-            crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 5, null)));
+            crm.getCorruptBlockIdsForTesting(
+                bim, BlockType.CONTIGUOUS, 5, null)));
     assertTrue("First five corrupt striped blocks ids are not right!",
         Arrays.equals(Arrays.copyOfRange(stripedIds, 0, 5),
-            crm.getCorruptBlockIdsForTesting(BlockType.STRIPED, 5, null)));
+            crm.getCorruptBlockIdsForTesting(
+                bim, BlockType.STRIPED, 5, null)));
 
     assertTrue("10 replica blocks after 7 not returned correctly!",
         Arrays.equals(Arrays.copyOfRange(replicaIds, 7, 17),
-            crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 10, 7L)));
+            crm.getCorruptBlockIdsForTesting(
+                bim, BlockType.CONTIGUOUS, 10, 7L)));
     assertTrue("10 striped blocks after 7 not returned correctly!",
         Arrays.equals(Arrays.copyOfRange(stripedIds, 7, 17),
-            crm.getCorruptBlockIdsForTesting(BlockType.STRIPED,
+            crm.getCorruptBlockIdsForTesting(bim, BlockType.STRIPED,
                 10, getStripedBlock(7).getBlockId())));
   }
   
   private static void addToCorruptReplicasMap(CorruptReplicasMap crm,
-      Block blk, DatanodeDescriptor dn) {
-    crm.addToCorruptReplicasMap(blk, dn, "TEST", Reason.NONE);
+      BlockInfo blk, DatanodeDescriptor dn) {
+    crm.addToCorruptReplicasMap(blk, dn, "TEST", Reason.NONE, blk.isStriped());
   }
 }
