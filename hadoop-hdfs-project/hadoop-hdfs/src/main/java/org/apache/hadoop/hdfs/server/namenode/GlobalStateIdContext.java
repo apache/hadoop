@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 /**
@@ -41,7 +42,7 @@ class GlobalStateIdContext implements AlignmentContext {
   }
 
   /**
-   * Server side implementation for providing state alignment info.
+   * Server side implementation for providing state alignment info in responses.
    */
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
@@ -56,4 +57,27 @@ class GlobalStateIdContext implements AlignmentContext {
   public void receiveResponseState(RpcResponseHeaderProto header) {
     // Do nothing.
   }
+
+  /**
+   * Server side implementation only receives state alignment info.
+   * It does not build RPC requests therefore this does nothing.
+   */
+  @Override
+  public void updateRequestState(RpcRequestHeaderProto.Builder header) {
+    // Do nothing.
+  }
+
+  /**
+   * Server side implementation for processing state alignment info in requests.
+   */
+  @Override
+  public void receiveRequestState(RpcRequestHeaderProto header) {
+    long serverStateId = namesystem.getLastWrittenTransactionId();
+    long clientStateId = header.getStateId();
+    if (clientStateId > serverStateId) {
+      FSNamesystem.LOG.warn("A client sent stateId: " + clientStateId +
+          ", but server state is: " + serverStateId);
+    }
+  }
+
 }
