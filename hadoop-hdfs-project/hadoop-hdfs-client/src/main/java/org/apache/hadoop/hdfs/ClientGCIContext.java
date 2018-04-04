@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.AlignmentContext;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 /**
@@ -32,15 +33,10 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 @InterfaceStability.Stable
 class ClientGCIContext implements AlignmentContext {
 
-  private final DFSClient dfsClient;
   private final AtomicLong lastSeenStateId = new AtomicLong(Long.MIN_VALUE);
 
-  /**
-   * Client side constructor.
-   * @param dfsClient client side state receiver
-   */
-  ClientGCIContext(DFSClient dfsClient) {
-    this.dfsClient = dfsClient;
+  long getLastSeenStateId() {
+    return lastSeenStateId.get();
   }
 
   /**
@@ -53,11 +49,28 @@ class ClientGCIContext implements AlignmentContext {
   }
 
   /**
-   * Client side implementation for receiving state alignment info.
+   * Client side implementation for receiving state alignment info in responses.
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
     updateMax(header.getStateId());
+  }
+
+  /**
+   * Client side implementation for providing state alignment info in requests.
+   */
+  @Override
+  public void updateRequestState(RpcRequestHeaderProto.Builder header) {
+    header.setStateId(lastSeenStateId.longValue());
+  }
+
+  /**
+   * Client side implementation only provides state alignment info in requests.
+   * Client does not receive RPC requests therefore this does nothing.
+   */
+  @Override
+  public void receiveRequestState(RpcRequestHeaderProto header) {
+    // Do nothing.
   }
 
   private void updateMax(long sample) {
