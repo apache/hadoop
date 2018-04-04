@@ -214,7 +214,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   volatile long lastLeaseRenewal;
-  volatile long lastSeenStateId;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
   final String clientName;
@@ -237,6 +236,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
+  private final ClientGCIContext alignmentContext;
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -392,7 +392,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
-    Client.setAlignmentContext(new ClientGCIContext(this));
+    this.alignmentContext = new ClientGCIContext();
+    Client.setAlignmentContext(alignmentContext);
   }
 
   /**
@@ -539,6 +540,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** @return true if the client is running */
   public boolean isClientRunning() {
     return clientRunning;
+  }
+
+  @VisibleForTesting
+  ClientGCIContext getAlignmentContext() {
+    return alignmentContext;
   }
 
   long getLastLeaseRenewal() {
