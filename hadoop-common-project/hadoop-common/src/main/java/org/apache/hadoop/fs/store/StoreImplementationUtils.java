@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.store;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -141,4 +143,128 @@ public final class StoreImplementationUtils {
     }
 
   }
+
+
+  /**
+   * Stream has three states: open, error, close,
+   */
+  public static class StreamState {
+
+    public enum State {Open, Error, Close}
+
+    /**
+     * Path; if not empty then a {@link PathIOException} will be raised
+     * containing this path.
+     */
+    private final String path;
+
+    /** Lock. Not considering an InstrumentedWriteLock, but it is an option. */
+    private final Lock lock = new ReentrantLock();
+
+    /** Initial state: open. */
+    private State state = State.Open;
+
+    private IOException exception;
+
+    public StreamState(Path path) {
+      this.path = path.toString();
+    }
+
+
+    public StreamState(final String path) {
+      this.path = path;
+    }
+
+    // Change state to close
+    // @return - true iff state transitions from open or error to close
+    public synchronized boolean enterClosedState() {
+      if (state == State.Open) {
+        state = State.Close;
+        return true;
+      } else {
+        return false;
+      }
+
+    }
+
+    // Change state to error and stores first error so it can be re-thrown.
+    // @return - null if state transitions from open to error
+    // @return - non-null if state is error or close.
+
+    /**
+     * Change state to error and stores first error so it can be re-thrown.
+     * If already in error: return previous exception.
+     * @param ex
+     * @return an exception to throw
+     */
+    public synchronized IOException enterErrorState(final IOException ex) {
+      switch (state) {
+      case Open:
+      case Close:
+        exception = ex;
+        state = State.Error;
+        break;
+      case Error:
+        break;
+      }
+      return exception;
+    }
+
+    /**
+     * Check a stream is open.
+     * If in an error state: rethrow that exception. If closed,
+     * throw an exception about that.
+     * @throws IOException if the stream is not open.
+     */
+    public synchronized void checkOpen() throws IOException {
+      switch (state) {
+      case Open:
+        return;
+
+      case Error:
+        throw exception;
+
+      case Close:
+        if (StringUtils.isNotEmpty(path)) {
+          throw new PathIOException(path, STREAM_IS_CLOSED);
+        } else {
+          throw new IOException(STREAM_IS_CLOSED);
+        }
+      }
+    }
+    /**
+     * Acquire an exclusive lock.
+     * @param checkOpen must the stream be open?
+     * @throws IOException if the stream is in error state or checkOpen==true
+     * and the stream is closed.
+     */
+    public void acquireLock(boolean checkOpen) throws IOException {
+      if (checkOpen) {
+        checkOpen();
+      }
+      lock.lock();
+    }
+
+    /**
+     * Release the lock.
+     */
+    public void releaseLock() {
+      lock.unlock();
+    }
+
+    /**
+     * Check for a stream being in a specific state.
+     * The check is synchronized, but not locked; if the caller does
+     * not hold a lock then the state may change before any subsequent
+     * operation.
+     * @param expected expected state
+     * @return return true iff the steam was in the state at the time
+     * of checking.
+     */
+    public synchronized boolean isInState(State expected) {
+      return state.equals(expected);
+    }
+
+  }
+
 }
