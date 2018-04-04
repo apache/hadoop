@@ -106,8 +106,8 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
       LoggerFactory.getLogger(KeySpaceManager.class);
 
   private static final String USAGE =
-      "Usage: \n hdfs ksm [genericOptions] " + "[ "
-          + StartupOption.CREATEOBJECTSTORE.getName() + " ]\n " + "hdfs ksm [ "
+      "Usage: \n oz ksm [genericOptions] " + "[ "
+          + StartupOption.CREATEOBJECTSTORE.getName() + " ]\n " + "oz ksm [ "
           + StartupOption.HELP.getName() + " ]\n";
 
   /** Startup options. */

@@ -228,12 +228,12 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
 
   private static final String USAGE =
-      "Usage: \n hdfs scm [genericOptions] "
+      "Usage: \n oz scm [genericOptions] "
           + "[ " + StartupOption.INIT.getName() + " [ "
           + StartupOption.CLUSTERID.getName() + " <cid> ] ]\n "
-          + "hdfs scm [genericOptions] [ "
+          + "oz scm [genericOptions] [ "
           + StartupOption.GENCLUSTERID.getName() + " ]\n " +
-          "hdfs scm [ "
+          "oz scm [ "
           + StartupOption.HELP.getName() + " ]\n";
   /**
    * Creates a new StorageContainerManager.  Configuration will be updated with
