@@ -658,4 +658,11 @@
     <Bug pattern="NP_NULL_ON_SOME_PATH" />
   </Match>
 
+  <!-- Expose the reference to avoid performance overhead -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
+    <Method name="getResources" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+
 </FindBugsFilter>

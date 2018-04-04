@@ -123,7 +123,7 @@ public abstract class YarnConfigurationStore {
    * Retrieve the persisted configuration.
    * @return configuration as key-value
    */
-  public abstract Configuration retrieve();
+  public abstract Configuration retrieve() throws IOException;
 
   /**
    * Get a list of confirmed configuration mutations starting from a given id.

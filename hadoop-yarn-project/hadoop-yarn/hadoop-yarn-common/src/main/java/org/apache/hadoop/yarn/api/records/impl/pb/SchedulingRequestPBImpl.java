@@ -291,6 +291,7 @@ public class SchedulingRequestPBImpl extends SchedulingRequest {
         ", executionType=" + getExecutionType() +
         ", allocationTags=" + getAllocationTags() +
         ", resourceSizing=" + getResourceSizing() +
+        ", placementConstraint=" + getPlacementConstraint() +
         '}';
   }
 }

@@ -966,7 +966,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long now = System.currentTimeMillis();
       long divide = now - delta;
 
-      getStore().prune(divide);
+      try {
+        getStore().prune(divide);
+      } catch (UnsupportedOperationException e){
+        errorln("Prune operation not supported in metadata store.");
+      }
 
       out.flush();
       return SUCCESS;

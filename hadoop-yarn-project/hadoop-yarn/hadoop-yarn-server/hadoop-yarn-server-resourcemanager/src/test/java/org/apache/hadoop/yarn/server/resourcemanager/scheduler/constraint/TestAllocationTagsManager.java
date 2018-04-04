@@ -27,13 +27,19 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Test functionality of AllocationTagsManager.
@@ -468,14 +474,26 @@ public class TestAllocationTagsManager {
   @Test
   public void testNodeAllocationTagsAggregation()
       throws InvalidAllocationTagsQueryException {
+    RMContext mockContext = Mockito.spy(rmContext);
 
-    AllocationTagsManager atm = new AllocationTagsManager(rmContext);
     ApplicationId app1 = TestUtils.getMockApplicationId(1);
     ApplicationId app2 = TestUtils.getMockApplicationId(2);
     ApplicationId app3 = TestUtils.getMockApplicationId(3);
+
     NodeId host1 = NodeId.fromString("host1:123");
     NodeId host2 = NodeId.fromString("host2:123");
     NodeId host3 = NodeId.fromString("host3:123");
+
+    ConcurrentMap<ApplicationId, RMApp> allApps = new ConcurrentHashMap<>();
+    allApps.put(app1, new MockRMApp(123, 1000,
+        RMAppState.NEW, "userA", ImmutableSet.of("")));
+    allApps.put(app2, new MockRMApp(124, 1001,
+        RMAppState.NEW, "userA", ImmutableSet.of("")));
+    allApps.put(app3, new MockRMApp(125, 1002,
+        RMAppState.NEW, "userA", ImmutableSet.of("")));
+    Mockito.when(mockContext.getRMApps()).thenReturn(allApps);
+
+    AllocationTagsManager atm = new AllocationTagsManager(mockContext);
 
     /**
      * Node1 (rack0)
@@ -561,7 +579,7 @@ public class TestAllocationTagsManager {
      *
      */
     tags = AllocationTags.createOtherAppAllocationTags(app1,
-        ImmutableSet.of(app1, app2, app3), ImmutableSet.of("A", "B"));
+        ImmutableSet.of("A", "B"));
 
     Assert.assertEquals(4, atm.getNodeCardinalityByOp(host1, tags, Long::max));
     Assert.assertEquals(0, atm.getNodeCardinalityByOp(host1, tags, Long::min));

@@ -16,50 +16,67 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint; /**
  * limitations under the License.
  */
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 /**
- * Test class for {@link AllocationTagNamespace}.
+ * Test class for {@link TargetApplicationsNamespace}.
  */
 public class TestAllocationTagsNamespace {
 
   @Test
   public void testNamespaceParse() throws InvalidAllocationTagsQueryException {
-    AllocationTagNamespace namespace;
+    TargetApplicationsNamespace namespace;
 
     String namespaceStr = "self";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     Assert.assertEquals(AllocationTagNamespaceType.SELF,
         namespace.getNamespaceType());
 
     namespaceStr = "not-self";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     Assert.assertEquals(AllocationTagNamespaceType.NOT_SELF,
         namespace.getNamespaceType());
 
     namespaceStr = "all";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     Assert.assertEquals(AllocationTagNamespaceType.ALL,
         namespace.getNamespaceType());
 
-    namespaceStr = "app-label";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
-    Assert.assertEquals(AllocationTagNamespaceType.APP_LABEL,
+    namespaceStr = "app-tag/spark-jobs";
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
+    Assert.assertEquals(AllocationTagNamespaceType.APP_TAG,
         namespace.getNamespaceType());
+
+    // Invalid app-tag namespace syntax
+    try {
+      namespaceStr = "app-tag/tag123/tag234";
+      TargetApplicationsNamespace.parse(namespaceStr);
+      Assert.fail("Parsing should fail as the given namespace is invalid");
+    } catch (Exception e) {
+      e.printStackTrace();
+      Assert.assertTrue(e instanceof InvalidAllocationTagsQueryException);
+      Assert.assertTrue(e.getMessage().startsWith(
+          "Invalid namespace string"));
+    }
 
     ApplicationId applicationId = ApplicationId.newInstance(12345, 1);
     namespaceStr = "app-id/" + applicationId.toString();
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     Assert.assertEquals(AllocationTagNamespaceType.APP_ID,
         namespace.getNamespaceType());
 
     // Invalid app-id namespace syntax, invalid app ID.
     try {
       namespaceStr = "app-id/apppppp_12345_99999";
-      AllocationTagNamespace.parse(namespaceStr);
+      TargetApplicationsNamespace.parse(namespaceStr);
       Assert.fail("Parsing should fail as the given app ID is invalid");
     } catch (Exception e) {
       Assert.assertTrue(e instanceof InvalidAllocationTagsQueryException);
@@ -70,7 +87,7 @@ public class TestAllocationTagsNamespace {
     // Invalid app-id namespace syntax, missing app ID.
     try {
       namespaceStr = "app-id";
-      AllocationTagNamespace.parse(namespaceStr);
+      TargetApplicationsNamespace.parse(namespaceStr);
       Assert.fail("Parsing should fail as the given namespace"
           + " is missing application ID");
     } catch (Exception e) {
@@ -82,7 +99,7 @@ public class TestAllocationTagsNamespace {
     // Invalid namespace type.
     try {
       namespaceStr = "non_exist_ns";
-      AllocationTagNamespace.parse(namespaceStr);
+      TargetApplicationsNamespace.parse(namespaceStr);
       Assert.fail("Parsing should fail as the giving type is not supported.");
     } catch (Exception e) {
       Assert.assertTrue(e instanceof InvalidAllocationTagsQueryException);
@@ -94,7 +111,7 @@ public class TestAllocationTagsNamespace {
   @Test
   public void testNamespaceEvaluation() throws
       InvalidAllocationTagsQueryException {
-    AllocationTagNamespace namespace;
+    TargetApplicationsNamespace namespace;
     TargetApplications targetApplications;
     ApplicationId app1 = ApplicationId.newInstance(10000, 1);
     ApplicationId app2 = ApplicationId.newInstance(10000, 2);
@@ -104,7 +121,7 @@ public class TestAllocationTagsNamespace {
 
     // Ensure eval is called before using the scope.
     String namespaceStr = "self";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     try {
       namespace.getNamespaceScope();
       Assert.fail("Call getNamespaceScope before evaluate is not allowed.");
@@ -115,14 +132,14 @@ public class TestAllocationTagsNamespace {
     }
 
     namespaceStr = "self";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     targetApplications = new TargetApplications(app1, ImmutableSet.of(app1));
     namespace.evaluate(targetApplications);
     Assert.assertEquals(1, namespace.getNamespaceScope().size());
     Assert.assertEquals(app1, namespace.getNamespaceScope().iterator().next());
 
     namespaceStr = "not-self";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     targetApplications = new TargetApplications(app1, ImmutableSet.of(app1));
     namespace.evaluate(targetApplications);
     Assert.assertEquals(0, namespace.getNamespaceScope().size());
@@ -134,16 +151,52 @@ public class TestAllocationTagsNamespace {
     Assert.assertFalse(namespace.getNamespaceScope().contains(app1));
 
     namespaceStr = "all";
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     Assert.assertEquals(AllocationTagNamespaceType.ALL,
         namespace.getNamespaceType());
 
     namespaceStr = "app-id/" + app2.toString();
-    namespace = AllocationTagNamespace.parse(namespaceStr);
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
     targetApplications = new TargetApplications(app1,
         ImmutableSet.of(app1, app2, app3, app4, app5));
     namespace.evaluate(targetApplications);
     Assert.assertEquals(1, namespace.getNamespaceScope().size());
     Assert.assertEquals(app2, namespace.getNamespaceScope().iterator().next());
+
+    /**
+     * App to Application Tags
+     *  app1: A, B
+     *  app2: A
+     *  app3:
+     *  app4: C
+     *  app5: A, B, C
+     */
+    Map<ApplicationId, Set<String>> appsWithTags = new HashMap<>();
+    appsWithTags.put(app1, ImmutableSet.of("A", "B"));
+    appsWithTags.put(app2, ImmutableSet.of("A"));
+    appsWithTags.put(app3, ImmutableSet.of());
+    appsWithTags.put(app4, ImmutableSet.of("C"));
+    appsWithTags.put(app5, ImmutableSet.of("A", "B", "C"));
+
+    namespaceStr = "app-tag/A";
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
+    targetApplications = new TargetApplications(app1, appsWithTags);
+    namespace.evaluate(targetApplications);
+    Assert.assertEquals(3, namespace.getNamespaceScope().size());
+    Assert.assertTrue(Sets.difference(namespace.getNamespaceScope(),
+        ImmutableSet.of(app1, app2, app5)).isEmpty());
+
+    namespaceStr = "app-tag/B";
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
+    namespace.evaluate(targetApplications);
+    Assert.assertEquals(2, namespace.getNamespaceScope().size());
+    Assert.assertTrue(Sets.difference(namespace.getNamespaceScope(),
+        ImmutableSet.of(app1, app5)).isEmpty());
+
+    // Not exist
+    namespaceStr = "app-tag/xyz";
+    namespace = TargetApplicationsNamespace.parse(namespaceStr);
+    namespace.evaluate(targetApplications);
+    Assert.assertEquals(0, namespace.getNamespaceScope().size());
   }
 }

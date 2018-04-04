@@ -169,7 +169,7 @@ public class LocalJobRunner implements ClientProtocol {
       // Manage the distributed cache.  If there are files to be copied,
       // this will trigger localFile to be re-written again.
       localDistributedCacheManager = new LocalDistributedCacheManager();
-      localDistributedCacheManager.setup(conf);
+      localDistributedCacheManager.setup(conf, jobid);
       
       // Write out configuration file.  Instead of copying it from
       // systemJobFile, we re-write it, since setup(), above, may have

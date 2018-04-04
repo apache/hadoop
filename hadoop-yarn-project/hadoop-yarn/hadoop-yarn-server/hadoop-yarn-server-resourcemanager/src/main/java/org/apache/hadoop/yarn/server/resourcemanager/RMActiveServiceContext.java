@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
@@ -111,6 +112,7 @@ public class RMActiveServiceContext {
   private QueueLimitCalculator queueLimitCalculator;
   private AllocationTagsManager allocationTagsManager;
   private PlacementConstraintManager placementConstraintManager;
+  private ResourceProfilesManager resourceProfilesManager;
 
   public RMActiveServiceContext() {
     queuePlacementManager = new PlacementManager();
@@ -512,5 +514,14 @@ public class RMActiveServiceContext {
   public void setContainerQueueLimitCalculator(
       QueueLimitCalculator limitCalculator) {
     this.queueLimitCalculator = limitCalculator;
+  }
+
+  public ResourceProfilesManager getResourceProfilesManager() {
+    return resourceProfilesManager;
+  }
+
+  public void setResourceProfilesManager(
+      ResourceProfilesManager resourceProfilesManager) {
+    this.resourceProfilesManager = resourceProfilesManager;
   }
 }

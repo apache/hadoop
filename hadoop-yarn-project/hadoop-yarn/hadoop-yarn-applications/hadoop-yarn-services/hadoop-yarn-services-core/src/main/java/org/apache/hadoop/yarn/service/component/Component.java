@@ -20,32 +20,41 @@ package org.apache.hadoop.yarn.service.component;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceSizing;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
 import org.apache.hadoop.yarn.service.ContainerFailureTracker;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.ServiceScheduler;
-import org.apache.hadoop.yarn.service.api.records.ServiceState;
-import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.ServiceMaster;
 import org.apache.hadoop.yarn.service.ServiceMetrics;
+import org.apache.hadoop.yarn.service.ServiceScheduler;
+import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
+import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
+import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
+import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.service.utils.ServiceUtils;
-import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
-import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +64,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -66,9 +76,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.*;
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
-import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
-import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
 import static org.apache.hadoop.yarn.service.component.ComponentState.*;
+import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURE_THRESHOLD;
 
 public class Component implements EventHandler<ComponentEvent> {
@@ -138,6 +147,12 @@ public class Component implements EventHandler<ComponentEvent> {
           // For flex down, go to STABLE state
           .addTransition(STABLE, EnumSet.of(STABLE, FLEXING),
               FLEX, new FlexComponentTransition())
+          .addTransition(STABLE, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
+          .addTransition(FLEXING, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
+          .addTransition(UPGRADING, UPGRADING, UPGRADE,
+              new ComponentNeedsUpgradeTransition())
           .installTopology();
 
   public Component(
@@ -355,6 +370,14 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
+  private static class ComponentNeedsUpgradeTransition extends BaseTransition {
+    @Override
+    public void transition(Component component, ComponentEvent event) {
+      component.componentSpec.setState(org.apache.hadoop.yarn.service.api.
+          records.ComponentState.NEEDS_UPGRADE);
+    }
+  }
+
   public void removePendingInstance(ComponentInstance instance) {
     pendingInstances.remove(instance);
   }
@@ -393,6 +416,8 @@ public class Component implements EventHandler<ComponentEvent> {
 
   @SuppressWarnings({ "unchecked" })
   public void requestContainers(long count) {
+    LOG.info("[COMPONENT {}] Requesting for {} container(s)",
+        componentSpec.getName(), count);
     org.apache.hadoop.yarn.service.api.records.Resource componentResource =
         componentSpec.getResource();
 
@@ -425,12 +450,98 @@ public class Component implements EventHandler<ComponentEvent> {
       }
     }
 
-    for (int i = 0; i < count; i++) {
-      //TODO Once YARN-5468 is done, use that for anti-affinity
-      ContainerRequest request =
-          ContainerRequest.newBuilder().capability(resource).priority(priority)
-              .allocationRequestId(allocateId).relaxLocality(true).build();
-      amrmClient.addContainerRequest(request);
+    if (!scheduler.hasAtLeastOnePlacementConstraint()) {
+      for (int i = 0; i < count; i++) {
+        ContainerRequest request = ContainerRequest.newBuilder()
+            .capability(resource).priority(priority)
+            .allocationRequestId(allocateId).relaxLocality(true).build();
+        LOG.info("[COMPONENT {}] Submitting container request : {}",
+            componentSpec.getName(), request);
+        amrmClient.addContainerRequest(request);
+      }
+    } else {
+      // Schedule placement requests. Validation of non-null target tags and
+      // that they refer to existing component names are already done. So, no
+      // need to validate here.
+      PlacementPolicy placementPolicy = componentSpec.getPlacementPolicy();
+      Collection<SchedulingRequest> schedulingRequests = new HashSet<>();
+      // We prepare an AND-ed composite constraint to be the final composite
+      // constraint. If placement expressions are specified to create advanced
+      // composite constraints then this AND-ed composite constraint is not
+      // used.
+      PlacementConstraint finalConstraint = null;
+      for (org.apache.hadoop.yarn.service.api.records.PlacementConstraint
+          yarnServiceConstraint : placementPolicy.getConstraints()) {
+        List<TargetExpression> targetExpressions = new ArrayList<>();
+        // Currently only intra-application allocation tags are supported.
+        if (!yarnServiceConstraint.getTargetTags().isEmpty()) {
+          targetExpressions.add(PlacementTargets.allocationTagToIntraApp(
+              yarnServiceConstraint.getTargetTags().toArray(new String[0])));
+        }
+        // Add all node attributes
+        for (Map.Entry<String, List<String>> attribute : yarnServiceConstraint
+            .getNodeAttributes().entrySet()) {
+          targetExpressions.add(PlacementTargets.nodeAttribute(
+              attribute.getKey(), attribute.getValue().toArray(new String[0])));
+        }
+        // Add all node partitions
+        if (!yarnServiceConstraint.getNodePartitions().isEmpty()) {
+          targetExpressions
+              .add(PlacementTargets.nodePartition(yarnServiceConstraint
+                  .getNodePartitions().toArray(new String[0])));
+        }
+        PlacementConstraint constraint = null;
+        switch (yarnServiceConstraint.getType()) {
+        case AFFINITY:
+          constraint = PlacementConstraints
+              .targetIn(yarnServiceConstraint.getScope().getValue(),
+                  targetExpressions.toArray(new TargetExpression[0]))
+              .build();
+          break;
+        case ANTI_AFFINITY:
+          constraint = PlacementConstraints
+              .targetNotIn(yarnServiceConstraint.getScope().getValue(),
+                  targetExpressions.toArray(new TargetExpression[0]))
+              .build();
+          break;
+        case AFFINITY_WITH_CARDINALITY:
+          constraint = PlacementConstraints.targetCardinality(
+              yarnServiceConstraint.getScope().name().toLowerCase(),
+              yarnServiceConstraint.getMinCardinality() == null ? 0
+                  : yarnServiceConstraint.getMinCardinality().intValue(),
+              yarnServiceConstraint.getMaxCardinality() == null
+                  ? Integer.MAX_VALUE
+                  : yarnServiceConstraint.getMaxCardinality().intValue(),
+              targetExpressions.toArray(new TargetExpression[0])).build();
+          break;
+        }
+        // The default AND-ed final composite constraint
+        if (finalConstraint != null) {
+          finalConstraint = PlacementConstraints
+              .and(constraint.getConstraintExpr(),
+                  finalConstraint.getConstraintExpr())
+              .build();
+        } else {
+          finalConstraint = constraint;
+        }
+        LOG.debug("[COMPONENT {}] Placement constraint: {}",
+            componentSpec.getName(), constraint.getConstraintExpr().toString());
+      }
+      ResourceSizing resourceSizing = ResourceSizing.newInstance((int) count,
+          resource);
+      LOG.debug("[COMPONENT {}] Resource sizing: {}", componentSpec.getName(),
+          resourceSizing);
+      SchedulingRequest request = SchedulingRequest.newBuilder()
+          .priority(priority).allocationRequestId(allocateId)
+          .allocationTags(Collections.singleton(componentSpec.getName()))
+          .executionType(
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true))
+          .placementConstraintExpression(finalConstraint)
+          .resourceSizing(resourceSizing).build();
+      LOG.info("[COMPONENT {}] Submitting scheduling request: {}",
+          componentSpec.getName(), request);
+      schedulingRequests.add(request);
+      amrmClient.addSchedulingRequests(schedulingRequests);
     }
   }
 

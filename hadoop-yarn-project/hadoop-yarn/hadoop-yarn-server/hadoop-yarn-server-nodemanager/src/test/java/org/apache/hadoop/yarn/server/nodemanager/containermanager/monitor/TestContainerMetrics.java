@@ -206,4 +206,21 @@ public class TestContainerMetrics {
     }
     Assert.assertEquals(expectedValues.keySet(), testResults);
   }
+
+  @Test
+  public void testContainerMetricsUpdateContainerPid() {
+    ContainerId containerId = mock(ContainerId.class);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
+
+    String origPid = "1234";
+    metrics.recordProcessId(origPid);
+    assertEquals(origPid, metrics.registry.getTag(
+        ContainerMetrics.PROCESSID_INFO.name()).value());
+
+    String newPid = "4321";
+    metrics.recordProcessId(newPid);
+    assertEquals(newPid, metrics.registry.getTag(
+        ContainerMetrics.PROCESSID_INFO.name()).value());
+  }
 }

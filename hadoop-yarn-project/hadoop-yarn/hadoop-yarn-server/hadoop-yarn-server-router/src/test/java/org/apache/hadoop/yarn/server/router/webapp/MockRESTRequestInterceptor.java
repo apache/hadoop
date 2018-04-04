@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
@@ -319,9 +320,9 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public Response checkUserAccessToQueue(String queue, String username,
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) {
-    return Response.status(Status.OK).build();
+    return new RMQueueAclInfo(true, username, "");
   }
 
   @Override

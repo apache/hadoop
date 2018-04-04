@@ -23,10 +23,12 @@ import AbstractRoute from './abstract';
 export default AbstractRoute.extend({
   model(param) {
     // Get all apps running on a specific node. Node is contacted by using node_addr.
+    var address = decodeURIComponent(param.node_addr);
+    address = address.replace(/(^\w+:|^)\/\//, '');
     return Ember.RSVP.hash({
-      apps: this.store.query('yarn-node-app', { nodeAddr: param.node_addr }),
-      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
+      apps: this.store.query('yarn-node-app', { nodeAddr: address }),
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', address, {reload:true}),
+      nodeInfo: { id: param.node_id, addr: address }
     });
   },
 

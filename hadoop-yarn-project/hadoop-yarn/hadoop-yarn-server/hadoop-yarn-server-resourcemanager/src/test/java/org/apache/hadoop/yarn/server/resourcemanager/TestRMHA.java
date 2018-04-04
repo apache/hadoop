@@ -658,6 +658,45 @@ public class TestRMHA {
     assertEquals(HAServiceState.STANDBY, rm.getRMContext().getHAServiceState());
   }
 
+  @Test
+  public void testResourceProfilesManagerAfterRMWentStandbyThenBackToActive()
+      throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    Configuration conf = new YarnConfiguration(configuration);
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+
+    // 1. start RM
+    rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 2. Transition to active
+    rm.adminService.transitionToActive(requestInfo);
+    checkMonitorHealth();
+    checkActiveRMFunctionality();
+
+    // 3. Transition to standby
+    rm.adminService.transitionToStandby(requestInfo);
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 4. Transition to active
+    rm.adminService.transitionToActive(requestInfo);
+    checkMonitorHealth();
+    checkActiveRMFunctionality();
+
+    // 5. Check ResourceProfilesManager
+    Assert.assertNotNull(
+        "ResourceProfilesManager should not be null!",
+        rm.getRMContext().getResourceProfilesManager());
+  }
+
   public void innerTestHAWithRMHostName(boolean includeBindHost) {
     //this is run two times, with and without a bind host configured
     if (includeBindHost) {

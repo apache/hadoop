@@ -776,10 +776,13 @@ public class YarnConfiguration extends Configuration {
   public static final String MEMORY_CONFIGURATION_STORE = "memory";
   @Private
   @Unstable
-  public static final String LEVELDB_CONFIGURATION_STORE = "leveldb";
+  public static final String FS_CONFIGURATION_STORE = "fs";
   @Private
   @Unstable
   public static final String ZK_CONFIGURATION_STORE = "zk";
+  @Private
+  @Unstable
+  public static final String LEVELDB_CONFIGURATION_STORE = "leveldb";
   @Private
   @Unstable
   public static final String DEFAULT_CONFIGURATION_STORE =
@@ -809,6 +812,17 @@ public class YarnConfiguration extends Configuration {
   @Private
   @Unstable
   public static final long DEFAULT_RM_SCHEDCONF_ZK_MAX_LOGS = 1000;
+  @Private
+  @Unstable
+  public static final String SCHEDULER_CONFIGURATION_FS_PATH =
+      YARN_PREFIX + "scheduler.configuration.fs.path";
+  @Private
+  @Unstable
+  public static final String SCHEDULER_CONFIGURATION_FS_MAX_VERSION =
+      YARN_PREFIX + "scheduler.configuration.max.version";
+  @Private
+  @Unstable
+  public static final int DEFAULT_SCHEDULER_CONFIGURATION_FS_MAX_VERSION = 100;
 
   /** Parent znode path under which ZKConfigurationStore will create znodes. */
   @Private
@@ -3089,14 +3103,17 @@ public class YarnConfiguration extends Configuration {
 
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";
+  // 5 minutes
+  public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
+
+  public static final String FEDERATION_FLUSH_CACHE_FOR_RM_ADDR =
+      FEDERATION_PREFIX + "flush-cache-for-rm-addr";
+  public static final boolean DEFAULT_FEDERATION_FLUSH_CACHE_FOR_RM_ADDR = true;
 
   public static final String FEDERATION_REGISTRY_BASE_KEY =
       FEDERATION_PREFIX + "registry.base-dir";
   public static final String DEFAULT_FEDERATION_REGISTRY_BASE_KEY =
       "yarnfederation/";
-
-  // 5 minutes
-  public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
 
   public static final String FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS =
       FEDERATION_PREFIX + "state-store.heartbeat-interval-secs";
@@ -3771,6 +3788,27 @@ public class YarnConfiguration extends Configuration {
       Collection<Float> versions = getTimelineServiceVersions(conf);
       for (Float version : versions) {
         if (version.intValue() == 1) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
+   * Returns whether the timeline service v.1,5 is enabled via configuration.
+   *
+   * @param conf the configuration
+   * @return whether the timeline service v.1.5 is enabled. V.1.5 refers to a
+   * version equal to 1.5.
+   */
+  public static boolean timelineServiceV15Enabled(Configuration conf) {
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (Float.compare(version, 1.5f) == 0) {
           enabled = true;
           break;
         }

@@ -230,6 +230,9 @@ public class Client {
   // Docker client configuration
   private String dockerClientConfig = null;
 
+  // Application tags
+  private Set<String> applicationTags = new HashSet<>();
+
   // Command line options
   private Options opts;
 
@@ -384,6 +387,7 @@ public class Client {
         "Placement specification. Please note, if this option is specified,"
             + " The \"num_containers\" option will be ignored. All requested"
             + " containers will be of type GUARANTEED" );
+    opts.addOption("application_tags", true, "Application tags.");
   }
 
   /**
@@ -604,6 +608,14 @@ public class Client {
     if (cliParser.hasOption("docker_client_config")) {
       dockerClientConfig = cliParser.getOptionValue("docker_client_config");
     }
+
+    if (cliParser.hasOption("application_tags")) {
+      String applicationTagsStr = cliParser.getOptionValue("application_tags");
+      String[] appTags = applicationTagsStr.split(",");
+      for (String appTag : appTags) {
+        this.applicationTags.add(appTag.trim());
+      }
+    }
     return true;
   }
 
@@ -729,6 +741,9 @@ public class Client {
     }
 
     Set<String> tags = new HashSet<String>();
+    if (applicationTags != null) {
+      tags.addAll(applicationTags);
+    }
     if (flowName != null) {
       tags.add(TimelineUtils.generateFlowNameTag(flowName));
     }
