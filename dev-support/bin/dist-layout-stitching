@@ -144,16 +144,22 @@ run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-api/target/hadoop-client-
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-runtime/target/hadoop-client-runtime-${VERSION}.jar" share/hadoop/client/
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-minicluster/target/hadoop-client-minicluster-${VERSION}.jar" share/hadoop/client/
 
+# HDSL
 run copy "${ROOT}/hadoop-hdsl/common/target/hadoop-hdsl-common-${VERSION}" .
 run copy "${ROOT}/hadoop-hdsl/framework/target/hadoop-hdsl-server-framework-${VERSION}" .
 run copy "${ROOT}/hadoop-hdsl/server-scm/target/hadoop-hdsl-server-scm-${VERSION}" .
-run copy "${ROOT}/hadoop-hdsl/tools/target/hadoop-hdsl-tools-${VERSION}" .
 run copy "${ROOT}/hadoop-hdsl/container-service/target/hadoop-hdsl-container-service-${VERSION}" .
+run copy "${ROOT}/hadoop-hdsl/client/target/hadoop-hdsl-client-${VERSION}" .
+run copy "${ROOT}/hadoop-hdsl/tools/target/hadoop-hdsl-tools-${VERSION}" .
+
+# Ozone
 run copy "${ROOT}/hadoop-ozone/common/target/hadoop-ozone-common-${VERSION}" .
 run copy "${ROOT}/hadoop-ozone/ozone-manager/target/hadoop-ozone-ozone-manager-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/ozone-client/target/hadoop-ozone-client-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
 run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${VERSION}" .
+run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${VERSION}" .
+run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
+
+# CBlock
 run copy "${ROOT}/hadoop-cblock/server/target/hadoop-cblock-server-${VERSION}" .
 run copy "${ROOT}/hadoop-cblock/tools/target/hadoop-cblock-tools-${VERSION}" .
 
