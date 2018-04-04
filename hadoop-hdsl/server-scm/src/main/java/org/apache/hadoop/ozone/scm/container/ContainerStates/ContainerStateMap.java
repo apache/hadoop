@@ -114,6 +114,8 @@ public class ContainerStateMap {
    */
   public void addContainer(ContainerInfo info)
       throws SCMException {
+    Preconditions.checkNotNull(info, "Container Info cannot be null");
+    Preconditions.checkNotNull(info.getPipeline(), "Pipeline cannot be null");
 
     try (AutoCloseableLock lock = autoLock.acquire()) {
       ContainerID id = ContainerID.valueof(info.getContainerID());

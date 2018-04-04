@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.tools;
+package org.apache.hadoop.ozone.freon;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Snapshot;
