@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 /**
@@ -48,4 +49,17 @@ public interface AlignmentContext {
    */
   void receiveResponseState(RpcResponseHeaderProto header);
 
+  /**
+   * This is the intended client method call to pull last seen state info
+   * into RPC request processing.
+   * @param header The RPC request header builder.
+   */
+  void updateRequestState(RpcRequestHeaderProto.Builder header);
+
+  /**
+   * This is the intended server method call to implement to receive
+   * client state info during RPC response header processing.
+   * @param header The RPC request header.
+   */
+  void receiveRequestState(RpcRequestHeaderProto header);
 }
