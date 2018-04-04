@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagNamespace;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.TargetApplicationsNamespace;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -294,7 +294,8 @@ public class TestSchedulingRequestContainerAllocation {
     // App2 asks for 3 containers that anti-affinity with any mapper,
     // since 3 out of 4 nodes already have mapper containers, all 3
     // containers will be allocated on the other node.
-    AllocationTagNamespace.All allNs = new AllocationTagNamespace.All();
+    TargetApplicationsNamespace.All allNs =
+        new TargetApplicationsNamespace.All();
     am2.allocateAppAntiAffinity(
         ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
         Priority.newInstance(1), 1L, allNs.toString(),

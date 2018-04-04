@@ -23,8 +23,6 @@ import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagNamespace;
-import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -334,25 +332,6 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
 
         targetAllocationTags = new HashSet<>(
             targetExpression.getTargetValues());
-
-        try {
-          AllocationTagNamespace tagNS =
-              AllocationTagNamespace.parse(targetExpression.getTargetKey());
-          if (AllocationTagNamespaceType.APP_LABEL
-              .equals(tagNS.getNamespaceType())) {
-            throwExceptionWithMetaInfo(
-                "As of now, allocation tag namespace ["
-                    + AllocationTagNamespaceType.APP_LABEL.toString()
-                    + "] is not supported. Please make changes to placement "
-                    + "constraints accordingly. If this is null, it will be "
-                    + "set to "
-                    + AllocationTagNamespaceType.SELF.toString()
-                    + " by default.");
-          }
-        } catch (InvalidAllocationTagsQueryException e) {
-          throwExceptionWithMetaInfo(
-              "Invalid allocation tag namespace, message: " + e.getMessage());
-        }
       }
     }
 
