@@ -865,7 +865,8 @@ public class LogAggregationIndexedFileController
       byte[] array = new byte[offset];
       fsDataIStream.seek(
           fileLength - offset - Integer.SIZE/ Byte.SIZE - UUID_LENGTH);
-      int actual = fsDataIStream.read(array);
+      fsDataIStream.readFully(array);
+      int actual = array.length;
       if (actual != offset) {
         throw new IOException("Error on loading log meta from "
             + remoteLogPath);
