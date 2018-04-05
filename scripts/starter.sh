@@ -51,7 +51,7 @@ fi
 
 if [ -n "$ENSURE_SCM_INITIALIZED" ]; then
    if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
-      /opt/hadoop/bin/hdfs scm -init
+      /opt/hadoop/bin/ozone scm -init
    fi
 fi
 
@@ -61,7 +61,7 @@ if [ -n "$ENSURE_KSM_INITIALIZED" ]; then
 		# Could be removed after HDFS-13203
 		echo "Waiting 15 seconds for SCM startup"
 		sleep 15
-      /opt/hadoop/bin/hdfs ksm -createObjectStore
+      /opt/hadoop/bin/ozone ksm -createObjectStore
    fi
 fi
 
