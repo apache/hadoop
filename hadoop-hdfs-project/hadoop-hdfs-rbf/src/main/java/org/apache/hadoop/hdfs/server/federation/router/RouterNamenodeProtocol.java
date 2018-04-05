@@ -56,8 +56,8 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
   }
 
   @Override
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize) throws IOException {
+  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
+      throws IOException {
     rpcServer.checkOperation(OperationCategory.READ);
 
     // Get the namespace where the datanode is located
@@ -83,8 +83,8 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
     if (nsId != null) {
       RemoteMethod method = new RemoteMethod(
           NamenodeProtocol.class, "getBlocks",
-          new Class<?>[] {DatanodeInfo.class, long.class, long.class},
-          datanode, size, minBlockSize);
+          new Class<?>[] {DatanodeInfo.class, long.class},
+          datanode, size);
       return rpcClient.invokeSingle(nsId, method, BlocksWithLocations.class);
     }
     return null;
