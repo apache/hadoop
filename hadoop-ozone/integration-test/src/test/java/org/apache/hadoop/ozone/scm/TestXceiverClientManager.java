@@ -22,15 +22,15 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.junit.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,7 +40,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.scm
+import static org.apache.hadoop.hdds.scm
     .ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
 
 /**
@@ -116,7 +116,7 @@ public class TestXceiverClientManager {
     String containerName1 = "container" + RandomStringUtils.randomNumeric(10);
     Pipeline pipeline1 =
         storageContainerLocationClient.allocateContainer(
-            clientManager.getType(), HdslProtos.ReplicationFactor.ONE,
+            clientManager.getType(), HddsProtos.ReplicationFactor.ONE,
             containerName1, containerOwner);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
     Assert.assertEquals(1, client1.getRefcount());
@@ -127,7 +127,7 @@ public class TestXceiverClientManager {
     Pipeline pipeline2 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, containerName2, containerOwner);
+            HddsProtos.ReplicationFactor.ONE, containerName2, containerOwner);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
     Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,

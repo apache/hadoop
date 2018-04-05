@@ -219,7 +219,7 @@
     </profile>
 
     <profile>
-      <id>hdsl</id>
+      <id>hdds</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
@@ -231,11 +231,11 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdsl-server-scm</artifactId>
+          <artifactId>hadoop-hdds-server-scm</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdsl-tools</artifactId>
+          <artifactId>hadoop-hdds-tools</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -243,7 +243,7 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdsl-container-service</artifactId>
+          <artifactId>hadoop-hdds-container-service</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -251,7 +251,7 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdsl-tools</artifactId>
+          <artifactId>hadoop-hdds-tools</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

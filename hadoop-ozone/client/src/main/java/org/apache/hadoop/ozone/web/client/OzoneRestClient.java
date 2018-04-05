@@ -22,8 +22,8 @@ import com.google.common.base.Strings;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -31,7 +31,7 @@ import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 
-import static org.apache.hadoop.hdsl.server.ServerUtils.releaseConnection;
+import static org.apache.hadoop.hdds.server.ServerUtils.releaseConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -604,7 +604,7 @@ public class OzoneRestClient implements Closeable {
 
     HttpPut putRequest = null;
     FileInputStream fis = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(getEndPointURI());
       builder.setPath("/" + volumeName + "/" + bucketName + "/" + keyName)
           .build();
@@ -650,7 +650,7 @@ public class OzoneRestClient implements Closeable {
 
     FileOutputStream outPutFile = null;
     HttpGet getRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       outPutFile = new FileOutputStream(downloadTo.toFile());
 
       URIBuilder builder = new URIBuilder(getEndPointURI());
@@ -687,7 +687,7 @@ public class OzoneRestClient implements Closeable {
     OzoneUtils.verifyResourceName(bucketName);
 
     HttpGet getRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(getEndPointURI());
       builder.setPath("/" + volumeName + "/" + bucketName).build();
 
@@ -798,6 +798,6 @@ public class OzoneRestClient implements Closeable {
 
   @VisibleForTesting
   public CloseableHttpClient newHttpClient() {
-    return OzoneClientUtils.newHttpClient();
+    return HddsClientUtils.newHttpClient();
   }
 }

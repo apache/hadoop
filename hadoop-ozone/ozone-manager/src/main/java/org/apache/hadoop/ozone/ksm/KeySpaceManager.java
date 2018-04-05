@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.hdsl.server.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
@@ -42,32 +42,32 @@ import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
     .ServicePort;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocolPB
     .KeySpaceManagerProtocolServerSideTranslatorPB;
-import org.apache.hadoop.scm.ScmInfo;
-import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocolPB
     .ScmBlockLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.apache.hadoop.hdsl.HdslUtils.getScmAddressForBlockClients;
-import static org.apache.hadoop.hdsl.HdslUtils.getScmAddressForClients;
-import static org.apache.hadoop.hdsl.HdslUtils.isHdslEnabled;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
+import static org.apache.hadoop.hdds.HddsUtils.isHddsEnabled;
 import static org.apache.hadoop.ozone.KsmUtils.getKsmAddress;
-import static org.apache.hadoop.hdsl.server.ServerUtils
+import static org.apache.hadoop.hdds.server.ServerUtils
     .updateRPCListenAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +92,7 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
 import static org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.KeySpaceManagerService
     .newReflectiveBlockingService;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
     .NodeState.HEALTHY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
@@ -338,7 +338,7 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
 
   public static KeySpaceManager createKSM(String[] argv,
       OzoneConfiguration conf) throws IOException {
-    if (!isHdslEnabled(conf)) {
+    if (!isHddsEnabled(conf)) {
       System.err.println("KSM cannot be started in secure mode or when " +
           OZONE_ENABLED + " is set to false");
       System.exit(1);
@@ -840,7 +840,7 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
     // When we implement multi-home this call has to be handled properly.
     List<ServiceInfo> services = new ArrayList<>();
     ServiceInfo.Builder ksmServiceInfoBuilder = ServiceInfo.newBuilder()
-        .setNodeType(HdslProtos.NodeType.KSM)
+        .setNodeType(HddsProtos.NodeType.KSM)
         .setHostname(ksmRpcAddress.getHostName())
         .addServicePort(ServicePort.newBuilder()
                 .setType(ServicePort.Type.RPC)
@@ -865,22 +865,22 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
     InetSocketAddress scmAddr = getScmAddressForClients(
         configuration);
     ServiceInfo.Builder scmServiceInfoBuilder = ServiceInfo.newBuilder()
-        .setNodeType(HdslProtos.NodeType.SCM)
+        .setNodeType(HddsProtos.NodeType.SCM)
         .setHostname(scmAddr.getHostName())
         .addServicePort(ServicePort.newBuilder()
             .setType(ServicePort.Type.RPC)
             .setValue(scmAddr.getPort()).build());
     services.add(scmServiceInfoBuilder.build());
 
-    List<HdslProtos.Node> nodes = scmContainerClient.queryNode(
-        EnumSet.of(HEALTHY), HdslProtos.QueryScope.CLUSTER, "")
+    List<HddsProtos.Node> nodes = scmContainerClient.queryNode(
+        EnumSet.of(HEALTHY), HddsProtos.QueryScope.CLUSTER, "")
         .getNodesList();
 
-    for (HdslProtos.Node node : nodes) {
-      HdslProtos.DatanodeDetailsProto datanode = node.getNodeID();
+    for (HddsProtos.Node node : nodes) {
+      HddsProtos.DatanodeDetailsProto datanode = node.getNodeID();
 
       ServiceInfo.Builder dnServiceInfoBuilder = ServiceInfo.newBuilder()
-          .setNodeType(HdslProtos.NodeType.DATANODE)
+          .setNodeType(HddsProtos.NodeType.DATANODE)
           .setHostname(datanode.getHostName());
 
       dnServiceInfoBuilder.addServicePort(ServicePort.newBuilder()

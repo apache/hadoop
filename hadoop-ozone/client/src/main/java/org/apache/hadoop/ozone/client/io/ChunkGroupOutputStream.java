@@ -20,25 +20,25 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
-import org.apache.hadoop.hdsl.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.container.common.helpers
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.storage.ChunkOutputStream;
-import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.hdds.scm.storage.ChunkOutputStream;
+import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

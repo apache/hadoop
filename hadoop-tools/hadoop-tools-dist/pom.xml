@@ -194,7 +194,7 @@
     </profile>
 
     <profile>
-      <id>hdsl</id>
+      <id>hdds</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>

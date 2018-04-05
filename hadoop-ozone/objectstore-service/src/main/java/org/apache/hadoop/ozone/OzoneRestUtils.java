@@ -31,7 +31,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.io.LengthInputStream;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
@@ -81,7 +81,7 @@ public final class OzoneRestUtils {
    */
   public static void verifyResourceName(String resName)
       throws IllegalArgumentException {
-    OzoneClientUtils.verifyResourceName(resName);
+    HddsClientUtils.verifyResourceName(resName);
   }
 
   /**

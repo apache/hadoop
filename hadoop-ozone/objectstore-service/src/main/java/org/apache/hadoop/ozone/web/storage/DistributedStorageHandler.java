@@ -29,8 +29,8 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
@@ -41,9 +41,9 @@ import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
@@ -84,8 +84,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final OzoneAcl.OzoneACLRights groupRights;
   private int chunkSize;
   private final boolean useRatis;
-  private final HdslProtos.ReplicationType type;
-  private final HdslProtos.ReplicationFactor factor;
+  private final HddsProtos.ReplicationType type;
+  private final HddsProtos.ReplicationFactor factor;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -107,11 +107,11 @@ public final class DistributedStorageHandler implements StorageHandler {
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
 
     if(useRatis) {
-      type = HdslProtos.ReplicationType.RATIS;
-      factor = HdslProtos.ReplicationFactor.THREE;
+      type = HddsProtos.ReplicationType.RATIS;
+      factor = HddsProtos.ReplicationFactor.THREE;
     } else {
-      type = HdslProtos.ReplicationType.STAND_ALONE;
-      factor = HdslProtos.ReplicationFactor.ONE;
+      type = HddsProtos.ReplicationType.STAND_ALONE;
+      factor = HddsProtos.ReplicationFactor.ONE;
     }
 
     chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,

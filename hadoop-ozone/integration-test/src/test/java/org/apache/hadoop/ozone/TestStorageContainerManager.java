@@ -21,25 +21,26 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeType;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState;
-import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
-import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
-import org.apache.hadoop.hdsl.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
-import org.apache.hadoop.ozone.scm.SCMStorage;
-import org.apache.hadoop.ozone.scm.StorageContainerManager;
-import org.apache.hadoop.ozone.scm.StorageContainerManager.StartupOption;
-import org.apache.hadoop.ozone.scm.block.DeletedBlockLog;
-import org.apache.hadoop.ozone.scm.block.SCMBlockDeletingService;
-import org.apache.hadoop.ozone.scm.exceptions.SCMException;
-import org.apache.hadoop.ozone.scm.node.NodeManager;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.ScmInfo;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
+import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.StorageContainerManager.StartupOption;
+import org.apache.hadoop.hdds.scm.block.DeletedBlockLog;
+import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.junit.Rule;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,7 +60,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
-import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
 import org.apache.hadoop.io.IOUtils;
 import org.junit.rules.Timeout;
@@ -132,7 +133,7 @@ public class TestStorageContainerManager {
       try {
         Pipeline pipeLine2 = mockScm.allocateContainer(
             xceiverClientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, "container2", "OZONE");
+            HddsProtos.ReplicationFactor.ONE, "container2", "OZONE");
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
@@ -145,7 +146,7 @@ public class TestStorageContainerManager {
       try {
         Pipeline pipeLine3 = mockScm.allocateContainer(
             xceiverClientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, "container3", "OZONE");
+            HddsProtos.ReplicationFactor.ONE, "container3", "OZONE");
 
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");

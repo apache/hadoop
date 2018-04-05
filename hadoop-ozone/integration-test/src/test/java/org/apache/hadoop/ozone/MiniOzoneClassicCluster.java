@@ -24,9 +24,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -36,14 +36,14 @@ import org.apache.hadoop.ozone.container.common
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
-import org.apache.hadoop.ozone.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.SCMStorage;
 import org.apache.hadoop.ozone.ksm.KSMStorage;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.ozone.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.StorageContainerManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -75,7 +75,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
 
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.junit.Assert.assertFalse;
 
@@ -341,8 +341,8 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
   public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
     DatanodeDetails datanodeDetails = null;
     for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HdslDatanodeService) {
-        datanodeDetails = ((HdslDatanodeService) plugin).getDatanodeDetails();
+      if (plugin instanceof HddsDatanodeService) {
+        datanodeDetails = ((HddsDatanodeService) plugin).getDatanodeDetails();
       }
     }
     return datanodeDetails;
@@ -499,10 +499,10 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(ScmConfigKeys.HDSL_REST_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(DFS_DATANODE_PLUGINS_KEY,
           "org.apache.hadoop.ozone.web.ObjectStoreRestPlugin," +
-          "org.apache.hadoop.ozone.HdslDatanodeService");
+          "org.apache.hadoop.ozone.HddsDatanodeService");
 
       // Configure KSM and SCM handlers
       conf.setInt(ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY, numOfScmHandlers);

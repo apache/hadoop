@@ -25,10 +25,10 @@ import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.util.KeyUtil;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.scm.client.ScmClient;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,8 +187,8 @@ public class StorageManager {
       ContainerDescriptor container = null;
       try {
         Pipeline pipeline = storageClient.createContainer(
-            HdslProtos.ReplicationType.STAND_ALONE,
-            HdslProtos.ReplicationFactor.ONE,
+            HddsProtos.ReplicationType.STAND_ALONE,
+            HddsProtos.ReplicationFactor.ONE,
             KeyUtil.getContainerName(volume.getUserName(),
                 volume.getVolumeName(), containerIdx), cblockId);
 

@@ -37,7 +37,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-server-framework</artifactId>
+      <artifactId>hadoop-hdds-server-framework</artifactId>
     </dependency>
 
     <dependency>
@@ -47,12 +47,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-common</artifactId>
+      <artifactId>hadoop-hdds-common</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-client</artifactId>
+      <artifactId>hadoop-hdds-client</artifactId>
     </dependency>
 
     <dependency>
@@ -132,7 +132,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto/
                 </param>
                 <param>
-                  ${basedir}/../../hadoop-hdsl/common/src/main/proto/
+                  ${basedir}/../../hadoop-hdds/common/src/main/proto/
                 </param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

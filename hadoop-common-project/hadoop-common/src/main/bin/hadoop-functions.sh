@@ -596,8 +596,8 @@ function hadoop_bootstrap
   YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
   MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
-  HDSL_DIR=${HDSL_DIR:-"share/hadoop/hdsl"}
-  HDSL_LIB_JARS_DIR=${HDSL_LIB_JARS_DIR:-"share/hadoop/hdsl/lib"}
+  HDDS_DIR=${HDDS_DIR:-"share/hadoop/hdds"}
+  HDDS_LIB_JARS_DIR=${HDDS_LIB_JARS_DIR:-"share/hadoop/hdds/lib"}
   OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}
   OZONE_LIB_JARS_DIR=${OZONE_LIB_JARS_DIR:-"share/hadoop/ozone/lib"}
   CBLOCK_DIR=${CBLOCK_DIR:-"share/hadoop/cblock"}

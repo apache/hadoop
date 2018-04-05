@@ -36,8 +36,8 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_SERVICERPC_HOSTNAME_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_SERVICERPC_PORT_DEFAULT;
-import static org.apache.hadoop.hdsl.HdslUtils.getHostNameFromConfigKeys;
-import static org.apache.hadoop.hdsl.HdslUtils.getPortNumberFromConfigKeys;
+import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
+import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 
 /**
  * Generic stateless utility functions for CBlock components.

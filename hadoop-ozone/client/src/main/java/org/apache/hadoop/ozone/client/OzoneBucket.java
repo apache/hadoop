@@ -22,6 +22,9 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -107,7 +110,7 @@ public class OzoneBucket {
     this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
-    this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
+    this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
     this.creationTime = creationTime;
     this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
         OzoneConfigKeys.OZONE_REPLICATION,

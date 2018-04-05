@@ -82,7 +82,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-common</artifactId>
+      <artifactId>hadoop-hdds-common</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

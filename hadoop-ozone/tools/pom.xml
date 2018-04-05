@@ -29,7 +29,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>jar</packaging>
 
   <properties>
-    <hadoop.component>hdsl</hadoop.component>
+    <hadoop.component>hdds</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
@@ -51,11 +51,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-server-scm</artifactId>
+      <artifactId>hadoop-hdds-server-scm</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdsl-common</artifactId>
+      <artifactId>hadoop-hdds-common</artifactId>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>

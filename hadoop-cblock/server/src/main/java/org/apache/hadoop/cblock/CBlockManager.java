@@ -37,24 +37,24 @@ import org.apache.hadoop.cblock.protocolPB
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.client.ContainerOperationClient;
-import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
+import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.cblock.storage.StorageManager;
 import org.apache.hadoop.cblock.util.KeyUtil;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.LevelDBStore;
 
 import static org.apache.hadoop.cblock.CblockUtils.getCblockServerRpcAddr;
 import static org.apache.hadoop.cblock.CblockUtils.getCblockServiceRpcAddr;
-import static org.apache.hadoop.hdsl.server.ServerUtils
+import static org.apache.hadoop.hdds.server.ServerUtils
     .updateRPCListenAddress;
 import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;

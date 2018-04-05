@@ -19,19 +19,19 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.ozone.scm.TestUtils;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.scm.XceiverClient;
-import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.XceiverClient;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
 import org.apache.hadoop.util.ServicePlugin;
@@ -97,15 +97,15 @@ public class TestMiniOzoneCluster {
       String containerName = OzoneUtils.getRequestID();
       DatanodeDetails datanodeDetails = null;
       for (ServicePlugin plugin : dn.getPlugins()) {
-        if (plugin instanceof HdslDatanodeService) {
-          datanodeDetails = ((HdslDatanodeService) plugin).getDatanodeDetails();
+        if (plugin instanceof HddsDatanodeService) {
+          datanodeDetails = ((HddsDatanodeService) plugin).getDatanodeDetails();
         }
       }
       final PipelineChannel pipelineChannel =
           new PipelineChannel(datanodeDetails.getUuidString(),
-              HdslProtos.LifeCycleState.OPEN,
-              HdslProtos.ReplicationType.STAND_ALONE,
-              HdslProtos.ReplicationFactor.ONE, "test");
+              HddsProtos.LifeCycleState.OPEN,
+              HddsProtos.ReplicationType.STAND_ALONE,
+              HddsProtos.ReplicationFactor.ONE, "test");
       pipelineChannel.addMember(datanodeDetails);
       Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
 

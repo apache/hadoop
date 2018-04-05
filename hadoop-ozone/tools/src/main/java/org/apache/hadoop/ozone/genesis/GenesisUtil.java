@@ -3,7 +3,7 @@ package org.apache.hadoop.ozone.genesis;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 

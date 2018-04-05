@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.scm.cli;
+package org.apache.hadoop.hdds.scm.cli;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.BasicParser;
@@ -28,16 +28,16 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.Pipeline;
-import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.utils.MetadataStore;
@@ -503,7 +503,7 @@ public class SQLCLI  extends Configured implements Tool {
         String containerName = new String(key, encoding);
         ContainerInfo containerInfo = null;
         containerInfo = ContainerInfo.fromProtobuf(
-            HdslProtos.SCMContainerInfo.PARSER.parseFrom(value));
+            HddsProtos.SCMContainerInfo.PARSER.parseFrom(value));
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema
@@ -533,7 +533,7 @@ public class SQLCLI  extends Configured implements Tool {
         pipeline.getPipelineChannel().getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
-    for (HdslProtos.DatanodeDetailsProto dd :
+    for (HddsProtos.DatanodeDetailsProto dd :
         pipeline.getPipelineChannel().getMembersList()) {
       String uuid = dd.getUuid();
       if (!uuidChecked.contains(uuid)) {
@@ -629,7 +629,7 @@ public class SQLCLI  extends Configured implements Tool {
 
       dbStore.iterate(null, (key, value) -> {
         DatanodeDetails nodeId = DatanodeDetails
-            .getFromProtoBuf(HdslProtos.DatanodeDetailsProto
+            .getFromProtoBuf(HddsProtos.DatanodeDetailsProto
                 .PARSER.parseFrom(key));
         String blockPool = DFSUtil.bytes2String(value);
         try {

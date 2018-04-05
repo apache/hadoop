@@ -24,7 +24,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 /**
- * Main class that executes a set of HDSL/Ozone benchmarks.
+ * Main class that executes a set of HDDS/Ozone benchmarks.
  * We purposefully don't use the runner and tools classes from Hadoop.
  * There are some name collisions with OpenJDK JMH package.
  * <p>

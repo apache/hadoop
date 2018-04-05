@@ -14,7 +14,7 @@
 
 # Acceptance test suite for Ozone/Hdsl
 
-This project contains acceptance tests for ozone/hdsl using docker-compose and [robot framework](http://robotframework.org/).
+This project contains acceptance tests for ozone/hdds using docker-compose and [robot framework](http://robotframework.org/).
 
 ## Run
 

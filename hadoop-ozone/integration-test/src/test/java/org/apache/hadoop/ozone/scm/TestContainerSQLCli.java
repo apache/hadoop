@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.ozone.scm;
 
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
-import org.apache.hadoop.ozone.scm.cli.SQLCLI;
-import org.apache.hadoop.ozone.scm.container.ContainerMapping;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
-import org.apache.hadoop.ozone.scm.node.NodeManager;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
+import org.apache.hadoop.hdds.scm.cli.SQLCLI;
+import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,8 +98,8 @@ public class TestContainerSQLCli {
   private HashMap<String, String> blockContainerMap;
 
   private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
-  private static HdslProtos.ReplicationFactor factor;
-  private static HdslProtos.ReplicationType type;
+  private static HddsProtos.ReplicationFactor factor;
+  private static HddsProtos.ReplicationType type;
   private static final String containerOwner = "OZONE";
 
 
@@ -113,11 +114,11 @@ public class TestContainerSQLCli {
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
-      factor = HdslProtos.ReplicationFactor.THREE;
-      type = HdslProtos.ReplicationType.RATIS;
+      factor = HddsProtos.ReplicationFactor.THREE;
+      type = HddsProtos.ReplicationType.RATIS;
     } else {
-      factor = HdslProtos.ReplicationFactor.ONE;
-      type = HdslProtos.ReplicationType.STAND_ALONE;
+      factor = HddsProtos.ReplicationFactor.ONE;
+      type = HddsProtos.ReplicationType.STAND_ALONE;
     }
     cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(2)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})

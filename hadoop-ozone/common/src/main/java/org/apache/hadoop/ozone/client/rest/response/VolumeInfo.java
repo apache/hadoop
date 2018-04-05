@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.client.rest.response;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.client.OzoneQuota;
+import org.apache.hadoop.hdds.client.OzoneQuota;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;

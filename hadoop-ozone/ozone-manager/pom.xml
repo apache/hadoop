@@ -101,7 +101,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <artifactItems>
             <artifactItem>
               <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-hdsl-server-framework</artifactId>
+              <artifactId>hadoop-hdds-server-framework</artifactId>
               <outputDirectory>${project.build.directory}/</outputDirectory>
               <includes>webapps/static/**/*.*</includes>
             </artifactItem>

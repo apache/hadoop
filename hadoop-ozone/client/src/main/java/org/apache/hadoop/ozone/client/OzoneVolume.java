@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.client;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 
@@ -88,7 +90,7 @@ public class OzoneVolume {
     this.quotaInBytes = quotaInBytes;
     this.creationTime = creationTime;
     this.acls = acls;
-    this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
+    this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
   }
 
   /**
@@ -162,7 +164,7 @@ public class OzoneVolume {
    * @param quota new quota
    * @throws IOException
    */
-  public void setQuota(OzoneQuota quota) throws IOException {
+  public void setQuota(OzoneQuota  quota) throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(quota);
     proxy.setVolumeQuota(name, quota);
@@ -178,7 +180,7 @@ public class OzoneVolume {
       throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
-    OzoneClientUtils.verifyResourceName(bucketName);
+    HddsClientUtils.verifyResourceName(bucketName);
     proxy.createBucket(name, bucketName);
   }
 
@@ -193,7 +195,7 @@ public class OzoneVolume {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
     Preconditions.checkNotNull(bucketArgs);
-    OzoneClientUtils.verifyResourceName(bucketName);
+    HddsClientUtils.verifyResourceName(bucketName);
     proxy.createBucket(name, bucketName, bucketArgs);
   }
 
@@ -206,7 +208,7 @@ public class OzoneVolume {
   public OzoneBucket getBucket(String bucketName) throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
-    OzoneClientUtils.verifyResourceName(bucketName);
+    HddsClientUtils.verifyResourceName(bucketName);
     OzoneBucket bucket = proxy.getBucketDetails(name, bucketName);
     return bucket;
   }
@@ -231,7 +233,7 @@ public class OzoneVolume {
   public void deleteBucket(String bucketName) throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
-    OzoneClientUtils.verifyResourceName(bucketName);
+    HddsClientUtils.verifyResourceName(bucketName);
     proxy.deleteBucket(name, bucketName);
   }
 

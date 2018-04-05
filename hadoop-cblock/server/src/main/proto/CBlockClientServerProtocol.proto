@@ -27,7 +27,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.cblock;
 
-import "hdsl.proto";
+import "hdds.proto";
 import "CBlockServiceProtocol.proto";
 /**
 * This message is sent from CBlock client side to CBlock server to
@@ -69,7 +69,7 @@ message ContainerIDProto {
     required string containerID = 1;
     required uint64 index = 2;
     // making pipeline optional to be compatible with exisiting tests
-    optional hadoop.hdsl.Pipeline pipeline = 3;
+    optional hadoop.hdds.Pipeline pipeline = 3;
 }
 
 

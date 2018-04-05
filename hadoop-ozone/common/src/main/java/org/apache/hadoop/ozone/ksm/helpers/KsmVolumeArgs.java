@@ -22,7 +22,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.KeyValue;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
 
 import java.io.IOException;
 import java.util.HashMap;

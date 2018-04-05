@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
-import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.junit.Assert;
 
 import java.io.IOException;

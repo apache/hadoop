@@ -6,16 +6,16 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
@@ -33,18 +33,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.CreateContainerRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ReadChunkRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.WriteChunkRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.PutKeyRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.GetKeyRequestProto;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerData;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.CreateContainerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ReadChunkRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.WriteChunkRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.PutKeyRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.GetKeyRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
 
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
 @State(Scope.Benchmark)
 public class BenchMarkDatanodeDispatcher {

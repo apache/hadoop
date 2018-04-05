@@ -19,7 +19,7 @@ package org.apache.hadoop.cblock.util;
 
 import org.apache.hadoop.cblock.meta.ContainerDescriptor;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;

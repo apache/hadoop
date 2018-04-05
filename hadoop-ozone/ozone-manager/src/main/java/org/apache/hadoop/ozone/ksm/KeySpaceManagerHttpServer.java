@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hdsl.server.BaseHttpServer;
+import org.apache.hadoop.hdds.server.BaseHttpServer;
 
 import java.io.IOException;
 
