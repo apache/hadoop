@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.TestConfigurationFieldsBase;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
-import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
 /**
  * Tests if configuration constants documented in ozone-defaults.xml.

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.cblock.proto;
 
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 import java.util.HashMap;
 import java.util.List;

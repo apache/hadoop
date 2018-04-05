@@ -20,8 +20,9 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
+
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
@@ -30,7 +31,7 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 
-import static org.apache.hadoop.hdsl.server.ServerUtils.releaseConnection;
+import static org.apache.hadoop.hdds.server.ServerUtils.releaseConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -177,7 +178,7 @@ public class OzoneBucket {
 
     HttpPut putRequest = null;
     InputStream is = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
@@ -236,7 +237,7 @@ public class OzoneBucket {
 
     HttpPut putRequest = null;
     FileInputStream fis = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
@@ -314,7 +315,7 @@ public class OzoneBucket {
 
     FileOutputStream outPutFile = null;
     HttpGet getRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       outPutFile = new FileOutputStream(downloadTo.toFile());
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
@@ -347,7 +348,7 @@ public class OzoneBucket {
 
     HttpGet getRequest = null;
     ByteArrayOutputStream outPutStream = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       outPutStream = new ByteArrayOutputStream();
 
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
@@ -417,7 +418,7 @@ public class OzoneBucket {
     }
 
     HttpDelete deleteRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
           + "/" + keyName).build();
@@ -480,7 +481,7 @@ public class OzoneBucket {
   public List<OzoneKey> listKeys(String resultLength, String previousKey,
       String prefix) throws OzoneException {
     HttpGet getRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       OzoneRestClient client = getVolume().getClient();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder.setPath("/" + getVolume().getVolumeName() + "/" + getBucketName())
@@ -590,7 +591,7 @@ public class OzoneBucket {
     }
 
     HttpGet getRequest = null;
-    try (CloseableHttpClient httpClient = OzoneClientUtils.newHttpClient()) {
+    try (CloseableHttpClient httpClient = HddsClientUtils.newHttpClient()) {
       OzoneRestClient client = getVolume().getClient();
       URIBuilder builder = new URIBuilder(volume.getClient().getEndPointURI());
       builder

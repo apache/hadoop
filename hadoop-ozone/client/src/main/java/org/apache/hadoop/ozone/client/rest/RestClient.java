@@ -23,19 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.client.OzoneKey;
-import org.apache.hadoop.ozone.client.OzoneQuota;
+import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.ReplicationFactor;
-import org.apache.hadoop.ozone.client.ReplicationType;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -190,7 +190,7 @@ public class RestClient implements ClientProtocol {
           serviceListJson, serviceInfoReference);
 
       List<ServiceInfo> dataNodeInfos = services.stream().filter(
-          a -> a.getNodeType().equals(HdslProtos.NodeType.DATANODE))
+          a -> a.getNodeType().equals(HddsProtos.NodeType.DATANODE))
           .collect(Collectors.toList());
 
       ServiceInfo restServer = selector.getRestServer(dataNodeInfos);
@@ -308,7 +308,7 @@ public class RestClient implements ClientProtocol {
           volInfo.getCreatedBy(),
           volInfo.getOwner().getName(),
           volInfo.getQuota().sizeInBytes(),
-          OzoneClientUtils.formatDateTime(volInfo.getCreatedOn()),
+          HddsClientUtils.formatDateTime(volInfo.getCreatedOn()),
           null);
       EntityUtils.consume(response);
       return volume;
@@ -540,7 +540,7 @@ public class RestClient implements ClientProtocol {
           bucketInfo.getAcls(),
           bucketInfo.getStorageType(),
           getBucketVersioningFlag(bucketInfo.getVersioning()),
-          OzoneClientUtils.formatDateTime(bucketInfo.getCreatedOn()));
+          HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()));
       EntityUtils.consume(response);
       return bucket;
     } catch (URISyntaxException | ParseException e) {
@@ -705,8 +705,8 @@ public class RestClient implements ClientProtocol {
           bucketName,
           keyInfo.getKeyName(),
           keyInfo.getSize(),
-          OzoneClientUtils.formatDateTime(keyInfo.getCreatedOn()),
-          OzoneClientUtils.formatDateTime(keyInfo.getModifiedOn()));
+          HddsClientUtils.formatDateTime(keyInfo.getCreatedOn()),
+          HddsClientUtils.formatDateTime(keyInfo.getModifiedOn()));
       EntityUtils.consume(response);
       return key;
     } catch (URISyntaxException | ParseException e) {
@@ -724,7 +724,7 @@ public class RestClient implements ClientProtocol {
         Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " " +
             ugi.getUserName());
     httpRequest.addHeader(HttpHeaders.DATE,
-        OzoneClientUtils.formatDateTime(Time.monotonicNow()));
+        HddsClientUtils.formatDateTime(Time.monotonicNow()));
     httpRequest.addHeader(Header.OZONE_VERSION_HEADER,
         Header.OZONE_V1_VERSION_HEADER);
   }

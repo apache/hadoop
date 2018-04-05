@@ -23,11 +23,11 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -378,7 +378,7 @@ public class TestVolume {
     List<CloseableHttpClient> spyHttpClients = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       CloseableHttpClient spyHttpClient = Mockito
-          .spy(OzoneClientUtils.newHttpClient());
+          .spy(HddsClientUtils.newHttpClient());
       spyHttpClients.add(spyHttpClient);
     }
 

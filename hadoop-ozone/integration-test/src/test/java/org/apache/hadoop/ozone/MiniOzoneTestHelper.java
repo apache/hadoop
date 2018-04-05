@@ -33,26 +33,26 @@ public class MiniOzoneTestHelper {
   }
 
   public static OzoneContainer getOzoneContainer(DataNode dataNode) {
-    return findHdslPlugin(dataNode).getDatanodeStateMachine()
+    return findHddsPlugin(dataNode).getDatanodeStateMachine()
         .getContainer();
   }
 
   public static ContainerManager getOzoneContainerManager(DataNode dataNode) {
-    return findHdslPlugin(dataNode).getDatanodeStateMachine()
+    return findHddsPlugin(dataNode).getDatanodeStateMachine()
         .getContainer().getContainerManager();
 
   }
   public static DatanodeStateMachine getStateMachine(DataNode dataNode) {
-    return findHdslPlugin(dataNode).getDatanodeStateMachine();
+    return findHddsPlugin(dataNode).getDatanodeStateMachine();
   }
 
-  private static HdslDatanodeService findHdslPlugin(DataNode dataNode) {
+  private static HddsDatanodeService findHddsPlugin(DataNode dataNode) {
     for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HdslDatanodeService) {
-        return (HdslDatanodeService) plugin;
+      if (plugin instanceof HddsDatanodeService) {
+        return (HddsDatanodeService) plugin;
       }
     }
-    throw new IllegalStateException("Can't find the Hdsl server plugin in the"
+    throw new IllegalStateException("Can't find the Hdds server plugin in the"
         + " plugin collection of datanode");
   }
 

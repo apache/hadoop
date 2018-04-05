@@ -38,7 +38,7 @@ import org.apache.hadoop.cblock.CblockUtils;
 import org.apache.hadoop.cblock.exception.CBlockException;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.storage.StorageManager;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.ratis.shaded.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

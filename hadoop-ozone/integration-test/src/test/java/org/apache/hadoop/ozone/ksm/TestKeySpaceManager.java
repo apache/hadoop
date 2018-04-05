@@ -25,16 +25,16 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
-import org.apache.hadoop.ozone.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.SCMStorage;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -46,8 +46,8 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
@@ -87,7 +87,8 @@ import java.util.stream.Stream;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
-import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .OZONE_SCM_CLIENT_ADDRESS_KEY;
 
 /**
  * Test Key Space Manager operation in distributed handler scenario.
@@ -1220,7 +1221,7 @@ public class TestKeySpaceManager {
         ksmMetrics.getNumGetServiceLists());
 
     ServiceInfo ksmInfo = services.stream().filter(
-        a -> a.getNodeType().equals(HdslProtos.NodeType.KSM))
+        a -> a.getNodeType().equals(HddsProtos.NodeType.KSM))
         .collect(Collectors.toList()).get(0);
     InetSocketAddress ksmAddress = new InetSocketAddress(ksmInfo.getHostname(),
         ksmInfo.getPort(ServicePort.Type.RPC));
@@ -1228,7 +1229,7 @@ public class TestKeySpaceManager {
         conf.get(OZONE_KSM_ADDRESS_KEY)), ksmAddress);
 
     ServiceInfo scmInfo = services.stream().filter(
-        a -> a.getNodeType().equals(HdslProtos.NodeType.SCM))
+        a -> a.getNodeType().equals(HddsProtos.NodeType.SCM))
         .collect(Collectors.toList()).get(0);
     InetSocketAddress scmAddress = new InetSocketAddress(scmInfo.getHostname(),
         scmInfo.getPort(ServicePort.Type.RPC));

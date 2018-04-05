@@ -25,7 +25,7 @@ import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
 import org.apache.hadoop.cblock.protocol.proto.CBlockServiceProtocolProtos;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.util.HashMap;

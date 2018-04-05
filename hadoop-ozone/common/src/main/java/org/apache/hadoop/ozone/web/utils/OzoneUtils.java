@@ -29,7 +29,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdsl.HdslUtils;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
@@ -120,7 +120,7 @@ public final class OzoneUtils {
    * @return the path of datanode id as string
    */
   public static String getDatanodeIdFilePath(Configuration conf) {
-    return HdslUtils.getDatanodeIdFilePath(conf);
+    return HddsUtils.getDatanodeIdFilePath(conf);
   }
 
   /**
@@ -141,7 +141,7 @@ public final class OzoneUtils {
   }
 
   public static boolean isOzoneEnabled(Configuration conf) {
-    return HdslUtils.isHdslEnabled(conf);
+    return HddsUtils.isHddsEnabled(conf);
   }
 
 

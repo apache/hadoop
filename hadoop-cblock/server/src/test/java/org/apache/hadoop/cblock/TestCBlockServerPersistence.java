@@ -18,8 +18,8 @@
 package org.apache.hadoop.cblock;
 
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.cblock.util.MockStorageClient;
 import org.junit.Test;

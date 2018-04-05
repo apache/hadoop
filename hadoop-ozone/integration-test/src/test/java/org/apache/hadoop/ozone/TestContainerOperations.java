@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.ozone;
 
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.client.ContainerOperationClient;
-import org.apache.hadoop.scm.client.ScmClient;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
+import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,8 +80,8 @@ public class TestContainerOperations {
    */
   @Test
   public void testCreate() throws Exception {
-    Pipeline pipeline0 = storageClient.createContainer(HdslProtos
-        .ReplicationType.STAND_ALONE, HdslProtos.ReplicationFactor
+    Pipeline pipeline0 = storageClient.createContainer(HddsProtos
+        .ReplicationType.STAND_ALONE, HddsProtos.ReplicationFactor
         .ONE, "container0", "OZONE");
     assertEquals("container0", pipeline0.getContainerName());
 

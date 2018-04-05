@@ -18,12 +18,12 @@
 package org.apache.hadoop.cblock.util;
 
 import org.apache.hadoop.cblock.meta.ContainerDescriptor;
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos.ContainerData;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.scm.client.ScmClient;
-import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -88,7 +88,7 @@ public class MockStorageClient implements ScmClient {
     ContainerInfo container = new ContainerInfo.Builder()
         .setContainerName(containerDescriptor.getContainerID())
         .setPipeline(containerDescriptor.getPipeline())
-        .setState(HdslProtos.LifeCycleState.ALLOCATED)
+        .setState(HddsProtos.LifeCycleState.ALLOCATED)
         .build();
     containerList.add(container);
     return containerList;
@@ -134,8 +134,8 @@ public class MockStorageClient implements ScmClient {
   }
 
   @Override
-  public Pipeline createContainer(HdslProtos.ReplicationType type,
-      HdslProtos.ReplicationFactor replicationFactor, String containerId,
+  public Pipeline createContainer(HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor replicationFactor, String containerId,
       String owner) throws IOException {
     int contId = currentContainerId.getAndIncrement();
     ContainerLookUpService.addContainer(Long.toString(contId));
@@ -153,8 +153,8 @@ public class MockStorageClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public HdslProtos.NodePool queryNode(EnumSet<HdslProtos.NodeState>
-      nodeStatuses, HdslProtos.QueryScope queryScope, String poolName)
+  public HddsProtos.NodePool queryNode(EnumSet<HddsProtos.NodeState>
+      nodeStatuses, HddsProtos.QueryScope queryScope, String poolName)
       throws IOException {
     return null;
   }
@@ -168,8 +168,8 @@ public class MockStorageClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public Pipeline createReplicationPipeline(HdslProtos.ReplicationType type,
-      HdslProtos.ReplicationFactor factor, HdslProtos.NodePool nodePool)
+  public Pipeline createReplicationPipeline(HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor factor, HddsProtos.NodePool nodePool)
       throws IOException {
     return null;
   }

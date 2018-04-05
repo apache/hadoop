@@ -19,7 +19,7 @@ package org.apache.hadoop.cblock.meta;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.cblock.protocol.proto.CBlockClientServerProtocolProtos;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 
 /**
  *

@@ -19,12 +19,14 @@
 package org.apache.hadoop.ozone.genesis;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.scm.container.ContainerStates.ContainerStateMap;
-import org.apache.hadoop.ozone.scm.exceptions.SCMException;
-import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -40,10 +42,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState.OPEN;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.LifeCycleState.CLOSED;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState.OPEN;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState.CLOSED;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
 @State(Scope.Thread)
 public class BenchMarkContainerStateMap {

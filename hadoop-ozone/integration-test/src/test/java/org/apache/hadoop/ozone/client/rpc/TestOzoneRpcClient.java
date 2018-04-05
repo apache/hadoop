@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
@@ -31,10 +31,10 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKey;
-import org.apache.hadoop.ozone.client.OzoneQuota;
+import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.ReplicationFactor;
-import org.apache.hadoop.ozone.client.ReplicationType;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -42,11 +42,11 @@ import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.protocolPB.
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
@@ -381,10 +381,10 @@ public class TestOzoneRpcClient {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .build();
-    HdslProtos.ReplicationType replicationType =
-        HdslProtos.ReplicationType.valueOf(type.toString());
-    HdslProtos.ReplicationFactor replicationFactor =
-        HdslProtos.ReplicationFactor.valueOf(factor.getValue());
+    HddsProtos.ReplicationType replicationType =
+        HddsProtos.ReplicationType.valueOf(type.toString());
+    HddsProtos.ReplicationFactor replicationFactor =
+        HddsProtos.ReplicationFactor.valueOf(factor.getValue());
     KsmKeyInfo keyInfo = keySpaceManager.lookupKey(keyArgs);
     for (KsmKeyLocationInfo info:
         keyInfo.getLatestVersionLocations().getLocationList()) {

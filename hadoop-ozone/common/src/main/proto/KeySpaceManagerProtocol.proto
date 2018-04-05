@@ -35,7 +35,7 @@ This is similar to Namenode for Ozone.
 */
 
 import "hdfs.proto";
-import "hdsl.proto";
+import "hdds.proto";
 
 enum Status {
     OK = 1;
@@ -60,7 +60,7 @@ message VolumeInfo {
     required string ownerName = 2;
     required string volume = 3;
     optional uint64 quotaInBytes = 4;
-    repeated hadoop.hdsl.KeyValue metadata = 5;
+    repeated hadoop.hdds.KeyValue metadata = 5;
     repeated OzoneAclInfo volumeAcls = 6;
     required uint64 creationTime = 7;
 }
@@ -225,8 +225,8 @@ message KeyArgs {
     required string bucketName = 2;
     required string keyName = 3;
     optional uint64 dataSize = 4;
-    optional hadoop.hdsl.ReplicationType type = 5;
-    optional hadoop.hdsl.ReplicationFactor factor = 6;
+    optional hadoop.hdds.ReplicationType type = 5;
+    optional hadoop.hdds.ReplicationFactor factor = 6;
 }
 
 message KeyLocation {
@@ -338,7 +338,7 @@ message ServicePort {
 }
 
 message ServiceInfo {
-    required hadoop.hdsl.NodeType nodeType = 1;
+    required hadoop.hdds.NodeType nodeType = 1;
     required string hostname = 2;
     repeated ServicePort servicePorts = 3;
 }

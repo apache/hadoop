@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.ksm.helpers;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationType;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
 /**
  * Args for key. Client use this to specify key's attributes on  key creation

@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
@@ -31,10 +31,10 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
-import org.apache.hadoop.ozone.client.OzoneQuota;
+import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.client.ReplicationFactor;
-import org.apache.hadoop.ozone.client.ReplicationType;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
@@ -58,13 +58,13 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -156,7 +156,7 @@ public class RpcClient implements ClientProtocol {
   private InetSocketAddress getScmAddressForClient() throws IOException {
     List<ServiceInfo> services = keySpaceManagerClient.getServiceList();
     ServiceInfo scmInfo = services.stream().filter(
-        a -> a.getNodeType().equals(HdslProtos.NodeType.SCM))
+        a -> a.getNodeType().equals(HddsProtos.NodeType.SCM))
         .collect(Collectors.toList()).get(0);
     return NetUtils.createSocketAddr(scmInfo.getHostname()+ ":" +
         scmInfo.getPort(ServicePort.Type.RPC));
@@ -460,8 +460,8 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(size)
-        .setType(HdslProtos.ReplicationType.valueOf(type.toString()))
-        .setFactor(HdslProtos.ReplicationFactor.valueOf(factor.getValue()))
+        .setType(HddsProtos.ReplicationType.valueOf(type.toString()))
+        .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
         .build();
 
     OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);
@@ -473,8 +473,8 @@ public class RpcClient implements ClientProtocol {
             .setKsmClient(keySpaceManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(requestId)
-            .setType(HdslProtos.ReplicationType.valueOf(type.toString()))
-            .setFactor(HdslProtos.ReplicationFactor.valueOf(factor.getValue()))
+            .setType(HddsProtos.ReplicationType.valueOf(type.toString()))
+            .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),

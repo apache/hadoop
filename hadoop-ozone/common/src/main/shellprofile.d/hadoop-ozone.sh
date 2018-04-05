@@ -19,7 +19,7 @@ if [[ "${HADOOP_SHELL_EXECNAME}" = oz ]]; then
 fi
 
 
-## @description  Profile for hdsl/cblock/ozone components.
+## @description  Profile for hdds/cblock/ozone components.
 ## @audience     private
 ## @stability    evolving
 function _ozone_hadoop_classpath
@@ -28,16 +28,16 @@ function _ozone_hadoop_classpath
   # get all of the ozone jars+config in the path
   #
 
-  if [[ -d "${HADOOP_HDFS_HOME}/${HDSL_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDSL_DIR}"
+  if [[ -d "${HADOOP_HDFS_HOME}/${HDDS_DIR}/webapps" ]]; then
+    hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_DIR}"
   fi
 
-  if [[ -d "${HADOOP_HDFS_HOME}/${HDSL_DIR}/webapps" ]]; then
+  if [[ -d "${HADOOP_HDFS_HOME}/${HDDS_DIR}/webapps" ]]; then
     hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_DIR}"
   fi
 
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDSL_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDSL_DIR}"'/*'
+  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_LIB_JARS_DIR}"'/*'
+  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_LIB_JARS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${CBLOCK_LIB_JARS_DIR}"'/*'

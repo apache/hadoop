@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.cblock.CBlockConfigKeys;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;

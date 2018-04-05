@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -53,7 +54,7 @@ public class ObjectStore {
    */
   public ObjectStore(Configuration conf, ClientProtocol proxy) {
     this.proxy = proxy;
-    this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
+    this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
   }
 
   /**
@@ -63,7 +64,7 @@ public class ObjectStore {
    */
   public void createVolume(String volumeName) throws IOException {
     Preconditions.checkNotNull(volumeName);
-    OzoneClientUtils.verifyResourceName(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     proxy.createVolume(volumeName);
   }
 
@@ -77,7 +78,7 @@ public class ObjectStore {
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     Preconditions.checkNotNull(volumeArgs);
-    OzoneClientUtils.verifyResourceName(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     proxy.createVolume(volumeName, volumeArgs);
   }
 
@@ -89,7 +90,7 @@ public class ObjectStore {
    */
   public OzoneVolume getVolume(String volumeName) throws IOException {
     Preconditions.checkNotNull(volumeName);
-    OzoneClientUtils.verifyResourceName(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     OzoneVolume volume = proxy.getVolumeDetails(volumeName);
     return volume;
   }
@@ -133,7 +134,7 @@ public class ObjectStore {
    */
   public void deleteVolume(String volumeName) throws IOException {
     Preconditions.checkNotNull(volumeName);
-    OzoneClientUtils.verifyResourceName(volumeName);
+    HddsClientUtils.verifyResourceName(volumeName);
     proxy.deleteVolume(volumeName);
   }
 

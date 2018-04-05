@@ -17,23 +17,23 @@
  */
 package org.apache.hadoop.ozone.scm;
 
-import org.apache.hadoop.hdsl.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
-import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
-import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.XceiverClientSpi;
+import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -87,7 +87,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, containerName, containerOwner);
+            HddsProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -108,7 +108,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, containerName, containerOwner);
+            HddsProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -130,7 +130,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            HdslProtos.ReplicationFactor.ONE, containerName, containerOwner);
+            HddsProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
     ContainerProtocolCalls.writeSmallFile(client, containerName,

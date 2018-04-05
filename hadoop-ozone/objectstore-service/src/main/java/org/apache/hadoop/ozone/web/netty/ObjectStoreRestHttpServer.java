@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdfs.server.datanode.web
     .RestCsrfPreventionFilterHandler;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 
 import io.netty.bootstrap.ChannelFactory;
@@ -54,15 +54,17 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import static org.apache.hadoop.scm.ScmConfigKeys
-    .HDSL_REST_CSRF_ENABLED_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys.HDSL_REST_CSRF_ENABLED_KEY;
-import static org.apache.hadoop.scm.ScmConfigKeys
-    .HDSL_REST_HTTP_ADDRESS_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys.HDSL_REST_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .HDDS_REST_CSRF_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .HDDS_REST_CSRF_ENABLED_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .HDDS_REST_HTTP_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
+    .HDDS_REST_HTTP_ADDRESS_KEY;
 
 /**
- * Netty based web server for Hdsl rest api server.
+ * Netty based web server for Hdds rest api server.
  * <p>
  * Based on the Datanode http serer.
  */
@@ -110,11 +112,11 @@ public class ObjectStoreRestHttpServer implements Closeable {
     });
 
     this.httpServer.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK,
-        conf.getInt(ScmConfigKeys.HDSL_REST_NETTY_HIGH_WATERMARK,
-            ScmConfigKeys.HDSL_REST_NETTY_HIGH_WATERMARK_DEFAULT));
+        conf.getInt(ScmConfigKeys.HDDS_REST_NETTY_HIGH_WATERMARK,
+            ScmConfigKeys.HDDS_REST_NETTY_HIGH_WATERMARK_DEFAULT));
     this.httpServer.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-        conf.getInt(ScmConfigKeys.HDSL_REST_NETTY_LOW_WATERMARK,
-            ScmConfigKeys.HDSL_REST_NETTY_LOW_WATERMARK_DEFAULT));
+        conf.getInt(ScmConfigKeys.HDDS_REST_NETTY_LOW_WATERMARK,
+            ScmConfigKeys.HDDS_REST_NETTY_LOW_WATERMARK_DEFAULT));
 
     if (externalHttpChannel == null) {
       httpServer.channel(NioServerSocketChannel.class);
@@ -141,8 +143,8 @@ public class ObjectStoreRestHttpServer implements Closeable {
     if (httpServer != null) {
 
       InetSocketAddress infoAddr = NetUtils.createSocketAddr(
-          conf.getTrimmed(HDSL_REST_HTTP_ADDRESS_KEY,
-              HDSL_REST_HTTP_ADDRESS_DEFAULT));
+          conf.getTrimmed(HDDS_REST_HTTP_ADDRESS_KEY,
+              HDDS_REST_HTTP_ADDRESS_DEFAULT));
 
       ChannelFuture f = httpServer.bind(infoAddr);
       try {
@@ -156,7 +158,7 @@ public class ObjectStoreRestHttpServer implements Closeable {
         }
       }
       httpAddress = (InetSocketAddress) f.channel().localAddress();
-      LOG.info("Listening HDSL REST traffic on " + httpAddress);
+      LOG.info("Listening HDDS REST traffic on " + httpAddress);
     }
 
   }
@@ -183,8 +185,8 @@ public class ObjectStoreRestHttpServer implements Closeable {
    */
   private static RestCsrfPreventionFilter createRestCsrfPreventionFilter(
       Configuration conf) {
-    if (!conf.getBoolean(HDSL_REST_CSRF_ENABLED_KEY,
-        HDSL_REST_CSRF_ENABLED_DEFAULT)) {
+    if (!conf.getBoolean(HDDS_REST_CSRF_ENABLED_KEY,
+        HDDS_REST_CSRF_ENABLED_DEFAULT)) {
       return null;
     }
     String restCsrfClassName = RestCsrfPreventionFilter.class.getName();

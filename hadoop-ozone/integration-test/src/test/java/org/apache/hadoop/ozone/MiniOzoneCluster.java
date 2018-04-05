@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.ozone;
 
+import org.apache.hadoop.hdds.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
-import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
-import org.apache.hadoop.scm.protocolPB
+import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 
 import java.io.Closeable;

@@ -14,14 +14,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.hadoop.ozone.scm.node;
+package org.apache.hadoop.hdds.scm.node;
 
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.client.ContainerOperationClient;
+import org.apache.hadoop.hdds.scm.XceiverClientManager;
+import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -31,18 +31,19 @@ import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState.DEAD;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState
-    .HEALTHY;
-import static org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeState
-    .STALE;
-import static org.apache.hadoop.scm.ScmConfigKeys
+
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.INVALID;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
+
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL;
-import static org.apache.hadoop.scm.ScmConfigKeys
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_INTERVAL;
-import static org.apache.hadoop.scm.ScmConfigKeys
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
-import static org.apache.hadoop.scm.ScmConfigKeys
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertEquals;
 
@@ -85,9 +86,9 @@ public class TestQueryNode {
 
   @Test
   public void testHealthyNodesCount() throws Exception {
-    HdslProtos.NodePool pool = scmClient.queryNode(
+    HddsProtos.NodePool pool = scmClient.queryNode(
         EnumSet.of(HEALTHY),
-        HdslProtos.QueryScope.CLUSTER, "");
+        HddsProtos.QueryScope.CLUSTER, "");
     assertEquals("Expected  live nodes", numOfDatanodes,
         pool.getNodesCount());
   }
@@ -102,7 +103,7 @@ public class TestQueryNode {
         100, 4 * 1000);
 
     int nodeCount = scmClient.queryNode(EnumSet.of(STALE),
-        HdslProtos.QueryScope.CLUSTER, "").getNodesCount();
+        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
     assertEquals("Mismatch of expected nodes count", 2, nodeCount);
 
     GenericTestUtils.waitFor(() ->
@@ -111,12 +112,12 @@ public class TestQueryNode {
 
     // Assert that we don't find any stale nodes.
     nodeCount = scmClient.queryNode(EnumSet.of(STALE),
-        HdslProtos.QueryScope.CLUSTER, "").getNodesCount();
+        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
     assertEquals("Mismatch of expected nodes count", 0, nodeCount);
 
     // Assert that we find the expected number of dead nodes.
     nodeCount = scmClient.queryNode(EnumSet.of(DEAD),
-        HdslProtos.QueryScope.CLUSTER, "").getNodesCount();
+        HddsProtos.QueryScope.CLUSTER, "").getNodesCount();
     assertEquals("Mismatch of expected nodes count", 2, nodeCount);
   }
 }

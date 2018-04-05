@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
@@ -26,7 +26,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BatchOperation;
 import org.slf4j.Logger;
@@ -137,9 +137,9 @@ public class VolumeManagerImpl implements VolumeManager {
 
       BatchOperation batch = new BatchOperation();
       // Write the vol info
-      List<HdslProtos.KeyValue> metadataList = new LinkedList<>();
+      List<HddsProtos.KeyValue> metadataList = new LinkedList<>();
       for (Map.Entry<String, String> entry : args.getKeyValueMap().entrySet()) {
-        metadataList.add(HdslProtos.KeyValue.newBuilder()
+        metadataList.add(HddsProtos.KeyValue.newBuilder()
             .setKey(entry.getKey()).setValue(entry.getValue()).build());
       }
       List<OzoneAclInfo> aclList = args.getAclMap().ozoneAclGetProtobuf();

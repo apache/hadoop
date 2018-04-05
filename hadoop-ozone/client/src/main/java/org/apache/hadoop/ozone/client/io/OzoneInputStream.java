@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.ozone.client.io;
 
-import org.apache.hadoop.scm.storage.ChunkInputStream;
+import org.apache.hadoop.hdds.scm.storage.ChunkInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;

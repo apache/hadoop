@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.Storage;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos.NodeType;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeType;
 
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_ID;
-import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * KSMStorage is responsible for management of the StorageDirectories used by

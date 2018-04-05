@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
@@ -65,7 +65,7 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_MB;
-import static org.apache.hadoop.hdsl.server.ServerUtils.getOzoneMetaDirPath;
+import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 
 /**
  * KSM metadata manager interface.

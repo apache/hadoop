@@ -62,7 +62,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   ${basedir}/../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto/
                 </param>
                 <param>
-                  ${basedir}/../../hadoop-hdsl/common/src/main/proto/
+                  ${basedir}/../../hadoop-hdds/common/src/main/proto/
                 </param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

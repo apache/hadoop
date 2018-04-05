@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
@@ -29,7 +29,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
-import org.apache.hadoop.hdsl.protocol.proto.HdslProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.apache.hadoop.hdsl.HdslUtils.getScmAddressForClients;
+import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.ozone.KsmUtils.getKsmAddressForClients;
 
 /**
@@ -90,14 +90,14 @@ public class TestKeySpaceManagerRestInterface {
         new TypeReference<List<ServiceInfo>>() {};
     List<ServiceInfo> serviceInfos = objectMapper.readValue(
         serviceListJson, serviceInfoReference);
-    Map<HdslProtos.NodeType, ServiceInfo> serviceMap = new HashMap<>();
+    Map<HddsProtos.NodeType, ServiceInfo> serviceMap = new HashMap<>();
     for (ServiceInfo serviceInfo : serviceInfos) {
       serviceMap.put(serviceInfo.getNodeType(), serviceInfo);
     }
 
     InetSocketAddress ksmAddress =
         getKsmAddressForClients(conf);
-    ServiceInfo ksmInfo = serviceMap.get(HdslProtos.NodeType.KSM);
+    ServiceInfo ksmInfo = serviceMap.get(HddsProtos.NodeType.KSM);
 
     Assert.assertEquals(ksmAddress.getHostName(), ksmInfo.getHostname());
     Assert.assertEquals(ksmAddress.getPort(),
@@ -107,13 +107,13 @@ public class TestKeySpaceManagerRestInterface {
 
     InetSocketAddress scmAddress =
         getScmAddressForClients(conf);
-    ServiceInfo scmInfo = serviceMap.get(HdslProtos.NodeType.SCM);
+    ServiceInfo scmInfo = serviceMap.get(HddsProtos.NodeType.SCM);
 
     Assert.assertEquals(scmAddress.getHostName(), scmInfo.getHostname());
     Assert.assertEquals(scmAddress.getPort(),
         scmInfo.getPort(ServicePort.Type.RPC));
 
-    ServiceInfo datanodeInfo = serviceMap.get(HdslProtos.NodeType.DATANODE);
+    ServiceInfo datanodeInfo = serviceMap.get(HddsProtos.NodeType.DATANODE);
     DataNode datanode = ((MiniOzoneClassicCluster) cluster)
         .getDataNodes().get(0);
     Assert.assertEquals(datanode.getDatanodeHostname(),

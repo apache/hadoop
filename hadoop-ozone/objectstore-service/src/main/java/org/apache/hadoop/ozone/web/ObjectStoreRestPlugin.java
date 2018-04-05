@@ -24,9 +24,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeServicePlugin;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
-import org.apache.hadoop.hdsl.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.HdslDatanodeService;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreRestHttpServer;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
@@ -82,11 +82,11 @@ public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
 
   public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
     for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HdslDatanodeService) {
-        return ((HdslDatanodeService) plugin).getDatanodeDetails();
+      if (plugin instanceof HddsDatanodeService) {
+        return ((HddsDatanodeService) plugin).getDatanodeDetails();
       }
     }
-    throw new RuntimeException("Not able to find HdslDatanodeService in the" +
+    throw new RuntimeException("Not able to find HddsDatanodeService in the" +
         " list of plugins loaded by DataNode.");
   }
 

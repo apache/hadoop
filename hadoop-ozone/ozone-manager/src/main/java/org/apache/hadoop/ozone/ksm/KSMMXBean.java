@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdsl.server.ServiceRuntimeInfo;
+import org.apache.hadoop.hdds.server.ServiceRuntimeInfo;
 
 /**
  * This is the JMX management interface for ksm information.

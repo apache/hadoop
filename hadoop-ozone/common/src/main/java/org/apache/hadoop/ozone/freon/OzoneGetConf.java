@@ -30,8 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdsl.HdslUtils;
-import org.apache.hadoop.hdsl.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.KsmUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -234,7 +234,7 @@ public class OzoneGetConf extends Configured implements Tool {
     @Override
     public int doWorkInternal(OzoneGetConf tool, String[] args)
         throws IOException {
-      Collection<InetSocketAddress> addresses = HdslUtils
+      Collection<InetSocketAddress> addresses = HddsUtils
           .getSCMAddresses(tool.getConf());
 
       for (InetSocketAddress addr : addresses) {

@@ -386,7 +386,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
-            <exclude>hadoop-hdsl/**/nvd3-*</exclude>
+            <exclude>hadoop-hdds/**/nvd3-*</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -589,7 +589,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </build>
     </profile>
     <profile>
-      <id>hdsl-src</id>
+      <id>hdds-src</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
@@ -609,12 +609,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <configuration>
                   <appendAssemblyId>false</appendAssemblyId>
                   <attach>false</attach>
-                  <finalName>hadoop-${project.version}-src-with-hdsl</finalName>
+                  <finalName>hadoop-${project.version}-src-with-hdds</finalName>
                   <outputDirectory>hadoop-dist/target</outputDirectory>
                   <!-- Not using descriptorRef and hadoop-assembly dependency -->
                   <!-- to avoid making hadoop-main to depend on a module      -->
                   <descriptors>
-                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-with-hdsl.xml</descriptor>
+                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-with-hdds.xml</descriptor>
                   </descriptors>
                 </configuration>
               </execution>
@@ -634,7 +634,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <configuration>
                   <target>
                     <echo/>
-                    <echo>Hadoop source tar (including HDSL) available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-hdsl.tar.gz</echo>
+                    <echo>Hadoop source tar (including HDDS) available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-hdds.tar.gz</echo>
                     <echo/>
                   </target>
                 </configuration>
@@ -741,14 +741,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </build>
     </profile>
     <profile>
-      <id>hdsl</id>
+      <id>hdds</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
       <modules>
         <module>hadoop-ozone</module>
         <module>hadoop-cblock</module>
-        <module>hadoop-hdsl</module>
+        <module>hadoop-hdds</module>
         <module>hadoop-ozone/acceptance-test</module>
       </modules>
     </profile>
