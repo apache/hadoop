@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.ClusterEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.QueueEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -142,6 +143,7 @@ public class TimelineCollectorWebService {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @QueryParam("async") String async,
+      @QueryParam("subappwrite") String isSubAppEntities,
       @QueryParam("appid") String appId,
       TimelineEntities entities) {
     init(res);
@@ -168,10 +170,11 @@ public class TimelineCollectorWebService {
 
       boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
       if (isAsync) {
-        collector.putEntitiesAsync(
-            processTimelineEntities(entities), callerUgi);
+        collector.putEntitiesAsync(processTimelineEntities(entities, appId,
+            Boolean.valueOf(isSubAppEntities)), callerUgi);
       } else {
-        collector.putEntities(processTimelineEntities(entities), callerUgi);
+        collector.putEntities(processTimelineEntities(entities, appId,
+            Boolean.valueOf(isSubAppEntities)), callerUgi);
       }
 
       return Response.ok().build();
@@ -212,7 +215,7 @@ public class TimelineCollectorWebService {
   // but let's keep it for now in case we need to use sub-classes APIs in the
   // future (e.g., aggregation).
   private static TimelineEntities processTimelineEntities(
-      TimelineEntities entities) {
+      TimelineEntities entities, String appId, boolean isSubAppWrite) {
     TimelineEntities entitiesToReturn = new TimelineEntities();
     for (TimelineEntity entity : entities.getEntities()) {
       TimelineEntityType type = null;
@@ -248,7 +251,13 @@ public class TimelineCollectorWebService {
           break;
         }
       } else {
-        entitiesToReturn.addEntity(entity);
+        if (isSubAppWrite) {
+          SubApplicationEntity se = new SubApplicationEntity(entity);
+          se.setApplicationId(appId);
+          entitiesToReturn.addEntity(se);
+        } else {
+          entitiesToReturn.addEntity(entity);
+        }
       }
     }
     return entitiesToReturn;
