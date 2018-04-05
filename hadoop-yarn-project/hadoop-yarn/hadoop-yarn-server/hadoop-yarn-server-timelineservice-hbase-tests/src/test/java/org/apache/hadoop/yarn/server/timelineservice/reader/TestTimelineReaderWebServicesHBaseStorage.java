@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -265,7 +266,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     relatesTo1.put("type3",
         Sets.newHashSet("entity31", "entity35", "entity32", "entity33"));
     entity5.addRelatesToEntities(relatesTo1);
-    userEntities.addEntity(entity5);
+    userEntities.addEntity(new SubApplicationEntity(entity5));
 
     TimelineEntity entity6 = new TimelineEntity();
     entity6.setId("entity2");
@@ -324,7 +325,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
     relatesTo2.put("type6", Sets.newHashSet("entity61", "entity66"));
     relatesTo2.put("type3", Sets.newHashSet("entity31"));
     entity6.addRelatesToEntities(relatesTo2);
-    userEntities.addEntity(entity6);
+    userEntities.addEntity(new SubApplicationEntity(entity6));
 
     for (long i = 1; i <= 10; i++) {
       TimelineEntity userEntity = new TimelineEntity();
@@ -332,7 +333,7 @@ public class TestTimelineReaderWebServicesHBaseStorage
       userEntity.setId("entityid-" + i);
       userEntity.setIdPrefix(11 - i);
       userEntity.setCreatedTime(ts);
-      userEntities.addEntity(userEntity);
+      userEntities.addEntity(new SubApplicationEntity(userEntity));
     }
 
     HBaseTimelineWriterImpl hbi = null;
