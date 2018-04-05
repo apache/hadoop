@@ -61,6 +61,7 @@ function updateConfigs(application) {
       url: getTimeLineURL(rmhost),
       success: function(data) {
         timelinehost = data.property.value;
+        timelinehost = timelinehost.replace(/(^\w+:|^)\/\//, '');
         ENV.hosts.timelineWebAddress = timelinehost;
 
         var address = timelinehost.split(":")[0];
@@ -94,6 +95,7 @@ function updateConfigs(application) {
       url: getTimeLineV1URL(rmhost),
       success: function(data) {
         timelinehost = data.property.value;
+        timelinehost = timelinehost.replace(/(^\w+:|^)\/\//, '');
         ENV.hosts.timelineV1WebAddress = timelinehost;
 
         var address = timelinehost.split(":")[0];
