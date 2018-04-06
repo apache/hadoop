@@ -246,12 +246,12 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
 
   private static final String USAGE =
-      "Usage: \n oz scm [genericOptions] "
+      "Usage: \n ozone scm [genericOptions] "
           + "[ " + StartupOption.INIT.getName() + " [ "
           + StartupOption.CLUSTERID.getName() + " <cid> ] ]\n "
-          + "oz scm [genericOptions] [ "
+          + "ozone scm [genericOptions] [ "
           + StartupOption.GENCLUSTERID.getName() + " ]\n " +
-          "oz scm [ "
+          "ozone scm [ "
           + StartupOption.HELP.getName() + " ]\n";
   /**
    * Creates a new StorageContainerManager.  Configuration will be updated with
