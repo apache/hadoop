@@ -966,8 +966,16 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long now = System.currentTimeMillis();
       long divide = now - delta;
 
+      // remove the protocol from path string to get keyPrefix
+      // by default the keyPrefix is "/" - unless the s3 URL is provided
+      String keyPrefix = "/";
+      if(paths.size() > 0) {
+        Path path = new Path(paths.get(0));
+        keyPrefix = PathMetadataDynamoDBTranslation.pathToParentKey(path);
+      }
+
       try {
-        getStore().prune(divide);
+        getStore().prune(divide, keyPrefix);
       } catch (UnsupportedOperationException e){
         errorln("Prune operation not supported in metadata store.");
       }
