@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 
 import java.net.InetSocketAddress;
 
@@ -52,9 +51,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private int infoSecurePort; // info server port
   private int ipcPort;       // IPC server port
   private String xferAddr;
-  private int containerPort; // container Stand_alone Rpc port.
-  private int ratisPort; // Container Ratis RPC Port.
-  private int ozoneRestPort;
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
@@ -76,12 +72,11 @@ public class DatanodeID implements Comparable<DatanodeID> {
         from.getInfoPort(),
         from.getInfoSecurePort(),
         from.getIpcPort());
-    this.ozoneRestPort = from.getOzoneRestPort();
     this.peerHostName = from.getPeerHostName();
   }
 
   /**
-   * Create a DatanodeID.
+   * Create a DatanodeID
    * @param ipAddr IP
    * @param hostName hostname
    * @param datanodeUuid data node ID, UUID for new Datanodes, may be the
@@ -269,8 +264,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
     infoPort = nodeReg.getInfoPort();
     infoSecurePort = nodeReg.getInfoSecurePort();
     ipcPort = nodeReg.getIpcPort();
-    ratisPort = nodeReg.getRatisPort();
-    ozoneRestPort = nodeReg.getOzoneRestPort();
   }
 
   /**
@@ -282,94 +275,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
   @Override
   public int compareTo(DatanodeID that) {
     return getXferAddr().compareTo(that.getXferAddr());
-  }
-
-  /**
-   * Returns the container port.
-   * @return Port
-   */
-  public int getContainerPort() {
-    return containerPort;
-  }
-
-  /**
-   * Sets the container port.
-   * @param containerPort - container port.
-   */
-  public void setContainerPort(int containerPort) {
-    this.containerPort = containerPort;
-  }
-
-  /**
-   * Gets the Ratis Port.
-   * @return retis port.
-   */
-  public int getRatisPort() {
-    return ratisPort;
-  }
-
-  /**
-   * Sets the Ratis Port.
-   * @param ratisPort - Ratis port.
-   */
-  public void setRatisPort(int ratisPort) {
-    this.ratisPort = ratisPort;
-  }
-
-  /**
-   * Ozone rest port.
-   *
-   * @return rest port.
-   */
-  public int getOzoneRestPort() {
-    return ozoneRestPort;
-  }
-
-  /**
-   * Set the ozone rest port.
-   *
-   * @param ozoneRestPort
-   */
-  public void setOzoneRestPort(int ozoneRestPort) {
-    this.ozoneRestPort = ozoneRestPort;
-  }
-
-  /**
-   * Returns a DataNode ID from the protocol buffers.
-   *
-   * @param datanodeIDProto - protoBuf Message
-   * @return DataNodeID
-   */
-  public static DatanodeID getFromProtoBuf(
-      HdfsProtos.DatanodeIDProto datanodeIDProto) {
-    DatanodeID id = new DatanodeID(datanodeIDProto.getIpAddr(),
-        datanodeIDProto.getHostName(), datanodeIDProto.getDatanodeUuid(),
-        datanodeIDProto.getXferPort(), datanodeIDProto.getInfoPort(),
-        datanodeIDProto.getInfoSecurePort(), datanodeIDProto.getIpcPort());
-    id.setContainerPort(datanodeIDProto.getContainerPort());
-    id.setRatisPort(datanodeIDProto.getRatisPort());
-    id.setOzoneRestPort(datanodeIDProto.getOzoneRestPort());
-    return id;
-  }
-
-  /**
-   * Returns a DataNodeID protobuf message from a datanode ID.
-   * @return HdfsProtos.DatanodeIDProto
-   */
-  public HdfsProtos.DatanodeIDProto getProtoBufMessage() {
-    HdfsProtos.DatanodeIDProto.Builder builder =
-        HdfsProtos.DatanodeIDProto.newBuilder();
-    return builder.setDatanodeUuid(this.getDatanodeUuid())
-        .setIpAddr(this.getIpAddr())
-        .setHostName(this.getHostName())
-        .setXferPort(this.getXferPort())
-        .setInfoPort(this.getInfoPort())
-        .setInfoSecurePort(this.getInfoSecurePort())
-        .setIpcPort(this.getIpcPort())
-        .setContainerPort(this.getContainerPort())
-        .setRatisPort(this.getRatisPort())
-        .setOzoneRestPort(this.getOzoneRestPort())
-        .build();
   }
 
   public InetSocketAddress getResolvedAddress() {
