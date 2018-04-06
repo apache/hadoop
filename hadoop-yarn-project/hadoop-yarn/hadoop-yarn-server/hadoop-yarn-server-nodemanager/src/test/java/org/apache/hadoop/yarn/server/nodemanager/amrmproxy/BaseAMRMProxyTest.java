@@ -109,6 +109,11 @@ public abstract class BaseAMRMProxyTest {
     return this.amrmProxyService;
   }
 
+  protected Context getNMContext() {
+    Assert.assertNotNull(this.nmContext);
+    return this.nmContext;
+  }
+
   @Before
   public void setUp() throws IOException {
     this.conf = createConfiguration();
