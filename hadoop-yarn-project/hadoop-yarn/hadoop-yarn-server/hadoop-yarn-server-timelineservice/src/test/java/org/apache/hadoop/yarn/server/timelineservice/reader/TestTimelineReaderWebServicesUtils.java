@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Sets;
@@ -520,6 +521,30 @@ public class TestTimelineReaderWebServicesUtils {
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
         parseKVFilters(expr, false), expectedList);
+
+    expr = "abdeq";
+    try {
+      TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
+      Assert.fail("Expression valuation should throw exception.");
+    } catch (TimelineParseException e) {
+      // expected: do nothing
+    }
+
+    expr = "abc gt 234 AND defeq";
+    try {
+      TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
+      Assert.fail("Expression valuation should throw exception.");
+    } catch (TimelineParseException e) {
+      // expected: do nothing
+    }
+
+    expr = "((key11 ne 234 AND key12 eq val12) AND (key13eq OR key14 eq va14))";
+    try {
+      TimelineReaderWebServicesUtils.parseKVFilters(expr, false);
+      Assert.fail("Expression valuation should throw exception.");
+    } catch (TimelineParseException e) {
+      // expected: do nothing
+    }
   }
 
   @Test
