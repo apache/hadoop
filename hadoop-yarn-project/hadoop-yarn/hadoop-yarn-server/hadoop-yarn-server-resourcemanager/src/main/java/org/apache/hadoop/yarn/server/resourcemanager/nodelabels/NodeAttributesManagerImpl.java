@@ -32,24 +32,31 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Strings;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.AttributeValue;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 import org.apache.hadoop.yarn.nodelabels.RMNodeAttribute;
 import org.apache.hadoop.yarn.nodelabels.StringAttributeValue;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AttributeMappingOperationType;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 
 /**
  * Manager holding the attributes to Labels.
@@ -63,7 +70,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
    */
   public static final String EMPTY_ATTRIBUTE_VALUE = "";
 
-  private Dispatcher dispatcher;
+  Dispatcher dispatcher;
+  NodeAttributeStore store;
 
   // TODO may be we can have a better collection here.
   // this will be updated to get the attributeName to NM mapping
@@ -121,7 +129,21 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   }
 
   protected void initNodeAttributeStore(Configuration conf) throws Exception {
-    // TODO to generalize and make use of the FileSystemNodeLabelsStore
+    this.store =getAttributeStoreClass(conf);
+    this.store.init(conf, this);
+    this.store.recover();
+  }
+
+  private NodeAttributeStore getAttributeStoreClass(Configuration conf) {
+    try {
+      return ReflectionUtils.newInstance(
+          conf.getClass(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_IMPL_CLASS,
+              FileSystemNodeAttributeStore.class, NodeAttributeStore.class),
+          conf);
+    } catch (Exception e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate Node Attribute Store ", e);
+    }
   }
 
   private void internalUpdateAttributesOnNodes(
@@ -174,7 +196,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
       LOG.info(logMsg);
 
-      if (null != dispatcher) {
+      if (null != dispatcher && NodeAttribute.PREFIX_CENTRALIZED
+          .equals(attributePrefix)) {
         dispatcher.getEventHandler()
             .handle(new NodeAttributesStoreEvent(nodeAttributeMapping, op));
       }
@@ -382,6 +405,32 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
   }
 
+  @Override
+  public List<NodeToAttributes> getNodeToAttributes(Set<String> prefix) {
+    try {
+      readLock.lock();
+      List<NodeToAttributes> nodeToAttributes = new ArrayList<>();
+      nodeCollections.forEach((k, v) -> {
+        List<NodeAttribute> attrs;
+        if (prefix == null || prefix.isEmpty()) {
+          attrs = new ArrayList<>(v.getAttributes().keySet());
+        } else {
+          attrs = new ArrayList<>();
+          for (Entry<NodeAttribute, AttributeValue> nodeAttr : v.attributes
+              .entrySet()) {
+            if (prefix.contains(nodeAttr.getKey().getAttributePrefix())) {
+              attrs.add(nodeAttr.getKey());
+            }
+          }
+        }
+        nodeToAttributes.add(NodeToAttributes.newInstance(k, attrs));
+      });
+      return nodeToAttributes;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
   public void activateNode(NodeId nodeId, Resource resource) {
     try {
       writeLock.lock();
@@ -524,7 +573,29 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
   // Dispatcher related code
   protected void handleStoreEvent(NodeAttributesStoreEvent event) {
-    // TODO Need to extend the File
+    List<NodeToAttributes> mappingList = new ArrayList<>();
+    Map<String, Map<NodeAttribute, AttributeValue>> nodeToAttr =
+        event.getNodeAttributeMappingList();
+    nodeToAttr.forEach((k, v) -> mappingList
+        .add(NodeToAttributes.newInstance(k, new ArrayList<>(v.keySet()))));
+    try {
+      switch (event.getOperation()) {
+      case REPLACE:
+        store.replaceNodeAttributes(mappingList);
+        break;
+      case ADD:
+        store.addNodeAttributes(mappingList);
+        break;
+      case REMOVE:
+        store.removeNodeAttributes(mappingList);
+        break;
+      default:
+        LOG.warn("Unsupported operation");
+      }
+    } catch (IOException e) {
+      LOG.error("Failed to store attribute modification to storage");
+      throw new YarnRuntimeException(e);
+    }
   }
 
   @Override
@@ -549,7 +620,8 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
   private void processMapping(
       Map<String, Set<NodeAttribute>> nodeAttributeMapping,
       AttributeMappingOperationType mappingType) throws IOException {
-    processMapping(nodeAttributeMapping, mappingType, null);
+    processMapping(nodeAttributeMapping, mappingType,
+        NodeAttribute.PREFIX_CENTRALIZED);
   }
 
   private void processMapping(
@@ -563,5 +635,23 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
 
     internalUpdateAttributesOnNodes(validMapping, mappingType,
         newAttributesToBeAdded, attributePrefix);
+  }
+
+  protected void stopDispatcher() {
+    AsyncDispatcher asyncDispatcher = (AsyncDispatcher) dispatcher;
+    if (null != asyncDispatcher) {
+      asyncDispatcher.stop();
+    }
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    // finalize store
+    stopDispatcher();
+
+    // only close store when we enabled store persistent
+    if (null != store) {
+      store.close();
+    }
   }
 }

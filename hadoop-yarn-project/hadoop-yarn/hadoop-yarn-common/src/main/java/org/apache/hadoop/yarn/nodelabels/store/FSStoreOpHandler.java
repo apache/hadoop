@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.yarn.nodelabels.store;
 
-import static org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler
-    .StoreType.NODE_LABEL_STORE;
+import static org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler.StoreType.NODE_ATTRIBUTE;
+import static org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler.StoreType.NODE_LABEL_STORE;
 import org.apache.hadoop.yarn.nodelabels.store.op.AddClusterLabelOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.AddNodeToAttributeLogOp;
 import org.apache.hadoop.yarn.nodelabels.store.op.FSNodeStoreLogOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.NodeAttributeMirrorOp;
 import org.apache.hadoop.yarn.nodelabels.store.op.NodeLabelMirrorOp;
 import org.apache.hadoop.yarn.nodelabels.store.op.NodeToLabelOp;
 import org.apache.hadoop.yarn.nodelabels.store.op.RemoveClusterLabelOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.RemoveNodeToAttributeLogOp;
+import org.apache.hadoop.yarn.nodelabels.store.op.ReplaceNodeToAttributeLogOp;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +43,7 @@ public class FSStoreOpHandler {
 
   public enum StoreType {
     NODE_LABEL_STORE,
-    NODE_LABEL_ATTRIBUTE;
+    NODE_ATTRIBUTE
   }
 
   static {
@@ -47,13 +51,24 @@ public class FSStoreOpHandler {
     mirrorOp = new HashMap<>();
 
     // registerLog edit log operation
+
+    //Node Label Operations
     registerLog(NODE_LABEL_STORE, AddClusterLabelOp.OPCODE, AddClusterLabelOp.class);
     registerLog(NODE_LABEL_STORE, NodeToLabelOp.OPCODE, NodeToLabelOp.class);
     registerLog(NODE_LABEL_STORE, RemoveClusterLabelOp.OPCODE, RemoveClusterLabelOp.class);
 
+    //NodeAttibute operation
+    registerLog(NODE_ATTRIBUTE, AddNodeToAttributeLogOp.OPCODE, AddNodeToAttributeLogOp.class);
+    registerLog(NODE_ATTRIBUTE, RemoveNodeToAttributeLogOp.OPCODE, RemoveNodeToAttributeLogOp.class);
+    registerLog(NODE_ATTRIBUTE, ReplaceNodeToAttributeLogOp.OPCODE, ReplaceNodeToAttributeLogOp.class);
+
     // registerLog Mirror op
 
+    // Node label mirror operation
     registerMirror(NODE_LABEL_STORE, NodeLabelMirrorOp.class);
+    //Node attribute mirror operation
+    registerMirror(NODE_ATTRIBUTE, NodeAttributeMirrorOp.class);
+
   }
 
   private static void registerMirror(StoreType type,

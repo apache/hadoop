@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.yarn.nodelabels.store.op;
 
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.nodelabels.store.StoreOp;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Defines all FileSystem editlog operation. All node label and attribute
@@ -32,4 +40,13 @@ public abstract class FSNodeStoreLogOp<M>
     implements StoreOp<OutputStream, InputStream, M> {
 
   public abstract int getOpCode();
+
+  protected Map<String, Set<NodeAttribute>> getNodeToAttributesMap(
+      NodesToAttributesMappingRequest request) {
+    List<NodeToAttributes> attributes = request.getNodesToAttributes();
+    Map<String, Set<NodeAttribute>> nodeToAttrMap = new HashMap<>();
+    attributes.forEach((v) -> nodeToAttrMap
+        .put(v.getNode(), new HashSet<>(v.getNodeAttributes())));
+    return nodeToAttrMap;
+  }
 }

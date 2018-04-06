@@ -53,12 +53,6 @@ public class RMNodeAttribute extends AbstractLabel {
     this.attribute = attribute;
   }
 
-  public RMNodeAttribute(String attributeName) {
-    super(attributeName);
-    attribute = NodeAttribute.newInstance(attributeName,
-        NodeAttributeType.STRING, CommonNodeLabelsManager.NO_LABEL);
-  }
-
   public NodeAttributeType getAttributeType() {
     return attribute.getAttributeType();
   }

@@ -64,7 +64,7 @@ public abstract class AbstractFSNodeStore<M> {
     initFileSystem(conf);
     // mkdir of root dir path
     fs.mkdirs(fsWorkingPath);
-
+    LOG.info("Created store directory :" + fsWorkingPath);
   }
 
   /**

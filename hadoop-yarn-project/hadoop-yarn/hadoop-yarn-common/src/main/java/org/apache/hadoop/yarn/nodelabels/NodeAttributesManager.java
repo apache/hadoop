@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.nodelabels;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 
 /**
  * This class captures all interactions for Attributes with RM.
@@ -100,6 +102,15 @@ public abstract class NodeAttributesManager extends AbstractService {
    */
   public abstract Map<NodeAttribute, AttributeValue> getAttributesForNode(
       String hostName);
+
+  /**
+   * Get All node to Attributes list based on filter.
+   *
+   * @return List<NodeToAttributes> nodeToAttributes matching filter.If empty
+   * or null is passed as argument will return all.
+   */
+  public abstract List<NodeToAttributes> getNodeToAttributes(
+      Set<String> prefix);
 
   // futuristic
   // public set<NodeId> getNodesMatchingExpression(String nodeLabelExp);
