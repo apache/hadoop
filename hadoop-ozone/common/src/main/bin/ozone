@@ -16,7 +16,7 @@
 # limitations under the License.
 
 # The name of the script being executed.
-HADOOP_SHELL_EXECNAME="oz"
+HADOOP_SHELL_EXECNAME="ozone"
 MYNAME="${BASH_SOURCE-$0}"
 
 ## @description  build up the hdfs command's usage text.
@@ -98,13 +98,13 @@ function ozonecmd_case
       exit 0
     ;;
     freon)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.Freon
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.Freon
     ;;
     genesis)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.genesis.Genesis
     ;;
     getozoneconf)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.tools.OzoneGetConf
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.OzoneGetConf;
     ;;
     jscsi)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
@@ -192,7 +192,7 @@ fi
 hadoop_add_client_opts
 
 if [[ ${HADOOP_WORKER_MODE} = true ]]; then
-  hadoop_common_worker_mode_execute "${HADOOP_HDFS_HOME}/bin/oz" "${HADOOP_USER_PARAMS[@]}"
+  hadoop_common_worker_mode_execute "${HADOOP_HDFS_HOME}/bin/ozone" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 

@@ -193,25 +193,25 @@ public class Shell extends Configured implements Tool {
 
 
     Option createVolume = new Option(CREATE_VOLUME, true, "creates a volume" +
-        "for the specified user.\n \t For example : hdfs oz  -createVolume " +
+        "for the specified user.\n \t For example : hdfs o3  -createVolume " +
         "<volumeURI> -root -user <userName>\n");
     options.addOption(createVolume);
 
     Option deleteVolume = new Option(DELETE_VOLUME, true, "deletes a volume" +
-        "if it is empty.\n \t For example : hdfs oz -deleteVolume <volumeURI>" +
+        "if it is empty.\n \t For example : ozone oz -deleteVolume <volumeURI>" +
         " -root \n");
     options.addOption(deleteVolume);
 
     Option listVolume =
         new Option(LIST_VOLUME, true, "List the volumes of a given user.\n" +
-            "For example : hdfs oz -listVolume <ozoneURI>" +
-            "-user <username> -root or hdfs oz " +
+            "For example : ozone oz -listVolume <ozoneURI>" +
+            "-user <username> -root or ozone oz " +
             "-listVolume");
     options.addOption(listVolume);
 
     Option updateVolume =
         new Option(UPDATE_VOLUME, true, "updates an existing volume.\n" +
-            "\t For example : hdfs oz " +
+            "\t For example : ozone oz " +
             "-updateVolume <volumeURI> -quota " +
             "100TB\n");
     options.addOption(updateVolume);
@@ -230,7 +230,7 @@ public class Shell extends Configured implements Tool {
   private void addBucketCommands(Options opts) {
     Option createBucket = new Option(CREATE_BUCKET, true,
         "creates a bucket in a given volume." +
-        "For example: hdfs oz -createBucket <bucketURI>");
+        "For example: ozone oz -createBucket <bucketURI>");
     opts.addOption(createBucket);
 
     Option infoBucket =
@@ -247,7 +247,7 @@ public class Shell extends Configured implements Tool {
 
     Option updateBucket =
         new Option(UPDATE_BUCKET, true, "allows changing bucket attributes.\n" +
-            " For example: hdfs oz -updateBucket <bucketURI> " +
+            " For example: ozone oz -updateBucket <bucketURI> " +
             "-addAcl user:frodo:rw");
     opts.addOption(updateBucket);
 
@@ -396,7 +396,7 @@ public class Shell extends Configured implements Tool {
         return 0;
       } else {
         HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp(eightyColumn, "hdfs oz -command uri [args]",
+        helpFormatter.printHelp(eightyColumn, "ozone oz -command uri [args]",
             "Ozone Commands",
             opts, "Please correct your command and try again.");
         return 1;

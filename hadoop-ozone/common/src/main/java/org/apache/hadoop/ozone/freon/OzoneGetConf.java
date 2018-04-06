@@ -43,7 +43,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class OzoneGetConf extends Configured implements Tool {
 
-  private static final String DESCRIPTION = "oz getconf is utility for "
+  private static final String DESCRIPTION = "ozone getconf is utility for "
       + "getting configuration information from the config file.\n";
 
   enum Command {
@@ -102,7 +102,7 @@ public class OzoneGetConf extends Configured implements Tool {
 
     /* Initialize USAGE based on Command values */
     StringBuilder usage = new StringBuilder(DESCRIPTION);
-    usage.append("\noz getconf \n");
+    usage.append("\nozone getconf \n");
     for (OzoneGetConf.Command cmd : OzoneGetConf.Command.values()) {
       usage.append("\t[" + cmd.getUsage() + "]\t\t\t" + cmd.getDescription()
           + "\n");

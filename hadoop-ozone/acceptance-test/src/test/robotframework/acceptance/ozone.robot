@@ -32,7 +32,7 @@ Daemons are running without error
     Is daemon running without error           datanode
 
 Check if datanode is connected to the scm
-    Wait Until Keyword Succeeds     2min    5sec    Have healthy datanodes   1
+    Wait Until Keyword Succeeds     3min    5sec    Have healthy datanodes   1
 
 Scale it up to 5 datanodes
     Scale datanodes up  5
@@ -48,15 +48,15 @@ Test rest interface
     ${result} =     Execute on          datanode        curl -i -X DELETE ${COMMON_RESTHEADER} "http://localhost:9880/volume1"
                     Should contain      ${result}       200 OK
 
-Test oz cli
-                    Execute on          datanode        oz oz -createVolume http://localhost:9880/hive -user bilbo -quota 100TB -root
-    ${result} =     Execute on          datanode        oz oz -listVolume http://localhost:9880/ -user bilbo | grep -v Removed | jq '.[] | select(.volumeName=="hive")'
+Test ozone cli
+                    Execute on          datanode        ozone oz -createVolume http://localhost:9880/hive -user bilbo -quota 100TB -root
+    ${result} =     Execute on          datanode        ozone oz -listVolume http://localhost:9880/ -user bilbo | grep -v Removed | jq '.[] | select(.volumeName=="hive")'
                     Should contain      ${result}       createdOn
-                    Execute on          datanode        oz oz -createBucket http://localhost:9880/hive/bb1
-    ${result}       Execute on          datanode        oz oz -listBucket http://localhost:9880/hive/ | grep -v Removed | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
+                    Execute on          datanode        ozone oz -createBucket http://localhost:9880/hive/bb1
+    ${result}       Execute on          datanode        ozone oz -listBucket http://localhost:9880/hive/ | grep -v Removed | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
                     Should Be Equal     ${result}       hive
-                    Execute on          datanode        oz oz -deleteBucket http://localhost:9880/hive/bb1
-                    Execute on          datanode        oz oz -deleteVolume http://localhost:9880/hive -user bilbo
+                    Execute on          datanode        ozone oz -deleteBucket http://localhost:9880/hive/bb1
+                    Execute on          datanode        ozone oz -deleteVolume http://localhost:9880/hive -user bilbo
 
 
 
@@ -67,7 +67,7 @@ Check webui static resources
 	 Should contain		${result}		200
 
 Start freon testing
-    ${result} =		Execute on		ksm		oz freon -numOfVolumes 5 -numOfBuckets 5 -numOfKeys 5 -numOfThreads 10
+    ${result} =		Execute on		ksm		ozone freon -numOfVolumes 5 -numOfBuckets 5 -numOfKeys 5 -numOfThreads 10
 	 Wait Until Keyword Succeeds	3min	10sec		Should contain		${result}		Number of Keys added: 125
 	 Should Not Contain		${result}		ERROR
 
