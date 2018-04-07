@@ -541,10 +541,6 @@ public class EncryptionZoneManager {
     if (srcIIP.getLastINode() == null) {
       throw new FileNotFoundException("cannot find " + srcIIP.getPath());
     }
-    if (dir.isNonEmptyDirectory(srcIIP)) {
-      throw new IOException(
-          "Attempt to create an encryption zone for a non-empty directory.");
-    }
 
     INode srcINode = srcIIP.getLastINode();
     if (!srcINode.isDirectory()) {
@@ -557,6 +553,10 @@ public class EncryptionZoneManager {
           "Directory " + srcIIP.getPath() + " is already an encryption zone.");
     }
 
+    if (dir.isNonEmptyDirectory(srcIIP)) {
+      throw new IOException(
+          "Attempt to create an encryption zone for a non-empty directory.");
+    }
     final HdfsProtos.ZoneEncryptionInfoProto proto =
         PBHelperClient.convert(suite, version, keyName);
     final XAttr ezXAttr = XAttrHelper
