@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,45 +31,70 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
-
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.util.FSDownload;
 import com.google.common.base.Preconditions;
 
 public class AuxServices extends AbstractService
     implements ServiceStateChangeListener, EventHandler<AuxServicesEvent> {
 
+  public static final String NM_AUX_SERVICE_DIR = "nmAuxService";
+  public static final FsPermission NM_AUX_SERVICE_DIR_PERM =
+      new FsPermission((short) 0700);
+
   static final String STATE_STORE_ROOT_NAME = "nm-aux-services";
 
   private static final Logger LOG =
        LoggerFactory.getLogger(AuxServices.class);
+  private static final String DEL_SUFFIX = "_DEL_";
 
   protected final Map<String,AuxiliaryService> serviceMap;
   protected final Map<String,ByteBuffer> serviceMetaData;
   private final AuxiliaryLocalPathHandler auxiliaryLocalPathHandler;
+  private final LocalDirsHandlerService dirsHandler;
+  private final DeletionService delService;
+  private final UserGroupInformation userUGI;
 
   private final Pattern p = Pattern.compile("^[A-Za-z_]+[A-Za-z0-9_]*$");
 
-  public AuxServices(AuxiliaryLocalPathHandler auxiliaryLocalPathHandler) {
+  public AuxServices(AuxiliaryLocalPathHandler auxiliaryLocalPathHandler,
+      Context nmContext, DeletionService deletionService) {
     super(AuxServices.class.getName());
     serviceMap =
       Collections.synchronizedMap(new HashMap<String,AuxiliaryService>());
     serviceMetaData =
       Collections.synchronizedMap(new HashMap<String,ByteBuffer>());
     this.auxiliaryLocalPathHandler = auxiliaryLocalPathHandler;
+    this.dirsHandler = nmContext.getLocalDirsHandler();
+    this.delService = deletionService;
+    this.userUGI = getRemoteUgi();
     // Obtain services from configuration in init()
   }
 
@@ -125,15 +152,103 @@ public class AuxServices extends AbstractService
         String classKey = String.format(
             YarnConfiguration.NM_AUX_SERVICE_FMT, sName);
         String className = conf.get(classKey);
-        final String appClassPath = conf.get(String.format(
+        final String appLocalClassPath = conf.get(String.format(
             YarnConfiguration.NM_AUX_SERVICES_CLASSPATH, sName));
+        final String appRemoteClassPath = conf.get(String.format(
+            YarnConfiguration.NM_AUX_SERVICE_REMOTE_CLASSPATH, sName));
         AuxiliaryService s = null;
-        boolean useCustomerClassLoader = appClassPath != null
-            && !appClassPath.isEmpty() && className != null
-            && !className.isEmpty();
+        boolean useCustomerClassLoader = ((appLocalClassPath != null
+            && !appLocalClassPath.isEmpty()) ||
+            (appRemoteClassPath != null && !appRemoteClassPath.isEmpty()))
+            && className != null && !className.isEmpty();
         if (useCustomerClassLoader) {
-          s = AuxiliaryServiceWithCustomClassLoader.getInstance(
-              conf, className, appClassPath);
+          // load AuxiliaryService from local class path
+          if (appRemoteClassPath == null || appRemoteClassPath.isEmpty()) {
+            s = AuxiliaryServiceWithCustomClassLoader.getInstance(
+                conf, className, appLocalClassPath);
+          } else {
+            // load AuxiliaryService from remote class path
+            if (appLocalClassPath != null && !appLocalClassPath.isEmpty()) {
+              throw new YarnRuntimeException("The aux serivce:" + sName
+                  + " has configured local classpath:" + appLocalClassPath
+                  + " and remote classpath:" + appRemoteClassPath
+                  + ". Only one of them should be configured.");
+            }
+            FileContext localLFS = getLocalFileContext(conf);
+            // create NM aux-service dir in NM localdir if it does not exist.
+            Path nmAuxDir = dirsHandler.getLocalPathForWrite("."
+                + Path.SEPARATOR + NM_AUX_SERVICE_DIR);
+            if (!localLFS.util().exists(nmAuxDir)) {
+              try {
+                localLFS.mkdir(nmAuxDir, NM_AUX_SERVICE_DIR_PERM, true);
+              } catch (IOException ex) {
+                throw new YarnRuntimeException("Fail to create dir:"
+                    + nmAuxDir.toString(), ex);
+              }
+            }
+            Path src = new Path(appRemoteClassPath);
+            FileContext remoteLFS = getRemoteFileContext(src.toUri(), conf);
+            FileStatus scFileStatus = remoteLFS.getFileStatus(src);
+            if (!scFileStatus.getOwner().equals(
+                this.userUGI.getShortUserName())) {
+              throw new YarnRuntimeException("The remote jarfile owner:"
+                  + scFileStatus.getOwner() + " is not the same as the NM user:"
+                  + this.userUGI.getShortUserName() + ".");
+            }
+            if ((scFileStatus.getPermission().toShort() & 0022) != 0) {
+              throw new YarnRuntimeException("The remote jarfile should not "
+                  + "be writable by group or others. "
+                  + "The current Permission is "
+                  + scFileStatus.getPermission().toShort());
+            }
+            Path dest = null;
+            Path downloadDest = new Path(nmAuxDir,
+                className + "_" + scFileStatus.getModificationTime());
+            // check whether we need to re-download the jar
+            // from remote directory
+            Path targetDirPath = new Path(downloadDest,
+                scFileStatus.getPath().getName());
+            FileStatus[] allSubDirs = localLFS.util().listStatus(nmAuxDir);
+            boolean reDownload = true;
+            for (FileStatus sub : allSubDirs) {
+              if (sub.getPath().getName().equals(downloadDest.getName())) {
+                reDownload = false;
+                dest = new Path(targetDirPath + Path.SEPARATOR + "*");
+                break;
+              } else {
+                if (sub.getPath().getName().contains(className) &&
+                    !sub.getPath().getName().endsWith(DEL_SUFFIX)) {
+                  Path delPath = new Path(sub.getPath().getParent(),
+                      sub.getPath().getName() + DEL_SUFFIX);
+                  localLFS.rename(sub.getPath(), delPath);
+                  LOG.info("delete old aux service jar dir:"
+                      + delPath.toString());
+                  FileDeletionTask deletionTask = new FileDeletionTask(
+                      this.delService, null, delPath, null);
+                  this.delService.delete(deletionTask);
+                }
+              }
+            }
+            if (reDownload) {
+              LocalResource scRsrc = LocalResource.newInstance(
+                  URL.fromURI(src.toUri()),
+                  LocalResourceType.ARCHIVE, LocalResourceVisibility.PRIVATE,
+                  scFileStatus.getLen(), scFileStatus.getModificationTime());
+              FSDownload download = new FSDownload(localLFS, null, conf,
+                  downloadDest, scRsrc, null);
+              try {
+                Path downloaded = download.call();
+                dest = new Path(downloaded + Path.SEPARATOR + "*");
+              } catch (Exception ex) {
+                throw new YarnRuntimeException(
+                    "Exception happend while downloading files "
+                    + "for aux-service:" + sName + " and remote-file-path:"
+                    + src + ".\n" + ex.getMessage());
+              }
+            }
+            s = AuxiliaryServiceWithCustomClassLoader.getInstance(
+                conf, className, dest.toString());
+          }
           LOG.info("The aux service:" + sName
               + " are using the custom classloader");
         } else {
@@ -288,5 +403,34 @@ public class AuxServices extends AbstractService
     LOG.warn((null == service ? "The auxService is null"
         : "The auxService name is " + service.getName())
         + " and it got an error at event: " + eventType, th);
+  }
+
+  FileContext getLocalFileContext(Configuration conf) {
+    try {
+      return FileContext.getLocalFSFileContext(conf);
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed to access local fs");
+    }
+  }
+
+  FileContext getRemoteFileContext(final URI path, Configuration conf) {
+    try {
+      return FileContext.getFileContext(path, conf);
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed to access remote fs");
+    }
+  }
+
+  private UserGroupInformation getRemoteUgi() {
+    UserGroupInformation remoteUgi;
+    try {
+      remoteUgi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      String msg = "Cannot obtain the user-name. Got exception: "
+          + StringUtils.stringifyException(e);
+      LOG.warn(msg);
+      throw new YarnRuntimeException(msg);
+    }
+    return remoteUgi;
   }
 }

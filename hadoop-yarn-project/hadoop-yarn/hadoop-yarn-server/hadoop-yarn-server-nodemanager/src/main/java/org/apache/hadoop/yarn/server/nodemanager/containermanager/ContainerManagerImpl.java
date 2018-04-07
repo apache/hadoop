@@ -256,7 +256,8 @@ public class ContainerManagerImpl extends CompositeService implements
     AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
         new AuxiliaryLocalPathHandlerImpl(dirsHandler);
     // Start configurable services
-    auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler);
+    auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler,
+        this.context, this.deletionService);
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
