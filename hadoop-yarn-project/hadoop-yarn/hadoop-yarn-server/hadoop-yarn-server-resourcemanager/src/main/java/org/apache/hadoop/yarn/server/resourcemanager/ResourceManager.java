@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineC
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.service.SystemServiceManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -310,7 +311,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     rmContext.setYarnConfiguration(conf);
-    
+
     createAndInitActiveServices(false);
 
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
@@ -483,6 +484,27 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException(
           "Could not instantiate ReservationSystem: " + reservationClassName, e);
+    }
+  }
+
+  protected SystemServiceManager createServiceManager() {
+    String schedulerClassName =
+        YarnConfiguration.DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS;
+    LOG.info("Using SystemServiceManager: " + schedulerClassName);
+    try {
+      Class<?> schedulerClazz = Class.forName(schedulerClassName);
+      if (SystemServiceManager.class.isAssignableFrom(schedulerClazz)) {
+        return (SystemServiceManager) ReflectionUtils
+            .newInstance(schedulerClazz, this.conf);
+      } else {
+        throw new YarnRuntimeException(
+            "Class: " + schedulerClassName + " not instance of "
+                + SystemServiceManager.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate SystemServiceManager: " + schedulerClassName,
+          e);
     }
   }
 
@@ -794,6 +816,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       new RMNMInfo(rmContext, scheduler);
+
+      if (conf.getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+          false)) {
+        SystemServiceManager systemServiceManager = createServiceManager();
+        addIfService(systemServiceManager);
+      }
 
       super.serviceInit(conf);
     }
