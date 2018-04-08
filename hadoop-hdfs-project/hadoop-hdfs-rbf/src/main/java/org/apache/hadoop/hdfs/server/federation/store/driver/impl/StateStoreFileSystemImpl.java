@@ -35,13 +35,15 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * StateStoreDriver} implementation based on a filesystem. The most common uses
- * HDFS as a backend.
+ * {@link StateStoreDriver} implementation based on a filesystem. The common
+ * implementation uses HDFS as a backend. The path can be specified setting
+ * dfs.federation.router.driver.fs.path=hdfs://host:port/path/to/store.
  */
 public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
 
