@@ -245,6 +245,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private int userRemappingGidThreshold;
   private Set<String> capabilities;
   private boolean delayedRemovalAllowed;
+  private int dockerStopGracePeriod;
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -348,6 +349,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     delayedRemovalAllowed = conf.getBoolean(
         YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL,
         YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL);
+
+    dockerStopGracePeriod = conf.getInt(
+        YarnConfiguration.NM_DOCKER_STOP_GRACE_PERIOD,
+        YarnConfiguration.DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD);
   }
 
   private Set<String> getDockerCapabilitiesFromConf() throws
@@ -1138,7 +1143,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         DockerCommandExecutor.getContainerStatus(containerId, conf,
             privilegedOperationExecutor);
     if (DockerCommandExecutor.isStoppable(containerStatus)) {
-      DockerStopCommand dockerStopCommand = new DockerStopCommand(containerId);
+      DockerStopCommand dockerStopCommand = new DockerStopCommand(
+          containerId).setGracePeriod(dockerStopGracePeriod);
       DockerCommandExecutor.executeDockerCommand(dockerStopCommand, containerId,
           env, conf, privilegedOperationExecutor, false);
     } else {

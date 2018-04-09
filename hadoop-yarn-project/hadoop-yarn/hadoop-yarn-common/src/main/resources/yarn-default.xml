@@ -1787,6 +1787,14 @@
   </property>
 
   <property>
+    <description>A configurable value to pass to the Docker Stop command. This value
+      defines the number of seconds between the docker stop command sending
+      a SIGTERM and a SIGKILL.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.stop.grace-period</name>
+    <value>10</value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>

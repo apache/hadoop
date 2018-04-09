@@ -1951,6 +1951,20 @@ public class YarnConfiguration extends Configuration {
    */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL = false;
 
+  /**
+   * A configurable value to pass to the Docker Stop command. This value
+   * defines the number of seconds between the docker stop command sending
+   * a SIGTERM and a SIGKILL.
+   */
+  public static final String NM_DOCKER_STOP_GRACE_PERIOD =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "stop.grace-period";
+
+  /**
+   * The default value for the grace period between the SIGTERM and the
+   * SIGKILL in the Docker Stop command.
+   */
+  public static final int DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD = 10;
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =
