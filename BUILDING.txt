@@ -10,6 +10,8 @@ Requirements:
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
+* One of the compilers that support thread_local storage: GCC 4.8.1 or later, Visual Studio,
+  Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Jansson C XML parsing library ( if compiling libwebhdfs )
