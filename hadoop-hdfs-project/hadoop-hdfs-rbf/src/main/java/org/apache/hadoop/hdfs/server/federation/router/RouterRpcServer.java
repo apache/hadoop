@@ -900,7 +900,8 @@ public class RouterRpcServer extends AbstractService
       throws IOException {
     checkOperation(OperationCategory.WRITE);
 
-    final List<RemoteLocation> srcLocations = getLocationsForPath(src, true);
+    final List<RemoteLocation> srcLocations =
+        getLocationsForPath(src, true, false);
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
     RemoteParam dstParam = getRenameDestinations(locs, dst);
@@ -921,7 +922,8 @@ public class RouterRpcServer extends AbstractService
       final Options.Rename... options) throws IOException {
     checkOperation(OperationCategory.WRITE);
 
-    final List<RemoteLocation> srcLocations = getLocationsForPath(src, true);
+    final List<RemoteLocation> srcLocations =
+        getLocationsForPath(src, true, false);
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
     RemoteParam dstParam = getRenameDestinations(locs, dst);
@@ -998,7 +1000,8 @@ public class RouterRpcServer extends AbstractService
   public boolean delete(String src, boolean recursive) throws IOException {
     checkOperation(OperationCategory.WRITE);
 
-    final List<RemoteLocation> locations = getLocationsForPath(src, true);
+    final List<RemoteLocation> locations =
+        getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("delete",
         new Class<?>[] {String.class, boolean.class}, new RemoteParam(),
         recursive);
@@ -2213,14 +2216,29 @@ public class RouterRpcServer extends AbstractService
 
   /**
    * Get the possible locations of a path in the federated cluster.
+   * During the get operation, it will do the quota verification.
    *
    * @param path Path to check.
    * @param failIfLocked Fail the request if locked (top mount point).
    * @return Prioritized list of locations in the federated cluster.
    * @throws IOException If the location for this path cannot be determined.
    */
-  protected List<RemoteLocation> getLocationsForPath(
-      String path, boolean failIfLocked) throws IOException {
+  protected List<RemoteLocation> getLocationsForPath(String path,
+      boolean failIfLocked) throws IOException {
+    return getLocationsForPath(path, failIfLocked, true);
+  }
+
+  /**
+   * Get the possible locations of a path in the federated cluster.
+   *
+   * @param path Path to check.
+   * @param failIfLocked Fail the request if locked (top mount point).
+   * @param needQuotaVerify If need to do the quota verification.
+   * @return Prioritized list of locations in the federated cluster.
+   * @throws IOException If the location for this path cannot be determined.
+   */
+  protected List<RemoteLocation> getLocationsForPath(String path,
+      boolean failIfLocked, boolean needQuotaVerify) throws IOException {
     try {
       // Check the location for this path
       final PathLocation location =
@@ -2241,7 +2259,7 @@ public class RouterRpcServer extends AbstractService
         }
 
         // Check quota
-        if (this.router.isQuotaEnabled()) {
+        if (this.router.isQuotaEnabled() && needQuotaVerify) {
           RouterQuotaUsage quotaUsage = this.router.getQuotaManager()
               .getQuotaUsage(path);
           if (quotaUsage != null) {
