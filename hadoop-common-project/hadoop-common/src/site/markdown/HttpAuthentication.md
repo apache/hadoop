@@ -28,7 +28,7 @@ Hadoop HTTP web-consoles can be configured to require Kerberos authentication us
 
 In addition, Hadoop HTTP web-consoles support the equivalent of Hadoop's Pseudo/Simple authentication. If this option is enabled, the user name must be specified in the first browser interaction using the user.name query string parameter. e.g. `http://localhost:8088/cluster?user.name=babu`.
 
-If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticatorHandler`).
+If a custom authentication mechanism is required for the HTTP web-consoles, it is possible to implement a plugin to support the alternate authentication mechanism (refer to Hadoop hadoop-auth for details on writing an `AuthenticationHandler`).
 
 The next section describes how to configure Hadoop HTTP web-consoles to require user authentication.
 
