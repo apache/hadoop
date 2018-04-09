@@ -1204,6 +1204,8 @@ public class CapacityScheduler extends
       updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
     }
 
+    LOG.info("Allocation for application " + applicationAttemptId + " : " +
+        allocation + " with cluster resource : " + getClusterResource());
     return allocation;
   }
 

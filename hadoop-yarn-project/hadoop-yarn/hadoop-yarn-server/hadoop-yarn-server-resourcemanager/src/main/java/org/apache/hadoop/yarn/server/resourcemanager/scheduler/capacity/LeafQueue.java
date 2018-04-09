@@ -778,6 +778,17 @@ public class LeafQueue extends AbstractCSQueue {
 
       metrics.setAMResouceLimit(nodePartition, amResouceLimit);
       queueUsage.setAMLimit(nodePartition, amResouceLimit);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Queue: " + getQueueName() + ", node label : " +
+            nodePartition
+            + ", queue "
+            + "partition "
+            + "resource : " + queuePartitionResource + ','
+            + " queue current limit : " + queueCurrentLimit + ","
+            + " queue partition usable resource : "
+            + queuePartitionUsableResource + ","
+            + " amResourceLimit : " + amResouceLimit);
+      }
       return amResouceLimit;
     } finally {
       writeLock.unlock();

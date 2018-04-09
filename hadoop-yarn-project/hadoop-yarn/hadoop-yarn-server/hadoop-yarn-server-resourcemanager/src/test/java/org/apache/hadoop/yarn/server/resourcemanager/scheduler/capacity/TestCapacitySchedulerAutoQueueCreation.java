@@ -72,15 +72,18 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
-import static org.apache.hadoop.yarn.server.resourcemanager.placement
-    .UserGroupMappingPlacementRule.CURRENT_USER_MAPPING;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
-    .capacity.CSQueueUtils.EPSILON;
+import static org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.CURRENT_USER_MAPPING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
+
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -90,7 +93,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Tests for creation and reinitialization of auto created leaf queues
- * under a ManagedParentQueue.
+ * and capacity management under a ManagedParentQueue.
  */
 public class TestCapacitySchedulerAutoQueueCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
@@ -105,7 +108,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       4);
 
 
-  @Test(timeout = 10000)
+  @Test(timeout = 20000)
   public void testAutoCreateLeafQueueCreation() throws Exception {
 
     try {
@@ -122,7 +125,12 @@ public class TestCapacitySchedulerAutoQueueCreation
       ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(
           PARENT_QUEUE);
       assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
-      validateInitialQueueEntitlement(parentQueue, USER0, 0.1f, accessibleNodeLabelsOnC);
+
+      Map<String, Float> expectedChildQueueAbsCapacity =
+      populateExpectedAbsCapacityByLabelForParentQueue(1);
+      validateInitialQueueEntitlement(parentQueue, USER0,
+          expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
+
       validateUserAndAppLimits(autoCreatedLeafQueue, 1000, 1000);
 
       assertTrue(autoCreatedLeafQueue
@@ -136,7 +144,14 @@ public class TestCapacitySchedulerAutoQueueCreation
           (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
       parentQueue = (ManagedParentQueue) cs.getQueue("d");
       assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
-      validateInitialQueueEntitlement(parentQueue, TEST_GROUPUSER, 0.02f,
+
+      expectedChildQueueAbsCapacity =
+          new HashMap<String, Float>() {{
+            put(NO_LABEL, 0.02f);
+          }};
+
+      validateInitialQueueEntitlement(parentQueue, TEST_GROUPUSER,
+          expectedChildQueueAbsCapacity,
           new HashSet<String>() {{ add(NO_LABEL); }});
 
     } finally {
@@ -173,10 +188,17 @@ public class TestCapacitySchedulerAutoQueueCreation
           USER0);
       ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(
           PARENT_QUEUE);
+
       assertEquals(parentQueue, user0Queue.getParent());
       assertEquals(parentQueue, user1Queue.getParent());
-      validateInitialQueueEntitlement(parentQueue, USER0, 0.2f, accessibleNodeLabelsOnC);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.2f, accessibleNodeLabelsOnC);
+
+      Map<String, Float>
+      expectedAbsChildQueueCapacity =
+      populateExpectedAbsCapacityByLabelForParentQueue(2);
+      validateInitialQueueEntitlement(parentQueue, USER0,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
+      validateInitialQueueEntitlement(parentQueue, USER1,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       ApplicationAttemptId appAttemptId = appsInC.get(0);
 
@@ -184,7 +206,8 @@ public class TestCapacitySchedulerAutoQueueCreation
       RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(
           null);
       ResourceRequest r1 = TestUtils.createResourceRequest(ResourceRequest.ANY,
-          1 * GB, 1, true, priority, recordFactory);
+          1 * GB, 1, true, priority,
+          recordFactory);
 
       cs.allocate(appAttemptId, Collections.<ResourceRequest>singletonList(r1),
           null, Collections.<ContainerId>emptyList(), Collections.singletonList(host),
@@ -216,8 +239,12 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) cs.getQueue(
           USER1);
+
+      expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(1);
+
       validateInitialQueueEntitlement(parentQueue, leafQueue.getQueueName(),
-          0.1f, accessibleNodeLabelsOnC);
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
     } finally {
       cleanupQueue(USER0);
@@ -498,52 +525,80 @@ public class TestCapacitySchedulerAutoQueueCreation
       CSQueue parentQueue = cs.getQueue(PARENT_QUEUE);
 
       //submit app1 as USER1
-      submitApp(mockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
+      ApplicationId user1AppId = submitApp(mockRM, parentQueue, USER1, USER1,
+          1, 1);
+      Map<String, Float> expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(1);
+      validateInitialQueueEntitlement(parentQueue, USER1,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
       ApplicationId user2AppId = submitApp(mockRM, parentQueue, USER2, USER2, 2,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
+
+      expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(2);
+      validateInitialQueueEntitlement(parentQueue, USER2,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //submit another app3 as USER1
       submitApp(mockRM, parentQueue, USER1, USER1, 3, 2);
 
       //validate total activated abs capacity remains the same
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
-          (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)
-              parentQueue)
+          (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue) parentQueue)
               .getAutoCreatedQueueManagementPolicy();
-      assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
 
-      //submit user_3 app. This cant be scheduled since there is no capacity
+      for (String nodeLabel : accessibleNodeLabelsOnC) {
+        assertEquals(expectedAbsChildQueueCapacity.get(nodeLabel),
+            autoCreatedQueueManagementPolicy.getAbsoluteActivatedChildQueueCapacity(nodeLabel), EPSILON);
+      }
+
+      //submit user_3 app. This cant be allocated since there is no capacity
+      // in NO_LABEL, SSD but can be in GPU label
       submitApp(mockRM, parentQueue, USER3, USER3, 4, 1);
       final CSQueue user3LeafQueue = cs.getQueue(USER3);
       validateCapacities((AutoCreatedLeafQueue) user3LeafQueue, 0.0f, 0.0f,
           1.0f, 1.0f);
+      validateCapacitiesByLabel((ManagedParentQueue) parentQueue,
+          (AutoCreatedLeafQueue)
+          user3LeafQueue, NODEL_LABEL_GPU);
 
-      assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+      assertEquals(0.2f, autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
+      assertEquals(0.9f, autoCreatedQueueManagementPolicy.getAbsoluteActivatedChildQueueCapacity(NODEL_LABEL_GPU),
+          EPSILON);
 
-      //deactivate USER2 queue
+      //Verify that AMs can be allocated
+      //Node 1 has SSD and default node label expression on C is SSD.
+      //This validates that the default node label expression with SSD is set
+      // on the AM attempt
+      // and app attempt reaches ALLOCATED state for a dynamic queue 'USER1'
+      mockRM.launchAM(mockRM.getRMContext().getRMApps().get(user1AppId),
+          mockRM, nm1);
+
+//      //deactivate USER2 queue
       cs.killAllAppsInQueue(USER2);
       mockRM.waitForState(user2AppId, RMAppState.KILLED);
 
-      //Verify if USER_2 can be deactivated since it has no pending appsA
+      //Verify if USER_2 can be deactivated since it has no pending apps
       List<QueueManagementChange> queueManagementChanges =
           autoCreatedQueueManagementPolicy.computeQueueManagementChanges();
 
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parentQueue;
-      managedParentQueue.validateAndApplyQueueManagementChanges(
-          queueManagementChanges);
+      managedParentQueue.
+          validateAndApplyQueueManagementChanges(queueManagementChanges);
 
-      validateDeactivatedQueueEntitlement(parentQueue, USER2, 0.2f,
-          queueManagementChanges);
+      validateDeactivatedQueueEntitlement(parentQueue, USER2,
+          expectedAbsChildQueueCapacity, queueManagementChanges);
 
-      //USER_3 should now get activated
-      validateActivatedQueueEntitlement(parentQueue, USER3, 0.2f,
-          queueManagementChanges);
+      //USER_3 should now get activated for SSD, NO_LABEL
+      Set<String> expectedNodeLabelsUpdated = new HashSet<>();
+      expectedNodeLabelsUpdated.add(NO_LABEL);
+      expectedNodeLabelsUpdated.add(NODEL_LABEL_SSD);
+
+      validateActivatedQueueEntitlement(parentQueue, USER3,
+          expectedAbsChildQueueCapacity , queueManagementChanges, expectedNodeLabelsUpdated);
 
     } finally {
       cleanupQueue(USER1);
@@ -565,13 +620,18 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
-      CSQueue user1LeafQueue = newCS.getQueue(USER1);
+      Map<String, Float> expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(1);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER1,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
-      submitApp(newMockRM, parentQueue, USER2, USER2, 2, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
-      CSQueue user2LeafQueue = newCS.getQueue(USER2);
+      ApplicationId user2AppId = submitApp(newMockRM, parentQueue, USER2, USER2, 2,
+          1);
+      expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(2);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER2,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //validate total activated abs capacity remains the same
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
@@ -579,7 +639,7 @@ public class TestCapacitySchedulerAutoQueueCreation
               parentQueue)
               .getAutoCreatedQueueManagementPolicy();
       assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), 0.2f, EPSILON);
 
       //submit user_3 app. This cant be scheduled since there is no capacity
       submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
@@ -588,7 +648,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           1.0f, 1.0f);
 
       assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), 0.2f, EPSILON);
 
       // add new NM.
       newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
@@ -596,31 +656,33 @@ public class TestCapacitySchedulerAutoQueueCreation
       // There will be change in effective resource when nodes are added
       // since we deal with percentages
 
-      Resource MAX_RES = Resources.addTo(TEMPLATE_MAX_RES,
-          Resources.createResource(125 * GB, 20));
+      Resource MAX_RES = Resources.addTo(TEMPLATE_MAX_RES, Resources.createResource(125 *
+          GB, 20));
 
       Resource MIN_RES = Resources.createResource(14438, 6);
 
       Assert.assertEquals("Effective Min resource for USER3 is not correct",
-          Resources.none(),
-          user3LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+          Resources.none(), user3LeafQueue.getQueueResourceQuotas()
+              .getEffectiveMinResource());
       Assert.assertEquals("Effective Max resource for USER3 is not correct",
-          MAX_RES,
-          user3LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+          MAX_RES, user3LeafQueue
+              .getQueueResourceQuotas()
+              .getEffectiveMaxResource());
 
+      CSQueue user1LeafQueue = newCS.getQueue(USER1);
+      CSQueue user2LeafQueue = newCS.getQueue(USER2);
       Assert.assertEquals("Effective Min resource for USER2 is not correct",
-          MIN_RES,
-          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+          MIN_RES, user1LeafQueue.getQueueResourceQuotas()
+              .getEffectiveMinResource());
       Assert.assertEquals("Effective Max resource for USER2 is not correct",
-          MAX_RES,
-          user1LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+          MAX_RES, user1LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
 
       Assert.assertEquals("Effective Min resource for USER1 is not correct",
-          MIN_RES,
-          user2LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+          MIN_RES, user2LeafQueue.getQueueResourceQuotas()
+              .getEffectiveMinResource());
       Assert.assertEquals("Effective Max resource for USER1 is not correct",
-          MAX_RES,
-          user2LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+          MAX_RES, user2LeafQueue.getQueueResourceQuotas()
+              .getEffectiveMaxResource());
 
       // unregister one NM.
       newMockRM.unRegisterNode(nm3);
@@ -629,11 +691,11 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       // After loosing one NM, resources will reduce
       Assert.assertEquals("Effective Min resource for USER2 is not correct",
-          MIN_RES_UPDATED,
-          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+          MIN_RES_UPDATED, user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource
+              ());
       Assert.assertEquals("Effective Max resource for USER2 is not correct",
-          MAX_RES_UPDATED,
-          user2LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+          MAX_RES_UPDATED, user2LeafQueue.getQueueResourceQuotas()
+              .getEffectiveMaxResource());
 
     } finally {
       cleanupQueue(USER1);
@@ -643,25 +705,6 @@ public class TestCapacitySchedulerAutoQueueCreation
         ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
         newMockRM.stop();
       }
-    }
-  }
-
-  @Test
-  public void testAutoCreatedQueueInheritsNodeLabels() throws Exception {
-
-    try {
-      String host = "127.0.0.1";
-      RMNode node = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1,
-          host);
-      cs.handle(new NodeAddedSchedulerEvent(node));
-
-      CSQueue parentQueue = cs.getQueue(PARENT_QUEUE);
-
-      submitApp(USER1, USER1, NODEL_LABEL_GPU);
-      //submit app1 as USER1
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
-    } finally {
-      cleanupQueue(USER1);
     }
   }
 
@@ -679,12 +722,20 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER1
       submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f, accessibleNodeLabelsOnC);
+
+      Map<String, Float> expectedChildQueueAbsCapacity =
+      populateExpectedAbsCapacityByLabelForParentQueue(1);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER1,
+          expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
-      ApplicationId user2AppId = submitApp(newMockRM, parentQueue, USER2, USER2,
-          2, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f, accessibleNodeLabelsOnC);
+      ApplicationId user2AppId = submitApp(newMockRM, parentQueue, USER2,
+          USER2, 2,
+          1);
+      expectedChildQueueAbsCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(2);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER2,
+          expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
       //update parent queue capacity
       conf.setCapacity(C, 30f);
@@ -709,19 +760,27 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //submit app1 as USER3
       submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f, accessibleNodeLabelsOnC);
-      AutoCreatedLeafQueue user3Queue = (AutoCreatedLeafQueue) newCS.getQueue(
-          USER1);
-      validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f, 0.2f);
+      AutoCreatedLeafQueue user3Queue =
+          (AutoCreatedLeafQueue) newCS.getQueue(USER1);
+      validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
+
       validateUserAndAppLimits(user3Queue, 900, 900);
 
       //submit app1 as USER1 - is already activated. there should be no diff
       // in capacities
       submitApp(newMockRM, parentQueue, USER3, USER3, 4, 2);
-      validateInitialQueueEntitlement(newCS, parentQueue, USER3, 0.27f, accessibleNodeLabelsOnC);
-      validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f, 0.2f);
+
+      validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
+
       validateUserAndAppLimits(user3Queue, 900, 900);
 
+      GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
+          (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)
+              parentQueue)
+              .getAutoCreatedQueueManagementPolicy();
+      assertEquals(0.27f, autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity
+              (NO_LABEL), EPSILON);
     } finally {
       cleanupQueue(USER1);
       cleanupQueue(USER2);

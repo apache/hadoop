@@ -132,7 +132,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
-  private void initializeQueueManagementPolicy() {
+  private void initializeQueueManagementPolicy() throws IOException {
     queueManagementPolicy =
         csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
@@ -140,7 +140,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     queueManagementPolicy.init(csContext, this);
   }
 
-  private void reinitializeQueueManagementPolicy() {
+  private void reinitializeQueueManagementPolicy() throws IOException {
     AutoCreatedQueueManagementPolicy managementPolicy =
         csContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
@@ -339,6 +339,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         ((AutoCreatedLeafQueue) childQueue).validateConfigurations(template);
         break;
       }
+
     }
   }
 
