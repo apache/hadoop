@@ -3491,7 +3491,7 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_NODE_ATTRIBUTE_STORE_IMPL_CLASS =
       NODE_ATTRIBUTE_PREFIX + "fs-store.impl.class";
   /**
-   * File system not attribute store directory.
+   * File system node attribute store directory.
    */
   public static final String FS_NODE_ATTRIBUTE_STORE_ROOT_DIR =
       NODE_ATTRIBUTE_PREFIX + "fs-store.root-dir";

@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -537,5 +538,17 @@ public class ResourceMgrDelegate extends YarnClient {
   public List<ResourceTypeInfo> getResourceTypeInfo()
       throws YarnException, IOException {
     return client.getResourceTypeInfo();
+  }
+
+  @Override
+  public Set<NodeAttribute> getClusterAttributes()
+      throws YarnException, IOException {
+    return client.getClusterAttributes();
+  }
+
+  @Override
+  public Map<NodeAttribute, Set<String>> getAttributesToNodes(
+      Set<NodeAttribute> attributes) throws YarnException, IOException {
+    return client.getAttributesToNodes(attributes);
   }
 }

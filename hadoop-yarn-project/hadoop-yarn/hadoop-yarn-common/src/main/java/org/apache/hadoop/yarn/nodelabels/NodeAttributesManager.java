@@ -88,12 +88,13 @@ public abstract class NodeAttributesManager extends AbstractService {
 
   /**
    * Given a attribute set, return what all Nodes have attribute mapped to it.
+   * If the attributes set is null or empty, all attributes mapping are
+   * returned.
    *
-   * @return a Map, of attribute to set of hostnames
+   * @return a Map of attributes to set of hostnames.
    */
-  //TODO need to handle as part of REST patch.
-/*  public abstract Map<NodeAttribute, Set<String>> getAttributesToNodes(
-      Set<NodeAttribute> attributes);*/
+  public abstract Map<NodeAttribute, Set<String>> getAttributesToNodes(
+      Set<NodeAttribute> attributes);
 
   /**
    * NodeAttribute to AttributeValue Map.

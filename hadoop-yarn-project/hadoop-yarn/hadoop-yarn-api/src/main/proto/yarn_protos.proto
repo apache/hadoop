@@ -383,6 +383,10 @@ message NodeAttributeProto {
   optional string attributeValue = 4 [default=""];
 }
 
+message AttributeToNodesProto {
+  required NodeAttributeProto nodeAttribute = 1;
+  repeated string hostnames = 2;
+}
 
 enum ContainerTypeProto {
   APPLICATION_MASTER = 1;
