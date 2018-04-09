@@ -186,19 +186,33 @@ public class SchedulerUtils {
       ResourceRequest resReq, QueueInfo queueInfo) {
 
     String labelExp = resReq.getNodeLabelExpression();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Requested Node Label Expression : " + labelExp);
+      LOG.debug("Queue Info : " + queueInfo);
+    }
 
     // if queue has default label expression, and RR doesn't have, use the
     // default label expression of queue
     if (labelExp == null && queueInfo != null && ResourceRequest.ANY
         .equals(resReq.getResourceName())) {
+      if ( LOG.isDebugEnabled()) {
+        LOG.debug("Setting default node label expression : " + queueInfo
+            .getDefaultNodeLabelExpression());
+      }
       labelExp = queueInfo.getDefaultNodeLabelExpression();
     }
 
-    // If labelExp still equals to null, set it to be NO_LABEL
-    if (labelExp == null) {
+    // If labelExp still equals to null, it could either be a dynamic queue
+    // or the label is not configured
+    // set it to be NO_LABEL in case of a pre-configured queue. Dynamic
+    // queues are handled in RMAppAttemptImp.ScheduledTransition
+    if (labelExp == null && queueInfo != null) {
       labelExp = RMNodeLabelsManager.NO_LABEL;
     }
-    resReq.setNodeLabelExpression(labelExp);
+
+    if ( labelExp != null) {
+      resReq.setNodeLabelExpression(labelExp);
+    }
   }
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
@@ -208,6 +222,7 @@ public class SchedulerUtils {
     normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
         isRecovery, rmContext, null);
   }
+
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
@@ -233,11 +248,12 @@ public class SchedulerUtils {
       try {
         queueInfo = scheduler.getQueueInfo(queueName, false, false);
       } catch (IOException e) {
-        // it is possible queue cannot get when queue mapping is set, just ignore
-        // the queueInfo here, and move forward
+        //Queue may not exist since it could be auto-created in case of
+        // dynamic queues
       }
     }
     SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
+
     if (!isRecovery) {
       validateResourceRequest(resReq, maximumResource, queueInfo, rmContext);
     }
@@ -245,8 +261,7 @@ public class SchedulerUtils {
 
   public static void normalizeAndvalidateRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
-      RMContext rmContext)
-      throws InvalidResourceRequestException {
+      RMContext rmContext) throws InvalidResourceRequestException {
     normalizeAndvalidateRequest(resReq, maximumResource, queueName, scheduler,
         rmContext, null);
   }
@@ -296,7 +311,7 @@ public class SchedulerUtils {
               + "resource request has resource name = "
               + resReq.getResourceName());
     }
-    
+
     // we don't allow specify label expression with more than one node labels now
     if (labelExp != null && labelExp.contains("&&")) {
       throw new InvalidLabelResourceRequestException(
@@ -305,7 +320,7 @@ public class SchedulerUtils {
               + "in a node label expression, node label expression = "
               + labelExp);
     }
-    
+
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
       if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),
           labelExp, rmContext)) {
