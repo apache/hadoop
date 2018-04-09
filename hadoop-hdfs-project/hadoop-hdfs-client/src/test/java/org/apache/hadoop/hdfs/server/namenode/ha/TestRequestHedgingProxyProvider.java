@@ -43,10 +43,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.Lists;
 
@@ -97,6 +100,37 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();
     Mockito.verify(goodMock).getStats();
+  }
+
+  @Test
+  public void testRequestNNAfterOneSuccess() throws Exception {
+    final AtomicInteger count = new AtomicInteger(0);
+    final ClientProtocol goodMock = mock(ClientProtocol.class);
+    when(goodMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        count.incrementAndGet();
+        Thread.sleep(1000);
+        return new long[]{1};
+      }
+    });
+    final ClientProtocol badMock = mock(ClientProtocol.class);
+    when(badMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        count.incrementAndGet();
+        throw new IOException("Bad mock !!");
+      }
+    });
+
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
+            createFactory(badMock, goodMock, goodMock, badMock));
+    ClientProtocol proxy = provider.getProxy().proxy;
+    proxy.getStats();
+    assertEquals(2, count.get());
+    proxy.getStats();
+    assertEquals(3, count.get());
   }
 
   @Test
