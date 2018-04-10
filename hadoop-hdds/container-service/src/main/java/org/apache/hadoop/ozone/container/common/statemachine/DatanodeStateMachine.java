@@ -297,6 +297,16 @@ public class DatanodeStateMachine implements Closeable {
   }
 
   /**
+   * Waits for DatanodeStateMachine to exit.
+   *
+   * @throws InterruptedException
+   */
+  public void join() throws InterruptedException {
+    stateMachineThread.join();
+    cmdProcessThread.join();
+  }
+
+  /**
    * Stop the daemon thread of the datanode state machine.
    */
   public synchronized void stopDaemon() {

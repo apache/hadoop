@@ -18,17 +18,11 @@
 package org.apache.hadoop.ozone.web;
 
 import java.io.IOException;
-import java.nio.channels.ServerSocketChannel;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeServicePlugin;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreRestHttpServer;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.util.ServicePlugin;
@@ -38,57 +32,39 @@ import org.slf4j.LoggerFactory;
 /**
  * DataNode service plugin implementation to start ObjectStore rest server.
  */
-public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
+public class OzoneHddsDatanodeService implements ServicePlugin {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ObjectStoreRestPlugin.class);
-
-  private final boolean isOzoneEnabled;
+      LoggerFactory.getLogger(OzoneHddsDatanodeService.class);
 
   private Configuration conf;
   private ObjectStoreHandler handler;
   private ObjectStoreRestHttpServer objectStoreRestHttpServer;
 
-  public ObjectStoreRestPlugin() {
-      OzoneConfiguration.activate();
-      this.conf = new OzoneConfiguration();
-      this.isOzoneEnabled = OzoneUtils.isOzoneEnabled(conf);
-  }
-
   @Override
   public void start(Object service) {
-    DataNode dataNode = (DataNode) service;
-    if (isOzoneEnabled) {
+    if (service instanceof HddsDatanodeService) {
       try {
-        handler = new ObjectStoreHandler(dataNode.getConf());
-        ServerSocketChannel httpServerChannel =
-            dataNode.getSecureResources() != null ?
-                dataNode.getSecureResources().getHttpServerChannel() :
-                null;
-
-        objectStoreRestHttpServer =
-            new ObjectStoreRestHttpServer(dataNode.getConf(), httpServerChannel,
-                handler);
-
+        HddsDatanodeService hddsDatanodeService = (HddsDatanodeService) service;
+        conf = hddsDatanodeService.getConf();
+        handler = new ObjectStoreHandler(conf);
+        objectStoreRestHttpServer = new ObjectStoreRestHttpServer(
+            conf, null, handler);
         objectStoreRestHttpServer.start();
-        getDatanodeDetails(dataNode).setOzoneRestPort(
+        hddsDatanodeService.getDatanodeDetails().setOzoneRestPort(
             objectStoreRestHttpServer.getHttpAddress().getPort());
+
       } catch (IOException e) {
         throw new RuntimeException("Can't start the Object Store Rest server",
             e);
       }
+    } else {
+      LOG.error("Not starting {}, as the plugin is not invoked through {}",
+          OzoneHddsDatanodeService.class.getSimpleName(),
+          HddsDatanodeService.class.getSimpleName());
     }
   }
 
-  public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
-    for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HddsDatanodeService) {
-        return ((HddsDatanodeService) plugin).getDatanodeDetails();
-      }
-    }
-    throw new RuntimeException("Not able to find HddsDatanodeService in the" +
-        " list of plugins loaded by DataNode.");
-  }
 
   @Override
   public void stop() {
@@ -100,7 +76,7 @@ public class ObjectStoreRestPlugin implements DataNodeServicePlugin {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     IOUtils.closeQuietly(objectStoreRestHttpServer);
     IOUtils.closeQuietly(handler);
   }
