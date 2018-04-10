@@ -1966,16 +1966,29 @@ public class TestConfiguration extends TestCase {
   public void testGettingPropertiesWithPrefix() throws Exception {
     Configuration conf = new Configuration();
     for (int i = 0; i < 10; i++) {
-      conf.set("prefix" + ".name" + i, "value");
+      conf.set("prefix." + "name" + i, "value" + i);
     }
     conf.set("different.prefix" + ".name", "value");
-    Map<String, String> props = conf.getPropsWithPrefix("prefix");
-    assertEquals(props.size(), 10);
+    Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
+    assertEquals(prefixedProps.size(), 10);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value" + i, prefixedProps.get("name" + i));
+    }
 
+    // Repeat test with variable substitution
+    conf.set("foo", "bar");
+    for (int i = 0; i < 10; i++) {
+      conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
+    }
+    prefixedProps = conf.getPropsWithPrefix("subprefix.");
+    assertEquals(prefixedProps.size(), 10);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
+    }
     // test call with no properties for a given prefix
-    props = conf.getPropsWithPrefix("none");
-    assertNotNull(props.isEmpty());
-    assertTrue(props.isEmpty());
+    prefixedProps = conf.getPropsWithPrefix("none");
+    assertNotNull(prefixedProps.isEmpty());
+    assertTrue(prefixedProps.isEmpty());
   }
 
   public static void main(String[] argv) throws Exception {
