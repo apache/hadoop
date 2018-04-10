@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
+import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoRequest;
@@ -396,6 +397,8 @@ public class NamenodeBeanMetrics
       }
     } catch (StandbyException e) {
       LOG.error("Cannot get {} nodes, Router in safe mode", type);
+    } catch (SubClusterTimeoutException e) {
+      LOG.error("Cannot get {} nodes, subclusters timed out responding", type);
     } catch (IOException e) {
       LOG.error("Cannot get " + type + " nodes", e);
     }
