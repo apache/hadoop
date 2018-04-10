@@ -999,7 +999,7 @@ public class RouterRpcClient {
           String msg =
               "Invocation to \"" + loc + "\" for \"" + method + "\" timed out";
           LOG.error(msg);
-          IOException ioe = new IOException(msg);
+          IOException ioe = new SubClusterTimeoutException(msg);
           exceptions.put(location, ioe);
         } catch (ExecutionException ex) {
           Throwable cause = ex.getCause();
