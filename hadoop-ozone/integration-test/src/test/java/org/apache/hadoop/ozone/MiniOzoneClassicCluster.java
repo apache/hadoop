@@ -77,6 +77,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
 import static org.junit.Assert.assertFalse;
 
 /**
@@ -501,8 +502,9 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       conf.set(KSMConfigKeys.OZONE_KSM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(DFS_DATANODE_PLUGINS_KEY,
-          "org.apache.hadoop.ozone.web.ObjectStoreRestPlugin," +
           "org.apache.hadoop.ozone.HddsDatanodeService");
+      conf.set(HDDS_DATANODE_PLUGINS_KEY,
+          "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
 
       // Configure KSM and SCM handlers
       conf.setInt(ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY, numOfScmHandlers);

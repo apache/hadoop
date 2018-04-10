@@ -1553,11 +1553,6 @@ public class DataNode extends ReconfigurableBase
         streamingAddr.getAddress().getHostAddress(), hostName, 
         storage.getDatanodeUuid(), getXferPort(), getInfoPort(),
             infoSecurePort, getIpcPort());
-    for (ServicePlugin plugin : plugins) {
-      if (plugin instanceof DataNodeServicePlugin) {
-        ((DataNodeServicePlugin) plugin).onDatanodeIdCreation(dnId);
-      }
-    }
     return new DatanodeRegistration(dnId, storageInfo, 
         new ExportedBlockKeys(), VersionInfo.getVersion());
   }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.statemachine
@@ -30,6 +31,10 @@ import org.apache.hadoop.util.ServicePlugin;
 public class MiniOzoneTestHelper {
 
   private MiniOzoneTestHelper() {
+  }
+
+  public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
+    return findHddsPlugin(dataNode).getDatanodeDetails();
   }
 
   public static OzoneContainer getOzoneContainer(DataNode dataNode) {
