@@ -1542,7 +1542,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   fprintf(LOGFILE, "Launching docker container...\n");
   fprintf(LOGFILE, "Docker run command: %s\n", docker_command_with_binary);
   FILE* start_docker = popen(docker_command_with_binary, "r");
-  if (pclose (start_docker) != 0)
+  if (WEXITSTATUS(pclose (start_docker)) != 0)
   {
     fprintf (ERRORFILE,
      "Could not invoke docker %s.\n", docker_command_with_binary);

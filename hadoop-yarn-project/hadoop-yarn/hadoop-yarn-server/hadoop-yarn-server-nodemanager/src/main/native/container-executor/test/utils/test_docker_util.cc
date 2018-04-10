@@ -338,6 +338,26 @@ namespace ContainerExecutor {
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_kill_command);
   }
 
+  TEST_F(TestDockerUtil, test_docker_start) {
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+         "[docker-command-execution]\n  docker-command=start\n  name=container_e1_12312_11111_02_000001",
+         "start container_e1_12312_11111_02_000001"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001",
+        static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "docker-command=start\n  name=ctr-id", static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=start\n  name=", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=start", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_start_command);
+  }
+
   TEST_F(TestDockerUtil, test_detach_container) {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(

@@ -32,6 +32,7 @@
 #define DOCKER_STOP_COMMAND "stop"
 #define DOCKER_KILL_COMMAND "kill"
 #define DOCKER_VOLUME_COMMAND "volume"
+#define DOCKER_START_COMMAND "start"
 
 
 enum docker_error_codes {
@@ -160,6 +161,16 @@ int get_docker_kill_command(const char* command_file, const struct configuration
  */
 int get_docker_volume_command(const char *command_file, const struct configuration *conf, char *out,
                                const size_t outlen);
+
+/**
+ * Get the Docker start command line string. The function will verify that the params file is meant for the start command.
+ * @param command_file File containing the params for the Docker start command
+ * @param conf Configuration struct containing the container-executor.cfg details
+ * @param out Buffer to fill with the start command
+ * @param outlen Size of the output buffer
+ * @return Return code with 0 indicating success and non-zero codes indicating error
+ */
+int get_docker_start_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
 
 /**
  * Give an error message for the supplied error code

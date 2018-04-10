@@ -42,10 +42,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerClient;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStartCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
@@ -99,6 +101,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RESOURCES_OPTIONS;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.RUN_AS_USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.TC_COMMAND_FILE;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_FILECACHE_DIRS;
 import static org.mockito.Mockito.any;
@@ -1864,6 +1867,32 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
   }
 
+  @Test
+  public void testDockerContainerRelaunch()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new MockRuntime(mockExecutor,
+        DockerCommandExecutor.DockerContainerStatus.EXITED, false);
+    runtime.initialize(conf, null);
+    runtime.relaunchContainer(builder.build());
+
+    PrivilegedOperation op = capturePrivilegedOperation();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    int expected = 3;
+    int counter = 0;
+    Assert.assertEquals(expected, dockerCommands.size());
+    Assert.assertEquals("[docker-command-execution]",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  docker-command=start",
+        dockerCommands.get(counter++));
+    Assert.assertEquals("  name=container_id", dockerCommands.get(counter));
+  }
+
   class MockRuntime extends DockerLinuxContainerRuntime {
 
     private PrivilegedOperationExecutor privilegedOperationExecutor;
@@ -1926,6 +1955,67 @@ public class TestDockerContainerRuntime {
           DockerCommandExecutor
               .executeDockerCommand(dockerRmCommand, containerId, env, conf,
                   privilegedOperationExecutor, false);
+        }
+      }
+    }
+
+    @Override
+    public void relaunchContainer(ContainerRuntimeContext ctx)
+        throws ContainerExecutionException {
+      if (DockerCommandExecutor.isRemovable(containerStatus)) {
+        String relaunchContainerIdStr =
+            ctx.getContainer().getContainerId().toString();
+        DockerStartCommand startCommand =
+            new DockerStartCommand(containerIdStr);
+        DockerClient dockerClient = new DockerClient(conf);
+        String commandFile = dockerClient.writeCommandToTempFile(startCommand,
+            relaunchContainerIdStr);
+        String relaunchRunAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
+        Path relaunchNmPrivateContainerScriptPath = ctx.getExecutionAttribute(
+            NM_PRIVATE_CONTAINER_SCRIPT_PATH);
+        Path relaunchContainerWorkDir =
+            ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
+        //we can't do better here thanks to type-erasure
+        @SuppressWarnings("unchecked")
+        List<String> relaunchLocalDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
+        @SuppressWarnings("unchecked")
+        List<String> relaunchLogDirs = ctx.getExecutionAttribute(LOG_DIRS);
+        String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
+
+        PrivilegedOperation launchOp = new PrivilegedOperation(
+            PrivilegedOperation.OperationType.LAUNCH_DOCKER_CONTAINER);
+
+        launchOp.appendArgs(relaunchRunAsUser, ctx.getExecutionAttribute(USER),
+            Integer.toString(PrivilegedOperation
+                .RunAsUserCommand.LAUNCH_DOCKER_CONTAINER.getValue()),
+            ctx.getExecutionAttribute(APPID),
+            relaunchContainerIdStr,
+            relaunchContainerWorkDir.toString(),
+            relaunchNmPrivateContainerScriptPath.toUri().getPath(),
+            ctx.getExecutionAttribute(NM_PRIVATE_TOKENS_PATH).toUri().getPath(),
+            ctx.getExecutionAttribute(PID_FILE_PATH).toString(),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                relaunchLocalDirs),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                relaunchLogDirs),
+            commandFile,
+            resourcesOpts);
+
+        String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
+
+        if (tcCommandFile != null) {
+          launchOp.appendArgs(tcCommandFile);
+        }
+
+        try {
+          privilegedOperationExecutor.executePrivilegedOperation(null,
+              launchOp, null, null, false, false);
+        } catch (PrivilegedOperationException e) {
+          LOG.warn("Relaunch container failed. Exception: ", e);
+          LOG.info("Docker command used: " + startCommand);
+
+          throw new ContainerExecutionException("Launch container failed", e
+              .getExitCode(), e.getOutput(), e.getErrorOutput());
         }
       }
     }
