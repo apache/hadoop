@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -947,7 +948,25 @@ public class TestRouterRpc {
     }, 500, 5 * 1000);
 
     // The cache should be updated now
-    assertNotEquals(jsonString0, metrics.getLiveNodes());
+    final String jsonString2 = metrics.getLiveNodes();
+    assertNotEquals(jsonString0, jsonString2);
+
+
+    // Without any subcluster available, we should return an empty list
+    MockResolver resolver =
+        (MockResolver) router.getRouter().getNamenodeResolver();
+    resolver.cleanRegistrations();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return !jsonString2.equals(metrics.getLiveNodes());
+      }
+    }, 500, 5 * 1000);
+    assertEquals("{}", metrics.getLiveNodes());
+
+    // Reset the registrations again
+    cluster.registerNamenodes();
+    cluster.waitNamenodeRegistration();
   }
 
   @Test
