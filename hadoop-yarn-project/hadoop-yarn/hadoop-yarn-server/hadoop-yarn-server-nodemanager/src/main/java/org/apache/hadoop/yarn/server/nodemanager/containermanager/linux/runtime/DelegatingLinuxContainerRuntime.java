@@ -142,6 +142,15 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
+  public void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    Container container = ctx.getContainer();
+    LinuxContainerRuntime runtime = pickContainerRuntime(container);
+
+    runtime.relaunchContainer(ctx);
+  }
+
+  @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
     Container container = ctx.getContainer();

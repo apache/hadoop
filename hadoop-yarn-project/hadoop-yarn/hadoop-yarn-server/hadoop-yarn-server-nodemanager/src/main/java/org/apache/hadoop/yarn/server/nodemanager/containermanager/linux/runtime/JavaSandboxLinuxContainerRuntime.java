@@ -268,6 +268,16 @@ public class JavaSandboxLinuxContainerRuntime
     }
   }
 
+  @Override
+  public void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    try {
+      super.relaunchContainer(ctx);
+    } finally {
+      deletePolicyFiles(ctx);
+    }
+  }
+
   /**
    * Determine if JVMSandboxLinuxContainerRuntime should be used.  This is
    * decided based on the value of

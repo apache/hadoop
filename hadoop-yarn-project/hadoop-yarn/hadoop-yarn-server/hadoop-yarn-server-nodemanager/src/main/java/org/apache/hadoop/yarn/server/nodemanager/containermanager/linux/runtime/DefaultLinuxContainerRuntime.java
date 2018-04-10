@@ -126,6 +126,12 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
+  public void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    launchContainer(ctx);
+  }
+
+  @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
     PrivilegedOperation signalOp = new PrivilegedOperation(

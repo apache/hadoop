@@ -24,9 +24,11 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStartCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -919,6 +921,40 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
   }
 
+  @Override
+  public void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException {
+    Container container = ctx.getContainer();
+    String containerIdStr = container.getContainerId().toString();
+    // Check to see if the container already exists for relaunch
+    DockerCommandExecutor.DockerContainerStatus containerStatus =
+        DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
+            privilegedOperationExecutor);
+    if (containerStatus != null &&
+        DockerCommandExecutor.isStartable(containerStatus)) {
+      DockerStartCommand startCommand = new DockerStartCommand(containerIdStr);
+      String commandFile = dockerClient.writeCommandToTempFile(startCommand,
+          containerIdStr);
+      PrivilegedOperation launchOp = buildLaunchOp(ctx, commandFile,
+          startCommand);
+
+      try {
+        privilegedOperationExecutor.executePrivilegedOperation(null,
+            launchOp, null, null, false, false);
+      } catch (PrivilegedOperationException e) {
+        LOG.warn("Relaunch container failed. Exception: ", e);
+        LOG.info("Docker command used: " + startCommand);
+
+        throw new ContainerExecutionException("Launch container failed", e
+            .getExitCode(), e.getOutput(), e.getErrorOutput());
+      }
+    } else {
+      throw new ContainerExecutionException("Container is not in a startable "
+          + "state, unable to relaunch: " + containerIdStr);
+    }
+
+  }
+
   /**
    * Signal the docker container.
    *
@@ -1067,7 +1103,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
 
   private PrivilegedOperation buildLaunchOp(ContainerRuntimeContext ctx,
-      String commandFile, DockerRunCommand runCommand) {
+      String commandFile, DockerCommand command) {
 
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
     String containerIdStr = ctx.getContainer().getContainerId().toString();
@@ -1106,7 +1142,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       launchOp.appendArgs(tcCommandFile);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Launching container with cmd: " + runCommand);
+      LOG.debug("Launching container with cmd: " + command);
     }
 
     return launchOp;

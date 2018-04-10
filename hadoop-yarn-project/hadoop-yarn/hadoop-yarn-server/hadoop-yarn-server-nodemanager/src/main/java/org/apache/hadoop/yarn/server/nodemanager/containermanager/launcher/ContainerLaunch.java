@@ -487,6 +487,24 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
+    int launchPrep = prepareForLaunch(ctx);
+    if (launchPrep == 0) {
+      return exec.launchContainer(ctx);
+    }
+    return launchPrep;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected int relaunchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
+    int launchPrep = prepareForLaunch(ctx);
+    if (launchPrep == 0) {
+      return exec.relaunchContainer(ctx);
+    }
+    return launchPrep;
+  }
+
+  protected int prepareForLaunch(ContainerStartContext ctx) throws IOException {
     ContainerId containerId = container.getContainerId();
     if (container.isMarkedForKilling()) {
       LOG.info("Container " + containerId + " not launched as it has already "
@@ -508,8 +526,8 @@ public class ContainerLaunch implements Callable<Integer> {
       return ExitCode.TERMINATED.getExitCode();
     } else {
       exec.activateContainer(containerId, pidFilePath);
-      return exec.launchContainer(ctx);
     }
+    return ExitCode.SUCCESS.getExitCode();
   }
 
   protected void setContainerCompletedStatus(int exitCode) {
