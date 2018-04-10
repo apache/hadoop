@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.service.Service.STATE;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -77,27 +79,31 @@ public class TestRouter {
             "0.0.0.0");
   }
 
-  @AfterClass
-  public static void destroy() {
-  }
-
-  @Before
-  public void setup() throws IOException, URISyntaxException {
-  }
-
-  @After
-  public void cleanup() {
-  }
-
   private static void testRouterStartup(Configuration routerConfig)
       throws InterruptedException, IOException {
     Router router = new Router();
     assertEquals(STATE.NOTINITED, router.getServiceState());
+    assertEquals(RouterServiceState.UNINITIALIZED, router.getRouterState());
     router.init(routerConfig);
+    if (routerConfig.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT)) {
+      assertEquals(RouterServiceState.SAFEMODE, router.getRouterState());
+    } else {
+      assertEquals(RouterServiceState.INITIALIZING, router.getRouterState());
+    }
     assertEquals(STATE.INITED, router.getServiceState());
     router.start();
+    if (routerConfig.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE_DEFAULT)) {
+      assertEquals(RouterServiceState.SAFEMODE, router.getRouterState());
+    } else {
+      assertEquals(RouterServiceState.RUNNING, router.getRouterState());
+    }
     assertEquals(STATE.STARTED, router.getServiceState());
     router.stop();
+    assertEquals(RouterServiceState.SHUTDOWN, router.getRouterState());
     assertEquals(STATE.STOPPED, router.getServiceState());
     router.close();
   }
@@ -113,6 +119,9 @@ public class TestRouter {
 
     // Rpc only
     testRouterStartup(new RouterConfigBuilder(conf).rpc().build());
+
+    // Safemode only
+    testRouterStartup(new RouterConfigBuilder(conf).rpc().safemode().build());
 
     // Metrics only
     testRouterStartup(new RouterConfigBuilder(conf).metrics().build());
@@ -145,6 +154,35 @@ public class TestRouter {
     router.stop();
     assertEquals(STATE.STOPPED, rpcServer.getServiceState());
 
+    router.close();
+  }
+
+  @Test
+  public void testRouterRpcWithNoSubclusters() throws IOException {
+
+    Router router = new Router();
+    router.init(new RouterConfigBuilder(conf).rpc().build());
+    router.start();
+
+    InetSocketAddress serverAddress = router.getRpcServerAddress();
+    DFSClient dfsClient = new DFSClient(serverAddress, conf);
+
+    try {
+      dfsClient.create("/test.txt", false);
+      fail("Create with no subclusters should fail");
+    } catch (RemoteException e) {
+      assertExceptionContains("Cannot find locations for /test.txt", e);
+    }
+
+    try {
+      dfsClient.datanodeReport(DatanodeReportType.LIVE);
+      fail("Get datanode reports with no subclusters should fail");
+    } catch (IOException e) {
+      assertExceptionContains("No remote locations available", e);
+    }
+
+    dfsClient.close();
+    router.stop();
     router.close();
   }
 }
