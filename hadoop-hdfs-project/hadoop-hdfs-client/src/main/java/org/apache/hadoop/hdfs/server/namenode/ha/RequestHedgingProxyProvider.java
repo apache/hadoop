@@ -76,9 +76,6 @@ public class RequestHedgingProxyProvider<T> extends
     public Object
     invoke(Object proxy, final Method method, final Object[] args)
             throws Throwable {
-      if (currentUsedProxy != null) {
-        return method.invoke(currentUsedProxy.proxy, args);
-      }
       Map<Future<Object>, ProxyInfo<T>> proxyMap = new HashMap<>();
       int numAttempts = 0;
 
