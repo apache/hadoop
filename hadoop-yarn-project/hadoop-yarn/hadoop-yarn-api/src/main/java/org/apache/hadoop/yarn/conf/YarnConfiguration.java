@@ -1260,7 +1260,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String GPU_EXCLUDE_OWNERLESS_GPUS = YARN_PREFIX
     + "gpu_exclude_ownerless_gpu.enable";
-  public static final boolean DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS = true;
+  public static final boolean DEFAULT_GPU_EXCLUDE_OWNERLESS_GPUS = false;
 
 
   /**
