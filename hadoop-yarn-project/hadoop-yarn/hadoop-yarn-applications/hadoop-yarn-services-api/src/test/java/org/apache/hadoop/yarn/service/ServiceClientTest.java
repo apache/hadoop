@@ -103,6 +103,12 @@ public class ServiceClientTest extends ServiceClient {
     }
     if (serviceName.equals("jenkins")) {
       return EXIT_SUCCESS;
+    } else if (serviceName.equals("jenkins-already-stopped")) {
+      return EXIT_SUCCESS;
+    } else if (serviceName.equals("jenkins-doesn't-exist")) {
+      return EXIT_NOT_FOUND;
+    } else if (serviceName.equals("jenkins-error-cleaning-registry")) {
+      return EXIT_OTHER_FAILURE;
     } else {
       throw new IllegalArgumentException();
     }

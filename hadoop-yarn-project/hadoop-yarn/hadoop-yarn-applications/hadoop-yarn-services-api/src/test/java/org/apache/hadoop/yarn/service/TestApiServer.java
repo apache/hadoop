@@ -155,8 +155,34 @@ public class TestApiServer {
   }
 
   @Test
+  public void testBadDeleteService3() {
+    final Response actual = apiServer.deleteService(request,
+        "jenkins-doesn't-exist");
+    assertEquals("Delete service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testBadDeleteService4() {
+    final Response actual = apiServer.deleteService(request,
+        "jenkins-error-cleaning-registry");
+    assertEquals("Delete service is ",
+        Response.status(Status.INTERNAL_SERVER_ERROR).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
   public void testGoodDeleteService() {
     final Response actual = apiServer.deleteService(request, "jenkins");
+    assertEquals("Delete service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
+  }
+
+  @Test
+  public void testDeleteStoppedService() {
+    final Response actual = apiServer.deleteService(request,
+        "jenkins-already-stopped");
     assertEquals("Delete service is ",
         Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }

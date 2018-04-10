@@ -22,6 +22,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
+import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.*;
@@ -33,6 +35,7 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.hamcrest.CoreMatchers;
@@ -52,6 +55,8 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
+import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR;
+import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_NOT_FOUND;
 
 /**
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
@@ -124,6 +129,10 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Assert.assertEquals(FINISHED, report.getYarnApplicationState());
     Assert.assertEquals(FinalApplicationStatus.ENDED,
         report.getFinalApplicationStatus());
+    String serviceZKPath = RegistryUtils.servicePath(RegistryUtils
+        .currentUser(), YarnServiceConstants.APP_TYPE, exampleApp.getName());
+    Assert.assertFalse("Registry ZK service path still exists after stop",
+        getCuratorService().zkPathExists(serviceZKPath));
 
     LOG.info("Destroy the service");
     // destroy the service and check the app dir is deleted from fs.
@@ -132,7 +141,20 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Assert.assertFalse(getFS().exists(appDir));
 
     // check that destroying again does not succeed
-    Assert.assertEquals(-1, client.actionDestroy(exampleApp.getName()));
+    Assert.assertEquals(EXIT_NOT_FOUND, client.actionDestroy(exampleApp.getName()));
+  }
+
+  // Save a service without starting it and ensure that stop does not NPE and
+  // that service can be successfully destroyed
+  @Test (timeout = 200000)
+  public void testStopDestroySavedService() throws Exception {
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    Service exampleApp = createExampleApplication();
+    client.actionBuild(exampleApp);
+    Assert.assertEquals(EXIT_COMMAND_ARGUMENT_ERROR, client.actionStop(
+        exampleApp.getName()));
+    Assert.assertEquals(0, client.actionDestroy(exampleApp.getName()));
   }
 
   // Create compa with 2 containers
@@ -411,19 +433,31 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   // When flex up to 4 instances, it should be compA-1 , compA-2, compA-3, compA-4
   // When flex down to 3 instances,  it should be compA-1 , compA-2, compA-3.
   private void checkCompInstancesInOrder(ServiceClient client,
-      Service exampleApp) throws IOException, YarnException {
+      Service exampleApp) throws IOException, YarnException,
+      TimeoutException, InterruptedException {
     Service service = client.getStatus(exampleApp.getName());
     for (Component comp : service.getComponents()) {
-      checkEachCompInstancesInOrder(comp);
+      checkEachCompInstancesInOrder(comp, exampleApp.getName());
     }
   }
 
-  private void checkEachCompInstancesInOrder(Component component) {
+  private void checkEachCompInstancesInOrder(Component component, String
+      serviceName) throws TimeoutException, InterruptedException {
     long expectedNumInstances = component.getNumberOfContainers();
     Assert.assertEquals(expectedNumInstances, component.getContainers().size());
     TreeSet<String> instances = new TreeSet<>();
     for (Container container : component.getContainers()) {
       instances.add(container.getComponentInstanceName());
+      String componentZKPath = RegistryUtils.componentPath(RegistryUtils
+          .currentUser(), YarnServiceConstants.APP_TYPE, serviceName,
+          RegistryPathUtils.encodeYarnID(container.getId()));
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return getCuratorService().zkPathExists(componentZKPath);
+        } catch (IOException e) {
+          return false;
+        }
+      }, 1000, 60000);
     }
 
     int i = 0;
