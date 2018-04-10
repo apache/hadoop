@@ -2869,15 +2869,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Map<String, String> getPropsWithPrefix(String confPrefix) {
     Properties props = getProps();
-    Enumeration e = props.propertyNames();
     Map<String, String> configMap = new HashMap<>();
-    String name = null;
-    while (e.hasMoreElements()) {
-      name = (String) e.nextElement();
+    for (String name : props.stringPropertyNames()) {
       if (name.startsWith(confPrefix)) {
-        String value = props.getProperty(name);
-        name = name.substring(confPrefix.length());
-        configMap.put(name, value);
+        String value = get(name);
+        String keyName = name.substring(confPrefix.length());
+        configMap.put(keyName, value);
       }
     }
     return configMap;
