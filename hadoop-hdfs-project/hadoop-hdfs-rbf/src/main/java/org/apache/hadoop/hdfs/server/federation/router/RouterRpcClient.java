@@ -932,7 +932,9 @@ public class RouterRpcClient {
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = method.getMethod();
 
-    if (locations.size() == 1) {
+    if (locations.isEmpty()) {
+      throw new IOException("No remote locations available");
+    } else if (locations.size() == 1) {
       // Shortcut, just one call
       T location = locations.iterator().next();
       String ns = location.getNameserviceId();
