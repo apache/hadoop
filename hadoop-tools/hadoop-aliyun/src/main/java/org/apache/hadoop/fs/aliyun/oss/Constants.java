@@ -31,10 +31,10 @@ public final class Constants {
   // User agent
   public static final String USER_AGENT_PREFIX = "fs.oss.user.agent.prefix";
   public static final String USER_AGENT_PREFIX_DEFAULT =
-          VersionInfoUtils.getDefaultUserAgent();
+      VersionInfoUtils.getDefaultUserAgent();
 
   // Class of credential provider
-  public static final String ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY =
+  public static final String CREDENTIALS_PROVIDER_KEY =
       "fs.oss.credentials.provider";
 
   // OSS access verification
@@ -82,10 +82,14 @@ public final class Constants {
   public static final int MAX_PAGING_KEYS_DEFAULT = 1000;
 
   // Size of each of or multipart pieces in bytes
-  public static final String MULTIPART_UPLOAD_SIZE_KEY =
+  public static final String MULTIPART_UPLOAD_PART_SIZE_KEY =
       "fs.oss.multipart.upload.size";
+  public static final long MULTIPART_UPLOAD_PART_SIZE_DEFAULT =
+      104857600; // 100 MB
 
-  public static final long MULTIPART_UPLOAD_SIZE_DEFAULT = 10 * 1024 * 1024;
+  /** The minimum multipart size which Aliyun OSS supports. */
+  public static final int MULTIPART_MIN_SIZE = 100 * 1024;
+
   public static final int MULTIPART_UPLOAD_PART_NUM_LIMIT = 10000;
 
   // Minimum size in bytes before we start a multipart uploads or copy
@@ -96,7 +100,6 @@ public final class Constants {
 
   public static final String MULTIPART_DOWNLOAD_SIZE_KEY =
       "fs.oss.multipart.download.size";
-
   public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 512 * 1024;
 
   public static final String MULTIPART_DOWNLOAD_THREAD_NUMBER_KEY =
@@ -139,9 +142,15 @@ public final class Constants {
 
   public static final String FS_OSS_BLOCK_SIZE_KEY = "fs.oss.block.size";
   public static final int FS_OSS_BLOCK_SIZE_DEFAULT = 64 * 1024 * 1024;
+
   public static final String FS_OSS = "oss";
 
-  public static final long MIN_MULTIPART_UPLOAD_PART_SIZE = 100 * 1024L;
-  public static final int MAX_RETRIES = 10;
+  public static final String KEEPALIVE_TIME_KEY =
+      "fs.oss.threads.keepalivetime";
+  public static final int KEEPALIVE_TIME_DEFAULT = 60;
+
+  public static final String UPLOAD_ACTIVE_BLOCKS_KEY =
+      "fs.oss.upload.active.blocks";
+  public static final int UPLOAD_ACTIVE_BLOCKS_DEFAULT = 4;
 
 }
