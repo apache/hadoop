@@ -56,6 +56,8 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.intOption;
+import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.longOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -69,6 +71,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   private URI uri;
   private String bucket;
   private Path workingDir;
+  private int blockOutputActiveBlocks;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
   private int maxReadAheadPartNumber;
@@ -125,8 +128,15 @@ public class AliyunOSSFileSystem extends FileSystem {
       // this means the file is not found
     }
 
-    return new FSDataOutputStream(new AliyunOSSOutputStream(getConf(),
-        store, key, progress, statistics), (Statistics)(null));
+    long uploadPartSize = AliyunOSSUtils.getMultipartSizeProperty(getConf(),
+        MULTIPART_UPLOAD_PART_SIZE_KEY, MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+    return new FSDataOutputStream(
+        new AliyunOSSBlockOutputStream(getConf(),
+            store,
+            key,
+            uploadPartSize,
+            new SemaphoredDelegatingExecutor(boundedThreadPool,
+                blockOutputActiveBlocks, true)), (Statistics)(null));
   }
 
   /**
@@ -149,9 +159,8 @@ public class AliyunOSSFileSystem extends FileSystem {
         throw new FileAlreadyExistsException("Not a directory: " + parent);
       }
     }
-    return create(path, permission,
-      flags.contains(CreateFlag.OVERWRITE), bufferSize,
-      replication, blockSize, progress);
+    return create(path, permission, flags.contains(CreateFlag.OVERWRITE),
+        bufferSize, replication, blockSize, progress);
   }
 
   @Override
@@ -270,7 +279,7 @@ public class AliyunOSSFileSystem extends FileSystem {
       }
     } else if (objectRepresentsDirectory(key, meta.getContentLength())) {
       return new FileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
-           qualifiedPath);
+          qualifiedPath);
     } else {
       return new FileStatus(meta.getContentLength(), false, 1,
           getDefaultBlockSize(path), meta.getLastModified().getTime(),
@@ -318,6 +327,10 @@ public class AliyunOSSFileSystem extends FileSystem {
     uri = java.net.URI.create(name.getScheme() + "://" + name.getAuthority());
     workingDir = new Path("/user",
         System.getProperty("user.name")).makeQualified(uri, null);
+    long keepAliveTime = longOption(conf,
+        KEEPALIVE_TIME_KEY, KEEPALIVE_TIME_DEFAULT, 0);
+    blockOutputActiveBlocks = intOption(conf,
+        UPLOAD_ACTIVE_BLOCKS_KEY, UPLOAD_ACTIVE_BLOCKS_DEFAULT, 1);
 
     store = new AliyunOSSFileSystemStore();
     store.initialize(name, conf, statistics);
@@ -335,7 +348,8 @@ public class AliyunOSSFileSystem extends FileSystem {
         Constants.MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT);
 
     this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        threadNum, totalTasks, 60L, TimeUnit.SECONDS, "oss-read-shared");
+        threadNum, totalTasks, keepAliveTime, TimeUnit.SECONDS,
+        "oss-transfer-shared");
 
     maxConcurrentCopyTasksPerDir = AliyunOSSUtils.intPositiveOption(conf,
         Constants.MAX_CONCURRENT_COPY_TASKS_PER_DIR_KEY,
