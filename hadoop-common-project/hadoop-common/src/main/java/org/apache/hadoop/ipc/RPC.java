@@ -810,22 +810,39 @@ public class RPC {
   
   /** An RPC Server. */
   public abstract static class Server extends org.apache.hadoop.ipc.Server {
-   boolean verbose;
+    boolean verbose;
 
+    private static final Pattern COMPLEX_SERVER_NAME_PATTERN =
+        Pattern.compile("(?:[^\\$]*\\$)*([A-Za-z][^\\$]+)(?:\\$\\d+)?");
+
+    /**
+     * Get a meaningful and short name for a server based on a java class.
+     *
+     * The rules are defined to support the current naming schema of the
+     * generated protobuf classes where the final class usually an anonymous
+     * inner class of an inner class.
+     *
+     * 1. For simple classes it returns with the simple name of the classes
+     *     (with the name without package name)
+     *
+     * 2. For inner classes, this is the simple name of the inner class.
+     *
+     * 3.  If it is an Object created from a class factory
+     *   E.g., org.apache.hadoop.ipc.TestRPC$TestClass$2
+     * this method returns parent class TestClass.
+     *
+     * 4. If it is an anonymous class E.g., 'org.apache.hadoop.ipc.TestRPC$10'
+     * serverNameFromClass returns parent class TestRPC.
+     *
+     *
+     */
     static String serverNameFromClass(Class<?> clazz) {
-      //The basic idea here is to handle names like
-      //org.apache.hadoop.hdsl.protocol.proto.
-      //
-      // StorageDatanodeProtocolProtos$StorageContainerDatanodeProtocolService$2
-      //where the getSimpleName is also empty
       String name = clazz.getName();
       String[] names = clazz.getName().split("\\.", -1);
       if (names != null && names.length > 0) {
         name = names[names.length - 1];
       }
-      Pattern pattern =
-          Pattern.compile("(?:[^\\$]*\\$)*([A-Za-z][^\\$]+)(?:\\$\\d+)?");
-      Matcher matcher = pattern.matcher(name);
+      Matcher matcher = COMPLEX_SERVER_NAME_PATTERN.matcher(name);
       if (matcher.find()) {
         return matcher.group(1);
       } else {

@@ -181,22 +181,26 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     }
   }
 
-  private void testPruneCommand(Configuration cmdConf, String...args)
-      throws Exception {
-    Path parent = path("prune-cli");
+  private void testPruneCommand(Configuration cmdConf, Path parent,
+      String...args) throws Exception {
+    Path keepParent = path("prune-cli-keep");
     try {
       getFileSystem().mkdirs(parent);
+      getFileSystem().mkdirs(keepParent);
 
       S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
       cmd.setMetadataStore(ms);
 
       createFile(new Path(parent, "stale"), true, true);
+      createFile(new Path(keepParent, "stale-to-keep"), true, true);
       Thread.sleep(TimeUnit.SECONDS.toMillis(2));
       createFile(new Path(parent, "fresh"), true, true);
 
       assertMetastoreListingCount(parent, "Children count before pruning", 2);
       exec(cmd, args);
       assertMetastoreListingCount(parent, "Pruned children count", 1);
+      assertMetastoreListingCount(keepParent,
+          "This child should have been kept (prefix restriction).", 1);
     } finally {
       getFileSystem().delete(parent, true);
       ms.prune(Long.MAX_VALUE);
@@ -213,17 +217,18 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
   @Test
   public void testPruneCommandCLI() throws Exception {
-    String testPath = path("testPruneCommandCLI").toString();
-    testPruneCommand(getFileSystem().getConf(),
-        "prune", "-seconds", "1", testPath);
+    Path testPath = path("testPruneCommandCLI");
+    testPruneCommand(getFileSystem().getConf(), testPath,
+        "prune", "-seconds", "1", testPath.toString());
   }
 
   @Test
   public void testPruneCommandConf() throws Exception {
     getConfiguration().setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
         TimeUnit.SECONDS.toMillis(1));
-    String testPath = path("testPruneCommandConf").toString();
-    testPruneCommand(getConfiguration(), "prune", testPath);
+    Path testPath = path("testPruneCommandConf");
+    testPruneCommand(getConfiguration(), testPath,
+        "prune", testPath.toString());
   }
 
   @Test

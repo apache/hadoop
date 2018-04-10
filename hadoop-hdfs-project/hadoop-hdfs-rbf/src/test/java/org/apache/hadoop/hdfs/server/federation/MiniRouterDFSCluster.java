@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
@@ -132,6 +133,9 @@ public class MiniRouterDFSCluster {
   /** Namenode configuration overrides. */
   private Configuration namenodeOverrides;
 
+  /** If the DNs are shared. */
+  private boolean sharedDNs = true;
+
 
   /**
    * Router context.
@@ -238,6 +242,10 @@ public class MiniRouterDFSCluster {
         client = new DFSClient(fileSystemUri, conf);
       }
       return client;
+    }
+
+    public Configuration getConf() {
+      return conf;
     }
   }
 
@@ -350,6 +358,10 @@ public class MiniRouterDFSCluster {
         suffix += "." + namenodeId;
       }
       return suffix;
+    }
+
+    public Configuration getConf() {
+      return conf;
     }
   }
 
@@ -550,6 +562,13 @@ public class MiniRouterDFSCluster {
     this.numDatanodesPerNameservice = num;
   }
 
+  /**
+   * Set the DNs to belong to only one subcluster.
+   */
+  public void setIndependentDNs() {
+    this.sharedDNs = false;
+  }
+
   public String getNameservicesKey() {
     StringBuilder sb = new StringBuilder();
     for (String nsId : this.nameservices) {
@@ -669,15 +688,33 @@ public class MiniRouterDFSCluster {
       }
       topology.setFederation(true);
 
+      // Set independent DNs across subclusters
+      int numDNs = nameservices.size() * numDatanodesPerNameservice;
+      Configuration[] dnConfs = null;
+      if (!sharedDNs) {
+        dnConfs = new Configuration[numDNs];
+        int dnId = 0;
+        for (String nsId : nameservices) {
+          Configuration subclusterConf = new Configuration();
+          subclusterConf.set(DFS_INTERNAL_NAMESERVICES_KEY, nsId);
+          for (int i = 0; i < numDatanodesPerNameservice; i++) {
+            dnConfs[dnId] = subclusterConf;
+            dnId++;
+          }
+        }
+      }
+
       // Start mini DFS cluster
       String ns0 = nameservices.get(0);
       Configuration nnConf = generateNamenodeConfiguration(ns0);
       if (overrideConf != null) {
         nnConf.addResource(overrideConf);
       }
+
       cluster = new MiniDFSCluster.Builder(nnConf)
-          .numDataNodes(nameservices.size() * numDatanodesPerNameservice)
+          .numDataNodes(numDNs)
           .nnTopology(topology)
+          .dataNodeConfOverlays(dnConfs)
           .build();
       cluster.waitActive();
 

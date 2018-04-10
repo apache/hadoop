@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.ipc.RPC;
 
 /**
@@ -26,18 +27,24 @@ import org.apache.hadoop.ipc.RPC;
  * a connection, it increments a counter to mark it as active. Once the client
  * is done with the connection, it decreases the counter. It also takes care of
  * closing the connection once is not active.
+ *
+ * The protocols currently used are:
+ * <ul>
+ * <li>{@link org.apache.hadoop.hdfs.protocol.ClientProtocol}
+ * <li>{@link org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol}
+ * </ul>
  */
 public class ConnectionContext {
 
   /** Client for the connection. */
-  private final ProxyAndInfo<ClientProtocol> client;
+  private final ProxyAndInfo<?> client;
   /** How many threads are using this connection. */
   private int numThreads = 0;
   /** If the connection is closed. */
   private boolean closed = false;
 
 
-  public ConnectionContext(ProxyAndInfo<ClientProtocol> connection) {
+  public ConnectionContext(ProxyAndInfo<?> connection) {
     this.client = connection;
   }
 
@@ -74,7 +81,7 @@ public class ConnectionContext {
    *
    * @return Connection client.
    */
-  public synchronized ProxyAndInfo<ClientProtocol> getClient() {
+  public synchronized ProxyAndInfo<?> getClient() {
     this.numThreads++;
     return this.client;
   }
@@ -96,9 +103,27 @@ public class ConnectionContext {
   public synchronized void close() {
     this.closed = true;
     if (this.numThreads == 0) {
-      ClientProtocol proxy = this.client.getProxy();
+      Object proxy = this.client.getProxy();
       // Nobody should be using this anymore so it should close right away
       RPC.stopProxy(proxy);
     }
+  }
+
+  @Override
+  public String toString() {
+    InetSocketAddress addr = this.client.getAddress();
+    Object proxy = this.client.getProxy();
+    Class<?> clazz = proxy.getClass();
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(clazz.getSimpleName());
+    sb.append("@");
+    sb.append(addr);
+    sb.append("x");
+    sb.append(numThreads);
+    if (closed) {
+      sb.append("[CLOSED]");
+    }
+    return sb.toString();
   }
 }

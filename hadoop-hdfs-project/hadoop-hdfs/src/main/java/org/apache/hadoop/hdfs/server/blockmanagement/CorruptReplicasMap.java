@@ -69,12 +69,12 @@ public class CorruptReplicasMap{
    * @param reasonCode the enum representation of the reason
    */
   void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
-      String reason, Reason reasonCode) {
+      String reason, Reason reasonCode, boolean isStriped) {
     Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
     if (nodes == null) {
       nodes = new HashMap<DatanodeDescriptor, Reason>();
       corruptReplicasMap.put(blk, nodes);
-      incrementBlockStat(blk);
+      incrementBlockStat(isStriped);
     }
     
     String reasonText;
@@ -103,11 +103,11 @@ public class CorruptReplicasMap{
    * Remove Block from CorruptBlocksMap.
    * @param blk Block to be removed
    */
-  void removeFromCorruptReplicasMap(Block blk) {
+  void removeFromCorruptReplicasMap(BlockInfo blk) {
     if (corruptReplicasMap != null) {
       Map<DatanodeDescriptor, Reason> value = corruptReplicasMap.remove(blk);
       if (value != null) {
-        decrementBlockStat(blk);
+        decrementBlockStat(blk.isStriped());
       }
     }
   }
@@ -119,12 +119,13 @@ public class CorruptReplicasMap{
    * @return true if the removal is successful; 
              false if the replica is not in the map
    */ 
-  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
+  boolean removeFromCorruptReplicasMap(
+      BlockInfo blk, DatanodeDescriptor datanode) {
     return removeFromCorruptReplicasMap(blk, datanode, Reason.ANY);
   }
 
-  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode,
-      Reason reason) {
+  boolean removeFromCorruptReplicasMap(
+      BlockInfo blk, DatanodeDescriptor datanode, Reason reason) {
     Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
     if (datanodes == null) {
       return false;
@@ -141,23 +142,23 @@ public class CorruptReplicasMap{
       if (datanodes.isEmpty()) {
         // remove the block if there is no more corrupted replicas
         corruptReplicasMap.remove(blk);
-        decrementBlockStat(blk);
+        decrementBlockStat(blk.isStriped());
       }
       return true;
     }
     return false;
   }
 
-  private void incrementBlockStat(Block block) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+  private void incrementBlockStat(boolean isStriped) {
+    if (isStriped) {
       totalCorruptECBlockGroups.increment();
     } else {
       totalCorruptBlocks.increment();
     }
   }
 
-  private void decrementBlockStat(Block block) {
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+  private void decrementBlockStat(boolean isStriped) {
+    if (isStriped) {
       totalCorruptECBlockGroups.decrement();
     } else {
       totalCorruptBlocks.decrement();
@@ -205,6 +206,8 @@ public class CorruptReplicasMap{
    * is null, up to numExpectedBlocks blocks are returned from the beginning.
    * If startingBlockId cannot be found, null is returned.
    *
+   * @param bim BlockIdManager to determine the block type.
+   * @param blockType desired block type to return.
    * @param numExpectedBlocks Number of block ids to return.
    *  0 <= numExpectedBlocks <= 100
    * @param startingBlockId Block id from which to start. If null, start at
@@ -212,7 +215,7 @@ public class CorruptReplicasMap{
    * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
    */
   @VisibleForTesting
-  long[] getCorruptBlockIdsForTesting(BlockType blockType,
+  long[] getCorruptBlockIdsForTesting(BlockIdManager bim, BlockType blockType,
       int numExpectedBlocks, Long startingBlockId) {
     if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
       return null;
@@ -223,11 +226,9 @@ public class CorruptReplicasMap{
         .stream()
         .filter(r -> {
           if (blockType == BlockType.STRIPED) {
-            return BlockIdManager.isStripedBlockID(r.getBlockId()) &&
-                r.getBlockId() >= cursorBlockId;
+            return bim.isStripedBlock(r) && r.getBlockId() >= cursorBlockId;
           } else {
-            return !BlockIdManager.isStripedBlockID(r.getBlockId()) &&
-                r.getBlockId() >= cursorBlockId;
+            return !bim.isStripedBlock(r) && r.getBlockId() >= cursorBlockId;
           }
         })
         .sorted()

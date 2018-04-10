@@ -10,6 +10,8 @@ Requirements:
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
+* One of the compilers that support thread_local storage: GCC 4.8.1 or later, Visual Studio,
+  Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Jansson C XML parsing library ( if compiling libwebhdfs )
@@ -137,6 +139,18 @@ Maven build goals:
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
   * Use -DskipShade to disable client jar shading to speed up build times (in
     development environments only, not to build release artifacts)
+
+ YARN Application Timeline Service V2 build options:
+
+   YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
+   versions of Apache HBase are 1.2.6 (default) and 2.0.0-beta1.
+
+  * HBase 1.2.6 is used by default to build Hadoop. The official releases are ready to use if you
+    plan on running Timeline Service v2 with HBase 1.2.6.
+
+  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.0.0-beta1. Provide this option if you plan
+    on running Timeline Service v2 with HBase 2.0.
+
 
  Snappy build options:
 

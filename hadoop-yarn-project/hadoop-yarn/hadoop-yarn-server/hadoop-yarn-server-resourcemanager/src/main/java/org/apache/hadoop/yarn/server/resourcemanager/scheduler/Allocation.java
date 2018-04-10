@@ -132,4 +132,16 @@ public class Allocation {
   public void setResourceLimit(Resource resource) {
     this.resourceLimit = resource;
   }
+
+  @Override
+  public String toString() {
+    return "Allocation{" + "containers=" + containers + ", strictContainers="
+        + strictContainers + ", fungibleContainers=" + fungibleContainers
+        + ", fungibleResources=" + fungibleResources + ", nmTokens=" + nmTokens
+        + ", increasedContainers=" + increasedContainers
+        + ", decreasedContainers=" + decreasedContainers
+        + ", promotedContainers=" + promotedContainers + ", demotedContainers="
+        + demotedContainers + ", previousAttemptContainers="
+        + previousAttemptContainers + ", resourceLimit=" + resourceLimit + '}';
+  }
 }

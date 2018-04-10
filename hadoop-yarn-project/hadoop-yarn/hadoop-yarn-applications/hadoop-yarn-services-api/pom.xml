@@ -71,6 +71,7 @@
         <configuration>
           <excludes>
             <exclude>**/*.json</exclude>
+            <exclude>**/*.yarnfile</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -93,6 +94,10 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-common</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

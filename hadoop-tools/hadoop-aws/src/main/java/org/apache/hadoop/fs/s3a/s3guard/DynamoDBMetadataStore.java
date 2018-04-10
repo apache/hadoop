@@ -812,23 +812,33 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Retries.OnceRaw
-  private ItemCollection<ScanOutcome> expiredFiles(long modTime) {
-    String filterExpression = "mod_time < :mod_time";
+  private ItemCollection<ScanOutcome> expiredFiles(long modTime,
+      String keyPrefix) {
+    String filterExpression =
+        "mod_time < :mod_time and begins_with(parent, :parent)";
     String projectionExpression = "parent,child";
-    ValueMap map = new ValueMap().withLong(":mod_time", modTime);
+    ValueMap map = new ValueMap()
+        .withLong(":mod_time", modTime)
+        .withString(":parent", keyPrefix);
     return table.scan(filterExpression, projectionExpression, null, map);
   }
 
   @Override
   @Retries.OnceRaw("once(batchWrite)")
   public void prune(long modTime) throws IOException {
+    prune(modTime, "/");
+  }
+
+  @Override
+  @Retries.OnceRaw("once(batchWrite)")
+  public void prune(long modTime, String keyPrefix) throws IOException {
     int itemCount = 0;
     try {
       Collection<Path> deletionBatch =
           new ArrayList<>(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
       int delay = conf.getInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
           S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT);
-      for (Item item : expiredFiles(modTime)) {
+      for (Item item : expiredFiles(modTime, keyPrefix)) {
         PathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
         Path path = md.getFileStatus().getPath();

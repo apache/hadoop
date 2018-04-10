@@ -151,6 +151,10 @@ public class TestRouterQuota {
     // mkdir in real FileSystem should be okay
     nnFs1.mkdirs(new Path("/testdir1/" + UUID.randomUUID()));
     nnFs2.mkdirs(new Path("/testdir2/" + UUID.randomUUID()));
+
+    // delete/rename call should be still okay
+    routerFs.delete(new Path("/nsquota"), true);
+    routerFs.rename(new Path("/nsquota/subdir"), new Path("/nsquota/subdir"));
   }
 
   @Test

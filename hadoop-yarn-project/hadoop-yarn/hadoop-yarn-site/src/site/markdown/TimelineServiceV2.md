@@ -190,9 +190,9 @@ Each step is explained in more detail below.
 
 ##### <a name="Set_up_the_HBase_cluster"> </a>Step 1) Set up the HBase cluster
 The first part is to set up or pick an Apache HBase cluster to use as the storage cluster. The
-version of Apache HBase that is supported with Timeline Service v.2 is 1.2.6. The 1.0.x versions
-do not work with Timeline Service v.2. Later versions of HBase have not been tested with
-Timeline Service.
+supported versions of Apache HBase are 1.2.6 (default) and 2.0.0-beta1.
+The 1.0.x versions do not work with Timeline Service v.2. By default, Hadoop releases are built
+with HBase 1.2.6. To use HBase 2.0.0-beta1, build from source with option -Dhbase.profile=2.0
 
 HBase has different deployment modes. Refer to the HBase book for understanding them and pick a
 mode that is suitable for your setup.
@@ -236,7 +236,7 @@ is needed for the `flowrun` table creation in the schema creator. The default HD
 For example,
 
     hadoop fs -mkdir /hbase/coprocessor
-    hadoop fs -put hadoop-yarn-server-timelineservice-hbase-3.0.0-alpha1-SNAPSHOT.jar
+    hadoop fs -put hadoop-yarn-server-timelineservice-hbase-coprocessor-3.2.0-SNAPSHOT.jar
            /hbase/coprocessor/hadoop-yarn-server-timelineservice.jar
 
 

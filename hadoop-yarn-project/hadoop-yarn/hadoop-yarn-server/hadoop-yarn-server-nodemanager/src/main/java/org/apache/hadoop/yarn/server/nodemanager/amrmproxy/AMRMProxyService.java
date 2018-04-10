@@ -261,7 +261,7 @@ public class AMRMProxyService extends CompositeService implements
         // Create the intercepter pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
             entry.getValue(), true, amCred);
-      } catch (IOException e) {
+      } catch (Throwable e) {
         LOG.error("Exception when recovering " + attemptId
             + ", removing it from NMStateStore and move on", e);
         this.nmContext.getNMStateStore().removeAMRMProxyAppContext(attemptId);

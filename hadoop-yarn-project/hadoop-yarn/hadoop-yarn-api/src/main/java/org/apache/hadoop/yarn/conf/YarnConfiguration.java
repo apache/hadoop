@@ -343,6 +343,10 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
 
+  @Private
+  public static final String DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS =
+      "org.apache.hadoop.yarn.service.client.SystemServiceManagerImpl";
+
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
   public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8031;
@@ -1947,6 +1951,20 @@ public class YarnConfiguration extends Configuration {
    */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL = false;
 
+  /**
+   * A configurable value to pass to the Docker Stop command. This value
+   * defines the number of seconds between the docker stop command sending
+   * a SIGTERM and a SIGKILL.
+   */
+  public static final String NM_DOCKER_STOP_GRACE_PERIOD =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "stop.grace-period";
+
+  /**
+   * The default value for the grace period between the SIGTERM and the
+   * SIGKILL in the Docker Stop command.
+   */
+  public static final int DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD = 10;
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =
@@ -2101,6 +2119,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_AUX_SERVICES_CLASSPATH =
       NM_AUX_SERVICES + ".%s.classpath";
+
+  public static final String NM_AUX_SERVICE_REMOTE_CLASSPATH =
+      NM_AUX_SERVICES + ".%s.remote-classpath";
 
   public static final String NM_AUX_SERVICES_SYSTEM_CLASSES =
       NM_AUX_SERVICES + ".%s.system-classes";
@@ -3788,6 +3809,27 @@ public class YarnConfiguration extends Configuration {
       Collection<Float> versions = getTimelineServiceVersions(conf);
       for (Float version : versions) {
         if (version.intValue() == 1) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
+   * Returns whether the timeline service v.1,5 is enabled via configuration.
+   *
+   * @param conf the configuration
+   * @return whether the timeline service v.1.5 is enabled. V.1.5 refers to a
+   * version equal to 1.5.
+   */
+  public static boolean timelineServiceV15Enabled(Configuration conf) {
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (Float.compare(version, 1.5f) == 0) {
           enabled = true;
           break;
         }

@@ -106,6 +106,7 @@
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
       <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html"/>
+      <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
     </menu>
 
     <menu name="Ozone" inherit="top">
@@ -156,6 +157,9 @@
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
+      <item name="Using GPU" href="hadoop-yarn/hadoop-yarn-site/UsingGpus.html"/>
+      <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
+      <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">

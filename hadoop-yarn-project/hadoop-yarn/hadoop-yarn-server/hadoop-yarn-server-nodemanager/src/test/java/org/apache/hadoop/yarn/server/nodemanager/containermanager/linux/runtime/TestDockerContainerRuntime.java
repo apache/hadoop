@@ -146,6 +146,7 @@ public class TestDockerContainerRuntime {
   private final String whitelistedUser = "yoda";
   private String[] testCapabilities;
   private final String signalPid = "1234";
+  private int dockerStopGracePeriod;
 
   @Before
   public void setup() {
@@ -165,6 +166,10 @@ public class TestDockerContainerRuntime {
     env = new HashMap<String, String>();
     env.put("FROM_CLIENT", "1");
     image = "busybox:latest";
+
+    dockerStopGracePeriod = conf.getInt(
+      YarnConfiguration.NM_DOCKER_STOP_GRACE_PERIOD,
+      YarnConfiguration.DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD);
 
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
     when(container.getContainerId()).thenReturn(cId);
@@ -1308,10 +1313,11 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = getDockerCommandsForSignal(
         ContainerExecutor.Signal.TERM,
         DockerCommandExecutor.DockerContainerStatus.RUNNING);
-    Assert.assertEquals(3, dockerCommands.size());
+    Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
     Assert.assertEquals("  name=container_id", dockerCommands.get(2));
+    Assert.assertEquals("  time=10", dockerCommands.get(3));
   }
 
   @Test
@@ -1321,10 +1327,11 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = getDockerCommandsForSignal(
         ContainerExecutor.Signal.KILL,
         DockerCommandExecutor.DockerContainerStatus.RUNNING);
-    Assert.assertEquals(3, dockerCommands.size());
+    Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
     Assert.assertEquals("  name=container_id", dockerCommands.get(2));
+    Assert.assertEquals("  time=10", dockerCommands.get(3));
   }
 
   @Test
@@ -1884,7 +1891,8 @@ public class TestDockerContainerRuntime {
             || ContainerExecutor.Signal.TERM.equals(signal)) {
           if (DockerCommandExecutor.isStoppable(containerStatus)) {
             DockerStopCommand dockerStopCommand =
-                new DockerStopCommand(containerName);
+                new DockerStopCommand(containerName)
+                .setGracePeriod(dockerStopGracePeriod);
             DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
                 containerName, environment, conf, mockExecutor, false);
           }

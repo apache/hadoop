@@ -21,7 +21,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,12 +31,14 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.LongBinaryOperator;
 
@@ -292,13 +293,21 @@ public class AllocationTagsManager {
 
   /**
    * Aggregates multiple {@link TypeToCountedTags} to a single one based on
-   * a given set of application IDs, the values are properly merged.
+   * the scope defined in the allocation tags, the values are properly merged.
    *
-   * @param appIds a set of application IDs.
+   * @param allocationTags {@link AllocationTags}.
    * @return an aggregated {@link TypeToCountedTags}.
    */
-  private TypeToCountedTags aggregateAllocationTags(Set<ApplicationId> appIds,
-      Map<ApplicationId, TypeToCountedTags> mapping) {
+  private TypeToCountedTags aggregateAllocationTags(
+      AllocationTags allocationTags,
+      Map<ApplicationId, TypeToCountedTags> mapping)
+      throws InvalidAllocationTagsQueryException {
+    // Based on the namespace type of the given allocation tags
+    TargetApplicationsNamespace namespace = allocationTags.getNamespace();
+    TargetApplications ta = new TargetApplications(
+        allocationTags.getCurrentApplicationId(), getApplicationIdToTags());
+    namespace.evaluate(ta);
+    Set<ApplicationId> appIds = namespace.getNamespaceScope();
     TypeToCountedTags result = new TypeToCountedTags();
     if (appIds != null) {
       if (appIds.size() == 1) {
@@ -571,9 +580,7 @@ public class AllocationTagsManager {
         mapping = globalNodeMapping;
       } else {
         // Aggregate app tags cardinality by applications.
-        mapping = aggregateAllocationTags(
-            tags.getNamespace().getNamespaceScope(),
-            perAppNodeMappings);
+        mapping = aggregateAllocationTags(tags, perAppNodeMappings);
       }
 
       return mapping == null ? 0 :
@@ -618,9 +625,7 @@ public class AllocationTagsManager {
         mapping = globalRackMapping;
       } else {
         // Aggregates cardinality by rack.
-        mapping = aggregateAllocationTags(
-            tags.getNamespace().getNamespaceScope(),
-            perAppRackMappings);
+        mapping = aggregateAllocationTags(tags, perAppRackMappings);
       }
 
       return mapping == null ? 0 :
@@ -642,10 +647,22 @@ public class AllocationTagsManager {
   }
 
   /**
-   * @return all application IDs in a set that currently visible by
-   * the allocation tags manager.
+   * @return all applications that is known to the
+   * {@link AllocationTagsManager}, along with their application tags.
+   * The result is a map, where key is an application ID, and value is the
+   * application-tags attached to this application. If there is no
+   * application-tag exists for the application, the value is an empty set.
    */
-  public Set<ApplicationId> getAllApplicationIds() {
-    return ImmutableSet.copyOf(perAppNodeMappings.keySet());
+  private Map<ApplicationId, Set<String>> getApplicationIdToTags() {
+    Map<ApplicationId, Set<String>> result = new HashMap<>();
+    ConcurrentMap<ApplicationId, RMApp> allApps = rmContext.getRMApps();
+    if (allApps != null) {
+      for (Map.Entry<ApplicationId, RMApp> app : allApps.entrySet()) {
+        if (perAppNodeMappings.containsKey(app.getKey())) {
+          result.put(app.getKey(), app.getValue().getApplicationTags());
+        }
+      }
+    }
+    return result;
   }
 }
