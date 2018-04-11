@@ -48,6 +48,11 @@ public class FederationNamespaceInfo extends RemoteLocationContext {
     return this.nameserviceId;
   }
 
+  @Override
+  public String getSrc() {
+    return null;
+  }
+
   /**
    * The HDFS cluster id for this namespace.
    *

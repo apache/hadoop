@@ -39,6 +39,13 @@ public abstract class RemoteLocationContext
    */
   public abstract String getDest();
 
+  /**
+   * Original source location.
+   *
+   * @return Source path.
+   */
+  public abstract String getSrc();
+
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 31)

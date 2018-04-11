@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteLocationContext;
 
 /**
- * A single in a remote namespace consisting of a nameservice ID
- * and a HDFS path.
+ * A location in a remote namespace consisting of a nameservice ID and a HDFS
+ * path (destination). It also contains the federated location (source).
  */
 public class RemoteLocation extends RemoteLocationContext {
 
@@ -30,16 +30,19 @@ public class RemoteLocation extends RemoteLocationContext {
   /** Identifier of the namenode in the namespace for this location. */
   private final String namenodeId;
   /** Path in the remote location. */
-  private final String path;
+  private final String dstPath;
+  /** Original path in federation. */
+  private final String srcPath;
 
   /**
    * Create a new remote location.
    *
-   * @param nsId
-   * @param pPath
+   * @param nsId Destination namespace.
+   * @param dPath Path in the destination namespace.
+   * @param sPath Path in the federated level.
    */
-  public RemoteLocation(String nsId, String pPath) {
-    this(nsId, null, pPath);
+  public RemoteLocation(String nsId, String dPath, String sPath) {
+    this(nsId, null, dPath, sPath);
   }
 
   /**
@@ -47,12 +50,15 @@ public class RemoteLocation extends RemoteLocationContext {
    * namespace.
    *
    * @param nsId Destination namespace.
-   * @param pPath Path in the destination namespace.
+   * @param nnId Destination namenode.
+   * @param dPath Path in the destination namespace.
+   * @param sPath Path in the federated level
    */
-  public RemoteLocation(String nsId, String nnId, String pPath) {
+  public RemoteLocation(String nsId, String nnId, String dPath, String sPath) {
     this.nameserviceId = nsId;
     this.namenodeId = nnId;
-    this.path = pPath;
+    this.dstPath = dPath;
+    this.srcPath = sPath;
   }
 
   @Override
@@ -66,11 +72,16 @@ public class RemoteLocation extends RemoteLocationContext {
 
   @Override
   public String getDest() {
-    return this.path;
+    return this.dstPath;
+  }
+
+  @Override
+  public String getSrc() {
+    return this.srcPath;
   }
 
   @Override
   public String toString() {
-    return getNameserviceId() + "->" + this.path;
+    return getNameserviceId() + "->" + this.dstPath;
   }
 }

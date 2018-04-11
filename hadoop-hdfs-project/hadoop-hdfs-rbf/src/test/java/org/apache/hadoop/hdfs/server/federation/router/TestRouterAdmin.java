@@ -251,7 +251,7 @@ public class TestRouterAdmin {
     // Verify starting condition
     MountTable entry = getMountTableEntry("/");
     assertEquals(
-        Collections.singletonList(new RemoteLocation("ns0", "/")),
+        Collections.singletonList(new RemoteLocation("ns0", "/", "/")),
         entry.getDestinations());
 
     // Edit the entry for /
@@ -264,7 +264,7 @@ public class TestRouterAdmin {
     // Verify edited condition
     entry = getMountTableEntry("/");
     assertEquals(
-        Collections.singletonList(new RemoteLocation("ns1", "/")),
+        Collections.singletonList(new RemoteLocation("ns1", "/", "/")),
         entry.getDestinations());
   }
 
