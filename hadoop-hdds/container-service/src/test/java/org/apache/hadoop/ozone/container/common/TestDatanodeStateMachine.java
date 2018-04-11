@@ -371,8 +371,6 @@ public class TestDatanodeStateMachine {
         .setUuid(UUID.randomUUID().toString())
         .setHostName("localhost")
         .setIpAddress("127.0.0.1")
-        .setInfoPort(0)
-        .setInfoSecurePort(0)
         .setContainerPort(0)
         .setRatisPort(0)
         .setOzoneRestPort(0)

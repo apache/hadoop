@@ -888,12 +888,6 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
           .setValue(datanode.getOzoneRestPort())
           .build());
 
-      if (datanode.hasInfoSecurePort() && datanode.getInfoSecurePort() > 0) {
-        dnServiceInfoBuilder.addServicePort(ServicePort.newBuilder()
-            .setType(ServicePort.Type.HTTPS)
-            .setValue(datanode.getOzoneRestPort())
-            .build());
-      }
       services.add(dnServiceInfoBuilder.build());
     }
 

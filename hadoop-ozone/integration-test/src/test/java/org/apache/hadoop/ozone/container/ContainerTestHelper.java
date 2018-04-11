@@ -96,8 +96,6 @@ public final class ContainerTestHelper {
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress(socket.getInetAddress().getHostAddress())
         .setHostName(socket.getInetAddress().getHostName())
-        .setInfoPort(port)
-        .setInfoSecurePort(port)
         .setContainerPort(port)
         .setRatisPort(port)
         .setOzoneRestPort(port)

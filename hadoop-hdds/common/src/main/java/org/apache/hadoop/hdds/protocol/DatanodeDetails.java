@@ -42,8 +42,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
 
   private String ipAddress;
   private String hostName;
-  private Integer infoPort;
-  private Integer infoSecurePort;
   private Integer containerPort;
   private Integer ratisPort;
   private Integer ozoneRestPort;
@@ -55,21 +53,15 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
    * @param uuid DataNode's UUID
    * @param ipAddress IP Address of this DataNode
    * @param hostName DataNode's hostname
-   * @param infoPort HTTP Port
-   * @param infoSecurePort HTTPS Port
    * @param containerPort Container Port
    * @param ratisPort Ratis Port
    * @param ozoneRestPort Rest Port
    */
-  private DatanodeDetails(
-      String uuid, String ipAddress, String hostName, Integer infoPort,
-      Integer infoSecurePort, Integer containerPort, Integer ratisPort,
-      Integer ozoneRestPort) {
+  private DatanodeDetails(String uuid, String ipAddress, String hostName,
+      Integer containerPort, Integer ratisPort, Integer ozoneRestPort) {
     this.uuid = UUID.fromString(uuid);
     this.ipAddress = ipAddress;
     this.hostName = hostName;
-    this.infoPort = infoPort;
-    this.infoSecurePort = infoSecurePort;
     this.containerPort = containerPort;
     this.ratisPort = ratisPort;
     this.ozoneRestPort = ozoneRestPort;
@@ -127,41 +119,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
    */
   public String getHostName() {
     return hostName;
-  }
-
-  /**
-   * Sets the InfoPort.
-   * @param port InfoPort
-   */
-  public void setInfoPort(int port) {
-    infoPort = port;
-  }
-
-  /**
-   * Returns DataNodes Info Port.
-   *
-   * @return InfoPort
-   */
-  public int getInfoPort() {
-    return infoPort;
-  }
-
-  /**
-   * Sets the InfoSecurePort.
-   *
-   * @param port InfoSecurePort
-   */
-  public void setInfoSecurePort(int port) {
-    infoSecurePort = port;
-  }
-
-  /**
-   * Returns DataNodes Secure Info Port.
-   *
-   * @return InfoSecurePort
-   */
-  public int getInfoSecurePort() {
-    return infoSecurePort;
   }
 
   /**
@@ -231,12 +188,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     if (datanodeDetailsProto.hasHostName()) {
       builder.setHostName(datanodeDetailsProto.getHostName());
     }
-    if (datanodeDetailsProto.hasInfoPort()) {
-        builder.setInfoPort(datanodeDetailsProto.getInfoPort());
-    }
-    if (datanodeDetailsProto.hasInfoSecurePort()) {
-        builder.setInfoSecurePort(datanodeDetailsProto.getInfoSecurePort());
-    }
     if (datanodeDetailsProto.hasContainerPort()) {
       builder.setContainerPort(datanodeDetailsProto.getContainerPort());
     }
@@ -262,12 +213,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
     if (hostName != null) {
       builder.setHostName(hostName);
-    }
-    if (infoPort != null) {
-      builder.setInfoPort(infoPort);
-    }
-    if (infoSecurePort != null) {
-      builder.setInfoSecurePort(infoSecurePort);
     }
     if (containerPort != null) {
       builder.setContainerPort(containerPort);
@@ -312,8 +257,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     private String id;
     private String ipAddress;
     private String hostName;
-    private Integer infoPort;
-    private Integer infoSecurePort;
     private Integer containerPort;
     private Integer ratisPort;
     private Integer ozoneRestPort;
@@ -350,29 +293,6 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
       this.hostName = host;
       return this;
     }
-
-    /**
-     * Sets the InfoPort.
-     *
-     * @param port InfoPort
-     * @return DatanodeDetails.Builder
-     */
-    public Builder setInfoPort(Integer port) {
-      this.infoPort = port;
-      return this;
-    }
-
-    /**
-     * Sets the Secure Info Port.
-     *
-     * @param port InfoSecurePort
-     * @return DatanodeDetails.Builder
-     */
-    public Builder setInfoSecurePort(Integer port) {
-      this.infoSecurePort = port;
-      return this;
-    }
-
     /**
      * Sets the ContainerPort.
      *
@@ -413,8 +333,8 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
      */
     public DatanodeDetails build() {
       Preconditions.checkNotNull(id);
-      return new DatanodeDetails(id, ipAddress, hostName,
-          infoPort, infoSecurePort, containerPort, ratisPort, ozoneRestPort);
+      return new DatanodeDetails(id, ipAddress, hostName, containerPort,
+          ratisPort, ozoneRestPort);
     }
 
   }
