@@ -2191,7 +2191,8 @@ public class ContainerImpl implements Container {
   }
 
   private void storeRetryContext() {
-    if (windowRetryContext.getRestartTimes() != null) {
+    if (windowRetryContext.getRestartTimes() != null &&
+        !windowRetryContext.getRestartTimes().isEmpty()) {
       try {
         stateStore.storeContainerRestartTimes(containerId,
             windowRetryContext.getRestartTimes());

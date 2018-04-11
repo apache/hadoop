@@ -347,7 +347,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             value.substring(1, value.length() - 1).split(", ");
         List<Long> restartTimes = new ArrayList<>();
         for (String restartTime : unparsedRestartTimes) {
-          restartTimes.add(Long.parseLong(restartTime));
+          if (!restartTime.isEmpty()) {
+            restartTimes.add(Long.parseLong(restartTime));
+          }
         }
         rcs.setRestartTimes(restartTimes);
       } else if (suffix.equals(CONTAINER_WORK_DIR_KEY_SUFFIX)) {
