@@ -102,7 +102,7 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
     for (RemoteLocationProto dest : destList) {
       String nsId = dest.getNameserviceId();
       String path = dest.getPath();
-      RemoteLocation loc = new RemoteLocation(nsId, path);
+      RemoteLocation loc = new RemoteLocation(nsId, path, getSourcePath());
       ret.add(loc);
     }
     return ret;

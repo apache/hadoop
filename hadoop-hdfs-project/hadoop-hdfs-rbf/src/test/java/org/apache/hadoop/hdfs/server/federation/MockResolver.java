@@ -80,7 +80,8 @@ public class MockResolver
       this.locations.put(mount, locationsList);
     }
 
-    final RemoteLocation remoteLocation = new RemoteLocation(nsId, location);
+    final RemoteLocation remoteLocation =
+        new RemoteLocation(nsId, location, mount);
     if (!locationsList.contains(remoteLocation)) {
       locationsList.add(remoteLocation);
     }
@@ -270,10 +271,15 @@ public class MockResolver
     for (String key : keys) {
       if (path.startsWith(key)) {
         for (RemoteLocation location : this.locations.get(key)) {
-          String finalPath = location.getDest() + path.substring(key.length());
+          String finalPath = location.getDest();
+          String extraPath = path.substring(key.length());
+          if (finalPath.endsWith("/") && extraPath.startsWith("/")) {
+            extraPath = extraPath.substring(1);
+          }
+          finalPath += extraPath;
           String nameservice = location.getNameserviceId();
           RemoteLocation remoteLocation =
-              new RemoteLocation(nameservice, finalPath);
+              new RemoteLocation(nameservice, finalPath, path);
           remoteLocations.add(remoteLocation);
         }
         break;

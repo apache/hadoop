@@ -134,7 +134,7 @@ public abstract class MountTable extends BaseRecord {
     for (Entry<String, String> entry : destinations.entrySet()) {
       String nsId = entry.getKey();
       String path = normalizeFileSystemPath(entry.getValue());
-      RemoteLocation location = new RemoteLocation(nsId, path);
+      RemoteLocation location = new RemoteLocation(nsId, path, src);
       locations.add(location);
     }
 
