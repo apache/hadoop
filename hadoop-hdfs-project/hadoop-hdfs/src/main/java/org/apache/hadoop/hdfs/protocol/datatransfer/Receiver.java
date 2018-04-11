@@ -301,8 +301,9 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-    blockChecksum(PBHelperClient.convert(proto.getHeader().getBlock()),
-        PBHelperClient.convert(proto.getHeader().getToken()));
+      blockChecksum(PBHelperClient.convert(proto.getHeader().getBlock()),
+          PBHelperClient.convert(proto.getHeader().getToken()),
+          PBHelperClient.convert(proto.getBlockChecksumOptions()));
     } finally {
       if (traceScope != null) traceScope.close();
     }
@@ -325,7 +326,8 @@ public abstract class Receiver implements DataTransferProtocol {
     try {
       blockGroupChecksum(stripedBlockInfo,
           PBHelperClient.convert(proto.getHeader().getToken()),
-          proto.getRequestedNumBytes());
+          proto.getRequestedNumBytes(),
+          PBHelperClient.convert(proto.getBlockChecksumOptions()));
     } finally {
       if (traceScope != null) {
         traceScope.close();
