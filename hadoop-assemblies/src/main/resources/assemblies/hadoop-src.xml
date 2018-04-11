@@ -52,7 +52,6 @@
         <exclude>**/SecurityAuth.audit*</exclude>
         <exclude>hadoop-ozone/**</exclude>
         <exclude>hadoop-hdds/**</exclude>
-        <exclude>hadoop-cblock/**</exclude>
       </excludes>
     </fileSet>
   </fileSets>

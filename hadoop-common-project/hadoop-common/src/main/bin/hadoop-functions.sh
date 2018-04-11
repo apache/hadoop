@@ -600,8 +600,6 @@ function hadoop_bootstrap
   HDDS_LIB_JARS_DIR=${HDDS_LIB_JARS_DIR:-"share/hadoop/hdds/lib"}
   OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}
   OZONE_LIB_JARS_DIR=${OZONE_LIB_JARS_DIR:-"share/hadoop/ozone/lib"}
-  CBLOCK_DIR=${CBLOCK_DIR:-"share/hadoop/cblock"}
-  CBLOCK_LIB_JARS_DIR=${CBLOCK_LIB_JARS_DIR:-"share/hadoop/cblock/lib"}
 
   HADOOP_TOOLS_HOME=${HADOOP_TOOLS_HOME:-${HADOOP_HOME}}
   HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}

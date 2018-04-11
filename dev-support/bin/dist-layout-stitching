@@ -158,10 +158,6 @@ run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectsto
 run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${VERSION}" .
 run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
 
-# CBlock
-run copy "${ROOT}/hadoop-cblock/server/target/hadoop-cblock-server-${VERSION}" .
-run copy "${ROOT}/hadoop-cblock/tools/target/hadoop-cblock-tools-${VERSION}" .
-
 run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 
 
