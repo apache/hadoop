@@ -83,7 +83,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   void SetAuthInfo(const AuthInfo& auth_info);
 
   std::weak_ptr<LockFreeRpcEngine> engine() { return engine_; }
-  ::asio::io_service *GetIoService();
+  std::shared_ptr<IoService> GetIoService();
 
  protected:
   struct Response {

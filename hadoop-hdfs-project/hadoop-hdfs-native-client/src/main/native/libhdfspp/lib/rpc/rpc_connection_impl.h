@@ -26,6 +26,7 @@
 #include "common/logging.h"
 #include "common/util.h"
 #include "common/libhdfs_events_impl.h"
+#include "hdfspp/ioservice.h"
 
 #include <asio/connect.hpp>
 #include <asio/read.hpp>
@@ -76,8 +77,8 @@ template <class Socket>
 RpcConnectionImpl<Socket>::RpcConnectionImpl(std::shared_ptr<RpcEngine> engine)
     : RpcConnection(engine),
       options_(engine->options()),
-      socket_(engine->io_service()),
-      connect_timer_(engine->io_service())
+      socket_(engine->io_service()->GetRaw()),
+      connect_timer_(engine->io_service()->GetRaw())
 {
       LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called &" << (void*)this);
 }
@@ -353,7 +354,7 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
                         OnSendCompleted(ec, size);
                       });
   } else {  // Nothing to send for this request, inform the handler immediately
-    ::asio::io_service *service = GetIoService();
+    std::shared_ptr<IoService> service = GetIoService();
     if(!service) {
       LOG_ERROR(kRPC, << "RpcConnectionImpl@" << this << " attempted to access null IoService");
       // No easy way to bail out of this context, but the only way to get here is when
@@ -361,7 +362,7 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
       return;
     }
 
-    service->post(
+    service->PostTask(
         // Never hold locks when calling a callback
         [req]() { req->OnResponseArrived(nullptr, Status::OK()); }
     );

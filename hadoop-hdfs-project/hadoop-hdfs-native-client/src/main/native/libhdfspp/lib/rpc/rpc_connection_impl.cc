@@ -70,27 +70,27 @@ RpcConnection::RpcConnection(std::shared_ptr<LockFreeRpcEngine> engine)
     : engine_(engine),
       connected_(kNotYetConnected) {}
 
-::asio::io_service *RpcConnection::GetIoService() {
+std::shared_ptr<IoService> RpcConnection::GetIoService() {
   std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
   if(!pinnedEngine) {
     LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid RpcEngine");
     return nullptr;
   }
 
-  return &pinnedEngine->io_service();
+  return pinnedEngine->io_service();
 }
 
 void RpcConnection::StartReading() {
   auto shared_this = shared_from_this();
-  ::asio::io_service *service = GetIoService();
+  std::shared_ptr<IoService> service = GetIoService();
   if(!service) {
     LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
     return;
   }
 
-  service->post([shared_this, this] () {
-    OnRecvCompleted(::asio::error_code(), 0);
-  });
+  service->PostLambda(
+    [shared_this, this] () { OnRecvCompleted(::asio::error_code(), 0); }
+  );
 }
 
 void RpcConnection::HandshakeComplete(const Status &s) {
@@ -164,13 +164,14 @@ void RpcConnection::ContextComplete(const Status &s) {
 void RpcConnection::AsyncFlushPendingRequests() {
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
 
-  ::asio::io_service *service = GetIoService();
+  std::shared_ptr<IoService> service = GetIoService();
   if(!service) {
     LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
     return;
   }
 
-  service->post([shared_this, this]() {
+  std::function<void()> task = [shared_this, this]()
+  {
     std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
     LOG_TRACE(kRPC, << "RpcConnection::AsyncFlushPendingRequests called (connected=" << ToString(connected_) << ")");
@@ -178,7 +179,10 @@ void RpcConnection::AsyncFlushPendingRequests() {
     if (!outgoing_request_) {
       FlushPendingRequests();
     }
-  });
+  };
+
+  service->PostTask(task);
+
 }
 
 Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
@@ -228,15 +232,17 @@ Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
     return status;
   }
 
-  ::asio::io_service *service = GetIoService();
+  std::shared_ptr<IoService> service = GetIoService();
   if(!service) {
     LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
     return Status::Error("RpcConnection attempted to access invalid IoService");
   }
 
-  service->post([req, response, status]() {
-    req->OnResponseArrived(response->in.get(), status);  // Never call back while holding a lock
-  });
+  service->PostLambda(
+    [req, response, status]() {
+      req->OnResponseArrived(response->in.get(), status);  // Never call back while holding a lock
+    }
+  );
 
   return Status::OK();
 }

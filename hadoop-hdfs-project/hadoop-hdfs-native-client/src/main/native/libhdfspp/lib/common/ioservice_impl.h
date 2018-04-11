@@ -19,19 +19,15 @@
 #ifndef COMMON_HDFS_IOSERVICE_H_
 #define COMMON_HDFS_IOSERVICE_H_
 
-#include "hdfspp/hdfspp.h"
+#include "hdfspp/ioservice.h"
 
 #include <asio/io_service.hpp>
-#include "common/util.h"
+#include "common/new_delete.h"
 
 #include <mutex>
 #include <thread>
 
 namespace hdfs {
-
-// Uncomment this to determine if issues are due to concurrency or logic faults
-// If tests still fail with concurrency disabled it's most likely a logic bug
-#define DISABLE_CONCURRENT_WORKERS
 
 /*
  *  A thin wrapper over the asio::io_service with a few extras
@@ -41,23 +37,24 @@ namespace hdfs {
 
 class IoServiceImpl : public IoService {
  public:
+  MEMCHECKED_CLASS(IoServiceImpl)
   IoServiceImpl() {}
 
-  virtual unsigned int InitDefaultWorkers() override;
-  virtual unsigned int InitWorkers(unsigned int thread_count) override;
-  virtual void PostTask(std::function<void(void)>& asyncTask) override;
-  virtual void Run() override;
-  virtual void Stop() override { io_service_.stop(); }
+  unsigned int InitDefaultWorkers() override;
+  unsigned int InitWorkers(unsigned int thread_count) override;
+  void PostTask(std::function<void(void)> asyncTask) override;
+  void Run() override;
+  void Stop() override;
+  asio::io_service& GetRaw() override;
 
   // Add a single worker thread, in the common case try to avoid this in favor
   // of Init[Default]Workers. Public for use by tests and rare cases where a
   // client wants very explicit control of threading for performance reasons
   // e.g. pinning threads to NUMA nodes.
-  bool AddWorkerThread();
+  bool AddWorkerThread() override;
 
-  // Be very careful about using this: HDFS-10241
-  ::asio::io_service &io_service() { return io_service_; }
-  unsigned int get_worker_thread_count();
+  unsigned int GetWorkerThreadCount() override;
+
  private:
   std::mutex state_lock_;
   ::asio::io_service io_service_;

@@ -21,16 +21,19 @@
 #include "hdfspp/status.h"
 #include "common/logging.h"
 
-#include <sstream>
 #include <mutex>
 #include <string>
 
 #include <asio/error_code.hpp>
 #include <openssl/rand.h>
-
-#include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
-#include <asio.hpp>
+
+
+namespace google {
+  namespace protobuf {
+    class MessageLite;
+  }
+}
 
 namespace hdfs {
 
@@ -38,20 +41,11 @@ namespace hdfs {
 typedef std::lock_guard<std::mutex> mutex_guard;
 
 
-static inline Status ToStatus(const ::asio::error_code &ec) {
-  if (ec) {
-    return Status(ec.value(), ec.message().c_str());
-  } else {
-    return Status::OK();
-  }
-}
+Status ToStatus(const ::asio::error_code &ec);
 
 // Determine size of buffer that needs to be allocated in order to serialize msg
 // in delimited format
-static inline int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg) {
-  size_t size = msg->ByteSize();
-  return ::google::protobuf::io::CodedOutputStream::VarintSize32(size) + size;
-}
+int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg);
 
 // Construct msg from the input held in the CodedInputStream
 // return false on failure, otherwise return true
@@ -82,7 +76,6 @@ bool lock_held(T & mutex) {
 // catch anything thrown by asio.
 // Returns a string containing error message on failure, otherwise an empty string.
 std::string SafeDisconnect(asio::ip::tcp::socket *sock);
-
 
 
 // The following helper function is used for classes that look like the following:

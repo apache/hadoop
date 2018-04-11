@@ -23,13 +23,10 @@
 
 #include "hdfspp/log.h"
 
-#include <iostream>
 #include <sstream>
 #include <mutex>
 #include <memory>
 #include <thread>
-
-#include <asio/ip/tcp.hpp>
 
 namespace hdfs {
 

@@ -40,7 +40,7 @@ namespace hdfs {
 class HANamenodeTracker {
  public:
   HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &servers,
-                    ::asio::io_service *ioservice,
+                    std::shared_ptr<IoService> ioservice,
                     std::shared_ptr<LibhdfsEvents> event_handlers_);
 
   virtual ~HANamenodeTracker();
@@ -66,7 +66,7 @@ class HANamenodeTracker {
   bool resolved_;
 
   // Keep service in case a second round of DNS lookup is required
-  ::asio::io_service *ioservice_;
+  std::shared_ptr<IoService> ioservice_;
 
   // Event handlers, for now this is the simplest place to catch all failover events
   // and push info out to client application.  Possibly move into RPCEngine.

@@ -72,11 +72,11 @@ public:
   virtual void AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
-    const MutableBuffers &buffers,
+    const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t)> handler) = 0;
 
   virtual void AsyncReadPacket(
-    const MutableBuffers &buffers,
+    const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) = 0;
 
   virtual void AsyncRequestBlock(
@@ -98,7 +98,7 @@ public:
         chunk_padding_bytes_(0), cancel_state_(cancel_state), event_handlers_(event_handlers.get()) {}
 
   virtual void AsyncReadPacket(
-    const MutableBuffers &buffers,
+    const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler) override;
 
   virtual void AsyncRequestBlock(
@@ -111,12 +111,12 @@ public:
   virtual void AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
-    const MutableBuffers &buffers,
+    const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t)> handler) override;
 
   virtual void CancelOperation() override;
 
-  size_t ReadPacket(const MutableBuffers &buffers, Status *status);
+  size_t ReadPacket(const MutableBuffer &buffer, Status *status);
 
   Status RequestBlock(
     const std::string &client_name,

@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-#include "common/hdfs_ioservice.h"
+#include "hdfspp/ioservice.h"
 
 #include <future>
 #include <functional>
 #include <thread>
 #include <string>
 
+
+#include <google/protobuf/stubs/common.h>
 #include <gmock/gmock.h>
 
 using ::testing::_;
@@ -34,7 +36,7 @@ using namespace hdfs;
 // Make sure IoService spins up specified number of threads
 TEST(IoServiceTest, InitThreads) {
 #ifndef DISABLE_CONCURRENT_WORKERS
-  std::shared_ptr<IoServiceImpl> service = std::static_pointer_cast<IoServiceImpl>(IoService::MakeShared());
+  std::shared_ptr<IoService> service = IoService::MakeShared();
   EXPECT_NE(service, nullptr);
 
   unsigned int thread_count = 4;
@@ -50,7 +52,7 @@ TEST(IoServiceTest, InitThreads) {
 // Make sure IoService defaults to logical thread count
 TEST(IoServiceTest, InitDefaultThreads) {
 #ifndef DISABLE_CONCURRENT_WORKERS
-  std::shared_ptr<IoServiceImpl> service = std::static_pointer_cast<IoServiceImpl>(IoService::MakeShared());
+  std::shared_ptr<IoService> service = IoService::MakeShared();
   EXPECT_NE(service, nullptr);
 
   unsigned int thread_count = std::thread::hardware_concurrency();
@@ -66,7 +68,7 @@ TEST(IoServiceTest, InitDefaultThreads) {
 
 // Check IoService::PostTask
 TEST(IoServiceTest, SimplePost) {
-  std::shared_ptr<IoServiceImpl> service = std::static_pointer_cast<IoServiceImpl>(IoService::MakeShared());
+  std::shared_ptr<IoService> service = IoService::MakeShared();
   EXPECT_NE(service, nullptr);
 
   unsigned int thread_count = std::thread::hardware_concurrency();

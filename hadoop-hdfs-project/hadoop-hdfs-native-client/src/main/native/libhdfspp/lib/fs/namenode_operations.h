@@ -42,7 +42,7 @@ namespace hdfs {
 class NameNodeOperations {
 public:
   MEMCHECKED_CLASS(NameNodeOperations)
-  NameNodeOperations(::asio::io_service *io_service, const Options &options,
+  NameNodeOperations(std::shared_ptr<IoService> io_service, const Options &options,
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :
   io_service_(io_service),
@@ -119,7 +119,7 @@ private:
   static void DirectoryListingProtoToStatInfo(std::shared_ptr<std::vector<StatInfo>> stat_infos, const ::hadoop::hdfs::DirectoryListingProto & dl);
   static void GetFsStatsResponseProtoToFsInfo(hdfs::FsInfo & fs_info, const std::shared_ptr<::hadoop::hdfs::GetFsStatsResponseProto> & fs);
 
-  ::asio::io_service * io_service_;
+  std::shared_ptr<IoService> io_service_;
 
   // This is the only permanent owner of the RpcEngine, however the RPC layer
   // needs to reference count it prevent races during FileSystem destruction.

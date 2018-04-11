@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-#include "hdfs_ioservice.h"
+#include "ioservice_impl.h"
 
 #include <thread>
 #include <mutex>
 #include <vector>
 
+#include "common/util.h"
 #include "common/logging.h"
+
 
 namespace hdfs {
 
@@ -99,7 +101,7 @@ void IoServiceImpl::ThreadExitHook() {
   LOG_DEBUG(kAsyncRuntime, << "Worker thread #" << std::this_thread::get_id() << " for IoServiceImpl@" << this << " exiting");
 }
 
-void IoServiceImpl::PostTask(std::function<void(void)>& asyncTask) {
+void IoServiceImpl::PostTask(std::function<void(void)> asyncTask) {
   io_service_.post(asyncTask);
 }
 
@@ -133,14 +135,25 @@ void IoServiceImpl::Run() {
     } catch (const std::exception & e) {
       LOG_WARN(kFileSystem, << "Unexpected exception in libhdfspp worker thread: " << e.what());
     } catch (...) {
-      LOG_WARN(kFileSystem, << "Unexpected value not derived from std::exception in libhdfspp worker thread");
+      LOG_WARN(kFileSystem, << "Caught unexpected value not derived from std::exception in libhdfspp worker thread");
     }
   }
 }
 
-unsigned int IoServiceImpl::get_worker_thread_count() {
-  mutex_guard state_lock(state_lock_);
-  return worker_threads_.size();
+void IoServiceImpl::Stop() {
+  // Note: This doesn't wait for running operations to stop.
+  io_service_.stop();
 }
 
+asio::io_service& IoServiceImpl::GetRaw() {
+  return io_service_;
 }
+
+unsigned int IoServiceImpl::GetWorkerThreadCount() {
+  mutex_guard state_lock(state_lock_);
+  return worker_threads_.size();
+
+}
+
+
+} // namespace hdfs

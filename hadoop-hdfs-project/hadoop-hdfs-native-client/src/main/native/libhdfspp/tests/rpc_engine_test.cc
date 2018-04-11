@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include "hdfspp/ioservice.h"
+
 #include "mock_connection.h"
 #include "test.pb.h"
 #include "RpcHeader.pb.h"
@@ -23,7 +25,6 @@
 #include "common/namenode_info.h"
 
 #include <google/protobuf/io/coded_stream.h>
-
 #include <gmock/gmock.h>
 
 using ::hadoop::common::RpcResponseHeaderProto;
@@ -104,9 +105,10 @@ static inline std::pair<error_code, string> RpcResponse(
 using namespace hdfs;
 
 TEST(RpcEngineTest, TestRoundTrip) {
-  ::asio::io_service io_service;
+
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(&io_service, options, "foo", "", "protocol", 1);
+  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);
@@ -129,20 +131,20 @@ TEST(RpcEngineTest, TestRoundTrip) {
   EchoRequestProto req;
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
-  engine->AsyncRpc("test", &req, resp, [resp, &complete,&io_service](const Status &stat) {
+  engine->AsyncRpc("test", &req, resp, [resp, &complete,io_service](const Status &stat) {
     ASSERT_TRUE(stat.ok());
     ASSERT_EQ("foo", resp->message());
     complete = true;
-    io_service.stop();
+    io_service->Stop();
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
 TEST(RpcEngineTest, TestConnectionResetAndFail) {
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(&io_service, options, "foo", "", "protocol", 1);
+  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);
@@ -164,23 +166,23 @@ TEST(RpcEngineTest, TestConnectionResetAndFail) {
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
 
-  engine->AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+  engine->AsyncRpc("test", &req, resp, [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_FALSE(stat.ok());
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
 
 TEST(RpcEngineTest, TestConnectionResetAndRecover) {
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
   std::shared_ptr<SharedConnectionEngine> engine
-      = std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      = std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -206,22 +208,22 @@ TEST(RpcEngineTest, TestConnectionResetAndRecover) {
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
 
-  engine->AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+  engine->AsyncRpc("test", &req, resp, [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_TRUE(stat.ok());
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
 TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
   std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -246,17 +248,17 @@ TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
   req.set_message("foo");
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
 
-  engine->AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+  engine->AsyncRpc("test", &req, resp, [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_TRUE(stat.ok());
   });
 
-  ::asio::deadline_timer timer(io_service);
+  ::asio::deadline_timer timer(io_service->GetRaw());
   timer.expires_from_now(std::chrono::hours(100));
   timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
 
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
@@ -267,7 +269,7 @@ TEST(RpcEngineTest, TestConnectionFailure)
   SharedMockConnection::SetSharedConnectionData(producer);
 
   // Error and no retry
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
 
   bool complete = false;
 
@@ -275,16 +277,16 @@ TEST(RpcEngineTest, TestConnectionFailure)
   options.max_rpc_retries = 0;
   options.rpc_retry_delay_ms = 0;
   std::shared_ptr<SharedConnectionEngine> engine
-      = std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      = std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine->Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine->Connect("", make_endpoint(), [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_FALSE(stat.ok());
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
@@ -294,7 +296,7 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
   producer->checkProducerForConnect = true;
   SharedMockConnection::SetSharedConnectionData(producer);
 
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
 
   bool complete = false;
 
@@ -302,18 +304,18 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
   options.max_rpc_retries = 2;
   options.rpc_retry_delay_ms = 0;
   std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")));
 
-  engine->Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine->Connect("", make_endpoint(), [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_FALSE(stat.ok());
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
@@ -323,7 +325,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
   producer->checkProducerForConnect = true;
   SharedMockConnection::SetSharedConnectionData(producer);
 
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
 
   bool complete = false;
 
@@ -331,29 +333,30 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
   std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine->Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine->Connect("", make_endpoint(), [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_TRUE(stat.ok());
   });
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
 TEST(RpcEngineTest, TestEventCallbacks)
 {
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
+
   Options options;
   options.max_rpc_retries = 99;
   options.rpc_retry_delay_ms = 0;
   std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -399,17 +402,18 @@ TEST(RpcEngineTest, TestEventCallbacks)
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
 
   bool complete = false;
-  engine->AsyncRpc("test", &req, resp, [&complete, &io_service](const Status &stat) {
+  engine->AsyncRpc("test", &req, resp, [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_TRUE(stat.ok());
   });
 
   // If you're adding event hooks you'll most likely need to update this.
   // It's a brittle test but makes it hard to miss control flow changes in RPC retry.
-  for(const auto& m : callbacks)
+  for(const auto& m : callbacks) {
     std::cerr << m << std::endl;
-  io_service.run();
+  }
+  io_service->Run();
   ASSERT_TRUE(complete);
   ASSERT_EQ(9, callbacks.size());
   ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[0]); // error
@@ -430,7 +434,7 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
   producer->checkProducerForConnect = true;
   SharedMockConnection::SetSharedConnectionData(producer);
 
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
 
   bool complete = false;
 
@@ -438,31 +442,31 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
   std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(&io_service, options, "foo", "", "protocol", 1);
+      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(::asio::error_code(), "")))
       .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
-  engine->Connect("", make_endpoint(), [&complete, &io_service](const Status &stat) {
+  engine->Connect("", make_endpoint(), [&complete, io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_TRUE(stat.ok());
   });
 
-  ::asio::deadline_timer timer(io_service);
+  ::asio::deadline_timer timer(io_service->GetRaw());
   timer.expires_from_now(std::chrono::hours(100));
   timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
 
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 
 TEST(RpcEngineTest, TestTimeout) {
-  ::asio::io_service io_service;
+  std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
   options.rpc_timeout = 1;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(&io_service, options, "foo", "", "protocol", 1);
+  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);
@@ -481,15 +485,15 @@ TEST(RpcEngineTest, TestTimeout) {
   std::shared_ptr<EchoResponseProto> resp(new EchoResponseProto());
   engine->AsyncRpc("test", &req, resp, [resp, &complete,&io_service](const Status &stat) {
     complete = true;
-    io_service.stop();
+    io_service->Stop();
     ASSERT_FALSE(stat.ok());
   });
 
-  ::asio::deadline_timer timer(io_service);
+  ::asio::deadline_timer timer(io_service->GetRaw());
   timer.expires_from_now(std::chrono::hours(100));
   timer.async_wait([](const asio::error_code & err){(void)err; ASSERT_FALSE("Timed out"); });
 
-  io_service.run();
+  io_service->Run();
   ASSERT_TRUE(complete);
 }
 

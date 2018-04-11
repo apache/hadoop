@@ -49,7 +49,7 @@ public:
   virtual ~MockConnectionBase();
   typedef std::pair<asio::error_code, std::string> ProducerResult;
 
-  void async_read_some(const MutableBuffers &buf,
+  void async_read_some(const MutableBuffer &buf,
           std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     if (produced_.size() == 0) {
@@ -72,7 +72,7 @@ public:
     io_service_->post(std::bind(handler, asio::error_code(), len));
   }
 
-  void async_write_some(const ConstBuffers &buf,
+  void async_write_some(const ConstBuffer &buf,
             std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     // CompletionResult res = OnWrite(buf);
