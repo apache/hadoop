@@ -829,9 +829,10 @@ public class SCMNodeManager
       DatanodeDetailsProto datanodeDetailsProto, SCMNodeReport nodeReport,
       ReportState containerReportState) {
 
+    Preconditions.checkNotNull(datanodeDetailsProto, "Heartbeat is missing " +
+        "DatanodeDetails.");
     DatanodeDetails datanodeDetails = DatanodeDetails
         .getFromProtoBuf(datanodeDetailsProto);
-
     // Checking for NULL to make sure that we don't get
     // an exception from ConcurrentList.
     // This could be a problem in tests, if this function is invoked via
@@ -846,7 +847,6 @@ public class SCMNodeManager
     } else {
       LOG.error("Datanode ID in heartbeat is null");
     }
-
     return commandQueue.getCommand(datanodeDetails.getUuid());
   }
 
@@ -875,7 +875,7 @@ public class SCMNodeManager
    */
   @Override
   public SCMNodeMetric getNodeStat(DatanodeDetails datanodeDetails) {
-    return new SCMNodeMetric(nodeStats.get(datanodeDetails));
+    return new SCMNodeMetric(nodeStats.get(datanodeDetails.getUuid()));
   }
 
   @Override

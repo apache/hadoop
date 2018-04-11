@@ -241,6 +241,17 @@ public final class DatanodeDetails implements Comparable<DatanodeDetails> {
     return this.getUuid().compareTo(that.getUuid());
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof DatanodeDetails &&
+        uuid.equals(((DatanodeDetails) obj).uuid);
+  }
+
+  @Override
+  public int hashCode() {
+    return uuid.hashCode();
+  }
+
   /**
    * Returns DatanodeDetails.Builder instance.
    *
