@@ -438,15 +438,15 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getNumGPUs(boolean excludeOwnerlessUsingGpus) {
-    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
+  public int getNumGPUs(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
     return numGPUs;
   }
 
   /** {@inheritDoc} */
   @Override
-  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus) {
-    refreshGpuIfNeeded(excludeOwnerlessUsingGpus);
+  public long getGpuAttributeCapacity(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
+    refreshGpuIfNeeded(excludeOwnerlessUsingGpus, gpuNotReadyMemoryThreshold);
     return gpuAttributeCapacity;
   }
 
@@ -469,7 +469,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
   }
 
-  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus) {
+  private void refreshGpuIfNeeded(boolean excludeOwnerlessUsingGpus, int gpuNotReadyMemoryThreshold) {
 
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
@@ -504,7 +504,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           if (mat.find()) {
             if (mat.group(1) != null && mat.group(2) != null) {
               int usedMem = Integer.parseInt(mat.group(1));
-              if (usedMem > 0) {
+              if (usedMem > gpuNotReadyMemoryThreshold) {
                 gpuAttributeUsed |= (1L << currentIndex);
               }
             }
@@ -603,8 +603,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
       plugin.getCumulativeCpuTime());
-    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true));
-    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true));
+    System.out.println("Number of GPUs : " + plugin.getNumGPUs(true, 0));
+    System.out.println("GPUs attribute : " + plugin.getGpuAttributeCapacity(true, 0));
     System.out.println("used Ports : " + plugin.getPortsUsage());
 
     try {

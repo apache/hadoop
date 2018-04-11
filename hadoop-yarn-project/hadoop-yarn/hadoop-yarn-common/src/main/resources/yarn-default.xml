@@ -1018,9 +1018,15 @@
   </property>
 
   <property>
-    <description>enable bitset store</description>
+    <description>exclude the gpus which is used by unknown process</description>
     <name>yarn.gpu_exclude_ownerless_gpu.enable</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>the gpu memory threshold to indicate a gpu is used by unknown process</description>
+    <name>yarn.gpu_not_ready_memory_threshold-mb</name>
+    <value>20</value>
   </property>
 
   <property>

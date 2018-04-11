@@ -1264,6 +1264,15 @@ public class YarnConfiguration extends Configuration {
 
 
   /**
+   * The GPU memory threshold to indicate whether this Gpus is ready to server job.
+   * usually, these memory are used by some unkown process.
+   */
+  public static final String GPU_NOT_READY_MEMORY_THRESHOLD = YARN_PREFIX
+    + "gpu_not_ready_memory_threshold-mb";
+  public static final int DEFAULT_GPU_NOT_READY_MEMORY_THRESHOLD = 20;
+
+
+  /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
    * entries
    */

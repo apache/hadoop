@@ -320,12 +320,12 @@ public class TestLinuxResourceCalculatorPlugin {
   public void parsingGPUFile() throws Exception {
 
     InitialGPUTestFile();
-    assertEquals(8,plugin.getNumGPUs(false));
-    assertEquals(plugin.getGpuAttributeCapacity(false),0xFC);
+    assertEquals(8,plugin.getNumGPUs(false, 0));
+    assertEquals(plugin.getGpuAttributeCapacity(false, 0),0xFC);
 
     Thread.sleep(LinuxResourceCalculatorPlugin.REFRESH_INTERVAL_MS +1);
-    assertEquals(8,plugin.getNumGPUs(false));
-    assertEquals(plugin.getGpuAttributeCapacity(false),0xFC);
+    assertEquals(8,plugin.getNumGPUs(false, 0));
+    assertEquals(plugin.getGpuAttributeCapacity(false, 0),0xFC);
   }
 
 
