@@ -15,7 +15,7 @@
 # Registry DNS Server
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
-The document describes the internals of Registry DNS server. It is based on the [YARN service registry](../registry/index.md) which is backed by a zookeeper cluster.
+The document describes the internals of Registry DNS server. It is based on the [YARN service registry](../registry/index.html) which is backed by a zookeeper cluster.
 ## Introduction
 
 The Registry DNS Server provides a standard DNS interface to the information posted into the YARN Registry by deployed applications. The DNS service serves the following functions:
@@ -153,7 +153,7 @@ The Registry DNS server reads its configuration properties from the yarn-site.xm
 
 | Name | Description |
 | ------------ | ------------- |
-|hadoop.registry.zk.quorum| A comma separated list of hostname:port pairs defining the zookeeper quorum for the [YARN registry](../registry/registry-configuration.md). |
+|hadoop.registry.zk.quorum| A comma separated list of hostname:port pairs defining the zookeeper quorum for the [YARN registry](../registry/registry-configuration.html). |
 | hadoop.registry.dns.enabled | The DNS functionality is enabled for the cluster. Default is false. |
 | hadoop.registry.dns.domain-name  | The domain name for Hadoop cluster associated records.  |
 | hadoop.registry.dns.bind-address | Address associated with the network interface to which the DNS listener should bind.  |

@@ -29,7 +29,7 @@ affinity and anti-affinity scheduling, log aggregation for services, automatical
 A restful API server is developed to allow users to deploy/manage their services on YARN via a simple JSON spec. This avoids users
 from dealing with the low-level APIs, writing complex code to bring their services onto YARN. The REST layer acts as a unified REST based entry for
 creation and lifecycle management of YARN services. Services here can range from simple single-component apps to the most complex, 
-multi-component applications needing special orchestration needs. Please refer to this [API doc](YarnServiceAPI.md) for detailed API documentations.
+multi-component applications needing special orchestration needs. Please refer to this [API doc](YarnServiceAPI.html) for detailed API documentations.
 
 The API-server is stateless, which means users can simply spin up multiple instances, and have a load balancer fronting them to 
 support HA, distribute the load etc.
@@ -37,10 +37,10 @@ support HA, distribute the load etc.
 ### Service Discovery
 A DNS server is implemented to enable discovering services on YARN via the standard mechanism: DNS lookup.
 
-The framework posts container information such as hostname and ip into the [YARN service registry](../registry/index.md). And the DNS server essentially exposes the
+The framework posts container information such as hostname and ip into the [YARN service registry](../registry/index.html). And the DNS server essentially exposes the
 information in YARN service registry by translating them into DNS records such as A record and SRV record.
 Clients can then discover the IPs of containers via standard DNS lookup.
 
 The previous read mechanisms of YARN Service Registry were limited to a registry specific (java) API and a REST interface and are difficult
-to wireup existing clients and services. The DNS based service discovery eliminates this gap. Please refer to this [Service Discovery doc](ServiceDiscovery.md)
+to wireup existing clients and services. The DNS based service discovery eliminates this gap. Please refer to this [Service Discovery doc](ServiceDiscovery.html)
 for more details.

@@ -51,11 +51,11 @@ e.g. Below command launches a `sleeper` service named as `my-sleeper` on YARN.
 ```
 yarn app -launch my-sleeper sleeper
 ```
-For launching docker based services using YARN Service framework, please refer to [API doc](YarnServiceAPI.md).
+For launching docker based services using YARN Service framework, please refer to [API doc](YarnServiceAPI.html).
 
 ## Manage services on YARN via CLI
 Below steps walk you through deploying a services on YARN using CLI.
-Refer to [Yarn Commands](../YarnCommands.md) for the full list of commands and options.
+Refer to [Yarn Commands](../YarnCommands.html) for the full list of commands and options.
 ### Deploy a service
 ```
 yarn app -launch ${SERVICE_NAME} ${PATH_TO_SERVICE_DEF_FILE}
@@ -121,7 +121,7 @@ For running inside ResourceManager, add this property to `yarn-site.xml` and res
 
 Services can be deployed on YARN through the ResourceManager web endpoint.
 
-Refer to [API doc](YarnServiceAPI.md)  for the detailed API specificatiosn.
+Refer to [API doc](YarnServiceAPI.html)  for the detailed API specificatiosn.
 
 ### Deploy a service
 
@@ -194,7 +194,7 @@ A new `service` tab is added in the YARN UI2 specially to show YARN Services in 
 The services framework posts the data into TimelineService and the `service` UI reads data from TimelineService to render its content.
 
 ### Enable Timeline Service v2
-Please refer to [TimeLineService v2 doc](../TimelineServiceV2.md) for how to enable Timeline Service v2.
+Please refer to [TimeLineService v2 doc](../TimelineServiceV2.html) for how to enable Timeline Service v2.
 
 ### Enable new YARN UI
 
@@ -229,7 +229,7 @@ E.g. A typical configuration looks like below:
 # Run with Docker
 The above example is only for a non-docker container based service. YARN Service Framework also provides first-class support for managing docker based services.
 Most of the steps for managing docker based services are the same except that in docker the `Artifact` type for a component is `DOCKER` and the Artifact `id` is the name of the docker image.
-For details in how to setup docker on YARN, please check [Docker on YARN](../DockerContainers.md).
+For details in how to setup docker on YARN, please check [Docker on YARN](../DockerContainers.html).
 
 With docker support, it also opens up a set of new possibilities to implement features such as discovering service containers on YARN with DNS.
-Check [ServiceDiscovery](ServiceDiscovery.md) for more details.
+Check [ServiceDiscovery](ServiceDiscovery.html) for more details.
