@@ -388,7 +388,7 @@ public class MountTableResolver
     } else {
       // Not found, use default location
       RemoteLocation remoteLocation =
-          new RemoteLocation(defaultNameService, path);
+          new RemoteLocation(defaultNameService, path, path);
       List<RemoteLocation> locations =
           Collections.singletonList(remoteLocation);
       ret = new PathLocation(null, locations);
@@ -519,7 +519,7 @@ public class MountTableResolver
         newPath += Path.SEPARATOR;
       }
       newPath += remainingPath;
-      RemoteLocation remoteLocation = new RemoteLocation(nsId, newPath);
+      RemoteLocation remoteLocation = new RemoteLocation(nsId, newPath, path);
       locations.add(remoteLocation);
     }
     DestinationOrder order = entry.getDestOrder();

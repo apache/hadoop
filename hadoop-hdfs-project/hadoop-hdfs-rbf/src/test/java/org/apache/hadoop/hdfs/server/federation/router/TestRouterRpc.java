@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.delet
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileStatus;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,6 +32,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -1020,6 +1022,49 @@ public class TestRouterRpc {
     boolean routerSuccess = routerProtocol.restoreFailedStorage("check");
     boolean nnSuccess = nnProtocol.restoreFailedStorage("check");
     assertEquals(nnSuccess, routerSuccess);
+  }
+
+  @Test
+  public void testProxyExceptionMessages() throws IOException {
+
+    // Install a mount point to a different path to check
+    MockResolver resolver =
+        (MockResolver)router.getRouter().getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    resolver.addLocation("/mnt", ns0, "/");
+
+    try {
+      FsPermission permission = new FsPermission("777");
+      routerProtocol.mkdirs("/mnt/folder0/folder1", permission, false);
+      fail("mkdirs for non-existing parent folder should have failed");
+    } catch (IOException ioe) {
+      assertExceptionContains("/mnt/folder0", ioe);
+    }
+
+    try {
+      FsPermission permission = new FsPermission("777");
+      routerProtocol.setPermission("/mnt/testfile.txt", permission);
+      fail("setPermission for non-existing file should have failed");
+    } catch (IOException ioe) {
+      assertExceptionContains("/mnt/testfile.txt", ioe);
+    }
+
+    try {
+      FsPermission permission = new FsPermission("777");
+      routerProtocol.mkdirs("/mnt/folder0/folder1", permission, false);
+      routerProtocol.delete("/mnt/folder0", false);
+      fail("delete for non-existing file should have failed");
+    } catch (IOException ioe) {
+      assertExceptionContains("/mnt/folder0", ioe);
+    }
+
+    resolver.cleanRegistrations();
+
+    // Check corner cases
+    assertEquals(
+        "Parent directory doesn't exist: /ns1/a/a/b",
+        RouterRpcClient.processExceptionMsg(
+            "Parent directory doesn't exist: /a/a/b", "/a", "/ns1/a"));
   }
 
   @Test
