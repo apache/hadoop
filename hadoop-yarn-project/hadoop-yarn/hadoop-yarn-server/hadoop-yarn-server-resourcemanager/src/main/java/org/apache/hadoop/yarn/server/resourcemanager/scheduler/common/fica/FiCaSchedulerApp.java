@@ -484,7 +484,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return accepted;
   }
 
-  public void apply(Resource cluster,
+  public boolean apply(Resource cluster,
       ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
     boolean reReservation = false;
 
@@ -497,8 +497,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             allocation = request.getFirstAllocatedOrReservedContainer();
         SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode>
             schedulerContainer = allocation.getAllocatedOrReservedContainer();
-        RMContainer rmContainer = schedulerContainer.getRmContainer();
 
+        // Required sanity check - AM can call 'allocate' to update resource
+        // request without locking the scheduler, hence we need to check
+        if (getOutstandingAsksCount(schedulerContainer.getSchedulerRequestKey())
+                <= 0) {
+          return false;
+        }
+
+        RMContainer rmContainer = schedulerContainer.getRmContainer();
         reReservation =
             (!schedulerContainer.isAllocated()) && (rmContainer.getState()
                 == RMContainerState.RESERVED);
@@ -578,6 +585,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     if (!reReservation) {
       getCSLeafQueue().apply(cluster, request);
     }
+    return true;
   }
 
   public boolean unreserve(SchedulerRequestKey schedulerKey,
