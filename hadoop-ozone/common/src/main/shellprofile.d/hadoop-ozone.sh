@@ -19,7 +19,7 @@ if [[ "${HADOOP_SHELL_EXECNAME}" = ozone ]]; then
 fi
 
 
-## @description  Profile for hdds/cblock/ozone components.
+## @description  Profile for hdds/ozone components.
 ## @audience     private
 ## @stability    evolving
 function _ozone_hadoop_classpath
@@ -40,7 +40,5 @@ function _ozone_hadoop_classpath
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDDS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_LIB_JARS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_HDFS_HOME}/${OZONE_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${CBLOCK_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${CBLOCK_DIR}"'/*'
 
 }

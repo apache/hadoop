@@ -33,8 +33,6 @@ function hadoop_usage
   hadoop_add_option "--workers" "turn on worker mode"
 
 
-  hadoop_add_subcommand "cblock" admin "cblock CLI"
-  hadoop_add_subcommand "cblockserver" daemon "run cblock server"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "datanode" daemon "run a DFS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
@@ -43,7 +41,6 @@ function hadoop_usage
   hadoop_add_subcommand "getozoneconf" client "get ozone config values from
   configuration"
   hadoop_add_subcommand "jmxget" admin "get JMX exported values from NameNode or DataNode."
-  hadoop_add_subcommand "jscsi" daemon "run cblock jscsi server"
   hadoop_add_subcommand "ksm" daemon "Ozone keyspace manager"
   hadoop_add_subcommand "o3" client "command line interface for ozone"
   hadoop_add_subcommand "noz" client "ozone debug tool, convert ozone metadata into relational data"
@@ -65,13 +62,6 @@ function ozonecmd_case
   shift
 
   case ${subcmd} in
-    cblock)
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.cli.CBlockCli
-    ;;
-    cblockserver)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.CBlockManager
-    ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
     ;;
@@ -105,10 +95,6 @@ function ozonecmd_case
     ;;
     getozoneconf)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.freon.OzoneGetConf;
-    ;;
-    jscsi)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME=org.apache.hadoop.cblock.jscsiHelper.SCSITargetDaemon
     ;;
     ksm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

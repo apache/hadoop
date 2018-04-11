@@ -585,11 +585,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-cblock-server</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-tools</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -599,14 +594,6 @@
         <version>${project.version}</version>
         <type>test-jar</type>
       </dependency>
-
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-cblock-tools</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-
-
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>

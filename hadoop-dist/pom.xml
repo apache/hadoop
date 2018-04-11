@@ -239,10 +239,6 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-cblock-server</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdds-container-service</artifactId>
         </dependency>
         <dependency>
@@ -256,10 +252,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-ozone-tools</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-cblock-tools</artifactId>
         </dependency>
       </dependencies>
       <build>
