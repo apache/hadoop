@@ -166,7 +166,9 @@ public class TestYarnNativeServices extends ServiceTestUtils {
 
   // Create compa with 2 containers
   // Create compb with 2 containers which depends on compa
-  // Check containers for compa started before containers for compb
+  // Create compc with 2 containers which depends on compb
+  // Check containers for compa started before containers for compb before
+  // containers for compc
   @Test (timeout = 200000)
   public void testComponentStartOrder() throws Exception {
     setupInternal(NUM_NMS);
@@ -175,17 +177,23 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     exampleApp.setName("teststartorder");
     exampleApp.setVersion("v1");
     exampleApp.addComponent(createComponent("compa", 2, "sleep 1000"));
-    Component compb = createComponent("compb", 2, "sleep 1000");
 
-    // Let compb depedends on compa;
+    // Let compb depend on compa
+    Component compb = createComponent("compb", 2, "sleep 1000");
     compb.setDependencies(Collections.singletonList("compa"));
     exampleApp.addComponent(compb);
+
+    // Let compc depend on compb
+    Component compc = createComponent("compc", 2, "sleep 1000");
+    compc.setDependencies(Collections.singletonList("compb"));
+    exampleApp.addComponent(compc);
 
     client.actionCreate(exampleApp);
     waitForServiceToBeStable(client, exampleApp);
 
     // check that containers for compa are launched before containers for compb
-    checkContainerLaunchDependencies(client, exampleApp, "compa", "compb");
+    checkContainerLaunchDependencies(client, exampleApp, "compa", "compb",
+        "compc");
 
     client.actionStop(exampleApp.getName(), true);
     client.actionDestroy(exampleApp.getName());
