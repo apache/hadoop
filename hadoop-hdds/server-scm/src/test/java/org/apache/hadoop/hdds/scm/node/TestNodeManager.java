@@ -35,7 +35,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -71,7 +70,6 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCmdType;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -423,8 +421,8 @@ public class TestNodeManager {
 
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
-      List<DatanodeDetails> nodeList = createNodeSet(nodeManager, nodeCount,
-          "Node");
+      List<DatanodeDetails> nodeList = createNodeSet(nodeManager, nodeCount);
+
 
       DatanodeDetails staleNode = TestUtils.getDatanodeDetails(nodeManager);
 
@@ -484,22 +482,20 @@ public class TestNodeManager {
   }
 
   /**
-   * Asserts that we log an error for null in datanode ID.
+   * Check for NPE when datanodeDetails is passed null for sendHeartbeat.
    *
    * @throws IOException
    * @throws InterruptedException
    * @throws TimeoutException
    */
   @Test
-  public void testScmLogErrorOnNullDatanode() throws IOException,
+  public void testScmCheckForErrorOnNullDatanodeDetails() throws IOException,
       InterruptedException, TimeoutException {
     try (SCMNodeManager nodeManager = createNodeManager(getConf())) {
-      GenericTestUtils.LogCapturer logCapturer =
-          GenericTestUtils.LogCapturer.captureLogs(SCMNodeManager.LOG);
       nodeManager.sendHeartbeat(null, null, reportState);
-      logCapturer.stopCapturing();
-      assertThat(logCapturer.getOutput(),
-          containsString("Datanode ID in heartbeat is null"));
+    } catch (NullPointerException npe) {
+      GenericTestUtils.assertExceptionContains("Heartbeat is missing " +
+          "DatanodeDetails.", npe);
     }
   }
 
@@ -568,11 +564,11 @@ public class TestNodeManager {
      */
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       DatanodeDetails healthyNode =
-          TestUtils.getDatanodeDetails(nodeManager, "HealthyNode");
+          TestUtils.getDatanodeDetails(nodeManager);
       DatanodeDetails staleNode =
-          TestUtils.getDatanodeDetails(nodeManager, "StaleNode");
+          TestUtils.getDatanodeDetails(nodeManager);
       DatanodeDetails deadNode =
-          TestUtils.getDatanodeDetails(nodeManager, "DeadNode");
+          TestUtils.getDatanodeDetails(nodeManager);
       nodeManager.sendHeartbeat(
           healthyNode.getProtoBufMessage(), null, reportState);
       nodeManager.sendHeartbeat(
@@ -708,15 +704,14 @@ public class TestNodeManager {
    * Create a set of Nodes with a given prefix.
    *
    * @param count  - number of nodes.
-   * @param prefix - A prefix string that can be used in verification.
    * @return List of Nodes.
    */
   private List<DatanodeDetails> createNodeSet(SCMNodeManager nodeManager, int
-      count, String
-      prefix) {
+      count) {
     List<DatanodeDetails> list = new LinkedList<>();
     for (int x = 0; x < count; x++) {
-      list.add(TestUtils.getDatanodeDetails(nodeManager, prefix + x));
+      list.add(TestUtils.getDatanodeDetails(nodeManager, UUID.randomUUID()
+          .toString()));
     }
     return list;
   }
@@ -758,11 +753,11 @@ public class TestNodeManager {
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       List<DatanodeDetails> healthyNodeList = createNodeSet(nodeManager,
-          healthyCount, "Healthy");
+          healthyCount);
       List<DatanodeDetails> staleNodeList = createNodeSet(nodeManager,
-          staleCount, "Stale");
-      List<DatanodeDetails> deadNodeList = createNodeSet(nodeManager, deadCount,
-          "Dead");
+          staleCount);
+      List<DatanodeDetails> deadNodeList = createNodeSet(nodeManager,
+          deadCount);
 
       Runnable healthyNodeTask = () -> {
         try {
@@ -810,8 +805,10 @@ public class TestNodeManager {
       List<DatanodeDetails> deadList = nodeManager.getNodes(DEAD);
 
       for (DatanodeDetails node : deadList) {
-        assertThat(node.getHostName(), CoreMatchers.startsWith("Dead"));
+        assertTrue(deadNodeList.contains(node));
       }
+
+
 
       // Checking stale nodes is tricky since they have to move between
       // healthy and stale to avoid becoming dead nodes. So we search for
@@ -849,9 +846,9 @@ public class TestNodeManager {
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       List<DatanodeDetails> healthyList = createNodeSet(nodeManager,
-          healthyCount, "h");
+          healthyCount);
       List<DatanodeDetails> staleList = createNodeSet(nodeManager,
-          staleCount, "s");
+          staleCount);
 
       Runnable healthyNodeTask = () -> {
         try {
@@ -911,7 +908,7 @@ public class TestNodeManager {
 
     try (SCMNodeManager nodeManager = createNodeManager(conf)) {
       List<DatanodeDetails> healthyList = createNodeSet(nodeManager,
-          healthyCount, "h");
+          healthyCount);
       GenericTestUtils.LogCapturer logCapturer =
           GenericTestUtils.LogCapturer.captureLogs(SCMNodeManager.LOG);
       Runnable healthyNodeTask = () -> {
@@ -1108,7 +1105,7 @@ public class TestNodeManager {
       // Compare the result from
       // NodeManager#getNodeStats and NodeManager#getNodeStat
       SCMNodeStat stat1 = nodeManager.getNodeStats().
-          get(datanodeDetails);
+          get(datanodeDetails.getUuid());
       SCMNodeStat stat2 = nodeManager.getNodeStat(datanodeDetails).get();
       assertEquals(stat1, stat2);
 
