@@ -34,12 +34,20 @@ public class RegisteredCommand extends
   private String datanodeUUID;
   private String clusterID;
   private ErrorCode error;
+  private String hostname;
+  private String ipAddress;
 
   public RegisteredCommand(final ErrorCode error, final String datanodeUUID,
-                           final String clusterID) {
+      final String clusterID) {
+    this(error, datanodeUUID, clusterID, null, null);
+  }
+  public RegisteredCommand(final ErrorCode error, final String datanodeUUID,
+      final String clusterID, final String hostname, final String ipAddress) {
     this.datanodeUUID = datanodeUUID;
     this.clusterID = clusterID;
     this.error = error;
+    this.hostname = hostname;
+    this.ipAddress = ipAddress;
   }
 
   /**
@@ -89,17 +97,37 @@ public class RegisteredCommand extends
   }
 
   /**
+   * Returns the hostname.
+   *
+   * @return - hostname
+   */
+  public String getHostName() {
+    return hostname;
+  }
+
+  /**
+   * Returns the ipAddress of the dataNode.
+   */
+  public String getIpAddress() {
+    return ipAddress;
+  }
+
+  /**
    * Gets the protobuf message of this object.
    *
    * @return A protobuf message.
    */
   @Override
   public byte[] getProtoBufMessage() {
-    return SCMRegisteredCmdResponseProto.newBuilder()
-        .setClusterID(this.clusterID)
-        .setDatanodeUUID(this.datanodeUUID)
-        .setErrorCode(this.error)
-        .build().toByteArray();
+    SCMRegisteredCmdResponseProto.Builder builder =
+        SCMRegisteredCmdResponseProto.newBuilder()
+            .setClusterID(this.clusterID)
+            .setDatanodeUUID(this.datanodeUUID)
+            .setErrorCode(this.error);
+    if (hostname != null && ipAddress != null) {
+      builder.setHostname(hostname).setIpAddress(ipAddress);
+    }
+    return builder.build().toByteArray();
   }
 
   /**
@@ -109,6 +137,8 @@ public class RegisteredCommand extends
     private String datanodeUUID;
     private String clusterID;
     private ErrorCode error;
+    private String ipAddress;
+    private String hostname;
 
     /**
      * sets UUID.
@@ -130,9 +160,16 @@ public class RegisteredCommand extends
     public  RegisteredCommand getFromProtobuf(SCMRegisteredCmdResponseProto
                                                         response) {
       Preconditions.checkNotNull(response);
-      return new RegisteredCommand(response.getErrorCode(),
-          response.hasDatanodeUUID() ? response.getDatanodeUUID(): "",
-          response.hasClusterID() ? response.getClusterID(): "");
+      if (response.hasHostname() && response.hasIpAddress()) {
+        return new RegisteredCommand(response.getErrorCode(),
+            response.hasDatanodeUUID() ? response.getDatanodeUUID() : "",
+            response.hasClusterID() ? response.getClusterID() : "",
+            response.getHostname(), response.getIpAddress());
+      } else {
+        return new RegisteredCommand(response.getErrorCode(),
+            response.hasDatanodeUUID() ? response.getDatanodeUUID() : "",
+            response.hasClusterID() ? response.getClusterID() : "");
+      }
     }
 
     /**
@@ -158,20 +195,37 @@ public class RegisteredCommand extends
     }
 
     /**
+     * sets the hostname.
+     */
+    public Builder setHostname(String hostname) {
+      this.hostname = hostname;
+      return this;
+    }
+
+    public Builder setIpAddress(String ipAddress) {
+      this.ipAddress = ipAddress;
+      return this;
+    }
+
+    /**
      * Build the command object.
      *
      * @return RegisteredCommand
      */
     public RegisteredCommand build() {
-      if ((this.error == ErrorCode.success) &&
-          (this.datanodeUUID == null || this.datanodeUUID.isEmpty()) ||
-          (this.clusterID == null || this.clusterID.isEmpty())) {
-        throw new IllegalArgumentException("On success, RegisteredCommand " +
-            "needs datanodeUUID and ClusterID.");
+      if ((this.error == ErrorCode.success) && (this.datanodeUUID == null
+          || this.datanodeUUID.isEmpty()) || (this.clusterID == null
+          || this.clusterID.isEmpty())) {
+        throw new IllegalArgumentException("On success, RegisteredCommand "
+            + "needs datanodeUUID and ClusterID.");
       }
-
-      return new
-          RegisteredCommand(this.error, this.datanodeUUID, this.clusterID);
+      if (hostname != null && ipAddress != null) {
+        return new RegisteredCommand(this.error, this.datanodeUUID,
+            this.clusterID, this.hostname, this.ipAddress);
+      } else {
+        return new RegisteredCommand(this.error, this.datanodeUUID,
+            this.clusterID);
+      }
     }
   }
 }

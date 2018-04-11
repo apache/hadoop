@@ -228,9 +228,7 @@ public class TestEndPoint {
         new RegisterEndpointTask(rpcEndPoint, conf);
     if (!clearDatanodeDetails) {
       DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
-      HddsProtos.DatanodeDetailsProto datanodeDetailsProto =
-          datanodeDetails.getProtoBufMessage();
-      endpointTask.setDatanodeDetailsProto(datanodeDetailsProto);
+      endpointTask.setDatanodeDetails(datanodeDetails);
     }
     endpointTask.call();
     return rpcEndPoint;
