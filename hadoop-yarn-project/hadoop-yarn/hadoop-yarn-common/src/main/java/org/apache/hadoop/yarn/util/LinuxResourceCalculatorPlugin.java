@@ -18,22 +18,18 @@
 
 package org.apache.hadoop.yarn.util;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Plugin to calculate resource information on Linux systems.
@@ -525,7 +521,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         ir.close();
         Long ownerLessGpus = (gpuAttributeUsed & ~gpuAttributeProcess);
         if ((ownerLessGpus != 0)) {
-          LOG.info("GpuAttributeCapacity:" + Long.toBinaryString(gpuAttributeCapacity) + " GpuAttributeUsed:" + Long.toBinaryString(gpuAttributeUsed) + " GpuAttributeProcess:" + Long.toBinaryString(gpuAttributeProcess) );
+          LOG.info("GpuAttributeCapacity:" + Long.toBinaryString(gpuAttributeCapacity) + " GpuAttributeUsed:" + Long.toBinaryString(gpuAttributeUsed) + " GpuAttributeProcess:" + Long.toBinaryString(gpuAttributeProcess));
           if (excludeOwnerlessUsingGpus) {
             gpuAttributeCapacity = (gpuAttributeCapacity & ~ownerLessGpus);
             LOG.error("GPU:" + Long.toBinaryString(ownerLessGpus) + " is using by unknown process, will exclude these Gpus and won't schedule jobs into these Gpus");

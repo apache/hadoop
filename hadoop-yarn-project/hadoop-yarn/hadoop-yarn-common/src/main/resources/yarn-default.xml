@@ -1017,7 +1017,11 @@
     <value>false</value>
   </property>
 
-
+  <property>
+    <description>enable bitset store</description>
+    <name>yarn.gpu_exclude_ownerless_gpu.enable</name>
+    <value>false</value>
+  </property>
 
   <property>
     <description>NM Webapp address.</description>
