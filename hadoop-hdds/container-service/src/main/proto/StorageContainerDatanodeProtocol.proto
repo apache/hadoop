@@ -181,6 +181,8 @@ message SCMRegisteredCmdResponseProto {
   optional string datanodeUUID = 3;
   optional string clusterID = 4;
   optional SCMNodeAddressList addressList = 5;
+  optional string hostname = 6;
+  optional string ipAddress = 7;
 }
 
 /**
