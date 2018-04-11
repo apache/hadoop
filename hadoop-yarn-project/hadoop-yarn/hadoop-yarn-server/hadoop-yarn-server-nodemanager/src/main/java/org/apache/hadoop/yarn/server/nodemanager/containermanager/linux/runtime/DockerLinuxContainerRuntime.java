@@ -760,7 +760,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           throw new ContainerExecutionException(message);
         }
       }
-      dockerRunAsUser = uid + ":" + gid;
+      if (!allowPrivilegedContainerExecution(container)) {
+        dockerRunAsUser = uid + ":" + gid;
+      } else {
+        dockerRunAsUser = ctx.getExecutionAttribute(USER);
+      }
     }
 
     //List<String> -> stored as List -> fetched/converted to List<String>
@@ -872,7 +876,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     if(enableUserReMapping) {
-      runCommand.groupAdd(groups);
+      if (!allowPrivilegedContainerExecution(container)) {
+        runCommand.groupAdd(groups);
+      }
     }
 
     // use plugins to update docker run command.

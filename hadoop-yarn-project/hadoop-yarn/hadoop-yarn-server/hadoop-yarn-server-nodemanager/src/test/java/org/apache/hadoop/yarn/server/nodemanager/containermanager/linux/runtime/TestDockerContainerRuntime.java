@@ -206,7 +206,7 @@ public class TestDockerContainerRuntime {
     // Prevent gid threshold failures for these tests
     conf.setInt(YarnConfiguration.NM_DOCKER_USER_REMAPPING_GID_THRESHOLD, 0);
 
-    user = "user";
+    user = submittingUser;
     appId = "app_id";
     containerIdStr = containerId;
     containerWorkDir = new Path("/test_container_work_dir");
@@ -949,7 +949,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -959,8 +959,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  cap-drop=ALL", dockerCommands.get(counter++));
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
-    Assert.assertEquals("  group-add=" + String.join(",", groups),
-        dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
     Assert.assertEquals(
@@ -976,7 +974,8 @@ public class TestDockerContainerRuntime {
         "  rw-mounts=/test_container_log_dir:/test_container_log_dir,"
             + "/test_application_local_dir:/test_application_local_dir",
         dockerCommands.get(counter++));
-    Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
+    Assert.assertEquals("  user=" + submittingUser,
+        dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter));
   }
@@ -1295,7 +1294,7 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(op.getOperationType(),
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
     Assert.assertEquals(runAsUser, op.getArguments().get(0));
-    Assert.assertEquals("user", op.getArguments().get(1));
+    Assert.assertEquals(submittingUser, op.getArguments().get(1));
     Assert.assertEquals("2", op.getArguments().get(2));
     Assert.assertEquals("1234", op.getArguments().get(3));
     Assert.assertEquals("0", op.getArguments().get(4));
