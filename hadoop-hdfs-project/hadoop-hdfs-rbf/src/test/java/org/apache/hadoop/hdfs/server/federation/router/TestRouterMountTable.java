@@ -17,25 +17,33 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,6 +57,7 @@ public class TestRouterMountTable {
   private static NamenodeContext nnContext;
   private static RouterContext routerContext;
   private static MountTableResolver mountTable;
+  private static ClientProtocol routerProtocol;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -69,6 +78,7 @@ public class TestRouterMountTable {
     nnContext = cluster.getRandomNamenode();
     routerContext = cluster.getRandomRouter();
     Router router = routerContext.getRouter();
+    routerProtocol = routerContext.getClient().getNamenode();
     mountTable = (MountTableResolver) router.getSubclusterResolver();
   }
 
@@ -139,5 +149,55 @@ public class TestRouterMountTable {
     mountTable.loadCache(true);
 
     return addResponse.getStatus();
+  }
+
+  /**
+   * Verify that the file/dir listing contains correct date/time information.
+   */
+  @Test
+  public void testListFilesTime() throws Exception {
+    Long beforeCreatingTime = Time.now();
+    // Add mount table entry
+    MountTable addEntry = MountTable.newInstance(
+        "/testdir", Collections.singletonMap("ns0", "/testdir"));
+    assertTrue(addMountTable(addEntry));
+    addEntry = MountTable.newInstance(
+        "/testdir2", Collections.singletonMap("ns0", "/testdir2"));
+    assertTrue(addMountTable(addEntry));
+    addEntry = MountTable.newInstance(
+        "/testdir/subdir", Collections.singletonMap("ns0", "/testdir/subdir"));
+    assertTrue(addMountTable(addEntry));
+
+    // Create test dir in NN
+    final FileSystem nnFs = nnContext.getFileSystem();
+    assertTrue(nnFs.mkdirs(new Path("/newdir")));
+
+    Map<String, Long> pathModTime = new TreeMap<>();
+    for (String mount : mountTable.getMountPoints("/")) {
+      pathModTime.put(mount, mountTable.getMountPoint("/"+mount)
+          .getDateModified());
+    }
+    FileStatus[] iterator = nnFs.listStatus(new Path("/"));
+    for (FileStatus file : iterator) {
+      pathModTime.put(file.getPath().getName(), file.getModificationTime());
+    }
+    // Fetch listing
+    DirectoryListing listing =
+        routerProtocol.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
+    Iterator<String> pathModTimeIterator = pathModTime.keySet().iterator();
+
+    // Match date/time for each path returned
+    for(HdfsFileStatus f : listing.getPartialListing()) {
+      String fileName = pathModTimeIterator.next();
+      String currentFile = f.getFullPath(new Path("/")).getName();
+      Long currentTime = f.getModificationTime();
+      Long expectedTime = pathModTime.get(currentFile);
+
+      assertEquals(currentFile, fileName);
+      assertTrue(currentTime > beforeCreatingTime);
+      assertEquals(currentTime, expectedTime);
+    }
+    // Verify the total number of results found/matched
+    assertEquals(pathModTime.size(), listing.getPartialListing().length);
   }
 }
