@@ -246,8 +246,6 @@ public class TestSCMMetrics {
           .setUuid(datanodeUuid)
           .setIpAddress("127.0.0.1")
           .setHostName("localhost")
-          .setInfoPort(0)
-          .setInfoSecurePort(0)
           .setContainerPort(0)
           .setRatisPort(0)
           .setOzoneRestPort(0)

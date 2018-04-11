@@ -33,11 +33,9 @@ message DatanodeDetailsProto {
     required string uuid = 1;  // UUID assigned to the Datanode.
     required string ipAddress = 2;     // IP address
     required string hostName = 3;      // hostname
-    optional uint32 infoPort = 4;      // datanode http port
-    optional uint32 infoSecurePort = 5 [default = 0]; // datanode https port
-    optional uint32 containerPort = 6 [default = 0];  // Ozone stand_alone protocol
-    optional uint32 ratisPort = 7 [default = 0];      //Ozone ratis port
-    optional uint32 ozoneRestPort = 8 [default = 0];
+    optional uint32 containerPort = 4 [default = 0];  // Ozone stand_alone protocol
+    optional uint32 ratisPort = 5 [default = 0];      //Ozone ratis port
+    optional uint32 ozoneRestPort = 6 [default = 0];
 }
 
 message PipelineChannel {

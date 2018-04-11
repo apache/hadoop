@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.cli;
+package org.apache.hadoop.ozone.scm.cli;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.BasicParser;
@@ -98,16 +98,14 @@ public class SQLCLI  extends Configured implements Tool {
           "hostName TEXT NOT NULL, " +
           "datanodeUUId TEXT PRIMARY KEY NOT NULL," +
           "ipAddress TEXT, " +
-          "infoPort INTEGER," +
-          "infoSecurePort INTEGER," +
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
       "INSERT INTO containerInfo (containerName, leaderUUID) " +
           "VALUES (\"%s\", \"%s\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
-          "infoPort, infoSecurePort, containerPort) " +
-          "VALUES (\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, %d)";
+          "containerPort,) " +
+          "VALUES (\"%s\", \"%s\", \"%s\", %d";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
           "VALUES (\"%s\", \"%s\")";
@@ -476,11 +474,11 @@ public class SQLCLI  extends Configured implements Tool {
    *
    * datanodeInfo:
    * ---------------------------------------------------------
-   * hostname | datanodeUUid* | xferPort | infoPort | ipcPort
+   * hostname | datanodeUUid* | xferPort | ipcPort
    * ---------------------------------------------------------
    *
    * --------------------------------
-   * | infoSecurePort | containerPort
+   * | containerPort
    * --------------------------------
    *
    * @param dbPath path to container db.
@@ -541,13 +539,9 @@ public class SQLCLI  extends Configured implements Tool {
         // but this seems a bit cleaner.
         String ipAddr = dd.getIpAddress();
         String hostName = dd.getHostName();
-        int infoPort = dd.hasInfoPort() ? dd.getInfoPort() : 0;
-        int securePort =
-            dd.hasInfoSecurePort() ? dd.getInfoSecurePort() : 0;
         int containerPort = dd.getContainerPort();
         String insertMachineInfo = String.format(
-            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, infoPort,
-            securePort, containerPort);
+            INSERT_DATANODE_INFO, hostName, uuid, ipAddr, containerPort);
         executeSQL(conn, insertMachineInfo);
         uuidChecked.add(uuid);
       }
@@ -607,11 +601,11 @@ public class SQLCLI  extends Configured implements Tool {
    *
    * datanodeInfo:
    * ---------------------------------------------------------
-   * hostname | datanodeUUid* | xferPort | infoPort | ipcPort
+   * hostname | datanodeUUid* | xferPort | ipcPort
    * ---------------------------------------------------------
    *
    * --------------------------------
-   * | infoSecurePort | containerPort
+   * |containerPort
    * --------------------------------
    *
    * @param dbPath path to container db.
@@ -648,11 +642,10 @@ public class SQLCLI  extends Configured implements Tool {
         datanodeDetails.getUuidString(), blockPool);
     executeSQL(conn, insertNodePool);
 
-    String insertDatanodeDetails = String.format(INSERT_DATANODE_INFO,
-        datanodeDetails.getHostName(), datanodeDetails.getUuid(),
-        datanodeDetails.getIpAddress(), datanodeDetails.getInfoPort(),
-        datanodeDetails.getInfoSecurePort(),
-        datanodeDetails.getContainerPort());
+    String insertDatanodeDetails = String
+        .format(INSERT_DATANODE_INFO, datanodeDetails.getHostName(),
+            datanodeDetails.getUuid(), datanodeDetails.getIpAddress(),
+            datanodeDetails.getContainerPort());
     executeSQL(conn, insertDatanodeDetails);
   }
 

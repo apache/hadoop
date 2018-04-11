@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.cli;
+package org.apache.hadoop.ozone.scm.cli;
 
 /**
  * Command line helpers for scm management.

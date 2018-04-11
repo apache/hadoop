@@ -65,8 +65,6 @@ public class GenesisUtil {
     builder.setUuid(uuid)
         .setHostName("localhost")
         .setIpAddress(ipAddress)
-        .setInfoPort(0)
-        .setInfoSecurePort(0)
         .setContainerPort(0)
         .setRatisPort(0)
         .setOzoneRestPort(0);

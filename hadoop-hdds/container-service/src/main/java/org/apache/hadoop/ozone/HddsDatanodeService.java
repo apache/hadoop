@@ -72,13 +72,6 @@ public class HddsDatanodeService implements ServicePlugin {
         datanodeDetails = initializeDatanodeDetails();
         datanodeDetails.setHostName(hostname);
         datanodeDetails.setIpAddress(ip);
-
-        //Below block should be removed as part of HDFS-13324
-        if (service != null) {
-          DataNode dataNode = (DataNode) service;
-          datanodeDetails.setInfoPort(dataNode.getInfoPort());
-          datanodeDetails.setInfoSecurePort(dataNode.getInfoSecurePort());
-        }
         datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf);
         startPlugins();
         // Starting HDDS Daemons
