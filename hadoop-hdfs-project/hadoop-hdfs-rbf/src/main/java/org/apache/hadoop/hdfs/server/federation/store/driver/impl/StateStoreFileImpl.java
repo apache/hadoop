@@ -26,9 +26,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
@@ -134,15 +136,16 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
 
   @Override
   protected List<String> getChildren(String path) {
-    List<String> ret = new LinkedList<>();
     File dir = new File(path);
     File[] files = dir.listFiles();
-    if (files != null) {
+    if (ArrayUtils.isNotEmpty(files)) {
+      List<String> ret = new ArrayList<>(files.length);
       for (File file : files) {
         String filename = file.getName();
         ret.add(filename);
       }
+      return ret;
     }
-    return ret;
+    return Collections.emptyList();
   }
 }
