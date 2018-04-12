@@ -758,8 +758,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       Path appRootDir, boolean hasSliderAMLog4j) throws BadConfigException {
     JavaCommandLineBuilder CLI = new JavaCommandLineBuilder();
     CLI.forceIPv4().headless();
-    CLI.setJVMOpts(YarnServiceConf.get(YarnServiceConf.JVM_OPTS, null,
-        app.getConfiguration(), conf));
+    String jvmOpts = YarnServiceConf
+        .get(YarnServiceConf.JVM_OPTS, "", app.getConfiguration(), conf);
+    if (!jvmOpts.contains("-Xmx")) {
+      jvmOpts += DEFAULT_AM_JVM_XMX;
+    }
+
+    CLI.setJVMOpts(jvmOpts);
     if (hasSliderAMLog4j) {
       CLI.sysprop(SYSPROP_LOG4J_CONFIGURATION, YARN_SERVICE_LOG4J_FILENAME);
       CLI.sysprop(SYSPROP_LOG_DIR, ApplicationConstants.LOG_DIR_EXPANSION_VAR);
