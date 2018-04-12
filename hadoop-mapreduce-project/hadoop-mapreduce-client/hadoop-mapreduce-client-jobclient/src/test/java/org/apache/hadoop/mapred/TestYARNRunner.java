@@ -811,15 +811,22 @@ public class TestYARNRunner {
 
   @Test
   public void testAMStandardEnvWithDefaultLibPath() throws Exception {
-    testAMStandardEnv(false);
+    testAMStandardEnv(false, false);
   }
 
   @Test
   public void testAMStandardEnvWithCustomLibPath() throws Exception {
-    testAMStandardEnv(true);
+    testAMStandardEnv(true, false);
   }
 
-  private void testAMStandardEnv(boolean customLibPath) throws Exception {
+  @Test
+  public void testAMStandardEnvWithCustomLibPathWithSeparateEnvProps()
+      throws Exception {
+    testAMStandardEnv(true, true);
+  }
+
+  private void testAMStandardEnv(boolean customLibPath,
+      boolean useSeparateEnvProps) throws Exception {
     // the Windows behavior is different and this test currently doesn't really
     // apply
     // MAPREDUCE-6588 should revisit this test
@@ -832,9 +839,16 @@ public class TestYARNRunner {
     String pathKey = Environment.LD_LIBRARY_PATH.name();
 
     if (customLibPath) {
-      jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
-          ADMIN_LIB_PATH);
-      jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+      if (useSeparateEnvProps) {
+        // Specify these as individual variables instead of k=v lists
+        jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV + "." + pathKey,
+            ADMIN_LIB_PATH);
+        jobConf.set(MRJobConfig.MR_AM_ENV + "." + pathKey, USER_LIB_PATH);
+      } else {
+        jobConf.set(MRJobConfig.MR_AM_ADMIN_USER_ENV, pathKey + "=" +
+            ADMIN_LIB_PATH);
+        jobConf.set(MRJobConfig.MR_AM_ENV, pathKey + "=" + USER_LIB_PATH);
+      }
     }
     jobConf.set(MRJobConfig.MAPRED_ADMIN_USER_SHELL, USER_SHELL);
 
