@@ -17,6 +17,8 @@
 package org.apache.hadoop.ozone.container.common.states.endpoint;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -28,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
@@ -98,6 +101,11 @@ public final class RegisterEndpointTask implements
       SCMRegisteredCmdResponseProto response = rpcEndPoint.getEndPoint()
           .register(datanodeDetails.getProtoBufMessage(),
               conf.getStrings(ScmConfigKeys.OZONE_SCM_NAMES));
+      Preconditions.checkState(UUID.fromString(response.getDatanodeUUID())
+              .equals(datanodeDetails.getUuid()),
+          "Unexpected datanode ID in the response.");
+      Preconditions.checkState(!StringUtils.isBlank(response.getClusterID()),
+          "Invalid cluster ID in the response.");
       if (response.hasHostname() && response.hasIpAddress()) {
         datanodeDetails.setHostName(response.getHostname());
         datanodeDetails.setIpAddress(response.getIpAddress());
