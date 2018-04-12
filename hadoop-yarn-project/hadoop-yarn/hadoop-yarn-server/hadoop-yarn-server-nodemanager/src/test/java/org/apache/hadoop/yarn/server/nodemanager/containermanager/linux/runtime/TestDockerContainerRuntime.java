@@ -160,6 +160,8 @@ public class TestDockerContainerRuntime {
       LOG.info("Could not run id -G command: " + e);
     }
     uidGidPair = uid + ":" + gid;
+    // Prevent gid threshold failures for these tests
+    conf.setInt(YarnConfiguration.NM_DOCKER_USER_REMAPPING_GID_THRESHOLD, 0);
 
     user = "user";
     appId = "app_id";
@@ -329,7 +331,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
             (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 14;
+    int expected = 13;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -341,7 +343,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
     Assert.assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
     Assert.assertEquals(
@@ -379,7 +380,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(
         Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 
-    Assert.assertEquals(14, dockerCommands.size());
+    Assert.assertEquals(13, dockerCommands.size());
     int counter = 0;
     Assert.assertEquals("[docker-command-execution]",
         dockerCommands.get(counter++));
@@ -389,8 +390,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  detach=true", dockerCommands.get(counter++));
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
     Assert.assertEquals("  group-add=" + String.join(",", groups),
-        dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=ctr-id",
         dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
@@ -437,7 +436,7 @@ public class TestDockerContainerRuntime {
       runtime =
           new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
       runtime.initialize(conf);
-      Assert.fail("Invalid default network configuration should did not "
+      Assert.fail("Invalid default network configuration did not "
           + "trigger initialization failure.");
     } catch (ContainerExecutionException e) {
       LOG.info("Caught expected exception : " + e);
@@ -477,10 +476,7 @@ public class TestDockerContainerRuntime {
       LOG.info("Caught expected exception: " + e);
     }
 
-    int size = YarnConfiguration
-        .DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS.length;
-    String allowedNetwork = YarnConfiguration
-        .DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS[randEngine.nextInt(size)];
+    String allowedNetwork = "bridge";
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_NETWORK,
         allowedNetwork);
     String expectedHostname = "test.hostname";
@@ -675,7 +671,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 14;
+    int expected = 13;
     Assert.assertEquals(expected, dockerCommands.size());
 
     String command = dockerCommands.get(0);
@@ -784,7 +780,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -796,7 +792,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
     Assert.assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert
         .assertEquals("  image=busybox:latest", dockerCommands.get(counter++));
     Assert.assertEquals(
@@ -903,7 +898,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -915,7 +910,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
     Assert.assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert.assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
     Assert.assertEquals(
@@ -979,7 +973,7 @@ public class TestDockerContainerRuntime {
     List<String> dockerCommands = Files.readAllLines(Paths.get
         (dockerCommandFile), Charset.forName("UTF-8"));
 
-    int expected = 15;
+    int expected = 14;
     int counter = 0;
     Assert.assertEquals(expected, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]",
@@ -991,7 +985,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  docker-command=run", dockerCommands.get(counter++));
     Assert.assertEquals("  group-add=" + String.join(",", groups),
         dockerCommands.get(counter++));
-    Assert.assertEquals("  hostname=ctr-id", dockerCommands.get(counter++));
     Assert.assertEquals("  image=busybox:latest",
         dockerCommands.get(counter++));
     Assert.assertEquals(

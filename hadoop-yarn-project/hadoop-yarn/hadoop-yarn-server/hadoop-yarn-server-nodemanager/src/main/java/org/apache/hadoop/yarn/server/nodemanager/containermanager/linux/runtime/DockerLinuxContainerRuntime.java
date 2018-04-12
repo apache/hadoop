@@ -106,7 +106,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_HOSTNAME} sets the
  *     hostname to be used by the Docker container. If not specified, a
- *     hostname will be derived from the container ID.
+ *     hostname will be derived from the container ID.  This variable is
+ *     ignored if the network is 'host'.
  *   </li>
  *   <li>
  *     {@code YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER}
@@ -584,7 +585,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network);
-    setHostname(runCommand, containerIdStr, hostname);
+    // Only add hostname if network is not host.
+    if (!network.equalsIgnoreCase("host")) {
+      setHostname(runCommand, containerIdStr, hostname);
+    }
     runCommand.setCapabilities(capabilities);
 
     if(cgroupsRootDirectory != null) {
