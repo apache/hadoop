@@ -178,8 +178,8 @@ message SCMRegisteredCmdResponseProto {
     errorNodeNotPermitted = 2;
   }
   required ErrorCode errorCode = 2;
-  optional string datanodeUUID = 3;
-  optional string clusterID = 4;
+  required string datanodeUUID = 3;
+  required string clusterID = 4;
   optional SCMNodeAddressList addressList = 5;
   optional string hostname = 6;
   optional string ipAddress = 7;

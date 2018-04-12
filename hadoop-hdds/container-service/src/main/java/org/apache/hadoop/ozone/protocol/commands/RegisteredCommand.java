@@ -162,13 +162,11 @@ public class RegisteredCommand extends
       Preconditions.checkNotNull(response);
       if (response.hasHostname() && response.hasIpAddress()) {
         return new RegisteredCommand(response.getErrorCode(),
-            response.hasDatanodeUUID() ? response.getDatanodeUUID() : "",
-            response.hasClusterID() ? response.getClusterID() : "",
+            response.getDatanodeUUID(), response.getClusterID(),
             response.getHostname(), response.getIpAddress());
       } else {
         return new RegisteredCommand(response.getErrorCode(),
-            response.hasDatanodeUUID() ? response.getDatanodeUUID() : "",
-            response.hasClusterID() ? response.getClusterID() : "");
+            response.getDatanodeUUID(), response.getClusterID());
       }
     }
 
