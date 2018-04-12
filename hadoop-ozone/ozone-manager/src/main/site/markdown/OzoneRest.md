@@ -84,7 +84,7 @@ Query Parameter:
 
 Sample HTTP POST request:
 
-    curl -i -X POST -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root" "http://localhost:9864/volume-to-create"
+    curl -i -X POST -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root" "http://localhost:9880/volume-to-create"
 
 this request creates a volume as user *bilbo*, the authorization field is set to *OZONE root* because this call requires administration privilege. The client receives a response with zero content length.
 
@@ -112,7 +112,7 @@ Query Parameter:
 
 Sample HTTP PUT request:
 
-    curl -X PUT -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user: john"  http://localhost:9864/volume-to-update
+    curl -X PUT -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user: john"  http://localhost:9880/volume-to-update
 
 this request modifies the owner of */volume-to-update* to *john*.
 
@@ -126,7 +126,7 @@ Schema:
 
 Sample HTTP DELETE request:
 
-    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user: bilbo"  http://localhost:9864/volume-to-delete
+    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user: bilbo"  http://localhost:9880/volume-to-delete
 
 this request deletes an empty volume */volume-to-delete*. The client receives a zero length content.
 
@@ -154,7 +154,7 @@ Query Parameter:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo?info=volume"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo?info=volume"
 
 this request gets the info of volume */volume-of-bilbo*, the client receives a response with a JSON object of volume info.
 
@@ -193,7 +193,7 @@ Query Parameter:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/?max-keys=100&prefix=Jan"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/?max-keys=100&prefix=Jan"
 
 this request gets all volumes owned by *bilbo* and each volume's name contains prefix *Jan*, the result at most contains *100* entries. The client receives a list of SON objects, each of them describes the info of a volume.
 
@@ -239,7 +239,7 @@ Additional HTTP Headers:
 
 Sample HTTP POST request:
 
-    curl -i -X POST -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" http://localhost:9864/volume-of-bilbo/bucket-0
+    curl -i -X POST -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" http://localhost:9880/volume-of-bilbo/bucket-0
 
 this request creates a bucket *bucket-0* under volume *volume-of-bilbo*.
 
@@ -268,7 +268,7 @@ Additional HTTP Headers:
 
 Sample HTTP PUT request:
 
-    curl -i -X PUT -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" -H "x-ozone-acl: ADD user:peregrin:rw" http://localhost:9864/volume-of-bilbo/bucket-to-update
+    curl -i -X PUT -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" -H "x-ozone-acl: ADD user:peregrin:rw" http://localhost:9880/volume-of-bilbo/bucket-to-update
 
 this request adds an ACL policy specified by HTTP header *x-ozone-acl* to bucket */volume-of-bilbo/bucket-to-update*, the ACL field *ADD user:peregrin:rw* gives add additional read/write permission to user *peregrin* to this bucket.
 
@@ -290,7 +290,7 @@ Schema:
 
 Sample HTTP DELETE request:
 
-    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9864/volume-of-bilbo/bucket-0"
+    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9880/volume-of-bilbo/bucket-0"
 
 this request deletes bucket */volume-of-bilbo/bucket-0*. The client receives a zero length content response.
 
@@ -319,7 +319,7 @@ Query Parameters:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo/bucket-0?info=bucket"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo/bucket-0?info=bucket"
 
 this request gets the info of bucket */volume-of-bilbo/bucket-0*. The client receives a response of JSON object contains bucket info.
 
@@ -358,7 +358,7 @@ Query Parameters:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo?max-keys=10"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo?max-keys=10"
 
 this request lists all the buckets under volume *volume-of-bilbo*, and the result at most contains 10 entries. The client receives response of a array of JSON objects, each of them represents for a bucket info.
 
@@ -404,7 +404,7 @@ Additional HTTP headers:
 
 Sample PUT HTTP request:
 
-    curl -X PUT -T /path/to/localfile -H "Authorization:OZONE" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9864/volume-of-bilbo/bucket-0/file-0"
+    curl -X PUT -T /path/to/localfile -H "Authorization:OZONE" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9880/volume-of-bilbo/bucket-0/file-0"
 
 this request uploads a local file */path/to/localfile* specified by option *-T* to ozone as user *bilbo*, mapped to ozone key */volume-of-bilbo/bucket-0/file-0*. The client receives a zero length content response.
 
@@ -418,7 +418,7 @@ Schema:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo/bucket-0/file-0"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo/bucket-0/file-0"
 
 this request reads the content of key */volume-of-bilbo/bucket-0/file-0*. If the content of the file is plain text, it can be directly dumped onto stdout.
 
@@ -434,7 +434,7 @@ this request reads the content of key */volume-of-bilbo/bucket-0/file-0*. If the
 
 if the file is not plain text, specify *-O* option in curl command and the file *file-0* will be downloaded into current working directory, file name will be same as the key. A sample request like following:
 
-    curl -O -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo/bucket-0/file-1"
+    curl -O -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo/bucket-0/file-1"
 
 response looks like following:
 
@@ -452,7 +452,7 @@ Schema:
 
 Sample HTTP DELETE request:
 
-    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9864/volume-of-bilbo/bucket-0/file-0"
+    curl -i -X DELETE -H "Authorization:OZONE root" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "x-ozone-version: v1" -H "x-ozone-user:bilbo" "http://localhost:9880/volume-of-bilbo/bucket-0/file-0"
 
 this request deletes key */volume-of-bilbo/bucket-0/file-0*. The client receives a zero length content result:
 
@@ -480,7 +480,7 @@ Query Parameter:
 
 Sample HTTP DELETE request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9864/volume-of-bilbo/buket-0/file-0?info=key"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http://localhost:9880/volume-of-bilbo/buket-0/file-0?info=key"
 
 this request returns information of the key */volume-of-bilbo/bucket-0/file-0*. The client receives a JSON object listed attributes of the key.
 
@@ -519,7 +519,7 @@ Query Parameters:
 
 Sample HTTP GET request:
 
-    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http:/localhost:9864/volume-of-bilbo/bucket-0/?max-keys=100&prefix=file"
+    curl -i -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE" "http:/localhost:9880/volume-of-bilbo/bucket-0/?max-keys=100&prefix=file"
 
 this request list keys under bucket */volume-of-bilbo/bucket-0*, the listing result is filtered by prefix *file*. The client receives an array of JSON objects, each of them represents the info of a matched key.
 
