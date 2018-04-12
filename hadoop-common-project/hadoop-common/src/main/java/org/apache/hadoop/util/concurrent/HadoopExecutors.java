@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.util.concurrent;
 
-import org.slf4j.Logger;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -40,14 +38,6 @@ public final class HadoopExecutors {
     return new HadoopThreadPoolExecutor(0, Integer.MAX_VALUE,
         60L, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
-        threadFactory);
-  }
-
-  public static ExecutorService newCachedThreadPool(ThreadFactory
-      threadFactory, int maxThreads) {
-    return new HadoopThreadPoolExecutor(0, maxThreads,
-        60L, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>(),
         threadFactory);
   }
 

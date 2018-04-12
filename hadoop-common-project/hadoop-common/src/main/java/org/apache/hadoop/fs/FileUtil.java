@@ -38,7 +38,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -48,19 +47,14 @@ import java.util.concurrent.Future;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.zip.CRC32;
-import java.util.zip.CheckedOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -75,7 +69,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A collection of file-processing util methods.
+ * A collection of file-processing util methods
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -610,65 +604,6 @@ public class FileUtil {
       }
       return size;
     }
-  }
-
-  /**
-   * creates zip archieve of the source dir and writes a zip file.
-   *
-   * @param sourceDir - The directory to zip.
-   * @param archiveName - The destination file, the parent directory is assumed
-   * to exist.
-   * @return Checksum of the Archive.
-   * @throws IOException - Throws if zipFileName already exists or if the
-   *                     sourceDir does not exist.
-   */
-  public static Long zip(File sourceDir, File archiveName) throws IOException {
-    Preconditions.checkNotNull(sourceDir, "source directory cannot be null");
-    Preconditions.checkState(sourceDir.exists(), "source directory must " +
-        "exist");
-
-    Preconditions.checkNotNull(archiveName, "Destination file cannot be null");
-    Preconditions.checkNotNull(archiveName.getParent(), "Destination " +
-        "directory cannot be null");
-    Preconditions.checkState(new File(archiveName.getParent()).exists(),
-        "Destination directory must exist");
-    Preconditions.checkState(!archiveName.exists(), "Destination file " +
-        "already exists. Refusing to overwrite existing file.");
-
-    CheckedOutputStream checksum;
-    try (FileOutputStream outputStream =
-             new FileOutputStream(archiveName)) {
-      checksum = new CheckedOutputStream(outputStream, new CRC32());
-      byte[] data = new byte[BUFFER_SIZE];
-      try (ZipOutputStream out =
-               new ZipOutputStream(new BufferedOutputStream(checksum))) {
-
-        Iterator<File> fileIter = FileUtils.iterateFiles(sourceDir, null, true);
-        while (fileIter.hasNext()) {
-          File file = fileIter.next();
-          LOG.debug("Compressing file : " + file.getPath());
-          try (FileInputStream currentFile = new FileInputStream(file)) {
-            ZipEntry entry = new ZipEntry(file.getCanonicalPath());
-            out.putNextEntry(entry);
-            try (BufferedInputStream sourceFile
-                     = new BufferedInputStream(currentFile, BUFFER_SIZE)) {
-              int bytesRead;
-              while ((bytesRead = sourceFile.read(data, 0, BUFFER_SIZE)) !=
-                  -1) {
-                out.write(data, 0, bytesRead);
-              }
-            }
-          }
-        }
-        out.flush();
-      }
-    }
-    // Exit condition -- ZipFile must exist.
-    Preconditions.checkState(archiveName.exists(),
-        "Expected archive file missing: {}", archiveName.toPath());
-    long crc32 = checksum.getChecksum().getValue();
-    checksum.close();
-    return crc32;
   }
 
   /**

@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,8 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,7 +132,7 @@ public class ContainerSupervisor implements Closeable {
     this.poolQueue = new PriorityQueue<>();
     this.runnable = new AtomicBoolean(true);
     this.threadFaultCount = new AtomicInteger(0);
-    this.executorService = HadoopExecutors.newCachedThreadPool(
+    this.executorService = newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Container Reports Processing Thread - %d")
             .build(), maxContainerReportThreads);
@@ -137,6 +140,12 @@ public class ContainerSupervisor implements Closeable {
     this.inProgressPoolListLock = new ReentrantReadWriteLock();
 
     initPoolProcessThread();
+  }
+
+  private ExecutorService newCachedThreadPool(ThreadFactory threadFactory,
+      int maxThreads) {
+    return new HadoopThreadPoolExecutor(0, maxThreads, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(), threadFactory);
   }
 
   /**

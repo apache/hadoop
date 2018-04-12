@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,13 +81,5 @@ public final class Time {
    */
   public static String formatTime(long millis) {
     return DATE_FORMAT.get().format(millis);
-  }
-
-  /**
-   * Convert time in human readable format to millisecond.
-   * @return time in milliseconds
-   */
-  public static long formatDate(String date) throws ParseException {
-    return DATE_FORMAT.get().parse(date).getTime();
   }
 }

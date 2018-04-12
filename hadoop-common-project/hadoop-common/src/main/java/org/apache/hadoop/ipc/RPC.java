@@ -810,6 +810,7 @@ public class RPC {
   
   /** An RPC Server. */
   public abstract static class Server extends org.apache.hadoop.ipc.Server {
+
     boolean verbose;
 
     private static final Pattern COMPLEX_SERVER_NAME_PATTERN =
