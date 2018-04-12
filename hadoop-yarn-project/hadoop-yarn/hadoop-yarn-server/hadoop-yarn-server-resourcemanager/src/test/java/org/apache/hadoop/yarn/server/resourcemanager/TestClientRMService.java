@@ -1064,7 +1064,7 @@ public class TestClientRMService {
   }
 
   @Test
-  public void testGetApplications() throws IOException, YarnException {
+  public void testGetApplications() throws Exception {
     /**
      * 1. Submit 3 applications alternately in two queues
      * 2. Test each of the filters
@@ -1113,8 +1113,12 @@ public class TestClientRMService {
       SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
           appId, appNames[i], queues[i % queues.length],
           new HashSet<String>(tags.subList(0, i + 1)));
+      // make sure each app is submitted at a different time
+      Thread.sleep(1);
       rmService.submitApplication(submitRequest);
-      submitTimeMillis[i] = System.currentTimeMillis();
+      submitTimeMillis[i] = rmService.getApplicationReport(
+          GetApplicationReportRequest.newInstance(appId))
+          .getApplicationReport().getStartTime();
     }
 
     // Test different cases of ClientRMService#getApplications()
@@ -1129,19 +1133,19 @@ public class TestClientRMService {
     
     // Check start range
     request = GetApplicationsRequest.newInstance();
-    request.setStartRange(submitTimeMillis[0], System.currentTimeMillis());
+    request.setStartRange(submitTimeMillis[0] + 1, System.currentTimeMillis());
     
     // 2 applications are submitted after first timeMills
     assertEquals("Incorrect number of matching start range", 
         2, rmService.getApplications(request).getApplicationList().size());
     
     // 1 application is submitted after the second timeMills
-    request.setStartRange(submitTimeMillis[1], System.currentTimeMillis());
+    request.setStartRange(submitTimeMillis[1] + 1, System.currentTimeMillis());
     assertEquals("Incorrect number of matching start range", 
         1, rmService.getApplications(request).getApplicationList().size());
     
     // no application is submitted after the third timeMills
-    request.setStartRange(submitTimeMillis[2], System.currentTimeMillis());
+    request.setStartRange(submitTimeMillis[2] + 1, System.currentTimeMillis());
     assertEquals("Incorrect number of matching start range", 
         0, rmService.getApplications(request).getApplicationList().size());
 
