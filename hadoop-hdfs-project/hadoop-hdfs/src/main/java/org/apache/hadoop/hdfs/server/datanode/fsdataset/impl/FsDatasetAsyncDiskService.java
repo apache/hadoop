@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -137,7 +138,7 @@ class FsDatasetAsyncDiskService {
 
   /**
    * Stops AsyncDiskService for a volume.
-   * @param volume the root of the volume.
+   * @param storageId id of {@link StorageDirectory}.
    */
   synchronized void removeVolume(String storageId) {
     if (executors == null) {
