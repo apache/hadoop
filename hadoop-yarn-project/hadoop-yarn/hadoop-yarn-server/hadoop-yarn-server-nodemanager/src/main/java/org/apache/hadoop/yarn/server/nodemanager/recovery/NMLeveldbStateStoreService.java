@@ -1037,7 +1037,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     Path storeRoot = createStorageDir(conf);
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
     try {
@@ -1101,16 +1100,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       LOG.info("Full compaction cycle completed in " + duration + " msec");
     }
   }
-
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
-    }
-  }
-
 
   Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
