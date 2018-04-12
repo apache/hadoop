@@ -93,7 +93,6 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -628,7 +627,6 @@ public class ShuffleHandler extends AuxiliaryService {
   private void startStore(Path recoveryRoot) throws IOException {
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LevelDBLogger());
     Path dbPath = new Path(recoveryRoot, STATE_DB_NAME);
     LOG.info("Using state database at " + dbPath + " for recovery");
     File dbfile = new File(dbPath.toString());
@@ -771,16 +769,6 @@ public class ShuffleHandler extends AuxiliaryService {
         throw new IOException("Unable to remove " + jobId
             + " from state store", e);
       }
-    }
-  }
-
-  private static class LevelDBLogger implements Logger {
-    private static final org.slf4j.Logger LOG =
-        LoggerFactory.getLogger(LevelDBLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
     }
   }
 
