@@ -22,16 +22,17 @@ API for accessing the store.
 
 Getting Started
 ---------------
-Ozone is a work in progress and  currently lives in its own branch. To
+Ozone is a work in progress and currently lives in the hadoop source tree.
+The subprojects (ozone/hdds) are part of the hadoop source tree but by default
+not compiled and not part of the official releases. To
 use it, you have to build a package by yourself and deploy a cluster.
 
 ### Building Ozone
 
 To build Ozone, please checkout the hadoop sources from github. Then
-checkout the ozone branch, HDFS-7240 and build it.
+checkout the trunk branch and build it.
 
-- `git checkout HDFS-7240`
-- `mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Phdsl -Dtar -DskipShade`
+`mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Pdist -Phdds -Dtar -DskipShade`
 
 skipShade is just to make compilation faster and not really required.
 
@@ -66,13 +67,12 @@ Now let us run some work load against ozone, to do that we will run freon.
 This will log into the datanode and run bash.
 
  - `docker-compose exec datanode bash`
- - `cd /opt/hadoop/bin`
 
-Now you can run the oz command shell or freon, the ozone load generator.
+Now you can run the `ozone` command shell or freon, the ozone load generator.
 
 This is the command to run freon.
 
- - `./oz freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
+ - `ozone freon -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
 
 You can checkout the KSM UI to see the requests information.
 
@@ -122,9 +122,9 @@ place  and not mingled with HDFS settings.
    </property>
 ```
 
-* _*ozone.scm.names*_ Ozone is build on top of container framework (See Ozone
- Architecture TODO). Storage container manager(SCM) is a distributed block
- service which is used by ozone and other storage services.
+* _*ozone.scm.names*_ Ozone is build on top of container framework. Storage
+ container manager(SCM) is a distributed block service which is used by ozone
+ and other storage services.
  This property allows datanodes to discover where SCM is, so that
  datanodes can send heartbeat to SCM. SCM is designed to be highly available
  and datanodes assume there are multiple instances of SCM which form a highly
@@ -172,6 +172,19 @@ Ozone File System.
     <property>
        <name>ozone.ksm.address</name>
        <value>ksm.hadoop.apache.org</value>
+    </property>
+```
+
+* _*dfs.datanode.plugin*_ Datanode service plugins: the container manager part
+ of ozone is running inside the datanode as a service plugin. To activate ozone
+ you should define the service plugin implementation class. **Important**
+ It should be added to the **hdfs-site.xml** as the plugin should be activated
+ as part of the normal HDFS Datanode bootstrap.
+
+```
+    <property>
+       <name>dfs.datanode.plugins</name>
+       <value>org.apache.hadoop.ozone.HddsDatanodeService</value>
     </property>
 ```
 
@@ -230,6 +243,16 @@ Here is a quick summary of settings needed by Ozone.
     </configuration>
 ```
 
+And don't forget to enable the datanode component with adding the
+following configuration to the hdfs-site.xml:
+
+```
+    <property>
+       <name>dfs.datanode.plugins</name>
+       <value>org.apache.hadoop.ozone.HddsDatanodeService</value>
+    </property>
+```
+
 ### Starting Ozone
 
 Ozone is designed to run concurrently with HDFS. The simplest way to [start
@@ -246,19 +269,19 @@ is running, please verify it is fully functional by running some commands like
 
  The first time you bring up Ozone, SCM must be initialized.
 
-   - `./hdfs scm -init`
+   - `./ozone scm -init`
 
  Start SCM.
 
-   - `./hdfs --daemon start scm`
+   - `./ozone --daemon start scm`
 
  Once SCM gets started, KSM must be initialized.
 
-   - `./hdfs ksm -createObjectStore`
+   - `./ozone ksm -createObjectStore`
 
  Start KSM.
 
-   - `./hdfs --daemon start ksm`
+   - `./ozone --daemon start ksm`
 
 if you would like to start HDFS and Ozone together, you can do that by running
  a single command.
@@ -316,5 +339,9 @@ On the SCM/KSM side, you will be able to see
   - `hadoop-hdfs-ksm-hostname.log`
   - `hadoop-hdfs-scm-hostname.log`
 
-Please file any issues you see under [Object store in HDFS (HDFS-7240)](https://issues.apache.org/jira/browse/HDFS-7240)
-as this is still a work in progress.
+Please file any issues you see under the related issues:
+
+ - [Object store in HDFS: HDFS-7240](https://issues.apache.org/jira/browse/HDFS-7240)
+ - [Ozone File System: HDFS-13074](https://issues.apache.org/jira/browse/HDFS-13074)
+ - [Building HDFS on top of new storage layer (HDDS): HDFS-10419](https://issues.apache.org/jira/browse/HDFS-10419)
+
