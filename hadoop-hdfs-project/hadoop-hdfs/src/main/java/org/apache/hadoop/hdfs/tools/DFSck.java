@@ -354,7 +354,7 @@ public class DFSck extends Configured implements Tool {
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));
     String line = null;
-    String lastLine = null;
+    String lastLine = NamenodeFsck.CORRUPT_STATUS;
     int errCode = -1;
     try {
       while ((line = input.readLine()) != null) {
