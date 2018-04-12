@@ -40,12 +40,14 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
   public void updateConfiguredResource(Resource res) throws YarnException {
     LOG.info("Initializing configured GPU resources for the NodeManager.");
 
-    List<Integer> usableGpus =
-        GpuDiscoverer.getInstance().getMinorNumbersOfGpusUsableByYarn();
+    List<GpuDevice> usableGpus =
+        GpuDiscoverer.getInstance().getGpusUsableByYarn();
     if (null == usableGpus || usableGpus.isEmpty()) {
-      LOG.info("Didn't find any usable GPUs on the NodeManager.");
+      String message = "GPU is enabled, but couldn't find any usable GPUs on the "
+          + "NodeManager.";
+      LOG.error(message);
       // No gpu can be used by YARN.
-      return;
+      throw new YarnException(message);
     }
 
     long nUsableGpus = usableGpus.size();
