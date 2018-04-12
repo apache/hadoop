@@ -230,8 +230,30 @@ class Ls extends FsCommand {
   }
 
   @Override
-  protected void processPaths(PathData parent, PathData ... items)
-  throws IOException {
+  protected boolean isSorted() {
+    // use the non-iterative method for listing because explicit sorting is
+    // required based on time/size/reverse or Total number of entries
+    // required to print summary first when non-recursive.
+    return !isRecursive() || isOrderTime() || isOrderSize() || isOrderReverse();
+  }
+
+  @Override
+  protected int getListingGroupSize() {
+    if (pathOnly) {
+      // If there is a need of printing only paths, then no grouping required
+      return 0;
+    }
+    /*
+     * LS output should be formatted properly. Grouping 100 items and formatting
+     * the output to reduce the creation of huge sized arrays. This method will
+     * be called only when recursive is set.
+     */
+    return 100;
+  }
+
+  @Override
+  protected void processPaths(PathData parent, PathData... items)
+      throws IOException {
     if (parent != null && !isRecursive() && items.length != 0) {
       if (!pathOnly) {
         out.println("Found " + items.length + " items");
