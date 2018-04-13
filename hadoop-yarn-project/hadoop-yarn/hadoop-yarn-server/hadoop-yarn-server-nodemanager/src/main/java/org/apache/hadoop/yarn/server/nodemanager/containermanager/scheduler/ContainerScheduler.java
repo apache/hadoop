@@ -501,8 +501,11 @@ public class ContainerScheduler extends AbstractService implements
 
   private void startContainer(Container container) {
     LOG.info("Starting container [" + container.getContainerId()+ "]");
-    runningContainers.put(container.getContainerId(), container);
-    this.utilizationTracker.addContainerResources(container);
+    // Skip to put into runningContainers and addUtilization when recover
+    if (!runningContainers.containsKey(container.getContainerId())) {
+      runningContainers.put(container.getContainerId(), container);
+      this.utilizationTracker.addContainerResources(container);
+    }
     if (container.getContainerTokenIdentifier().getExecutionType() ==
         ExecutionType.OPPORTUNISTIC) {
       this.metrics.startOpportunisticContainer(container.getResource());
