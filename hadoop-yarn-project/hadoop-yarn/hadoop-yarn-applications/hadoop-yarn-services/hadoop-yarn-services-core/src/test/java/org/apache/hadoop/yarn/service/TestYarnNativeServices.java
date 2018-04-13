@@ -28,6 +28,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -487,6 +488,76 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     LOG.info("Stop/destroy service {}", exampleApp);
     client.actionStop(exampleApp.getName(), true);
     client.actionDestroy(exampleApp.getName());
+  }
+
+  @Test(timeout = 200000)
+  public void testAMSigtermDoesNotKillApplication() throws Exception {
+    runAMSignalTest(SignalContainerCommand.GRACEFUL_SHUTDOWN);
+  }
+
+  @Test(timeout = 200000)
+  public void testAMSigkillDoesNotKillApplication() throws Exception {
+    runAMSignalTest(SignalContainerCommand.FORCEFUL_SHUTDOWN);
+  }
+
+  public void runAMSignalTest(SignalContainerCommand signal) throws Exception {
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    Service exampleApp = createExampleApplication();
+    client.actionCreate(exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
+    Service appStatus1 = client.getStatus(exampleApp.getName());
+    ApplicationId exampleAppId = ApplicationId.fromString(appStatus1.getId());
+
+    YarnClient yarnClient = createYarnClient(getConf());
+    ApplicationReport applicationReport = yarnClient.getApplicationReport(
+        exampleAppId);
+
+    ApplicationAttemptId firstAttemptId = applicationReport
+        .getCurrentApplicationAttemptId();
+    ApplicationAttemptReport attemptReport = yarnClient
+        .getApplicationAttemptReport(firstAttemptId);
+
+    // the AM should not perform a graceful shutdown since the operation was not
+    // initiated through the service client
+    yarnClient.signalToContainer(attemptReport.getAMContainerId(), signal);
+
+    GenericTestUtils.waitFor(() -> {
+      try {
+        ApplicationReport ar = client.getYarnClient()
+            .getApplicationReport(exampleAppId);
+        YarnApplicationState state = ar.getYarnApplicationState();
+        Assert.assertTrue(state == YarnApplicationState.RUNNING ||
+            state == YarnApplicationState.ACCEPTED);
+        if (state != YarnApplicationState.RUNNING) {
+          return false;
+        }
+        if (ar.getCurrentApplicationAttemptId() == null ||
+            ar.getCurrentApplicationAttemptId().equals(firstAttemptId)) {
+          return false;
+        }
+        Service appStatus2 = client.getStatus(exampleApp.getName());
+        if (appStatus2.getState() != ServiceState.STABLE) {
+          return false;
+        }
+        Assert.assertEquals(getSortedContainerIds(appStatus1).toString(),
+            getSortedContainerIds(appStatus2).toString());
+        return true;
+      } catch (YarnException | IOException e) {
+        throw new RuntimeException("while waiting", e);
+      }
+    }, 2000, 200000);
+  }
+
+  private static List<String> getSortedContainerIds(Service s) {
+    List<String> containerIds = new ArrayList<>();
+    for (Component component : s.getComponents()) {
+      for (Container container : component.getContainers()) {
+        containerIds.add(container.getId());
+      }
+    }
+    Collections.sort(containerIds);
+    return containerIds;
   }
 
   // Check containers launched are in dependency order

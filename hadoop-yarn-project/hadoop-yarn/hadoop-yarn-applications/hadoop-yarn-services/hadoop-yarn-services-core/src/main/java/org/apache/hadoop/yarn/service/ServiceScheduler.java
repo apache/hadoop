@@ -156,6 +156,8 @@ public class ServiceScheduler extends CompositeService {
   // requests for a single service is not recommended.
   private boolean hasAtLeastOnePlacementConstraint;
 
+  private boolean gracefulStop = false;
+
   public ServiceScheduler(ServiceContext context) {
     super(context.service.getName());
     this.context = context;
@@ -199,6 +201,7 @@ public class ServiceScheduler extends CompositeService {
     addIfService(amRMClient);
 
     nmClient = createNMClient();
+    nmClient.getClient().cleanupRunningContainersOnStop(false);
     addIfService(nmClient);
 
     dispatcher = new AsyncDispatcher("Component  dispatcher");
@@ -252,6 +255,11 @@ public class ServiceScheduler extends CompositeService {
         .createAMRMClientAsync(1000, new AMRMClientCallback());
   }
 
+  protected void setGracefulStop() {
+    this.gracefulStop = true;
+    nmClient.getClient().cleanupRunningContainersOnStop(true);
+  }
+
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     try {
@@ -266,26 +274,31 @@ public class ServiceScheduler extends CompositeService {
   public void serviceStop() throws Exception {
     LOG.info("Stopping service scheduler");
 
-    // Mark component-instances/containers as STOPPED
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      for (ContainerId containerId : getLiveInstances().keySet()) {
-        serviceTimelinePublisher.componentInstanceFinished(containerId,
-            KILLED_AFTER_APP_COMPLETION, diagnostics.toString());
-      }
-    }
     if (executorService != null) {
       executorService.shutdownNow();
     }
 
     DefaultMetricsSystem.shutdown();
-    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      serviceTimelinePublisher
-          .serviceAttemptUnregistered(context, diagnostics.toString());
+
+    // only stop the entire service when a graceful stop has been initiated
+    // (e.g. via client RPC, not through the AM receiving a SIGTERM)
+    if (gracefulStop) {
+      if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+        // mark component-instances/containers as STOPPED
+        for (ContainerId containerId : getLiveInstances().keySet()) {
+          serviceTimelinePublisher.componentInstanceFinished(containerId,
+              KILLED_AFTER_APP_COMPLETION, diagnostics.toString());
+        }
+        // mark attempt as unregistered
+        serviceTimelinePublisher
+            .serviceAttemptUnregistered(context, diagnostics.toString());
+      }
+      // unregister AM
+      amRMClient.unregisterApplicationMaster(FinalApplicationStatus.ENDED,
+          diagnostics.toString(), "");
+      LOG.info("Service {} unregistered with RM, with attemptId = {} " +
+          ", diagnostics = {} ", app.getName(), context.attemptId, diagnostics);
     }
-    amRMClient.unregisterApplicationMaster(FinalApplicationStatus.ENDED,
-        diagnostics.toString(), "");
-    LOG.info("Service {} unregistered with RM, with attemptId = {} " +
-        ", diagnostics = {} ", app.getName(), context.attemptId, diagnostics);
     super.serviceStop();
   }
 
