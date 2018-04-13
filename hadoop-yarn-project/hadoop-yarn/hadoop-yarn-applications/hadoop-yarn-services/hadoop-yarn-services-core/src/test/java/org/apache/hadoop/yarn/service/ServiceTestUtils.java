@@ -30,6 +30,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.registry.client.impl.zk.CuratorService;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -300,6 +301,16 @@ public class ServiceTestUtils {
         return null;
       }
     };
+    client.init(conf);
+    client.start();
+    return client;
+  }
+
+  /**
+   * Creates a YarnClient for test purposes.
+   */
+  public static YarnClient createYarnClient(Configuration conf) {
+    YarnClient client = YarnClient.createYarnClient();
     client.init(conf);
     client.start();
     return client;
