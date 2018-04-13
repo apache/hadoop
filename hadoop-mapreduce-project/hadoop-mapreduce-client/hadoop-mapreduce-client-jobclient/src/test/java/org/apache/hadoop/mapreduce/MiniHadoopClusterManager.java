@@ -152,7 +152,9 @@ public class MiniHadoopClusterManager {
       URISyntaxException {
     if (!noDFS) {
       dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nnPort)
-          .numDataNodes(numDataNodes).startupOption(dfsOpts).build();
+          .numDataNodes(numDataNodes)
+          .format(dfsOpts == StartupOption.FORMAT)
+          .startupOption(dfsOpts).build();
       LOG.info("Started MiniDFSCluster -- namenode on port "
           + dfs.getNameNodePort());
     }
