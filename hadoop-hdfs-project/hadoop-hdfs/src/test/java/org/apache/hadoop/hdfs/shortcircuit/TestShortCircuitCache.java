@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache.ShortCircuitReplica
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -792,5 +793,30 @@ public class TestShortCircuitCache {
         cluster.getDataNodes().get(0).getShortCircuitRegistry());
     cluster.shutdown();
     sockDir.close();
+  }
+
+  @Test
+  public void testFetchOrCreateRetries() throws Exception {
+    try(ShortCircuitCache cache = Mockito
+        .spy(new ShortCircuitCache(10, 10000000, 10, 10000000, 1, 10000, 0))) {
+      final TestFileDescriptorPair pair = new TestFileDescriptorPair();
+      ExtendedBlockId extendedBlockId = new ExtendedBlockId(123, "test_bp1");
+      SimpleReplicaCreator sRC = new SimpleReplicaCreator(123, cache, pair);
+
+      // Arrange that fetch will throw RetriableException for any call
+      Mockito.doThrow(new RetriableException("Retry")).when(cache)
+        .fetch(Mockito.eq(extendedBlockId), Mockito.any());
+
+      // Act: calling fetchOrCreate two times
+      //  first call: it will create and put entry to replicaInfoMap
+      //  second call: it will call fetch to get info for entry, and should
+      //               retry 3 times because RetriableException thrown
+      cache.fetchOrCreate(extendedBlockId, sRC);
+      cache.fetchOrCreate(extendedBlockId, sRC);
+
+      // Assert that fetchOrCreate retried to fetch at least 3 times
+      Mockito.verify(cache, Mockito.atLeast(3))
+        .fetch(Mockito.eq(extendedBlockId), Mockito.any());
+    }
   }
 }
