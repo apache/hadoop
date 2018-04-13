@@ -86,7 +86,7 @@ public class TestCloseContainerHandler {
 
     Assert.assertFalse(isContainerClosed(cluster, containerName));
 
-    DatanodeDetails datanodeDetails = MiniOzoneClassicCluster
+    DatanodeDetails datanodeDetails = MiniOzoneTestHelper
         .getDatanodeDetails(cluster.getDataNodes().get(0));
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()

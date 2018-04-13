@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
@@ -117,7 +118,7 @@ public class TestOzoneShell {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
+    final int port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
     url = String.format("http://localhost:%d", port);
     client = new OzoneRestClient(String.format("http://localhost:%d", port));
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);

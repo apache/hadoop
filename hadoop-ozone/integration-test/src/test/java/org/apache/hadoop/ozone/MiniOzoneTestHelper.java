@@ -25,6 +25,9 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.util.ServicePlugin;
 
+import java.lang.reflect.Field;
+import java.util.List;
+
 /**
  * Stateless helper functions for MiniOzone based tests.
  */
@@ -35,6 +38,10 @@ public class MiniOzoneTestHelper {
 
   public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
     return findHddsPlugin(dataNode).getDatanodeDetails();
+  }
+
+  public static int getOzoneRestPort(DataNode dataNode) {
+    return MiniOzoneTestHelper.getDatanodeDetails(dataNode).getOzoneRestPort();
   }
 
   public static OzoneContainer getOzoneContainer(DataNode dataNode) {
@@ -52,10 +59,19 @@ public class MiniOzoneTestHelper {
   }
 
   private static HddsDatanodeService findHddsPlugin(DataNode dataNode) {
-    for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HddsDatanodeService) {
-        return (HddsDatanodeService) plugin;
+    try {
+      Field pluginsField = DataNode.class.getDeclaredField("plugins");
+      pluginsField.setAccessible(true);
+      List<ServicePlugin> plugins =
+          (List<ServicePlugin>) pluginsField.get(dataNode);
+
+      for (ServicePlugin plugin : plugins) {
+        if (plugin instanceof HddsDatanodeService) {
+          return (HddsDatanodeService) plugin;
+        }
       }
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      e.printStackTrace();
     }
     throw new IllegalStateException("Can't find the Hdds server plugin in the"
         + " plugin collection of datanode");

@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
@@ -90,7 +91,7 @@ public class TestVolume {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
+    final int port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
 
     ozoneRestClient = new OzoneRestClient(
         String.format("http://localhost:%d", port));

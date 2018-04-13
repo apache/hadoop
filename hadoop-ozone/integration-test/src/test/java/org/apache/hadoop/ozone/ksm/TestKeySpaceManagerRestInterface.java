@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -124,7 +125,7 @@ public class TestKeySpaceManagerRestInterface {
       switch (type) {
       case HTTP:
       case HTTPS:
-        Assert.assertEquals(MiniOzoneClassicCluster.getOzoneRestPort(datanode),
+        Assert.assertEquals(MiniOzoneTestHelper.getOzoneRestPort(datanode),
             (int) ports.get(type));
         break;
       default:
