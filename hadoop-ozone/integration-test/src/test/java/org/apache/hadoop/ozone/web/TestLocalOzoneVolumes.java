@@ -19,9 +19,11 @@ package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.TestOzoneHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -70,7 +72,7 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    port = MiniOzoneClassicCluster.getOzoneRestPort(dataNode);
+    port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
   }
 
   /**

@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -67,7 +66,7 @@ public class HddsDatanodeService implements ServicePlugin {
     }
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
-        String hostname = DataNode.getHostName(conf);
+        String hostname = HddsUtils.getHostName(conf);
         String ip = InetAddress.getByName(hostname).getHostAddress();
         datanodeDetails = initializeDatanodeDetails();
         datanodeDetails.setHostName(hostname);

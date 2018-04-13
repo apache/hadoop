@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.scm.StorageContainerManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
@@ -234,7 +235,7 @@ public class TestSCMCli {
   @Test
   public void testInfoContainer() throws Exception {
     // The cluster has one Datanode server.
-    DatanodeDetails datanodeDetails = MiniOzoneClassicCluster
+    DatanodeDetails datanodeDetails = MiniOzoneTestHelper
         .getDatanodeDetails(cluster.getDataNodes().get(0));
     String formatStr =
         "Container Name: %s\n" +

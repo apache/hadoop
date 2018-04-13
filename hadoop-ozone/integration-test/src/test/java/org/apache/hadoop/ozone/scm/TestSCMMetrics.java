@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
@@ -173,7 +174,7 @@ public class TestSCMMetrics {
       StorageContainerManager scmManager = cluster.getStorageContainerManager();
 
       DataNode dataNode = cluster.getDataNodes().get(0);
-      String datanodeUuid = MiniOzoneClassicCluster.getDatanodeDetails(dataNode)
+      String datanodeUuid = MiniOzoneTestHelper.getDatanodeDetails(dataNode)
           .getUuidString();
       ContainerReportsRequestProto request = createContainerReport(numReport,
           stat, datanodeUuid);

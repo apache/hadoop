@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.web.netty;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.BindException;
@@ -33,8 +32,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.hdfs.server.datanode.web
-    .RestCsrfPreventionFilterHandler;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -55,10 +52,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .HDDS_REST_CSRF_ENABLED_DEFAULT;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
-    .HDDS_REST_CSRF_ENABLED_KEY;
-import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .HDDS_REST_HTTP_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .HDDS_REST_HTTP_ADDRESS_KEY;
@@ -75,7 +68,6 @@ public class ObjectStoreRestHttpServer implements Closeable {
   private final ServerBootstrap httpServer;
   private final Configuration conf;
   private final Configuration confForCreate;
-  private final RestCsrfPreventionFilter restCsrfPreventionFilter;
   private InetSocketAddress httpAddress;
   static final Log LOG = LogFactory.getLog(ObjectStoreRestHttpServer.class);
   private final ObjectStoreHandler objectStoreHandler;
@@ -83,7 +75,6 @@ public class ObjectStoreRestHttpServer implements Closeable {
   public ObjectStoreRestHttpServer(final Configuration conf,
       final ServerSocketChannel externalHttpChannel,
       ObjectStoreHandler objectStoreHandler) throws IOException {
-    this.restCsrfPreventionFilter = createRestCsrfPreventionFilter(conf);
     this.conf = conf;
 
     this.confForCreate = new Configuration(conf);
@@ -101,11 +92,7 @@ public class ObjectStoreRestHttpServer implements Closeable {
       protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline p = ch.pipeline();
         p.addLast(new HttpRequestDecoder(), new HttpResponseEncoder());
-        if (restCsrfPreventionFilter != null) {
-          p.addLast(
-              new RestCsrfPreventionFilterHandler(restCsrfPreventionFilter));
-        }
-
+        // Later we have to support cross-site request forgery (CSRF) Filter
         p.addLast(new ChunkedWriteHandler(), new ObjectStoreURLDispatcher(
             objectStoreHandler.getObjectStoreJerseyContainer()));
       }
@@ -170,36 +157,6 @@ public class ObjectStoreRestHttpServer implements Closeable {
     if (externalHttpChannel != null) {
       externalHttpChannel.close();
     }
-  }
-
-  /**
-   * Creates the {@link RestCsrfPreventionFilter} for the DataNode.  Since the
-   * DataNode HTTP server is not implemented in terms of the servlet API, it
-   * takes some extra effort to obtain an instance of the filter.  This method
-   * takes care of configuration and implementing just enough of the servlet API
-   * and related interfaces so that the DataNode can get a fully initialized
-   * instance of the filter.
-   *
-   * @param conf configuration to read
-   * @return initialized filter, or null if CSRF protection not enabled
-   */
-  private static RestCsrfPreventionFilter createRestCsrfPreventionFilter(
-      Configuration conf) {
-    if (!conf.getBoolean(HDDS_REST_CSRF_ENABLED_KEY,
-        HDDS_REST_CSRF_ENABLED_DEFAULT)) {
-      return null;
-    }
-    String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
-    Map<String, String> restCsrfParams = RestCsrfPreventionFilter
-        .getFilterParams(conf, "dfs.webhdfs.rest-csrf.");
-    RestCsrfPreventionFilter filter = new RestCsrfPreventionFilter();
-    try {
-      filter.init(new MapBasedFilterConfig(restCsrfClassName, restCsrfParams));
-    } catch (ServletException e) {
-      throw new IllegalStateException(
-          "Failed to initialize RestCsrfPreventionFilter.", e);
-    }
-    return filter;
   }
 
   /**

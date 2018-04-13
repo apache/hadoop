@@ -187,14 +187,6 @@ message StorageInfoProto {
   required uint32 namespceID = 2;    // File system namespace ID
   required string clusterID = 3;     // ID of the cluster
   required uint64 cTime = 4;         // File system creation time
-
-    enum NodeTypeProto {
-    NAME_NODE = 1;
-    DATA_NODE = 2;
-    JOURNAL_NODE = 3;
-    STORAGE_CONTAINER_SERVICE = 4;
-  }
-  optional NodeTypeProto nodeType = 5;
 }
 
 /**

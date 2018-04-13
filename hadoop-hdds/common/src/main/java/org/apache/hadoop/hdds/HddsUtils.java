@@ -22,18 +22,26 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys
+    .DFS_DATANODE_DNS_INTERFACE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys
+    .DFS_DATANODE_DNS_NAMESERVER_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
 
@@ -269,4 +277,42 @@ public class HddsUtils {
     }
     return dataNodeIDPath;
   }
+
+  /**
+   * Returns the hostname for this datanode. If the hostname is not
+   * explicitly configured in the given config, then it is determined
+   * via the DNS class.
+   *
+   * @param conf Configuration
+   *
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the dfs.datanode.dns.interface
+   *    option is used and the hostname can not be determined
+   */
+  public static String getHostName(Configuration conf)
+      throws UnknownHostException {
+    String name = conf.get(DFS_DATANODE_HOST_NAME_KEY);
+    if (name == null) {
+      String dnsInterface = conf.get(
+          CommonConfigurationKeys.HADOOP_SECURITY_DNS_INTERFACE_KEY);
+      String nameServer = conf.get(
+          CommonConfigurationKeys.HADOOP_SECURITY_DNS_NAMESERVER_KEY);
+      boolean fallbackToHosts = false;
+
+      if (dnsInterface == null) {
+        // Try the legacy configuration keys.
+        dnsInterface = conf.get(DFS_DATANODE_DNS_INTERFACE_KEY);
+        nameServer = conf.get(DFS_DATANODE_DNS_NAMESERVER_KEY);
+      } else {
+        // If HADOOP_SECURITY_DNS_* is set then also attempt hosts file
+        // resolution if DNS fails. We will not use hosts file resolution
+        // by default to avoid breaking existing clusters.
+        fallbackToHosts = true;
+      }
+
+      name = DNS.getDefaultHost(dnsInterface, nameServer, fallbackToHosts);
+    }
+    return name;
+  }
+
 }

@@ -170,7 +170,7 @@ public class TestStorageContainerManagerHelper {
   private OzoneContainer getContainerServerByDatanodeUuid(String dnUUID)
       throws IOException {
     for (DataNode dn : cluster.getDataNodes()) {
-      if (MiniOzoneClassicCluster.getDatanodeDetails(dn).getUuidString()
+      if (MiniOzoneTestHelper.getDatanodeDetails(dn).getUuidString()
           .equals(dnUUID)) {
         return MiniOzoneTestHelper.getOzoneContainer(dn);
       }

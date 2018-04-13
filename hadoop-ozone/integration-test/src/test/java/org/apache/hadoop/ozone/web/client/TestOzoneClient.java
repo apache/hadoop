@@ -45,6 +45,7 @@ import io.netty.handler.logging.LoggingHandler;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneTestHelper;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -98,7 +99,7 @@ public class TestOzoneClient {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     endpoint = String.format("http://localhost:%d",
-        MiniOzoneClassicCluster.getOzoneRestPort(dataNode));
+        MiniOzoneTestHelper.getOzoneRestPort(dataNode));
   }
 
   @AfterClass

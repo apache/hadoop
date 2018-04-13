@@ -95,12 +95,8 @@ public class TestMiniOzoneCluster {
     for(DataNode dn : datanodes) {
       // Create a single member pipe line
       String containerName = OzoneUtils.getRequestID();
-      DatanodeDetails datanodeDetails = null;
-      for (ServicePlugin plugin : dn.getPlugins()) {
-        if (plugin instanceof HddsDatanodeService) {
-          datanodeDetails = ((HddsDatanodeService) plugin).getDatanodeDetails();
-        }
-      }
+      DatanodeDetails datanodeDetails =
+          MiniOzoneTestHelper.getDatanodeDetails(dn);
       final PipelineChannel pipelineChannel =
           new PipelineChannel(datanodeDetails.getUuidString(),
               HddsProtos.LifeCycleState.OPEN,

@@ -23,10 +23,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -49,7 +47,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 
-import org.apache.hadoop.util.ServicePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -242,7 +239,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
     // An Ozone request may originate at any DataNode, so pick one at random.
     int dnIndex = new Random().nextInt(getDataNodes().size());
     String uri = String.format("http://127.0.0.1:%d",
-        getOzoneRestPort(getDataNodes().get(dnIndex)));
+        MiniOzoneTestHelper.getOzoneRestPort(getDataNodes().get(dnIndex)));
     LOG.info("Creating Ozone client to DataNode {} with URI {} and user {}",
         dnIndex, uri, USER_AUTH);
     try {
@@ -337,20 +334,6 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
     GenericTestUtils.waitFor(() ->
             scm.getScmNodeManager().getStats().getCapacity().get() > 0, 100,
         4 * 1000);
-  }
-
-  public static DatanodeDetails getDatanodeDetails(DataNode dataNode) {
-    DatanodeDetails datanodeDetails = null;
-    for (ServicePlugin plugin : dataNode.getPlugins()) {
-      if (plugin instanceof HddsDatanodeService) {
-        datanodeDetails = ((HddsDatanodeService) plugin).getDatanodeDetails();
-      }
-    }
-    return datanodeDetails;
-  }
-
-  public static int getOzoneRestPort(DataNode dataNode) {
-    return getDatanodeDetails(dataNode).getOzoneRestPort();
   }
 
   /**

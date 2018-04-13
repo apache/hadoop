@@ -87,7 +87,7 @@ public class TestFavoredNodesEndToEnd {
     for (int i = 0; i < NUM_FILES; i++) {
       Random rand = new Random(System.currentTimeMillis() + i);
       //pass a new created rand so as to get a uniform distribution each time
-      //without too much collisions (look at the do-while loop in getMembers)
+      //without too much collisions (look at the do-while loop in getDatanodes)
       InetSocketAddress datanode[] = getDatanodes(rand);
       Path p = new Path("/filename"+i);
       FSDataOutputStream out = dfs.create(p, FsPermission.getDefault(), true,
@@ -168,7 +168,7 @@ public class TestFavoredNodesEndToEnd {
     for (int i = 0; i < NUM_FILES; i++) {
       Random rand = new Random(System.currentTimeMillis() + i);
       // pass a new created rand so as to get a uniform distribution each time
-      // without too much collisions (look at the do-while loop in getMembers)
+      // without too much collisions (look at the do-while loop in getDatanodes)
       InetSocketAddress datanode[] = getDatanodes(rand);
       Path p = new Path("/filename" + i);
       // create and close the file.
@@ -195,7 +195,7 @@ public class TestFavoredNodesEndToEnd {
     for (int i = 0; i < NUM_FILES; i++) {
       Random rand = new Random(System.currentTimeMillis() + i);
       //pass a new created rand so as to get a uniform distribution each time
-      //without too much collisions (look at the do-while loop in getMembers)
+      //without too much collisions (look at the do-while loop in getDatanodes)
       InetSocketAddress[] dns = getDatanodes(rand);
       Path p = new Path("/filename"+i);
       FSDataOutputStream out =

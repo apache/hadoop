@@ -48,7 +48,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_P
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ReconfigurationProtocolService;
 
@@ -914,7 +913,7 @@ public class DataNode extends ReconfigurableBase
    * @throws UnknownHostException if the dfs.datanode.dns.interface
    *    option is used and the hostname can not be determined
    */
-  public static String getHostName(Configuration config)
+  private static String getHostName(Configuration config)
       throws UnknownHostException {
     String name = config.get(DFS_DATANODE_HOST_NAME_KEY);
     if (name == null) {
@@ -1572,6 +1571,7 @@ public class DataNode extends ReconfigurableBase
           + bpRegistration.getDatanodeUuid()
           + ". Expecting " + storage.getDatanodeUuid());
     }
+    
     registerBlockPoolWithSecretManager(bpRegistration, blockPoolId);
   }
   
@@ -3605,15 +3605,5 @@ public class DataNode extends ReconfigurableBase
       volumeInfoList.add(dnStorageInfo);
     }
     return volumeInfoList;
-  }
-
-  @Private
-  public SecureResources getSecureResources() {
-    return secureResources;
-  }
-
-  @Private
-  public Collection<ServicePlugin> getPlugins() {
-    return Collections.unmodifiableList(plugins);
   }
 }

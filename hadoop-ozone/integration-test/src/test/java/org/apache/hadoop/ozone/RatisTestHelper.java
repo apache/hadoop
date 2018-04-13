@@ -80,7 +80,7 @@ public interface RatisTestHelper {
     }
 
     public int getDatanodeOzoneRestPort() {
-      return MiniOzoneClassicCluster.getOzoneRestPort(
+      return MiniOzoneTestHelper.getOzoneRestPort(
           cluster.getDataNodes().get(0));
     }
   }
