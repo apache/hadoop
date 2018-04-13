@@ -86,7 +86,7 @@ public final class IrqHandler implements SignalHandler {
    * Bind to the interrupt handler.
    * @throws IllegalArgumentException if the exception could not be set
    */
-  void bind() {
+  public void bind() {
     Preconditions.checkState(signal == null, "Handler already bound");
     try {
       signal = new Signal(name);
