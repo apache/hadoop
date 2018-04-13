@@ -23,14 +23,14 @@
   <div class="col-md-10">
     <div class="btn-group btn-group-justified">
       <a class="btn"
-         ng-class="$ctrl.allSelected() ? 'btn-primary' :'btn-secondary'"
-         ng-click="$ctrl.switchto('')">All
+         ng-class="$ctrl.allSelected('All') ? 'btn-primary' :'btn-secondary'"
+         ng-click="$ctrl.switchto('All')">All
       </a>
       <a class="btn"
-         ng-class="$ctrl.selected('KSM') ? 'btn-primary' :'btn-secondary'"
+         ng-class="$ctrl.allSelected('KSM') ? 'btn-primary' :'btn-secondary'"
          ng-click="$ctrl.switchto('KSM')">KSM</a>
       <a class="btn"
-         ng-class="$ctrl.selected('SCM') ? 'btn-primary' :'btn-secondary'"
+         ng-class="$ctrl.allSelected('SCM') ? 'btn-primary' :'btn-secondary'"
          ng-click="$ctrl.switchto('SCM')">SCM</a>
     </div>
   </div>
@@ -61,26 +61,26 @@
       <thead>
       <tr>
         <th class="col-md-3" >
-          <a href="#" ng-click="$ctrl.sortBy('name')">Property</a>
-          <span class="sortorder" ng-show="propertyName === 'name'"
-                ng-class="{reverse: reverse}">
-
+          <a href="javascript:void(0)" ng-click="$ctrl.sortBy('name')">Property</a>
+          <span class="sortorder" ng-show="$ctrl.propertyName === 'name'"
+                ng-class="{reverse: $ctrl.reverse}">
               </span>
         </th>
         <th class="col-md-2" style="word-wrap: break-word;">
-          <a ng-click="$ctrl.sortBy('value')">Value</a>
-          <span class="sortorder" ng-show="propertyName === 'value'"
-                ng-class="{reverse: reverse}"></span>
+          <a href="javascript:void(0)" ng-click="$ctrl.sortBy('value')">Value</a>
+          <span class="sortorder" ng-show="$ctrl.propertyName === 'value'"
+                ng-class="{reverse: $ctrl.reverse}"></span>
         </th>
         <th class="col-md-7">
-          <a href="#" ng-click="$ctrl.sortBy('description')">Description</a>
-          <span class="sortorder" ng-show="propertyName === 'description'"
+          <a href="javascript:void(0)" ng-click="$ctrl.sortBy('description')">Description</a>
+          <span class="sortorder" ng-show="$ctrl.propertyName === 'description'"
                 ng-class="{reverse: reverse}"></span>
         </th>
       </tr>
       </thead>
       <tbody>
-      <tr ng-repeat="config in $ctrl.configs | filter:$ctrl.tagFilter | filter:search | orderBy:propertyName:reverse">
+      <tr
+          ng-repeat="config in $ctrl.configs | filter:search | orderBy:$ctrl.propertyName:$ctrl.reverse">
         <td style="word-wrap: break-word;">{{config.name}}</td>
         <td style="word-wrap: break-word;">{{config.value}}</td>
         <td style="word-wrap: break-word;">{{config.description}}</td>

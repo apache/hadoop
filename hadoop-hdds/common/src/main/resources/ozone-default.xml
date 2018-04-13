@@ -993,6 +993,16 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.custom.tags</name>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+  </property>
+
+  <property>
+    <name>ozone.system.tags</name>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,KSM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE</value>
+  </property>
+
 
   <property>
     <name>hdds.rest.rest-csrf.enabled</name>

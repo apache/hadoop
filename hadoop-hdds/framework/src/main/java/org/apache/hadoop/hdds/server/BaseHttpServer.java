@@ -21,6 +21,7 @@ import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdds.conf.HddsConfServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
@@ -79,6 +80,7 @@ public abstract class BaseHttpServer {
       builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
 
       httpServer = builder.build();
+      httpServer.addServlet("conf", "/conf", HddsConfServlet.class);
 
     }
 
@@ -86,17 +88,19 @@ public abstract class BaseHttpServer {
 
   /**
    * Add a servlet to BaseHttpServer.
+   *
    * @param servletName The name of the servlet
-   * @param pathSpec The path spec for the servlet
-   * @param clazz The servlet class
+   * @param pathSpec    The path spec for the servlet
+   * @param clazz       The servlet class
    */
   protected void addServlet(String servletName, String pathSpec,
-                            Class<? extends HttpServlet> clazz) {
+      Class<? extends HttpServlet> clazz) {
     httpServer.addServlet(servletName, pathSpec, clazz);
   }
 
   /**
    * Returns the WebAppContext associated with this HttpServer.
+   *
    * @return WebAppContext
    */
   protected WebAppContext getWebAppContext() {
