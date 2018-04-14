@@ -294,6 +294,9 @@ public class ChunkGroupOutputStream extends OutputStream {
   @Override
   public synchronized void flush() throws IOException {
     checkNotClosed();
+    if (streamEntries.size() == 0) {
+      return;
+    }
     for (int i = 0; i <= currentStreamIndex; i++) {
       streamEntries.get(i).flush();
     }

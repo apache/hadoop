@@ -76,7 +76,7 @@ public class TestStorageContainerManagerHttpServer {
     conf = new Configuration();
     keystoresDir = new File(BASEDIR).getAbsolutePath();
     sslConfDir = KeyStoreTestUtil.getClasspathDir(
-        org.apache.hadoop.hdfs.server.namenode.TestNameNodeHttpServer.class);
+        TestStorageContainerManagerHttpServer.class);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
     connectionFactory =
         URLConnectionFactory.newDefaultURLConnectionFactory(conf);

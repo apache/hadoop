@@ -315,7 +315,7 @@ public class MockNodeManager implements NodeManager {
 
   // Returns the number of commands that is queued to this node manager.
   public int getCommandCount(DatanodeDetails dd) {
-    List<SCMCommand> list = commandMap.get(dd);
+    List<SCMCommand> list = commandMap.get(dd.getUuid());
     return (list == null) ? 0 : list.size();
   }
 

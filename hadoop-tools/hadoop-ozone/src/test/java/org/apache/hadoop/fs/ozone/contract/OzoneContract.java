@@ -20,12 +20,11 @@ package org.apache.hadoop.fs.ozone.contract;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.ozone.Constants;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -105,8 +104,6 @@ class OzoneContract extends AbstractFSContract {
     } catch (OzoneException e) {
       throw new IOException(e.getMessage());
     }
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = dataNode.getInfoPort();
 
     String uri = String.format("%s://%s.%s/",
         Constants.OZONE_URI_SCHEME, bucketName, volumeName);

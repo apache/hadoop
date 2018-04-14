@@ -93,8 +93,8 @@ public class TestOzoneFSInputStream {
     String host = dataNode.getDatanodeHostname();
 
     // Set the fs.defaultFS and start the filesystem
-    String uri = String.format("%s://%s:%d/%s/%s",
-        Constants.OZONE_URI_SCHEME, host, port, volumeName, bucketName);
+    String uri = String.format("%s://%s.%s/",
+        Constants.OZONE_URI_SCHEME, bucketName, volumeName);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, uri);
     fs =  FileSystem.get(conf);
     int fileLen = 100 * 1024 * 1024;
