@@ -262,7 +262,7 @@ public class TestDeletedBlockLog {
     int count = 0;
     String containerName = null;
     DatanodeDetails dnDd1 = DatanodeDetails.newBuilder()
-        .setUuid("node1")
+        .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
         .setHostName("localhost")
         .setContainerPort(0)
@@ -270,7 +270,7 @@ public class TestDeletedBlockLog {
         .setOzoneRestPort(0)
         .build();
     DatanodeDetails dnId2 = DatanodeDetails.newBuilder()
-        .setUuid("node2")
+        .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
         .setHostName("localhost")
         .setContainerPort(0)

@@ -32,14 +32,13 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.junit.After;
 
-import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -99,7 +98,7 @@ public class TestOzoneFileInterfaces {
   public void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(10)
+        .numDataNodes(3)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();
     storageHandler =
@@ -118,11 +117,6 @@ public class TestOzoneFileInterfaces {
     storageHandler.createVolume(volumeArgs);
     BucketArgs bucketArgs = new BucketArgs(volumeName, bucketName, userArgs);
     storageHandler.createBucket(bucketArgs);
-
-    // Fetch the host and port for File System init
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    int port = dataNode.getInfoPort();
-    String host = dataNode.getDatanodeHostname();
 
     rootPath = String
         .format("%s://%s.%s/", Constants.OZONE_URI_SCHEME, bucketName,
@@ -147,7 +141,7 @@ public class TestOzoneFileInterfaces {
   public void testFileSystemInit() throws IOException {
     if (setDefaultFs) {
       assertTrue(
-          "The initialized file system is not OzoneFileSysetem but " +
+          "The initialized file system is not OzoneFileSystem but " +
               fs.getClass(),
           fs instanceof OzoneFileSystem);
       assertEquals(Constants.OZONE_URI_SCHEME, fs.getUri().getScheme());

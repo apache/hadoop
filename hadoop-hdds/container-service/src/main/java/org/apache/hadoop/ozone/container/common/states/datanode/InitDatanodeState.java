@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -107,6 +108,12 @@ public class InitDatanodeState implements DatanodeState,
    */
   private void persistContainerDatanodeDetails() throws IOException {
     String dataNodeIDPath = HddsUtils.getDatanodeIdFilePath(conf);
+    if (Strings.isNullOrEmpty(dataNodeIDPath)) {
+      LOG.error("A valid file path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+      this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
+      return;
+    }
     File idPath = new File(dataNodeIDPath);
     DatanodeDetails datanodeDetails = this.context.getParent()
         .getDatanodeDetails();
