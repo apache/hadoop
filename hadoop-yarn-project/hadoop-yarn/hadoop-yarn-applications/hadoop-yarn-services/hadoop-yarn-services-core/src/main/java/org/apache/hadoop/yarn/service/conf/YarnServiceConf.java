@@ -38,6 +38,8 @@ public class YarnServiceConf {
   public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";
   public static final long DEFAULT_KEY_AM_RESOURCE_MEM = 1024;
 
+  public static final String DEFAULT_AM_JVM_XMX = " -Xmx768m ";
+
   public static final String YARN_QUEUE = "yarn.service.queue";
 
   public static final String API_SERVER_ADDRESS = "yarn.service.api-server.address";

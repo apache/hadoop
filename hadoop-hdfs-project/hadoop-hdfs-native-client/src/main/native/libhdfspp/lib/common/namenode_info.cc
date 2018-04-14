@@ -20,11 +20,12 @@
 
 #include "common/util.h"
 #include "common/logging.h"
+#include "hdfspp/ioservice.h"
 
 #include <sstream>
 #include <utility>
 #include <future>
-#include <memory>
+
 
 namespace hdfs {
 
@@ -34,8 +35,6 @@ ResolvedNamenodeInfo& ResolvedNamenodeInfo::operator=(const NamenodeInfo &info) 
   uri = info.uri;
   return *this;
 }
-
-
 
 std::string ResolvedNamenodeInfo::str() const {
   std::stringstream ss;
@@ -58,7 +57,7 @@ std::string ResolvedNamenodeInfo::str() const {
 }
 
 
-bool ResolveInPlace(::asio::io_service *ioservice, ResolvedNamenodeInfo &info) {
+bool ResolveInPlace(std::shared_ptr<IoService> ioservice, ResolvedNamenodeInfo &info) {
   // this isn't very memory friendly, but if it needs to be called often there are bigger issues at hand
   info.endpoints.clear();
   std::vector<ResolvedNamenodeInfo> resolved = BulkResolve(ioservice, {info});
@@ -76,7 +75,7 @@ typedef std::vector<asio::ip::tcp::endpoint> endpoint_vector;
 // RAII wrapper
 class ScopedResolver {
  private:
-  ::asio::io_service *io_service_;
+  std::shared_ptr<IoService> io_service_;
   std::string host_;
   std::string port_;
   ::asio::ip::tcp::resolver::query query_;
@@ -86,8 +85,8 @@ class ScopedResolver {
   // Caller blocks on access if resolution isn't finished
   std::shared_ptr<std::promise<Status>> result_status_;
  public:
-  ScopedResolver(::asio::io_service *service, const std::string &host, const std::string &port) :
-        io_service_(service), host_(host), port_(port), query_(host, port), resolver_(*io_service_)
+  ScopedResolver(std::shared_ptr<IoService> service, const std::string &host, const std::string &port) :
+        io_service_(service), host_(host), port_(port), query_(host, port), resolver_(io_service_->GetRaw())
   {
     if(!io_service_)
       LOG_ERROR(kAsyncRuntime, << "ScopedResolver@" << this << " passed nullptr to io_service");
@@ -140,7 +139,7 @@ class ScopedResolver {
   }
 };
 
-std::vector<ResolvedNamenodeInfo> BulkResolve(::asio::io_service *ioservice, const std::vector<NamenodeInfo> &nodes) {
+std::vector<ResolvedNamenodeInfo> BulkResolve(std::shared_ptr<IoService> ioservice, const std::vector<NamenodeInfo> &nodes) {
   std::vector< std::unique_ptr<ScopedResolver> > resolvers;
   resolvers.reserve(nodes.size());
 

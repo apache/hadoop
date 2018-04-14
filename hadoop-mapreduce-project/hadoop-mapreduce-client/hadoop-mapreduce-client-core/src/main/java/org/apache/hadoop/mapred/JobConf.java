@@ -312,6 +312,15 @@ public class JobConf extends Configuration {
    * <ul>
    *   <li> A=foo - This will set the env variable A to foo. </li>
    * </ul>
+   *
+   * You can also add environment variables individually by appending
+   * <code>.VARNAME</code> to this configuration key, where VARNAME is
+   * the name of the environment variable.
+   *
+   * Example:
+   * <ul>
+   *   <li>mapreduce.map.env.VARNAME=value</li>
+   * </ul>
    */
   public static final String MAPRED_MAP_TASK_ENV = JobContext.MAP_ENV;
   
@@ -325,6 +334,15 @@ public class JobConf extends Configuration {
    * Example:
    * <ul>
    *   <li> A=foo - This will set the env variable A to foo. </li>
+   * </ul>
+   *
+   * You can also add environment variables individually by appending
+   * <code>.VARNAME</code> to this configuration key, where VARNAME is
+   * the name of the environment variable.
+   *
+   * Example:
+   * <ul>
+   *   <li>mapreduce.reduce.env.VARNAME=value</li>
    * </ul>
    */
   public static final String MAPRED_REDUCE_TASK_ENV = JobContext.REDUCE_ENV;

@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.StripedBlockInfo;
@@ -214,11 +215,13 @@ public interface DataTransferProtocol {
    *
    * @param blk a block.
    * @param blockToken security token for accessing the block.
+   * @param blockChecksumOptions determines how the block-level checksum is
+   *     computed from underlying block metadata.
    * @throws IOException
    */
   void blockChecksum(ExtendedBlock blk,
-      Token<BlockTokenIdentifier> blockToken) throws IOException;
-
+      Token<BlockTokenIdentifier> blockToken,
+      BlockChecksumOptions blockChecksumOptions) throws IOException;
 
   /**
    * Get striped block group checksum (MD5 of CRC32).
@@ -227,9 +230,12 @@ public interface DataTransferProtocol {
    * @param blockToken security token for accessing the block.
    * @param requestedNumBytes requested number of bytes in the block group
    *                          to compute the checksum.
+   * @param blockChecksumOptions determines how the block-level checksum is
+   *     computed from underlying block metadata.
    * @throws IOException
    */
   void blockGroupChecksum(StripedBlockInfo stripedBlockInfo,
           Token<BlockTokenIdentifier> blockToken,
-          long requestedNumBytes) throws IOException;
+          long requestedNumBytes,
+          BlockChecksumOptions blockChecksumOptions) throws IOException;
 }

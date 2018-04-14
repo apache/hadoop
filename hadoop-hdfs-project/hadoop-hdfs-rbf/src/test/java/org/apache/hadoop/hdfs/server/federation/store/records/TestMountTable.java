@@ -50,8 +50,8 @@ public class TestMountTable {
   private static final String DST_PATH_1 = "/path/path2";
   private static final List<RemoteLocation> DST = new LinkedList<>();
   static {
-    DST.add(new RemoteLocation(DST_NS_0, DST_PATH_0));
-    DST.add(new RemoteLocation(DST_NS_1, DST_PATH_1));
+    DST.add(new RemoteLocation(DST_NS_0, DST_PATH_0, SRC));
+    DST.add(new RemoteLocation(DST_NS_1, DST_PATH_1, SRC));
   }
   private static final Map<String, String> DST_MAP = new LinkedHashMap<>();
   static {

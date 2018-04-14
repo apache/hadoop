@@ -179,6 +179,7 @@ public class Component implements EventHandler<ComponentEvent> {
     maxContainerFailurePerComp = componentSpec.getConfiguration()
         .getPropertyInt(CONTAINER_FAILURE_THRESHOLD, 10);
     createNumCompInstances(component.getNumberOfContainers());
+    setDesiredContainers(component.getNumberOfContainers().intValue());
   }
 
   private void createNumCompInstances(long count) {

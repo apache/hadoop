@@ -2616,6 +2616,26 @@
 </property>
 
 <property>
+  <name>hadoop.security.kms.client.copy.legacy.token</name>
+  <value>true</value>
+  <description>
+    Expert only. Whether the KMS client provider should copy a token to legacy
+    kind. This is for KMS_DELEGATION_TOKEN to be backwards compatible. With the
+    default value set to true, the client will locally duplicate the
+    KMS_DELEGATION_TOKEN token and create a kms-dt token, with the service field
+    conforming to kms-dt. All other parts of the token remain the same.
+    Then the new clients will use KMS_DELEGATION_TOKEN and old clients will
+    use kms-dt to authenticate. Default value is true.
+    You should only change this to false if you know all the KMS servers
+    , clients (including both job submitters and job runners) and the
+    token renewers (usually Yarn RM) are on a version that supports
+    KMS_DELEGATION_TOKEN.
+    Turning this off prematurely may result in old clients failing to
+    authenticate with new servers.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.kms.client.failover.sleep.max.millis</name>
   <value>2000</value>
   <description>

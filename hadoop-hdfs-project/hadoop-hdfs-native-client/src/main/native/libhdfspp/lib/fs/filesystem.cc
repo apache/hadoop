@@ -18,6 +18,7 @@
 
 #include "filesystem.h"
 
+#include "filehandle.h"
 #include "common/namenode_info.h"
 
 #include <functional>
@@ -104,6 +105,54 @@ FileSystem *FileSystem::New() {
  *                    FILESYSTEM IMPLEMENTATION
  ****************************************************************************/
 
+struct FileSystemImpl::FindSharedState {
+  //Name pattern (can have wild-cards) to find
+  const std::string name;
+  //Maximum depth to recurse after the end of path is reached.
+  //Can be set to 0 for pure path globbing and ignoring name pattern entirely.
+  const uint32_t maxdepth;
+  //Vector of all sub-directories from the path argument (each can have wild-cards)
+  std::vector<std::string> dirs;
+  //Callback from Find
+  const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler;
+  //outstanding_requests is incremented once for every GetListing call.
+  std::atomic<uint64_t> outstanding_requests;
+  //Boolean needed to abort all recursion on error or on user command
+  std::atomic<bool> aborted;
+  //Shared variables will need protection with a lock
+  std::mutex lock;
+  FindSharedState(const std::string path_, const std::string name_, const uint32_t maxdepth_,
+              const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler_,
+              uint64_t outstanding_recuests_, bool aborted_)
+      : name(name_),
+        maxdepth(maxdepth_),
+        handler(handler_),
+        outstanding_requests(outstanding_recuests_),
+        aborted(aborted_),
+        lock() {
+    //Constructing the list of sub-directories
+    std::stringstream ss(path_);
+    if(path_.back() != '/'){
+      ss << "/";
+    }
+    for (std::string token; std::getline(ss, token, '/'); ) {
+      dirs.push_back(token);
+    }
+  }
+};
+
+struct FileSystemImpl::FindOperationalState {
+  const std::string path;
+  const uint32_t depth;
+  const bool search_path;
+  FindOperationalState(const std::string path_, const uint32_t depth_, const bool search_path_)
+      : path(path_),
+        depth(depth_),
+        search_path(search_path_) {
+  }
+};
+
+
 const std::string get_effective_user_name(const std::string &user_name) {
   if (!user_name.empty())
     return user_name;
@@ -134,10 +183,10 @@ const std::string get_effective_user_name(const std::string &user_name) {
 }
 
 FileSystemImpl::FileSystemImpl(IoService *&io_service, const std::string &user_name, const Options &options) :
-     io_service_(static_cast<IoServiceImpl *>(io_service)), options_(options),
+     io_service_(io_service), options_(options),
      client_name_(GetRandomClientName()),
      nn_(
-       &io_service_->io_service(), options, client_name_,
+       io_service_, options, client_name_,
        get_effective_user_name(user_name), kNamenodeProtocol,
        kNamenodeProtocolVersion
      ),
@@ -166,10 +215,10 @@ FileSystemImpl::FileSystemImpl(IoService *&io_service, const std::string &user_n
 }
 
 FileSystemImpl::FileSystemImpl(std::shared_ptr<IoService> io_service, const std::string& user_name, const Options &options) :
-     io_service_(std::static_pointer_cast<IoServiceImpl>(io_service)), options_(options),
+     io_service_(io_service), options_(options),
      client_name_(GetRandomClientName()),
      nn_(
-       &io_service_->io_service(), options, client_name_,
+       io_service_, options, client_name_,
        get_effective_user_name(user_name), kNamenodeProtocol,
        kNamenodeProtocolVersion
      ),
@@ -178,7 +227,7 @@ FileSystemImpl::FileSystemImpl(std::shared_ptr<IoService> io_service, const std:
 {
   LOG_DEBUG(kFileSystem, << "FileSystemImpl::FileSystemImpl("
                          << FMT_THIS_ADDR << ", shared IoService@" << io_service_.get() << ") called");
-  int worker_thread_count = io_service_->get_worker_thread_count();
+  int worker_thread_count = io_service_->GetWorkerThreadCount();
   if(worker_thread_count < 1) {
     LOG_WARN(kFileSystem, << "FileSystemImpl::FileSystemImpl IoService provided doesn't have any worker threads. "
                           << "It needs at least 1 worker to connect to an HDFS cluster.")
@@ -217,7 +266,7 @@ void FileSystemImpl::Connect(const std::string &server,
   auto name_service = options_.services.find(server);
   if(name_service != options_.services.end()) {
     cluster_name_ = name_service->first;
-    resolved_namenodes = BulkResolve(&io_service_->io_service(), name_service->second);
+    resolved_namenodes = BulkResolve(io_service_, name_service->second);
   } else {
     cluster_name_ = server + ":" + service;
 
@@ -230,7 +279,7 @@ void FileSystemImpl::Connect(const std::string &server,
       handler(Status::Error(("Invalid namenode " + cluster_name_ + " in config").c_str()), this);
     }
 
-    resolved_namenodes = BulkResolve(&io_service_->io_service(), {tmp_info});
+    resolved_namenodes = BulkResolve(io_service_, {tmp_info});
   }
 
   for(unsigned int i=0;i<resolved_namenodes.size();i++) {
@@ -282,7 +331,7 @@ int FileSystemImpl::WorkerThreadCount() {
   if(!io_service_) {
     return -1;
   } else {
-    return io_service_->get_worker_thread_count();
+    return io_service_->GetWorkerThreadCount();
   }
 }
 
@@ -339,7 +388,7 @@ void FileSystemImpl::Open(
         LOG_DEBUG(kFileSystem, << "Operation not allowed on standby datanode");
       }
     }
-    handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, &io_service_->io_service(), client_name_, file_info, bad_node_tracker_, event_handlers_)
+    handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, io_service_, client_name_, file_info, bad_node_tracker_, event_handlers_)
                             : nullptr);
   });
 }

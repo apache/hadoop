@@ -19,16 +19,24 @@
 #include "common/util.h"
 #include "common/util_c.h"
 
+#include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 #include <exception>
 #include <sstream>
-#include <iostream>
 #include <iomanip>
 #include <thread>
 
 
 namespace hdfs {
+
+Status ToStatus(const ::asio::error_code &ec) {
+  if (ec) {
+    return Status(ec.value(), ec.message().c_str());
+  } else {
+    return Status::OK();
+  }
+}
 
 bool ReadDelimitedPBMessage(::google::protobuf::io::CodedInputStream *in,
                             ::google::protobuf::MessageLite *msg) {
@@ -60,6 +68,10 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
   return buf;
 }
 
+int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg) {
+  size_t size = msg->ByteSize();
+  return ::google::protobuf::io::CodedOutputStream::VarintSize32(size) + size;
+}
 
 std::string GetRandomClientName() {
   std::vector<unsigned char>buf(8);

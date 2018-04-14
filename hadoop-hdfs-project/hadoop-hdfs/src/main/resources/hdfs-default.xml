@@ -3541,6 +3541,17 @@
 </property>
 
 <property>
+  <name>dfs.checksum.combine.mode</name>
+  <value>MD5MD5CRC</value>
+  <description>
+    Defines how lower-level chunk/block checksums are combined into file-level
+    checksums; the original MD5MD5CRC mode is not comparable between files
+    with different block layouts, while modes like COMPOSITE_CRC are
+    comparable independently of block layout.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>
@@ -4848,6 +4859,20 @@
     <value>true</value>
     <description>
       Enables DFSNetworkTopology to choose nodes for placing replicas.
+      When enabled, NetworkTopology will be instantiated as class defined in
+      property dfs.net.topology.impl, otherwise NetworkTopology will be
+      instantiated as class defined in property net.topology.impl.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.net.topology.impl</name>
+    <value>org.apache.hadoop.hdfs.net.DFSNetworkTopology</value>
+    <description>
+      The implementation class of NetworkTopology used in HDFS. By default,
+      the class org.apache.hadoop.hdfs.net.DFSNetworkTopology is specified and
+      used in block placement.
+      This property only works when dfs.use.dfs.network.topology is true.
     </description>
   </property>
 

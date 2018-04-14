@@ -17,18 +17,17 @@
  */
 
 #include "hdfspp/hdfspp.h"
+#include "hdfspp/hdfs_ext.h"
 
-#include "fs/filesystem.h"
 #include "common/hdfs_configuration.h"
 #include "common/configuration_loader.h"
 #include "common/logging.h"
+#include "fs/filesystem.h"
+#include "fs/filehandle.h"
 
-#include <hdfs/hdfs.h>
-#include <hdfspp/hdfs_ext.h>
 
 #include <libgen.h>
 #include "limits.h"
-
 #include <string>
 #include <cstring>
 #include <iostream>

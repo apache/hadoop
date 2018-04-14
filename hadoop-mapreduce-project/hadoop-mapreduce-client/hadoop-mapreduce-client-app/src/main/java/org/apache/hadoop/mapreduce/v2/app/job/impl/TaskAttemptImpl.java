@@ -953,10 +953,10 @@ public abstract class TaskAttemptImpl implements
         MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Add the env variables passed by the admin
-    MRApps.setEnvFromInputString(environment,
-        conf.get(MRJobConfig.MAPRED_ADMIN_USER_ENV,
-            MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV),
-        conf);
+    MRApps.setEnvFromInputProperty(environment,
+        MRJobConfig.MAPRED_ADMIN_USER_ENV,
+        MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV, conf);
+
     return environment;
   }
 

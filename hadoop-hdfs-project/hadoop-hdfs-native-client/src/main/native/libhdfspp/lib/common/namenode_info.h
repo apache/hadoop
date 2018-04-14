@@ -20,12 +20,16 @@
 #define COMMON_HDFS_NAMENODE_INFO_H_
 
 #include <asio.hpp>
+
 #include <hdfspp/options.h>
 
 #include <string>
 #include <vector>
 
 namespace hdfs {
+
+// Forward decl
+class IoService;
 
 // Internal representation of namenode info that keeps track
 // of its endpoints.
@@ -38,11 +42,11 @@ struct ResolvedNamenodeInfo : public NamenodeInfo {
 
 // Clear endpoints if set and resolve all of them in parallel.
 // Only successful lookups will be placed in the result set.
-std::vector<ResolvedNamenodeInfo> BulkResolve(::asio::io_service *ioservice, const std::vector<NamenodeInfo> &nodes);
+std::vector<ResolvedNamenodeInfo> BulkResolve(std::shared_ptr<IoService> ioservice, const std::vector<NamenodeInfo> &nodes);
 
 // Clear endpoints, if any, and resolve them again
 // Return true if endpoints were resolved
-bool ResolveInPlace(::asio::io_service *ioservice, ResolvedNamenodeInfo &info);
+bool ResolveInPlace(std::shared_ptr<IoService> ioservice, ResolvedNamenodeInfo &info);
 
 }
 

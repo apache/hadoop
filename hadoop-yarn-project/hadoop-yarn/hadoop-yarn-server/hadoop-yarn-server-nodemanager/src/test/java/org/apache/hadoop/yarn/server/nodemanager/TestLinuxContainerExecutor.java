@@ -675,6 +675,18 @@ public class TestLinuxContainerExecutor {
     verify(lce, times(1)).reapContainer(ctx);
   }
 
+  @Test
+  public void testRelaunchContainer() throws Exception {
+    Container container = mock(Container.class);
+    LinuxContainerExecutor lce = mock(LinuxContainerExecutor.class);
+    ContainerStartContext.Builder builder =
+        new ContainerStartContext.Builder();
+    builder.setContainer(container).setUser("foo");
+    ContainerStartContext ctx = builder.build();
+    lce.relaunchContainer(ctx);
+    verify(lce, times(1)).relaunchContainer(ctx);
+  }
+
   private static class TestResourceHandler implements LCEResourcesHandler {
     static Set<ContainerId> postExecContainers = new HashSet<ContainerId>();
 

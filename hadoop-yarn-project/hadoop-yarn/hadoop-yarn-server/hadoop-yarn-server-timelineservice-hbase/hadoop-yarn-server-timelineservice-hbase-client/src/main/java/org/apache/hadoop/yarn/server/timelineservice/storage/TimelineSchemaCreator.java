@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableR
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -350,6 +351,15 @@ public final class TimelineSchemaCreator {
       }
       try {
         new SubApplicationTableRW().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new DomainTableRW().createTable(admin, hbaseConf);
       } catch (IOException e) {
         if (skipExisting) {
           LOG.warn("Skip and continue on: " + e.getMessage());

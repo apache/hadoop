@@ -431,7 +431,7 @@ private:
   std::shared_ptr<DataNodeConnection> shared_conn_;
 };
 
-void BlockReaderImpl::AsyncReadPacket(const MutableBuffers &buffers,
+void BlockReaderImpl::AsyncReadPacket(const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t bytes_transferred)> &handler)
 {
   assert(state_ != kOpen && "Not connected");
@@ -450,7 +450,7 @@ void BlockReaderImpl::AsyncReadPacket(const MutableBuffers &buffers,
       .Push(new ReadChecksum(this))
       .Push(new ReadPadding(this))
       .Push(new ReadData(
-          this, m->state().bytes_transferred, buffers))
+          this, m->state().bytes_transferred, buffer))
       .Push(new AckRead(this));
 
   auto self = this->shared_from_this();
@@ -460,14 +460,14 @@ void BlockReaderImpl::AsyncReadPacket(const MutableBuffers &buffers,
 }
 
 
-size_t BlockReaderImpl::ReadPacket(const MutableBuffers &buffers, Status *status)
+size_t BlockReaderImpl::ReadPacket(const MutableBuffer &buffer, Status *status)
 {
   LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadPacket called");
 
   size_t transferred = 0;
   auto done = std::make_shared<std::promise<void>>();
   auto future = done->get_future();
-  AsyncReadPacket(buffers,
+  AsyncReadPacket(buffer,
                   [status, &transferred, done](const Status &stat, size_t t) {
                     *status = stat;
                     transferred = t;
@@ -504,7 +504,7 @@ private:
 
 struct BlockReaderImpl::ReadBlockContinuation : continuation::Continuation
 {
-  ReadBlockContinuation(BlockReader *reader, MutableBuffers buffer, size_t *transferred)
+  ReadBlockContinuation(BlockReader *reader, MutableBuffer buffer, size_t *transferred)
       : reader_(reader), buffer_(buffer), buffer_size_(asio::buffer_size(buffer)), transferred_(transferred) {}
 
   virtual void Run(const Next &next) override {
@@ -517,7 +517,7 @@ struct BlockReaderImpl::ReadBlockContinuation : continuation::Continuation
 
 private:
   BlockReader *reader_;
-  const MutableBuffers buffer_;
+  const MutableBuffer buffer_;
   const size_t buffer_size_;
   size_t *transferred_;
   std::function<void(const Status &)> next_;
@@ -542,7 +542,7 @@ void BlockReaderImpl::AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
     size_t offset,
-    const MutableBuffers &buffers,
+    const MutableBuffer &buffer,
     const std::function<void(const Status &, size_t)> handler)
 {
   LOG_TRACE(kBlockReader, << "BlockReaderImpl::AsyncReadBlock("
@@ -551,10 +551,10 @@ void BlockReaderImpl::AsyncReadBlock(
   auto m = continuation::Pipeline<size_t>::Create(cancel_state_);
   size_t * bytesTransferred = &m->state();
 
-  size_t size = asio::buffer_size(buffers);
+  size_t size = asio::buffer_size(buffer);
 
   m->Push(new RequestBlockContinuation(this, client_name, &block.b(), size, offset))
-    .Push(new ReadBlockContinuation(this, buffers, bytesTransferred));
+    .Push(new ReadBlockContinuation(this, buffer, bytesTransferred));
 
   m->Run([handler] (const Status &status, const size_t totalBytesTransferred) {
     handler(status, totalBytesTransferred);

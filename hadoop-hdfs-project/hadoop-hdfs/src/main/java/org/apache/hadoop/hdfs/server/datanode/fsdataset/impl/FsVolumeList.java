@@ -335,7 +335,7 @@ class FsVolumeList {
 
   /**
    * Dynamically remove volume in the list.
-   * @param volume the volume to be removed.
+   * @param storageLocation {@link StorageLocation} of the volume to be removed.
    * @param clearFailure set true to remove failure info for this volume.
    */
   void removeVolume(StorageLocation storageLocation, boolean clearFailure) {

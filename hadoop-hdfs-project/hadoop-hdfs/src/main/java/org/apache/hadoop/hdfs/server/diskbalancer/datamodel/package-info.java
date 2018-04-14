@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 /**
  * Disk Balancer Data Model is the Data Model for the cluster that
  * Disk Balancer is working against. This information is read
@@ -29,3 +28,4 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
  * DiskBalancerVolumeSets is a collection of DiskBalancerVolumes
  * DiskBalancerVolumes represents actual volumes on DataNodes.
  */
+package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;

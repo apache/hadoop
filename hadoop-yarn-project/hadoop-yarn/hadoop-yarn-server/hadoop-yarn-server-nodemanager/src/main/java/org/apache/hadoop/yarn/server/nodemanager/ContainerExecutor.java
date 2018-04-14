@@ -182,6 +182,17 @@ public abstract class ContainerExecutor implements Configurable {
       IOException, ConfigurationException;
 
   /**
+   * Relaunch the container on the node. This is a blocking call and returns
+   * only when the container exits.
+   * @param ctx Encapsulates information necessary for relaunching containers.
+   * @return the return status of the relaunch
+   * @throws IOException if the container relaunch fails
+   * @throws ConfigurationException if config error was found
+   */
+  public abstract int relaunchContainer(ContainerStartContext ctx) throws
+      IOException, ConfigurationException;
+
+  /**
    * Signal container with the specified signal.
    *
    * @param ctx Encapsulates information necessary for signaling containers.

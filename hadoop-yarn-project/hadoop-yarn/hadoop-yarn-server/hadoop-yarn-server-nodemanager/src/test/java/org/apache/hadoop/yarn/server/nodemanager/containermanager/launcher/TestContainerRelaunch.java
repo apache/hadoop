@@ -78,7 +78,7 @@ public class TestContainerRelaunch {
     assertEquals("relaunch failed", 0, result);
     ArgumentCaptor<ContainerStartContext> captor =
         ArgumentCaptor.forClass(ContainerStartContext.class);
-    verify(mockExecutor).launchContainer(captor.capture());
+    verify(mockExecutor).relaunchContainer(captor.capture());
     ContainerStartContext csc = captor.getValue();
     assertNotNull("app ID null", csc.getAppId());
     assertNotNull("container null", csc.getContainer());

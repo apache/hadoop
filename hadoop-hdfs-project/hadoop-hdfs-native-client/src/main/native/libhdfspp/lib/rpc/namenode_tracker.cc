@@ -35,7 +35,7 @@ static std::string format_endpoints(const std::vector<::asio::ip::tcp::endpoint>
 }
 
 HANamenodeTracker::HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &servers,
-                                     ::asio::io_service *ioservice,
+                                     std::shared_ptr<IoService> ioservice,
                                      std::shared_ptr<LibhdfsEvents> event_handlers)
                   : enabled_(false), resolved_(false),
                     ioservice_(ioservice), event_handlers_(event_handlers)

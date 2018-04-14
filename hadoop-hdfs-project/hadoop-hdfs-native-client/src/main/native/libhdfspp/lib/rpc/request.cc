@@ -20,6 +20,7 @@
 #include "request.h"
 #include "rpc_engine.h"
 #include "sasl_protocol.h"
+#include "hdfspp/ioservice.h"
 
 #include "RpcHeader.pb.h"
 #include "ProtobufRpcEngine.pb.h"
@@ -118,7 +119,7 @@ Request::Request(std::shared_ptr<LockFreeRpcEngine> engine, const std::string &m
     : engine_(engine),
       method_name_(method_name),
       call_id_(call_id),
-      timer_(engine->io_service()),
+      timer_(engine->io_service()->GetRaw()),
       handler_(std::move(handler)),
       retry_count_(engine->retry_policy() ? 0 : kNoRetry),
       failover_count_(0)
@@ -129,7 +130,7 @@ Request::Request(std::shared_ptr<LockFreeRpcEngine> engine, const std::string &m
 Request::Request(std::shared_ptr<LockFreeRpcEngine> engine, Handler &&handler)
     : engine_(engine),
       call_id_(-1/*Handshake ID*/),
-      timer_(engine->io_service()),
+      timer_(engine->io_service()->GetRaw()),
       handler_(std::move(handler)),
       retry_count_(engine->retry_policy() ? 0 : kNoRetry),
       failover_count_(0) {

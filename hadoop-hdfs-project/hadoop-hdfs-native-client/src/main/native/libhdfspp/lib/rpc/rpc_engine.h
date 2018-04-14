@@ -60,6 +60,7 @@ class RpcConnection;
 class SaslProtocol;
 class RpcConnection;
 class Request;
+class IoService;
 
 /*
  * These methods of the RpcEngine will never acquire locks, and are safe for
@@ -83,7 +84,7 @@ public:
   virtual const std::string &user_name() = 0;
   virtual const std::string &protocol_name() = 0;
   virtual int protocol_version() = 0;
-  virtual ::asio::io_service &io_service() = 0;
+  virtual std::shared_ptr<IoService> io_service() const = 0;
   virtual const Options &options() = 0;
 };
 
@@ -107,7 +108,7 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
     kCallIdSasl = -33
   };
 
-  RpcEngine(::asio::io_service *io_service, const Options &options,
+  RpcEngine(std::shared_ptr<IoService> service, const Options &options,
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version);
 
@@ -145,7 +146,7 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
   const std::string &user_name() override { return auth_info_.getUser(); }
   const std::string &protocol_name() override { return protocol_name_; }
   int protocol_version() override { return protocol_version_; }
-  ::asio::io_service &io_service() override { return *io_service_; }
+  std::shared_ptr<IoService> io_service() const override { return io_service_; }
   const Options &options() override { return options_; }
   static std::string GetRandomClientName();
 
@@ -162,7 +163,7 @@ protected:
   std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
 
 private:
-  ::asio::io_service * const io_service_;
+  mutable std::shared_ptr<IoService> io_service_;
   const Options options_;
   const std::string client_name_;
   const std::string client_id_;

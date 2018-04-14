@@ -339,6 +339,12 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     return 0;
   }
 
+  @Override
+  public int relaunchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
+    return launchContainer(ctx);
+  }
+
   /**
    * Create a new {@link ShellCommandExecutor} using the parameters.
    *

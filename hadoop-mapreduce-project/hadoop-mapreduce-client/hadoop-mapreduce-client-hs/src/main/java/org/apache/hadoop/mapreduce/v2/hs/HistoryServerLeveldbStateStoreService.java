@@ -74,7 +74,6 @@ public class HistoryServerLeveldbStateStoreService extends
     Path storeRoot = createStorageDir(getConfig());
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
     try {
@@ -364,16 +363,6 @@ public class HistoryServerLeveldbStateStoreService extends
       throw new IOException(
         "Incompatible version for state: expecting state version "
             + getCurrentVersion() + ", but loading version " + loadedVersion);
-    }
-  }
-
-  private static class LeveldbLogger implements org.iq80.leveldb.Logger {
-    private static final Logger LOG =
-        LoggerFactory.getLogger(LeveldbLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
     }
   }
 }

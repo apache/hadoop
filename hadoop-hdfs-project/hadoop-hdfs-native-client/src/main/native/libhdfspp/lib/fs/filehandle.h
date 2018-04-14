@@ -18,7 +18,7 @@
 #ifndef LIBHDFSPP_LIB_FS_FILEHANDLE_H_
 #define LIBHDFSPP_LIB_FS_FILEHANDLE_H_
 
-#include "common/hdfs_ioservice.h"
+#include "hdfspp/ioservice.h"
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
 #include "common/libhdfs_events_impl.h"
@@ -26,12 +26,10 @@
 #include "reader/fileinfo.h"
 #include "reader/readergroup.h"
 
-#include "asio.hpp"
 #include "bad_datanode_tracker.h"
 #include "ClientNamenodeProtocol.pb.h"
 
 #include <mutex>
-#include <iostream>
 
 namespace hdfs {
 
@@ -53,7 +51,7 @@ public:
   MEMCHECKED_CLASS(FileHandleImpl)
   FileHandleImpl(const std::string & cluster_name,
                  const std::string & path,
-                 ::asio::io_service *io_service, const std::string &client_name,
+                 std::shared_ptr<IoService> io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info,
                   std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
                   std::shared_ptr<LibhdfsEvents> event_handlers);
@@ -93,7 +91,7 @@ public:
    * If trying to begin a read past the EOF, status will be Status::InvalidOffset.
    *
    */
-  void AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
+  void AsyncPreadSome(size_t offset, const MutableBuffer &buffer,
                       std::shared_ptr<NodeExclusionRule> excluded_nodes,
                       const std::function<void(const Status &status,
                       const std::string &dn_id, size_t bytes_read)> handler);
@@ -124,13 +122,13 @@ protected:
                                                          std::shared_ptr<DataNodeConnection> dn,
                                                          std::shared_ptr<hdfs::LibhdfsEvents> event_handlers);
   virtual std::shared_ptr<DataNodeConnection> CreateDataNodeConnection(
-      ::asio::io_service *io_service,
+      std::shared_ptr<IoService> io_service,
       const ::hadoop::hdfs::DatanodeInfoProto & dn,
       const hadoop::common::TokenProto * token);
 private:
   const std::string cluster_name_;
   const std::string path_;
-  ::asio::io_service * const io_service_;
+  std::shared_ptr<IoService> io_service_;
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;

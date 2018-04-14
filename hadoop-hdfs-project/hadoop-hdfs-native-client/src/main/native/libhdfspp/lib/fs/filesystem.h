@@ -18,18 +18,17 @@
 #ifndef LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
-#include "filehandle.h"
-#include "hdfspp/hdfspp.h"
+#include "namenode_operations.h"
 #include "fs/bad_datanode_tracker.h"
-#include "reader/block_reader.h"
+#include "hdfspp/hdfspp.h"
 #include "reader/fileinfo.h"
 
-#include "asio.hpp"
-
 #include <thread>
-#include "namenode_operations.h"
 
 namespace hdfs {
+
+class FileHandle;
+
 
 /*
  * FileSystem: The consumer's main point of interaction with the cluster as
@@ -48,6 +47,7 @@ public:
   MEMCHECKED_CLASS(FileSystemImpl)
   typedef std::function<void(const Status &, FileSystem *)> ConnectCallback;
 
+  // Note: Longer term it'd be cleaner to take a rvalue reference to a shared_ptr to get ownership
   explicit FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
   explicit FileSystemImpl(std::shared_ptr<IoService>, const std::string& user_name, const Options &options);
   ~FileSystemImpl() override;
@@ -215,7 +215,7 @@ private:
    *  A side effect of this is that requests may outlive the RpcEngine they
    *  reference.
    **/
-  std::shared_ptr<IoServiceImpl> io_service_;
+  std::shared_ptr<IoService> io_service_;
   const Options options_;
   const std::string client_name_;
   std::string cluster_name_;
@@ -234,53 +234,11 @@ private:
 
   void GetListingShim(const Status &stat, const std::vector<StatInfo> & stat_infos, bool has_more,
               std::string path, const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler);
-
-  struct FindSharedState {
-    //Name pattern (can have wild-cards) to find
-    const std::string name;
-    //Maximum depth to recurse after the end of path is reached.
-    //Can be set to 0 for pure path globbing and ignoring name pattern entirely.
-    const uint32_t maxdepth;
-    //Vector of all sub-directories from the path argument (each can have wild-cards)
-    std::vector<std::string> dirs;
-    //Callback from Find
-    const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler;
-    //outstanding_requests is incremented once for every GetListing call.
-    std::atomic<uint64_t> outstanding_requests;
-    //Boolean needed to abort all recursion on error or on user command
-    std::atomic<bool> aborted;
-    //Shared variables will need protection with a lock
-    std::mutex lock;
-    FindSharedState(const std::string path_, const std::string name_, const uint32_t maxdepth_,
-                const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler_,
-                uint64_t outstanding_recuests_, bool aborted_)
-        : name(name_),
-          maxdepth(maxdepth_),
-          handler(handler_),
-          outstanding_requests(outstanding_recuests_),
-          aborted(aborted_),
-          lock() {
-      //Constructing the list of sub-directories
-      std::stringstream ss(path_);
-      if(path_.back() != '/'){
-        ss << "/";
-      }
-      for (std::string token; std::getline(ss, token, '/'); ) {
-        dirs.push_back(token);
-      }
-    }
-  };
-
-  struct FindOperationalState {
-    const std::string path;
-    const uint32_t depth;
-    const bool search_path;
-    FindOperationalState(const std::string path_, const uint32_t depth_, const bool search_path_)
-        : path(path_),
-          depth(depth_),
-          search_path(search_path_) {
-    }
-  };
+  /**
+   * Helper struct to store state for recursive find
+   */
+  struct FindSharedState;
+  struct FindOperationalState;
 
   void FindShim(const Status &stat, const std::vector<StatInfo> & stat_infos,
                 bool directory_has_more, std::shared_ptr<FindOperationalState> current_state, std::shared_ptr<FindSharedState> shared_state);

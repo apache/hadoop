@@ -30,7 +30,7 @@ template <class T>
 using optional = std::experimental::optional<T>;
 
 
-RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
+RpcEngine::RpcEngine(std::shared_ptr<IoService> io_service, const Options &options,
                      const std::string &client_name, const std::string &user_name,
                      const char *protocol_name, int protocol_version)
     : io_service_(io_service),
@@ -40,7 +40,7 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
       protocol_name_(protocol_name),
       protocol_version_(protocol_version),
       call_id_(0),
-      retry_timer(*io_service),
+      retry_timer(io_service->GetRaw()),
       event_handlers_(std::make_shared<LibhdfsEvents>()),
       connect_canceled_(false)
 {
@@ -86,7 +86,7 @@ bool RpcEngine::CancelPendingConnect() {
 
 void RpcEngine::Shutdown() {
   LOG_DEBUG(kRPC, << "RpcEngine::Shutdown called");
-  io_service_->post([this]() {
+  io_service_->PostLambda([this]() {
     std::lock_guard<std::mutex> state_lock(engine_state_lock_);
     conn_.reset();
   });
@@ -154,7 +154,7 @@ void RpcEngine::AsyncRpc(
 
   // In case user-side code isn't checking the status of Connect before doing RPC
   if(connect_canceled_) {
-    io_service_->post(
+    io_service_->PostLambda(
         [handler](){ handler(Status::Canceled()); }
     );
     return;
@@ -190,7 +190,7 @@ void RpcEngine::AsyncRpcCommsError(
     std::vector<std::shared_ptr<Request>> pendingRequests) {
   LOG_ERROR(kRPC, << "RpcEngine::AsyncRpcCommsError called; status=\"" << status.ToString() << "\" conn=" << failedConnection.get() << " reqs=" << std::to_string(pendingRequests.size()));
 
-  io_service().post([this, status, failedConnection, pendingRequests]() {
+  io_service_->PostLambda([this, status, failedConnection, pendingRequests]() {
     RpcCommsError(status, failedConnection, pendingRequests);
   });
 }
@@ -238,7 +238,7 @@ void RpcEngine::RpcCommsError(
       //    on.  There might be a good argument for caching the first error
       //    rather than the last one, that gets messy
 
-      io_service().post([req, status]() {
+      io_service()->PostLambda([req, status]() {
         req->OnResponseArrived(nullptr, status);  // Never call back while holding a lock
       });
       it = pendingRequests.erase(it);
@@ -283,7 +283,7 @@ void RpcEngine::RpcCommsError(
 
           for(unsigned int i=0; i<pendingRequests.size(); i++) {
             std::shared_ptr<Request> sharedCurrentRequest = pendingRequests[i];
-            io_service().post([sharedCurrentRequest, badEndpointStatus]() {
+            io_service()->PostLambda([sharedCurrentRequest, badEndpointStatus]() {
               sharedCurrentRequest->OnResponseArrived(nullptr, badEndpointStatus);  // Never call back while holding a lock
             });
           }

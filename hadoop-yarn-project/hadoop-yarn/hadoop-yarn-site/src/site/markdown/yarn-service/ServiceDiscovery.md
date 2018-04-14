@@ -18,7 +18,7 @@ This document describes the mechanism of service discovery on YARN and the
 steps for enabling it.
 
 ## Overview
-A [DNS server](RegistryDNS.md) is implemented to enable discovering services on YARN via
+A [DNS server](RegistryDNS.html) is implemented to enable discovering services on YARN via
 the standard mechanism: DNS lookup.
 
 The framework ApplicationMaster posts the container information such as hostname and IP address into
@@ -71,7 +71,7 @@ assigned `0` since it is the first and only instance for the `hbasemaster` compo
 ## Configure Registry DNS
 
 Below is the set of configurations in `yarn-site.xml` required for enabling Registry DNS. A full list of properties can be found in the Configuration
-section of [Registry DNS](RegistryDNS.md).
+section of [Registry DNS](RegistryDNS.html).
 
 
 ```

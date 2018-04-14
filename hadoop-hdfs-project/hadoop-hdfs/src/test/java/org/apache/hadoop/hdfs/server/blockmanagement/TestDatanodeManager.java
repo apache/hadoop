@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -61,11 +63,13 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
@@ -621,5 +625,53 @@ public class TestDatanodeManager {
 
     // Approximately load tasks if the ratio between queue length is large.
     verifyPendingRecoveryTasks(400, 1, 20, 20, 1);
+  }
+
+  @Test
+  public void testNetworkTopologyInstantiation() throws Exception {
+    // case 1, dfs.use.dfs.network.topology=true, use the default
+    // DFSNetworkTopology impl.
+    Configuration conf1 = new HdfsConfiguration();
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    DatanodeManager dm1 = mockDatanodeManager(fsn, conf1);
+    assertEquals(DFSNetworkTopology.class, dm1.getNetworkTopology().getClass());
+
+    // case 2, dfs.use.dfs.network.topology=false, use the default
+    // NetworkTopology impl.
+    Configuration conf2 = new HdfsConfiguration();
+    conf2.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
+    DatanodeManager dm2 = mockDatanodeManager(fsn, conf2);
+    assertEquals(NetworkTopology.class, dm2.getNetworkTopology()
+        .getClass());
+
+    // case 3, dfs.use.dfs.network.topology=false, and specify the
+    // net.topology.impl property.
+    Configuration conf3 = new HdfsConfiguration();
+    conf3.setClass(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
+        MockDfsNetworkTopology.class, NetworkTopology.class);
+    conf3.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
+    DatanodeManager dm3 = mockDatanodeManager(fsn, conf3);
+    assertEquals(MockDfsNetworkTopology.class, dm3.getNetworkTopology()
+        .getClass());
+
+    // case 4, dfs.use.dfs.network.topology=true, and specify the
+    // dfs.net.topology.impl property.
+    Configuration conf4 = new HdfsConfiguration();
+    conf4.setClass(DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_KEY,
+            MockDfsNetworkTopology.class, NetworkTopology.class);
+    conf4.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, true);
+    DatanodeManager dm4 = mockDatanodeManager(fsn, conf4);
+    assertEquals(MockDfsNetworkTopology.class, dm4.getNetworkTopology()
+        .getClass());
+  }
+
+  /**
+   * A NetworkTopology implementation for test.
+   *
+   */
+  public static class MockDfsNetworkTopology extends DFSNetworkTopology {
+    public MockDfsNetworkTopology(){
+      super();
+    }
   }
 }

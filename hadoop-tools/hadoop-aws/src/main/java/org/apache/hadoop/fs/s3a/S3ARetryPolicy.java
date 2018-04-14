@@ -175,9 +175,9 @@ public class S3ARetryPolicy implements RetryPolicy {
     // which isn't going to be recovered from
     policyMap.put(EOFException.class, retryIdempotentCalls);
 
-    // policy on a 400/bad request still ambiguous. Given it
-    // comes and goes on test runs: try again
-    policyMap.put(AWSBadRequestException.class, connectivityFailure);
+    // policy on a 400/bad request still ambiguous.
+    // Treated as an immediate failure
+    policyMap.put(AWSBadRequestException.class, fail);
 
     // Status 500 error code is also treated as a connectivity problem
     policyMap.put(AWSStatus500Exception.class, connectivityFailure);

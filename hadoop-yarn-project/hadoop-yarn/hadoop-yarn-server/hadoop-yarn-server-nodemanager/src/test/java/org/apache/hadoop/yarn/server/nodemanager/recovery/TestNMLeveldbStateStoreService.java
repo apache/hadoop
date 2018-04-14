@@ -1216,6 +1216,22 @@ public class TestNMLeveldbStateStoreService {
     Assert.fail("Expected exception not thrown");
   }
 
+  @Test
+  public void testEmptyRestartTimes() throws IOException {
+    List<Long> restartTimes = new ArrayList<>();
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
+        4);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
+    storeMockContainer(containerId);
+    stateStore.storeContainerRestartTimes(containerId,
+        restartTimes);
+    restartStateStore();
+    RecoveredContainerState rcs = stateStore.loadContainersState().get(0);
+    List<Long> recoveredRestartTimes = rcs.getRestartTimes();
+    assertTrue(recoveredRestartTimes.isEmpty());
+  }
+
   private StartContainerRequest storeMockContainer(ContainerId containerId)
       throws IOException {
     // create a container request

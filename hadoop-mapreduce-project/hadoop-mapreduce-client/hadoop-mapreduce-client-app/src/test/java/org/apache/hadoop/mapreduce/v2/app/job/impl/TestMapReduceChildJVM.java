@@ -289,11 +289,11 @@ public class TestMapReduceChildJVM {
     app.verifyCompleted();
     
     Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
     Assert.assertEquals("WARN,console",
-      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
     Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
-      app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
+        app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
     Assert.assertEquals("test", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
 
     // Try one more.
@@ -305,8 +305,22 @@ public class TestMapReduceChildJVM {
     app.verifyCompleted();
     
     Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
-      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
     Assert.assertEquals("trace",
-      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+
+    // Try one using the mapreduce.task.env.var=value syntax
+    app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
+    conf = new Configuration();
+    conf.set(JobConf.MAPRED_MAP_TASK_ENV + ".HADOOP_ROOT_LOGGER",
+        "DEBUG,console");
+    job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+
+    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
+        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+    Assert.assertEquals("DEBUG,console",
+        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
   }
 }

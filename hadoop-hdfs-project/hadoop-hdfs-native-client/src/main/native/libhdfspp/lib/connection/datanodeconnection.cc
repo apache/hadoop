@@ -24,14 +24,14 @@ namespace hdfs {
 DataNodeConnection::~DataNodeConnection(){}
 DataNodeConnectionImpl::~DataNodeConnectionImpl(){}
 
-DataNodeConnectionImpl::DataNodeConnectionImpl(asio::io_service * io_service,
-                                                const ::hadoop::hdfs::DatanodeInfoProto &dn_proto,
-                                                const hadoop::common::TokenProto *token,
-                                                LibhdfsEvents *event_handlers) : event_handlers_(event_handlers)
+DataNodeConnectionImpl::DataNodeConnectionImpl(std::shared_ptr<IoService> io_service,
+                                               const ::hadoop::hdfs::DatanodeInfoProto &dn_proto,
+                                               const hadoop::common::TokenProto *token,
+                                               LibhdfsEvents *event_handlers) : event_handlers_(event_handlers)
 {
   using namespace ::asio::ip;
 
-  conn_.reset(new tcp::socket(*io_service));
+  conn_.reset(new tcp::socket(io_service->GetRaw()));
   auto datanode_addr = dn_proto.id();
   endpoints_[0] = tcp::endpoint(address::from_string(datanode_addr.ipaddr()),
                                   datanode_addr.xferport());
@@ -68,5 +68,22 @@ void DataNodeConnectionImpl::Cancel() {
   }
 }
 
+void DataNodeConnectionImpl::async_read_some(const MutableBuffer &buf,
+             std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler)
+{
+  event_handlers_->call("DN_read_req", "", "", buf.end() - buf.begin());
+
+  mutex_guard state_lock(state_lock_);
+  conn_->async_read_some(buf, handler);
+}
+
+void DataNodeConnectionImpl::async_write_some(const ConstBuffer &buf,
+             std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler)
+{
+  event_handlers_->call("DN_write_req", "", "", buf.end() - buf.begin());
+
+  mutex_guard state_lock(state_lock_);
+  conn_->async_write_some(buf, handler);
+}
 
 }

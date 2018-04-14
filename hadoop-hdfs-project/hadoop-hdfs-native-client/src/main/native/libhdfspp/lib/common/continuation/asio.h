@@ -20,13 +20,8 @@
 
 #include "continuation.h"
 #include "common/util.h"
-
 #include "hdfspp/status.h"
-
-#include <asio/connect.hpp>
-#include <asio/read.hpp>
 #include <asio/write.hpp>
-#include <asio/ip/tcp.hpp>
 #include <memory>
 
 namespace hdfs {

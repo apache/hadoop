@@ -350,11 +350,22 @@
 <property>
   <name>mapred.child.env</name>
   <value></value>
-  <description>User added environment variables for the task processes.
+  <description>User added environment variables for the task processes,
+  specified as a comma separated list.
   Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit nodemanager's B env variable on Unix.
   3) B=%B%;c This is inherit nodemanager's B env variable on Windows.
+
+  To specify a comma separated list of environment variables specifically for
+  map or reduce tasks, use the mapreduce.map.env or mapreduce.reduce.env
+  properties.
+
+  To define environment variables individually for map or reduce tasks,
+  you can specify multiple properties of the form mapreduce.map.env.VARNAME
+  or mapreduce.reduce.env.VARNAME, where VARNAME is the name of the
+  environment variable. This is the only way to add a variable when its value
+  contains commas.
   </description>
 </property>
 
@@ -362,7 +373,15 @@
 <property>
   <name>mapreduce.map.env</name>
   <value></value>
-  <description>User added environment variables for the map task processes.
+  <description>User added environment variables for the map task processes,
+  specified as a comma separated list.
+  Example:
+    VAR1=value1,VAR2=value2
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.map.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 -->
@@ -371,7 +390,16 @@
 <property>
   <name>mapreduce.reduce.env</name>
   <value></value>
-  <description>User added environment variables for the reduce task processes.
+  <description>User added environment variables for the reduce task processes,
+  specified as a comma separated list.
+  Example:
+    VAR1=value1,VAR2=value2
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.reduce.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
+  contains commas.
   </description>
 </property>
 -->
@@ -385,9 +413,14 @@
   You must preserve the original value if you want your map and
   reduce tasks to have access to native libraries (compression, etc).
   When this value is empty, the command to set execution
-  envrionment will be OS dependent:
+  environment will be OS dependent:
   For linux, use LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native.
   For windows, use PATH = %PATH%;%HADOOP_COMMON_HOME%\\bin.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form mapreduce.admin.user.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 
@@ -1045,6 +1078,12 @@
     <value></value>
     <description> Tags for the job that will be passed to YARN at submission
       time. Queries to YARN for applications can filter on these tags.
+      If these tags are intended to be used with The YARN Timeline Service v.2,
+      prefix them with the appropriate tag names for flow name, flow version and
+      flow run id. Example:
+      timeline_flow_name_tag:foo,
+      timeline_flow_version_tag:3df8b0d6100530080d2e0decf9e528e57c42a90a,
+      timeline_flow_run_id_tag:1465246348599
     </description>
   </property>
 
@@ -1359,20 +1398,32 @@
   <name>yarn.app.mapreduce.am.env</name>
   <value></value>
   <description>User added environment variables for the MR App Master
-  processes. Example :
+  processes, specified as a comma separated list.
+  Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit tasktracker's B env variable.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form yarn.app.mapreduce.am.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 
 <property>
   <name>yarn.app.mapreduce.am.admin.user.env</name>
   <value></value>
-  <description> Environment variables for the MR App Master
-  processes for admin purposes. These values are set first and can be
-  overridden by the user env (yarn.app.mapreduce.am.env) Example :
+  <description>Environment variables for the MR App Master
+  processes for admin purposes, specified as a comma separated list
+  These values are set first and can be overridden by the user env
+  (yarn.app.mapreduce.am.env). Example :
   1) A=foo  This will set the env variable A to foo
   2) B=$B:c This is inherit app master's B env variable.
+
+  To define environment variables individually, you can specify
+  multiple properties of the form yarn.app.mapreduce.am.admin.user.env.VARNAME,
+  where VARNAME is the name of the environment variable. This is the only
+  way to add a variable when its value contains commas.
   </description>
 </property>
 

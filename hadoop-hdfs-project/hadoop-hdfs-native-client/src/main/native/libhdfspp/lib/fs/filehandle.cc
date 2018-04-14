@@ -36,10 +36,10 @@ FileHandle::~FileHandle() {}
 
 FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
                                const std::string & path,
-                               ::asio::io_service *io_service, const std::string &client_name,
-                                 const std::shared_ptr<const struct FileInfo> file_info,
-                                 std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
-                                 std::shared_ptr<LibhdfsEvents> event_handlers)
+                               std::shared_ptr<IoService> io_service, const std::string &client_name,
+                               const std::shared_ptr<const struct FileInfo> file_info,
+                               std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
+                               std::shared_ptr<LibhdfsEvents> event_handlers)
     : cluster_name_(cluster_name), path_(path), io_service_(io_service), client_name_(client_name), file_info_(file_info),
       bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()), event_handlers_(event_handlers), bytes_read_(0) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::FileHandleImpl("
@@ -167,7 +167,7 @@ bool FileHandleImpl::CheckSeekBounds(ssize_t desired_position) {
  * on the FileHandle
  */
 void FileHandleImpl::AsyncPreadSome(
-    size_t offset, const MutableBuffers &buffers,
+    size_t offset, const MutableBuffer &buffer,
     std::shared_ptr<NodeExclusionRule> excluded_nodes,
     const std::function<void(const Status &, const std::string &, size_t)> handler) {
   using ::hadoop::hdfs::DatanodeInfoProto;
@@ -233,7 +233,7 @@ void FileHandleImpl::AsyncPreadSome(
 
   uint64_t offset_within_block = offset - block->offset();
   uint64_t size_within_block = std::min<uint64_t>(
-      block->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
+      block->b().numbytes() - offset_within_block, asio::buffer_size(buffer));
 
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
             << FMT_THIS_ADDR << "), ...) Datanode hostname=" << dnHostName << ", IP Address=" << dnIpAddr
@@ -268,7 +268,7 @@ void FileHandleImpl::AsyncPreadSome(
     handler(status, dn_id, transferred);
   };
 
-  auto connect_handler = [handler,event_handlers,cluster_name,path,read_handler,block,offset_within_block,size_within_block, buffers, reader, dn_id, client_name]
+  auto connect_handler = [handler,event_handlers,cluster_name,path,read_handler,block,offset_within_block,size_within_block, buffer, reader, dn_id, client_name]
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     (void)dn;
     event_response event_resp = event_handlers->call(FILE_DN_CONNECT_EVENT, cluster_name.c_str(), path.c_str(), 0);
@@ -281,7 +281,7 @@ void FileHandleImpl::AsyncPreadSome(
     if (status.ok()) {
       reader->AsyncReadBlock(
           client_name, *block, offset_within_block,
-          asio::buffer(buffers, size_within_block), read_handler);
+          asio::buffer(buffer, size_within_block), read_handler);
     } else {
       handler(status, dn_id, 0);
     }
@@ -307,7 +307,7 @@ std::shared_ptr<BlockReader> FileHandleImpl::CreateBlockReader(const BlockReader
 }
 
 std::shared_ptr<DataNodeConnection> FileHandleImpl::CreateDataNodeConnection(
-    ::asio::io_service * io_service,
+    std::shared_ptr<IoService> io_service,
     const ::hadoop::hdfs::DatanodeInfoProto & dn,
     const hadoop::common::TokenProto * token) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::CreateDataNodeConnection("

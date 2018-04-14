@@ -108,7 +108,7 @@ public class ContainerRelaunch extends ContainerLaunch {
             + dirsHandler.getDisksHealthReport(false));
       }
 
-      ret = launchContainer(new ContainerStartContext.Builder()
+      ret = relaunchContainer(new ContainerStartContext.Builder()
           .setContainer(container)
           .setLocalizedResources(localResources)
           .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)

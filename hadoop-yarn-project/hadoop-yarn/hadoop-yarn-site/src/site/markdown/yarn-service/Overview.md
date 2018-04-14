@@ -46,16 +46,16 @@ The benefits of combining these workloads are two-fold:
 
 *`This feature is in alpha state`* and so APIs, command lines are subject to change. We will continue to update the documents over time.
 
-[QuickStart](QuickStart.md) shows a quick tutorial that walks you through simple steps to deploy a service on YARN.
+[QuickStart](QuickStart.html) shows a quick tutorial that walks you through simple steps to deploy a service on YARN.
 
 ## How do I get my hands dirty?
 
-* [Concepts](Concepts.md): Describes the internals of the framework and some features in YARN core to support running services on YARN.
-* [Service REST API](YarnServiceAPI.md): The API doc for deploying/managing services on YARN.
-* [Service Discovery](ServiceDiscovery.md): Describes the service discovery mechanism on YARN.
-* [Registry DNS](RegistryDNS.md): Deep dives into the Registry DNS internals.
-* [Examples](Examples.md): List some example service definitions (`Yarnfile`).
-* [Configurations](Configurations.md): Describes how to configure the custom services on YARN.
+* [Concepts](Concepts.html): Describes the internals of the framework and some features in YARN core to support running services on YARN.
+* [Service REST API](YarnServiceAPI.html): The API doc for deploying/managing services on YARN.
+* [Service Discovery](ServiceDiscovery.html): Describes the service discovery mechanism on YARN.
+* [Registry DNS](RegistryDNS.html): Deep dives into the Registry DNS internals.
+* [Examples](Examples.html): List some example service definitions (`Yarnfile`).
+* [Configurations](Configurations.html): Describes how to configure the custom services on YARN.
 
 
  

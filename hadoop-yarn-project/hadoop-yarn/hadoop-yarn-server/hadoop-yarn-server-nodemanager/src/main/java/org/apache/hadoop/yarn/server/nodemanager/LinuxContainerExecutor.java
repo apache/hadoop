@@ -474,6 +474,20 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
+    return handleLaunchForLaunchType(ctx,
+        ApplicationConstants.ContainerLaunchType.LAUNCH);
+  }
+
+  @Override
+  public int relaunchContainer(ContainerStartContext ctx)
+      throws IOException, ConfigurationException {
+    return handleLaunchForLaunchType(ctx,
+        ApplicationConstants.ContainerLaunchType.RELAUNCH);
+  }
+
+  private int handleLaunchForLaunchType(ContainerStartContext ctx,
+      ApplicationConstants.ContainerLaunchType type) throws IOException,
+      ConfigurationException {
     Container container = ctx.getContainer();
     String user = ctx.getUser();
 
@@ -542,62 +556,19 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         ContainerRuntimeContext runtimeContext = buildContainerRuntimeContext(
             ctx, pidFilePath, resourcesOptions, tcCommandFile, numaArgs);
 
-        linuxContainerRuntime.launchContainer(runtimeContext);
+        if (type.equals(ApplicationConstants.ContainerLaunchType.RELAUNCH)) {
+          linuxContainerRuntime.relaunchContainer(runtimeContext);
+        } else {
+          linuxContainerRuntime.launchContainer(runtimeContext);
+        }
+
       } else {
         LOG.info(
             "Container was marked as inactive. Returning terminated error");
         return ContainerExecutor.ExitCode.TERMINATED.getExitCode();
       }
     } catch (ContainerExecutionException e) {
-      int exitCode = e.getExitCode();
-      LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
-      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
-      // terminated/killed forcefully. In all other cases, log the
-      // output
-      if (exitCode != ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode()
-          && exitCode != ContainerExecutor.ExitCode.TERMINATED.getExitCode()) {
-        LOG.warn("Exception from container-launch with container ID: "
-            + containerId + " and exit code: " + exitCode, e);
-
-        StringBuilder builder = new StringBuilder();
-        builder.append("Exception from container-launch.\n");
-        builder.append("Container id: " + containerId + "\n");
-        builder.append("Exit code: " + exitCode + "\n");
-        builder.append("Exception message: " + e.getMessage() + "\n");
-        if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
-          builder.append("Shell error output: " + e.getErrorOutput() + "\n");
-        }
-        //Skip stack trace
-        String output = e.getOutput();
-        if (output != null && !output.isEmpty()) {
-          builder.append("Shell output: " + output + "\n");
-        }
-        String diagnostics = builder.toString();
-        logOutput(diagnostics);
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            diagnostics));
-        if (exitCode ==
-                ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
-            exitCode ==
-                ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
-            exitCode ==
-                ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
-            exitCode ==
-                ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
-            exitCode ==
-                ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
-            exitCode ==
-                ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
-            exitCode ==
-                ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
-          throw new ConfigurationException(
-              "Linux Container Executor reached unrecoverable exception", e);
-        }
-      } else {
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            "Container killed on request. Exit code is " + exitCode));
-      }
-      return exitCode;
+      return handleExitCode(e, container, containerId);
     } finally {
       resourcesHandler.postExecute(containerId);
 
@@ -612,6 +583,59 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
 
     return 0;
+  }
+
+  private int handleExitCode(ContainerExecutionException e, Container container,
+      ContainerId containerId) throws ConfigurationException {
+    int exitCode = e.getExitCode();
+    LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
+    // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
+    // terminated/killed forcefully. In all other cases, log the
+    // output
+    if (exitCode != ContainerExecutor.ExitCode.FORCE_KILLED.getExitCode()
+        && exitCode != ContainerExecutor.ExitCode.TERMINATED.getExitCode()) {
+      LOG.warn("Exception from container-launch with container ID: "
+          + containerId + " and exit code: " + exitCode, e);
+
+      StringBuilder builder = new StringBuilder();
+      builder.append("Exception from container-launch.\n");
+      builder.append("Container id: " + containerId + "\n");
+      builder.append("Exit code: " + exitCode + "\n");
+      builder.append("Exception message: " + e.getMessage() + "\n");
+      if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
+        builder.append("Shell error output: " + e.getErrorOutput() + "\n");
+      }
+      //Skip stack trace
+      String output = e.getOutput();
+      if (output != null && !output.isEmpty()) {
+        builder.append("Shell output: " + output + "\n");
+      }
+      String diagnostics = builder.toString();
+      logOutput(diagnostics);
+      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+          diagnostics));
+      if (exitCode ==
+          ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
+          exitCode ==
+              ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
+        throw new ConfigurationException(
+            "Linux Container Executor reached unrecoverable exception", e);
+      }
+    } else {
+      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+          "Container killed on request. Exit code is " + exitCode));
+    }
+    return exitCode;
   }
 
   private ContainerRuntimeContext buildContainerRuntimeContext(

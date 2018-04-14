@@ -339,6 +339,16 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         return false;
       }
     }
+    // If allocate from reserved container, make sure node is still reserved
+    if (allocation.getAllocateFromReservedContainer() != null
+        && reservedContainerOnNode == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Try to allocate from reserved container " + allocation
+            .getAllocateFromReservedContainer().getRmContainer()
+            .getContainerId() + ", but node is not reserved");
+      }
+      return false;
+    }
 
     // Do we have enough space on this node?
     Resource availableResource = Resources.clone(
