@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -123,12 +122,12 @@ public class TestKeySpaceManager {
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    cluster =  MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
         .setKsmId(ksmId)
         .build();
+    cluster.waitForClusterToBeReady();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
     userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
         null, null, null, null);

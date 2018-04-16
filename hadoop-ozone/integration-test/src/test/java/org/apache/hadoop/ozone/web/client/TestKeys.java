@@ -26,13 +26,10 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
@@ -87,7 +84,7 @@ public class TestKeys {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneClassicCluster ozoneCluster = null;
+  private static MiniOzoneCluster ozoneCluster = null;
   private static String path;
   private static OzoneRestClient ozoneRestClient = null;
   private static long currentTime;
@@ -108,10 +105,10 @@ public class TestKeys {
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    ozoneCluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = ozoneCluster.getDataNodes().get(0);
-    final int port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
+    ozoneCluster = MiniOzoneCluster.newBuilder(conf).build();
+    ozoneCluster.waitForClusterToBeReady();
+    final int port = ozoneCluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
     ozoneRestClient = new OzoneRestClient(
         String.format("http://localhost:%d", port));
     currentTime = Time.now();
@@ -277,12 +274,12 @@ public class TestKeys {
   }
 
   private static void restartDatanode(
-      MiniOzoneClassicCluster cluster, int datanodeIdx, OzoneRestClient client)
-      throws IOException, OzoneException, URISyntaxException {
-    cluster.restartDataNode(datanodeIdx);
+      MiniOzoneCluster cluster, int datanodeIdx, OzoneRestClient client)
+      throws OzoneException, URISyntaxException {
+    cluster.restartHddsDatanode(datanodeIdx);
     // refresh the datanode endpoint uri after datanode restart
-    DataNode dataNode = cluster.getDataNodes().get(datanodeIdx);
-    final int port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
+    final int port = ozoneCluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
     client.setEndPoint(String.format("http://localhost:%d", port));
   }
 
@@ -297,14 +294,13 @@ public class TestKeys {
   }
 
   static void runTestPutAndGetKeyWithDnRestart(
-      PutHelper helper, MiniOzoneClassicCluster cluster) throws Exception {
+      PutHelper helper, MiniOzoneCluster cluster) throws Exception {
     String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
 
     // restart the datanode
     restartDatanode(cluster, 0, helper.client);
-
     // verify getKey after the datanode restart
     String newFileName = helper.dir + "/"
         + OzoneUtils.getRequestID().toLowerCase();
@@ -609,8 +605,8 @@ public class TestKeys {
     Assert.assertEquals(20, bucketKeys.totalNumOfKeys());
 
     int numOfCreatedKeys = 0;
-    OzoneContainer cm = MiniOzoneTestHelper
-        .getOzoneContainer(ozoneCluster.getDataNodes().get(0));
+    OzoneContainer cm = ozoneCluster.getHddsDatanodes().get(0)
+        .getDatanodeStateMachine().getContainer();
 
     // Expected to delete chunk file list.
     List<File> expectedChunkFiles = Lists.newArrayList();

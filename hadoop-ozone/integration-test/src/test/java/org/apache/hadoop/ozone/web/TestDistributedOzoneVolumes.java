@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.ozone.web;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -49,7 +47,7 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static int port = 0;
 
   /**
@@ -66,10 +64,10 @@ public class TestDistributedOzoneVolumes extends TestOzoneHelper {
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
+    port = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
   }
 
   /**

@@ -20,10 +20,8 @@ package org.apache.hadoop.ozone.scm;
 import com.google.common.cache.Cache;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -57,18 +55,22 @@ public class TestXceiverClientManager {
   public ExpectedException exception = ExpectedException.none();
 
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
     config = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(config)
-        .numDataNodes(3)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(config)
+        .setNumDatanodes(3)
+        .build();
+    cluster.waitForClusterToBeReady();
     storageContainerLocationClient = cluster
-        .createStorageContainerLocationClient();
+        .getStorageContainerLocationClient();
   }
 
   @AfterClass
   public static void shutdown() {
-    IOUtils.cleanupWithLogger(null, cluster, storageContainerLocationClient);
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient);
   }
 
   @Test

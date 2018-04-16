@@ -49,22 +49,19 @@ public class TestContainerOperations {
   @BeforeClass
   public static void setup() throws Exception {
     int containerSizeGB = 5;
-    long datanodeCapacities = 3 * OzoneConsts.TB;
     ContainerOperationClient.setContainerSizeB(
         containerSizeGB * OzoneConsts.GB);
     ozoneConf = new OzoneConfiguration();
     ozoneConf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
-    cluster = new MiniOzoneClassicCluster.Builder(ozoneConf).numDataNodes(1)
-        .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(ozoneConf).setNumDatanodes(1).build();
     StorageContainerLocationProtocolClientSideTranslatorPB client =
-        cluster.createStorageContainerLocationClient();
+        cluster.getStorageContainerLocationClient();
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
     storageClient = new ContainerOperationClient(
         client, new XceiverClientManager(ozoneConf));
-    cluster.waitForHeartbeatProcessed();
+    cluster.waitForClusterToBeReady();
   }
 
   @AfterClass

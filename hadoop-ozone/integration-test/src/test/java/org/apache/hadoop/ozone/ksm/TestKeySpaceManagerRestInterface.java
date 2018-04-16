@@ -21,12 +21,9 @@ package org.apache.hadoop.ozone.ksm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
@@ -45,7 +42,6 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.ozone.KsmUtils.getKsmAddressForClients;
@@ -61,17 +57,14 @@ public class TestKeySpaceManagerRestInterface {
   @BeforeClass
   public static void setUp() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
-        .setClusterId(UUID.randomUUID().toString())
-        .setScmId(UUID.randomUUID().toString())
-        .build();
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
     if (cluster != null) {
-      cluster.close();
+      cluster.shutdown();
     }
   }
 
@@ -115,9 +108,9 @@ public class TestKeySpaceManagerRestInterface {
         scmInfo.getPort(ServicePort.Type.RPC));
 
     ServiceInfo datanodeInfo = serviceMap.get(HddsProtos.NodeType.DATANODE);
-    DataNode datanode = ((MiniOzoneClassicCluster) cluster)
-        .getDataNodes().get(0);
-    Assert.assertEquals(datanode.getDatanodeHostname(),
+    DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
+    Assert.assertEquals(datanodeDetails.getHostName(),
         datanodeInfo.getHostname());
 
     Map<ServicePort.Type, Integer> ports = datanodeInfo.getPorts();
@@ -125,7 +118,7 @@ public class TestKeySpaceManagerRestInterface {
       switch (type) {
       case HTTP:
       case HTTPS:
-        Assert.assertEquals(MiniOzoneTestHelper.getOzoneRestPort(datanode),
+        Assert.assertEquals(datanodeDetails.getOzoneRestPort(),
             (int) ports.get(type));
         break;
       default:

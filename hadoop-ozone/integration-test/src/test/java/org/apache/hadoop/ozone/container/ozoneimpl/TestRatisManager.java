@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.ratis.rpc.RpcType;
@@ -75,17 +73,15 @@ public class TestRatisManager {
     // create Ozone clusters
     final OzoneConfiguration conf = newOzoneConfiguration();
     RatisTestHelper.initRatisConf(rpc, conf);
-    final MiniOzoneClassicCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL)
-        .numDataNodes(5)
+    final MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(5)
         .build();
     try {
-      cluster.waitOzoneReady();
+      cluster.waitForClusterToBeReady();
 
-      final List<DataNode> datanodes = cluster.getDataNodes();
+      final List<HddsDatanodeService> datanodes = cluster.getHddsDatanodes();
       final List<DatanodeDetails> datanodeDetailsSet = datanodes.stream()
-          .map(MiniOzoneTestHelper::getDatanodeDetails).collect(
+          .map(HddsDatanodeService::getDatanodeDetails).collect(
               Collectors.toList());
 
       //final RatisManager manager = RatisManager.newRatisManager(conf);

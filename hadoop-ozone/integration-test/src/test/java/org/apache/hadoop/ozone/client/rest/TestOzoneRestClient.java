@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.client.rest;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -58,7 +58,7 @@ public class TestOzoneRestClient {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
 
@@ -75,9 +75,8 @@ public class TestOzoneRestClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
+    cluster.waitForClusterToBeReady();
     InetSocketAddress ksmHttpAddress = cluster.getKeySpaceManager()
         .getHttpServer().getHttpAddress();
     ozClient = OzoneClientFactory.getRestClient(ksmHttpAddress.getHostName(),

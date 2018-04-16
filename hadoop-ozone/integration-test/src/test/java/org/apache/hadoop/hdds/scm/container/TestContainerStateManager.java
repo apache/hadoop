@@ -18,15 +18,10 @@ package org.apache.hadoop.hdds.scm.container;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.ContainerMapping;
-import org.apache.hadoop.hdds.scm.container.ContainerStateManager;
-import org.apache.hadoop.hdds.scm.container.Mapping;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.StorageContainerManager;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.junit.After;
@@ -54,10 +49,10 @@ public class TestContainerStateManager {
 
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
+    cluster.waitForClusterToBeReady();
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();
     scmContainerMapping = scm.getScmContainerManager();
@@ -68,7 +63,6 @@ public class TestContainerStateManager {
   public void cleanUp() {
     if (cluster != null) {
       cluster.shutdown();
-      cluster.close();
     }
   }
 

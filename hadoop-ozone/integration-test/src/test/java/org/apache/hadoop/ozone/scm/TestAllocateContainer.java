@@ -19,10 +19,8 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -51,15 +49,12 @@ public class TestAllocateContainer {
 
   @BeforeClass
   public static void init() throws Exception {
-    long datanodeCapacities = 3 * OzoneConsts.TB;
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(3)
-        .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
+    cluster.waitForClusterToBeReady();
     storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
+        cluster.getStorageContainerLocationClient();
     xceiverClientManager = new XceiverClientManager(conf);
-    cluster.waitForHeartbeatProcessed();
   }
 
   @AfterClass
@@ -67,7 +62,7 @@ public class TestAllocateContainer {
     if(cluster != null) {
       cluster.shutdown();
     }
-    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient);
   }
 
   @Test

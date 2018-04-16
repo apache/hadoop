@@ -21,7 +21,6 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -32,10 +31,8 @@ import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -63,13 +60,12 @@ public class TestXceiverClientMetrics {
   private static String containerOwner = "OZONE";
 
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
     config = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(config)
-        .numDataNodes(1)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(config).build();
+    cluster.waitForClusterToBeReady();
     storageContainerLocationClient = cluster
-        .createStorageContainerLocationClient();
+        .getStorageContainerLocationClient();
   }
 
   @AfterClass

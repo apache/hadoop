@@ -43,9 +43,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -86,7 +84,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
 public class TestOzoneClient {
   private static Logger log = Logger.getLogger(TestOzoneClient.class);
   private static int testVolumeCount = 5;
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static String endpoint = null;
 
   @BeforeClass
@@ -95,11 +93,11 @@ public class TestOzoneClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    endpoint = String.format("http://localhost:%d",
-        MiniOzoneTestHelper.getOzoneRestPort(dataNode));
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
+    int port = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
+    endpoint = String.format("http://localhost:%d", port);
   }
 
   @AfterClass

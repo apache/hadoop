@@ -19,11 +19,9 @@
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -59,8 +57,8 @@ public class TestOzoneContainer {
     OzoneContainer container = null;
     MiniOzoneCluster cluster = null;
     try {
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+      cluster = MiniOzoneCluster.newBuilder(conf).build();
+      cluster.waitForClusterToBeReady();
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
       Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
@@ -105,9 +103,10 @@ public class TestOzoneContainer {
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
 
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+          .build();
+      cluster.waitForClusterToBeReady();
 
       // This client talks to ozone container via datanode.
       XceiverClient client = new XceiverClient(pipeline, conf);
@@ -208,9 +207,10 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+          .build();
+      cluster.waitForClusterToBeReady();
       String containerName = client.getPipeline().getContainerName();
 
       runTestBothGetandPutSmallFile(containerName, client);
@@ -266,9 +266,10 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+          .build();
+      cluster.waitForClusterToBeReady();
       client.connect();
 
       String containerName = client.getPipeline().getContainerName();
@@ -356,9 +357,10 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+          .build();
+      cluster.waitForClusterToBeReady();
       client.connect();
 
       String containerName = client.getPipeline().getContainerName();
@@ -471,9 +473,10 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
           .setRandomContainerPort(false)
-          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+          .build();
+      cluster.waitForClusterToBeReady();
       String containerName = client.getPipeline().getContainerName();
       runAsyncTests(containerName, client);
     } finally {
@@ -492,9 +495,10 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneClassicCluster.Builder(conf)
+      cluster = MiniOzoneCluster.newBuilder(conf)
               .setRandomContainerPort(false)
-              .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+              .build();
+      cluster.waitForClusterToBeReady();
       client.connect();
 
       // Send a request without traceId.

@@ -44,10 +44,10 @@ public interface RatisTestHelper {
     static final int NUM_DATANODES = 3;
 
     private final OzoneConfiguration conf;
-    private final MiniOzoneClassicCluster cluster;
+    private final MiniOzoneCluster cluster;
 
     /**
-     * Create a {@link MiniOzoneClassicCluster} for testing by setting
+     * Create a {@link MiniOzoneCluster} for testing by setting
      *   OZONE_ENABLED = true,
      *   RATIS_ENABLED = true, and
      *   OZONE_HANDLER_TYPE_KEY = "distributed".
@@ -61,12 +61,8 @@ public interface RatisTestHelper {
       return conf;
     }
 
-    public MiniOzoneClassicCluster getCluster() {
+    public MiniOzoneCluster getCluster() {
       return cluster;
-    }
-
-    public int getDatanodeInfoPort() {
-      return cluster.getDataNodes().get(0).getInfoPort();
     }
 
     public OzoneRestClient newOzoneRestClient()
@@ -76,12 +72,12 @@ public interface RatisTestHelper {
 
     @Override
     public void close() {
-      cluster.close();
+      cluster.shutdown();
     }
 
     public int getDatanodeOzoneRestPort() {
-      return MiniOzoneTestHelper.getOzoneRestPort(
-          cluster.getDataNodes().get(0));
+      return cluster.getHddsDatanodes().get(0).getDatanodeDetails()
+          .getOzoneRestPort();
     }
   }
 
@@ -100,12 +96,10 @@ public interface RatisTestHelper {
         + " = " + rpc.name());
   }
 
-  static MiniOzoneClassicCluster newMiniOzoneCluster(
+  static MiniOzoneCluster newMiniOzoneCluster(
       int numDatanodes, OzoneConfiguration conf) throws IOException {
-    final MiniOzoneClassicCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(numDatanodes)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    final MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(numDatanodes).build();
     return cluster;
   }
 

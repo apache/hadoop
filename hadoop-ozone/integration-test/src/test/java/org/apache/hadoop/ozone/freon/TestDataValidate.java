@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.freon;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -56,9 +55,9 @@ public class TestDataValidate {
     conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
-        .numDataNodes(5).build();
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(5).build();
+    cluster.waitForClusterToBeReady();
   }
 
   /**

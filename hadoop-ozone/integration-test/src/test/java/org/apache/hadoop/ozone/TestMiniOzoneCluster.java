@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.TestGenericTestUtils;
-import org.apache.hadoop.util.ServicePlugin;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -56,7 +54,7 @@ import static org.junit.Assert.*;
  */
 public class TestMiniOzoneCluster {
 
-  private static MiniOzoneClassicCluster cluster;
+  private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
 
   private final static File TEST_ROOT = TestGenericTestUtils.getTestDir();
@@ -79,24 +77,22 @@ public class TestMiniOzoneCluster {
   public static void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
-      cluster.close();
     }
   }
 
   @Test(timeout = 30000)
   public void testStartMultipleDatanodes() throws Exception {
     final int numberOfNodes = 3;
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(numberOfNodes)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(numberOfNodes)
         .build();
-    List<DataNode> datanodes = cluster.getDataNodes();
+    cluster.waitForClusterToBeReady();
+    List<HddsDatanodeService> datanodes = cluster.getHddsDatanodes();
     assertEquals(numberOfNodes, datanodes.size());
-    for(DataNode dn : datanodes) {
+    for(HddsDatanodeService dn : datanodes) {
       // Create a single member pipe line
       String containerName = OzoneUtils.getRequestID();
-      DatanodeDetails datanodeDetails =
-          MiniOzoneTestHelper.getDatanodeDetails(dn);
+      DatanodeDetails datanodeDetails = dn.getDatanodeDetails();
       final PipelineChannel pipelineChannel =
           new PipelineChannel(datanodeDetails.getUuidString(),
               HddsProtos.LifeCycleState.OPEN,
@@ -132,15 +128,6 @@ public class TestMiniOzoneCluster {
 
     assertEquals(id1, validId);
     assertEquals(id1.getProtoBufMessage(), validId.getProtoBufMessage());
-
-    // Write should fail if unable to create file or directory
-    File invalidPath = new File(WRITE_TMP, "an/invalid/path");
-    try {
-      ContainerUtils.writeDatanodeDetailsTo(id1, invalidPath);
-      Assert.fail();
-    } catch (Exception e) {
-      assertTrue(e instanceof IOException);
-    }
 
     // Read should return an empty value if file doesn't exist
     File nonExistFile = new File(READ_TMP, "non_exist.id");

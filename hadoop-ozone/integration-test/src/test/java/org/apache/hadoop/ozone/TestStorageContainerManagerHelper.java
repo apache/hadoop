@@ -23,7 +23,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -55,11 +54,11 @@ import java.util.Set;
  */
 public class TestStorageContainerManagerHelper {
 
-  private final MiniOzoneClassicCluster cluster;
+  private final MiniOzoneCluster cluster;
   private final Configuration conf;
   private final StorageHandler storageHandler;
 
-  public TestStorageContainerManagerHelper(MiniOzoneClassicCluster cluster,
+  public TestStorageContainerManagerHelper(MiniOzoneCluster cluster,
       Configuration conf) throws IOException {
     this.cluster = cluster;
     this.conf = conf;
@@ -169,10 +168,9 @@ public class TestStorageContainerManagerHelper {
 
   private OzoneContainer getContainerServerByDatanodeUuid(String dnUUID)
       throws IOException {
-    for (DataNode dn : cluster.getDataNodes()) {
-      if (MiniOzoneTestHelper.getDatanodeDetails(dn).getUuidString()
-          .equals(dnUUID)) {
-        return MiniOzoneTestHelper.getOzoneContainer(dn);
+    for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
+      if (dn.getDatanodeDetails().getUuidString().equals(dnUUID)) {
+        return dn.getDatanodeStateMachine().getContainer();
       }
     }
     throw new IOException("Unable to get the ozone container "

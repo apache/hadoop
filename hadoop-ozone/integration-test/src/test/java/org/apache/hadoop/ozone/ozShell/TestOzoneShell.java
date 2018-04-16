@@ -26,9 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,9 +36,7 @@ import java.util.UUID;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
@@ -82,7 +78,7 @@ public class TestOzoneShell {
   private static String url;
   private static File baseDir;
   private static OzoneConfiguration conf = null;
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneRestClient client = null;
   private static Shell shell = null;
 
@@ -95,11 +91,10 @@ public class TestOzoneShell {
    * Create a MiniDFSCluster for testing with using distributed Ozone
    * handler type.
    *
-   * @throws IOException
+   * @throws Exception
    */
   @BeforeClass
-  public static void init()
-      throws IOException, URISyntaxException, OzoneException {
+  public static void init() throws Exception {
     conf = new OzoneConfiguration();
 
     String path = GenericTestUtils.getTempPath(
@@ -115,10 +110,10 @@ public class TestOzoneShell {
     shell = new Shell();
     shell.setConf(conf);
 
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = MiniOzoneTestHelper.getOzoneRestPort(dataNode);
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
+    final int port = cluster.getHddsDatanodes().get(0).getDatanodeDetails()
+        .getOzoneRestPort();
     url = String.format("http://localhost:%d", port);
     client = new OzoneRestClient(String.format("http://localhost:%d", port));
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);

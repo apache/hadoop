@@ -19,22 +19,19 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.scm.cli.SQLCLI;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,12 +49,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
-//import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -83,10 +80,9 @@ public class TestContainerSQLCli {
 
   private static SQLCLI cli;
 
-  private MiniOzoneClassicCluster cluster;
+  private MiniOzoneCluster cluster;
   private OzoneConfiguration conf;
-  private StorageContainerLocationProtocolClientSideTranslatorPB
-      storageContainerLocationClient;
+  private String datanodeIpAddress;
 
   private ContainerMapping mapping;
   private NodeManager nodeManager;
@@ -105,7 +101,6 @@ public class TestContainerSQLCli {
 
   @Before
   public void setup() throws Exception {
-    long datanodeCapacities = 3 * OzoneConsts.TB;
     blockContainerMap = new HashMap<>();
 
     conf = new OzoneConfiguration();
@@ -120,13 +115,12 @@ public class TestContainerSQLCli {
       factor = HddsProtos.ReplicationFactor.ONE;
       type = HddsProtos.ReplicationType.STAND_ALONE;
     }
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(2)
-        .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
-    cluster.waitForHeartbeatProcessed();
-    cluster.shutdown();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(2).build();
+    cluster.waitForClusterToBeReady();
+    datanodeIpAddress = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getIpAddress();
+    cluster.getKeySpaceManager().stop();
+    cluster.getStorageContainerManager().stop();
 
     nodeManager = cluster.getStorageContainerManager().getScmNodeManager();
     mapping = new ContainerMapping(conf, nodeManager, 128);
@@ -179,12 +173,15 @@ public class TestContainerSQLCli {
 
   @After
   public void shutdown() throws InterruptedException {
-    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   @Test
   public void testConvertBlockDB() throws Exception {
-    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbOutPath = GenericTestUtils.getTempPath(
+        UUID.randomUUID() + "/out_sql.db");
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + BLOCK_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
@@ -206,7 +203,8 @@ public class TestContainerSQLCli {
 
   @Test
   public void testConvertNodepoolDB() throws Exception {
-    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbOutPath = GenericTestUtils.getTempPath(
+        UUID.randomUUID() + "/out_sql.db");
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + NODEPOOL_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
@@ -233,7 +231,8 @@ public class TestContainerSQLCli {
 
   @Test
   public void testConvertContainerDB() throws Exception {
-    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbOutPath = GenericTestUtils.getTempPath(
+        UUID.randomUUID() + "/out_sql.db");
     // TODO : the following will fail due to empty Datanode list, need to fix.
     //String dnUUID = cluster.getDataNodes().get(0).getUuid();
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
@@ -275,7 +274,7 @@ public class TestContainerSQLCli {
     rs = executeQuery(conn, sql);
     int count = 0;
     while (rs.next()) {
-      assertEquals("127.0.0.1", rs.getString("ipAddr"));
+      assertEquals(datanodeIpAddress, rs.getString("ipAddress"));
       //assertEquals(dnUUID, rs.getString("datanodeUUID"));
       count += 1;
     }

@@ -19,11 +19,9 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.OzoneConsts;
 
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -41,7 +39,7 @@ public class TestVolumeRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
   private static OzoneRestClient ozoneClient;
-  private static MiniOzoneClassicCluster cluster;
+  private static MiniOzoneCluster cluster;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -60,10 +58,10 @@ public class TestVolumeRatis {
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(3)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    final int port = dataNode.getInfoPort();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
+    cluster.waitForClusterToBeReady();
+    final int port = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
 
     ozoneClient = new OzoneRestClient(
         String.format("http://localhost:%d", port));

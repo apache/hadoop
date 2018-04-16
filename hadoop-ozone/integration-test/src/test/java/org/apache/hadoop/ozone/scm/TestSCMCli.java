@@ -20,10 +20,8 @@ package org.apache.hadoop.ozone.scm;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.StorageContainerManager;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -61,7 +59,7 @@ import static org.junit.Assert.assertFalse;
 public class TestSCMCli {
   private static SCMCLI cli;
 
-  private static MiniOzoneClassicCluster cluster;
+  private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
@@ -82,11 +80,11 @@ public class TestSCMCli {
   @BeforeClass
   public static void setup() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(3)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(3).build();
+    cluster.waitForClusterToBeReady();
     xceiverClientManager = new XceiverClientManager(conf);
     storageContainerLocationClient =
-        cluster.createStorageContainerLocationClient();
+        cluster.getStorageContainerLocationClient();
     containerOperationClient = new ContainerOperationClient(
         storageContainerLocationClient, new XceiverClientManager(conf));
     outContent = new ByteArrayOutputStream();
@@ -116,7 +114,10 @@ public class TestSCMCli {
 
   @AfterClass
   public static void shutdown() throws InterruptedException {
-    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient);
   }
 
   @Test
@@ -235,8 +236,8 @@ public class TestSCMCli {
   @Test
   public void testInfoContainer() throws Exception {
     // The cluster has one Datanode server.
-    DatanodeDetails datanodeDetails = MiniOzoneTestHelper
-        .getDatanodeDetails(cluster.getDataNodes().get(0));
+    DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
     String formatStr =
         "Container Name: %s\n" +
         "Container State: %s\n" +
