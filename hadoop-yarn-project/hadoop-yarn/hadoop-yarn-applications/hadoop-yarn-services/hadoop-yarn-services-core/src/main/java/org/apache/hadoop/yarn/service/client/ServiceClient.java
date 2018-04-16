@@ -668,8 +668,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       submissionContext.setApplicationTimeouts(appTimeout);
     }
     submissionContext.setMaxAppAttempts(YarnServiceConf
-        .getInt(YarnServiceConf.AM_RESTART_MAX, 20, app.getConfiguration(),
-            conf));
+        .getInt(YarnServiceConf.AM_RESTART_MAX, DEFAULT_AM_RESTART_MAX, app
+            .getConfiguration(), conf));
 
     setLogAggregationContext(app, conf, submissionContext);
 
@@ -695,7 +695,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             conf), 1));
     String queue = app.getQueue();
     if (StringUtils.isEmpty(queue)) {
-      queue = conf.get(YARN_QUEUE, "default");
+      queue = conf.get(YARN_QUEUE, DEFAULT_YARN_QUEUE);
     }
     submissionContext.setQueue(queue);
     submissionContext.setApplicationName(serviceName);

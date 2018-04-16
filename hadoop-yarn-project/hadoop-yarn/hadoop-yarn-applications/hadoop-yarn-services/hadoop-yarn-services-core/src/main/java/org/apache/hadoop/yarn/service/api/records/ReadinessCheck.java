@@ -60,6 +60,7 @@ public class ReadinessCheck implements Serializable {
   @XmlType(name = "type")
   @XmlEnum
   public enum TypeEnum {
+    DEFAULT("DEFAULT"),
     HTTP("HTTP"),
     PORT("PORT");
 

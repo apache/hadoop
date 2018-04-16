@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
@@ -79,6 +80,9 @@ import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
 import static org.apache.hadoop.yarn.service.component.ComponentState.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURE_THRESHOLD;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_FAILURE_THRESHOLD;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_READINESS_CHECK_ENABLED;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_READINESS_CHECK_ENABLED_DEFAULT;
 
 public class Component implements EventHandler<ComponentEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(Component.class);
@@ -175,9 +179,15 @@ public class Component implements EventHandler<ComponentEvent> {
     dispatcher = scheduler.getDispatcher();
     failureTracker =
         new ContainerFailureTracker(context, this);
-    probe = MonitorUtils.getProbe(componentSpec.getReadinessCheck());
-    maxContainerFailurePerComp = componentSpec.getConfiguration()
-        .getPropertyInt(CONTAINER_FAILURE_THRESHOLD, 10);
+    if (componentSpec.getReadinessCheck() != null ||
+        YarnServiceConf.getBoolean(DEFAULT_READINESS_CHECK_ENABLED,
+            DEFAULT_READINESS_CHECK_ENABLED_DEFAULT,
+            componentSpec.getConfiguration(), scheduler.getConfig())) {
+      probe = MonitorUtils.getProbe(componentSpec.getReadinessCheck());
+    }
+    maxContainerFailurePerComp = YarnServiceConf.getInt(
+        CONTAINER_FAILURE_THRESHOLD, DEFAULT_CONTAINER_FAILURE_THRESHOLD,
+        componentSpec.getConfiguration(), scheduler.getConfig());
     createNumCompInstances(component.getNumberOfContainers());
     setDesiredContainers(component.getNumberOfContainers().intValue());
   }
