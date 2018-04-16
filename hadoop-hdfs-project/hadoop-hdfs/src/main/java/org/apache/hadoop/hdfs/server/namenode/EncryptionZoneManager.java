@@ -33,6 +33,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -50,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +110,34 @@ public class EncryptionZoneManager {
 
     String getKeyName() {
       return keyName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof EncryptionZoneInt)) {
+        return false;
+      }
+
+      EncryptionZoneInt b = (EncryptionZoneInt)o;
+      return new EqualsBuilder()
+          .append(inodeId, b.getINodeId())
+          .append(suite, b.getSuite())
+          .append(version, b.getVersion())
+          .append(keyName, b.getKeyName())
+          .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+      return new HashCodeBuilder().
+          append(inodeId).
+          append(suite).
+          append(version).
+          append(keyName).
+          toHashCode();
     }
   }
 
@@ -315,8 +347,8 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  boolean isInAnEZ(INodesInPath iip)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
+  boolean isInAnEZ(INodesInPath iip) throws UnresolvedLinkException,
+      SnapshotAccessControlException, IOException {
     assert dir.hasReadLock();
     return (getEncryptionZoneForPath(iip) != null);
   }
@@ -341,7 +373,7 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  String getKeyName(final INodesInPath iip) {
+  String getKeyName(final INodesInPath iip) throws IOException {
     assert dir.hasReadLock();
     EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
     if (ezi == null) {
@@ -356,18 +388,42 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
+  private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip)
+      throws  IOException{
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     if (!hasCreatedEncryptionZone()) {
       return null;
     }
+
+    int snapshotID = iip.getPathSnapshotId();
     for (int i = iip.length() - 1; i >= 0; i--) {
       final INode inode = iip.getINode(i);
-      if (inode != null) {
+      if (inode == null || !inode.isDirectory()) {
+        //not found or not a directory, encryption zone is supported on
+        //directory only.
+        continue;
+      }
+      if (snapshotID == Snapshot.CURRENT_STATE_ID) {
         final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
         if (ezi != null) {
           return ezi;
+        }
+      } else {
+        XAttr xAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(
+            inode, snapshotID, CRYPTO_XATTR_ENCRYPTION_ZONE);
+        if (xAttr != null) {
+          try {
+            final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+                HdfsProtos.ZoneEncryptionInfoProto.parseFrom(xAttr.getValue());
+            return new EncryptionZoneInt(
+                inode.getId(), PBHelperClient.convert(ezProto.getSuite()),
+                PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
+                ezProto.getKeyName());
+          } catch (InvalidProtocolBufferException e) {
+            throw new IOException("Could not parse encryption zone for inode "
+                + iip.getPath(), e);
+          }
         }
       }
     }
@@ -381,7 +437,8 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  private EncryptionZoneInt getParentEncryptionZoneForPath(INodesInPath iip) {
+  private EncryptionZoneInt getParentEncryptionZoneForPath(INodesInPath iip)
+      throws  IOException {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     INodesInPath parentIIP = iip.getParentINodesInPath();
@@ -395,7 +452,8 @@ public class EncryptionZoneManager {
    * @param iip The INodesInPath of the path to check
    * @return the EncryptionZone representing the ez for the path.
    */
-  EncryptionZone getEZINodeForPath(INodesInPath iip) {
+  EncryptionZone getEZINodeForPath(INodesInPath iip)
+      throws IOException {
     final EncryptionZoneInt ezi = getEncryptionZoneForPath(iip);
     if (ezi == null) {
       return null;
@@ -437,7 +495,7 @@ public class EncryptionZoneManager {
     }
 
     if (srcInEZ) {
-      if (srcParentEZI != dstParentEZI) {
+      if (!srcParentEZI.equals(dstParentEZI)) {
         final String srcEZPath = getFullPathName(srcParentEZI.getINodeId());
         final String dstEZPath = getFullPathName(dstParentEZI.getINodeId());
         final StringBuilder sb = new StringBuilder(srcIIP.getPath());
@@ -483,10 +541,6 @@ public class EncryptionZoneManager {
     if (srcIIP.getLastINode() == null) {
       throw new FileNotFoundException("cannot find " + srcIIP.getPath());
     }
-    if (dir.isNonEmptyDirectory(srcIIP)) {
-      throw new IOException(
-          "Attempt to create an encryption zone for a non-empty directory.");
-    }
 
     INode srcINode = srcIIP.getLastINode();
     if (!srcINode.isDirectory()) {
@@ -499,6 +553,10 @@ public class EncryptionZoneManager {
           "Directory " + srcIIP.getPath() + " is already an encryption zone.");
     }
 
+    if (dir.isNonEmptyDirectory(srcIIP)) {
+      throw new IOException(
+          "Attempt to create an encryption zone for a non-empty directory.");
+    }
     final HdfsProtos.ZoneEncryptionInfoProto proto =
         PBHelperClient.convert(suite, version, keyName);
     final XAttr ezXAttr = XAttrHelper

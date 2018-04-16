@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -75,6 +76,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
+
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
+    .RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
@@ -1109,6 +1113,49 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               amBlacklist.getBlacklistAdditions() + ") and removals(" +
               amBlacklist.getBlacklistRemovals() + ")");
         }
+
+        QueueInfo queueInfo = null;
+        for (ResourceRequest amReq : appAttempt.amReqs) {
+          if (amReq.getNodeLabelExpression() == null && ResourceRequest.ANY
+              .equals(amReq.getResourceName())) {
+            String queue = appAttempt.rmApp.getQueue();
+
+            //Load queue only once since queue will be same across attempts
+            if (queueInfo == null) {
+              try {
+                queueInfo = appAttempt.scheduler.getQueueInfo(queue, false,
+                    false);
+              } catch (IOException e) {
+                LOG.error("Could not find queue for application : ", e);
+                // Set application status to REJECTED since we cant find the
+                // queue
+                appAttempt.rmContext.getDispatcher().getEventHandler().handle(
+                    new RMAppAttemptEvent(appAttempt.getAppAttemptId(),
+                        RMAppAttemptEventType.FAIL,
+                        "Could not find queue for application : " +
+                        appAttempt.rmApp.getQueue()));
+                appAttempt.rmContext.getDispatcher().getEventHandler().handle(
+                    new RMAppEvent(appAttempt.rmApp.getApplicationId(), RMAppEventType
+                        .APP_REJECTED,
+                        "Could not find queue for application : " +
+                            appAttempt.rmApp.getQueue()));
+                return RMAppAttemptState.FAILED;
+              }
+            }
+
+            String labelExp = RMNodeLabelsManager.NO_LABEL;
+            if (queueInfo != null) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Setting default node label expression : " + queueInfo
+                    .getDefaultNodeLabelExpression());
+              }
+              labelExp = queueInfo.getDefaultNodeLabelExpression();
+            }
+
+            amReq.setNodeLabelExpression(labelExp);
+          }
+        }
+
         // AM resource has been checked when submission
         Allocation amContainerAllocation =
             appAttempt.scheduler.allocate(

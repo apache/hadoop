@@ -231,30 +231,40 @@ public class ApiServer {
           e.getCause().getMessage());
     } catch (YarnException | FileNotFoundException e) {
       return formatResponse(Status.NOT_FOUND, e.getMessage());
-    } catch (IOException | InterruptedException e) {
+    } catch (Exception e) {
       LOG.error("Fail to stop service: {}", e);
       return formatResponse(Status.INTERNAL_SERVER_ERROR, e.getMessage());
     }
   }
 
   private Response stopService(String appName, boolean destroy,
-      final UserGroupInformation ugi) throws IOException,
-      InterruptedException, YarnException, FileNotFoundException {
+      final UserGroupInformation ugi) throws Exception {
     int result = ugi.doAs(new PrivilegedExceptionAction<Integer>() {
       @Override
-      public Integer run() throws IOException, YarnException,
-          FileNotFoundException {
+      public Integer run() throws Exception {
         int result = 0;
         ServiceClient sc = getServiceClient();
         sc.init(YARN_CONFIG);
         sc.start();
-        result = sc.actionStop(appName, destroy);
-        if (result == EXIT_SUCCESS) {
-          LOG.info("Successfully stopped service {}", appName);
+        Exception stopException = null;
+        try {
+          result = sc.actionStop(appName, destroy);
+          if (result == EXIT_SUCCESS) {
+            LOG.info("Successfully stopped service {}", appName);
+          }
+        } catch (Exception e) {
+          LOG.info("Got exception stopping service", e);
+          stopException = e;
         }
         if (destroy) {
           result = sc.actionDestroy(appName);
-          LOG.info("Successfully deleted service {}", appName);
+          if (result == EXIT_SUCCESS) {
+            LOG.info("Successfully deleted service {}", appName);
+          }
+        } else {
+          if (stopException != null) {
+            throw stopException;
+          }
         }
         sc.close();
         return result;
@@ -262,8 +272,21 @@ public class ApiServer {
     });
     ServiceStatus serviceStatus = new ServiceStatus();
     if (destroy) {
-      serviceStatus.setDiagnostics("Successfully destroyed service " +
-          appName);
+      if (result == EXIT_SUCCESS) {
+        serviceStatus.setDiagnostics("Successfully destroyed service " +
+            appName);
+      } else {
+        if (result == EXIT_NOT_FOUND) {
+          serviceStatus
+              .setDiagnostics("Service " + appName + " doesn't exist");
+          return formatResponse(Status.BAD_REQUEST, serviceStatus);
+        } else {
+          serviceStatus
+              .setDiagnostics("Service " + appName + " error cleaning up " +
+                  "registry");
+          return formatResponse(Status.INTERNAL_SERVER_ERROR, serviceStatus);
+        }
+      }
     } else {
       if (result == EXIT_COMMAND_ARGUMENT_ERROR) {
         serviceStatus
@@ -375,6 +398,12 @@ public class ApiServer {
           && updateServiceData.getLifetime() > 0) {
         return updateLifetime(appName, updateServiceData, ugi);
       }
+
+      // If an UPGRADE is requested
+      if (updateServiceData.getState() != null &&
+          updateServiceData.getState() == ServiceState.UPGRADING) {
+        return upgradeService(updateServiceData, ugi);
+      }
     } catch (UndeclaredThrowableException e) {
       return formatResponse(Status.BAD_REQUEST,
           e.getCause().getMessage());
@@ -388,7 +417,7 @@ public class ApiServer {
       String message = "Service is not found in hdfs: " + appName;
       LOG.error(message, e);
       return formatResponse(Status.NOT_FOUND, e.getMessage());
-    } catch (IOException | InterruptedException e) {
+    } catch (Exception e) {
       String message = "Error while performing operation for app: " + appName;
       LOG.error(message, e);
       return formatResponse(Status.INTERNAL_SERVER_ERROR, e.getMessage());
@@ -473,6 +502,24 @@ public class ApiServer {
     status.setDiagnostics("Service " + appName + " is successfully started.");
     status.setState(ServiceState.ACCEPTED);
     return formatResponse(Status.OK, status);
+  }
+
+  private Response upgradeService(Service service,
+      final UserGroupInformation ugi) throws IOException, InterruptedException {
+    ServiceStatus status = new ServiceStatus();
+    ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      sc.actionUpgrade(service);
+      sc.close();
+      return null;
+    });
+    LOG.info("Service {} version {} upgrade initialized");
+    status.setDiagnostics("Service " + service.getName() +
+        " version " + service.getVersion() + " saved.");
+    status.setState(ServiceState.ACCEPTED);
+    return formatResponse(Status.ACCEPTED, status);
   }
 
   /**

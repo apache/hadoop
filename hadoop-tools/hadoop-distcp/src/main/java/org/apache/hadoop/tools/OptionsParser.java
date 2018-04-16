@@ -145,6 +145,12 @@ public class OptionsParser {
         builder.withAtomicWorkPath(new Path(workPath));
       }
     }
+    if (command.hasOption(DistCpOptionSwitch.TRACK_MISSING.getSwitch())) {
+      builder.withTrackMissing(
+          new Path(getVal(
+              command,
+              DistCpOptionSwitch.TRACK_MISSING.getSwitch())));
+    }
 
     if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
       try {

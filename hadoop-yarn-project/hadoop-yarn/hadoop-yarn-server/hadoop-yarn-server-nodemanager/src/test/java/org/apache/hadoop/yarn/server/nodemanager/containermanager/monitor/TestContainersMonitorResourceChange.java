@@ -86,6 +86,11 @@ public class TestContainersMonitorResourceChange {
       return 0;
     }
     @Override
+    public int relaunchContainer(ContainerStartContext ctx) throws
+        IOException, ConfigurationException {
+      return 0;
+    }
+    @Override
     public boolean signalContainer(ContainerSignalContext ctx)
         throws IOException {
       return true;

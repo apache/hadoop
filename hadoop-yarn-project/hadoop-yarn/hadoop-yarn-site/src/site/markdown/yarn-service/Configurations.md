@@ -12,7 +12,9 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-This document describes how to configure the services to be deployed on YARN
+# YARN Service Configurations
+
+This document describes how to configure the services to be deployed on YARN.
 
 There are mainly three types of configurations:
 
@@ -93,7 +95,19 @@ Below is how a configuration object typically looks like:
 ## Configuration for YARN service AM
 This section describes the configurations for configuring the YARN service AM.
 
-These can be specified either in the cluster `yarn-site.xml` at the global level or in the `properties` field of the `Configuration` object as per service basis like below:
+### System-wide configuration properties
+System-wide service AM properties can only be configured in the cluster `yarn-site.xml` file.
+
+| System-Level Config Name | Description |
+| ------------ | ------------- |
+|yarn.service.framework.path | HDFS parent directory where the service AM dependency tarball can be found.|
+|yarn.service.base.path | HDFS parent directory where service artifacts will be stored (default ${user_home_dir}/.yarn/).
+|yarn.service.client-am.retry.max-wait-ms | Max retry time in milliseconds for the service client to talk to the service AM (default 900000, i.e. 15 minutes).|
+|yarn.service.client-am.retry-interval-ms | Retry interval in milliseconds for the service client to talk to the service AM (default 2000, i.e. 2 seconds).|
+|yarn.service.queue | Default queue to which the service will be submitted (default submits to the `default` queue). Note that queue can be specified per-service through the queue field, rather than through the service-level configuration properties.|
+
+### Service-level configuration properties
+Service-level service AM configuration properties can be specified either in the cluster `yarn-site.xml` at the global level (effectively overriding the default values system-wide) or specified per service in the `properties` field of the `Configuration` object as in the example below:
 ```
 {
     "configuration" : {
@@ -103,33 +117,97 @@ These can be specified either in the cluster `yarn-site.xml` at the global level
     }
 }
 ```
-Above config make the service AM to be retried at max 10 times.
+The above config allows the service AM to be retried a maximum of 10 times.
 
-#### Available configurations:
-
-| Name | Description |
+| Service-Level Config Name | Description |
 | ------------ | ------------- |
-|yarn.service.client-am.retry.max-wait-ms | the max retry time in milliseconds for the service client to talk to the service AM. By default, it is set to 0, which means no retry |
-|yarn.service.client-am.retry-interval-ms | the retry interval in milliseconds for the service client to talk to the service AM. By default, it is 2000, i.e. 2 seconds |
-|yarn.service.container-failure.retry.max | the max number of retries for the container to be auto restarted if it fails. By default, it is set to -1, which means forever.
-|yarn.service.container-failure.retry-interval-ms| the retry interval in milliseconds for the container to be restarted. By default, it is 30000, i.e. 30 seconds |
-|yarn.service.am-restart.max-attempts| the max number of attempts for the framework AM
-|yarn.service.am-resource.memory | the memory size in GB for the framework AM. By default, it is set to 1024
-|yarn.service.queue | the default queue to which the service will be submitted. By default, it is submitted to `default` queue
-|yarn.service.base.path | the root location for the service artifacts on hdfs for a user. By default, it is under ${user_home_dir}/.yarn/
-|yarn.service.container-failure-per-component.threshold | the max number of container failures for a given component before the AM exits.
-|yarn.service.node-blacklist.threshold | Maximum number of container failures on a node before the node is blacklisted by the AM
-|yarn.service.failure-count-reset.window | The interval in seconds when the `yarn.service.container-failure-per-component.threshold` and `yarn.service.node-blacklist.threshold` gets reset. By default, it is 21600, i.e. 6 hours
-|yarn.service.readiness-check-interval.seconds | The interval in seconds between readiness checks. By default, it is 30 seconds
-|yarn.service.log.include-pattern| The regex expression for including log files whose file name matches it when aggregating the logs after the application completes.
-|yarn.service.log.exclude-pattern| The regex expression for excluding log files whose file name matches it when aggregating the logs after the application completes. If the log file name matches both include and exclude pattern, this file will be excluded.
-|yarn.service.rolling-log.include-pattern| The regex expression for including log files whose file name matches it when aggregating the logs while app is running.
-|yarn.service.rolling-log.exclude-pattern| The regex expression for excluding log files whose file name matches it when aggregating the logs while app is running. If the log file name matches both include and exclude pattern, this file will be excluded.
-|yarn.service.container-recovery.timeout.ms| The timeout in milliseconds after which the service AM releases all the containers of previous attempt which are not yet recovered by the RM. By default, it is set to 120000, i.e. 2 minutes.
+|yarn.service.am-restart.max-attempts | Max number of times to start the service AM, after which the service will be killed (default 20).|
+|yarn.service.am-resource.memory | Memory size in GB for the service AM (default 1024).|
+|yarn.service.am.java.opts | Additional JVM options for the service AM (default " -Xmx768m" will be appended to any JVM opts that do not specify -Xmx).|
+|yarn.service.container-recovery.timeout.ms | Timeout in milliseconds after which a newly started service AM releases all the containers of previous AM attempts which are not yet recovered from the RM (default 120000, i.e. 2 minutes).|
+|yarn.service.failure-count-reset.window | Interval in seconds after which the container failure counts that will be evaluated for the per-component `yarn.service.container-failure-per-component.threshold` and `yarn.service.node-blacklist.threshold` are reset (default 21600, i.e. 6 hours).|
+|yarn.service.readiness-check-interval.seconds | Interval in seconds between readiness checks (default 30 seconds).|
+|yarn.service.log.include-pattern | Regex expression for including log files by name when aggregating the logs after the application completes (default includes all files).|
+|yarn.service.log.exclude-pattern | Regex expression for excluding log files by name when aggregating the logs after the application completes. If the log file name matches both include and exclude pattern, this file will be excluded (default does not exclude any files).|
+|yarn.service.rolling-log.include-pattern | Regex expression for including log files by name when aggregating the logs while app is running.|
+|yarn.service.rolling-log.exclude-pattern | Regex expression for excluding log files by name when aggregating the logs while app is running. If the log file name matches both include and exclude pattern, this file will be excluded.|
+
+### Component-level configuration properties
+Component-level service AM configuration properties can be specified either in the cluster `yarn-site.xml` at the global level (effectively overriding the default values system-wide), specified per service in the `properties` field of the `Configuration` object, or specified per component in the `properties` field of the component's `Configuration` object.
+
+| Component-Level Config Name | Description |
+| ------------ | ------------- |
+|yarn.service.container-failure.retry.max | Max number of retries for the container to be auto restarted if it fails (default -1, which means forever).|
+|yarn.service.container-failure.retry-interval-ms | Retry interval in milliseconds for the container to be restarted (default 30000, i.e. 30 seconds).|
+|yarn.service.container-failure.validity-interval-ms | Failure validity interval in milliseconds. When set to a value greater than 0, the container retry policy will not take the failures that happened outside of this interval into the failure count (default -1, which means that all the failures so far will be included in the failure count).|
+|yarn.service.container-failure-per-component.threshold | Max number of container failures (not including retries) for a given component before the AM stops the service (default 10).|
+|yarn.service.node-blacklist.threshold | Maximum number of container failures on a node (not including retries) before the node is blacklisted by the AM (default 3).|
+|yarn.service.default-readiness-check.enabled | Whether or not the default readiness check is enabled (default true).|
+
+There is one component-level configuration property that is set differently in the `yarn-site.xml` file than it is in the service specification.
+To select the docker network type that will be used for docker containers, `docker.network` may be set in the service `Configuration` `properties` or the component `Configuration` `properties`.
+The system-wide default for the docker network type (for both YARN service containers and all other application containers) is set via the `yarn.nodemanager.runtime.linux.docker.default-container-network` property in the `yarn-site.xml` file.
+
+### Component-level readiness check properties
+The AM can be configured to perform readiness checks for containers through the `Component` field `readiness_check`.
+A container will not reach the `READY` state until its readiness check succeeds.
+If no readiness check is specified, the default readiness check is performed unless it is disabled through the `yarn.service.default-readiness-check.enabled` component-level configuration property.
+
+The default readiness check succeeds when an IP becomes available for a container.
+There are also optional properties that configure a DNS check in addition to the IP check.
+DNS checking ensures that a DNS lookup succeeds for the container hostname before the container is considered ready.
+For example, DNS checking can be enabled for the default readiness check as follows:
+```
+      "readiness_check": {
+        "type": "DEFAULT",
+        "properties": {
+          "dns.check.enabled": "true"
+        }
+      },
+```
+
+Here is a full list of configurable properties for readiness checks that can be performed by the AM.
+
+| Readiness Check | Configurable Property | Description |
+| ------------ | ------------- | ------------- |
+|DEFAULT, HTTP, PORT| dns.check.enabled | true if DNS check should be performed (default false)|
+|DEFAULT, HTTP, PORT| dns.address | optional IP:port address of DNS server to use for DNS check|
+|HTTP| url | required URL for HTTP response check, e.g. http://${THIS_HOST}:8080|
+|HTTP| timeout | connection timeout (default 1000)|
+|HTTP| min.success | minimum response code considered successful (default 200)|
+|HTTP| max.success | maximum response code considered successful (default 299)|
+|PORT| port | required port for socket connection|
+|PORT| timeout | socket connection timeout (default 1000)|
+
+HTTP readiness check example:
+```
+      "readiness_check": {
+        "type": "HTTP",
+        "properties": {
+          "url": "http://${THIS_HOST}:8080"
+        }
+      },
+```
+
+PORT readiness check example:
+```
+      "readiness_check": {
+        "type": "PORT",
+        "properties": {
+          "port": "8080"
+        }
+      },
+```
+
+#### Warning on configuring readiness checks with `host` network for docker containers
+When the `host` docker network is configured for a component that has more than one container and the containers are binding to a specific port, there will be a port collision if the containers happen to be allocated on the same host.
+HTTP and PORT readiness checks will not be valid in this situation.
+In particular, both containers (the one that successfully binds to the port and the one that does not) may have their HTTP or PORT readiness check succeed since the checks are being performed against the same IP (the host's IP).
+A valid configuration for such a service could use the anti-affinity placement policy, ensuring that containers will be assigned on different hosts so that port collisions will not occur.
 
 ## Constant variables for custom service
 The service framework provides some constant variables for user to configure their services. These variables are either dynamically generated by the system or are static ones such as service name defined by the user.
-User can use these constants in their configurations to be dynamically substituted by the service AM.E.g.
+User can use these constants in their configurations to be dynamically substituted by the service AM. E.g.
 ```
 {
     "type" : "HADOOP_XML",
@@ -141,12 +219,12 @@ User can use these constants in their configurations to be dynamically substitut
 ```
 Here, `COMPONENT_INSTANCE_NAME` and `SERVICE_NAME` are the constants to be substituted by the system.
 
-Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `hwxdev.site`.
+Suppose the `COMPONENT_INSTANCE_NAME` is `regionserver-0` and `SERVICE_NAME` is defined by user as `hbase`, user name is `devuser` and domain name is `dev.test`.
 Then, the config will be substituted by the service AM and written in the config file `/etc/hadoop/hbase-site.xml` inside the container as below:
 ```
 <property>
   <name>hbase.regionserver.hostname</name>
-  <value>regionserver-0.hbase.devuser.hwxdev.site</value>
+  <value>regionserver-0.hbase.devuser.dev.test</value>
 </property>
 ```
 where `regionserver-0` is the actual component instance name assigned by the system for this container.

@@ -21,20 +21,24 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.log4j.Logger;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.LongBinaryOperator;
 
@@ -74,6 +78,12 @@ public class AllocationTagsManager {
   public static class TypeToCountedTags<T> {
     // Map<Type, Map<Tag, Count>>
     private Map<T, Map<String, Long>> typeToTagsWithCount = new HashMap<>();
+
+    public TypeToCountedTags() {}
+
+    private TypeToCountedTags(Map<T, Map<String, Long>> tags) {
+      this.typeToTagsWithCount = tags;
+    }
 
     // protected by external locks
     private void addTags(T type, Set<String> tags) {
@@ -206,6 +216,52 @@ public class AllocationTagsManager {
     public Map<T, Map<String, Long>> getTypeToTagsWithCount() {
       return typeToTagsWithCount;
     }
+
+    /**
+     * Absorbs the given {@link TypeToCountedTags} to current mapping,
+     * this will aggregate the count of the tags with same name.
+     *
+     * @param target a {@link TypeToCountedTags} to merge with.
+     */
+    protected void absorb(final TypeToCountedTags<T> target) {
+      // No opt if the given target is null.
+      if (target == null || target.getTypeToTagsWithCount() == null) {
+        return;
+      }
+
+      // Merge the target.
+      Map<T, Map<String, Long>> targetMap = target.getTypeToTagsWithCount();
+      for (Map.Entry<T, Map<String, Long>> targetEntry :
+          targetMap.entrySet()) {
+        // Get a mutable copy, do not modify the target reference.
+        Map<String, Long> copy = Maps.newHashMap(targetEntry.getValue());
+
+        // If the target type doesn't exist in the current mapping,
+        // add as a new entry.
+        Map<String, Long> existingMapping =
+            this.typeToTagsWithCount.putIfAbsent(targetEntry.getKey(), copy);
+        // There was a mapping for this target type,
+        // do proper merging on the operator.
+        if (existingMapping != null) {
+          Map<String, Long> localMap =
+              this.typeToTagsWithCount.get(targetEntry.getKey());
+          // Merge the target map to the inner map.
+          Map<String, Long> targetValue = targetEntry.getValue();
+          for (Map.Entry<String, Long> entry : targetValue.entrySet()) {
+            localMap.merge(entry.getKey(), entry.getValue(),
+                (a, b) -> Long.sum(a, b));
+          }
+        }
+      }
+    }
+
+    /**
+     * @return an immutable copy of current instance.
+     */
+    protected TypeToCountedTags immutableCopy() {
+      return new TypeToCountedTags(
+          Collections.unmodifiableMap(this.typeToTagsWithCount));
+    }
   }
 
   @VisibleForTesting
@@ -233,6 +289,42 @@ public class AllocationTagsManager {
     readLock = lock.readLock();
     writeLock = lock.writeLock();
     rmContext = context;
+  }
+
+  /**
+   * Aggregates multiple {@link TypeToCountedTags} to a single one based on
+   * the scope defined in the allocation tags, the values are properly merged.
+   *
+   * @param allocationTags {@link AllocationTags}.
+   * @return an aggregated {@link TypeToCountedTags}.
+   */
+  private TypeToCountedTags aggregateAllocationTags(
+      AllocationTags allocationTags,
+      Map<ApplicationId, TypeToCountedTags> mapping)
+      throws InvalidAllocationTagsQueryException {
+    // Based on the namespace type of the given allocation tags
+    TargetApplicationsNamespace namespace = allocationTags.getNamespace();
+    TargetApplications ta = new TargetApplications(
+        allocationTags.getCurrentApplicationId(), getApplicationIdToTags());
+    namespace.evaluate(ta);
+    Set<ApplicationId> appIds = namespace.getNamespaceScope();
+    TypeToCountedTags result = new TypeToCountedTags();
+    if (appIds != null) {
+      if (appIds.size() == 1) {
+        // If there is only one app, we simply return the mapping
+        // without any extra computation.
+        return mapping.get(appIds.iterator().next());
+      }
+
+      for (ApplicationId applicationId : appIds) {
+        TypeToCountedTags appIdTags = mapping.get(applicationId);
+        if (appIdTags != null) {
+          // Make sure ATM state won't be changed.
+          result.absorb(appIdTags.immutableCopy());
+        }
+      }
+    }
+    return result;
   }
 
   /**
@@ -458,9 +550,8 @@ public class AllocationTagsManager {
    * to implement customized logic.
    *
    * @param nodeId        nodeId, required.
-   * @param applicationId applicationId. When null is specified, return
-   *                      aggregated cardinality among all applications.
-   * @param tags          allocation tags, see
+   * @param tags          {@link AllocationTags}, allocation tags under a
+   *                      specific namespace. See
    *                      {@link SchedulingRequest#getAllocationTags()},
    *                      When multiple tags specified. Returns cardinality
    *                      depends on op. If a specified tag doesn't exist, 0
@@ -474,29 +565,26 @@ public class AllocationTagsManager {
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
    */
-  public long getNodeCardinalityByOp(NodeId nodeId, ApplicationId applicationId,
-      Set<String> tags, LongBinaryOperator op)
-      throws InvalidAllocationTagsQueryException {
+  public long getNodeCardinalityByOp(NodeId nodeId, AllocationTags tags,
+      LongBinaryOperator op) throws InvalidAllocationTagsQueryException {
     readLock.lock();
-
     try {
-      if (nodeId == null || op == null) {
+      if (nodeId == null || op == null || tags == null) {
         throw new InvalidAllocationTagsQueryException(
             "Must specify nodeId/tags/op to query cardinality");
       }
 
       TypeToCountedTags mapping;
-      if (applicationId != null) {
-        mapping = perAppNodeMappings.get(applicationId);
-      } else {
+      if (AllocationTagNamespaceType.ALL.equals(
+          tags.getNamespace().getNamespaceType())) {
         mapping = globalNodeMapping;
+      } else {
+        // Aggregate app tags cardinality by applications.
+        mapping = aggregateAllocationTags(tags, perAppNodeMappings);
       }
 
-      if (mapping == null) {
-        return 0;
-      }
-
-      return mapping.getCardinality(nodeId, tags, op);
+      return mapping == null ? 0 :
+          mapping.getCardinality(nodeId, tags.getTags(), op);
     } finally {
       readLock.unlock();
     }
@@ -507,9 +595,8 @@ public class AllocationTagsManager {
    * to implement customized logic.
    *
    * @param rack          rack, required.
-   * @param applicationId applicationId. When null is specified, return
-   *                      aggregated cardinality among all applications.
-   * @param tags          allocation tags, see
+   * @param tags          {@link AllocationTags}, allocation tags under a
+   *                      specific namespace. See
    *                      {@link SchedulingRequest#getAllocationTags()},
    *                      When multiple tags specified. Returns cardinality
    *                      depends on op. If a specified tag doesn't exist, 0
@@ -523,30 +610,26 @@ public class AllocationTagsManager {
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
    */
-  @SuppressWarnings("unchecked")
-  public long getRackCardinalityByOp(String rack, ApplicationId applicationId,
-      Set<String> tags, LongBinaryOperator op)
-      throws InvalidAllocationTagsQueryException {
+  public long getRackCardinalityByOp(String rack, AllocationTags tags,
+      LongBinaryOperator op) throws InvalidAllocationTagsQueryException {
     readLock.lock();
-
     try {
-      if (rack == null || op == null) {
+      if (rack == null || op == null || tags == null) {
         throw new InvalidAllocationTagsQueryException(
-            "Must specify rack/tags/op to query cardinality");
+            "Must specify nodeId/tags/op to query cardinality");
       }
 
       TypeToCountedTags mapping;
-      if (applicationId != null) {
-        mapping = perAppRackMappings.get(applicationId);
-      } else {
+      if (AllocationTagNamespaceType.ALL.equals(
+          tags.getNamespace().getNamespaceType())) {
         mapping = globalRackMapping;
+      } else {
+        // Aggregates cardinality by rack.
+        mapping = aggregateAllocationTags(tags, perAppRackMappings);
       }
 
-      if (mapping == null) {
-        return 0;
-      }
-
-      return mapping.getCardinality(rack, tags, op);
+      return mapping == null ? 0 :
+          mapping.getCardinality(rack, tags.getTags(), op);
     } finally {
       readLock.unlock();
     }
@@ -564,10 +647,22 @@ public class AllocationTagsManager {
   }
 
   /**
-   * @return all application IDs in a set that currently visible by
-   * the allocation tags manager.
+   * @return all applications that is known to the
+   * {@link AllocationTagsManager}, along with their application tags.
+   * The result is a map, where key is an application ID, and value is the
+   * application-tags attached to this application. If there is no
+   * application-tag exists for the application, the value is an empty set.
    */
-  public Set<ApplicationId> getAllApplicationIds() {
-    return ImmutableSet.copyOf(perAppNodeMappings.keySet());
+  private Map<ApplicationId, Set<String>> getApplicationIdToTags() {
+    Map<ApplicationId, Set<String>> result = new HashMap<>();
+    ConcurrentMap<ApplicationId, RMApp> allApps = rmContext.getRMApps();
+    if (allApps != null) {
+      for (Map.Entry<ApplicationId, RMApp> app : allApps.entrySet()) {
+        if (perAppNodeMappings.containsKey(app.getKey())) {
+          result.put(app.getKey(), app.getValue().getApplicationTags());
+        }
+      }
+    }
+    return result;
   }
 }

@@ -17,11 +17,7 @@
 
 package org.apache.hadoop.yarn.service.monitor.probe;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +26,20 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-public class HttpProbe extends Probe {
+/**
+ * A probe that checks whether a successful HTTP response code can be obtained
+ * from a container. A well-formed URL must be provided. The URL is intended
+ * to contain a token ${THIS_HOST} that will be replaced by the IP of the
+ * container. This probe also performs the checks of the {@link DefaultProbe}.
+ * Additional configurable properties include:
+ *
+ *   url - required URL for HTTP connection, e.g. http://${THIS_HOST}:8080
+ *   timeout - connection timeout (default 1000)
+ *   min.success - minimum response code considered successful (default 200)
+ *   max.success - maximum response code considered successful (default 299)
+ *
+ */
+public class HttpProbe extends DefaultProbe {
   protected static final Logger log = LoggerFactory.getLogger(HttpProbe.class);
 
   private static final String HOST_TOKEN = "${THIS_HOST}";
@@ -40,9 +49,9 @@ public class HttpProbe extends Probe {
   private final int min, max;
 
 
-  public HttpProbe(String url, int timeout, int min, int max, Configuration
-      conf) {
-    super("Http probe of " + url + " [" + min + "-" + max + "]", conf);
+  public HttpProbe(String url, int timeout, int min, int max,
+      Map<String, String> props) {
+    super("Http probe of " + url + " [" + min + "-" + max + "]", props);
     this.urlString = url;
     this.timeout = timeout;
     this.min = min;
@@ -59,7 +68,7 @@ public class HttpProbe extends Probe {
         WEB_PROBE_MIN_SUCCESS_DEFAULT);
     int maxSuccess = getPropertyInt(props, WEB_PROBE_MAX_SUCCESS,
         WEB_PROBE_MAX_SUCCESS_DEFAULT);
-    return new HttpProbe(urlString, timeout, minSuccess, maxSuccess, null);
+    return new HttpProbe(urlString, timeout, minSuccess, maxSuccess, props);
   }
 
 
@@ -73,15 +82,11 @@ public class HttpProbe extends Probe {
 
   @Override
   public ProbeStatus ping(ComponentInstance instance) {
-    ProbeStatus status = new ProbeStatus();
-    ContainerStatus containerStatus = instance.getContainerStatus();
-    if (containerStatus == null || ServiceUtils.isEmpty(containerStatus.getIPs())
-        || StringUtils.isEmpty(containerStatus.getHost())) {
-      status.fail(this, new IOException("IP is not available yet"));
+    ProbeStatus status = super.ping(instance);
+    if (!status.isSuccess()) {
       return status;
     }
-
-    String ip = containerStatus.getIPs().get(0);
+    String ip = instance.getContainerStatus().getIPs().get(0);
     HttpURLConnection connection = null;
     try {
       URL url = new URL(urlString.replace(HOST_TOKEN, ip));

@@ -121,6 +121,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       rcsCopy.startRequest = rcs.startRequest;
       rcsCopy.capability = rcs.capability;
       rcsCopy.setRemainingRetryAttempts(rcs.getRemainingRetryAttempts());
+      rcsCopy.setRestartTimes(rcs.getRestartTimes());
       rcsCopy.setWorkDir(rcs.getWorkDir());
       rcsCopy.setLogDir(rcs.getLogDir());
       rcsCopy.setResourceMappings(rcs.getResourceMappings());
@@ -210,6 +211,14 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       int remainingRetryAttempts) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);
     rcs.setRemainingRetryAttempts(remainingRetryAttempts);
+  }
+
+  @Override
+  public void storeContainerRestartTimes(
+      ContainerId containerId, List<Long> restartTimes)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.setRestartTimes(restartTimes);
   }
 
   @Override

@@ -43,8 +43,11 @@ import java.util.concurrent.CyclicBarrier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -102,6 +105,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -128,6 +134,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -164,6 +171,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
@@ -4722,6 +4731,34 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     rm.stop();
   }
 
+
+  @Test
+  public void testQueueMappingWithCurrentUserQueueMappingForaGroup() throws
+      Exception {
+
+    CapacitySchedulerConfiguration config =
+        new CapacitySchedulerConfiguration();
+    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    setupQueueConfiguration(config);
+
+    config.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
+    config.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
+        "a1" +"=" + "agroup" + "");
+    config.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
+        "g:agroup:%user");
+
+    MockRM rm = new MockRM(config);
+    rm.start();
+    CapacityScheduler cs = ((CapacityScheduler) rm.getResourceScheduler());
+    cs.start();
+
+    RMApp app = rm.submitApp(GB, "appname", "a1", null, "default");
+    List<ApplicationAttemptId> appsInA1 = cs.getAppsInQueue("a1");
+    assertEquals(1, appsInA1.size());
+  }
+
   @Test(timeout = 30000)
   public void testcheckAndGetApplicationLifetime() throws Exception {
     long maxLifetime = 10;
@@ -4822,5 +4859,55 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         break;
       }
     }
+  }
+
+  @Test (timeout = 60000)
+  public void testClearRequestsBeforeApplyTheProposal()
+      throws Exception {
+    // init RM & NMs & Nodes
+    final MockRM rm = new MockRM(new CapacitySchedulerConfiguration());
+    rm.start();
+    final MockNM nm = rm.registerNode("h1:1234", 200 * GB);
+
+    // submit app
+    final RMApp app = rm.submitApp(200, "app", "user");
+    MockRM.launchAndRegisterAM(app, rm, nm);
+
+    // spy capacity scheduler to handle CapacityScheduler#apply
+    final Priority priority = Priority.newInstance(1);
+    final CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    final CapacityScheduler spyCs = Mockito.spy(cs);
+    Mockito.doAnswer(new Answer<Object>() {
+      public Object answer(InvocationOnMock invocation) throws Exception {
+        // clear resource request before applying the proposal for container_2
+        spyCs.allocate(app.getCurrentAppAttempt().getAppAttemptId(),
+            Arrays.asList(ResourceRequest.newInstance(priority, "*",
+                Resources.createResource(1 * GB), 0)), null,
+            Collections.<ContainerId>emptyList(), null, null,
+            NULL_UPDATE_REQUESTS);
+        // trigger real apply which can raise NPE before YARN-6629
+        try {
+          FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
+              app.getCurrentAppAttempt().getAppAttemptId());
+          schedulerApp.apply((Resource) invocation.getArguments()[0],
+              (ResourceCommitRequest) invocation.getArguments()[1],
+              (Boolean) invocation.getArguments()[2]);
+          // the proposal of removed request should be rejected
+          Assert.assertEquals(1, schedulerApp.getLiveContainers().size());
+        } catch (Throwable e) {
+          Assert.fail();
+        }
+        return null;
+      }
+    }).when(spyCs).tryCommit(Mockito.any(Resource.class),
+        Mockito.any(ResourceCommitRequest.class), Mockito.anyBoolean());
+
+    // rm allocates container_2 to reproduce the process that can raise NPE
+    spyCs.allocate(app.getCurrentAppAttempt().getAppAttemptId(),
+        Arrays.asList(ResourceRequest.newInstance(priority, "*",
+            Resources.createResource(1 * GB), 1)), null,
+        Collections.<ContainerId>emptyList(), null, null, NULL_UPDATE_REQUESTS);
+    spyCs.handle(new NodeUpdateSchedulerEvent(
+        spyCs.getNode(nm.getNodeId()).getRMNode()));
   }
 }

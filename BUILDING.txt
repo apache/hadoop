@@ -9,8 +9,13 @@ Requirements:
 * ProtocolBuffer 2.5.0
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
+* Cyrus SASL devel (if compiling native code)
+* One of the compilers that support thread_local storage: GCC 4.8.1 or later, Visual Studio,
+  Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
+* Jansson C XML parsing library ( if compiling libwebhdfs )
+* Doxygen ( if compiling libhdfspp and generating the documents )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * python (for releasedocs)
 * bats (for shell code testing)
@@ -65,7 +70,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
-  $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev
+  $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * ProtocolBuffer 2.5.0 (required)
   $ sudo apt-get -y install protobuf-compiler
 
@@ -134,6 +139,18 @@ Maven build goals:
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
   * Use -DskipShade to disable client jar shading to speed up build times (in
     development environments only, not to build release artifacts)
+
+ YARN Application Timeline Service V2 build options:
+
+   YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
+   versions of Apache HBase are 1.2.6 (default) and 2.0.0-beta1.
+
+  * HBase 1.2.6 is used by default to build Hadoop. The official releases are ready to use if you
+    plan on running Timeline Service v2 with HBase 1.2.6.
+
+  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.0.0-beta1. Provide this option if you plan
+    on running Timeline Service v2 with HBase 2.0.
+
 
  Snappy build options:
 
@@ -348,7 +365,7 @@ Requirements:
 * Maven 3.0 or later
 * ProtocolBuffer 2.5.0
 * CMake 3.1 or newer
-* Windows SDK 7.1 or Visual Studio 2010 Professional
+* Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
@@ -359,18 +376,15 @@ Requirements:
 Unix command-line tools are also included with the Windows Git package which
 can be downloaded from http://git-scm.com/downloads
 
-If using Visual Studio, it must be Visual Studio 2010 Professional (not 2012).
+If using Visual Studio, it must be Professional level or higher.
 Do not use Visual Studio Express.  It does not support compiling for 64-bit,
-which is problematic if running a 64-bit system.  The Windows SDK 7.1 is free to
-download here:
-
-http://www.microsoft.com/en-us/download/details.aspx?id=8279
+which is problematic if running a 64-bit system.
 
 The Windows SDK 8.1 is available to download at:
 
 http://msdn.microsoft.com/en-us/windows/bg162891.aspx
 
-Cygwin is neither required nor supported.
+Cygwin is not required.
 
 ----------------------------------------------------------------------------------
 Building:
@@ -378,21 +392,12 @@ Building:
 Keep the source code tree in a short path to avoid running into problems related
 to Windows maximum path length limitation (for example, C:\hdc).
 
-Run builds from a Windows SDK Command Prompt. (Start, All Programs,
-Microsoft Windows SDK v7.1, Windows SDK 7.1 Command Prompt).
+There is one support command file located in dev-support called win-paths-eg.cmd.
+It should be copied somewhere convenient and modified to fit your needs.
 
-JAVA_HOME must be set, and the path must not contain spaces. If the full path
-would contain spaces, then use the Windows short path instead.
-
-You must set the Platform environment variable to either x64 or Win32 depending
-on whether you're running a 64-bit or 32-bit system. Note that this is
-case-sensitive. It must be "Platform", not "PLATFORM" or "platform".
-Environment variables on Windows are usually case-insensitive, but Maven treats
-them as case-sensitive. Failure to set this environment variable correctly will
-cause msbuild to fail while building the native code in hadoop-common.
-
-set Platform=x64 (when building on a 64-bit system)
-set Platform=Win32 (when building on a 32-bit system)
+win-paths-eg.cmd sets up the environment for use. You will need to modify this
+file. It will put all of the required components in the command path,
+configure the bit-ness of the build, and set several optional components.
 
 Several tests require that the user must have the Create Symbolic Links
 privilege.

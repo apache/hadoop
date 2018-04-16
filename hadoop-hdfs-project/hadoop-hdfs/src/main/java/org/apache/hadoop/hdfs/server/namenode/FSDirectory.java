@@ -1293,13 +1293,8 @@ public class FSDirectory implements Closeable {
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
-    boolean added;
-    try {
-      added = parent.addChild(inode, true, existing.getLatestSnapshotId());
-    } catch (QuotaExceededException e) {
-      updateCountNoQuotaCheck(existing, pos, counts.negation());
-      throw e;
-    }
+    final boolean added = parent.addChild(inode, true,
+        existing.getLatestSnapshotId());
     if (!added) {
       updateCountNoQuotaCheck(existing, pos, counts.negation());
       return null;

@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -76,6 +77,7 @@ import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -1753,18 +1755,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return encryptionKey;
   }
 
-  /**
-   * Get the checksum of the whole file or a range of the file. Note that the
-   * range always starts from the beginning of the file. The file can be
-   * in replicated form, or striped mode. It can be used to checksum and compare
-   * two replicated files, or two striped files, but not applicable for two
-   * files of different block layout forms.
-   * @param src The file path
-   * @param length the length of the range, i.e., the range is [0, length]
-   * @return The checksum
-   * @see DistributedFileSystem#getFileChecksum(Path)
-   */
-  public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
+  private FileChecksum getFileChecksumInternal(
+      String src, long length, ChecksumCombineMode combineMode)
       throws IOException {
     checkOpen();
     Preconditions.checkArgument(length >= 0);
@@ -1779,13 +1771,49 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     maker = ecPolicy != null ?
         new FileChecksumHelper.StripedFileNonStripedChecksumComputer(src,
-            length, blockLocations, namenode, this, ecPolicy) :
+            length, blockLocations, namenode, this, ecPolicy, combineMode) :
         new FileChecksumHelper.ReplicatedFileChecksumComputer(src, length,
-            blockLocations, namenode, this);
+            blockLocations, namenode, this, combineMode);
 
     maker.compute();
 
     return maker.getFileChecksum();
+  }
+
+  /**
+   * Get the checksum of the whole file or a range of the file. Note that the
+   * range always starts from the beginning of the file. The file can be
+   * in replicated form, or striped mode. Depending on the
+   * dfs.checksum.combine.mode, checksums may or may not be comparable between
+   * different block layout forms.
+   *
+   * @param src The file path
+   * @param length the length of the range, i.e., the range is [0, length]
+   * @return The checksum
+   * @see DistributedFileSystem#getFileChecksum(Path)
+   */
+  public FileChecksum getFileChecksumWithCombineMode(String src, long length)
+      throws IOException {
+    ChecksumCombineMode combineMode = getConf().getChecksumCombineMode();
+    return getFileChecksumInternal(src, length, combineMode);
+  }
+
+  /**
+   * Get the checksum of the whole file or a range of the file. Note that the
+   * range always starts from the beginning of the file. The file can be
+   * in replicated form, or striped mode. It can be used to checksum and compare
+   * two replicated files, or two striped files, but not applicable for two
+   * files of different block layout forms.
+   *
+   * @param src The file path
+   * @param length the length of the range, i.e., the range is [0, length]
+   * @return The checksum
+   * @see DistributedFileSystem#getFileChecksum(Path)
+   */
+  public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
+      throws IOException {
+    return (MD5MD5CRC32FileChecksum) getFileChecksumInternal(
+        src, length, ChecksumCombineMode.MD5MD5CRC);
   }
 
   protected LocatedBlocks getBlockLocations(String src,
@@ -2910,7 +2938,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param num Number of threads for hedged reads thread pool.
    * If zero, skip hedged reads thread pool creation.
    */
-  private synchronized void initThreadsNumForHedgedReads(int num) {
+  private static synchronized void initThreadsNumForHedgedReads(int num) {
     if (num <= 0 || HEDGED_READ_THREAD_POOL != null) return;
     HEDGED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),

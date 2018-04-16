@@ -23,7 +23,7 @@
 The S3A filesystem client supports Amazon S3's Server Side Encryption
 for at-rest data encryption.
 You should to read up on the [AWS documentation](https://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html)
-for S3 Server Side Encryption for up to date information on the encryption mechansims.
+for S3 Server Side Encryption for up to date information on the encryption mechanisms.
 
 
 
@@ -135,7 +135,7 @@ it blank to use the default configured for that region.
 the right to use it, uses it to encrypt the object-specific key.
 
 
-When downloading SSE-KMS encrypte data, the sequence is as follows
+When downloading SSE-KMS encrypted data, the sequence is as follows
 
 1. The S3A client issues an HTTP GET request to read the data.
 1. S3 sees that the data was encrypted with SSE-KMS, and looks up the specific key in the KMS service
@@ -413,8 +413,8 @@ a KMS key hosted in the AWS-KMS service in the same region.
 
 ```
 
-Again the approprate bucket policy can be used to guarantee that all callers
-will use SSE-KMS; they can even mandata the name of the key used to encrypt
+Again the appropriate bucket policy can be used to guarantee that all callers
+will use SSE-KMS; they can even mandate the name of the key used to encrypt
 the data, so guaranteeing that access to thee data can be read by everyone
 granted access to that key, and nobody without access to it.
 

@@ -464,7 +464,7 @@ public final class ReencryptionUpdater implements Runnable {
     final String zonePath;
     dir.writeLock();
     try {
-      handler.checkZoneReady(task.zoneId);
+      handler.getTraverser().checkINodeReady(task.zoneId);
       final INode zoneNode = dir.getInode(task.zoneId);
       if (zoneNode == null) {
         // ez removed.

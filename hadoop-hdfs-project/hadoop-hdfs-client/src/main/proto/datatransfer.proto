@@ -148,8 +148,9 @@ message OpCopyBlockProto {
   required BaseHeaderProto header = 1;
 }
 
-message OpBlockChecksumProto { 
+message OpBlockChecksumProto {
   required BaseHeaderProto header = 1;
+  optional BlockChecksumOptionsProto blockChecksumOptions = 2;
 }
 
 message OpBlockGroupChecksumProto {
@@ -160,6 +161,7 @@ message OpBlockGroupChecksumProto {
   required ErasureCodingPolicyProto ecPolicy = 4;
   repeated uint32 blockIndices = 5;
   required uint64 requestedNumBytes = 6;
+  optional BlockChecksumOptionsProto blockChecksumOptions = 7;
 }
 
 /**
@@ -313,8 +315,9 @@ message DNTransferAckProto {
 message OpBlockChecksumResponseProto {
   required uint32 bytesPerCrc = 1;
   required uint64 crcPerBlock = 2;
-  required bytes md5 = 3;
+  required bytes blockChecksum = 3;
   optional ChecksumTypeProto crcType = 4;
+  optional BlockChecksumOptionsProto blockChecksumOptions = 5;
 }
 
 message OpCustomProto {

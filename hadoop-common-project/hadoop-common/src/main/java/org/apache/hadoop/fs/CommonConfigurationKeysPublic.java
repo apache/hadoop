@@ -678,6 +678,27 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_KEY_PROVIDER_PATH =
       "hadoop.security.key.provider.path";
 
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY =
+      "hadoop.security.key.default.bitlength";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY. */
+  public static final int HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT = 128;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY =
+      "hadoop.security.key.default.cipher";
+  /** Defalt value for HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY. */
+  public static final String HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT =
+      "AES/CTR/NoPadding";
+
   //  <!-- KMSClientProvider configurations -->
   /**
    * @see
@@ -748,6 +769,16 @@ public class CommonConfigurationKeysPublic {
       "hadoop.security.kms.client.failover.sleep.base.millis";
   /**  Default value is 100 ms. */
   public static final int KMS_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT  = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_COPY_LEGACY_TOKEN_KEY =
+      "hadoop.security.kms.client.copy.legacy.token";
+  /**  Default value is true. */
+  public static final boolean KMS_CLIENT_COPY_LEGACY_TOKEN_DEFAULT = true;
 
   /**
    * @see

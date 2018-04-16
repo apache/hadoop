@@ -112,6 +112,9 @@ For some LDAP servers, such as Active Directory, the user object returned in the
 Therefore, it is possible to infer the user's groups from the first query without sending the second one, and it may reduce group name resolution latency incurred by the second query. If it fails to get group names, it will fall back to the typical two-query scenario and send the second query to get group names.
 To enable this feature, set `hadoop.security.group.mapping.ldap.search.attr.memberof` to `memberOf`, and Hadoop will resolve group names using this attribute in the user object.
 
+If the LDAP server's certificate is not signed by a well known certificate authority, specify the path to the truststore in `hadoop.security.group.mapping.ldap.ssl.truststore`.
+Similar to keystore, specify the truststore password file in `hadoop.security.group.mapping.ldap.ssl.truststore.password.file`.
+
 Composite Groups Mapping
 --------
 `CompositeGroupsMapping` works by enumerating a list of service providers in `hadoop.security.group.mapping.providers`.

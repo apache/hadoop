@@ -269,7 +269,7 @@ public class JobHistoryEventHandler extends AbstractService
       LOG.info("Emitting job history data to the timeline service is enabled");
       if (YarnConfiguration.timelineServiceEnabled(conf)) {
         boolean timelineServiceV2Enabled =
-            ((int) YarnConfiguration.getTimelineServiceVersion(conf) == 2);
+            YarnConfiguration.timelineServiceV2Enabled(conf);
         if(timelineServiceV2Enabled) {
           timelineV2Client =
               ((MRAppMaster.RunningAppContext)context).getTimelineV2Client();

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import  org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -197,7 +198,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         store(rowKey, te, flowVersion, Tables.ENTITY_TABLE);
       }
 
-      if (!isApplication && !userId.equals(subApplicationUser)) {
+      if (!isApplication && SubApplicationEntity.isSubApplicationEntity(te)) {
         SubApplicationRowKey subApplicationRowKey =
             new SubApplicationRowKey(subApplicationUser, clusterId,
                 te.getType(), te.getIdPrefix(), te.getId(), userId);

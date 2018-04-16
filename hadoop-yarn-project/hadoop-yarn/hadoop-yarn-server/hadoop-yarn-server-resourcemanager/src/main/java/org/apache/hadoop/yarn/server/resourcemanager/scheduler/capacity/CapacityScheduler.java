@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
@@ -325,6 +326,7 @@ public class CapacityScheduler extends
       case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
       case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
       case YarnConfiguration.ZK_CONFIGURATION_STORE:
+      case YarnConfiguration.FS_CONFIGURATION_STORE:
         this.csConfProvider = new MutableCSConfigurationProvider(rmContext);
         break;
       default:
@@ -641,45 +643,80 @@ public class CapacityScheduler extends
   public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
     try {
       readLock.lock();
-      return UserGroupMappingPlacementRule.get(this);
+      UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
+      ugRule.initialize(this);
+      return ugRule;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public PlacementRule getAppNameMappingPlacementRule() throws IOException {
+    try {
+      readLock.lock();
+      AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule();
+      anRule.initialize(this);
+      return anRule;
     } finally {
       readLock.unlock();
     }
   }
 
   @VisibleForTesting
-  void updatePlacementRules() throws IOException {
+  public void updatePlacementRules() throws IOException {
     // Initialize placement rules
     Collection<String> placementRuleStrs = conf.getStringCollection(
         YarnConfiguration.QUEUE_PLACEMENT_RULES);
     List<PlacementRule> placementRules = new ArrayList<>();
-    if (placementRuleStrs.isEmpty()) {
-      PlacementRule ugRule = getUserGroupMappingPlacementRule();
-      if (null != ugRule) {
-        placementRules.add(ugRule);
+    Set<String> distingushRuleSet = new HashSet<>();
+    // fail the case if we get duplicate placementRule add in
+    for (String pls : placementRuleStrs) {
+      if (!distingushRuleSet.add(pls)) {
+        throw new IOException("Invalid PlacementRule inputs which "
+            + "contains duplicate rule strings");
       }
-    } else {
-      for (String placementRuleStr : placementRuleStrs) {
-        switch (placementRuleStr) {
-        case YarnConfiguration.USER_GROUP_PLACEMENT_RULE:
-          PlacementRule ugRule = getUserGroupMappingPlacementRule();
-          if (null != ugRule) {
-            placementRules.add(ugRule);
-          }
-          break;
-        default:
-          try {
-            PlacementRule rule = PlacementFactory.getPlacementRule(
-                placementRuleStr, conf);
-            if (null != rule) {
+    }
+
+    // add UserGroupMappingPlacementRule if absent
+    distingushRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+
+    placementRuleStrs = new ArrayList<>(distingushRuleSet);
+
+    for (String placementRuleStr : placementRuleStrs) {
+      switch (placementRuleStr) {
+      case YarnConfiguration.USER_GROUP_PLACEMENT_RULE:
+        PlacementRule ugRule = getUserGroupMappingPlacementRule();
+        if (null != ugRule) {
+          placementRules.add(ugRule);
+        }
+        break;
+      case YarnConfiguration.APP_NAME_PLACEMENT_RULE:
+        PlacementRule anRule = getAppNameMappingPlacementRule();
+        if (null != anRule) {
+          placementRules.add(anRule);
+        }
+        break;
+      default:
+        boolean isMappingNotEmpty;
+        try {
+          PlacementRule rule = PlacementFactory.getPlacementRule(
+              placementRuleStr, conf);
+          if (null != rule) {
+            try {
+              isMappingNotEmpty = rule.initialize(this);
+            } catch (IOException ie) {
+              throw new IOException(ie);
+            }
+            if (isMappingNotEmpty) {
               placementRules.add(rule);
             }
-          } catch (ClassNotFoundException cnfe) {
-            throw new IOException(cnfe);
           }
+        } catch (ClassNotFoundException cnfe) {
+          throw new IOException(cnfe);
         }
       }
     }
+
     rmContext.getQueuePlacementManager().updateRules(placementRules);
   }
 
@@ -1167,6 +1204,8 @@ public class CapacityScheduler extends
       updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
     }
 
+    LOG.info("Allocation for application " + applicationAttemptId + " : " +
+        allocation + " with cluster resource : " + getClusterResource());
     return allocation;
   }
 
@@ -2789,8 +2828,8 @@ public class CapacityScheduler extends
       // proposal might be outdated if AM failover just finished
       // and proposal queue was not be consumed in time
       if (app != null && attemptId.equals(app.getApplicationAttemptId())) {
-        if (app.accept(cluster, request, updatePending)) {
-          app.apply(cluster, request, updatePending);
+        if (app.accept(cluster, request, updatePending)
+            && app.apply(cluster, request, updatePending)) {
           LOG.info("Allocation proposal accepted");
           isSuccess = true;
         } else{

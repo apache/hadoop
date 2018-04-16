@@ -24,6 +24,8 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
@@ -43,6 +45,8 @@ import java.util.Set;
  *
  * This class is immutable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class DistCpOptions {
   private static final Logger LOG = LoggerFactory.getLogger(Builder.class);
   public static final int MAX_NUM_LISTSTATUS_THREADS = 40;
@@ -67,6 +71,9 @@ public final class DistCpOptions {
 
   /** Whether source and target folder contents be sync'ed up. */
   private final boolean syncFolder;
+
+  /** Path to save source/dest sequence files to, if non-null. */
+  private final Path trackPath;
 
   /** Whether files only present in target should be deleted. */
   private boolean deleteMissing;
@@ -208,6 +215,7 @@ public final class DistCpOptions {
 
     this.copyBufferSize = builder.copyBufferSize;
     this.verboseLog = builder.verboseLog;
+    this.trackPath = builder.trackPath;
   }
 
   public Path getSourceFileListing() {
@@ -331,6 +339,10 @@ public final class DistCpOptions {
     return verboseLog;
   }
 
+  public Path getTrackPath() {
+    return trackPath;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -371,6 +383,11 @@ public final class DistCpOptions {
         String.valueOf(copyBufferSize));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.VERBOSE_LOG,
         String.valueOf(verboseLog));
+    if (trackPath != null) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.TRACK_MISSING,
+          String.valueOf(trackPath));
+    }
+
   }
 
   /**
@@ -441,6 +458,7 @@ public final class DistCpOptions {
     private String filtersFile;
 
     private Path logPath;
+    private Path trackPath;
     private String copyStrategy = DistCpConstants.UNIFORMSIZE;
 
     private int numListstatusThreads = 0;  // 0 indicates that flag is not set.
@@ -638,6 +656,11 @@ public final class DistCpOptions {
 
     public Builder withLogPath(Path newLogPath) {
       this.logPath = newLogPath;
+      return this;
+    }
+
+    public Builder withTrackMissing(Path path) {
+      this.trackPath = path;
       return this;
     }
 

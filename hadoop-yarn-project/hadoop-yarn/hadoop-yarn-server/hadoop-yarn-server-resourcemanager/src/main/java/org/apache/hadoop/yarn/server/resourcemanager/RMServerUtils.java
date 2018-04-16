@@ -236,13 +236,14 @@ public class RMServerUtils {
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
-      RMContext rmContext)
-      throws InvalidResourceRequestException {
+      RMContext rmContext) throws InvalidResourceRequestException {
     // Get queue from scheduler
     QueueInfo queueInfo = null;
     try {
       queueInfo = scheduler.getQueueInfo(queueName, false, false);
     } catch (IOException e) {
+      //Queue may not exist since it could be auto-created in case of
+      // dynamic queues
     }
 
     for (ResourceRequest resReq : ask) {

@@ -317,6 +317,27 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.ssl.truststore</name>
+  <value></value>
+  <description>
+    File path to the SSL truststore that contains the root certificate used to
+    sign the LDAP server's certificate. Specify this if the LDAP server's
+    certificate is not signed by a well known certificate authority.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.truststore.password.file</name>
+  <value></value>
+  <description>
+    The path to a file containing the password of the LDAP SSL truststore.
+
+    IMPORTANT: This file should be readable only by the Unix user running
+    the daemons.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.bind.user</name>
   <value></value>
   <description>
@@ -2495,6 +2516,25 @@
 </property>
 
 <property>
+  <name>hadoop.security.key.default.bitlength</name>
+  <value>128</value>
+  <description>
+    The length (bits) of keys we want the KeyProvider to produce. Key length
+    defines the upper-bound on an algorithm's security, ideally, it would
+    coincide with the lower-bound on an algorithm's security.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.key.default.cipher</name>
+  <value>AES/CTR/NoPadding</value>
+  <description>
+    This indicates the algorithm that be used by KeyProvider for generating
+    key, and will be converted to CipherSuite when creating encryption zone.
+  </description>
+</property>
+
+<property>
   <name>fs.har.impl.disable.cache</name>
   <value>true</value>
   <description>Don't cache 'har' filesystem instances.</description>
@@ -2559,6 +2599,26 @@
     first failover will retry immediately. The 2nd failover attempt
     will delay at least hadoop.security.client.failover.sleep.base.millis
     milliseconds. And so on.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.copy.legacy.token</name>
+  <value>true</value>
+  <description>
+    Expert only. Whether the KMS client provider should copy a token to legacy
+    kind. This is for KMS_DELEGATION_TOKEN to be backwards compatible. With the
+    default value set to true, the client will locally duplicate the
+    KMS_DELEGATION_TOKEN token and create a kms-dt token, with the service field
+    conforming to kms-dt. All other parts of the token remain the same.
+    Then the new clients will use KMS_DELEGATION_TOKEN and old clients will
+    use kms-dt to authenticate. Default value is true.
+    You should only change this to false if you know all the KMS servers
+    , clients (including both job submitters and job runners) and the
+    token renewers (usually Yarn RM) are on a version that supports
+    KMS_DELEGATION_TOKEN.
+    Turning this off prematurely may result in old clients failing to
+    authenticate with new servers.
   </description>
 </property>
 

@@ -53,6 +53,8 @@ class FSDirAclOp {
           existingAcl, aclSpec);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -77,6 +79,8 @@ class FSDirAclOp {
         existingAcl, aclSpec);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -100,6 +104,8 @@ class FSDirAclOp {
         existingAcl);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -117,6 +123,8 @@ class FSDirAclOp {
       src = iip.getPath();
       fsd.checkOwner(pc, iip);
       unprotectedRemoveAcl(fsd, iip);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -136,6 +144,8 @@ class FSDirAclOp {
       fsd.checkOwner(pc, iip);
       List<AclEntry> newAcl = unprotectedSetAcl(fsd, iip, aclSpec, false);
       fsd.getEditLog().logSetAcl(iip.getPath(), newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -162,6 +172,8 @@ class FSDirAclOp {
           .stickyBit(fsPermission.getStickyBit())
           .setPermission(fsPermission)
           .addEntries(acl).build();
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.readUnlock();
     }

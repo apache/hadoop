@@ -26,6 +26,10 @@ service ClientAMProtocolService {
   rpc flexComponents(FlexComponentsRequestProto) returns (FlexComponentsResponseProto);
   rpc getStatus(GetStatusRequestProto) returns (GetStatusResponseProto);
   rpc stop(StopRequestProto) returns (StopResponseProto);
+  rpc upgradeService(UpgradeServiceRequestProto)
+    returns (UpgradeServiceResponseProto);
+  rpc restartService(RestartServiceRequestProto)
+    returns (RestartServiceResponseProto);
 }
 
 message FlexComponentsRequestProto {
@@ -37,7 +41,7 @@ message ComponentCountProto {
   optional int64 numberOfContainers = 2;
 }
 
-message FlexComponentsResponseProto{
+message FlexComponentsResponseProto {
 }
 
 message GetStatusRequestProto {
@@ -53,4 +57,17 @@ message StopRequestProto {
 
 message StopResponseProto {
 
+}
+
+message UpgradeServiceRequestProto {
+  optional string version = 1;
+}
+
+message UpgradeServiceResponseProto {
+}
+
+message RestartServiceRequestProto {
+}
+
+message RestartServiceResponseProto {
 }

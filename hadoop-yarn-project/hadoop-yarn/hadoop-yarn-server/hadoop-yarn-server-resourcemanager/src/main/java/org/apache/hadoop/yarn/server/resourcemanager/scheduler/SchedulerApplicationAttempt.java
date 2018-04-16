@@ -418,7 +418,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   protected void addReReservation(
       SchedulerRequestKey schedulerKey) {
-    reReservations.add(schedulerKey);
+    try {
+      reReservations.add(schedulerKey);
+    } catch (IllegalArgumentException e) {
+      // This happens when count = MAX_INT, ignore the exception
+    }
   }
 
   public int getReReservations(SchedulerRequestKey schedulerKey) {
@@ -1006,8 +1010,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   public int addMissedNonPartitionedRequestSchedulingOpportunity(
       SchedulerRequestKey schedulerKey) {
-    return missedNonPartitionedReqSchedulingOpportunity.add(
-        schedulerKey, 1) + 1;
+    try {
+      return missedNonPartitionedReqSchedulingOpportunity.add(
+          schedulerKey, 1) + 1;
+    } catch (IllegalArgumentException e) {
+      // This happens when count = MAX_INT, ignore the exception
+      return Integer.MAX_VALUE;
+    }
   }
 
   public void

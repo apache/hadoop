@@ -50,7 +50,7 @@
 
     <kafka.version>0.8.2.1</kafka.version>
 
-    <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
+    <hadoop.assemblies.version>3.2.0-SNAPSHOT</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
@@ -69,7 +69,7 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.7.8</jackson2.version>
+    <jackson2.version>2.9.4</jackson2.version>
 
     <!-- SLF4J version -->
     <slf4j.version>1.7.25</slf4j.version>
@@ -115,7 +115,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>2.20.1</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>2.21.0</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -139,7 +139,7 @@
     <frontend-maven-plugin.version>1.5</frontend-maven-plugin.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
-    <declared.hadoop.version>${project.version}</declared.hadoop.version>
+    <declared.hadoop.version>${hadoop.version}</declared.hadoop.version>
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.16</snakeyaml.version>
@@ -168,398 +168,403 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-assemblies</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-annotations</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-modules</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>pom</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-api</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-check-invariants</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>pom</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-check-test-invariants</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>pom</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-integration-tests</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-runtime</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-minicluster</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-auth</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-auth</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-nfs</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs-client</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-rbf</artifactId>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-app</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-app</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-api</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-client</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>pom</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-web-proxy</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
          <artifactId>hadoop-yarn-server-tests</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-registry</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timelineservice</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-server-timelineservice</artifactId>
-          <version>${project.version}</version>
+          <version>${hadoop.version}</version>
           <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timelineservice-hbase-common</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timeline-pluginstorage</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-timeline-pluginstorage</artifactId>
         <type>test-jar</type>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-router</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-services-core</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-hs</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-examples</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-gridmix</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-streaming</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-archives</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-archive-logs</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-distcp</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-distcp</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-datajoin</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-rumen</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-extras</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-minicluster</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-minikdc</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-openstack</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure-datalake</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aws</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aliyun</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
 
@@ -1106,12 +1111,12 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-sls</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-cloud-storage</artifactId>
-        <version>${project.version}</version>
+        <version>${hadoop.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
@@ -1510,7 +1515,7 @@
         <plugin>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-maven-plugins</artifactId>
-          <version>${project.version}</version>
+          <version>${hadoop.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -1539,14 +1544,14 @@
         <version>${maven-remote-resources-plugin.version}</version>
         <configuration>
           <resourceBundles>
-            <resourceBundle>org.apache.hadoop:hadoop-build-tools:${project.version}</resourceBundle>
+            <resourceBundle>org.apache.hadoop:hadoop-build-tools:${hadoop.version}</resourceBundle>
           </resourceBundles>
         </configuration>
         <dependencies>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-build-tools</artifactId>
-            <version>${project.version}</version>
+            <version>${hadoop.version}</version>
           </dependency>
         </dependencies>
         <executions>
@@ -1857,7 +1862,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${project.version}</version>
+            <version>${hadoop.version}</version>
           </dependency>
         </dependencies>
       </dependencyManagement>
@@ -1884,7 +1889,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${project.version}</version>
+            <version>${hadoop.version}</version>
           </dependency>
         </dependencies>
       </dependencyManagement>

@@ -91,4 +91,16 @@ public interface RestApiErrorMessages {
 
   String ERROR_QUICKLINKS_FOR_COMP_INVALID = "Quicklinks specified at"
       + " component level, needs corresponding values set at service level";
+  String ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME = "Invalid target tag %s "
+      + "specified in placement policy of component %s. For now, target tags "
+      + "support self reference only. Specifying anything other than its "
+      + "component name is not supported. Set target tag of component %s to "
+      + "%s.";
+  String ERROR_PLACEMENT_POLICY_TAG_NAME_INVALID = "Invalid target tag %s "
+      + "specified in placement policy of component %s. Target tags should be "
+      + "a valid component name in the service.";
+  String ERROR_PLACEMENT_POLICY_EXPRESSION_ELEMENT_NAME_INVALID = "Invalid "
+      + "expression element name %s specified in placement policy of component "
+      + "%s. Expression element names should be a valid constraint name or an "
+      + "expression name defined for this component only.";
 }

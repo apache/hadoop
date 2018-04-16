@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRo
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
 import org.junit.Test;
 
 
@@ -273,4 +274,35 @@ public class TestRowKeys {
     assertEquals(USER, rowKey.getUserId());
   }
 
+  @Test
+  public void testDomainRowKey() {
+    String clusterId = "cluster1@dc1";
+    String domainId = "helloworld";
+    byte[] byteRowKey =
+        new DomainRowKey(clusterId, domainId).getRowKey();
+    DomainRowKey rowKey = DomainRowKey.parseRowKey(byteRowKey);
+    assertEquals(clusterId, rowKey.getClusterId());
+    assertEquals(domainId, rowKey.getDomainId());
+
+    String rowKeyStr = rowKey.getRowKeyAsString();
+    DomainRowKey drk = DomainRowKey.parseRowKeyFromString(rowKeyStr);
+    assertEquals(drk.getClusterId(), rowKey.getClusterId());
+    assertEquals(drk.getDomainId(), rowKey.getDomainId());
+  }
+
+  @Test
+  public void testDomainRowKeySpecialChars() {
+    String clusterId = "cluster1!temp!dc1";
+    String domainId = "hello=world";
+    byte[] byteRowKey =
+        new DomainRowKey(clusterId, domainId).getRowKey();
+    DomainRowKey rowKey = DomainRowKey.parseRowKey(byteRowKey);
+    assertEquals(clusterId, rowKey.getClusterId());
+    assertEquals(domainId, rowKey.getDomainId());
+
+    String rowKeyStr = rowKey.getRowKeyAsString();
+    DomainRowKey drk = DomainRowKey.parseRowKeyFromString(rowKeyStr);
+    assertEquals(drk.getClusterId(), rowKey.getClusterId());
+    assertEquals(drk.getDomainId(), rowKey.getDomainId());
+  }
 }

@@ -146,13 +146,25 @@ class BlockPoolManager {
   
   void refreshNamenodes(Configuration conf)
       throws IOException {
-    LOG.info("Refresh request received for nameservices: " + conf.get
-            (DFSConfigKeys.DFS_NAMESERVICES));
+    LOG.info("Refresh request received for nameservices: " +
+        conf.get(DFSConfigKeys.DFS_NAMESERVICES));
 
-    Map<String, Map<String, InetSocketAddress>> newAddressMap = DFSUtil
-            .getNNServiceRpcAddressesForCluster(conf);
-    Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap = DFSUtil
-            .getNNLifelineRpcAddressesForCluster(conf);
+    Map<String, Map<String, InetSocketAddress>> newAddressMap = null;
+    Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap = null;
+
+    try {
+      newAddressMap =
+          DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+      newLifelineAddressMap =
+          DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
+    } catch (IOException ioe) {
+      LOG.warn("Unable to get NameNode addresses.");
+    }
+
+    if (newAddressMap == null || newAddressMap.isEmpty()) {
+      throw new IOException("No services to connect, missing NameNode " +
+          "address.");
+    }
 
     synchronized (refreshNamenodesLock) {
       doRefreshNamenodes(newAddressMap, newLifelineAddressMap);

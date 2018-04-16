@@ -371,11 +371,27 @@ public class TestNMLeveldbStateStoreService {
     assertEquals("/test/workdir", rcs.getWorkDir());
     assertEquals("/test/logdir", rcs.getLogDir());
 
+    validateRetryAttempts(containerId);
     // remove the container and verify not recovered
     stateStore.removeContainer(containerId);
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertTrue(recoveredContainers.isEmpty());
+  }
+
+  private void validateRetryAttempts(ContainerId containerId)
+      throws IOException {
+    // store finishTimeForRetryAttempts
+    List<Long> finishTimeForRetryAttempts = Arrays.asList(1462700529039L,
+        1462700529050L, 1462700529120L);
+    stateStore.storeContainerRestartTimes(containerId,
+        finishTimeForRetryAttempts);
+    restartStateStore();
+    RecoveredContainerState rcs = stateStore.loadContainersState().get(0);
+    List<Long> recoveredRestartTimes = rcs.getRestartTimes();
+    assertEquals(1462700529039L, (long)recoveredRestartTimes.get(0));
+    assertEquals(1462700529050L, (long)recoveredRestartTimes.get(1));
+    assertEquals(1462700529120L, (long)recoveredRestartTimes.get(2));
   }
 
   private StartContainerRequest createContainerRequest(
@@ -1198,6 +1214,22 @@ public class TestNMLeveldbStateStoreService {
       stateStore.setDB(keepDB);
     }
     Assert.fail("Expected exception not thrown");
+  }
+
+  @Test
+  public void testEmptyRestartTimes() throws IOException {
+    List<Long> restartTimes = new ArrayList<>();
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
+        4);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
+    storeMockContainer(containerId);
+    stateStore.storeContainerRestartTimes(containerId,
+        restartTimes);
+    restartStateStore();
+    RecoveredContainerState rcs = stateStore.loadContainersState().get(0);
+    List<Long> recoveredRestartTimes = rcs.getRestartTimes();
+    assertTrue(recoveredRestartTimes.isEmpty());
   }
 
   private StartContainerRequest storeMockContainer(ContainerId containerId)

@@ -1885,7 +1885,10 @@ public class UserGroupInformation {
     @Override
     public void logout() throws LoginException {
       synchronized(getSubjectLock()) {
-        super.logout();
+        if (this.getSubject() != null
+            && !this.getSubject().getPrivateCredentials().isEmpty()) {
+          super.logout();
+        }
       }
     }
   }

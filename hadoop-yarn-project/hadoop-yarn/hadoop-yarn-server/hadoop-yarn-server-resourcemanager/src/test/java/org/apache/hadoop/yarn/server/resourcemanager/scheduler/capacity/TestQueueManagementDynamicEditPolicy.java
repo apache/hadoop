@@ -24,7 +24,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Map;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
+    .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
 import static org.junit.Assert.assertEquals;
@@ -54,21 +57,27 @@ public class TestQueueManagementDynamicEditPolicy extends
               parentQueue)
               .getAutoCreatedQueueManagementPolicy();
       assertEquals(0f, autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), EPSILON);
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
 
       //submit app1 as USER1
       ApplicationId user1AppId = submitApp(mockRM, parentQueue, USER1, USER1, 1,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER1, 0.1f);
+      Map<String, Float> expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(1);
+      validateInitialQueueEntitlement(parentQueue, USER1,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //submit another app2 as USER2
       ApplicationId user2AppId = submitApp(mockRM, parentQueue, USER2, USER2, 2,
           1);
-      validateInitialQueueEntitlement(parentQueue, USER2, 0.2f);
+      expectedAbsChildQueueCapacity =
+          populateExpectedAbsCapacityByLabelForParentQueue(2);
+      validateInitialQueueEntitlement(parentQueue, USER2,
+          expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //validate total activated abs capacity
       assertEquals(0.2f, autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), EPSILON);
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
 
       //submit user_3 app. This cant be scheduled since there is no capacity
       submitApp(mockRM, parentQueue, USER3, USER3, 3, 1);
@@ -77,7 +86,7 @@ public class TestQueueManagementDynamicEditPolicy extends
           1.0f, 1.0f);
 
       assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), 0.2f, EPSILON);
 
       //deactivate USER2 queue
       cs.killAllAppsInQueue(USER2);
@@ -88,8 +97,8 @@ public class TestQueueManagementDynamicEditPolicy extends
       mockRM.waitForState(user1AppId, RMAppState.KILLED);
 
       policy.editSchedule();
-
-      waitForPolicyState(0.1f, autoCreatedQueueManagementPolicy, 1000);
+      waitForPolicyState(0.1f, autoCreatedQueueManagementPolicy, NO_LABEL,
+          1000);
 
       validateCapacities((AutoCreatedLeafQueue) user3LeafQueue, 0.5f, 0.1f,
           1.0f, 1.0f);
@@ -105,13 +114,12 @@ public class TestQueueManagementDynamicEditPolicy extends
   }
 
   private void waitForPolicyState(float expectedVal,
-      GuaranteedOrZeroCapacityOverTimePolicy queueManagementPolicy, int
-      timesec) throws
-      InterruptedException {
+      GuaranteedOrZeroCapacityOverTimePolicy queueManagementPolicy, String
+      nodeLabel, int timesec) throws InterruptedException {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timesec * 1000) {
       if (Float.compare(expectedVal, queueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity()) != 0) {
+          .getAbsoluteActivatedChildQueueCapacity(nodeLabel)) > EPSILON) {
         Thread.sleep(100);
       } else {
         break;

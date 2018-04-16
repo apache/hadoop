@@ -98,6 +98,7 @@ public abstract class NMStateStoreService extends AbstractService {
     StartContainerRequest startRequest;
     Resource capability;
     private int remainingRetryAttempts = ContainerRetryContext.RETRY_INVALID;
+    private List<Long> restartTimes;
     private String workDir;
     private String logDir;
     int version;
@@ -150,6 +151,15 @@ public abstract class NMStateStoreService extends AbstractService {
       this.remainingRetryAttempts = retryAttempts;
     }
 
+    public List<Long> getRestartTimes() {
+      return restartTimes;
+    }
+
+    public void setRestartTimes(
+        List<Long> restartTimes) {
+      this.restartTimes = restartTimes;
+    }
+
     public String getWorkDir() {
       return workDir;
     }
@@ -177,6 +187,7 @@ public abstract class NMStateStoreService extends AbstractService {
           .append(", Capability: ").append(getCapability())
           .append(", StartRequest: ").append(getStartRequest())
           .append(", RemainingRetryAttempts: ").append(remainingRetryAttempts)
+          .append(", RestartTimes: ").append(restartTimes)
           .append(", WorkDir: ").append(workDir)
           .append(", LogDir: ").append(logDir)
           .toString();
@@ -485,6 +496,16 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void storeContainerRemainingRetryAttempts(
       ContainerId containerId, int remainingRetryAttempts) throws IOException;
+
+  /**
+   * Record restart times for a container.
+   * @param containerId
+   * @param restartTimes
+   * @throws IOException
+   */
+  public abstract void storeContainerRestartTimes(
+      ContainerId containerId, List<Long> restartTimes)
+      throws IOException;
 
   /**
    * Record working directory for a container.

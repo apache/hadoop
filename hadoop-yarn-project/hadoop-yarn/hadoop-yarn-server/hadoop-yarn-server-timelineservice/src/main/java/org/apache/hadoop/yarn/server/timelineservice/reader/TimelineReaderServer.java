@@ -235,7 +235,7 @@ public class TimelineReaderServer extends CompositeService {
   public static void main(String[] args) {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, 2.0f);
     TimelineReaderServer server = startTimelineReaderServer(args, conf);
     server.join();
   }

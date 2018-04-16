@@ -381,6 +381,20 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       if (containerReports != null) {
         LOG.info("Registering with RM using containers :" + containerReports);
       }
+      if (logAggregationEnabled) {
+        // pull log aggregation status for application running in this NM
+        List<LogAggregationReport> logAggregationReports =
+            context.getNMLogAggregationStatusTracker()
+                .pullCachedLogAggregationReports();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("The cache log aggregation status size:"
+              + logAggregationReports.size());
+        }
+        if (logAggregationReports != null
+            && !logAggregationReports.isEmpty()) {
+          request.setLogAggregationReportsForApps(logAggregationReports);
+        }
+      }
       regNMResponse =
           resourceTracker.registerNodeManager(request);
       // Make sure rmIdentifier is set before we release the lock

@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -247,10 +249,11 @@ public class TestAppManager{
   private TestRMAppManager appMonitor;
   private ApplicationSubmissionContext asContext;
   private ApplicationId appId;
+  private QueueInfo mockDefaultQueueInfo;
 
   @SuppressWarnings("deprecation")
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     long now = System.currentTimeMillis();
 
     rmContext = mockRMContext(1, now - 10);
@@ -258,6 +261,7 @@ public class TestAppManager{
         .setRMTimelineCollectorManager(mock(RMTimelineCollectorManager.class));
     ResourceScheduler scheduler = mockResourceScheduler();
     ((RMContextImpl)rmContext).setScheduler(scheduler);
+
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     ((RMContextImpl) rmContext).setYarnConfiguration(conf);
@@ -275,6 +279,11 @@ public class TestAppManager{
     asContext.setAMContainerSpec(mockContainerLaunchContext(recordFactory));
     asContext.setResource(mockResource());
     asContext.setPriority(Priority.newInstance(0));
+    asContext.setQueue("default");
+    mockDefaultQueueInfo = mock(QueueInfo.class);
+    when(scheduler.getQueueInfo("default", false, false))
+        .thenReturn(mockDefaultQueueInfo);
+
     setupDispatcher(rmContext, conf);
   }
 
@@ -410,12 +419,12 @@ public class TestAppManager{
         new ClientToAMTokenSecretManagerInRM(), newMockRMContext.getScheduler(),
         masterService, new ApplicationACLsManager(conf), conf);
 
-    //only user test has permission to submit to 'test' queue
+    //only user test has permission to submit to 'user1' queue
     newAppMonitor.submitApplication(asContext, "user1");
 
     try {
       //should fail since user does not have permission to submit to queue
-      // 'test'
+      // 'managedparent'
       asContext.setApplicationId(appId = MockApps.newAppID(2));
       newAppMonitor.submitApplication(asContext, "user2");
     } catch (YarnException e) {
@@ -709,6 +718,7 @@ public class TestAppManager{
     for (ResourceRequest req : reqs) {
       req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     }
+
     // setAMContainerResourceRequests has priority over
     // setAMContainerResourceRequest and setResource
     Assert.assertEquals(reqs, app.getAMResourceRequests());
@@ -722,6 +732,7 @@ public class TestAppManager{
     ResourceRequest req =
         ResourceRequest.newInstance(Priority.newInstance(0),
             ResourceRequest.ANY, Resources.createResource(1025), 1, true);
+    req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     asContext.setAMContainerResourceRequest(cloneResourceRequest(req));
     // getAMContainerResourceRequests uses a singleton list of
     // getAMContainerResourceRequest
@@ -729,7 +740,6 @@ public class TestAppManager{
     Assert.assertEquals(req, asContext.getAMContainerResourceRequests().get(0));
     Assert.assertEquals(1, asContext.getAMContainerResourceRequests().size());
     RMApp app = testRMAppSubmit();
-    req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     // setAMContainerResourceRequest has priority over setResource
     Assert.assertEquals(Collections.singletonList(req),
         app.getAMResourceRequests());
@@ -740,10 +750,12 @@ public class TestAppManager{
     asContext.setResource(Resources.createResource(1024));
     asContext.setAMContainerResourceRequests(null);
     RMApp app = testRMAppSubmit();
+
     // setResource
     Assert.assertEquals(Collections.singletonList(
         ResourceRequest.newInstance(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
-        ResourceRequest.ANY, Resources.createResource(1024), 1, true, "")),
+        ResourceRequest.ANY, Resources.createResource(1024), 1, true,
+            "")),
         app.getAMResourceRequests());
   }
 
@@ -766,6 +778,8 @@ public class TestAppManager{
       throws Exception {
     asContext.setResource(null);
     List<ResourceRequest> reqs = new ArrayList<>();
+    when(mockDefaultQueueInfo.getAccessibleNodeLabels()).thenReturn
+        (new HashSet<String>() {{ add("label1"); add(""); }});
     ResourceRequest anyReq = ResourceRequest.newInstance(
         Priority.newInstance(1),
         ResourceRequest.ANY, Resources.createResource(1024), 1, false, "label1",

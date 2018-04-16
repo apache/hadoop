@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service;
 
 import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_NODE_BLACKLIST_THRESHOLD;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.NODE_BLACKLIST_THRESHOLD;
 
 /**
@@ -51,8 +53,9 @@ public class ContainerFailureTracker {
   public ContainerFailureTracker(ServiceContext context, Component component) {
     this.context = context;
     this.component = component;
-    maxFailurePerNode = component.getComponentSpec().getConfiguration()
-        .getPropertyInt(NODE_BLACKLIST_THRESHOLD, 3);
+    maxFailurePerNode = YarnServiceConf.getInt(NODE_BLACKLIST_THRESHOLD,
+        DEFAULT_NODE_BLACKLIST_THRESHOLD, component.getComponentSpec()
+        .getConfiguration(), context.scheduler.getConfig());
   }
 
 

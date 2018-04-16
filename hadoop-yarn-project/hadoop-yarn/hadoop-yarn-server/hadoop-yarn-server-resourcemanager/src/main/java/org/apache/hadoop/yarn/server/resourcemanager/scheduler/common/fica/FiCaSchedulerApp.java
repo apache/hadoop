@@ -339,6 +339,16 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         return false;
       }
     }
+    // If allocate from reserved container, make sure node is still reserved
+    if (allocation.getAllocateFromReservedContainer() != null
+        && reservedContainerOnNode == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Try to allocate from reserved container " + allocation
+            .getAllocateFromReservedContainer().getRmContainer()
+            .getContainerId() + ", but node is not reserved");
+      }
+      return false;
+    }
 
     // Do we have enough space on this node?
     Resource availableResource = Resources.clone(
@@ -489,7 +499,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return accepted;
   }
 
-  public void apply(Resource cluster, ResourceCommitRequest<FiCaSchedulerApp,
+  public boolean apply(Resource cluster, ResourceCommitRequest<FiCaSchedulerApp,
       FiCaSchedulerNode> request, boolean updatePending) {
     boolean reReservation = false;
 
@@ -502,8 +512,16 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             allocation = request.getFirstAllocatedOrReservedContainer();
         SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode>
             schedulerContainer = allocation.getAllocatedOrReservedContainer();
-        RMContainer rmContainer = schedulerContainer.getRmContainer();
 
+        // Required sanity check - AM can call 'allocate' to update resource
+        // request without locking the scheduler, hence we need to check
+        if (updatePending &&
+            getOutstandingAsksCount(schedulerContainer.getSchedulerRequestKey())
+                <= 0) {
+          return false;
+        }
+
+        RMContainer rmContainer = schedulerContainer.getRmContainer();
         reReservation =
             (!schedulerContainer.isAllocated()) && (rmContainer.getState()
                 == RMContainerState.RESERVED);
@@ -545,7 +563,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
                 containerRequest);
 
             // If this is from a SchedulingRequest, set allocation tags.
-            if (containerRequest.getSchedulingRequest() != null) {
+            if (containerRequest != null
+                && containerRequest.getSchedulingRequest() != null) {
               ((RMContainerImpl) rmContainer).setAllocationTags(
                   containerRequest.getSchedulingRequest().getAllocationTags());
             }
@@ -598,6 +617,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     if (!reReservation) {
       getCSLeafQueue().apply(cluster, request);
     }
+    return true;
   }
 
   public boolean unreserve(SchedulerRequestKey schedulerKey,

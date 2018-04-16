@@ -12,6 +12,9 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
+#set ( $H3 = '###' )
+#set ( $H4 = '####' )
+
 Placement Constraints
 =====================
 
@@ -35,7 +38,7 @@ Quick Guide
 
 We first describe how to enable scheduling with placement constraints and then provide examples of how to experiment with this feature using the distributed shell, an application that allows to run a given shell command on a set of containers.
 
-### Enabling placement constraints
+$H3 Enabling placement constraints
 
 To enable placement constraints, the following property has to be set to `placement-processor` or `scheduler` in **conf/yarn-site.xml**:
 
@@ -51,7 +54,7 @@ We now give more details about each of the three placement constraint handlers:
 
 The `placement-processor` handler supports a wider range of constraints and can allow more containers to be placed, especially when applications have demanding constraints or the cluster is highly-utilized (due to considering multiple containers at a time). However, if respecting task priority within an application is important for the user and the capacity scheduler is used, then the `scheduler` handler should be used instead.
 
-### Experimenting with placement constraints using distributed shell
+$H3 Experimenting with placement constraints using distributed shell
 
 Users can experiment with placement constraints by using the distributed shell application through the following command:
 
@@ -89,18 +92,18 @@ The above encodes two constraints:
 Defining Placement Constraints
 ------------------------------
 
-### Allocation tags
+$H3 Allocation tags
 
 Allocation tags are string tags that an application can associate with (groups of) its containers. Tags are used to identify components of applications. For example, an HBase Master allocation can be tagged with "hbase-m", and Region Servers with "hbase-rs". Other examples are "latency-critical" to refer to the more general demands of the allocation, or "app_0041" to denote the job ID. Allocation tags play a key role in constraints, as they allow to refer to multiple allocations that share a common tag.
 
 Note that instead of using the `ResourceRequest` object to define allocation tags, we use the new `SchedulingRequest` object. This has many similarities with the `ResourceRequest`, but better separates the sizing of the requested allocations (number and size of allocations, priority, execution type, etc.), and the constraints dictating how these allocations should be placed (resource name, relaxed locality). Applications can still use `ResourceRequest` objects, but in order to define allocation tags and constraints, they need to use the `SchedulingRequest` object. Within a single `AllocateRequest`, an application should use either the `ResourceRequest` or the `SchedulingRequest` objects, but not both of them.
 
-#### Differences between node labels, node attributes and allocation tags
+$H4 Differences between node labels, node attributes and allocation tags
 
 The difference between allocation tags and node labels or node attributes (YARN-3409), is that allocation tags are attached to allocations and not to nodes. When an allocation gets allocated to a node by the scheduler, the set of tags of that allocation are automatically added to the node for the duration of the allocation. Hence, a node inherits the tags of the allocations that are currently allocated to the node. Likewise, a rack inherits the tags of its nodes. Moreover, similar to node labels and unlike node attributes, allocation tags have no value attached to them. As we show below, our constraints can refer to allocation tags, as well as node labels and node attributes.
 
 
-### Placement constraints API
+$H3 Placement constraints API
 
 Applications can use the public API in the `PlacementConstraints` to construct placement constraint. Before describing the methods for building constraints, we describe the methods of the `PlacementTargets` class that are used to construct the target expressions that will then be used in constraints:
 
@@ -127,7 +130,7 @@ The methods of the `PlacementConstraints` class for building constraints are the
 The `PlacementConstraints` class also includes method for building compound constraints (AND/OR expressions with multiple constraints). Adding support for compound constraints is work in progress.
 
 
-### Specifying constraints in applications
+$H3 Specifying constraints in applications
 
 Applications have to specify the containers for which each constraint will be enabled. To this end, applications can provide a mapping from a set of allocation tags (source tags) to a placement constraint. For example, an entry of this mapping could be "hbase"->constraint1, which means that constraint1 will be applied when scheduling each allocation with tag "hbase".
 

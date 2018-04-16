@@ -229,7 +229,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final Logger LOG_DEPRECATION =
       LoggerFactory.getLogger(
           "org.apache.hadoop.conf.Configuration.deprecation");
-  private static final Set<String> TAGS = new HashSet<>();
+  private static final Set<String> TAGS = ConcurrentHashMap.newKeySet();
 
   private boolean quietmode = true;
 
@@ -816,8 +816,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-    this.resources = (ArrayList<Resource>) other.resources.clone();
     synchronized(other) {
+      // Make sure we clone a finalized state
+      // Resources like input streams can be processed only once
+      other.getProps();
+      this.resources = (ArrayList<Resource>) other.resources.clone();
       if (other.properties != null) {
         this.properties = (Properties)other.properties.clone();
       }
@@ -2332,7 +2335,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return password or null if not found
    * @throws IOException
    */
-  protected char[] getPasswordFromCredentialProviders(String name)
+  public char[] getPasswordFromCredentialProviders(String name)
       throws IOException {
     char[] pass = null;
     try {
@@ -2866,15 +2869,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Map<String, String> getPropsWithPrefix(String confPrefix) {
     Properties props = getProps();
-    Enumeration e = props.propertyNames();
     Map<String, String> configMap = new HashMap<>();
-    String name = null;
-    while (e.hasMoreElements()) {
-      name = (String) e.nextElement();
+    for (String name : props.stringPropertyNames()) {
       if (name.startsWith(confPrefix)) {
-        String value = props.getProperty(name);
-        name = name.substring(confPrefix.length());
-        configMap.put(name, value);
+        String value = get(name);
+        String keyName = name.substring(confPrefix.length());
+        configMap.put(keyName, value);
       }
     }
     return configMap;
@@ -2932,7 +2932,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         resources.set(i, ret);
       }
     }
-    this.removeUndeclaredTags(properties);
+    this.addTags(properties);
   }
   
   private Resource loadResource(Properties properties,
@@ -3180,29 +3180,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Removes undeclared tags and related properties from propertyTagsMap.
-   * Its required because ordering of properties in xml config files is not
-   * guaranteed.
+   * Add tags defined in HADOOP_SYSTEM_TAGS, HADOOP_CUSTOM_TAGS.
    * @param prop
    */
-  private void removeUndeclaredTags(Properties prop) {
+  public void addTags(Properties prop) {
     // Get all system tags
-    if (prop.containsKey(CommonConfigurationKeys.HADOOP_SYSTEM_TAGS)){
-      String systemTags = prop.getProperty(CommonConfigurationKeys
-              .HADOOP_SYSTEM_TAGS);
-      Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
-    }
-    // Get all custom tags
-    if (prop.containsKey(CommonConfigurationKeys.HADOOP_CUSTOM_TAGS)) {
-      String customTags = prop.getProperty(CommonConfigurationKeys
-          .HADOOP_CUSTOM_TAGS);
-      Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+    try {
+      if (prop.containsKey(CommonConfigurationKeys.HADOOP_SYSTEM_TAGS)) {
+        String systemTags = prop.getProperty(CommonConfigurationKeys
+            .HADOOP_SYSTEM_TAGS);
+        Arrays.stream(systemTags.split(",")).forEach(tag -> TAGS.add(tag));
+      }
+      // Get all custom tags
+      if (prop.containsKey(CommonConfigurationKeys.HADOOP_CUSTOM_TAGS)) {
+        String customTags = prop.getProperty(CommonConfigurationKeys
+            .HADOOP_CUSTOM_TAGS);
+        Arrays.stream(customTags.split(",")).forEach(tag -> TAGS.add(tag));
+      }
+
+    } catch (Exception ex) {
+      LOG.trace("Error adding tags in configuration", ex);
     }
 
-    Set undeclaredTags = propertyTagsMap.keySet();
-    if (undeclaredTags.retainAll(TAGS)) {
-      LOG.info("Removed undeclared tags:");
-    }
   }
 
   /**
@@ -3216,8 +3215,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private void readTagFromConfig(String attributeValue, String confName, String
       confValue, List<String> confSource) {
     for (String tagStr : attributeValue.split(",")) {
-      tagStr = tagStr.trim();
       try {
+        tagStr = tagStr.trim();
         // Handle property with no/null value
         if (confValue == null) {
           confValue = "";

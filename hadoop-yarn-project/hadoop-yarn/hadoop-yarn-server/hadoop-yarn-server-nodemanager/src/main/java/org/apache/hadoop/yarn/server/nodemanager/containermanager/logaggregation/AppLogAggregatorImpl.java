@@ -385,7 +385,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         logAggregationSucceedInThisCycle
             ? LogAggregationStatus.RUNNING
             : LogAggregationStatus.RUNNING_WITH_FAILURE;
-    sendLogAggregationReportInternal(logAggregationStatus, diagnosticMessage);
+    sendLogAggregationReportInternal(logAggregationStatus, diagnosticMessage,
+        false);
     if (appFinished) {
       // If the app is finished, one extra final report with log aggregation
       // status SUCCEEDED/FAILED will be sent to RM to inform the RM
@@ -394,18 +395,22 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
               ? LogAggregationStatus.FAILED
               : LogAggregationStatus.SUCCEEDED;
-      sendLogAggregationReportInternal(finalLogAggregationStatus, "");
+      sendLogAggregationReportInternal(finalLogAggregationStatus, "", true);
     }
   }
 
   private void sendLogAggregationReportInternal(
-      LogAggregationStatus logAggregationStatus, String diagnosticMessage) {
+      LogAggregationStatus logAggregationStatus, String diagnosticMessage,
+      boolean finalized) {
     LogAggregationReport report =
         Records.newRecord(LogAggregationReport.class);
     report.setApplicationId(appId);
     report.setDiagnosticMessage(diagnosticMessage);
     report.setLogAggregationStatus(logAggregationStatus);
     this.context.getLogAggregationStatusForApps().add(report);
+    this.context.getNMLogAggregationStatusTracker().updateLogAggregationStatus(
+        appId, logAggregationStatus, System.currentTimeMillis(),
+        diagnosticMessage, finalized);
   }
 
   @SuppressWarnings("unchecked")

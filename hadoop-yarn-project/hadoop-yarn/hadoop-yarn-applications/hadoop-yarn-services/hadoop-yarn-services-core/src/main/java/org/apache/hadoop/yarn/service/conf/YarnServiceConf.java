@@ -20,23 +20,34 @@ package org.apache.hadoop.yarn.service.conf;
 
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 
+// ALL SERVICE AM PROPERTIES ADDED TO THIS FILE MUST BE DOCUMENTED
+// in the yarn site yarn-service/Configurations.md file.
 public class YarnServiceConf {
 
   private static final String YARN_SERVICE_PREFIX = "yarn.service.";
 
   // Retry settings for the ServiceClient to talk to Service AppMaster
   public static final String CLIENT_AM_RETRY_MAX_WAIT_MS = "yarn.service.client-am.retry.max-wait-ms";
+  public static final long DEFAULT_CLIENT_AM_RETRY_MAX_WAIT_MS = 15 * 60 * 1000;
   public static final String CLIENT_AM_RETRY_MAX_INTERVAL_MS = "yarn.service.client-am.retry-interval-ms";
+  public static final long DEFAULT_CLIENT_AM_RETRY_MAX_INTERVAL_MS = 2 * 1000;
 
   // Retry settings for container failures
   public static final String CONTAINER_RETRY_MAX = "yarn.service.container-failure.retry.max";
+  public static final int DEFAULT_CONTAINER_RETRY_MAX = -1;
   public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval-ms";
+  public static final int DEFAULT_CONTAINER_RETRY_INTERVAL = 30000;
+  public static final String CONTAINER_FAILURES_VALIDITY_INTERVAL =
+      "yarn.service.container-failure.validity-interval-ms";
+  public static final long DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL = -1;
 
   public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
+  public static final int DEFAULT_AM_RESTART_MAX = 20;
   public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";
   public static final long DEFAULT_KEY_AM_RESOURCE_MEM = 1024;
 
   public static final String YARN_QUEUE = "yarn.service.queue";
+  public static final String DEFAULT_YARN_QUEUE = "default";
 
   public static final String API_SERVER_ADDRESS = "yarn.service.api-server.address";
   public static final String DEFAULT_API_SERVER_ADDRESS = "0.0.0.0:";
@@ -48,6 +59,8 @@ public class YarnServiceConf {
   public static final String ROLLING_LOG_INCLUSION_PATTERN = "yarn.service.rolling-log.include-pattern";
   public static final String ROLLING_LOG_EXCLUSION_PATTERN = "yarn.service.rolling-log.exclude-pattern";
 
+  public static final String YARN_SERVICES_SYSTEM_SERVICE_DIRECTORY =
+      YARN_SERVICE_PREFIX + "system-service.dir";
 
   /**
    * The yarn service base path:
@@ -61,11 +74,14 @@ public class YarnServiceConf {
    */
   public static final String CONTAINER_FAILURE_THRESHOLD =
       "yarn.service.container-failure-per-component.threshold";
+  public static final int DEFAULT_CONTAINER_FAILURE_THRESHOLD = 10;
+
   /**
    * Maximum number of container failures on a node before the node is blacklisted
    */
   public static final String NODE_BLACKLIST_THRESHOLD =
       "yarn.service.node-blacklist.threshold";
+  public static final int DEFAULT_NODE_BLACKLIST_THRESHOLD = 3;
 
   /**
    * The failure count for CONTAINER_FAILURE_THRESHOLD and NODE_BLACKLIST_THRESHOLD
@@ -73,6 +89,7 @@ public class YarnServiceConf {
    */
   public static final String CONTAINER_FAILURE_WINDOW =
       "yarn.service.failure-count-reset.window";
+  public static final long DEFAULT_CONTAINER_FAILURE_WINDOW = 21600;
 
   /**
    * interval between readiness checks.
@@ -81,9 +98,17 @@ public class YarnServiceConf {
   public static final int DEFAULT_READINESS_CHECK_INTERVAL = 30; // seconds
 
   /**
+   * Default readiness check enabled.
+   */
+  public static final String DEFAULT_READINESS_CHECK_ENABLED =
+      "yarn.service.default-readiness-check.enabled";
+  public static final boolean DEFAULT_READINESS_CHECK_ENABLED_DEFAULT = true;
+
+  /**
    * JVM opts.
    */
   public static final String JVM_OPTS = "yarn.service.am.java.opts";
+  public static final String DEFAULT_AM_JVM_XMX = " -Xmx768m ";
 
   /**
    * How long to wait until a container is considered dead.
@@ -118,6 +143,12 @@ public class YarnServiceConf {
   public static int getInt(String name, int defaultValue,
       Configuration userConf, org.apache.hadoop.conf.Configuration systemConf) {
     return userConf.getPropertyInt(name, systemConf.getInt(name, defaultValue));
+  }
+
+  public static boolean getBoolean(String name, boolean defaultValue,
+      Configuration userConf, org.apache.hadoop.conf.Configuration systemConf) {
+    return userConf.getPropertyBool(name, systemConf.getBoolean(name,
+        defaultValue));
   }
 
   public static String get(String name, String defaultVal,

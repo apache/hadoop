@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
@@ -258,7 +259,8 @@ class ApplicationEntityReader extends GenericEntityReader {
    * @throws IOException if any problem occurs while updating filter list.
    */
   private void updateFilterForConfsAndMetricsToRetrieve(
-      FilterList listBasedOnFields) throws IOException {
+      FilterList listBasedOnFields, Set<String> cfsInFields)
+      throws IOException {
     TimelineDataToRetrieve dataToRetrieve = getDataToRetrieve();
     // Please note that if confsToRetrieve is specified, we would have added
     // CONFS to fields to retrieve in augmentParams() even if not specified.
@@ -268,6 +270,8 @@ class ApplicationEntityReader extends GenericEntityReader {
           createFilterForConfsOrMetricsToRetrieve(
               dataToRetrieve.getConfsToRetrieve(),
               ApplicationColumnFamily.CONFIGS, ApplicationColumnPrefix.CONFIG));
+      cfsInFields.add(
+          Bytes.toString(ApplicationColumnFamily.CONFIGS.getBytes()));
     }
 
     // Please note that if metricsToRetrieve is specified, we would have added
@@ -278,11 +282,14 @@ class ApplicationEntityReader extends GenericEntityReader {
           createFilterForConfsOrMetricsToRetrieve(
               dataToRetrieve.getMetricsToRetrieve(),
               ApplicationColumnFamily.METRICS, ApplicationColumnPrefix.METRIC));
+      cfsInFields.add(
+          Bytes.toString(ApplicationColumnFamily.METRICS.getBytes()));
     }
   }
 
   @Override
-  protected FilterList constructFilterListBasedOnFields() throws IOException {
+  protected FilterList constructFilterListBasedOnFields(Set<String> cfsInFields)
+      throws IOException {
     if (!needCreateFilterListBasedOnFields()) {
       // Fetch all the columns. No need of a filter.
       return null;
@@ -303,8 +310,9 @@ class ApplicationEntityReader extends GenericEntityReader {
       excludeFieldsFromInfoColFamily(infoColFamilyList);
     }
     listBasedOnFields.addFilter(infoColFamilyList);
+    cfsInFields.add(Bytes.toString(ApplicationColumnFamily.INFO.getBytes()));
 
-    updateFilterForConfsAndMetricsToRetrieve(listBasedOnFields);
+    updateFilterForConfsAndMetricsToRetrieve(listBasedOnFields, cfsInFields);
     return listBasedOnFields;
   }
 

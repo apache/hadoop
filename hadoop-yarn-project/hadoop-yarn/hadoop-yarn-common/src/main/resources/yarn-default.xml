@@ -1286,7 +1286,9 @@
     How long for ResourceManager to wait for NodeManager to report its
     log aggregation status. If waiting time of which the log aggregation
     status is reported from NodeManager exceeds the configured value, RM
-    will report log aggregation status for this NodeManager as TIME_OUT
+    will report log aggregation status for this NodeManager as TIME_OUT.
+    This configuration will be used in NodeManager as well to decide
+    whether and when to delete the cached log aggregation status.
     </description>
     <name>yarn.log-aggregation-status.time-out.ms</name>
     <value>600000</value>
@@ -1782,6 +1784,14 @@
       troubleshooting Docker container related launch failures.</description>
     <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>A configurable value to pass to the Docker Stop command. This value
+      defines the number of seconds between the docker stop command sending
+      a SIGTERM and a SIGKILL.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.stop.grace-period</name>
+    <value>10</value>
   </property>
 
   <property>
@@ -2489,7 +2499,7 @@
     <description>Time period till which the application collector will be alive
      in NM, after the  application master container finishes.</description>
     <name>yarn.timeline-service.app-collector.linger-period.ms</name>
-    <value>1000</value>
+    <value>60000</value>
   </property>
 
   <property>
@@ -3564,6 +3574,28 @@
     </description>
     <name>yarn.scheduler.configuration.store.max-logs</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      The file system directory to store the configuration files. The path
+      can be any format as long as it follows hadoop compatible schema,
+      for example value "file:///path/to/dir" means to store files on local
+      file system, value "hdfs:///path/to/dir" means to store files on HDFS.
+      If resource manager HA is enabled, recommended to use hdfs schema so
+      it works in fail-over scenario.
+    </description>
+    <name>yarn.scheduler.configuration.fs.path</name>
+    <value>file://${hadoop.tmp.dir}/yarn/system/schedconf</value>
+  </property>
+
+  <property>
+    <description>
+      The max number of configuration file in filesystem.
+      Default is 100 for either.
+    </description>
+    <name>yarn.scheduler.configuration.max.version</name>
+    <value>100</value>
   </property>
 
   <property>

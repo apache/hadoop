@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.base.Throwables;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.conf.Configuration;
@@ -26,18 +27,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.registry.client.impl.zk.CuratorService;
+import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +56,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Paths;
+import java.util.Map;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC;
@@ -66,7 +77,8 @@ public class ServiceTestUtils {
 
   private MiniYARNCluster yarnCluster = null;
   private MiniDFSCluster hdfsCluster = null;
-  TestingCluster zkCluster;
+  private TestingCluster zkCluster;
+  private CuratorService curatorService;
   private FileSystem fs = null;
   private Configuration conf = null;
   public static final int NUM_NMS = 1;
@@ -78,7 +90,7 @@ public class ServiceTestUtils {
 
   // Example service definition
   // 2 components, each of which has 2 containers.
-  protected Service createExampleApplication() {
+  public static Service createExampleApplication() {
     Service exampleApp = new Service();
     exampleApp.setName("example-app");
     exampleApp.setVersion("v1");
@@ -176,7 +188,11 @@ public class ServiceTestUtils {
     zkCluster.start();
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, zkCluster.getConnectString());
     conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
-    LOG.info("ZK cluster: " +  zkCluster.getConnectString());
+    LOG.info("ZK cluster: " + zkCluster.getConnectString());
+
+    curatorService = new CuratorService("testCuratorService");
+    curatorService.init(conf);
+    curatorService.start();
 
     fs = FileSystem.get(conf);
     basedir = new File("target", "apps");
@@ -245,6 +261,9 @@ public class ServiceTestUtils {
         hdfsCluster = null;
       }
     }
+    if (curatorService != null) {
+      ServiceOperations.stop(curatorService);
+    }
     if (zkCluster != null) {
       zkCluster.stop();
     }
@@ -268,4 +287,91 @@ public class ServiceTestUtils {
     }
   }
 
+  /**
+   * Creates a {@link ServiceClient} for test purposes.
+   */
+  public static ServiceClient createClient(Configuration conf)
+      throws Exception {
+    ServiceClient client = new ServiceClient() {
+      @Override
+      protected Path addJarResource(String appName,
+          Map<String, LocalResource> localResources)
+          throws IOException, SliderException {
+        // do nothing, the Unit test will use local jars
+        return null;
+      }
+    };
+    client.init(conf);
+    client.start();
+    return client;
+  }
+
+  /**
+   * Creates a YarnClient for test purposes.
+   */
+  public static YarnClient createYarnClient(Configuration conf) {
+    YarnClient client = YarnClient.createYarnClient();
+    client.init(conf);
+    client.start();
+    return client;
+  }
+
+  protected CuratorService getCuratorService() throws IOException {
+    return curatorService;
+  }
+
+  /**
+   * Watcher to initialize yarn service base path under target and deletes the
+   * the test directory when finishes.
+   */
+  public static class ServiceFSWatcher extends TestWatcher {
+    private YarnConfiguration conf;
+    private SliderFileSystem fs;
+    private java.nio.file.Path serviceBasePath;
+
+    @Override
+    protected void starting(Description description) {
+      conf = new YarnConfiguration();
+      delete(description);
+      serviceBasePath = Paths.get("target",
+          description.getClassName(), description.getMethodName());
+      conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
+      try {
+        fs = new SliderFileSystem(conf);
+      } catch (IOException e) {
+        Throwables.propagate(e);
+      }
+    }
+
+    @Override
+    protected void finished(Description description) {
+      delete(description);
+    }
+
+    private void delete(Description description) {
+      FileUtils.deleteQuietly(Paths.get("target",
+          description.getClassName()).toFile());
+    }
+
+    /**
+     * Returns the yarn conf.
+     */
+    public YarnConfiguration getConf() {
+      return conf;
+    }
+
+    /**
+     * Returns the file system.
+     */
+    public SliderFileSystem getFs() {
+      return fs;
+    }
+
+    /**
+     * Returns the test service base path.
+     */
+    public java.nio.file.Path getServiceBasePath() {
+      return serviceBasePath;
+    }
+  }
 }

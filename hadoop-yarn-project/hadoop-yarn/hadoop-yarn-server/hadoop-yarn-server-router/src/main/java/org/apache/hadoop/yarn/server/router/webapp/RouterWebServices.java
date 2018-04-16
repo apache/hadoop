@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
@@ -830,6 +831,23 @@ public class RouterWebServices implements RMWebServiceProtocol {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppAttempts(hsr, appId);
+  }
+
+  @GET
+  @Path(RMWSConsts.CHECK_USER_ACCESS_TO_QUEUE)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+                MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(
+      @PathParam(RMWSConsts.QUEUE) String queue,
+      @QueryParam(RMWSConsts.USER) String username,
+      @QueryParam(RMWSConsts.QUEUE_ACL_TYPE)
+      @DefaultValue("SUBMIT_APPLICATIONS") String queueAclType,
+      @Context HttpServletRequest hsr) throws AuthorizationException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().checkUserAccessToQueue(queue,
+        username, queueAclType, hsr);
   }
 
   @GET

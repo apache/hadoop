@@ -105,7 +105,8 @@
       <item name="Disk Balancer" href="hadoop-project-dist/hadoop-hdfs/HDFSDiskbalancer.html"/>
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
-      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html"/>
+      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html"/>
+      <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -147,6 +148,9 @@
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
+      <item name="Using GPU" href="hadoop-yarn/hadoop-yarn-site/UsingGpus.html"/>
+      <item name="Using FPGA" href="hadoop-yarn/hadoop-yarn-site/UsingFPGA.html"/>
+      <item name="Placement Constraints" href="hadoop-yarn/hadoop-yarn-site/PlacementConstraints.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -203,6 +207,7 @@
     <menu name="Configuration" inherit="top">
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
+      <item name="hdfs-rbf-default.xml" href="hadoop-project-dist/hadoop-hdfs-rbf/hdfs-rbf-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
       <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>

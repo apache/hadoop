@@ -305,7 +305,6 @@ public class TestDataNodeHotSwapVolumes {
 
   private void addVolumes(int numNewVolumes, CountDownLatch waitLatch)
       throws ReconfigurationException, IOException, InterruptedException {
-    File dataDir = new File(cluster.getDataDirectory());
     DataNode dn = cluster.getDataNodes().get(0);  // First DataNode.
     Configuration conf = dn.getConf();
     String oldDataDir = conf.get(DFS_DATANODE_DATA_DIR_KEY);
@@ -315,14 +314,14 @@ public class TestDataNodeHotSwapVolumes {
     int startIdx = oldDataDir.split(",").length + 1;
     // Find the first available (non-taken) directory name for data volume.
     while (true) {
-      File volumeDir = new File(dataDir, "data" + startIdx);
+      File volumeDir = cluster.getInstanceStorageDir(0, startIdx);
       if (!volumeDir.exists()) {
         break;
       }
       startIdx++;
     }
     for (int i = startIdx; i < startIdx + numNewVolumes; i++) {
-      File volumeDir = new File(dataDir, "data" + String.valueOf(i));
+      File volumeDir = cluster.getInstanceStorageDir(0, i);
       newVolumeDirs.add(volumeDir);
       volumeDir.mkdirs();
       newDataDirBuf.append(",");
@@ -985,7 +984,7 @@ public class TestDataNodeHotSwapVolumes {
 
     DataNode dn = cluster.getDataNodes().get(0);
     final String oldDataDir = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY);
-    File dirToFail = new File(cluster.getDataDirectory(), "data1");
+    File dirToFail = cluster.getInstanceStorageDir(0, 0);
 
     FsVolumeImpl failedVolume = DataNodeTestUtils.getVolume(dn, dirToFail);
     assertTrue("No FsVolume was found for " + dirToFail,
@@ -1037,7 +1036,7 @@ public class TestDataNodeHotSwapVolumes {
         InternalDataNodeTestUtils.spyOnBposToNN(dn, cluster.getNameNode());
 
     // Remove a data dir from datanode
-    File dataDirToKeep = new File(cluster.getDataDirectory(), "data1");
+    File dataDirToKeep = cluster.getInstanceStorageDir(0, 0);
     assertThat(
         "DN did not update its own config",
         dn.reconfigurePropertyImpl(

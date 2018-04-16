@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.conf;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,7 +27,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -61,7 +61,6 @@ import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -93,8 +92,8 @@ public class TestConfiguration {
   final static String CONFIG_CORE = new File("./core-site.xml")
       .getAbsolutePath();
   final static String CONFIG_FOR_ENUM = new File("./test-config-enum-TestConfiguration.xml").getAbsolutePath();
-  final static String CONFIG_FOR_URI = "file://"
-      + new File("./test-config-uri-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG_FOR_URI = new File(
+      "./test-config-uri-TestConfiguration.xml").toURI().toString();
 
   private static final String CONFIG_MULTI_BYTE = new File(
     "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
@@ -877,7 +876,8 @@ public class TestConfiguration {
     out.close();
     out=new BufferedWriter(new FileWriter(CONFIG));
     writeHeader();
-    declareSystemEntity("configuration", "d", CONFIG2);
+    declareSystemEntity("configuration", "d",
+        new Path(CONFIG2).toUri().toString());
     writeConfiguration();
     appendProperty("a", "b");
     appendProperty("c", "&d;");
@@ -1749,7 +1749,7 @@ public class TestConfiguration {
       assertEquals("test.key2", jp1.getKey());
       assertEquals("value2", jp1.getValue());
       assertEquals(true, jp1.isFinal);
-      assertEquals(fileResource.toUri().getPath(), jp1.getResource());
+      assertEquals(fileResource.toString(), jp1.getResource());
 
       // test xml format
       outWriter = new StringWriter();
@@ -1760,7 +1760,7 @@ public class TestConfiguration {
       assertEquals(1, actualConf1.size());
       assertEquals("value2", actualConf1.get("test.key2"));
       assertTrue(actualConf1.getFinalParameters().contains("test.key2"));
-      assertEquals(fileResource.toUri().getPath(),
+      assertEquals(fileResource.toString(),
           actualConf1.getPropertySources("test.key2")[0]);
 
       // case 2: dump an non existing property
@@ -2271,7 +2271,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
@@ -2299,7 +2300,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
@@ -2318,19 +2320,33 @@ public class TestConfiguration {
     FileUtil.fullyDelete(tmpDir);
   }
 
+  @Test
   public void testGettingPropertiesWithPrefix() throws Exception {
     Configuration conf = new Configuration();
     for (int i = 0; i < 10; i++) {
-      conf.set("prefix" + ".name" + i, "value");
+      conf.set("prefix." + "name" + i, "value" + i);
     }
     conf.set("different.prefix" + ".name", "value");
-    Map<String, String> props = conf.getPropsWithPrefix("prefix");
-    assertEquals(props.size(), 10);
+    Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
+    assertEquals(prefixedProps.size(), 10);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value" + i, prefixedProps.get("name" + i));
+    }
 
+    // Repeat test with variable substitution
+    conf.set("foo", "bar");
+    for (int i = 0; i < 10; i++) {
+      conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
+    }
+    prefixedProps = conf.getPropsWithPrefix("subprefix.");
+    assertEquals(prefixedProps.size(), 10);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
+    }
     // test call with no properties for a given prefix
-    props = conf.getPropsWithPrefix("none");
-    assertNotNull(props.isEmpty());
-    assertTrue(props.isEmpty());
+    prefixedProps = conf.getPropsWithPrefix("none");
+    assertNotNull(prefixedProps.isEmpty());
+    assertTrue(prefixedProps.isEmpty());
   }
 
   public static void main(String[] argv) throws Exception {
@@ -2389,32 +2405,43 @@ public class TestConfiguration {
 
   @Test
   public void testInvalidTags() throws Exception {
-    PrintStream output = System.out;
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      System.setOut(new PrintStream(bytes));
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.getProps();
 
-      out = new BufferedWriter(new FileWriter(CONFIG));
-      startConfig();
-      appendPropertyByTag("dfs.cblock.trace.io", "false", "MYOWNTAG,TAG2");
-      endConfig();
+    assertFalse(conf.isPropertyTag("BADTAG"));
+    assertFalse(conf.isPropertyTag("CUSTOM_TAG"));
+    assertTrue(conf.isPropertyTag("DEBUG"));
+    assertTrue(conf.isPropertyTag("HDFS"));
+  }
 
-      Path fileResource = new Path(CONFIG);
-      conf.addResource(fileResource);
-      conf.getProps();
-
-      List<String> tagList = new ArrayList<>();
-      tagList.add("REQUIRED");
-      tagList.add("MYOWNTAG");
-      tagList.add("TAG2");
-
-      Properties properties = conf.getAllPropertiesByTags(tagList);
-      assertEq(0, properties.size());
-      assertFalse(properties.containsKey("dfs.cblock.trace.io"));
-      assertFalse(bytes.toString().contains("Invalid tag "));
-      assertFalse(bytes.toString().contains("Tag"));
-    } finally {
-      System.setOut(output);
-    }
+  /**
+   * Test race conditions between clone() and getProps().
+   * Test for race conditions in the way Hadoop handles the Configuration
+   * class. The scenario is the following. Let's assume that there are two
+   * threads sharing the same Configuration class. One adds some resources
+   * to the configuration, while the other one clones it. Resources are
+   * loaded lazily in a deferred call to loadResources(). If the cloning
+   * happens after adding the resources but before parsing them, some temporary
+   * resources like input stream pointers are cloned. Eventually both copies
+   * will load the same input stream resources.
+   * One parses the input stream XML and closes it updating it's own copy of
+   * the resource. The other one has another pointer to the same input stream.
+   * When it tries to load it, it will crash with a stream closed exception.
+   */
+  @Test
+  public void testResourceRace() {
+    InputStream is =
+        new BufferedInputStream(new ByteArrayInputStream(
+            "<configuration></configuration>".getBytes()));
+    Configuration config = new Configuration();
+    // Thread 1
+    config.addResource(is);
+    // Thread 2
+    Configuration confClone = new Configuration(conf);
+    // Thread 2
+    confClone.get("firstParse");
+    // Thread 1
+    config.get("secondParse");
   }
 }

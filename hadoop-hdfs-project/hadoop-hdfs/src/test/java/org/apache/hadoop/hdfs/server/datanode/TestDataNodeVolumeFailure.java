@@ -168,7 +168,7 @@ public class TestDataNodeVolumeFailure {
    
     // fail the volume
     // delete/make non-writable one of the directories (failed volume)
-    data_fail = new File(dataDir, "data3");
+    data_fail = cluster.getInstanceStorageDir(1, 0);
     failedDir = MiniDFSCluster.getFinalizedDir(data_fail,
         cluster.getNamesystem().getBlockPoolId());
     if (failedDir.exists() &&
@@ -235,7 +235,7 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.createFile(fs, file1, 1024, (short) 2, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short) 2);
 
-    File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
     DataNode dn0 = cluster.getDataNodes().get(0);
     DataNodeTestUtils.waitForDiskError(dn0,
@@ -298,8 +298,8 @@ public class TestDataNodeVolumeFailure {
     assumeNotWindows();
 
     // make both data directories to fail on dn0
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     DataNodeTestUtils.injectDataDirFailure(dn0Vol1, dn0Vol2);
     DataNode dn0 = cluster.getDataNodes().get(0);
     DataNodeTestUtils.waitForDiskError(dn0,
@@ -322,8 +322,8 @@ public class TestDataNodeVolumeFailure {
     // volume failures which is currently not supported on Windows.
     assumeNotWindows();
 
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     final DataNode dn0 = cluster.getDataNodes().get(0);
     final String oldDataDirs = dn0.getConf().get(
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
@@ -366,8 +366,8 @@ public class TestDataNodeVolumeFailure {
     // volume failures which is currently not supported on Windows.
     assumeNotWindows();
 
-    final File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    final File dn0Vol2 = new File(dataDir, "data" + (2 * 0 + 2));
+    final File dn0Vol1 = cluster.getInstanceStorageDir(0, 0);
+    final File dn0Vol2 = cluster.getInstanceStorageDir(0, 1);
     final File dn0VolNew = new File(dataDir, "data_new");
     final DataNode dn0 = cluster.getDataNodes().get(0);
     final String oldDataDirs = dn0.getConf().get(
@@ -413,8 +413,8 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.waitReplication(fs, file1, (short)3);
 
     // Fail the first volume on both datanodes
-    File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
-    File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
+    File dn1Vol1 = cluster.getInstanceStorageDir(0, 0);
+    File dn2Vol1 = cluster.getInstanceStorageDir(1, 0);
     DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
 
     Path file2 = new Path("/test2");

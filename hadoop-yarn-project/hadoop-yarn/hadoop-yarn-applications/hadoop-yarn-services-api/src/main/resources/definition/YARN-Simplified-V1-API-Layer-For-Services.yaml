@@ -229,9 +229,6 @@ definitions:
         type: integer
         format: int64
         description: Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.
-      placement_policy:
-        description: (TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.
-        $ref: '#/definitions/PlacementPolicy'
       components:
         description: Components of a service.
         type: array
@@ -256,7 +253,7 @@ definitions:
         $ref: '#/definitions/KerberosPrincipal'
   ResourceInformation:
     description:
-      ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object
+      ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object.
     properties:
       value:
         type: integer
@@ -264,8 +261,7 @@ definitions:
         description: Integer value of the resource.
       unit:
         type: string
-        description:
-          Unit of the resource, acceptable values are: p/n/u/m/k/M/G/T/P/Ki/Mi/Gi/Ti/Pi. By default it is empty means no unit
+        description: Unit of the resource, acceptable values are - p/n/u/m/k/M/G/T/P/Ki/Mi/Gi/Ti/Pi. By default it is empty means no unit.
   Resource:
     description:
       Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.
@@ -286,11 +282,75 @@ definitions:
           $ref: '#/definitions/ResourceInformation'
         description: Map of resource name to ResourceInformation
   PlacementPolicy:
-    description: Placement policy of an instance of a service. This feature is in the works in YARN-6592.
+    description: Advanced placement policy of the components of a service.
+    required:
+      - constraints
     properties:
-      label:
+      constraints:
+        description: Placement constraint details.
+        type: array
+        items:
+          $ref: '#/definitions/PlacementConstraint'
+  PlacementConstraint:
+    description: Placement constraint details.
+    required:
+      - type
+      - scope
+    properties:
+      name:
+        description: An optional name associated to this constraint.
         type: string
-        description: Assigns a service to a named partition of the cluster where the service desires to run (optional). If not specified all services are submitted to a default label of the service owner. One or more labels can be setup for each service owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.
+        example: C1
+      type:
+        description: The type of placement.
+        $ref: '#/definitions/PlacementType'
+      scope:
+        description: The scope of placement.
+        $ref: '#/definitions/PlacementScope'
+      target_tags:
+        description: The name of the components that this component's placement policy is depending upon are added as target tags. So for affinity say, this component's containers are requesting to be placed on hosts where containers of the target tag component(s) are running on. Target tags can also contain the name of this component, in which case it implies that for anti-affinity say, no more than one container of this component can be placed on a host. Similarly, for cardinality, it would mean that containers of this component is requesting to be placed on hosts where at least minCardinality but no more than maxCardinality containers of the target tag component(s) are running.
+        type: array
+        items:
+          type: string
+      node_attributes:
+        description: Node attributes are a set of key:value(s) pairs associated with nodes.
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
+      node_partitions:
+        description: Node partitions where the containers of this component can run.
+        type: array
+        items:
+          type: string
+      min_cardinality:
+        type: integer
+        format: int64
+        description: When placement type is cardinality, the minimum number of containers of the depending component that a host should have, where containers of this component can be allocated on.
+        example: 2
+      max_cardinality:
+        type: integer
+        format: int64
+        description: When placement type is cardinality, the maximum number of containers of the depending component that a host should have, where containers of this component can be allocated on.
+        example: 3
+  PlacementType:
+    description: The type of placement - affinity/anti-affinity/affinity-with-cardinality with containers of another component or containers of the same component (self).
+    properties:
+      type:
+        type: string
+        enum:
+          - AFFINITY
+          - ANTI_AFFINITY
+          - AFFINITY_WITH_CARDINALITY
+  PlacementScope:
+    description: The scope of placement for the containers of a component.
+    properties:
+      type:
+        type: string
+        enum:
+          - NODE
+          - RACK
   Artifact:
     description: Artifact of a service component. If not specified, component will just run the bare launch command and no artifact will be localized.
     required:
@@ -342,11 +402,16 @@ definitions:
         type: integer
         format: int64
         description: Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.
+      containers:
+        type: array
+        description: Containers of a started component. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.
+        items:
+          $ref: '#/definitions/Container'
       run_privileged_container:
         type: boolean
         description: Run all containers of this component in privileged mode (YARN-4262).
       placement_policy:
-        description: Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the service level placement_policy takes effect. Refer to the description at the global level for more details.
+        description: Advanced scheduling and placement policies for all containers of this component.
         $ref: '#/definitions/PlacementPolicy'
       configuration:
         description: Config properties for this component.
@@ -357,14 +422,15 @@ definitions:
           type: string
         description: A list of quicklink keys defined at the service level, and to be resolved by this component.
   ReadinessCheck:
-    description: A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.
+    description: A check to be performed to determine the readiness of a component instance (a container). If no readiness check is specified, the default readiness check will be used unless the yarn.service.default-readiness-check.enabled configuration property is set to false at the component, service, or system level. The artifact field is currently unsupported but may be implemented in the future, enabling a pluggable helper container to support advanced use cases.
     required:
     - type
     properties:
       type:
         type: string
-        description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
+        description: DEFAULT (AM checks whether the container has an IP and optionally performs a DNS lookup for the container hostname), HTTP (AM performs default checks, plus sends a REST call to the container and expects a response code between 200 and 299), or PORT (AM performs default checks, plus attempts to open a socket connection to the container on a specified port).
         enum:
+          - DEFAULT
           - HTTP
           - PORT
       properties:
@@ -380,7 +446,7 @@ definitions:
     properties:
       properties:
         type: object
-        description: A blob of key-value pairs for configuring the YARN service AM
+        description: A blob of key-value pairs for configuring the YARN service AM.
         additionalProperties:
           type: string
       env:
@@ -405,7 +471,6 @@ definitions:
           - JSON
           - YAML
           - TEMPLATE
-          - ENV
           - HADOOP_XML
       dest_file:
         type: string
@@ -416,6 +481,8 @@ definitions:
       properties:
         type: object
         description: A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.
+        additionalProperties:
+          type: string
   Container:
     description: An instance of a running service container.
     properties:
@@ -464,6 +531,7 @@ definitions:
           - STABLE
           - STOPPED
           - FAILED
+          - FLEX
   ContainerState:
     description: The current state of the container of a service.
     properties:

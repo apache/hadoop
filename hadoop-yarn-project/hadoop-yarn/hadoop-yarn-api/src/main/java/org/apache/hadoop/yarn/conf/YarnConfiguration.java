@@ -268,6 +268,8 @@ public class YarnConfiguration extends Configuration {
   /** UserGroupMappingPlacementRule configuration string. */
   public static final String USER_GROUP_PLACEMENT_RULE = "user-group";
 
+  public static final String APP_NAME_PLACEMENT_RULE = "app-name";
+
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
     RM_PREFIX + "webapp.ui-actions.enabled";
@@ -340,6 +342,10 @@ public class YarnConfiguration extends Configuration {
       + "webapp.ui2.war-file-path";
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
+
+  @Private
+  public static final String DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS =
+      "org.apache.hadoop.yarn.service.client.SystemServiceManagerImpl";
 
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
@@ -774,10 +780,13 @@ public class YarnConfiguration extends Configuration {
   public static final String MEMORY_CONFIGURATION_STORE = "memory";
   @Private
   @Unstable
-  public static final String LEVELDB_CONFIGURATION_STORE = "leveldb";
+  public static final String FS_CONFIGURATION_STORE = "fs";
   @Private
   @Unstable
   public static final String ZK_CONFIGURATION_STORE = "zk";
+  @Private
+  @Unstable
+  public static final String LEVELDB_CONFIGURATION_STORE = "leveldb";
   @Private
   @Unstable
   public static final String DEFAULT_CONFIGURATION_STORE =
@@ -807,6 +816,17 @@ public class YarnConfiguration extends Configuration {
   @Private
   @Unstable
   public static final long DEFAULT_RM_SCHEDCONF_ZK_MAX_LOGS = 1000;
+  @Private
+  @Unstable
+  public static final String SCHEDULER_CONFIGURATION_FS_PATH =
+      YARN_PREFIX + "scheduler.configuration.fs.path";
+  @Private
+  @Unstable
+  public static final String SCHEDULER_CONFIGURATION_FS_MAX_VERSION =
+      YARN_PREFIX + "scheduler.configuration.max.version";
+  @Private
+  @Unstable
+  public static final int DEFAULT_SCHEDULER_CONFIGURATION_FS_MAX_VERSION = 100;
 
   /** Parent znode path under which ZKConfigurationStore will create znodes. */
   @Private
@@ -1328,7 +1348,10 @@ public class YarnConfiguration extends Configuration {
    * How long for ResourceManager to wait for NodeManager to report its
    * log aggregation status. If waiting time of which the log aggregation status
    * is reported from NodeManager exceeds the configured value, RM will report
-   * log aggregation status for this NodeManager as TIME_OUT
+   * log aggregation status for this NodeManager as TIME_OUT.
+   *
+   * This configuration will be used in NodeManager as well to decide
+   * whether and when to delete the cached log aggregation status.
    */
   public static final String LOG_AGGREGATION_STATUS_TIME_OUT_MS =
       YARN_PREFIX + "log-aggregation-status.time-out.ms";
@@ -1928,6 +1951,20 @@ public class YarnConfiguration extends Configuration {
    */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL = false;
 
+  /**
+   * A configurable value to pass to the Docker Stop command. This value
+   * defines the number of seconds between the docker stop command sending
+   * a SIGTERM and a SIGKILL.
+   */
+  public static final String NM_DOCKER_STOP_GRACE_PERIOD =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "stop.grace-period";
+
+  /**
+   * The default value for the grace period between the SIGTERM and the
+   * SIGKILL in the Docker Stop command.
+   */
+  public static final int DEFAULT_NM_DOCKER_STOP_GRACE_PERIOD = 10;
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =
@@ -2082,6 +2119,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_AUX_SERVICES_CLASSPATH =
       NM_AUX_SERVICES + ".%s.classpath";
+
+  public static final String NM_AUX_SERVICE_REMOTE_CLASSPATH =
+      NM_AUX_SERVICES + ".%s.remote-classpath";
 
   public static final String NM_AUX_SERVICES_SYSTEM_CLASSES =
       NM_AUX_SERVICES + ".%s.system-classes";
@@ -2620,7 +2660,7 @@ public class YarnConfiguration extends Configuration {
   public static final String ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS =
       TIMELINE_SERVICE_PREFIX + "app-collector.linger-period.ms";
 
-  public static final int DEFAULT_ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS = 1000;
+  public static final int DEFAULT_ATS_APP_COLLECTOR_LINGER_PERIOD_IN_MS = 60000;
 
   public static final String NUMBER_OF_ASYNC_ENTITIES_TO_MERGE =
       TIMELINE_SERVICE_PREFIX
@@ -3084,14 +3124,17 @@ public class YarnConfiguration extends Configuration {
 
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";
+  // 5 minutes
+  public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
+
+  public static final String FEDERATION_FLUSH_CACHE_FOR_RM_ADDR =
+      FEDERATION_PREFIX + "flush-cache-for-rm-addr";
+  public static final boolean DEFAULT_FEDERATION_FLUSH_CACHE_FOR_RM_ADDR = true;
 
   public static final String FEDERATION_REGISTRY_BASE_KEY =
       FEDERATION_PREFIX + "registry.base-dir";
   public static final String DEFAULT_FEDERATION_REGISTRY_BASE_KEY =
       "yarnfederation/";
-
-  // 5 minutes
-  public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
 
   public static final String FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS =
       FEDERATION_PREFIX + "state-store.heartbeat-interval-secs";
@@ -3766,6 +3809,27 @@ public class YarnConfiguration extends Configuration {
       Collection<Float> versions = getTimelineServiceVersions(conf);
       for (Float version : versions) {
         if (version.intValue() == 1) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
+   * Returns whether the timeline service v.1,5 is enabled via configuration.
+   *
+   * @param conf the configuration
+   * @return whether the timeline service v.1.5 is enabled. V.1.5 refers to a
+   * version equal to 1.5.
+   */
+  public static boolean timelineServiceV15Enabled(Configuration conf) {
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (Float.compare(version, 1.5f) == 0) {
           enabled = true;
           break;
         }

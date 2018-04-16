@@ -142,6 +142,12 @@ class CopyCommands {
         srcs.add(src);
       }
     }
+
+    @Override
+    protected boolean isSorted() {
+      //Sort the children for merge
+      return true;
+    }
   }
 
   static class Cp extends CommandWithDestination {

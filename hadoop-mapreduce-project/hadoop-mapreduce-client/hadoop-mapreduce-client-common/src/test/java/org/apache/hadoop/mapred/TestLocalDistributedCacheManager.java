@@ -32,6 +32,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,37 +61,37 @@ import org.mockito.stubbing.Answer;
 @SuppressWarnings("deprecation")
 public class TestLocalDistributedCacheManager {
 
-  private static FileSystem mockfs; 
-  
+  private static FileSystem mockfs;
+
   public static class MockFileSystem extends FilterFileSystem {
     public MockFileSystem() {
       super(mockfs);
     }
   }
-  
+
   private File localDir;
-  
+
   private static void delete(File file) throws IOException {
-    if (file.getAbsolutePath().length() < 5) { 
+    if (file.getAbsolutePath().length() < 5) {
       throw new IllegalArgumentException(
           "Path [" + file + "] is too short, not deleting");
     }
-    if (file.exists()) {  
+    if (file.exists()) {
       if (file.isDirectory()) {
         File[] children = file.listFiles();
         if (children != null) {
           for (File child : children) {
             delete(child);
-          } 
-        } 
-      } 
+          }
+        }
+      }
       if (!file.delete()) {
         throw new RuntimeException(
           "Could not delete path [" + file + "]");
       }
     }
   }
-  
+
   @Before
   public void setup() throws Exception {
     mockfs = mock(FileSystem.class);
@@ -93,7 +100,7 @@ public class TestLocalDistributedCacheManager {
     delete(localDir);
     localDir.mkdirs();
   }
-  
+
   @After
   public void cleanup() throws Exception {
     delete(localDir);
@@ -120,9 +127,10 @@ public class TestLocalDistributedCacheManager {
 
   @Test
   public void testDownload() throws Exception {
+    JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockBase = new URI("mock://test-nn1/");
     when(mockfs.getUri()).thenReturn(mockBase);
     Path working = new Path("mock://test-nn1/user/me/");
@@ -137,14 +145,14 @@ public class TestLocalDistributedCacheManager {
     final URI file = new URI("mock://test-nn1/user/me/file.txt#link");
     final Path filePath = new Path(file);
     File link = new File("link");
-    
+
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(new Answer<FileStatus>() {
       @Override
       public FileStatus answer(InvocationOnMock args) throws Throwable {
         Path p = (Path)args.getArguments()[0];
         if("file.txt".equals(p.getName())) {
-         return new FileStatus(201, false, 1, 500, 101, 101, 
-             FsPermission.getDefault(), "me", "me", filePath);
+          return new FileStatus(201, false, 1, 500, 101, 101,
+              FsPermission.getDefault(), "me", "me", filePath);
         }  else {
           throw new FileNotFoundException(p+" not supported by mocking");
         }
@@ -176,7 +184,7 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
-      manager.setup(conf);
+      manager.setup(conf, jobId);
       assertTrue(link.exists());
     } finally {
       manager.close();
@@ -186,9 +194,10 @@ public class TestLocalDistributedCacheManager {
 
   @Test
   public void testEmptyDownload() throws Exception {
+    JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockBase = new URI("mock://test-nn1/");
     when(mockfs.getUri()).thenReturn(mockBase);
     Path working = new Path("mock://test-nn1/user/me/");
@@ -199,7 +208,7 @@ public class TestLocalDistributedCacheManager {
         return (Path) args.getArguments()[0];
       }
     });
-    
+
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(new Answer<FileStatus>() {
       @Override
       public FileStatus answer(InvocationOnMock args) throws Throwable {
@@ -221,7 +230,7 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
-      manager.setup(conf);
+      manager.setup(conf, jobId);
     } finally {
       manager.close();
     }
@@ -230,9 +239,10 @@ public class TestLocalDistributedCacheManager {
 
   @Test
   public void testDuplicateDownload() throws Exception {
+    JobID jobId = new JobID();
     JobConf conf = new JobConf();
     conf.setClass("fs.mock.impl", MockFileSystem.class, FileSystem.class);
-    
+
     URI mockBase = new URI("mock://test-nn1/");
     when(mockfs.getUri()).thenReturn(mockBase);
     Path working = new Path("mock://test-nn1/user/me/");
@@ -247,14 +257,14 @@ public class TestLocalDistributedCacheManager {
     final URI file = new URI("mock://test-nn1/user/me/file.txt#link");
     final Path filePath = new Path(file);
     File link = new File("link");
-    
+
     when(mockfs.getFileStatus(any(Path.class))).thenAnswer(new Answer<FileStatus>() {
       @Override
       public FileStatus answer(InvocationOnMock args) throws Throwable {
         Path p = (Path)args.getArguments()[0];
         if("file.txt".equals(p.getName())) {
-         return new FileStatus(201, false, 1, 500, 101, 101, 
-             FsPermission.getDefault(), "me", "me", filePath);
+          return new FileStatus(201, false, 1, 500, 101, 101,
+              FsPermission.getDefault(), "me", "me", filePath);
         }  else {
           throw new FileNotFoundException(p+" not supported by mocking");
         }
@@ -287,11 +297,48 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
-      manager.setup(conf);
+      manager.setup(conf, jobId);
       assertTrue(link.exists());
     } finally {
       manager.close();
     }
     assertFalse(link.exists());
+  }
+
+  /**
+   * This test tries to replicate the issue with the previous version of
+   * {@ref LocalDistributedCacheManager} when the resulting timestamp is
+   * identical as that in another process.  Unfortunately, it is difficult
+   * to mimic such behavior in a single process unit test.  And mocking
+   * the unique id (timestamp previously, UUID otherwise) won't prove the
+   * validity of one approach over the other.
+   */
+  @Test
+  public void testMultipleCacheSetup() throws Exception {
+    JobID jobId = new JobID();
+    JobConf conf = new JobConf();
+    LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
+
+    final int threadCount = 10;
+    final CyclicBarrier barrier = new CyclicBarrier(threadCount);
+
+    ArrayList<Callable<Void>> setupCallable = new ArrayList<>();
+    for (int i = 0; i < threadCount; ++i) {
+      setupCallable.add(() -> {
+        barrier.await();
+        manager.setup(conf, jobId);
+        return null;
+      });
+    }
+
+    ExecutorService ePool = Executors.newFixedThreadPool(threadCount);
+    try {
+      for (Future<Void> future : ePool.invokeAll(setupCallable)) {
+        future.get();
+      }
+    } finally {
+      ePool.shutdown();
+      manager.close();
+    }
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.TargetApplicationsNamespace;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
@@ -220,6 +221,132 @@ public class TestSchedulingRequestContainerAllocation {
     // 1 AM + 2 task (first request) + 1 task (2nd request) +
     // 1 task (3rd request)
     Assert.assertEquals(5, schedulerApp.getLiveContainers().size());
+
+    rm1.close();
+  }
+
+  /**
+   * This UT covers some basic end-to-end inter-app anti-affinity
+   * constraint tests. For comprehensive tests over different namespace
+   * types, see more in TestPlacementConstraintsUtil.
+   * @throws Exception
+   */
+  @Test
+  public void testInterAppAntiAffinity() throws Exception {
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(
+        new Configuration());
+    csConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+
+    // inject node label manager
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    // 4 NMs.
+    MockNM[] nms = new MockNM[4];
+    RMNode[] rmNodes = new RMNode[4];
+    for (int i = 0; i < 4; i++) {
+      nms[i] = rm1.registerNode("192.168.0." + i + ":1234", 10 * GB);
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(nms[i].getNodeId());
+    }
+
+    // app1 -> c
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
+
+    // app1 asks for 3 anti-affinity containers for the same app. It should
+    // only get 3 containers allocated to 3 different nodes..
+    am1.allocateIntraAppAntiAffinity(
+        ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
+        Priority.newInstance(1), 1L, ImmutableSet.of("mapper"), "mapper");
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
+      }
+    }
+
+    System.out.println("Mappers on HOST0: "
+        + rmNodes[0].getAllocationTagsWithCount().get("mapper"));
+    System.out.println("Mappers on HOST1: "
+        + rmNodes[1].getAllocationTagsWithCount().get("mapper"));
+    System.out.println("Mappers on HOST2: "
+        + rmNodes[2].getAllocationTagsWithCount().get("mapper"));
+
+    // App1 should get 4 containers allocated (1 AM + 3 mappers).
+    FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(
+        am1.getApplicationAttemptId());
+    Assert.assertEquals(4, schedulerApp.getLiveContainers().size());
+
+    // app2 -> c
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nms[0]);
+
+    // App2 asks for 3 containers that anti-affinity with any mapper,
+    // since 3 out of 4 nodes already have mapper containers, all 3
+    // containers will be allocated on the other node.
+    TargetApplicationsNamespace.All allNs =
+        new TargetApplicationsNamespace.All();
+    am2.allocateAppAntiAffinity(
+        ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
+        Priority.newInstance(1), 1L, allNs.toString(),
+        ImmutableSet.of("foo"), "mapper");
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
+      }
+    }
+
+    FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
+        am2.getApplicationAttemptId());
+
+    // App2 should get 4 containers allocated (1 AM + 3 container).
+    Assert.assertEquals(4, schedulerApp2.getLiveContainers().size());
+
+    // The allocated node should not have mapper tag.
+    Assert.assertTrue(schedulerApp2.getLiveContainers()
+        .stream().allMatch(rmContainer -> {
+          // except the nm host
+          if (!rmContainer.getContainer().getNodeId().equals(rmNodes[0])) {
+            return !rmContainer.getAllocationTags().contains("mapper");
+          }
+          return true;
+        }));
+
+    // app3 -> c
+    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nms[0]);
+
+    // App3 asks for 3 containers that anti-affinity with any mapper.
+    // Unlike the former case, since app3 source tags are also mapper,
+    // it will anti-affinity with itself too. So there will be only 1
+    // container be allocated.
+    am3.allocateAppAntiAffinity(
+        ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
+        Priority.newInstance(1), 1L, allNs.toString(),
+        ImmutableSet.of("mapper"), "mapper");
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        cs.handle(new NodeUpdateSchedulerEvent(rmNodes[j]));
+      }
+    }
+
+    FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
+        am3.getApplicationAttemptId());
+
+    // App3 should get 2 containers allocated (1 AM + 1 container).
+    Assert.assertEquals(2, schedulerApp3.getLiveContainers().size());
 
     rm1.close();
   }

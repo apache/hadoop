@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
@@ -25,6 +28,9 @@
 #include "docker-util.h"
 #include "string-utils.h"
 #include "util.h"
+#include <grp.h>
+#include <pwd.h>
+#include <errno.h>
 
 static int read_and_verify_command_file(const char *command_file, const char *docker_command,
                                         struct configuration *command_config) {
@@ -357,6 +363,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
     return get_docker_stop_command(command_file, conf, out, outlen);
   } else if (strcmp(DOCKER_VOLUME_COMMAND, command) == 0) {
     return get_docker_volume_command(command_file, conf, out, outlen);
+  } else if (strcmp(DOCKER_START_COMMAND, command) == 0) {
+    return get_docker_start_command(command_file, conf, out, outlen);
   } else {
     return UNKNOWN_DOCKER_COMMAND;
   }
@@ -813,6 +821,44 @@ int get_docker_kill_command(const char *command_file, const struct configuration
   return BUFFER_TOO_SMALL;
 }
 
+int get_docker_start_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
+  int ret = 0;
+  char *container_name = NULL;
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_START_COMMAND, &command_config);
+  if (ret != 0) {
+    return ret;
+  }
+
+  container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (container_name == NULL || validate_container_name(container_name) != 0) {
+    return INVALID_DOCKER_CONTAINER_NAME;
+  }
+
+  memset(out, 0, outlen);
+
+  ret = add_docker_config_param(&command_config, out, outlen);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
+  ret = add_to_buffer(out, outlen, DOCKER_START_COMMAND);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+  ret = add_to_buffer(out, outlen, " ");
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+  ret = add_to_buffer(out, outlen, container_name);
+  if (ret != 0) {
+    goto free_and_exit;
+  }
+free_and_exit:
+  free(container_name);
+  return ret;
+}
+
 static int detach_container(const struct configuration *command_config, char *out, const size_t outlen) {
   return add_param_to_command(command_config, "detach", "-d ", 0, out, outlen);
 }
@@ -1214,14 +1260,94 @@ static int  add_rw_mounts(const struct configuration *command_config, const stru
   return add_mounts(command_config, conf, "rw-mounts", 0, out, outlen);
 }
 
+static int check_privileges(const char *user) {
+  int ngroups = 0;
+  gid_t *groups = NULL;
+  struct passwd *pw;
+  struct group *gr;
+  int ret = 0;
+  int waitid = -1;
+  int statval = 0;
+
+  pw = getpwnam(user);
+  if (pw == NULL) {
+    fprintf(ERRORFILE, "User %s does not exist in host OS.\n", user);
+    exit(INITIALIZE_USER_FAILED);
+  }
+
+  int rc = getgrouplist(user, pw->pw_gid, groups, &ngroups);
+  if (rc < 0) {
+    groups = (gid_t *) alloc_and_clear_memory(ngroups, sizeof(gid_t));
+    if (groups == NULL) {
+      fprintf(ERRORFILE, "Failed to allocate buffer for group lookup for user %s.\n", user);
+      exit(OUT_OF_MEMORY);
+    }
+    if (getgrouplist(user, pw->pw_gid, groups, &ngroups) == -1) {
+      fprintf(ERRORFILE, "Fail to lookup groups for user %s.\n", user);
+      ret = 2;
+    }
+  }
+
+  if (ret != 2) {
+    for (int j = 0; j < ngroups; j++) {
+      gr = getgrgid(groups[j]);
+      if (gr != NULL) {
+        if (strcmp(gr->gr_name, "root")==0 || strcmp(gr->gr_name, "docker")==0) {
+          ret = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  if (ret != 1) {
+    int child_pid = fork();
+    if (child_pid == 0) {
+      execl("/bin/sudo", "sudo", "-U", user, "-n", "-l", "docker", NULL);
+      exit(INITIALIZE_USER_FAILED);
+    } else {
+      while ((waitid = waitpid(child_pid, &statval, 0)) != child_pid) {
+        if (waitid == -1 && errno != EINTR) {
+          fprintf(ERRORFILE, "waitpid failed: %s\n", strerror(errno));
+          break;
+        }
+      }
+      if (waitid == child_pid) {
+        if (WIFEXITED(statval)) {
+          if (WEXITSTATUS(statval) == 0) {
+            ret = 1;
+          }
+        } else if (WIFSIGNALED(statval)) {
+          fprintf(ERRORFILE, "sudo terminated by signal %d\n", WTERMSIG(statval));
+        }
+      }
+    }
+  }
+  free(groups);
+  if (ret == 1) {
+    fprintf(ERRORFILE, "check privileges passed for user: %s\n", user);
+  } else {
+    fprintf(ERRORFILE, "check privileges failed for user: %s, error code: %d\n", user, ret);
+    ret = 0;
+  }
+  return ret;
+}
+
 static int set_privileged(const struct configuration *command_config, const struct configuration *conf, char *out,
                           const size_t outlen) {
   size_t tmp_buffer_size = 1024;
+  char *user = NULL;
   char *tmp_buffer = (char *) alloc_and_clear_memory(tmp_buffer_size, sizeof(char));
   char *value = get_configuration_value("privileged", DOCKER_COMMAND_FILE_SECTION, command_config);
   char *privileged_container_enabled
       = get_configuration_value("docker.privileged-containers.enabled", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
   int ret = 0;
+  int allowed = 0;
+
+  user = get_configuration_value("user", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (user == NULL) {
+    return INVALID_DOCKER_USER_NAME;
+  }
 
   if (value != NULL && strcasecmp(value, "true") == 0 ) {
     if (privileged_container_enabled != NULL) {
@@ -1233,9 +1359,16 @@ static int set_privileged(const struct configuration *command_config, const stru
           ret = PRIVILEGED_CONTAINERS_DISABLED;
           goto free_and_exit;
         }
-        ret = add_to_buffer(out, outlen, "--privileged ");
-        if (ret != 0) {
-          ret = BUFFER_TOO_SMALL;
+        allowed = check_privileges(user);
+        if (allowed) {
+          ret = add_to_buffer(out, outlen, "--privileged ");
+          if (ret != 0) {
+            ret = BUFFER_TOO_SMALL;
+          }
+        } else {
+          fprintf(ERRORFILE, "Privileged containers are disabled for user: %s\n", user);
+          ret = PRIVILEGED_CONTAINERS_DISABLED;
+          goto free_and_exit;
         }
       } else {
         fprintf(ERRORFILE, "Privileged containers are disabled\n");
@@ -1253,6 +1386,7 @@ static int set_privileged(const struct configuration *command_config, const stru
   free(tmp_buffer);
   free(value);
   free(privileged_container_enabled);
+  free(user);
   if (ret != 0) {
     memset(out, 0, outlen);
   }

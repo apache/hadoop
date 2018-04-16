@@ -52,6 +52,7 @@ enum operations {
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
 #define USER_DIR_PATTERN "%s/usercache/%s"
+#define USER_FILECACHE_DIR_PATTERN "%s/usercache/%s/filecache"
 #define NM_APP_DIR_PATTERN USER_DIR_PATTERN "/appcache/%s"
 #define CONTAINER_DIR_PATTERN NM_APP_DIR_PATTERN "/%s"
 #define CONTAINER_SCRIPT "launch_container.sh"

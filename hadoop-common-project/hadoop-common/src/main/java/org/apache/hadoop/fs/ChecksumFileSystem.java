@@ -677,7 +677,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f, DEFAULT_FILTER);
   }
-  
+
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(final Path p)
+      throws IOException {
+    // Not-using fs#listStatusIterator() since it includes crc files as well
+    return new DirListingIterator<>(p);
+  }
+
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.

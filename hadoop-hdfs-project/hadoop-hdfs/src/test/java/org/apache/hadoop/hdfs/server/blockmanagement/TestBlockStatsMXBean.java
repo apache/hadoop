@@ -179,10 +179,9 @@ public class TestBlockStatsMXBean {
 
     storageTypeStats = storageTypeStatsMap.get(StorageType.ARCHIVE);
     assertEquals(3, storageTypeStats.getNodesInService());
-    String dataDir = cluster.getDataDirectory();
-    File dn1ArcVol1 = new File(dataDir, "data" + (3 * 0 + 2));
-    File dn2ArcVol1 = new File(dataDir, "data" + (3 * 1 + 2));
-    File dn3ArcVol1 = new File(dataDir, "data" + (3 * 2 + 2));
+    File dn1ArcVol1 = cluster.getInstanceStorageDir(0, 1);
+    File dn2ArcVol1 = cluster.getInstanceStorageDir(1, 1);
+    File dn3ArcVol1 = cluster.getInstanceStorageDir(2, 1);
     DataNodeTestUtils.injectDataDirFailure(dn1ArcVol1);
     DataNodeTestUtils.injectDataDirFailure(dn2ArcVol1);
     DataNodeTestUtils.injectDataDirFailure(dn3ArcVol1);

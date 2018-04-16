@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
@@ -66,6 +67,14 @@ public class PassThroughRESTRequestInterceptor
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
     return getNextInterceptor().getAppAttempts(hsr, appId);
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr)
+      throws AuthorizationException {
+    return getNextInterceptor().checkUserAccessToQueue(queue, username,
+        queueAclType, hsr);
   }
 
   @Override

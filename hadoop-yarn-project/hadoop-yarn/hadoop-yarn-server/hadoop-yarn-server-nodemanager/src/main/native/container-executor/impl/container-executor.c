@@ -535,6 +535,18 @@ char *get_user_directory(const char *nm_root, const char *user) {
 }
 
 /**
+ * Get the user private filecache directory of a particular user
+ */
+char *get_user_filecache_directory(const char *nm_root, const char *user) {
+  int result = check_nm_local_dir(nm_uid, nm_root);
+  if (result != 0) {
+    return NULL;
+  }
+  return concatenate(USER_FILECACHE_DIR_PATTERN, "user_filecache_dir_path", 2,
+      nm_root, user);
+}
+
+/**
  * Check node manager local dir permission.
  */
 int check_nm_local_dir(uid_t caller_uid, const char *nm_root) {
@@ -1422,6 +1434,29 @@ int create_local_dirs(const char * user, const char *app_id,
   return exit_code;
 }
 
+// create the user file directory on all disks
+int create_user_filecache_dirs(const char * user, char* const* local_dirs) {
+  int rc = 0;
+  const mode_t permissions = S_IRWXU | S_IXGRP;
+  for(char* const* ldir_p = local_dirs; *ldir_p != 0; ++ldir_p) {
+    char* filecache_dir = get_user_filecache_directory(*ldir_p, user);
+    if (filecache_dir == NULL) {
+      fprintf(LOGFILE, "Couldn't get user filecache directory for %s.\n", user);
+      rc = INITIALIZE_USER_FAILED;
+      break;
+    }
+    if (0 != mkdir(filecache_dir, permissions) && EEXIST != errno) {
+      fprintf(LOGFILE, "Failed to create directory %s - %s\n", filecache_dir,
+              strerror(errno));
+      free(filecache_dir);
+      rc = INITIALIZE_USER_FAILED;
+      break;
+    }
+    free(filecache_dir);
+  }
+  return rc;
+}
+
 int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
@@ -1476,6 +1511,13 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
+  exit_code = create_user_filecache_dirs(user, local_dirs);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create user filecache directory");
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
   docker_command = construct_docker_command(command_file);
   docker_binary = get_docker_binary(&CFG);
 
@@ -1500,7 +1542,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   fprintf(LOGFILE, "Launching docker container...\n");
   fprintf(LOGFILE, "Docker run command: %s\n", docker_command_with_binary);
   FILE* start_docker = popen(docker_command_with_binary, "r");
-  if (pclose (start_docker) != 0)
+  if (WEXITSTATUS(pclose (start_docker)) != 0)
   {
     fprintf (ERRORFILE,
      "Could not invoke docker %s.\n", docker_command_with_binary);

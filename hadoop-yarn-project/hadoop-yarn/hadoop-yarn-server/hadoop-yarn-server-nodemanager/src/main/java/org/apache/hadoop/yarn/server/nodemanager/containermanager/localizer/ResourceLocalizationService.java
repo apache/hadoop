@@ -152,6 +152,8 @@ public class ResourceLocalizationService extends CompositeService
        LoggerFactory.getLogger(ResourceLocalizationService.class);
   public static final String NM_PRIVATE_DIR = "nmPrivate";
   public static final FsPermission NM_PRIVATE_PERM = new FsPermission((short) 0700);
+  private static final FsPermission PUBLIC_FILECACHE_FOLDER_PERMS =
+      new FsPermission((short) 0755);
 
   private Server server;
   private InetSocketAddress localizationServerAddress;
@@ -881,6 +883,7 @@ public class ResourceLocalizationService extends CompositeService
                 publicRsrc.getPathForLocalization(key, publicRootPath,
                     delService);
             if (!publicDirDestPath.getParent().equals(publicRootPath)) {
+              createParentDirs(publicDirDestPath, publicRootPath);
               if (diskValidator != null) {
                 diskValidator.checkStatus(
                     new File(publicDirDestPath.toUri().getPath()));
@@ -929,6 +932,23 @@ public class ResourceLocalizationService extends CompositeService
           LOG.debug("Skip downloading resource: " + key + " since it is locked"
               + " by other threads");
         }
+      }
+    }
+
+    private void createParentDirs(Path destDirPath, Path destDirRoot)
+        throws IOException {
+      if (destDirPath == null || destDirPath.equals(destDirRoot)) {
+        return;
+      }
+      createParentDirs(destDirPath.getParent(), destDirRoot);
+      createDir(destDirPath, PUBLIC_FILECACHE_FOLDER_PERMS);
+    }
+
+    private void createDir(Path dirPath, FsPermission perms)
+        throws IOException {
+      lfs.mkdir(dirPath, perms, false);
+      if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
+        lfs.setPermission(dirPath, perms);
       }
     }
 

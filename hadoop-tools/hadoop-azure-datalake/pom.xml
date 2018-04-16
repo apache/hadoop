@@ -33,7 +33,7 @@
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <azure.data.lake.store.sdk.version>2.2.5</azure.data.lake.store.sdk.version>
+    <azure.data.lake.store.sdk.version>2.2.7</azure.data.lake.store.sdk.version>
   </properties>
   <build>
     <plugins>
@@ -146,6 +146,25 @@
       <artifactId>mockwebserver</artifactId>
       <version>${okhttp.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-distcp</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
     </dependency>
   </dependencies>
 </project>

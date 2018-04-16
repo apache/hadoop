@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineC
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.service.SystemServiceManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -245,13 +246,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmContext = new RMContextImpl();
     rmContext.setResourceManager(this);
 
-
-    // add resource profiles here because it's used by AbstractYarnScheduler
-    ResourceProfilesManager resourceProfilesManager =
-        createResourceProfileManager();
-    resourceProfilesManager.init(conf);
-    rmContext.setResourceProfilesManager(resourceProfilesManager);
-
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -260,9 +254,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // load core-site.xml
     loadConfigurationXml(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
 
-    // Do refreshUserToGroupsMappings with loaded core-site.xml
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
-        .refresh();
+    // Refresh user to group mappings during init.
+    refreshUserToGroupMappingsWithConf();
 
     // Do refreshSuperUserGroupsConfiguration with loaded core-site.xml
     // Or use RM specific configurations to overwrite the common ones first
@@ -318,7 +311,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     rmContext.setYarnConfiguration(conf);
-    
+
     createAndInitActiveServices(false);
 
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
@@ -345,6 +338,21 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
+  }
+
+  private void refreshUserToGroupMappingsWithConf()
+      throws YarnException, IOException {
+    Configuration newConf = new Configuration(false);
+    InputStream confFileInputStream =
+        configurationProvider
+        .getConfigurationInputStream(newConf, YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+    if (confFileInputStream != null) {
+      newConf.addResource(confFileInputStream);
+    }
+
+    // Do refreshUserToGroupsMappings with loaded core-site.xml
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(newConf)
+        .refresh();
   }
 
   private void loadConfigurationXml(String configurationFile)
@@ -476,6 +484,27 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException(
           "Could not instantiate ReservationSystem: " + reservationClassName, e);
+    }
+  }
+
+  protected SystemServiceManager createServiceManager() {
+    String schedulerClassName =
+        YarnConfiguration.DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS;
+    LOG.info("Using SystemServiceManager: " + schedulerClassName);
+    try {
+      Class<?> schedulerClazz = Class.forName(schedulerClassName);
+      if (SystemServiceManager.class.isAssignableFrom(schedulerClazz)) {
+        return (SystemServiceManager) ReflectionUtils
+            .newInstance(schedulerClazz, this.conf);
+      } else {
+        throw new YarnRuntimeException(
+            "Class: " + schedulerClassName + " not instance of "
+                + SystemServiceManager.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate SystemServiceManager: " + schedulerClassName,
+          e);
     }
   }
 
@@ -641,6 +670,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(placementConstraintManager);
       rmContext.setPlacementConstraintManager(placementConstraintManager);
 
+      // add resource profiles here because it's used by AbstractYarnScheduler
+      ResourceProfilesManager resourceProfilesManager =
+          createResourceProfileManager();
+      resourceProfilesManager.init(conf);
+      rmContext.setResourceProfilesManager(resourceProfilesManager);
+
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();
       if (delegatedNodeLabelsUpdater != null) {
@@ -781,6 +816,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       new RMNMInfo(rmContext, scheduler);
+
+      if (conf.getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+          false)) {
+        SystemServiceManager systemServiceManager = createServiceManager();
+        addIfService(systemServiceManager);
+      }
 
       super.serviceInit(conf);
     }

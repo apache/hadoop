@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.hadoop.yarn.exceptions.InvalidAllocationTagException;
-
-import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 /**
  * Class to describe all supported forms of namespaces for an allocation tag.
  */
@@ -32,7 +26,7 @@ public enum AllocationTagNamespaceType {
   SELF("self"),
   NOT_SELF("not-self"),
   APP_ID("app-id"),
-  APP_LABEL("app-label"),
+  APP_TAG("app-tag"),
   ALL("all");
 
   private String typeKeyword;
@@ -42,29 +36,6 @@ public enum AllocationTagNamespaceType {
 
   public String getTypeKeyword() {
     return this.typeKeyword;
-  }
-
-  /**
-   * Parses the namespace type from a given string.
-   * @param prefix namespace prefix.
-   * @return namespace type.
-   * @throws InvalidAllocationTagException
-   */
-  public static AllocationTagNamespaceType fromString(String prefix) throws
-      InvalidAllocationTagException {
-    for (AllocationTagNamespaceType type :
-        AllocationTagNamespaceType.values()) {
-      if(type.getTypeKeyword().equals(prefix)) {
-        return type;
-      }
-    }
-
-    Set<String> values = Arrays.stream(AllocationTagNamespaceType.values())
-        .map(AllocationTagNamespaceType::toString)
-        .collect(Collectors.toSet());
-    throw new InvalidAllocationTagException(
-        "Invalid namespace prefix: " + prefix
-            + ", valid values are: " + String.join(",", values));
   }
 
   @Override

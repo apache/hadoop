@@ -42,6 +42,7 @@ RUN apt-get -q update && apt-get -q install -y \
     apt-utils \
     build-essential \
     bzip2 \
+    clang \
     curl \
     doxygen \
     fuse \
@@ -54,6 +55,7 @@ RUN apt-get -q update && apt-get -q install -y \
     libfuse-dev \
     libprotobuf-dev \
     libprotoc-dev \
+    libsasl2-dev \
     libsnappy-dev \
     libssl-dev \
     libtool \
@@ -71,6 +73,7 @@ RUN apt-get -q update && apt-get -q install -y \
     software-properties-common \
     snappy \
     sudo \
+    valgrind \
     zlib1g-dev
 
 #######

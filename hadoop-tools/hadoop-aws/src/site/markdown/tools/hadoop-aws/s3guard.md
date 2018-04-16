@@ -506,7 +506,7 @@ Input seek policy: fs.s3a.experimental.input.fadvise=normal
 
 Note that other clients may have a S3Guard table set up to store metadata
 on this bucket; the checks are all done from the perspective of the configuration
-setttings of the current client.
+settings of the current client.
 
 ```bash
 hadoop s3guard bucket-info -guarded -auth s3a://landsat-pds
@@ -592,8 +592,8 @@ A time value of hours, minutes and/or seconds must be supplied.
 1. This does not delete the entries in the bucket itself.
 1. The modification time is effectively the creation time of the objects
 in the S3 Bucket.
-1. Even when an S3A URI is supplied, all entries in the table older than
-a specific age are deleted &mdash; even those from other buckets.
+1. If an S3A URI is supplied, only the entries in the table specified by the
+URI and older than a specific age are deleted.
 
 Example
 
@@ -603,6 +603,13 @@ hadoop s3guard prune -days 7 s3a://ireland-1
 
 Deletes all entries in the S3Guard table for files older than seven days from
 the table associated with `s3a://ireland-1`.
+
+```bash
+hadoop s3guard prune -days 7 s3a://ireland-1/path_prefix/
+```
+
+Deletes all entries in the S3Guard table for files older than seven days from
+the table associated with `s3a://ireland-1` and with the prefix "path_prefix"
 
 ```bash
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
@@ -798,6 +805,6 @@ The IO load of clients of the (shared) DynamoDB table was exceeded.
 Currently S3Guard doesn't do any throttling and retries here; the way to address
 this is to increase capacity via the AWS console or the `set-capacity` command.
 
-## Other Topis
+## Other Topics
 
 For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)

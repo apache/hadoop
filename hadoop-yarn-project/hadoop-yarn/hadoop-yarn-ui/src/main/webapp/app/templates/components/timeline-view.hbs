@@ -26,16 +26,16 @@
       {{/if}}
     </div>
     <ul class="nav nav-tabs" role="tablist">
-      <li class="active">
-        <a href="#graphViewTab" role="tab" data-toggle="tab">Graph View</a>
+      <li class="{{if (eq viewType "graph") "active" ""}}">
+        <a href="#graphViewTab" role="tab" data-toggle="tab" {{action "changeViewType" "graph"}}>Graph View</a>
       </li>
-      <li class="">
-        <a href="#gridViewTab" role="tab" data-toggle="tab">Grid View</a>
+      <li class="{{if (eq viewType "grid") "active" ""}}">
+        <a href="#gridViewTab" role="tab" data-toggle="tab" {{action "changeViewType" "grid"}}>Grid View</a>
       </li>
     </ul>
     <div class="panel-body">
       <div class="tab-content">
-        <div role="tabpanel" class="tab-pane active" id="graphViewTab">
+        <div role="tabpanel" class="tab-pane {{if (eq viewType "graph") "active" ""}}" id="graphViewTab">
           <br/><br/>
           <div class="col-md-7 container-fluid" id={{parent-id}}></div>
           <!-- diag info -->
@@ -56,7 +56,7 @@
             </div>
           </div>
         </div>
-        <div role="tabpanel" class="tab-pane" id="gridViewTab">
+        <div role="tabpanel" class="tab-pane {{if (eq viewType "grid") "active" ""}}" id="gridViewTab">
           {{em-table columns=gridColumns rows=gridRows definition=tableDefinition}}
         </div>
       </div>

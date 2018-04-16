@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.service.monitor.probe;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 
 import java.io.IOException;
@@ -29,18 +28,18 @@ import java.util.Map;
  */
 public abstract class Probe implements MonitorKeys {
 
-  protected final Configuration conf;
   private String name;
+
+  protected Probe() {
+  }
 
   /**
    * Create a probe of a specific name
    *
    * @param name probe name
-   * @param conf configuration being stored.
    */
-  public Probe(String name, Configuration conf) {
+  public Probe(String name) {
     this.name = name;
-    this.conf = conf;
   }
 
 
@@ -80,6 +79,15 @@ public abstract class Probe implements MonitorKeys {
       return defaultValue;
     }
     return Integer.parseInt(value);
+  }
+
+  public static boolean getPropertyBool(Map<String, String> props, String name,
+      boolean defaultValue) {
+    String value = props.get(name);
+    if (StringUtils.isEmpty(value)) {
+      return defaultValue;
+    }
+    return Boolean.parseBoolean(value);
   }
 
   /**

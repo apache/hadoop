@@ -3376,7 +3376,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       BlockUnderConstructionFeature uc =
           lastBlock.getUnderConstructionFeature();
       // determine if last block was intended to be truncated
-      Block recoveryBlock = uc.getTruncateBlock();
+      BlockInfo recoveryBlock = uc.getTruncateBlock();
       boolean truncateRecovery = recoveryBlock != null;
       boolean copyOnTruncate = truncateRecovery &&
           recoveryBlock.getBlockId() != lastBlock.getBlockId();
@@ -4338,6 +4338,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       for (int i=0; i<arr.length; i++) {
         arr[i] = new DatanodeInfoBuilder().setFrom(results.get(i))
             .build();
+        arr[i].setNumBlocks(results.get(i).numBlocks());
       }
     } finally {
       readUnlock(operationName);

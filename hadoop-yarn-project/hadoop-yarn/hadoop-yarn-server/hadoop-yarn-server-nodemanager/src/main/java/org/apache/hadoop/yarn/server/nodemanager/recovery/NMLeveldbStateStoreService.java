@@ -127,6 +127,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_EXIT_CODE_KEY_SUFFIX = "/exitcode";
   private static final String CONTAINER_REMAIN_RETRIES_KEY_SUFFIX =
       "/remainingRetryAttempts";
+  private static final String CONTAINER_RESTART_TIMES_SUFFIX =
+      "/restartTimes";
   private static final String CONTAINER_WORK_DIR_KEY_SUFFIX = "/workdir";
   private static final String CONTAINER_LOG_DIR_KEY_SUFFIX = "/logdir";
 
@@ -338,6 +340,18 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       } else if (suffix.equals(CONTAINER_REMAIN_RETRIES_KEY_SUFFIX)) {
         rcs.setRemainingRetryAttempts(
             Integer.parseInt(asString(entry.getValue())));
+      } else if (suffix.equals(CONTAINER_RESTART_TIMES_SUFFIX)) {
+        String value = asString(entry.getValue());
+        // parse the string format of List<Long>, e.g. [34, 21, 22]
+        String[] unparsedRestartTimes =
+            value.substring(1, value.length() - 1).split(", ");
+        List<Long> restartTimes = new ArrayList<>();
+        for (String restartTime : unparsedRestartTimes) {
+          if (!restartTime.isEmpty()) {
+            restartTimes.add(Long.parseLong(restartTime));
+          }
+        }
+        rcs.setRestartTimes(restartTimes);
       } else if (suffix.equals(CONTAINER_WORK_DIR_KEY_SUFFIX)) {
         rcs.setWorkDir(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_LOG_DIR_KEY_SUFFIX)) {
@@ -577,6 +591,18 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       db.put(bytes(key), bytes(Integer.toString(remainingRetryAttempts)));
     } catch (DBException e) {
       markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerRestartTimes(ContainerId containerId,
+      List<Long> restartTimes) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_RESTART_TIMES_SUFFIX;
+    try {
+      db.put(bytes(key), bytes(restartTimes.toString()));
+    } catch (DBException e) {
       throw new IOException(e);
     }
   }
@@ -1505,7 +1531,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     Path storeRoot = createStorageDir(conf);
     Options options = new Options();
     options.createIfMissing(false);
-    options.logger(new LeveldbLogger());
     LOG.info("Using state database at " + storeRoot + " for recovery");
     File dbfile = new File(storeRoot.toString());
     try {
@@ -1569,17 +1594,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       LOG.info("Full compaction cycle completed in " + duration + " msec");
     }
   }
-
-  private static class LeveldbLogger implements org.iq80.leveldb.Logger {
-    private static final org.slf4j.Logger LOG =
-        LoggerFactory.getLogger(LeveldbLogger.class);
-
-    @Override
-    public void log(String message) {
-      LOG.info(message);
-    }
-  }
-
 
   Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));

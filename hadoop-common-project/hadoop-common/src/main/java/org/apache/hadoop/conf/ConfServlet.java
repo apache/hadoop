@@ -20,7 +20,6 @@ package org.apache.hadoop.conf;
 import java.io.IOException;
 import java.io.Writer;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -59,12 +58,7 @@ public class ConfServlet extends HttpServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
-    // If user is a static user and auth Type is null, that means
-    // there is a non-security environment and no need authorization,
-    // otherwise, do the authorization.
-    final ServletContext servletContext = getServletContext();
-    if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-        !HttpServer2.isInstrumentationAccessAllowed(servletContext,
+    if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
                                                    request, response)) {
       return;
     }

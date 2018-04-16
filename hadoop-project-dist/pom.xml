@@ -120,7 +120,7 @@
             <docletArtifact>
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-annotations</artifactId>
-              <version>${project.version}</version>
+              <version>${hadoop.version}</version>
             </docletArtifact>
           </docletArtifacts>
           <useStandardDocletOptions>true</useStandardDocletOptions>
@@ -145,7 +145,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>3.0.0</jdiff.stable.api>
+        <jdiff.stable.api>3.0.1</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -393,7 +393,7 @@
               <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
+                <version>${hadoop.version}</version>
               </dependency>
             </dependencies>
             <executions>

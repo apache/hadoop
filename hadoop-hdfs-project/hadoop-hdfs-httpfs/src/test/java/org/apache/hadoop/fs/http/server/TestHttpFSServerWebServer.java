@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 
 import org.apache.commons.io.FileUtils;
@@ -61,7 +61,7 @@ public class TestHttpFSServerWebServer {
     System.setProperty("httpfs.log.dir", logsDir.getAbsolutePath());
     System.setProperty("httpfs.config.dir", confDir.getAbsolutePath());
     FileUtils.writeStringToFile(new File(confDir, "httpfs-signature.secret"),
-        "foo", Charset.forName("UTF-8"));
+        "foo", StandardCharsets.UTF_8);
   }
 
   @Before

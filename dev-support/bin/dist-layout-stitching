@@ -129,6 +129,7 @@ run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${VERSION}"
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-nfs/target/hadoop-hdfs-nfs-${VERSION}" .
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-${VERSION}" .
 run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-native-client/target/hadoop-hdfs-native-client-${VERSION}" .
+run copy "${ROOT}/hadoop-hdfs-project/hadoop-hdfs-rbf/target/hadoop-hdfs-rbf-${VERSION}" .
 run copy "${ROOT}/hadoop-yarn-project/target/hadoop-yarn-project-${VERSION}" .
 run copy "${ROOT}/hadoop-mapreduce-project/target/hadoop-mapreduce-${VERSION}" .
 run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .

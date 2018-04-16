@@ -225,4 +225,18 @@ public final class DockerCommandExecutor {
         && !containerStatus.equals(DockerContainerStatus.REMOVING)
         && !containerStatus.equals(DockerContainerStatus.RUNNING);
   }
+
+  /**
+   * Is the container in a startable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a startable state.
+   */
+  public static boolean isStartable(DockerContainerStatus containerStatus) {
+    if (containerStatus.equals(DockerContainerStatus.EXITED)
+        || containerStatus.equals(DockerContainerStatus.STOPPED)) {
+      return true;
+    }
+    return false;
+  }
 }

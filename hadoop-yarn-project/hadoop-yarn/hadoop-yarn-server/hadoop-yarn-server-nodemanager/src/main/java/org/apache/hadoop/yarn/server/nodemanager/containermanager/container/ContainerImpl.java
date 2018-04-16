@@ -167,9 +167,11 @@ public class ContainerImpl implements Container {
   private long containerLaunchStartTime;
   private ContainerMetrics containerMetrics;
   private static Clock clock = SystemClock.getInstance();
+
   private ContainerRetryContext containerRetryContext;
-  // remaining retries to relaunch container if needed
-  private int remainingRetryAttempts;
+  private SlidingWindowRetryPolicy.RetryContext windowRetryContext;
+  private SlidingWindowRetryPolicy retryPolicy;
+
   private String workDir;
   private String logDir;
   private String host;
@@ -246,7 +248,10 @@ public class ContainerImpl implements Container {
     // Configure the Retry Context
     this.containerRetryContext = configureRetryContext(
         conf, launchContext, this.containerId);
-    this.remainingRetryAttempts = this.containerRetryContext.getMaxRetries();
+    this.windowRetryContext = new SlidingWindowRetryPolicy
+        .RetryContext(containerRetryContext);
+    this.retryPolicy = new SlidingWindowRetryPolicy(clock);
+
     stateMachine = stateMachineFactory.make(this, ContainerState.NEW,
         context.getContainerStateTransitionListener());
     this.context = context;
@@ -289,7 +294,9 @@ public class ContainerImpl implements Container {
     this.recoveredAsKilled = rcs.getKilled();
     this.diagnostics.append(rcs.getDiagnostics());
     this.version = rcs.getVersion();
-    this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
+    this.windowRetryContext.setRemainingRetries(
+        rcs.getRemainingRetryAttempts());
+    this.windowRetryContext.setRestartTimes(rcs.getRestartTimes());
     this.workDir = rcs.getWorkDir();
     this.logDir = rcs.getLogDir();
     this.resourceMappings = rcs.getResourceMappings();
@@ -1591,27 +1598,15 @@ public class ContainerImpl implements Container {
       if (exitEvent.getDiagnosticInfo() != null) {
         if (container.containerRetryContext.getRetryPolicy()
             != ContainerRetryPolicy.NEVER_RETRY) {
-          int n = container.containerRetryContext.getMaxRetries()
-              - container.remainingRetryAttempts;
-          container.addDiagnostics("Diagnostic message from attempt "
-              + n + " : ", "\n");
+          container.addDiagnostics("Diagnostic message from attempt : \n");
         }
         container.addDiagnostics(exitEvent.getDiagnosticInfo() + "\n");
       }
 
       if (container.shouldRetry(container.exitCode)) {
-        if (container.remainingRetryAttempts > 0) {
-          container.remainingRetryAttempts--;
-          try {
-            container.stateStore.storeContainerRemainingRetryAttempts(
-                container.getContainerId(), container.remainingRetryAttempts);
-          } catch (IOException e) {
-            LOG.warn(
-                "Unable to update remainingRetryAttempts in state store for "
-                    + container.getContainerId(), e);
-          }
-        }
-        doRelaunch(container, container.remainingRetryAttempts,
+        container.storeRetryContext();
+        doRelaunch(container,
+            container.windowRetryContext.getRemainingRetries(),
             container.containerRetryContext.getRetryInterval());
         return ContainerState.RELAUNCHING;
       } else if (container.canRollback()) {
@@ -1671,29 +1666,14 @@ public class ContainerImpl implements Container {
 
   @Override
   public boolean shouldRetry(int errorCode) {
-    return shouldRetry(errorCode, containerRetryContext,
-        remainingRetryAttempts);
-  }
-
-  public static boolean shouldRetry(int errorCode,
-      ContainerRetryContext retryContext, int remainingRetryAttempts) {
     if (errorCode == ExitCode.SUCCESS.getExitCode()
         || errorCode == ExitCode.FORCE_KILLED.getExitCode()
         || errorCode == ExitCode.TERMINATED.getExitCode()) {
       return false;
     }
-
-    ContainerRetryPolicy retryPolicy = retryContext.getRetryPolicy();
-    if (retryPolicy == ContainerRetryPolicy.RETRY_ON_ALL_ERRORS
-        || (retryPolicy == ContainerRetryPolicy.RETRY_ON_SPECIFIC_ERROR_CODES
-        && retryContext.getErrorCodes() != null
-        && retryContext.getErrorCodes().contains(errorCode))) {
-      return remainingRetryAttempts > 0
-          || remainingRetryAttempts == ContainerRetryContext.RETRY_FOREVER;
-    }
-
-    return false;
+    return retryPolicy.shouldRetry(windowRetryContext, errorCode);
   }
+
   /**
    * Transition to EXITED_WITH_FAILURE
    */
@@ -1729,9 +1709,9 @@ public class ContainerImpl implements Container {
       container.containerRetryContext =
           configureRetryContext(container.context.getConf(),
               container.launchContext, container.containerId);
-      // Reset the retry attempts since its a fresh start
-      container.remainingRetryAttempts =
-          container.containerRetryContext.getMaxRetries();
+      container.windowRetryContext = new SlidingWindowRetryPolicy
+          .RetryContext(container.containerRetryContext);
+      container.retryPolicy = new SlidingWindowRetryPolicy(clock);
 
       container.resourceSet =
           container.reInitContext.mergedResourceSet(container.resourceSet);
@@ -2208,5 +2188,32 @@ public class ContainerImpl implements Container {
         new DockerContainerDeletionTask(deletionService, container.user,
             container.getContainerId().toString());
     deletionService.delete(deletionTask);
+  }
+
+  private void storeRetryContext() {
+    if (windowRetryContext.getRestartTimes() != null &&
+        !windowRetryContext.getRestartTimes().isEmpty()) {
+      try {
+        stateStore.storeContainerRestartTimes(containerId,
+            windowRetryContext.getRestartTimes());
+      } catch (IOException e) {
+        LOG.warn(
+            "Unable to update finishTimeForRetryAttempts in state store for "
+                + containerId, e);
+      }
+    }
+    try {
+      stateStore.storeContainerRemainingRetryAttempts(containerId,
+          windowRetryContext.getRemainingRetries());
+    } catch (IOException e) {
+      LOG.warn(
+          "Unable to update remainingRetryAttempts in state store for "
+              + containerId, e);
+    }
+  }
+
+  @VisibleForTesting
+  SlidingWindowRetryPolicy getRetryPolicy() {
+    return retryPolicy;
   }
 }

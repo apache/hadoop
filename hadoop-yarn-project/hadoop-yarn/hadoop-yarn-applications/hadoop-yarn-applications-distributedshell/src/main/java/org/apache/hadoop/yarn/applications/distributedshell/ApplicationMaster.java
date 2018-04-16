@@ -308,6 +308,7 @@ public class ApplicationMaster {
   private Set<Integer> containerRetryErrorCodes = null;
   private int containerMaxRetries = 0;
   private int containrRetryInterval = 0;
+  private long containerFailuresValidityInterval = -1;
 
   // Timeline domain ID
   private String domainId = null;
@@ -471,6 +472,9 @@ public class ApplicationMaster {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("container_failures_validity_interval", true,
+        "Failures which are out of the time window will not be added to"
+            + " the number of container retry attempts");
     opts.addOption("placement_spec", true, "Placement specification");
     opts.addOption("debug", false, "Dump out debug information");
 
@@ -661,7 +665,8 @@ public class ApplicationMaster {
         cliParser.getOptionValue("container_max_retries", "0"));
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
         "container_retry_interval", "0"));
-
+    containerFailuresValidityInterval = Long.parseLong(
+        cliParser.getOptionValue("container_failures_validity_interval", "-1"));
     if (!YarnConfiguration.timelineServiceEnabled(conf)) {
       timelineClient = null;
       timelineV2Client = null;
@@ -1142,7 +1147,6 @@ public class ApplicationMaster {
     public void onError(Throwable e) {
       LOG.error("Error in RMCallbackHandler: ", e);
       done = true;
-      amRMClient.stop();
     }
   }
 
@@ -1385,7 +1389,8 @@ public class ApplicationMaster {
       ContainerRetryContext containerRetryContext =
           ContainerRetryContext.newInstance(
               containerRetryPolicy, containerRetryErrorCodes,
-              containerMaxRetries, containrRetryInterval);
+              containerMaxRetries, containrRetryInterval,
+              containerFailuresValidityInterval);
       ContainerLaunchContext ctx = ContainerLaunchContext.newInstance(
         localResources, myShellEnv, commands, null, allTokens.duplicate(),
           null, containerRetryContext);

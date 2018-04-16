@@ -448,7 +448,8 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT) * 1000L;
     invalidateBlocks = new InvalidateBlocks(
         datanodeManager.getBlockInvalidateLimit(),
-        startupDelayBlockDeletionInMs);
+        startupDelayBlockDeletionInMs,
+        blockIdManager);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
@@ -991,6 +992,13 @@ public class BlockManager implements BlockStatsMXBean {
         addExpectedReplicasToPending(lastBlock);
       }
       completeBlock(lastBlock, iip, false);
+    } else if (pendingRecoveryBlocks.isUnderRecovery(lastBlock)) {
+      // We've just finished recovery for this block, complete
+      // the block forcibly disregarding number of replicas.
+      // This is to ignore minReplication, the block will be closed
+      // and then replicated out.
+      completeBlock(lastBlock, iip, true);
+      updateNeededReconstructions(lastBlock, 1, 0);
     }
     return committed;
   }
@@ -1670,7 +1678,7 @@ public class BlockManager implements BlockStatsMXBean {
       corrupted.setBlockId(b.getStored().getBlockId());
     }
     corruptReplicas.addToCorruptReplicasMap(corrupted, node, b.getReason(),
-        b.getReasonCode());
+        b.getReasonCode(), b.getStored().isStriped());
 
     NumberReplicas numberOfReplicas = countNodes(b.getStored());
     boolean hasEnoughLiveReplicas = numberOfReplicas.liveReplicas() >=

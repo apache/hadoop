@@ -61,6 +61,8 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -247,6 +249,48 @@ public class PBHelperClient {
     return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
   }
 
+  public static HdfsProtos.BlockChecksumTypeProto convert(
+      BlockChecksumType type) {
+    switch(type) {
+    case MD5CRC:
+      return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
+    case COMPOSITE_CRC:
+      return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumType not found, type=" + type);
+    }
+  }
+
+  public static BlockChecksumType convert(
+      HdfsProtos.BlockChecksumTypeProto blockChecksumTypeProto) {
+    switch(blockChecksumTypeProto) {
+    case MD5CRC:
+      return BlockChecksumType.MD5CRC;
+    case COMPOSITE_CRC:
+      return BlockChecksumType.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumTypeProto not found, type="
+          + blockChecksumTypeProto);
+    }
+  }
+
+  public static HdfsProtos.BlockChecksumOptionsProto convert(
+      BlockChecksumOptions options) {
+    return HdfsProtos.BlockChecksumOptionsProto.newBuilder()
+        .setBlockChecksumType(convert(options.getBlockChecksumType()))
+        .setStripeLength(options.getStripeLength())
+        .build();
+  }
+
+  public static BlockChecksumOptions convert(
+      HdfsProtos.BlockChecksumOptionsProto options) {
+    return new BlockChecksumOptions(
+        convert(options.getBlockChecksumType()),
+        options.getStripeLength());
+  }
+
   public static ExtendedBlockProto convert(final ExtendedBlock b) {
     if (b == null) return null;
     return ExtendedBlockProto.newBuilder().
@@ -333,6 +377,7 @@ public class PBHelperClient {
         .setAdminState(convert(info.getAdminState()))
         .setLastBlockReportTime(info.getLastBlockReportTime())
         .setLastBlockReportMonotonic(info.getLastBlockReportMonotonic())
+        .setNumBlocks(info.getNumBlocks())
         .build();
     return builder.build();
   }
@@ -704,7 +749,9 @@ public class PBHelperClient {
             .setLastBlockReportTime(di.hasLastBlockReportTime() ?
                 di.getLastBlockReportTime() : 0)
             .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
-                di.getLastBlockReportMonotonic() : 0);
+                di.getLastBlockReportMonotonic() : 0)
+            .setNumBlocks(di.getNumBlocks());
+
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
     } else {

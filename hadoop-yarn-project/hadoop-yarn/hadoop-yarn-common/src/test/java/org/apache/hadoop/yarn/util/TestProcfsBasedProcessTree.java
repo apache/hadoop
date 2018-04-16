@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Random;
 import java.util.Vector;
@@ -154,7 +155,8 @@ public class TestProcfsBasedProcessTree {
         + " $(($1-1))\n" + "else\n" + " echo $$ > " + lowestDescendant + "\n"
         + "(sleep 300&\n"
         + "echo $! > " + lostDescendant + ")\n"
-        + " while true\n do\n" + "  sleep 5\n" + " done\n" + "fi");
+        + " while true\n do\n" + "  sleep 5\n" + " done\n" + "fi",
+            StandardCharsets.UTF_8);
 
     Thread t = new RogueTaskThread();
     t.start();
