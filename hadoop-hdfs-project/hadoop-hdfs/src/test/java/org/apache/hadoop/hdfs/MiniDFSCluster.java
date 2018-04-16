@@ -536,14 +536,6 @@ public class MiniDFSCluster implements AutoCloseable {
       this.ipcPort = ipcPort;
     }
 
-    public Configuration getConf() {
-      return conf;
-    }
-
-    public DataNode getDatanode() {
-      return datanode;
-    }
-
     public void setDnArgs(String ... args) {
       dnArgs = args;
     }
@@ -1083,6 +1075,9 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public static void configureNameNodes(MiniDFSNNTopology nnTopology, boolean federation,
       Configuration conf) throws IOException {
+    Preconditions.checkArgument(nnTopology.countNameNodes() > 0,
+        "empty NN topology: no namenodes specified!");
+
     if (!federation && nnTopology.countNameNodes() == 1) {
       NNConf onlyNN = nnTopology.getOnlyNameNode();
       // we only had one NN, set DEFAULT_NAME for it. If not explicitly
@@ -1597,7 +1592,7 @@ public class MiniDFSCluster implements AutoCloseable {
         dnConf.addResource(dnConfOverlays[i]);
       }
       // Set up datanode address
-      setupDatanodeAddress(i, dnConf, setupHostsFile, checkDataNodeAddrConfig);
+      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
         String dirs = makeDataNodeDirs(i, storageTypes == null ?
           null : storageTypes[i - curDatanodesNum]);
@@ -2358,7 +2353,7 @@ public class MiniDFSCluster implements AutoCloseable {
       conf.set(DFS_DATANODE_ADDRESS_KEY, 
           addr.getAddress().getHostAddress() + ":" + addr.getPort());
       conf.set(DFS_DATANODE_IPC_ADDRESS_KEY,
-          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort);
+          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort); 
     }
     final DataNode newDn = DataNode.createDataNode(args, conf, secureResources);
 
@@ -2899,19 +2894,16 @@ public class MiniDFSCluster implements AutoCloseable {
 
   /**
    * Get a storage directory for a datanode.
-   * For examples,
    * <ol>
-   * <li><base directory>/data/dn0_data0</li>
-   * <li><base directory>/data/dn0_data1</li>
-   * <li><base directory>/data/dn1_data0</li>
-   * <li><base directory>/data/dn1_data1</li>
+   * <li><base directory>/data/data<2*dnIndex + 1></li>
+   * <li><base directory>/data/data<2*dnIndex + 2></li>
    * </ol>
    *
    * @param dnIndex datanode index (starts from 0)
    * @param dirIndex directory index.
    * @return Storage directory
    */
-  public static File getStorageDir(int dnIndex, int dirIndex) {
+  public File getStorageDir(int dnIndex, int dirIndex) {
     return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
   }
 
@@ -2922,8 +2914,8 @@ public class MiniDFSCluster implements AutoCloseable {
    * @param dirIndex directory index.
    * @return storage directory path
    */
-  private static String getStorageDirPath(int dnIndex, int dirIndex) {
-    return "data/dn" + dnIndex + "_data" + dirIndex;
+  private String getStorageDirPath(int dnIndex, int dirIndex) {
+    return "data/data" + (storagesPerDatanode * dnIndex + 1 + dirIndex);
   }
 
   /**
@@ -3188,36 +3180,35 @@ public class MiniDFSCluster implements AutoCloseable {
     }
   }
   
-  protected void setupDatanodeAddress(
-      int i, Configuration dnConf, boolean setupHostsFile,
-      boolean checkDataNodeAddrConfig) throws IOException {
+  protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
+                           boolean checkDataNodeAddrConfig) throws IOException {
     if (setupHostsFile) {
-      String hostsFile = dnConf.get(DFS_HOSTS, "").trim();
+      String hostsFile = conf.get(DFS_HOSTS, "").trim();
       if (hostsFile.length() == 0) {
         throw new IOException("Parameter dfs.hosts is not setup in conf");
       }
       // Setup datanode in the include file, if it is defined in the conf
       String address = "127.0.0.1:" + NetUtils.getFreeSocketPort();
       if (checkDataNodeAddrConfig) {
-        dnConf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, address);
+        conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, address);
       } else {
-        dnConf.set(DFS_DATANODE_ADDRESS_KEY, address);
+        conf.set(DFS_DATANODE_ADDRESS_KEY, address);
       }
       addToFile(hostsFile, address);
       LOG.info("Adding datanode " + address + " to hosts file " + hostsFile);
     } else {
       if (checkDataNodeAddrConfig) {
-        dnConf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+        conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
       } else {
-        dnConf.set(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+        conf.set(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
       }
     }
     if (checkDataNodeAddrConfig) {
-      dnConf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      dnConf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
     } else {
-      dnConf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
-      dnConf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
     }
   }
   
