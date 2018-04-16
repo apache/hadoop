@@ -104,8 +104,8 @@ public class SQLCLI  extends Configured implements Tool {
           "VALUES (\"%s\", \"%s\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
-          "containerPort,) " +
-          "VALUES (\"%s\", \"%s\", \"%s\", %d";
+          "containerPort) " +
+          "VALUES (\"%s\", \"%s\", \"%s\", \"%d\")";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
           "VALUES (\"%s\", \"%s\")";
@@ -644,7 +644,7 @@ public class SQLCLI  extends Configured implements Tool {
 
     String insertDatanodeDetails = String
         .format(INSERT_DATANODE_INFO, datanodeDetails.getHostName(),
-            datanodeDetails.getUuid(), datanodeDetails.getIpAddress(),
+            datanodeDetails.getUuidString(), datanodeDetails.getIpAddress(),
             datanodeDetails.getContainerPort());
     executeSQL(conn, insertDatanodeDetails);
   }

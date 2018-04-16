@@ -24,7 +24,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.CHUNK_SIZE;
 import static org.junit.Assert.*;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.junit.AfterClass;
@@ -61,15 +60,21 @@ public class TestOzoneRestWithMiniCluster {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    cluster.waitOzoneReady();
-    ozoneClient = cluster.createOzoneRestClient();
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
+    int port = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails().getOzoneRestPort();
+    ozoneClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
+    ozoneClient.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
   }
 
   @AfterClass
   public static void shutdown() throws InterruptedException {
-    IOUtils.cleanupWithLogger(null, ozoneClient, cluster);
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    IOUtils.cleanupWithLogger(null, ozoneClient);
   }
 
   @Test

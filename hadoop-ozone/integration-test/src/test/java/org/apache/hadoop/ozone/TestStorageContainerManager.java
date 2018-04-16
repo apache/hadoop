@@ -37,7 +37,6 @@ import org.apache.hadoop.hdds.scm.StorageContainerManager.StartupOption;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLog;
 import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -62,7 +61,6 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
-import org.apache.hadoop.io.IOUtils;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -87,7 +85,7 @@ public class TestStorageContainerManager {
   public ExpectedException exception = ExpectedException.none();
 
   @Test
-  public void testRpcPermission() throws IOException {
+  public void testRpcPermission() throws Exception {
     // Test with default configuration
     OzoneConfiguration defaultConf = new OzoneConfiguration();
     testRpcPermissionWithConf(defaultConf, "unknownUser", true);
@@ -104,11 +102,9 @@ public class TestStorageContainerManager {
 
   private void testRpcPermissionWithConf(
       OzoneConfiguration ozoneConf, String fakeRemoteUsername,
-      boolean expectPermissionDenied) throws IOException {
-    MiniOzoneCluster cluster =
-        new MiniOzoneClassicCluster.Builder(ozoneConf).numDataNodes(1)
-            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-
+      boolean expectPermissionDenied) throws Exception {
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(ozoneConf).build();
+    cluster.waitForClusterToBeReady();
     try {
       String fakeUser = fakeRemoteUsername;
       StorageContainerManager mockScm = Mockito.spy(
@@ -172,7 +168,7 @@ public class TestStorageContainerManager {
         }
       }
     } finally {
-      IOUtils.cleanupWithLogger(null, cluster);
+      cluster.shutdown();
     }
   }
 
@@ -201,9 +197,8 @@ public class TestStorageContainerManager {
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
         numKeys);
 
-    MiniOzoneClassicCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
 
     try {
       DeletedBlockLog delLog = cluster.getStorageContainerManager()
@@ -269,19 +264,17 @@ public class TestStorageContainerManager {
   public void testBlockDeletingThrottling() throws Exception {
     int numKeys = 15;
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL, 5,
-        TimeUnit.SECONDS);
-    conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
-        3000, TimeUnit.MILLISECONDS);
     conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 5);
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         1000, TimeUnit.MILLISECONDS);
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
         numKeys);
 
-    MiniOzoneClassicCluster cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(1).setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setHbInterval(5000)
+        .setHbProcessorInterval(3000)
         .build();
+    cluster.waitForClusterToBeReady();
 
     DeletedBlockLog delLog = cluster.getStorageContainerManager()
         .getScmBlockManager().getDeletedBlockLog();
@@ -402,14 +395,15 @@ public class TestStorageContainerManager {
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     //This will set the cluster id in the version file
     MiniOzoneCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+        MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
+    cluster.waitForClusterToBeReady();
     StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
     SCMStorage scmStore = new SCMStorage(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
+    cluster.shutdown();
   }
 
   @Test

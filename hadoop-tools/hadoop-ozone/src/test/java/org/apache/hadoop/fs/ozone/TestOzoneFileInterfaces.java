@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,8 +41,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
@@ -82,7 +81,7 @@ public class TestOzoneFileInterfaces {
 
   private boolean useAbsolutePath;
 
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
 
   private static FileSystem fs;
 
@@ -97,10 +96,10 @@ public class TestOzoneFileInterfaces {
   @Before
   public void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(3)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(3)
         .build();
+    cluster.waitForClusterToBeReady();
     storageHandler =
         new ObjectStoreHandler(conf).getStorageHandler();
 
@@ -132,9 +131,11 @@ public class TestOzoneFileInterfaces {
 
   @After
   public void teardown() throws IOException {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
     IOUtils.closeQuietly(fs);
     IOUtils.closeQuietly(storageHandler);
-    IOUtils.closeQuietly(cluster);
   }
 
   @Test

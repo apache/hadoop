@@ -51,18 +51,42 @@ public class HddsDatanodeService implements ServicePlugin {
       HddsDatanodeService.class);
 
 
-  private Configuration conf;
+  private OzoneConfiguration conf;
   private DatanodeDetails datanodeDetails;
   private DatanodeStateMachine datanodeStateMachine;
   private List<ServicePlugin> plugins;
 
+  /**
+   * Default constructor.
+   */
+  public HddsDatanodeService() {
+    this(null);
+  }
+
+  /**
+   * Constructs {@link HddsDatanodeService} using the provided {@code conf}
+   * value.
+   *
+   * @param conf OzoneConfiguration
+   */
+  public HddsDatanodeService(Configuration conf) {
+    if (conf == null) {
+      this.conf = new OzoneConfiguration();
+    } else {
+      this.conf = new OzoneConfiguration(conf);
+    }
+  }
+
+  /**
+   * Starts HddsDatanode services.
+   *
+   * @param service The service instance invoking this method
+   */
   @Override
   public void start(Object service) {
     OzoneConfiguration.activate();
     if (service instanceof Configurable) {
       conf = new OzoneConfiguration(((Configurable) service).getConf());
-    } else {
-      conf = new OzoneConfiguration();
     }
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
@@ -109,6 +133,11 @@ public class HddsDatanodeService implements ServicePlugin {
       return DatanodeDetails.newBuilder().setUuid(datanodeUuid).build();
     }
   }
+
+  /**
+   * Starts all the service plugins which are configured using
+   * OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY.
+   */
   private void startPlugins() {
     try {
       plugins = conf.getInstances(HDDS_DATANODE_PLUGINS_KEY,
@@ -130,7 +159,12 @@ public class HddsDatanodeService implements ServicePlugin {
     }
   }
 
-  public Configuration getConf() {
+  /**
+   * Returns the OzoneConfiguration used by this HddsDatanodeService.
+   *
+   * @return OzoneConfiguration
+   */
+  public OzoneConfiguration getConf() {
     return conf;
   }
   /**
@@ -149,8 +183,13 @@ public class HddsDatanodeService implements ServicePlugin {
     return datanodeStateMachine;
   }
 
-  public void join() throws InterruptedException {
-    datanodeStateMachine.join();
+  public void join() {
+    try {
+      datanodeStateMachine.join();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.info("Interrupted during StorageContainerManager join.");
+    }
   }
 
   @Override
@@ -172,20 +211,31 @@ public class HddsDatanodeService implements ServicePlugin {
 
   @Override
   public void close() throws IOException {
+    if (plugins != null) {
+      for (ServicePlugin plugin : plugins) {
+        try {
+          plugin.close();
+        } catch (Throwable t) {
+          LOG.warn("ServicePlugin {} could not be closed", plugin, t);
+        }
+      }
+    }
   }
 
-  public static HddsDatanodeService createHddsDatanodeService(String args[]) {
-    StringUtils.startupShutdownMessage(HddsDatanodeService.class, args, LOG);
-    return new HddsDatanodeService();
+  public static HddsDatanodeService createHddsDatanodeService(
+      Configuration conf) {
+    return new HddsDatanodeService(conf);
   }
 
   public static void main(String args[]) {
     try {
-      HddsDatanodeService hddsDatanodeService = createHddsDatanodeService(args);
+      StringUtils.startupShutdownMessage(HddsDatanodeService.class, args, LOG);
+      HddsDatanodeService hddsDatanodeService =
+          createHddsDatanodeService(new OzoneConfiguration());
       hddsDatanodeService.start(null);
       hddsDatanodeService.join();
     } catch (Throwable e) {
-      LOG.error("Exception in while starting HddsDatanodeService.", e);
+      LOG.error("Exception in HddsDatanodeService.", e);
       terminate(1, e);
     }
   }

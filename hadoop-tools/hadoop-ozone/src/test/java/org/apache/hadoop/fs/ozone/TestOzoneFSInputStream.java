@@ -24,13 +24,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
@@ -48,7 +47,7 @@ import java.util.Arrays;
  * Test OzoneFSInputStream by reading through multiple interfaces.
  */
 public class TestOzoneFSInputStream {
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static FileSystem fs;
   private static StorageHandler storageHandler;
   private static Path filePath = null;
@@ -66,10 +65,10 @@ public class TestOzoneFSInputStream {
   public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, 10);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(10)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(10)
         .build();
+    cluster.waitForClusterToBeReady();
     storageHandler =
         new ObjectStoreHandler(conf).getStorageHandler();
 
@@ -88,9 +87,10 @@ public class TestOzoneFSInputStream {
     storageHandler.createBucket(bucketArgs);
 
     // Fetch the host and port for File System init
-    DataNode dataNode = cluster.getDataNodes().get(0);
-    int port = dataNode.getInfoPort();
-    String host = dataNode.getDatanodeHostname();
+    DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
+    int port = datanodeDetails.getOzoneRestPort();
+    String host = datanodeDetails.getHostName();
 
     // Set the fs.defaultFS and start the filesystem
     String uri = String.format("%s://%s.%s/",

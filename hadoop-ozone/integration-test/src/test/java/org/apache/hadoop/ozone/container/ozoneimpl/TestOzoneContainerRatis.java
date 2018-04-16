@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.RatisTestHelper;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -76,20 +74,19 @@ public class TestOzoneContainerRatis {
     // create Ozone clusters
     final OzoneConfiguration conf = newOzoneConfiguration();
     RatisTestHelper.initRatisConf(rpc, conf);
-    final MiniOzoneClassicCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL)
-        .numDataNodes(numNodes)
+    final MiniOzoneCluster cluster =
+        MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(numNodes)
         .build();
     try {
-      cluster.waitOzoneReady();
+      cluster.waitForClusterToBeReady();
 
       final String containerName = OzoneUtils.getRequestID();
-      final List<DataNode> datanodes = cluster.getDataNodes();
+      final List<HddsDatanodeService> datanodes = cluster.getHddsDatanodes();
       final Pipeline pipeline = ContainerTestHelper.createPipeline(
           containerName,
           CollectionUtils.as(datanodes,
-              MiniOzoneTestHelper::getDatanodeDetails));
+              HddsDatanodeService::getDatanodeDetails));
       LOG.info("pipeline=" + pipeline);
 
       // Create Ratis cluster

@@ -26,8 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.ozone.Constants;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -45,7 +44,7 @@ import java.io.IOException;
  */
 class OzoneContract extends AbstractFSContract {
 
-  private static MiniOzoneClassicCluster cluster;
+  private static MiniOzoneCluster cluster;
   private static StorageHandler storageHandler;
   private static final String CONTRACT_XML = "contract/ozone.xml";
 
@@ -70,10 +69,12 @@ class OzoneContract extends AbstractFSContract {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.addResource(CONTRACT_XML);
 
-    cluster =
-        new MiniOzoneClassicCluster.Builder(conf).numDataNodes(5)
-            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    cluster.waitClusterUp();
+    cluster = MiniOzoneCluster.newBuilder(conf).setNumDatanodes(5).build();
+    try {
+      cluster.waitForClusterToBeReady();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
   }
 

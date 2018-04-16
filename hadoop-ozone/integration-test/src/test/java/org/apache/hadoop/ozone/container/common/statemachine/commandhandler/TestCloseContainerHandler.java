@@ -19,9 +19,7 @@ package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
@@ -55,10 +53,9 @@ public class TestCloseContainerHandler {
     //setup a cluster (1G free space is enough for a unit test)
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OZONE_SCM_CONTAINER_SIZE_GB, "1");
-    MiniOzoneClassicCluster cluster =
-        new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
-            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
-    cluster.waitOzoneReady();
+    MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(1).build();
+    cluster.waitForClusterToBeReady();
 
     //the easiest way to create an open container is creating a key
     OzoneClient client = OzoneClientFactory.getClient(conf);
@@ -86,8 +83,8 @@ public class TestCloseContainerHandler {
 
     Assert.assertFalse(isContainerClosed(cluster, containerName));
 
-    DatanodeDetails datanodeDetails = MiniOzoneTestHelper
-        .getDatanodeDetails(cluster.getDataNodes().get(0));
+    DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
+        .getDatanodeDetails();
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
@@ -101,12 +98,13 @@ public class TestCloseContainerHandler {
     Assert.assertTrue(isContainerClosed(cluster, containerName));
   }
 
-  private Boolean isContainerClosed(MiniOzoneClassicCluster cluster,
+  private Boolean isContainerClosed(MiniOzoneCluster cluster,
       String containerName) {
     ContainerData containerData;
     try {
-      containerData = MiniOzoneTestHelper.getOzoneContainerManager(cluster
-          .getDataNodes().get(0)).readContainer(containerName);
+      containerData = cluster.getHddsDatanodes().get(0)
+          .getDatanodeStateMachine().getContainer().getContainerManager()
+          .readContainer(containerName);
       return !containerData.isOpen();
     } catch (StorageContainerException e) {
       throw new AssertionError(e);

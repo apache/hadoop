@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -28,6 +28,8 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,6 +49,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.junit.Assert.assertEquals;
@@ -59,7 +62,7 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(Parameterized.class)
 public class TestKSMSQLCli {
-  private MiniOzoneClassicCluster cluster = null;
+  private MiniOzoneCluster cluster = null;
   private StorageHandler storageHandler;
   private UserArgs userArgs;
   private OzoneConfiguration conf;
@@ -104,12 +107,12 @@ public class TestKSMSQLCli {
     conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
     userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
         null, null, null, null);
-    cluster.waitForHeartbeatProcessed();
+    cluster.waitForClusterToBeReady();
 
     VolumeArgs createVolumeArgs0 = new VolumeArgs(volumeName0, userArgs);
     createVolumeArgs0.setUserName(userName);
@@ -149,15 +152,23 @@ public class TestKSMSQLCli {
     stream = storageHandler.newKeyWriter(keyArgs3);
     stream.close();
 
-    cluster.shutdown();
-
+    cluster.getKeySpaceManager().stop();
+    cluster.getStorageContainerManager().stop();
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL, metaStoreType);
     cli = new SQLCLI(conf);
   }
 
+  @After
+  public void shutdown() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testKSMDB() throws Exception {
-    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
+    String dbOutPath =  GenericTestUtils.getTempPath(
+        UUID.randomUUID() + "/out_sql.db");
 
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + KSM_DB_NAME;

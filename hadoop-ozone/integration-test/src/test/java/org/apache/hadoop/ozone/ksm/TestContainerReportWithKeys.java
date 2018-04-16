@@ -22,8 +22,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneTestHelper;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.*;
@@ -51,7 +50,7 @@ import java.io.IOException;
 public class TestContainerReportWithKeys {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestContainerReportWithKeys.class);
-  private static MiniOzoneClassicCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneConfiguration conf;
   private static StorageContainerManager scm;
 
@@ -71,8 +70,8 @@ public class TestContainerReportWithKeys {
     conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
   }
 
@@ -117,7 +116,7 @@ public class TestContainerReportWithKeys {
         cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    ContainerData cd = getContainerData(cluster, keyInfo.getContainerName());
+    ContainerData cd = getContainerData(keyInfo.getContainerName());
 
     LOG.info("DN Container Data:  keyCount: {} used: {} ",
         cd.getKeyCount(), cd.getBytesUsed());
@@ -129,12 +128,11 @@ public class TestContainerReportWithKeys {
   }
 
 
-  private static ContainerData getContainerData(MiniOzoneClassicCluster clus,
-      String containerName) {
-    ContainerData containerData = null;
+  private static ContainerData getContainerData(String containerName) {
+    ContainerData containerData;
     try {
-      ContainerManager containerManager = MiniOzoneTestHelper
-          .getOzoneContainerManager(clus.getDataNodes().get(0));
+      ContainerManager containerManager = cluster.getHddsDatanodes().get(0)
+          .getDatanodeStateMachine().getContainer().getContainerManager();
       containerData = containerManager.readContainer(containerName);
     } catch (StorageContainerException e) {
       throw new AssertionError(e);

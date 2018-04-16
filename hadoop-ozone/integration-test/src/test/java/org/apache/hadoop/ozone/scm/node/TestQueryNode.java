@@ -16,10 +16,9 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -34,7 +33,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.INVALID;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -52,7 +50,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestQueryNode {
   private static int numOfDatanodes = 5;
-  private MiniOzoneClassicCluster cluster;
+  private MiniOzoneCluster cluster;
 
   private ContainerOperationClient scmClient;
 
@@ -67,13 +65,12 @@ public class TestQueryNode {
     conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, SECONDS);
     conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .numDataNodes(numOfDatanodes)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(numOfDatanodes)
         .build();
-    cluster.waitOzoneReady();
+    cluster.waitForClusterToBeReady();
     scmClient = new ContainerOperationClient(cluster
-        .createStorageContainerLocationClient(),
+        .getStorageContainerLocationClient(),
         new XceiverClientManager(conf));
   }
 
@@ -95,8 +92,8 @@ public class TestQueryNode {
 
   @Test(timeout = 10 * 1000L)
   public void testStaleNodesCount() throws Exception {
-    cluster.shutdownDataNode(0);
-    cluster.shutdownDataNode(1);
+    cluster.shutdownHddsDatanode(0);
+    cluster.shutdownHddsDatanode(1);
 
     GenericTestUtils.waitFor(() ->
             cluster.getStorageContainerManager().getNodeCount(STALE) == 2,
