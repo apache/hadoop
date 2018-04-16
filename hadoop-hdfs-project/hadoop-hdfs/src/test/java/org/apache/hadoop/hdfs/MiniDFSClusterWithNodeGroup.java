@@ -117,7 +117,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new HdfsConfiguration(conf);
       // Set up datanode address
-      setupDatanodeAddress(i, dnConf, setupHostsFile, checkDataNodeAddrConfig);
+      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
         String dirs = makeDataNodeDirs(i, storageTypes == null ? null : storageTypes[i]);
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
