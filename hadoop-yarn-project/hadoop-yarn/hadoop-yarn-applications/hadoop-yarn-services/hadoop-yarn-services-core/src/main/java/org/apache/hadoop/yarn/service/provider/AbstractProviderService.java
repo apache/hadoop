@@ -42,6 +42,9 @@ import java.util.Map.Entry;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURES_VALIDITY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_MAX;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_RETRY_INTERVAL;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_RETRY_MAX;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
 
 public abstract class AbstractProviderService implements ProviderService,
@@ -106,12 +109,14 @@ public abstract class AbstractProviderService implements ProviderService,
     }
 
     // By default retry forever every 30 seconds
-    launcher.setRetryContext(YarnServiceConf
-        .getInt(CONTAINER_RETRY_MAX, -1, service.getConfiguration(),
-            yarnConf), YarnServiceConf
-        .getInt(CONTAINER_RETRY_INTERVAL, 30000, service.getConfiguration(),
+    launcher.setRetryContext(
+        YarnServiceConf.getInt(CONTAINER_RETRY_MAX, DEFAULT_CONTAINER_RETRY_MAX,
+            component.getConfiguration(), yarnConf),
+        YarnServiceConf.getInt(CONTAINER_RETRY_INTERVAL,
+            DEFAULT_CONTAINER_RETRY_INTERVAL, component.getConfiguration(),
             yarnConf),
-        YarnServiceConf.getLong(CONTAINER_FAILURES_VALIDITY_INTERVAL, -1,
-            service.getConfiguration(), yarnConf));
+        YarnServiceConf.getLong(CONTAINER_FAILURES_VALIDITY_INTERVAL,
+            DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL,
+            component.getConfiguration(), yarnConf));
   }
 }
