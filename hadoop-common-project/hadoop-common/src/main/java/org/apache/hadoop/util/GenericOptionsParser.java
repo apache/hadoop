@@ -525,6 +525,9 @@ public class GenericOptionsParser {
     }
     List<String> newArgs = new ArrayList<String>(args.length);
     for (int i=0; i < args.length; i++) {
+      if (args[i] == null) {
+        continue;
+      }
       String prop = null;
       if (args[i].equals("-D")) {
         newArgs.add(args[i]);
