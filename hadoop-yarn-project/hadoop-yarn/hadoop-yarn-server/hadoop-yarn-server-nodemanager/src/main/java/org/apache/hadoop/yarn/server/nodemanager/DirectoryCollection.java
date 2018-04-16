@@ -36,8 +36,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileContext;
@@ -490,40 +488,12 @@ public class DirectoryCollection {
             new DiskErrorInformation(DiskErrorCause.DISK_FULL, msg));
           continue;
         }
-
-        // create a random dir to make sure fs isn't in read-only mode
-        verifyDirUsingMkdir(testDir);
       } catch (IOException ie) {
         ret.put(dir,
           new DiskErrorInformation(DiskErrorCause.OTHER, ie.getMessage()));
       }
     }
     return ret;
-  }
-
-  /**
-   * Function to test whether a dir is working correctly by actually creating a
-   * random directory.
-   *
-   * @param dir
-   *          the dir to test
-   */
-  private void verifyDirUsingMkdir(File dir) throws IOException {
-
-    String randomDirName = RandomStringUtils.randomAlphanumeric(5);
-    File target = new File(dir, randomDirName);
-    int i = 0;
-    while (target.exists()) {
-
-      randomDirName = RandomStringUtils.randomAlphanumeric(5) + i;
-      target = new File(dir, randomDirName);
-      i++;
-    }
-    try {
-      diskValidator.checkStatus(target);
-    } finally {
-      FileUtils.deleteQuietly(target);
-    }
   }
 
   private boolean isDiskUsageOverPercentageLimit(File dir,
