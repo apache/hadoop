@@ -120,7 +120,7 @@
             <docletArtifact>
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-annotations</artifactId>
-              <version>${project.version}</version>
+              <version>${hadoop.version}</version>
             </docletArtifact>
           </docletArtifacts>
           <useStandardDocletOptions>true</useStandardDocletOptions>
@@ -393,7 +393,7 @@
               <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-assemblies</artifactId>
-                <version>${project.version}</version>
+                <version>${hadoop.version}</version>
               </dependency>
             </dependencies>
             <executions>
