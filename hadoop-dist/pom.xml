@@ -174,6 +174,7 @@
                     <argument>${basedir}/../dev-support/bin/dist-layout-stitching</argument>
                     <argument>${project.version}</argument>
                     <argument>${project.build.directory}</argument>
+                    <argument>${hdds.version}</argument>
                   </arguments>
                 </configuration>
               </execution>
