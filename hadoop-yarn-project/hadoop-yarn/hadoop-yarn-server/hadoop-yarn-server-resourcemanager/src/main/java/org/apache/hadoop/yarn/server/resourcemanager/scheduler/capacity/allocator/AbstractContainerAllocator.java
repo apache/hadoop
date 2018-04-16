@@ -96,7 +96,8 @@ public abstract class AbstractContainerAllocator {
         // This is a reserved container
         LOG.info("Reserved container " + " application="
             + application.getApplicationId() + " resource=" + allocatedResource
-            + " queue=" + this.toString() + " cluster=" + clusterResource);
+            + " queue=" + appInfo.getQueueName()
+            + " cluster=" + clusterResource);
         assignment.getAssignmentInformation().addReservationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());
         assignment.getAssignmentInformation().incrReservations();
@@ -124,9 +125,9 @@ public abstract class AbstractContainerAllocator {
         // Inform the ordering policy
         LOG.info("assignedContainer" + " application attempt=" + application
             .getApplicationAttemptId() + " container=" + updatedContainer
-            .getContainerId() + " queue=" + this + " clusterResource="
-            + clusterResource + " type=" + assignment.getType()
-            + " requestedPartition="
+            .getContainerId() + " queue=" + appInfo.getQueueName()
+            + " clusterResource=" + clusterResource
+            + " type=" + assignment.getType() + " requestedPartition="
             + updatedContainer.getNodeLabelExpression());
 
         assignment.getAssignmentInformation().addAllocationDetails(
