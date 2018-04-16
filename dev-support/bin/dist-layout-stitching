@@ -21,6 +21,9 @@ VERSION=$1
 # project.build.directory
 BASEDIR=$2
 
+#hdds.version
+HDDS_VERSION=$3
+
 function run()
 {
   declare res
@@ -144,19 +147,19 @@ run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-runtime/target/hadoop-cli
 run cp -p "${ROOT}/hadoop-client-modules/hadoop-client-minicluster/target/hadoop-client-minicluster-${VERSION}.jar" share/hadoop/client/
 
 # HDDS
-run copy "${ROOT}/hadoop-hdds/common/target/hadoop-hdds-common-${VERSION}" .
-run copy "${ROOT}/hadoop-hdds/framework/target/hadoop-hdds-server-framework-${VERSION}" .
-run copy "${ROOT}/hadoop-hdds/server-scm/target/hadoop-hdds-server-scm-${VERSION}" .
-run copy "${ROOT}/hadoop-hdds/container-service/target/hadoop-hdds-container-service-${VERSION}" .
-run copy "${ROOT}/hadoop-hdds/client/target/hadoop-hdds-client-${VERSION}" .
-run copy "${ROOT}/hadoop-hdds/tools/target/hadoop-hdds-tools-${VERSION}" .
+run copy "${ROOT}/hadoop-hdds/common/target/hadoop-hdds-common-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-hdds/framework/target/hadoop-hdds-server-framework-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-hdds/server-scm/target/hadoop-hdds-server-scm-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-hdds/container-service/target/hadoop-hdds-container-service-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-hdds/client/target/hadoop-hdds-client-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-hdds/tools/target/hadoop-hdds-tools-${HDDS_VERSION}" .
 
 # Ozone
-run copy "${ROOT}/hadoop-ozone/common/target/hadoop-ozone-common-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/ozone-manager/target/hadoop-ozone-ozone-manager-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${VERSION}" .
-run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${VERSION}" .
+run copy "${ROOT}/hadoop-ozone/common/target/hadoop-ozone-common-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-ozone/ozone-manager/target/hadoop-ozone-ozone-manager-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-ozone/client/target/hadoop-ozone-client-${HDDS_VERSION}" .
+run copy "${ROOT}/hadoop-ozone/tools/target/hadoop-ozone-tools-${HDDS_VERSION}" .
 
 run copy "${ROOT}/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${VERSION}" .
 
