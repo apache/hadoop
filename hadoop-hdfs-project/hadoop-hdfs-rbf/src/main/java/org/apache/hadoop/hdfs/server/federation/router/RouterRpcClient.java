@@ -1067,8 +1067,8 @@ public class RouterRpcClient {
           results.put(location, clazz.cast(result));
         } catch (CancellationException ce) {
           T loc = orderedLocations.get(i);
-          String msg =
-              "Invocation to \"" + loc + "\" for \"" + method + "\" timed out";
+          String msg = "Invocation to \"" + loc + "\" for \""
+              + method.getMethodName() + "\" timed out";
           LOG.error(msg);
           IOException ioe = new SubClusterTimeoutException(msg);
           exceptions.put(location, ioe);
