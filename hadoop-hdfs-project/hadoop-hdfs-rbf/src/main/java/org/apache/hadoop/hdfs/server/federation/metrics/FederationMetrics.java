@@ -456,7 +456,7 @@ public class FederationMetrics implements FederationMBean {
         dev = (float) Math.sqrt(dev / usages.length);
       }
     } catch (IOException e) {
-      LOG.info("Cannot get the live nodes: {}", e.getMessage());
+      LOG.error("Cannot get the live nodes: {}", e.getMessage());
     }
 
     final Map<String, Object> innerInfo = new HashMap<>();

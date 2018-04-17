@@ -183,7 +183,7 @@ public class StateStoreService extends CompositeService {
     } catch (NotCompliantMBeanException e) {
       throw new RuntimeException("Bad StateStoreMBean setup", e);
     } catch (MetricsException e) {
-      LOG.info("Failed to register State Store bean {}", e.getMessage());
+      LOG.error("Failed to register State Store bean {}", e.getMessage());
     }
 
     super.serviceInit(this.conf);
