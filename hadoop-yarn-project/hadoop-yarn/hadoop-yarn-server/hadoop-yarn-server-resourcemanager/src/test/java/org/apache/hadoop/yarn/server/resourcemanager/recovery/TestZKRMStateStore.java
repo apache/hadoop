@@ -790,7 +790,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       long finishTime, boolean isFinished) {
     return ApplicationStateData.newInstance(submitTime, startTime, "test",
         ctxt, isFinished ? RMAppState.FINISHED : null, isFinished ?
-        "appDiagnostics" : "", isFinished ? finishTime : 0, null);
+        "appDiagnostics" : "", 0, isFinished ? finishTime : 0, null);
   }
 
   private static ApplicationAttemptStateData createFinishedAttempt(

@@ -407,7 +407,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
             store.storeApplicationStateInternal(
                 ApplicationId.newInstance(100L, 1),
                 ApplicationStateData.newInstance(111, 111, "user", null,
-                    RMAppState.ACCEPTED, "diagnostics", 333, null));
+                    RMAppState.ACCEPTED, "diagnostics", 222, 333, null));
           } catch (Exception e) {
             assertionFailedInThread.set(true);
             e.printStackTrace();

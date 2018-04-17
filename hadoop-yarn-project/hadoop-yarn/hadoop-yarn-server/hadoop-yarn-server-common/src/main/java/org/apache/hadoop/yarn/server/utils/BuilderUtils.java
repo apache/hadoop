@@ -391,7 +391,7 @@ public class BuilderUtils {
       ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
       String user, String queue, String name, String host, int rpcPort,
       Token clientToAMToken, YarnApplicationState state, String diagnostics,
-      String url, long startTime, long finishTime,
+      String url, long startTime, long launchTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String appType, Token amRmToken, Set<String> tags,
@@ -410,6 +410,7 @@ public class BuilderUtils {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
+    report.setLaunchTime(launchTime);
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
