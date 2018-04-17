@@ -210,8 +210,7 @@ public class LocalResolver extends RouterResolver<String, String> {
         }
       }
     } catch (IOException ioe) {
-      LOG.error("Cannot get Namenodes from the State Store: {}",
-          ioe.getMessage());
+      LOG.error("Cannot get Namenodes from the State Store", ioe);
     }
     return ret;
   }
