@@ -2248,7 +2248,7 @@ public class RouterRpcServer extends AbstractService
           return entry.isAll();
         }
       } catch (IOException e) {
-        LOG.error("Cannot get mount point: {}", e.getMessage());
+        LOG.error("Cannot get mount point", e);
       }
     }
     return false;
@@ -2269,7 +2269,7 @@ public class RouterRpcServer extends AbstractService
           return true;
         }
       } catch (IOException e) {
-        LOG.error("Cannot get mount point: {}", e.getMessage());
+        LOG.error("Cannot get mount point", e);
       }
     }
     return false;
@@ -2298,7 +2298,7 @@ public class RouterRpcServer extends AbstractService
           ret.put(child, entry.getDateModified());
         }
       } catch (IOException e) {
-        LOG.error("Cannot get mount point: {}", e.getMessage());
+        LOG.error("Cannot get mount point", e);
       }
     }
     return ret;
