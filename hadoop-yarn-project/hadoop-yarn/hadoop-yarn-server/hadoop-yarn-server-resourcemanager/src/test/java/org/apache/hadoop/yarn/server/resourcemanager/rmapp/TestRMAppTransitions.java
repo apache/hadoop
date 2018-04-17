@@ -1239,7 +1239,7 @@ public class TestRMAppTransitions {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(app.getSubmitTime(), app.getStartTime(),
             app.getUser(), app.getApplicationSubmissionContext(), rmAppState,
-            null, app.getFinishTime(), null);
+            null, app.getLaunchTime(), app.getFinishTime(), null);
     applicationState.put(app.getApplicationId(), appState);
   }
   

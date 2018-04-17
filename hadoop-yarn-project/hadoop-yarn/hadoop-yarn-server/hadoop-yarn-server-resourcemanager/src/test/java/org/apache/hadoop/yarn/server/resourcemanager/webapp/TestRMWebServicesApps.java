@@ -1498,6 +1498,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element, "diagnostics"),
           WebServicesTestUtils.getXmlLong(element, "clusterId"),
           WebServicesTestUtils.getXmlLong(element, "startedTime"),
+          WebServicesTestUtils.getXmlLong(element, "launchTime"),
           WebServicesTestUtils.getXmlLong(element, "finishedTime"),
           WebServicesTestUtils.getXmlLong(element, "elapsedTime"),
           WebServicesTestUtils.getXmlString(element, "amHostHttpAddress"),
@@ -1550,7 +1551,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app, boolean hasResourceReqs)
       throws JSONException, Exception {
 
-    int expectedNumberOfElements = 36 + (hasResourceReqs ? 2 : 0);
+    int expectedNumberOfElements = 37 + (hasResourceReqs ? 2 : 0);
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()
@@ -1576,8 +1577,10 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getString("state"), info.getString("finalStatus"),
         (float) info.getDouble("progress"), info.getString("trackingUI"),
         info.getString("diagnostics"), info.getLong("clusterId"),
-        info.getLong("startedTime"), info.getLong("finishedTime"),
-        info.getLong("elapsedTime"), info.getString("amHostHttpAddress"),
+        info.getLong("startedTime"), info.getLong("launchTime"),
+        info.getLong("finishedTime"),
+        info.getLong("elapsedTime"),
+        info.getString("amHostHttpAddress"),
         info.getString("amContainerLogs"), info.getInt("allocatedMB"),
         info.getInt("allocatedVCores"), info.getInt("runningContainers"),
         (float) info.getDouble("queueUsagePercentage"),
@@ -1600,8 +1603,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
       String name, String applicationType, String queue, int prioirty,
       String state, String finalStatus, float progress, String trackingUI,
-      String diagnostics, long clusterId, long startedTime, long finishedTime,
-      long elapsedTime, String amHostHttpAddress, String amContainerLogs,
+      String diagnostics, long clusterId, long startedTime,
+      long launchTime, long finishedTime, long elapsedTime,
+      String amHostHttpAddress, String amContainerLogs,
       int allocatedMB, int allocatedVCores, int numContainers,
       float queueUsagePerc, float clusterUsagePerc,
       int preemptedResourceMB, int preemptedResourceVCores,

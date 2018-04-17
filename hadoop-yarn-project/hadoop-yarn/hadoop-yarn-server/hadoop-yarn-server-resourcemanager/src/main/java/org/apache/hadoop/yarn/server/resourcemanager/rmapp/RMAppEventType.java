@@ -37,6 +37,7 @@ public enum RMAppEventType {
   ATTEMPT_FAILED,
   ATTEMPT_KILLED,
   NODE_UPDATE,
+  ATTEMPT_LAUNCHED,
   
   // Source: Container and ResourceTracker
   APP_RUNNING_ON_NODE,
