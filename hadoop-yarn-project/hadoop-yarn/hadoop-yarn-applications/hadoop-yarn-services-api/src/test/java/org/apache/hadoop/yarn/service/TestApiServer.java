@@ -19,6 +19,9 @@ package org.apache.hadoop.yarn.service;
 
 import static org.junit.Assert.*;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +30,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
@@ -90,7 +94,19 @@ public class TestApiServer {
   }
 
   @Test
-  public void testGoodCreateService() {
+  public void testGoodCreateService() throws Exception {
+    String json = "{\"auths\": "
+        + "{\"https://index.docker.io/v1/\": "
+        + "{\"auth\": \"foobarbaz\"},"
+        + "\"registry.example.com\": "
+        + "{\"auth\": \"bazbarfoo\"}}}";
+    File dockerTmpDir = new File("target", "docker-tmp");
+    FileUtils.deleteQuietly(dockerTmpDir);
+    dockerTmpDir.mkdirs();
+    String dockerConfig = dockerTmpDir + "/config.json";
+    BufferedWriter bw = new BufferedWriter(new FileWriter(dockerConfig));
+    bw.write(json);
+    bw.close();
     Service service = new Service();
     service.setName("jenkins");
     service.setVersion("v1");
@@ -112,6 +128,33 @@ public class TestApiServer {
     final Response actual = apiServer.createService(request, service);
     assertEquals("Create service is ",
         Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testInternalServerErrorDockerClientConfigMissingCreateService() {
+    Service service = new Service();
+    service.setName("jenkins");
+    service.setVersion("v1");
+    service.setDockerClientConfig("/does/not/exist/config.json");
+    Artifact artifact = new Artifact();
+    artifact.setType(TypeEnum.DOCKER);
+    artifact.setId("jenkins:latest");
+    Resource resource = new Resource();
+    resource.setCpus(1);
+    resource.setMemory("2048");
+    List<Component> components = new ArrayList<>();
+    Component c = new Component();
+    c.setName("jenkins");
+    c.setNumberOfContainers(1L);
+    c.setArtifact(artifact);
+    c.setLaunchCommand("");
+    c.setResource(resource);
+    components.add(c);
+    service.setComponents(components);
+    final Response actual = apiServer.createService(request, service);
+    assertEquals("Create service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
         actual.getStatus());
   }
 

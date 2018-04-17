@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
@@ -89,8 +90,8 @@ public class ServiceMaster extends CompositeService {
     fs.setAppDir(appDir);
     loadApplicationJson(context, fs);
 
+    context.tokens = recordTokensForContainers();
     if (UserGroupInformation.isSecurityEnabled()) {
-      context.tokens = recordTokensForContainers();
       doSecureLogin();
     }
     // Take yarn config from YarnFile and merge them into YarnConfiguration
@@ -128,15 +129,10 @@ public class ServiceMaster extends CompositeService {
 
   // Record the tokens and use them for launching containers.
   // e.g. localization requires the hdfs delegation tokens
-  private ByteBuffer recordTokensForContainers() throws IOException {
+  @VisibleForTesting
+  protected ByteBuffer recordTokensForContainers() throws IOException {
     Credentials copy = new Credentials(UserGroupInformation.getCurrentUser()
         .getCredentials());
-    DataOutputBuffer dob = new DataOutputBuffer();
-    try {
-      copy.writeTokenStorageToStream(dob);
-    } finally {
-      dob.close();
-    }
     // Now remove the AM->RM token so that task containers cannot access it.
     Iterator<Token<?>> iter = copy.getAllTokens().iterator();
     while (iter.hasNext()) {
@@ -145,6 +141,12 @@ public class ServiceMaster extends CompositeService {
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
         iter.remove();
       }
+    }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    try {
+      copy.writeTokenStorageToStream(dob);
+    } finally {
+      dob.close();
     }
     return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
   }

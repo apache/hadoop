@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -60,6 +62,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -96,9 +99,17 @@ public class MockServiceAM extends ServiceMaster {
   private Map<ContainerId, ContainerStatus> containerStatuses =
       new ConcurrentHashMap<>();
 
+  private Credentials amCreds;
+
   public MockServiceAM(Service service) {
     super(service.getName());
     this.service = service;
+  }
+
+  public MockServiceAM(Service service, Credentials amCreds) {
+    super(service.getName());
+    this.service = service;
+    this.amCreds = amCreds;
   }
 
   @Override
@@ -385,4 +396,18 @@ public class MockServiceAM extends ServiceMaster {
     containerStatuses.put(container.getId(), status);
   }
 
+  @Override
+  protected ByteBuffer recordTokensForContainers()
+      throws IOException {
+    DataOutputBuffer dob = new DataOutputBuffer();
+    if (amCreds == null) {
+      return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    }
+    try {
+      amCreds.writeTokenStorageToStream(dob);
+    } finally {
+      dob.close();
+    }
+    return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
 }
