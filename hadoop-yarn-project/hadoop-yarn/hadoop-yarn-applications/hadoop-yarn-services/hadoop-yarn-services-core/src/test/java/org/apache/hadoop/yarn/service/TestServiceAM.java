@@ -21,6 +21,10 @@ package org.apache.hadoop.yarn.service;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -29,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -36,6 +41,7 @@ import org.apache.hadoop.yarn.service.component.ComponentState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -44,14 +50,18 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
+import static org.junit.Assert.assertEquals;
 
 public class TestServiceAM extends ServiceTestUtils{
 
@@ -291,6 +301,46 @@ public class TestServiceAM extends ServiceTestUtils{
     Assert.assertEquals(3333L, capability.getResourceValue("resource-1"));
     Assert.assertEquals("Gi",
         capability.getResourceInformation("resource-1").getUnits());
+
+    am.stop();
+  }
+
+  @Test
+  public void testRecordTokensForContainers() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testContainerCompleted");
+    exampleApp.addComponent(createComponent("compa", 1, "pwd"));
+
+    String json = "{\"auths\": "
+        + "{\"https://index.docker.io/v1/\": "
+        + "{\"auth\": \"foobarbaz\"},"
+        + "\"registry.example.com\": "
+        + "{\"auth\": \"bazbarfoo\"}}}";
+    File dockerTmpDir = new File("target", "docker-tmp");
+    FileUtils.deleteQuietly(dockerTmpDir);
+    dockerTmpDir.mkdirs();
+    String dockerConfig = dockerTmpDir + "/config.json";
+    BufferedWriter bw = new BufferedWriter(new FileWriter(dockerConfig));
+    bw.write(json);
+    bw.close();
+    Credentials dockerCred =
+        DockerClientConfigHandler.readCredentialsFromConfigFile(
+            new Path(dockerConfig), conf, applicationId.toString());
+
+
+    MockServiceAM am = new MockServiceAM(exampleApp, dockerCred);
+    ByteBuffer amCredBuffer = am.recordTokensForContainers();
+    Credentials amCreds =
+        DockerClientConfigHandler.getCredentialsFromTokensByteBuffer(
+            amCredBuffer);
+
+    assertEquals(2, amCreds.numberOfTokens());
+    for (Token<? extends TokenIdentifier> tk : amCreds.getAllTokens()) {
+      Assert.assertTrue(
+          tk.getKind().equals(DockerCredentialTokenIdentifier.KIND));
+    }
 
     am.stop();
   }
