@@ -24,15 +24,15 @@ Typically you need a `mvn install -Phdsl,ozone-acceptance-test,dist -DskipTests`
 
 Notes:
 
- 1. You need a hadoop build in hadoop-dist/target directory.  
+ 1. You need a hadoop build in hadoop-dist/target directory.
  2. The `ozone-acceptance-test` could be activated with profile even if the unit tests are disabled.
 
- 
+
 ## Development
 
 You can run manually the robot tests with `robot` cli. (See robotframework docs to install it.)
 
  1. Go to the `src/test/robotframework`
  2. Execute `robot -v basedir:${PWD}/../../.. -v VERSION:3.2.0-SNAPSHOT .`
- 
+
 You can also use select just one test with -t `"*testnamefragment*"`

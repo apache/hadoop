@@ -30,7 +30,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <packaging>jar</packaging>
 
   <properties>
-	 <hadoop.component>hdds</hadoop.component>
+    <hadoop.component>hdds</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 

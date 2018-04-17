@@ -122,6 +122,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>**/target/**</exclude>
+            <exclude>acceptance-test/hadoop-ozone-acceptance-test.iml</exclude>
             <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
             <exclude>dev-support/checkstyle*</exclude>

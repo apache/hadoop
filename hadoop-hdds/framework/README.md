@@ -17,8 +17,8 @@
 
 # Server framework for HDDS/Ozone
 
-This project contains generic utilities and resources for all the HDDS/Ozone 
+This project contains generic utilities and resources for all the HDDS/Ozone
 server-side components.
 
-The project is shared between the server/service projects but not with the 
+The project is shared between the server/service projects but not with the
 client packages.
