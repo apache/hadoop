@@ -358,7 +358,7 @@ public class RMStateStoreTestBase {
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(),
             appState.getApplicationSubmissionContext(), RMAppState.FINISHED,
-            "appDiagnostics", 1234, appState.getCallerContext());
+            "appDiagnostics", 123, 1234, appState.getCallerContext());
     appState2.attempts.putAll(appState.attempts);
     store.updateApplicationState(appState2);
 
@@ -384,7 +384,7 @@ public class RMStateStoreTestBase {
     ApplicationStateData dummyApp =
         ApplicationStateData.newInstance(appState.getSubmitTime(),
             appState.getStartTime(), appState.getUser(), dummyContext,
-            RMAppState.FINISHED, "appDiagnostics", 1234, null);
+            RMAppState.FINISHED, "appDiagnostics", 123, 1234, null);
     store.updateApplicationState(dummyApp);
 
     ApplicationAttemptId dummyAttemptId =

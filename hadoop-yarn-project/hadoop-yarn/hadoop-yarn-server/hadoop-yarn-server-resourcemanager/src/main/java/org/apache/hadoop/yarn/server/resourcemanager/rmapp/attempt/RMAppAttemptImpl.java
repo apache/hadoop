@@ -1565,7 +1565,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.launchAMStartTime;
         ClusterMetrics.getMetrics().addAMLaunchDelay(delay);
       }
-
+      appAttempt.eventHandler.handle(
+          new RMAppEvent(appAttempt.getAppAttemptId().getApplicationId(),
+            RMAppEventType.ATTEMPT_LAUNCHED, event.getTimestamp()));
       appAttempt
           .updateAMLaunchDiagnostics(AMState.LAUNCHED.getDiagnosticMessage());
       // Register with AMLivelinessMonitor

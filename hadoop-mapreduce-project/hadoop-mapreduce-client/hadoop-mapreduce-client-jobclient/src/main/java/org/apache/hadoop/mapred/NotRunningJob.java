@@ -89,7 +89,7 @@ public class NotRunningJob implements MRClientProtocol {
     // used for a non running job
     return ApplicationReport.newInstance(unknownAppId, unknownAttemptId,
       "N/A", "N/A", "N/A", "N/A", 0, null, YarnApplicationState.NEW, "N/A",
-      "N/A", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
+      "N/A", 0, 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A", 0.0f,
       YarnConfiguration.DEFAULT_APPLICATION_TYPE, null);
   }
 
