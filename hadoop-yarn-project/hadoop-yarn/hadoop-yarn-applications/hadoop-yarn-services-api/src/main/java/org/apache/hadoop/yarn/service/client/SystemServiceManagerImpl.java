@@ -92,10 +92,12 @@ public class SystemServiceManagerImpl extends AbstractService
   private Thread serviceLaucher;
 
   @VisibleForTesting
-  private int skipCounter;
+  private int badFileNameExtensionSkipCounter;
   @VisibleForTesting
   private Map<String, Integer> ignoredUserServices =
       new HashMap<>();
+  @VisibleForTesting
+  private int badDirSkipCounter;
 
   public SystemServiceManagerImpl() {
     super(SystemServiceManagerImpl.class.getName());
@@ -268,6 +270,7 @@ public class SystemServiceManagerImpl extends AbstractService
         } else if (launchType.getPath().getName().equals(ASYNC)) {
           scanForUserServiceDefinition(launchType.getPath(), asyncUserServices);
         } else {
+          badDirSkipCounter++;
           LOG.debug("Scanner skips for unknown dir {}.", launchType.getPath());
         }
       }
@@ -308,7 +311,7 @@ public class SystemServiceManagerImpl extends AbstractService
         if (!filename.endsWith(YARN_FILE_SUFFIX)) {
           LOG.info("Scanner skips for unknown file extension, filename = {}",
               filename);
-          skipCounter++;
+          badFileNameExtensionSkipCounter++;
           continue;
         }
         Service service = getServiceDefinition(serviceCache.getPath());
@@ -325,9 +328,10 @@ public class SystemServiceManagerImpl extends AbstractService
             LOG.warn(
                 "Ignoring service {} for the user {} as it is already present,"
                     + " filename = {}", service.getName(), userName, filename);
+          } else {
+            LOG.info("Added service {} for the user {}, filename = {}",
+                service.getName(), userName, filename);
           }
-          LOG.info("Added service {} for the user {}, filename = {}",
-              service.getName(), userName, filename);
         }
       }
     }
@@ -375,7 +379,13 @@ public class SystemServiceManagerImpl extends AbstractService
     return syncUserServices;
   }
 
-  @VisibleForTesting int getSkipCounter() {
-    return skipCounter;
+  @VisibleForTesting
+  int getBadFileNameExtensionSkipCounter() {
+    return badFileNameExtensionSkipCounter;
+  }
+
+  @VisibleForTesting
+  int getBadDirSkipCounter() {
+    return badDirSkipCounter;
   }
 }
