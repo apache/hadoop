@@ -136,7 +136,7 @@ public class TestYarnCLI {
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
-          YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+          YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
           FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
           null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
@@ -383,7 +383,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null,
         Sets.newHashSet("tag1", "tag3"), false, Priority.UNDEFINED, "", "");
     List<ApplicationReport> applicationReports =
@@ -394,7 +394,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
         applicationId2, ApplicationAttemptId.newInstance(applicationId2, 2),
         "user2", "queue2", "appname2", "host2", 125, null,
-        YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2,
+        YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2, 2,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN", 
         null, Sets.newHashSet("tag2", "tag3"), false, Priority.UNDEFINED,
         "", "");
@@ -404,7 +404,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport3 = ApplicationReport.newInstance(
         applicationId3, ApplicationAttemptId.newInstance(applicationId3, 3),
         "user3", "queue3", "appname3", "host3", 126, null,
-        YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3,
+        YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3, 3,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE", 
         null, Sets.newHashSet("tag1", "tag4"), false, Priority.UNDEFINED,
         "", "");
@@ -414,7 +414,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport4 = ApplicationReport.newInstance(
         applicationId4, ApplicationAttemptId.newInstance(applicationId4, 4),
         "user4", "queue4", "appname4", "host4", 127, null,
-        YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4,
+        YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f,
         "NON-MAPREDUCE", null, Sets.newHashSet("tag1"), false,
         Priority.UNDEFINED, "", "");
@@ -424,7 +424,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport5 = ApplicationReport.newInstance(
         applicationId5, ApplicationAttemptId.newInstance(applicationId5, 5),
         "user5", "queue5", "appname5", "host5", 128, null,
-        YarnApplicationState.ACCEPTED, "diagnostics5", "url5", 5, 5,
+        YarnApplicationState.ACCEPTED, "diagnostics5", "url5", 5, 5, 5,
         FinalApplicationStatus.KILLED, null, "N/A", 0.93789f, "HIVE", null,
         Sets.newHashSet("tag2", "tag4"), false, Priority.UNDEFINED, "", "");
     applicationReports.add(newApplicationReport5);
@@ -433,7 +433,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport6 = ApplicationReport.newInstance(
         applicationId6, ApplicationAttemptId.newInstance(applicationId6, 6),
         "user6", "queue6", "appname6", "host6", 129, null,
-        YarnApplicationState.SUBMITTED, "diagnostics6", "url6", 6, 6,
+        YarnApplicationState.SUBMITTED, "diagnostics6", "url6", 6, 6, 6,
         FinalApplicationStatus.KILLED, null, "N/A", 0.99789f, "PIG",
         null, new HashSet<String>(), false, Priority.UNDEFINED, "", "");
     applicationReports.add(newApplicationReport6);
@@ -1007,7 +1007,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport2);
@@ -1020,7 +1020,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
@@ -1059,12 +1059,12 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport1 = ApplicationReport.newInstance(
         applicationId1, ApplicationAttemptId.newInstance(applicationId1, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
         applicationId2, ApplicationAttemptId.newInstance(applicationId2, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.34344f, "YARN", null);
     when(client.getApplicationReport(applicationId1)).thenReturn(
         newApplicationReport1);
@@ -1084,12 +1084,12 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport3 = ApplicationReport.newInstance(
         applicationId1, ApplicationAttemptId.newInstance(applicationId1, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     ApplicationReport newApplicationReport4 = ApplicationReport.newInstance(
         applicationId2, ApplicationAttemptId.newInstance(applicationId2, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53345f, "YARN", null);
     when(client.getApplicationReport(applicationId1)).thenReturn(
         newApplicationReport3);
@@ -1127,7 +1127,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport5 = ApplicationReport.newInstance(
         applicationId1, ApplicationAttemptId.newInstance(applicationId1, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53345f, "YARN", null);
     when(client.getApplicationReport(applicationId1)).thenReturn(
         newApplicationReport5);
@@ -1154,12 +1154,12 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport5 = ApplicationReport.newInstance(
         applicationId1, ApplicationAttemptId.newInstance(applicationId1, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     ApplicationReport newApplicationReport6 = ApplicationReport.newInstance(
         applicationId2, ApplicationAttemptId.newInstance(applicationId2, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53345f, "YARN", null);
     when(client.getApplicationReport(applicationId1)).thenReturn(
         newApplicationReport5);
@@ -1182,7 +1182,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport2);
@@ -1197,7 +1197,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
@@ -1232,7 +1232,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class)))
         .thenReturn(newApplicationReport2);
@@ -1247,7 +1247,7 @@ public class TestYarnCLI {
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
         applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class)))
         .thenReturn(newApplicationReport);
@@ -2015,7 +2015,7 @@ public class TestYarnCLI {
         ApplicationReport.newInstance(applicationId,
             ApplicationAttemptId.newInstance(applicationId, 1), "user",
             "queue", "appname", "host", 124, null,
-            YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+            YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0, 0,
             FinalApplicationStatus.UNDEFINED, null, "N/A", 0.53789f, "YARN",
             null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(

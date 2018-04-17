@@ -38,6 +38,13 @@ public class RMAppAttemptEvent extends AbstractEvent<RMAppAttemptEventType> {
     this.diagnosticMsg = diagnostics;
   }
 
+  public RMAppAttemptEvent(ApplicationAttemptId appAttemptId,
+                           RMAppAttemptEventType type, long timeStamp) {
+    super(type, timeStamp);
+    this.appAttemptId = appAttemptId;
+    this.diagnosticMsg = "";
+  }
+
   public ApplicationAttemptId getApplicationAttemptId() {
     return this.appAttemptId;
   }

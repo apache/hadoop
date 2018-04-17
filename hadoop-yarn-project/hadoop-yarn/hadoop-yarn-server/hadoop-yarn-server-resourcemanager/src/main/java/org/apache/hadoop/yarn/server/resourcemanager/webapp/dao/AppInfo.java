@@ -87,6 +87,7 @@ public class AppInfo {
 
   // these are only allowed if acls allow
   protected long startedTime;
+  private long launchTime;
   protected long finishedTime;
   protected long elapsedTime;
   protected String amContainerLogs;
@@ -179,6 +180,7 @@ public class AppInfo {
       this.clusterId = ResourceManager.getClusterTimeStamp();
       if (hasAccess) {
         this.startedTime = app.getStartTime();
+        this.launchTime = app.getLaunchTime();
         this.finishedTime = app.getFinishTime();
         this.elapsedTime =
             Times.elapsed(app.getStartTime(), app.getFinishTime());
@@ -389,6 +391,10 @@ public class AppInfo {
 
   public long getStartTime() {
     return this.startedTime;
+  }
+
+  public long getLaunchTime() {
+    return this.launchTime;
   }
 
   public long getFinishTime() {

@@ -242,10 +242,9 @@ public class AppBlock extends HtmlBlock {
         .__("FinalStatus Reported by AM:",
             clairfyAppFinalStatus(app.getFinalAppStatus()))
         .__("Started:", Times.format(app.getStartedTime()))
-        .__(
-            "Elapsed:",
-            StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
-                app.getFinishedTime())))
+        .__("Launched:", Times.format(app.getLaunchTime()))
+        .__("Finished:", Times.format(app.getFinishedTime()))
+        .__("Elapsed:", StringUtils.formatTime(app.getElapsedTime()))
         .__(
             "Tracking URL:",
             app.getTrackingUrl() == null
