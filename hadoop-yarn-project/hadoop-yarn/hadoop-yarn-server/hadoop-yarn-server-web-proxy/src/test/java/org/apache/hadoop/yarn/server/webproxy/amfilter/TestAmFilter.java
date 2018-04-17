@@ -49,7 +49,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.http.TestHttpServer;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.eclipse.jetty.server.Server;
@@ -177,6 +179,44 @@ public class TestAmFilter {
     server.start();
     System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
     return server.getURI().toString() + servletPath;
+  }
+
+  @Test(timeout = 2000)
+  public void testProxyUpdate() throws Exception {
+    Map<String, String> params = new HashMap<>();
+    params.put(AmIpFilter.PROXY_HOSTS, proxyHost);
+    params.put(AmIpFilter.PROXY_URI_BASES, proxyUri);
+
+    FilterConfig conf = new DummyFilterConfig(params);
+    AmIpFilter filter = new AmIpFilter();
+    int updateInterval = 1000;
+    AmIpFilter.setUpdateInterval(updateInterval);
+    filter.init(conf);
+    filter.getProxyAddresses();
+
+    // check that the configuration was applied
+    assertTrue(filter.getProxyAddresses().contains("127.0.0.1"));
+
+    // change proxy configurations
+    params = new HashMap<>();
+    params.put(AmIpFilter.PROXY_HOSTS, "unknownhost");
+    params.put(AmIpFilter.PROXY_URI_BASES, proxyUri);
+    conf = new DummyFilterConfig(params);
+    filter.init(conf);
+
+    // configurations shouldn't be updated now
+    assertFalse(filter.getProxyAddresses().isEmpty());
+    // waiting for configuration update
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          return filter.getProxyAddresses().isEmpty();
+        } catch (ServletException e) {
+          return true;
+        }
+      }
+    }, 500, updateInterval);
   }
 
   /**
