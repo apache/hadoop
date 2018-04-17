@@ -90,6 +90,21 @@
 
 <div class="page-header"><h1>Summary</h1></div>
 {#federation}
+<p>
+  Security is {#routerstat}{#SecurityEnabled}on{:else}off{/SecurityEnabled}{/routerstat}.</p>
+<p>{#router}{#Safemode}{.}{:else}Safemode is off.{/Safemode}{/router}</p>
+
+<p>
+  {NumFiles|fmt_number} files and directories, {NumBlocks|fmt_number} blocks.
+</p>
+
+{#mem.HeapMemoryUsage}
+<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
+{/mem.HeapMemoryUsage}
+
+{#mem.NonHeapMemoryUsage}
+<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
+{/mem.NonHeapMemoryUsage}
 <table class="table table-bordered table-striped">
   <tr><th>Total capacity</th><td>{TotalCapacity|fmt_bytes}</td></tr>
   <tr><th>Used capacity</th><td>{UsedCapacity|fmt_bytes}</td></tr>
@@ -103,8 +118,6 @@
   <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveNodes} (Decommissioned: {NumDecomLiveNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadNodes} (Decommissioned: {NumDecomDeadNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningNodes}</td></tr>
-  <tr><th>Files</th><td>{NumFiles}</td></tr>
-  <tr><th>Blocks</th><td>{NumBlocks}</td></tr>
   <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{NumOfBlocksUnderReplicated}</td></tr>
   <tr><th>Number of Blocks Pending Deletion</th><td>{NumOfBlocksPendingDeletion}</td></tr>
 </table>
