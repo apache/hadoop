@@ -41,13 +41,13 @@ import java.util.Set;
 /**
  * Test class for system service manager.
  */
-public class TestSystemServiceImpl {
+public class TestSystemServiceManagerImpl {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestSystemServiceImpl.class);
+      LoggerFactory.getLogger(TestSystemServiceManagerImpl.class);
   private SystemServiceManagerImpl systemService;
   private Configuration conf;
-  private String resourcePath = "users";
+  private String resourcePath = "system-services";
 
   private String[] users = new String[] {"user1", "user2"};
   private static Map<String, Set<String>> loadedServices = new HashMap<>();
@@ -88,7 +88,9 @@ public class TestSystemServiceImpl {
         ignoredUserServices.containsKey(users[0]));
     int count = ignoredUserServices.get(users[0]);
     Assert.assertEquals(1, count);
-    Assert.assertEquals(1, systemService.getSkipCounter());
+    Assert.assertEquals(1,
+        systemService.getBadFileNameExtensionSkipCounter());
+    Assert.assertEquals(1, systemService.getBadDirSkipCounter());
 
     Map<String, Set<Service>> userServices =
         systemService.getSyncUserServices();
@@ -112,7 +114,7 @@ public class TestSystemServiceImpl {
       while (iterator.hasNext()) {
         Service next = iterator.next();
         Assert.assertTrue(
-            "Service name doesn't exist in expected " + "userService "
+            "Service name doesn't exist in expected userService "
                 + serviceNames, serviceNames.contains(next.getName()));
       }
     }
