@@ -1385,7 +1385,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create script path\n");
     fflush(ERRORFILE);
-    goto cleanup;
+    goto pre_launch_cleanup;
   }
 
   fprintf(LOGFILE, "Creating local dirs...\n");
@@ -1396,7 +1396,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (exit_code != 0) {
     fprintf(ERRORFILE, "Could not create local files and directories %d %d\n", container_file_source, cred_file_source);
     fflush(ERRORFILE);
-    goto cleanup;
+    goto pre_launch_cleanup;
   }
 
   docker_command = construct_docker_command(command_file);
@@ -1408,14 +1408,14 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     exit_code = OUT_OF_MEMORY;
     fprintf(ERRORFILE, "Container out of memory");
     fflush(ERRORFILE);
-    goto cleanup;
+    goto pre_launch_cleanup;
   }
 
   fprintf(LOGFILE, "Changing effective user to root...\n");
   if (change_effective_user(0, user_gid) != 0) {
     fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", 0, user_gid);
     fflush(ERRORFILE);
-    goto cleanup;
+    goto pre_launch_cleanup;
   }
 
   snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
@@ -1428,7 +1428,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
      "Could not invoke docker %s.\n", docker_command_with_binary);
     fflush(ERRORFILE);
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-    goto cleanup;
+    goto post_launch_cleanup;
   }
 
   snprintf(docker_inspect_command, command_size,
@@ -1445,7 +1445,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
      "Could not inspect docker to get pid %s.\n", docker_inspect_command);
     fflush(ERRORFILE);
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-    goto cleanup;
+    goto post_launch_cleanup;
   }
 
   if (pid != 0) {
@@ -1460,7 +1460,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
         if (strcmp(*cgroup_ptr, "none") != 0 &&
              write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
           exit_code = WRITE_CGROUP_FAILED;
-          goto cleanup;
+          goto post_launch_cleanup;
         }
       }
     }
@@ -1473,7 +1473,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       exit_code = WRITE_PIDFILE_FAILED;
       fprintf(ERRORFILE, "Could not write pid to %s", pid_file);
       fflush(ERRORFILE);
-      goto cleanup;
+      goto post_launch_cleanup;
     }
 
     snprintf(docker_wait_command, command_size,
@@ -1519,20 +1519,49 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     }
   }
 
+post_launch_cleanup:
+
   fprintf(LOGFILE, "Removing docker container post-exit...\n");
   snprintf(docker_rm_command, command_size,
     "%s rm %s", docker_binary, container_id);
-  FILE* rm_docker = popen(docker_rm_command, "w");
-  if (pclose (rm_docker) != 0)
-  {
-    fprintf (ERRORFILE,
-     "Could not remove container %s.\n", docker_rm_command);
-    fflush(ERRORFILE);
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-    goto cleanup;
+  int rc, i, sleep_time = 1, max_iterations = 5;
+  for (i = 0; i < max_iterations; i++) {
+    if (i > 0) {
+      sleep(sleep_time);
+      sleep_time *= 2;
+    }
+    FILE* rm_docker = popen(docker_rm_command, "w");
+    if (rm_docker == 0) {
+      fprintf(ERRORFILE,
+        "popen() failed: %s\n", strerror(errno));
+      fflush(ERRORFILE);
+      continue;
+    }
+    rc = pclose(rm_docker);
+    if (rc == -1) {
+      fprintf(ERRORFILE,
+        "pclose() failed: %s\n", strerror(errno));
+      fflush(ERRORFILE);
+    } else if (WIFEXITED(rc)) {
+      if (WEXITSTATUS(rc) == 0) {
+        break;
+      } else {
+        fprintf(ERRORFILE,
+          "docker rm command failed with exit status: %d\n", WEXITSTATUS(rc));
+        fflush(ERRORFILE);
+      }
+    }
   }
 
-cleanup:
+  if (i == max_iterations) {
+    // Tried 5 times and failed.
+    fprintf(ERRORFILE,
+     "Could not remove container after %d tries: %s\n", max_iterations, docker_rm_command);
+    fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+  }
+
+pre_launch_cleanup:
 
   if (exit_code_file != NULL && write_exit_code_file_as_nm(exit_code_file, exit_code) < 0) {
     fprintf (ERRORFILE,
