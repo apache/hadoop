@@ -227,7 +227,7 @@ public class HddsDatanodeService implements ServicePlugin {
     return new HddsDatanodeService(conf);
   }
 
-  public static void main(String args[]) {
+  public static void main(String[] args) {
     try {
       StringUtils.startupShutdownMessage(HddsDatanodeService.class, args, LOG);
       HddsDatanodeService hddsDatanodeService =

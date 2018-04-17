@@ -44,7 +44,7 @@ public class TestContainerStateManager {
   private XceiverClientManager xceiverClientManager;
   private StorageContainerManager scm;
   private Mapping scmContainerMapping;
-  private ContainerStateManager stateManager;
+  private ContainerStateManager containerStateManager;
   private String containerOwner = "OZONE";
 
 
@@ -56,7 +56,7 @@ public class TestContainerStateManager {
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();
     scmContainerMapping = scm.getScmContainerManager();
-    stateManager = scmContainerMapping.getStateManager();
+    containerStateManager = scmContainerMapping.getStateManager();
   }
 
   @After
@@ -72,7 +72,7 @@ public class TestContainerStateManager {
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
-    ContainerInfo info = stateManager
+    ContainerInfo info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.ALLOCATED);
@@ -89,7 +89,7 @@ public class TestContainerStateManager {
     String container2 = "container" + RandomStringUtils.randomNumeric(5);
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2, containerOwner);
-    int numContainers = stateManager
+    int numContainers = containerStateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.ALLOCATED).size();
@@ -139,13 +139,13 @@ public class TestContainerStateManager {
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2, containerOwner);
 
-    ContainerInfo info = stateManager
+    ContainerInfo info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.OPEN);
     Assert.assertEquals(container1, info.getContainerName());
 
-    info = stateManager
+    info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.ALLOCATED);
@@ -158,7 +158,7 @@ public class TestContainerStateManager {
 
     // space has already been allocated in container1, now container 2 should
     // be chosen.
-    info = stateManager
+    info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.OPEN);
@@ -167,7 +167,7 @@ public class TestContainerStateManager {
 
   @Test
   public void testUpdateContainerState() throws IOException {
-    NavigableSet<ContainerID> containerList = stateManager
+    NavigableSet<ContainerID> containerList = containerStateManager
         .getMatchingContainerIDs(containerOwner,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.ALLOCATED);
@@ -179,49 +179,49 @@ public class TestContainerStateManager {
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.ALLOCATED).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping.updateContainerState(container1,
         HddsProtos.LifeCycleEvent.CREATE);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.CREATING).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping.updateContainerState(container1,
         HddsProtos.LifeCycleEvent.CREATED);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.OPEN).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping
         .updateContainerState(container1, HddsProtos.LifeCycleEvent.FINALIZE);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.CLOSING).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping
         .updateContainerState(container1, HddsProtos.LifeCycleEvent.CLOSE);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.CLOSED).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping
         .updateContainerState(container1, HddsProtos.LifeCycleEvent.DELETE);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.DELETING).size();
     Assert.assertEquals(1, containers);
 
     scmContainerMapping
         .updateContainerState(container1, HddsProtos.LifeCycleEvent.CLEANUP);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.DELETED).size();
     Assert.assertEquals(1, containers);
@@ -235,7 +235,7 @@ public class TestContainerStateManager {
         HddsProtos.LifeCycleEvent.CREATE);
     scmContainerMapping
         .updateContainerState(container2, HddsProtos.LifeCycleEvent.TIMEOUT);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.DELETING).size();
     Assert.assertEquals(1, containers);
@@ -253,7 +253,7 @@ public class TestContainerStateManager {
         HddsProtos.LifeCycleEvent.FINALIZE);
     scmContainerMapping
         .updateContainerState(container3, HddsProtos.LifeCycleEvent.CLOSE);
-    containers = stateManager.getMatchingContainerIDs(containerOwner,
+    containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         HddsProtos.LifeCycleState.CLOSED).size();
     Assert.assertEquals(1, containers);
@@ -275,7 +275,7 @@ public class TestContainerStateManager {
       long size = Math.abs(ran.nextLong() % OzoneConsts.GB);
       allocatedSize += size;
       // trigger allocating bytes by calling getMatchingContainer
-      ContainerInfo info = stateManager
+      ContainerInfo info = containerStateManager
           .getMatchingContainer(size, containerOwner,
               xceiverClientManager.getType(), xceiverClientManager.getFactor(),
               HddsProtos.LifeCycleState.OPEN);

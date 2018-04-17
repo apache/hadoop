@@ -34,7 +34,7 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
  * Stateless helper functions for the server and client side of KSM
  * communication.
  */
-public class KsmUtils {
+public final class KsmUtils {
 
   private KsmUtils() {
   }

@@ -31,7 +31,11 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
  * Hence, these classes do not use the Tool/Runner pattern of standard Hadoop
  * CLI.
  */
-public class Genesis {
+public final class Genesis {
+
+  private Genesis() {
+  }
+
   public static void main(String[] args) throws RunnerException {
     Options opt = new OptionsBuilder()
         .include(BenchMarkContainerStateMap.class.getSimpleName())

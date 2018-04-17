@@ -14,7 +14,7 @@ import java.util.Random;
 /**
  * Utility class for benchmark test cases.
  */
-public class GenesisUtil {
+public final class GenesisUtil {
 
   private GenesisUtil() {
     // private constructor.
@@ -28,8 +28,8 @@ public class GenesisUtil {
   private static final int DB_FILE_LEN = 7;
   private static final String TMP_DIR = "java.io.tmpdir";
 
-
-  public static MetadataStore getMetadataStore(String dbType) throws IOException {
+  public static MetadataStore getMetadataStore(String dbType)
+      throws IOException {
     Configuration conf = new Configuration();
     MetadataStoreBuilder builder = MetadataStoreBuilder.newBuilder();
     builder.setConf(conf);

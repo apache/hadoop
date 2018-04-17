@@ -55,7 +55,10 @@ import static org.apache.hadoop.hdds.server.ServerUtils.sanitizeUserArgs;
 /**
  * Hdds stateless helper functions for server side components.
  */
-public class HddsServerUtil {
+public final class HddsServerUtil {
+
+  private HddsServerUtil() {
+  }
 
   private static final Logger LOG = LoggerFactory.getLogger(
       HddsServerUtil.class);

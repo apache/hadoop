@@ -59,7 +59,7 @@ public abstract class OzoneCommandHandler {
     this.err = err;
   }
 
-  public void logOut(String msg, String ... variable) {
+  public void logOut(String msg, String... variable) {
     this.out.println(String.format(msg, variable));
   }
 

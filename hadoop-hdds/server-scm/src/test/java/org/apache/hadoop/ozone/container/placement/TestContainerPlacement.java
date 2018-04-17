@@ -89,8 +89,8 @@ public class TestContainerPlacement {
           capacityPlacer.chooseDatanodes(nodesRequired, containerSize);
       assertEquals(nodesRequired, nodesCapacity.size());
 
-      List<DatanodeDetails> nodesRandom = randomPlacer.chooseDatanodes(nodesRequired,
-          containerSize);
+      List<DatanodeDetails> nodesRandom =
+          randomPlacer.chooseDatanodes(nodesRequired, containerSize);
 
       // One fifth of all calls are delete
       if (x % 5 == 0) {

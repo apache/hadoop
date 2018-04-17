@@ -35,8 +35,8 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
 /**
- * This test class verifies the parsing of SCM endpoint config settings.
- * The parsing logic is in {@link org.apache.hadoop.hdds.scm.client.HddsClientUtils}.
+ * This test class verifies the parsing of SCM endpoint config settings. The
+ * parsing logic is in {@link org.apache.hadoop.hdds.scm.client.HddsClientUtils}.
  */
 public class TestHddsClientUtils {
   @Rule

@@ -7,7 +7,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
@@ -106,7 +105,8 @@ public class BenchMarkDatanodeDispatcher {
       for (int y = 0; y < 100; y++) {
         String containerName = "container-" + y;
         dispatcher.dispatch(getWriteChunkCommand(containerName, chunkName));
-        dispatcher.dispatch(getPutKeyCommand(containerName, chunkName, keyName));
+        dispatcher
+            .dispatch(getPutKeyCommand(containerName, chunkName, keyName));
       }
     }
   }
@@ -119,8 +119,8 @@ public class BenchMarkDatanodeDispatcher {
 
   private ContainerCommandRequestProto getCreateContainerCommand(
       String containerName) {
-    CreateContainerRequestProto.Builder createRequest = CreateContainerRequestProto
-            .newBuilder();
+    CreateContainerRequestProto.Builder createRequest =
+        CreateContainerRequestProto.newBuilder();
     createRequest.setPipeline(
         new Pipeline(containerName, pipelineChannel).getProtobufMessage());
     createRequest.setContainerData(
@@ -174,12 +174,12 @@ public class BenchMarkDatanodeDispatcher {
 
   private ContainerProtos.ChunkInfo getChunkInfo(
       String containerName, String key) {
-    ContainerProtos.ChunkInfo.Builder builder = ContainerProtos.ChunkInfo
-        .newBuilder()
-        .setChunkName(
-            DigestUtils.md5Hex(key) + "_stream_" + containerName + "_chunk_" + key)
-        .setOffset(0)
-        .setLen(data.size());
+    ContainerProtos.ChunkInfo.Builder builder =
+        ContainerProtos.ChunkInfo.newBuilder()
+            .setChunkName(
+                DigestUtils.md5Hex(key) + "_stream_" + containerName + "_chunk_"
+                    + key)
+            .setOffset(0).setLen(data.size());
     return builder.build();
   }
 
@@ -250,7 +250,7 @@ public class BenchMarkDatanodeDispatcher {
     String containerName = "container-" + random.nextInt(containerCount.get());
     String chunkKey = "chunk-" + random.nextInt(chunkCount.get());
     bmdd.dispatcher.dispatch(getPutKeyCommand(
-        containerName, chunkKey,"key-" + keyCount.getAndIncrement()));
+        containerName, chunkKey, "key-" + keyCount.getAndIncrement()));
   }
 
   @Benchmark

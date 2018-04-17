@@ -27,7 +27,7 @@ import java.util.UUID;
 /**
  * Stateless helper functions to handler scm/datanode connection.
  */
-public class TestUtils {
+public final class TestUtils {
 
   private TestUtils() {
   }

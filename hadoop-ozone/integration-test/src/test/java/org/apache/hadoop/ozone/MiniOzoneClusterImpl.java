@@ -179,8 +179,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
    * @throws IOException if there is an I/O error
    */
   @Override
-  public StorageContainerLocationProtocolClientSideTranslatorPB
-  getStorageContainerLocationClient() throws IOException {
+  public StorageContainerLocationProtocolClientSideTranslatorPB getStorageContainerLocationClient()
+      throws IOException {
     long version = RPC.getProtocolVersion(
         StorageContainerLocationProtocolPB.class);
     InetSocketAddress address = scm.getClientRpcAddress();

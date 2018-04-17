@@ -48,7 +48,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
 /**
  * HDDS specific stateless utility functions.
  */
-public class HddsUtils {
+public final class HddsUtils {
 
 
   private static final Logger LOG = LoggerFactory.getLogger(HddsUtils.class);

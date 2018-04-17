@@ -34,7 +34,7 @@ import java.net.InetSocketAddress;
 /**
  * Helper utility to test containers.
  */
-public class ContainerTestUtils {
+public final class ContainerTestUtils {
 
   private ContainerTestUtils() {
   }

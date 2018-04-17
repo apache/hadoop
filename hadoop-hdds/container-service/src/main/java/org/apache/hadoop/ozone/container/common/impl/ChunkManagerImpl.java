@@ -107,6 +107,8 @@ public class ChunkManagerImpl implements ChunkManager {
         containerManager.incrWriteCount(containerName);
         containerManager.incrWriteBytes(containerName, info.getLen());
         break;
+      default:
+        throw new IOException("Can not identify write operation.");
       }
     } catch (ExecutionException | NoSuchAlgorithmException | IOException e) {
       LOG.error("write data failed. error: {}", e);
