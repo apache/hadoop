@@ -89,7 +89,6 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".fairshare", "Fair Share").
             th(".starttime", "StartTime").
-            th(".launchTime", "LaunchTime").
             th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
@@ -136,7 +135,6 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         appInfo.getQueue()))).append("\",\"")
       .append(fairShare).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")
-      .append(appInfo.getLaunchTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")

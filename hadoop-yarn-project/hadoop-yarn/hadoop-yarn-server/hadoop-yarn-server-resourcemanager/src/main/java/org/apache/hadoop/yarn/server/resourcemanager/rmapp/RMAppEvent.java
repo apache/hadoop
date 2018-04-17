@@ -37,12 +37,6 @@ public class RMAppEvent extends AbstractEvent<RMAppEventType>{
     this.diagnosticMsg = diagnostic;
   }
 
-  public RMAppEvent(ApplicationId appId, RMAppEventType type, long timeStamp) {
-    super(type, timeStamp);
-    this.appId = appId;
-    this.diagnosticMsg = "";
-  }
-
   public ApplicationId getApplicationId() {
     return this.appId;
   }

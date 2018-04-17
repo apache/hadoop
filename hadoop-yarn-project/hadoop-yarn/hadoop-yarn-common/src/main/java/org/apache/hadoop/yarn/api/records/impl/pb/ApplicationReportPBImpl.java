@@ -221,17 +221,6 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
-  public long getLaunchTime() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getLaunchTime();
-  }
-
-  @Override
-  public void setLaunchTime(long launchTime) {
-    maybeInitBuilder();
-    builder.setLaunchTime(launchTime);
-  }
-  @Override
   public long getFinishTime() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     return p.getFinishTime();

@@ -272,8 +272,7 @@ public class TestYARNRunner {
         .thenReturn(
             ApplicationReport.newInstance(appId, null, "tmp", "tmp", "tmp",
                 "tmp", 0, null, YarnApplicationState.FINISHED, "tmp", "tmp",
-                0L, 0L, 0L,
-                 FinalApplicationStatus.SUCCEEDED, null, null, 0f,
+                0l, 0l, FinalApplicationStatus.SUCCEEDED, null, null, 0f,
                 "tmp", null));
     yarnRunner.killJob(jobId);
     verify(clientDelegate).killJob(jobId);

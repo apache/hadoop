@@ -47,8 +47,7 @@ public abstract class ApplicationStateData {
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, String user,
       ApplicationSubmissionContext submissionContext, RMAppState state,
-      String diagnostics, long launchTime, long finishTime,
-      CallerContext callerContext) {
+      String diagnostics, long finishTime, CallerContext callerContext) {
     ApplicationStateData appState = Records.newRecord(ApplicationStateData.class);
     appState.setSubmitTime(submitTime);
     appState.setStartTime(startTime);
@@ -56,7 +55,6 @@ public abstract class ApplicationStateData {
     appState.setApplicationSubmissionContext(submissionContext);
     appState.setState(state);
     appState.setDiagnostics(diagnostics);
-    appState.setLaunchTime(launchTime);
     appState.setFinishTime(finishTime);
     appState.setCallerContext(callerContext);
     return appState;
@@ -65,8 +63,7 @@ public abstract class ApplicationStateData {
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, String user,
       ApplicationSubmissionContext submissionContext, RMAppState state,
-      String diagnostics, long launchTime, long finishTime,
-      CallerContext callerContext,
+      String diagnostics, long finishTime, CallerContext callerContext,
       Map<ApplicationTimeoutType, Long> applicationTimeouts) {
     ApplicationStateData appState =
         Records.newRecord(ApplicationStateData.class);
@@ -76,7 +73,6 @@ public abstract class ApplicationStateData {
     appState.setApplicationSubmissionContext(submissionContext);
     appState.setState(state);
     appState.setDiagnostics(diagnostics);
-    appState.setLaunchTime(launchTime);
     appState.setFinishTime(finishTime);
     appState.setCallerContext(callerContext);
     appState.setApplicationTimeouts(applicationTimeouts);
@@ -86,7 +82,7 @@ public abstract class ApplicationStateData {
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, ApplicationSubmissionContext context, String user,
       CallerContext callerContext) {
-    return newInstance(submitTime, startTime, user, context, null, "", 0, 0,
+    return newInstance(submitTime, startTime, user, context, null, "", 0,
         callerContext);
   }
   
@@ -139,20 +135,6 @@ public abstract class ApplicationStateData {
   @Private
   @Unstable
   public abstract void setStartTime(long startTime);
-
-
-
-  /**
-   * Get the <em>launch time</em> of the application.
-   * @return <em>launch time</em> of the application
-   */
-  @Public
-  @Stable
-  public abstract long getLaunchTime();
-
-  @Private
-  @Unstable
-  public abstract void setLaunchTime(long launchTime);
 
   /**
    * The application submitter

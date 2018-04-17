@@ -58,8 +58,7 @@ public abstract class ApplicationReport {
       ApplicationAttemptId applicationAttemptId, String user, String queue,
       String name, String host, int rpcPort, Token clientToAMToken,
       YarnApplicationState state, String diagnostics, String url,
-      long startTime, long launchTime, long finishTime,
-      FinalApplicationStatus finalStatus,
+      long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String applicationType, Token amRmToken) {
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
@@ -75,7 +74,6 @@ public abstract class ApplicationReport {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
-    report.setLaunchTime(launchTime);
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
@@ -86,40 +84,13 @@ public abstract class ApplicationReport {
     return report;
   }
 
-
-  @Private
-  @Unstable
-  public static ApplicationReport newInstance(ApplicationId applicationId,
-        ApplicationAttemptId applicationAttemptId, String user, String queue,
-        String name, String host, int rpcPort, Token clientToAMToken,
-        YarnApplicationState state, String diagnostics, String url,
-        long startTime, long finishTime,
-        FinalApplicationStatus finalStatus,
-        ApplicationResourceUsageReport appResources, String origTrackingUrl,
-        float progress, String applicationType, Token amRmToken,
-        Set<String> tags, boolean unmanagedApplication, Priority priority,
-        String appNodeLabelExpression, String amNodeLabelExpression) {
-    ApplicationReport report =
-            newInstance(applicationId, applicationAttemptId, user, queue, name,
-                    host, rpcPort, clientToAMToken, state, diagnostics, url,
-                    startTime, 0, finishTime, finalStatus, appResources,
-                    origTrackingUrl, progress, applicationType, amRmToken);
-    report.setApplicationTags(tags);
-    report.setUnmanagedApp(unmanagedApplication);
-    report.setPriority(priority);
-    report.setAppNodeLabelExpression(appNodeLabelExpression);
-    report.setAmNodeLabelExpression(amNodeLabelExpression);
-    return report;
-  }
-
   @Private
   @Unstable
   public static ApplicationReport newInstance(ApplicationId applicationId,
       ApplicationAttemptId applicationAttemptId, String user, String queue,
       String name, String host, int rpcPort, Token clientToAMToken,
       YarnApplicationState state, String diagnostics, String url,
-      long startTime, long launchTime, long finishTime,
-      FinalApplicationStatus finalStatus,
+      long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String applicationType, Token amRmToken, Set<String> tags,
       boolean unmanagedApplication, Priority priority,
@@ -127,8 +98,8 @@ public abstract class ApplicationReport {
     ApplicationReport report =
         newInstance(applicationId, applicationAttemptId, user, queue, name,
           host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
-          launchTime, finishTime, finalStatus, appResources,
-          origTrackingUrl, progress, applicationType, amRmToken);
+          finishTime, finalStatus, appResources, origTrackingUrl, progress,
+          applicationType, amRmToken);
     report.setApplicationTags(tags);
     report.setUnmanagedApp(unmanagedApplication);
     report.setPriority(priority);
@@ -310,14 +281,6 @@ public abstract class ApplicationReport {
   @Private
   @Unstable
   public abstract void setStartTime(long startTime);
-
-  @Private
-  @Unstable
-  public abstract void setLaunchTime(long setLaunchTime);
-
-  @Public
-  @Unstable
-  public abstract long getLaunchTime();
 
   /**
    * Get the <em>finish time</em> of the application.
