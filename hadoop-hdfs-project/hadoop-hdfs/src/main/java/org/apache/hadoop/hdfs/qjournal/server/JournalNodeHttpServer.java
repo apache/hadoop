@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 
@@ -41,20 +42,36 @@ public class JournalNodeHttpServer {
   private HttpServer2 httpServer;
   private final JournalNode localJournalNode;
 
+  private InetSocketAddress httpAddress;
+  private InetSocketAddress httpsAddress;
+  private final InetSocketAddress bindAddress;
+
   private final Configuration conf;
 
-  JournalNodeHttpServer(Configuration conf, JournalNode jn) {
+  JournalNodeHttpServer(Configuration conf, JournalNode jn,
+      InetSocketAddress bindAddress) {
     this.conf = conf;
     this.localJournalNode = jn;
+    this.bindAddress = bindAddress;
   }
 
   void start() throws IOException {
-    final InetSocketAddress httpAddr = getAddress(conf);
+    final InetSocketAddress httpAddr = bindAddress;
 
     final String httpsAddrString = conf.get(
         DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_DEFAULT);
     InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
+
+    if (httpsAddr != null) {
+      // If DFS_JOURNALNODE_HTTPS_BIND_HOST_KEY exists then it overrides the
+      // host name portion of DFS_NAMENODE_HTTPS_ADDRESS_KEY.
+      final String bindHost =
+          conf.getTrimmed(DFSConfigKeys.DFS_JOURNALNODE_HTTPS_BIND_HOST_KEY);
+      if (bindHost != null && !bindHost.isEmpty()) {
+        httpsAddr = new InetSocketAddress(bindHost, httpsAddr.getPort());
+      }
+    }
 
     HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
         httpAddr, httpsAddr, "journal",
@@ -67,6 +84,20 @@ public class JournalNodeHttpServer {
     httpServer.addInternalServlet("getJournal", "/getJournal",
         GetJournalEditServlet.class, true);
     httpServer.start();
+
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    int connIdx = 0;
+    if (policy.isHttpEnabled()) {
+      httpAddress = httpServer.getConnectorAddress(connIdx++);
+      conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpAddress));
+    }
+
+    if (policy.isHttpsEnabled()) {
+      httpsAddress = httpServer.getConnectorAddress(connIdx);
+      conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpsAddress));
+    }
   }
 
   void stop() throws IOException {
@@ -78,15 +109,27 @@ public class JournalNodeHttpServer {
       }
     }
   }
+
+  /**
+   * Return the actual HTTP/HTTPS address bound to by the running server.
+   */
+  public InetSocketAddress getAddress() {
+    assert httpAddress != null || httpsAddress != null;
+    return httpAddress != null ? httpAddress : httpsAddress;
+  }
   
   /**
    * Return the actual address bound to by the running server.
    */
-  @Deprecated
-  public InetSocketAddress getAddress() {
-    InetSocketAddress addr = httpServer.getConnectorAddress(0);
-    assert addr.getPort() != 0;
-    return addr;
+  public InetSocketAddress getHttpAddress() {
+    return httpAddress;
+  }
+
+  /**
+   * Return the actual address bound to by the running server.
+   */
+  public InetSocketAddress getHttpsAddress() {
+    return httpsAddress;
   }
 
   /**
@@ -99,14 +142,6 @@ public class JournalNodeHttpServer {
     InetSocketAddress addr = httpServer.getConnectorAddress(0);
     return URI.create(DFSUtil.getHttpClientScheme(conf) + "://"
         + NetUtils.getHostPortString(addr));
-  }
-
-  private static InetSocketAddress getAddress(Configuration conf) {
-    String addr = conf.get(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY,
-        DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_DEFAULT);
-    return NetUtils.createSocketAddr(addr,
-        DFSConfigKeys.DFS_JOURNALNODE_HTTP_PORT_DEFAULT,
-        DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY);
   }
 
   public static Journal getJournalFromContext(ServletContext context, String jid)
