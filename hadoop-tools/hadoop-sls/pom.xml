@@ -137,6 +137,7 @@
             <exclude>src/test/resources/syn_stream.json</exclude>
             <exclude>src/test/resources/inputsls.json</exclude>
             <exclude>src/test/resources/nodes.json</exclude>
+            <exclude>src/test/resources/nodes-with-resources.json</exclude>
             <exclude>src/test/resources/exit-invariants.txt</exclude>
             <exclude>src/test/resources/ongoing-invariants.txt</exclude>
           </excludes>

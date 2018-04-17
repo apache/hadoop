@@ -22,6 +22,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +41,11 @@ import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
 @Unstable
@@ -145,9 +151,9 @@ public class SLSUtils {
   /**
    * parse the input node file, return each host name
    */
-  public static Set<String> parseNodesFromNodeFile(String nodeFile)
-          throws IOException {
-    Set<String> nodeSet = new HashSet<String>();
+  public static Map<String, Resource> parseNodesFromNodeFile(String nodeFile,
+      Resource nmDefaultResource) throws IOException {
+    Map<String, Resource> nodeResourceMap = new HashMap<>();
     JsonFactory jsonF = new JsonFactory();
     ObjectMapper mapper = new ObjectMapper();
     Reader input =
@@ -160,13 +166,21 @@ public class SLSUtils {
         List tasks = (List) jsonE.get("nodes");
         for (Object o : tasks) {
           Map jsonNode = (Map) o;
-          nodeSet.add(rack + "/" + jsonNode.get("node"));
+          Resource nodeResource = Resources.clone(nmDefaultResource);
+          ResourceInformation[] infors = ResourceUtils.getResourceTypesArray();
+          for (ResourceInformation info : infors) {
+            if (jsonNode.get(info.getName()) != null) {
+              nodeResource.setResourceValue(info.getName(),
+                  Integer.parseInt(jsonNode.get(info.getName()).toString()));
+            }
+          }
+          nodeResourceMap.put(rack + "/" + jsonNode.get("node"), nodeResource);
         }
       }
     } finally {
       input.close();
     }
-    return nodeSet;
+    return nodeResourceMap;
   }
 
   public static Set<? extends String> generateNodes(int numNodes,

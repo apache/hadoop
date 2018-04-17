@@ -292,21 +292,30 @@ public class SLSRunner extends Configured implements Tool {
         SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO,
         SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO_DEFAULT);
     // nm information (fetch from topology file, or from sls/rumen json file)
-    Set<String> nodeSet = new HashSet<String>();
+    Map<String, Resource> nodeResourceMap = new HashMap<>();
+    Set<? extends  String> nodeSet;
     if (nodeFile.isEmpty()) {
       for (String inputTrace : inputTraces) {
-
         switch (inputType) {
         case SLS:
-          nodeSet.addAll(SLSUtils.parseNodesFromSLSTrace(inputTrace));
+          nodeSet = SLSUtils.parseNodesFromSLSTrace(inputTrace);
+          for (String node : nodeSet) {
+            nodeResourceMap.put(node, null);
+          }
           break;
         case RUMEN:
-          nodeSet.addAll(SLSUtils.parseNodesFromRumenTrace(inputTrace));
+          nodeSet = SLSUtils.parseNodesFromRumenTrace(inputTrace);
+          for (String node : nodeSet) {
+            nodeResourceMap.put(node, null);
+          }
           break;
         case SYNTH:
           stjp = new SynthTraceJobProducer(getConf(), new Path(inputTraces[0]));
-          nodeSet.addAll(SLSUtils.generateNodes(stjp.getNumNodes(),
-              stjp.getNumNodes()/stjp.getNodesPerRack()));
+          nodeSet = SLSUtils.generateNodes(stjp.getNumNodes(),
+              stjp.getNumNodes()/stjp.getNodesPerRack());
+          for (String node : nodeSet) {
+            nodeResourceMap.put(node, null);
+          }
           break;
         default:
           throw new YarnException("Input configuration not recognized, "
@@ -314,20 +323,26 @@ public class SLSRunner extends Configured implements Tool {
         }
       }
     } else {
-      nodeSet.addAll(SLSUtils.parseNodesFromNodeFile(nodeFile));
+      nodeResourceMap = SLSUtils.parseNodesFromNodeFile(nodeFile,
+          nodeManagerResource);
     }
 
-    if (nodeSet.size() == 0) {
+    if (nodeResourceMap.size() == 0) {
       throw new YarnException("No node! Please configure nodes.");
     }
 
     // create NM simulators
     Random random = new Random();
     Set<String> rackSet = new HashSet<String>();
-    for (String hostName : nodeSet) {
+    for (Map.Entry<String, Resource> entry : nodeResourceMap.entrySet()) {
       // we randomize the heartbeat start time from zero to 1 interval
       NMSimulator nm = new NMSimulator();
-      nm.init(hostName, nodeManagerResource, random.nextInt(heartbeatInterval),
+      Resource nmResource = nodeManagerResource;
+      String hostName = entry.getKey();
+      if (entry.getValue() != null) {
+        nmResource = entry.getValue();
+      }
+      nm.init(hostName, nmResource, random.nextInt(heartbeatInterval),
           heartbeatInterval, rm, resourceUtilizationRatio);
       nmMap.put(nm.getNode().getNodeID(), nm);
       runner.schedule(nm);
