@@ -69,7 +69,8 @@ public class NodeFencer {
   private static final Map<String, Class<? extends FenceMethod>> STANDARD_METHODS =
     ImmutableMap.<String, Class<? extends FenceMethod>>of(
         "shell", ShellCommandFencer.class,
-        "sshfence", SshFenceByTcpPort.class);
+        "sshfence", SshFenceByTcpPort.class,
+        "powershell", PowerShellFencer.class);
   
   private final List<FenceMethodWithArg> methods;
   
