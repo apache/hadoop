@@ -44,25 +44,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>.gitattributes</exclude>
-            <exclude>.idea/**</exclude>
-            <exclude>src/main/conf/*</exclude>
-            <exclude>src/main/webapps/static/angular-1.6.4.min.js</exclude>
-            <exclude>src/main/webapps/static/angular-nvd3-1.0.9.min.js</exclude>
-            <exclude>src/main/webapps/static/angular-route-1.6.4.min.js</exclude>
-            <exclude>src/main/webapps/static/d3-3.5.17.min.js</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.css.map</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js</exclude>
-            <exclude>src/main/webapps/static/nvd3-1.8.5.min.js.map</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>

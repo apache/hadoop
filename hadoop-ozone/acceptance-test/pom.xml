@@ -73,8 +73,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <variable>version:${project.version}</variable>
                     <variable>basedir:${project.basedir}</variable>
                   </variables>
-						<skip>false</skip>
-						<skipTests>false</skipTests>
+                  <skip>false</skip>
+                  <skipTests>false</skipTests>
                 </configuration>
               </execution>
             </executions>
