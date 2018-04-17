@@ -361,7 +361,7 @@ public abstract class StateStoreFileBaseImpl
           try {
             writer.close();
           } catch (IOException e) {
-            LOG.error("Cannot close the writer for {}", recordPathTemp);
+            LOG.error("Cannot close the writer for {}", recordPathTemp, e);
           }
         }
       }
