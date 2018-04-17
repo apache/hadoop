@@ -195,13 +195,13 @@ public class RegisteredCommand extends
     /**
      * sets the hostname.
      */
-    public Builder setHostname(String hostname) {
-      this.hostname = hostname;
+    public Builder setHostname(String host) {
+      this.hostname = host;
       return this;
     }
 
-    public Builder setIpAddress(String ipAddress) {
-      this.ipAddress = ipAddress;
+    public Builder setIpAddress(String ipAddr) {
+      this.ipAddress = ipAddr;
       return this;
     }
 

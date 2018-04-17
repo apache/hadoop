@@ -115,7 +115,7 @@ public class OzoneGetConf extends Configured implements Tool {
    * {@link OzoneGetConf.Command}.
    */
   static class CommandHandler {
-    String key; // Configuration key to lookup
+    protected String key; // Configuration key to lookup
 
     CommandHandler() {
       this(null);
@@ -136,7 +136,7 @@ public class OzoneGetConf extends Configured implements Tool {
       return -1;
     }
 
-    protected void checkArgs(String args[]) {
+    protected void checkArgs(String[] args) {
       if (args.length > 0) {
         throw new HadoopIllegalArgumentException(
             "Did not expect argument: " + args[0]);
@@ -144,7 +144,7 @@ public class OzoneGetConf extends Configured implements Tool {
     }
 
 
-    /** Method to be overridden by sub classes for specific behavior */
+    /** Method to be overridden by sub classes for specific behavior. */
     int doWorkInternal(OzoneGetConf tool, String[] args) throws Exception {
 
       String value = tool.getConf().getTrimmed(key);
@@ -205,10 +205,10 @@ public class OzoneGetConf extends Configured implements Tool {
    */
   private int doWork(String[] args) {
     if (args.length >= 1) {
-      OzoneGetConf.CommandHandler handler = OzoneGetConf.Command.getHandler(args[0]);
+      OzoneGetConf.CommandHandler handler =
+          OzoneGetConf.Command.getHandler(args[0]);
       if (handler != null) {
-        return handler.doWork(this,
-            Arrays.copyOfRange(args, 1, args.length));
+        return handler.doWork(this, Arrays.copyOfRange(args, 1, args.length));
       }
     }
     printUsage();
@@ -249,9 +249,9 @@ public class OzoneGetConf extends Configured implements Tool {
    */
   static class KeySpaceManagersCommandHandler extends CommandHandler {
     @Override
-    public int doWorkInternal(OzoneGetConf tool, String[] args) throws IOException {
-      tool.printOut(KsmUtils.getKsmAddress(tool.getConf())
-          .getHostName());
+    public int doWorkInternal(OzoneGetConf tool, String[] args)
+        throws IOException {
+      tool.printOut(KsmUtils.getKsmAddress(tool.getConf()).getHostName());
       return 0;
     }
   }

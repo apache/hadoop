@@ -20,7 +20,7 @@ public class BenchMarkMetadataStoreWrites {
 
 
   private static final int DATA_LEN = 1024;
-  private static final long maxKeys = 1024 * 10;
+  private static final long MAX_KEYS = 1024 * 10;
 
   private MetadataStore store;
   private byte[] data;
@@ -37,7 +37,7 @@ public class BenchMarkMetadataStoreWrites {
 
   @Benchmark
   public void test() throws IOException {
-    long x = org.apache.commons.lang3.RandomUtils.nextLong(0L, maxKeys);
+    long x = org.apache.commons.lang3.RandomUtils.nextLong(0L, MAX_KEYS);
     store.put(Long.toHexString(x).getBytes(Charset.forName("UTF-8")), data);
   }
 }

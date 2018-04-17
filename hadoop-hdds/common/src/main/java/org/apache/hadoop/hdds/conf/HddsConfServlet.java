@@ -53,7 +53,8 @@ public class HddsConfServlet extends HttpServlet {
   private static final String COMMAND = "cmd";
   private static final OzoneConfiguration OZONE_CONFIG =
       new OzoneConfiguration();
-  transient Logger LOG = LoggerFactory.getLogger(HddsConfServlet.class);
+  private static final transient Logger LOG =
+      LoggerFactory.getLogger(HddsConfServlet.class);
 
 
   /**
@@ -152,25 +153,25 @@ public class HddsConfServlet extends HttpServlet {
     Configuration config = getOzoneConfig();
 
     switch (cmd) {
-      case "getOzoneTags":
-        out.write(gson.toJson(config.get("ozone.system.tags").split(",")));
-        break;
-      case "getPropertyByTag":
-        String tags = request.getParameter("tags");
-        Map<String, Properties> propMap = new HashMap<>();
+    case "getOzoneTags":
+      out.write(gson.toJson(config.get("ozone.system.tags").split(",")));
+      break;
+    case "getPropertyByTag":
+      String tags = request.getParameter("tags");
+      Map<String, Properties> propMap = new HashMap<>();
 
-        for (String tag : tags.split(",")) {
-          if (config.isPropertyTag(tag)) {
-            Properties properties = config.getAllPropertiesByTag(tag);
-            propMap.put(tag, properties);
-          } else {
-            LOG.debug("Not a valid tag" + tag);
-          }
+      for (String tag : tags.split(",")) {
+        if (config.isPropertyTag(tag)) {
+          Properties properties = config.getAllPropertiesByTag(tag);
+          propMap.put(tag, properties);
+        } else {
+          LOG.debug("Not a valid tag" + tag);
         }
-        out.write(gson.toJsonTree(propMap).toString());
-        break;
-      default:
-        throw new IllegalArgumentException(cmd + " is not a valid command.");
+      }
+      out.write(gson.toJsonTree(propMap).toString());
+      break;
+    default:
+      throw new IllegalArgumentException(cmd + " is not a valid command.");
     }
 
   }

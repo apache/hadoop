@@ -66,8 +66,9 @@ public class CloseContainerHandler extends OzoneCommandHandler {
     Options options = new Options();
     addOptions(options);
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp(SCMCLI.CMD_WIDTH, "hdfs scm -container -close <option>",
-        "where <option> is", options, "");
+    helpFormatter
+        .printHelp(SCMCLI.CMD_WIDTH, "hdfs scm -container -close <option>",
+            "where <option> is", options, "");
   }
 
   public static void addOptions(Options options) {

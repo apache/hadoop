@@ -96,7 +96,7 @@ public class TestContainerSQLCli {
   private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
   private static HddsProtos.ReplicationFactor factor;
   private static HddsProtos.ReplicationType type;
-  private static final String containerOwner = "OZONE";
+  private static final String CONTAINER_OWNER = "OZONE";
 
 
   @Before
@@ -141,7 +141,7 @@ public class TestContainerSQLCli {
     }
     assertEquals(2, nodeManager.getAllNodes().size());
     AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type,
-        factor, containerOwner);
+        factor, CONTAINER_OWNER);
     pipeline1 = ab1.getPipeline();
     blockContainerMap.put(ab1.getKey(), pipeline1.getContainerName());
 
@@ -154,7 +154,7 @@ public class TestContainerSQLCli {
     // the size of blockContainerMap will vary each time the test is run.
     while (true) {
       ab2 = blockManager
-          .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
+          .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, CONTAINER_OWNER);
       pipeline2 = ab2.getPipeline();
       blockContainerMap.put(ab2.getKey(), pipeline2.getContainerName());
       if (!pipeline1.getContainerName().equals(pipeline2.getContainerName())) {

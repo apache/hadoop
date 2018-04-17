@@ -32,7 +32,7 @@ import java.net.InetSocketAddress;
 /**
  * Generic utilities for all HDDS/Ozone servers.
  */
-public class ServerUtils {
+public final class ServerUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ServerUtils.class);

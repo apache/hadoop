@@ -42,13 +42,13 @@ public class BenchMarkRocksDbStore {
   private byte[] data;
 
   @Param(value = {"8"})
-  private String blockSize;// 4KB default
+  private String blockSize; // 4KB default
 
   @Param(value = {"64"})
   private String writeBufferSize; //64 MB default
 
   @Param(value = {"16"})
-  private String maxWriteBufferNumber;// 2 default
+  private String maxWriteBufferNumber; // 2 default
 
   @Param(value = {"4"})
   private String maxBackgroundFlushes; // 1 default

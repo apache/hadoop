@@ -148,8 +148,9 @@ public class SCMCLI extends OzoneBaseCLI {
   }
 
   private static void addTopLevelOptions(Options options) {
-    Option containerOps = new Option(
-        ContainerCommandHandler.CONTAINER_CMD, false, "Container related options");
+    Option containerOps =
+        new Option(ContainerCommandHandler.CONTAINER_CMD, false,
+            "Container related options");
     options.addOption(containerOps);
     // TODO : add pool, node and pipeline commands.
   }

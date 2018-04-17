@@ -96,9 +96,10 @@ public class TestContainerReportWithKeys {
     ObjectStore objectStore = client.getObjectStore();
     objectStore.createVolume(volumeName);
     objectStore.getVolume(volumeName).createBucket(bucketName);
-    OzoneOutputStream key = objectStore.getVolume(volumeName).getBucket(bucketName)
-        .createKey(keyName, keySize, ReplicationType.STAND_ALONE,
-            ReplicationFactor.ONE);
+    OzoneOutputStream key =
+        objectStore.getVolume(volumeName).getBucket(bucketName)
+            .createKey(keyName, keySize, ReplicationType.STAND_ALONE,
+                ReplicationFactor.ONE);
     String dataString = RandomStringUtils.randomAlphabetic(keySize);
     key.write(dataString.getBytes());
     key.close();

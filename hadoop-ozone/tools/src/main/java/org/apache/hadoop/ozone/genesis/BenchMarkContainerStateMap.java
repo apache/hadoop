@@ -42,89 +42,73 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState.OPEN;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState.CLOSED;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 
 @State(Scope.Thread)
 public class BenchMarkContainerStateMap {
-    public ContainerStateMap stateMap;
-    public AtomicInteger containerID;
+  private ContainerStateMap stateMap;
+  private AtomicInteger containerID;
 
-    @Setup(Level.Trial)
-    public void initialize() throws IOException {
-      stateMap = new ContainerStateMap();
-      Pipeline pipeline = createSingleNodePipeline(UUID.randomUUID().toString());
-      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null.");
-      int currentCount = 1;
-      for (int x = 1; x < 1000; x++) {
-        try {
-          ContainerInfo containerInfo = new ContainerInfo.Builder()
-              .setContainerName(pipeline.getContainerName())
-              .setState(CLOSED)
-              .setPipeline(pipeline)
-              // This is bytes allocated for blocks inside container, not the
-              // container size
-              .setAllocatedBytes(0)
-              .setUsedBytes(0)
-              .setNumberOfKeys(0)
-              .setStateEnterTime(Time.monotonicNow())
-              .setOwner("OZONE")
-              .setContainerID(x)
-              .build();
-          stateMap.addContainer(containerInfo);
-          currentCount++;
-        } catch (SCMException e) {
-          e.printStackTrace();
-        }
-      }
-      for (int y = currentCount; y < 2000; y++) {
-        try {
-          ContainerInfo containerInfo = new ContainerInfo.Builder()
-              .setContainerName(pipeline.getContainerName())
-              .setState(OPEN)
-              .setPipeline(pipeline)
-              // This is bytes allocated for blocks inside container, not the
-              // container size
-              .setAllocatedBytes(0)
-              .setUsedBytes(0)
-              .setNumberOfKeys(0)
-              .setStateEnterTime(Time.monotonicNow())
-              .setOwner("OZONE")
-              .setContainerID(y)
-              .build();
-          stateMap.addContainer(containerInfo);
-          currentCount++;
-        } catch (SCMException e) {
-          e.printStackTrace();
-        }
-      }
+  @Setup(Level.Trial)
+  public void initialize() throws IOException {
+    stateMap = new ContainerStateMap();
+    Pipeline pipeline = createSingleNodePipeline(UUID.randomUUID().toString());
+    Preconditions.checkNotNull(pipeline, "Pipeline cannot be null.");
+    int currentCount = 1;
+    for (int x = 1; x < 1000; x++) {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
-            .setContainerName(pipeline.getContainerName())
-            .setState(OPEN)
+            .setContainerName(pipeline.getContainerName()).setState(CLOSED)
             .setPipeline(pipeline)
             // This is bytes allocated for blocks inside container, not the
             // container size
-            .setAllocatedBytes(0)
-            .setUsedBytes(0)
-            .setNumberOfKeys(0)
-            .setStateEnterTime(Time.monotonicNow())
-            .setOwner("OZONE")
-            .setContainerID(currentCount++)
-            .build();
+            .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
+            .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
+            .setContainerID(x).build();
         stateMap.addContainer(containerInfo);
+        currentCount++;
       } catch (SCMException e) {
         e.printStackTrace();
       }
-
-      containerID = new AtomicInteger(currentCount++);
-
+    }
+    for (int y = currentCount; y < 2000; y++) {
+      try {
+        ContainerInfo containerInfo = new ContainerInfo.Builder()
+            .setContainerName(pipeline.getContainerName()).setState(OPEN)
+            .setPipeline(pipeline)
+            // This is bytes allocated for blocks inside container, not the
+            // container size
+            .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
+            .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
+            .setContainerID(y).build();
+        stateMap.addContainer(containerInfo);
+        currentCount++;
+      } catch (SCMException e) {
+        e.printStackTrace();
+      }
+    }
+    try {
+      ContainerInfo containerInfo = new ContainerInfo.Builder()
+          .setContainerName(pipeline.getContainerName()).setState(OPEN)
+          .setPipeline(pipeline)
+          // This is bytes allocated for blocks inside container, not the
+          // container size
+          .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
+          .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
+          .setContainerID(currentCount++).build();
+      stateMap.addContainer(containerInfo);
+    } catch (SCMException e) {
+      e.printStackTrace();
     }
 
-  public static Pipeline createSingleNodePipeline(String containerName) throws
-      IOException {
+    containerID = new AtomicInteger(currentCount++);
+
+  }
+
+  public static Pipeline createSingleNodePipeline(String containerName)
+      throws IOException {
     return createPipeline(containerName, 1);
   }
 
@@ -144,9 +128,8 @@ public class BenchMarkContainerStateMap {
     return createPipeline(containerName, ids);
   }
 
-  public static Pipeline createPipeline(
-      String containerName, Iterable<DatanodeDetails> ids)
-      throws IOException {
+  public static Pipeline createPipeline(String containerName,
+      Iterable<DatanodeDetails> ids) throws IOException {
     Objects.requireNonNull(ids, "ids == null");
     final Iterator<DatanodeDetails> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
@@ -156,37 +139,33 @@ public class BenchMarkContainerStateMap {
         new PipelineChannel(leader.getUuidString(), OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE, pipelineName);
     pipelineChannel.addMember(leader);
-    for (; i.hasNext(); ) {
+    for (; i.hasNext();) {
       pipelineChannel.addMember(i.next());
     }
     return new Pipeline(containerName, pipelineChannel);
   }
 
   @Benchmark
-  public void createContainerBenchMark(BenchMarkContainerStateMap state, Blackhole bh)
-      throws IOException {
+  public void createContainerBenchMark(BenchMarkContainerStateMap state,
+      Blackhole bh) throws IOException {
     Pipeline pipeline = createSingleNodePipeline(UUID.randomUUID().toString());
     int cid = state.containerID.incrementAndGet();
     ContainerInfo containerInfo = new ContainerInfo.Builder()
-        .setContainerName(pipeline.getContainerName())
-        .setState(CLOSED)
+        .setContainerName(pipeline.getContainerName()).setState(CLOSED)
         .setPipeline(pipeline)
         // This is bytes allocated for blocks inside container, not the
         // container size
-        .setAllocatedBytes(0)
-        .setUsedBytes(0)
-        .setNumberOfKeys(0)
-        .setStateEnterTime(Time.monotonicNow())
-        .setOwner("OZONE")
-        .setContainerID(cid)
-        .build();
+        .setAllocatedBytes(0).setUsedBytes(0).setNumberOfKeys(0)
+        .setStateEnterTime(Time.monotonicNow()).setOwner("OZONE")
+        .setContainerID(cid).build();
     state.stateMap.addContainer(containerInfo);
   }
 
   @Benchmark
   public void getMatchingContainerBenchMark(BenchMarkContainerStateMap state,
       Blackhole bh) {
-    bh.consume(state.stateMap.getMatchingContainerIDs(OPEN, "BILBO",
-        ReplicationFactor.ONE, ReplicationType.STAND_ALONE));
+    bh.consume(state.stateMap
+        .getMatchingContainerIDs(OPEN, "BILBO", ReplicationFactor.ONE,
+            ReplicationType.STAND_ALONE));
   }
 }

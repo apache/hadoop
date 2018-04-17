@@ -119,8 +119,8 @@ public interface MiniOzoneCluster {
    * @return StorageContainerLocation Client
    * @throws IOException
    */
-  StorageContainerLocationProtocolClientSideTranslatorPB
-  getStorageContainerLocationClient()  throws IOException;
+  StorageContainerLocationProtocolClientSideTranslatorPB getStorageContainerLocationClient()
+      throws IOException;
 
   /**
    * Restarts StorageContainerManager instance.
@@ -166,6 +166,9 @@ public interface MiniOzoneCluster {
     return new MiniOzoneClusterImpl.Builder(conf);
   }
 
+  /**
+   * Builder class for MiniOzoneCluster.
+   */
   abstract class Builder {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
@@ -280,7 +283,7 @@ public interface MiniOzoneCluster {
      *
      * @return MiniOzoneCluster.Builder
      */
-    public Builder setHbProcessorInterval (int val) {
+    public Builder setHbProcessorInterval(int val) {
       hbProcessorInterval = Optional.of(val);
       return this;
     }

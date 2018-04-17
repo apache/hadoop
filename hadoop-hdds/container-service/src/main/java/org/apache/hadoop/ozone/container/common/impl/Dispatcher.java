@@ -464,7 +464,7 @@ public class Dispatcher implements ContainerDispatcher {
     byte[] data = null;
     if (msg.getWriteChunk().getStage() == ContainerProtos.Stage.WRITE_DATA
         || msg.getWriteChunk().getStage() == ContainerProtos.Stage.COMBINED) {
-       data = msg.getWriteChunk().getData().toByteArray();
+      data = msg.getWriteChunk().getData().toByteArray();
       metrics.incContainerBytesStats(Type.WriteChunk, data.length);
 
     }
