@@ -164,6 +164,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   // Mutable fields
   private long startTime;
+  private long launchTime = 0;
   private long finishTime = 0;
   private long storedFinishTime = 0;
   private int firstAttemptIdInStateStore = 1;
@@ -290,6 +291,10 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+      // Handle AppAttemptLaunch to upate the launchTime and publish to ATS
+      .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
+        RMAppEventType.ATTEMPT_LAUNCHED,
+        new AttemptLaunchedTransition())
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
@@ -784,9 +789,9 @@ public class RMAppImpl implements RMApp, Recoverable {
           this.applicationId, currentApplicationAttemptId, this.user,
           this.queue, this.name, host, rpcPort, clientToAMToken,
           createApplicationState(), diags, trackingUrl, this.startTime,
-          this.finishTime, finishState, appUsageReport, origTrackingUrl,
-          progress, this.applicationType, amrmToken, applicationTags,
-          this.getApplicationPriority());
+          this.launchTime, this.finishTime, finishState, appUsageReport,
+          origTrackingUrl, progress, this.applicationType, amrmToken,
+          applicationTags, this.getApplicationPriority());
       report.setLogAggregationStatus(logAggregationStatus);
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       report.setAppNodeLabelExpression(getAppNodeLabelExpression());
@@ -834,6 +839,17 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     try {
       return this.startTime;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getLaunchTime() {
+    this.readLock.lock();
+
+    try {
+      return this.launchTime;
     } finally {
       this.readLock.unlock();
     }
@@ -936,6 +952,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         .getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
+    this.launchTime = appState.getLaunchTime();
     this.callerContext = appState.getCallerContext();
     this.applicationTimeouts = appState.getApplicationTimeouts();
     // If interval > 0, some attempts might have been deleted.
@@ -1036,6 +1053,21 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.rmContext.getSystemMetricsPublisher().appStateUpdated(
           app, stateToATS, app.systemClock.getTime());
     };
+  }
+
+  private static final class AttemptLaunchedTransition
+      extends  RMAppTransition {
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+
+      if(app.launchTime == 0) {
+        LOG.info("update the launch time for applicationId: "+
+                app.getApplicationId()+", attemptId: "+
+                app.getCurrentAppAttempt().getAppAttemptId()+
+                "launchTime: "+event.getTimestamp());
+        app.launchTime = event.getTimestamp();
+      }
+    }
   }
 
   private static final class AppRunningOnNodeTransition extends RMAppTransition {
@@ -1297,7 +1329,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(this.submitTime, this.startTime,
             this.user, this.submissionContext,
-            stateToBeStored, diags, this.storedFinishTime, this.callerContext);
+            stateToBeStored, diags, this.launchTime, this.storedFinishTime,
+            this.callerContext);
     appState.setApplicationTimeouts(this.applicationTimeouts);
     this.rmContext.getStateStore().updateApplicationState(appState);
   }
