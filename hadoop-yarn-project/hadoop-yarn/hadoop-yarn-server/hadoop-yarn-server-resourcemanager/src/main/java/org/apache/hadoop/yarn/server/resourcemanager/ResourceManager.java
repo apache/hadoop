@@ -34,7 +34,6 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -254,9 +253,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // load core-site.xml
     loadConfigurationXml(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
 
-    // Refresh user to group mappings during init.
-    refreshUserToGroupMappingsWithConf();
-
     // Do refreshSuperUserGroupsConfiguration with loaded core-site.xml
     // Or use RM specific configurations to overwrite the common ones first
     // if they exist
@@ -338,21 +334,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
-  }
-
-  private void refreshUserToGroupMappingsWithConf()
-      throws YarnException, IOException {
-    Configuration newConf = new Configuration(false);
-    InputStream confFileInputStream =
-        configurationProvider
-        .getConfigurationInputStream(newConf, YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-    if (confFileInputStream != null) {
-      newConf.addResource(confFileInputStream);
-    }
-
-    // Do refreshUserToGroupsMappings with loaded core-site.xml
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(newConf)
-        .refresh();
   }
 
   private void loadConfigurationXml(String configurationFile)
