@@ -2303,10 +2303,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * the disk, update {@link ReplicaInfo} with the correct file</li>
    * </ul>
    *
-   * @param blockId Block that differs
-   * @param diskFile Block file on the disk
-   * @param diskMetaFile Metadata file from on the disk
-   * @param vol Volume of the block file
+   * @param bpid block pool ID
+   * @param scanInfo {@link ScanInfo} for a given block
    */
   @Override
   public void checkAndUpdate(String bpid, ScanInfo scanInfo)
