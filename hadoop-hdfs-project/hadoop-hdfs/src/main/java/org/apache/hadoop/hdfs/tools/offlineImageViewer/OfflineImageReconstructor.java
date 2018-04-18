@@ -385,8 +385,8 @@ class OfflineImageReconstructor {
           break;
         case XMLEvent.CHARACTERS:
           String val = XMLUtils.
-              unmangleXmlString(ev.asCharacters().getData(), true);
-          parent.setVal(val);
+              unmangleXmlString(ev.asCharacters().getData(), false);
+          parent.setVal(parent.getVal() + val);
           events.nextEvent();
           break;
         case XMLEvent.ATTRIBUTE:
