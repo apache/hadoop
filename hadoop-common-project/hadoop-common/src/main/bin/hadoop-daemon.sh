@@ -156,10 +156,10 @@ case $startStop in
         else
           hdfsScript="$HADOOP_HDFS_HOME"/bin/hdfs
         fi
-        nohup nice -n $HADOOP_NICENESS $hdfsScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+        nohup nice -n $HADOOP_NICENESS $hdfsScript --config $HADOOP_CONF_DIR $command "$@" >> "$log" 2>&1 < /dev/null &
       ;;
       (*)
-        nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+        nohup nice -n $HADOOP_NICENESS $hadoopScript --config $HADOOP_CONF_DIR $command "$@" >> "$log" 2>&1 < /dev/null &
       ;;
     esac
     echo $! > $pid
