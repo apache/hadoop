@@ -722,6 +722,7 @@ public class TestRMAdminService {
     }
 
     // Make sure RM will use the updated GroupMappingServiceProvider
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf).refresh();
     List<String> groupBefore =
         new ArrayList<String>(Groups.getUserToGroupsMappingService(
             configuration).getGroups(user));
@@ -1099,6 +1100,7 @@ public class TestRMAdminService {
           .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
 
       // verify UserToGroupsMappings
+      Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf).refresh();
       List<String> groupAfter =
           Groups.getUserToGroupsMappingService(configuration).getGroups(
               UserGroupInformation.getCurrentUser().getUserName());
