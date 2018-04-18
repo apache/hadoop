@@ -53,7 +53,7 @@
     {{#if attempt.nodeHttpAddress}}
     <tr>
       <td>AM Node Web UI</td>
-      <td title="{{attempt.nodeHttpAddress}}"><a href="{{prepend-protocol attempt.nodeHttpAddress}}" target="_blank">{{attempt.nodeHttpAddress}}</a></td>
+      <td title="{{attempt.nodeHttpAddress}}"><a href="{{attempt.masterNodeURL}}">{{attempt.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
     {{#if attempt.logsLink}}
