@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueuePlacementRule.NestedUserQueue;
@@ -356,26 +355,6 @@ public class TestAllocationFileLoaderService {
     assertEquals(.4f, queueConf.getQueueMaxAMShare("root.queueD"), 0.01);
     assertEquals(.5f, queueConf.getQueueMaxAMShare("root.queueE"), 0.01);
 
-    // Root should get * ACL
-    assertEquals("*", queueConf.getQueueAcl("root",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals("*", queueConf.getQueueAcl("root",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Unspecified queues should get default ACL
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
         YarnConfiguration.DEFAULT_QUEUE_NAME));
@@ -521,20 +500,6 @@ public class TestAllocationFileLoaderService {
     assertEquals(15, queueConf.getQueueMaxApps("root.queueE"));
     assertEquals(10, queueConf.getUserMaxApps("user1"));
     assertEquals(5, queueConf.getUserMaxApps("user2"));
-
-    // Unspecified queues should get default ACL
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueConf.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins", queueConf.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
 
     assertEquals(120000, queueConf.getMinSharePreemptionTimeout("root"));
     assertEquals(-1, queueConf.getMinSharePreemptionTimeout("root." +
