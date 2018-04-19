@@ -443,4 +443,60 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // The merge operations is tested in TestRouterWebServiceUtil
   }
 
+  /**
+   * This test validates the correctness of GetApplicationState in case the
+   * application exists in the cluster.
+   */
+  @Test
+  public void testGetApplicationState()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationSubmissionContextInfo context =
+        new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Submit the application we want the report later
+    Response response = interceptor.submitApplication(context, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    AppState responseGet = interceptor.getAppState(null, appId.toString());
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertEquals(MockDefaultRequestInterceptorREST.APP_STATE_RUNNING,
+        responseGet.getState());
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationState in case the
+   * application does not exist in StateStore.
+   */
+  @Test
+  public void testGetApplicationStateNotExists()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    AppState response = interceptor.getAppState(null, appId.toString());
+
+    Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the correctness of GetApplicationState in case of
+   * application in wrong format.
+   */
+  @Test
+  public void testGetApplicationStateWrongFormat()
+      throws YarnException, IOException, InterruptedException {
+
+    AppState response = interceptor.getAppState(null, "Application_wrong_id");
+
+    Assert.assertNull(response);
+  }
+
 }
