@@ -272,7 +272,15 @@ message GetAttributesToNodesRequestProto {
 }
 
 message GetAttributesToNodesResponseProto {
-  repeated AttributeToNodesProto attributeToNodes = 1;
+  repeated AttributeToNodesProto attributesToNodes = 1;
+}
+
+message GetNodesToAttributesRequestProto {
+  repeated string hostnames = 1;
+}
+
+message GetNodesToAttributesResponseProto {
+  repeated NodeToAttributesProto nodesToAttributes = 1;
 }
 
 message UpdateApplicationPriorityRequestProto {

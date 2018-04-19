@@ -551,4 +551,10 @@ public class ResourceMgrDelegate extends YarnClient {
       Set<NodeAttribute> attributes) throws YarnException, IOException {
     return client.getAttributesToNodes(attributes);
   }
+
+  @Override
+  public Map<String, Set<NodeAttribute>> getNodeToAttributes(
+      Set<String> hostNames) throws YarnException, IOException {
+    return client.getNodeToAttributes(hostNames);
+  }
 }

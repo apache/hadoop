@@ -438,6 +438,30 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
   }
 
+  @Override
+  public Map<String, Set<NodeAttribute>> getNodesToAttributes(
+      Set<String> hostNames) {
+    try {
+      readLock.lock();
+      boolean fetchAllNodes = (hostNames == null || hostNames.isEmpty());
+      Map<String, Set<NodeAttribute>> nodeToAttrs = new HashMap<>();
+      if (fetchAllNodes) {
+        nodeCollections.forEach((key, value) -> nodeToAttrs
+            .put(key, value.getAttributes().keySet()));
+      } else {
+        for (String hostName : hostNames) {
+          Host host = nodeCollections.get(hostName);
+          if (host != null) {
+            nodeToAttrs.put(hostName, host.getAttributes().keySet());
+          }
+        }
+      }
+      return nodeToAttrs;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
   public void activateNode(NodeId nodeId, Resource resource) {
     try {
       writeLock.lock();

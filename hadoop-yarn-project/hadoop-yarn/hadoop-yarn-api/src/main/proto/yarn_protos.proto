@@ -388,6 +388,11 @@ message AttributeToNodesProto {
   repeated string hostnames = 2;
 }
 
+message NodeToAttributesProto {
+  optional string node = 1;
+  repeated NodeAttributeProto nodeAttributes = 2;
+}
+
 enum ContainerTypeProto {
   APPLICATION_MASTER = 1;
   TASK = 2;

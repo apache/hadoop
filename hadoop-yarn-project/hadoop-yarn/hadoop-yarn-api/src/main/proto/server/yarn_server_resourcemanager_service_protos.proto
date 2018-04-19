@@ -144,11 +144,6 @@ message NodesToAttributesMappingRequestProto {
   optional bool failOnUnknownNodes = 3;
 }
 
-message NodeToAttributesProto {
-  optional string node = 1;
-  repeated NodeAttributeProto nodeAttributes = 2;
-}
-
 message NodesToAttributesMappingResponseProto {
 }
 //////////////////////////////////////////////////////////////////

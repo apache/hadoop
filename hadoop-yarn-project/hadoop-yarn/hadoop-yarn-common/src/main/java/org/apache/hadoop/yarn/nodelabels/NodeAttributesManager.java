@@ -113,6 +113,15 @@ public abstract class NodeAttributesManager extends AbstractService {
   public abstract List<NodeToAttributes> getNodeToAttributes(
       Set<String> prefix);
 
+  /**
+   * Get all node to Attributes mapping.
+   *
+   * @return Map<String, Set<NodeAttribute>> nodesToAttributes matching
+   * filter.If empty or null is passed as argument will return all.
+   */
+  public abstract Map<String, Set<NodeAttribute>> getNodesToAttributes(
+      Set<String> hostNames);
+
   // futuristic
   // public set<NodeId> getNodesMatchingExpression(String nodeLabelExp);
 }

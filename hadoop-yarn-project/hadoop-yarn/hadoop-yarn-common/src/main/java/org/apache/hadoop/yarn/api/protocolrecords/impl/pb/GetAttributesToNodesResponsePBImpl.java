@@ -66,7 +66,7 @@ public class GetAttributesToNodesResponsePBImpl
     }
     YarnServiceProtos.GetAttributesToNodesResponseProtoOrBuilder p =
         viaProto ? proto : builder;
-    List<AttributeToNodesProto> list = p.getAttributeToNodesList();
+    List<AttributeToNodesProto> list = p.getAttributesToNodesList();
     this.attributesToNodes = new HashMap<>();
 
     for (AttributeToNodesProto c : list) {
@@ -87,7 +87,7 @@ public class GetAttributesToNodesResponsePBImpl
 
   private void addAttributesToNodesToProto() {
     maybeInitBuilder();
-    builder.clearAttributeToNodes();
+    builder.clearAttributesToNodes();
     if (attributesToNodes == null) {
       return;
     }
@@ -119,7 +119,7 @@ public class GetAttributesToNodesResponsePBImpl
             return iter.hasNext();
           }
         };
-    builder.addAllAttributeToNodes(iterable);
+    builder.addAllAttributesToNodes(iterable);
   }
 
   private NodeAttributePBImpl convertFromProtoFormat(NodeAttributeProto p) {
