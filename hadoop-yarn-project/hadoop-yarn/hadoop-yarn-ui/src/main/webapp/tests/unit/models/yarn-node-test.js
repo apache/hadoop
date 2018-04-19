@@ -17,7 +17,6 @@
  */
 
 import { moduleForModel, test } from 'ember-qunit';
-import Ember from 'ember';
 
 moduleForModel('yarn-node', 'Unit | Model | Node', {
   // Specify the other units that are required for this test.
@@ -40,20 +39,3 @@ test('Basic creation test', function(assert) {
   assert.ok(model.nodeManagerBuildVersion);
   assert.ok(model.hadoopBuildVersion);
 });
-
-test('test fields', function(assert) {
-  let model = this.subject();
-
-  assert.expect(4);
-  Ember.run(function () {
-    model.set("totalVmemAllocatedContainersMB", 4096);
-    model.set("totalPmemAllocatedContainersMB", 2048);
-    model.set("totalVCoresAllocatedContainers", 4);
-    model.set("hadoopBuildVersion", "3.0.0-SNAPSHOT");
-    assert.equal(model.get("totalVmemAllocatedContainersMB"), 4096);
-    assert.equal(model.get("totalPmemAllocatedContainersMB"), 2048);
-    assert.equal(model.get("totalVCoresAllocatedContainers"), 4);
-    assert.equal(model.get("hadoopBuildVersion"), "3.0.0-SNAPSHOT");
-  });
-});
-

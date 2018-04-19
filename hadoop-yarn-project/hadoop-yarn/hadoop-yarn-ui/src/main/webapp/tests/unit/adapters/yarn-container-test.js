@@ -16,25 +16,23 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import { initialize } from '../../../initializers/env';
-import { module, test } from 'qunit';
+import { moduleFor, test } from 'ember-qunit';
 
-var application;
-
-module('Unit | Initializer | env', {
-  beforeEach: function() {
-    Ember.run(function() {
-      application = Ember.Application.create();
-      application.deferReadiness();
-    });
-  }
+moduleFor('adapter:yarn-container', 'Unit | Adapter | yarn container', {
+  unit: true
 });
 
-// Replace this with your real tests.
-test('it works', function(assert) {
-  initialize(application);
-
-  // you would normally confirm the results of the initializer here
-  assert.ok(true);
+test('Basic creation test', function(assert) {
+  let adapter = this.subject({
+    host: "localhost:8088",
+    namespace: "ws/v1/cluster"
+  });
+  assert.ok(adapter);
+  assert.ok(adapter.headers);
+  assert.ok(adapter.host);
+  assert.ok(adapter.namespace);
+  assert.ok(adapter.urlForQuery);
+  assert.ok(adapter.ajax);
+  assert.equal(adapter.headers.Accept, "application/json");
+  assert.equal(adapter.namespace, "ws/v1/cluster");
 });
