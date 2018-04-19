@@ -137,7 +137,7 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
       currentApplicationAttemptId, appHistory.getUser(), appHistory.getQueue(),
       appHistory.getApplicationName(), host, rpcPort, null,
       appHistory.getYarnApplicationState(), appHistory.getDiagnosticsInfo(),
-      trackingUrl, appHistory.getStartTime(), appHistory.getFinishTime(),
+      trackingUrl, appHistory.getStartTime(), 0, appHistory.getFinishTime(),
       appHistory.getFinalApplicationStatus(), null, "", 100,
       appHistory.getApplicationType(), null);
   }

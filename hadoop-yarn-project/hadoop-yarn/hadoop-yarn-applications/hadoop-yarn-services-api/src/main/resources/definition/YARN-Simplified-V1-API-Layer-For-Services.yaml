@@ -251,6 +251,9 @@ definitions:
       kerberos_principal:
         description: The Kerberos Principal of the service
         $ref: '#/definitions/KerberosPrincipal'
+      docker_client_config:
+        type: string
+        description: URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json).
   ResourceInformation:
     description:
       ResourceInformation determines unit/value of resource types in addition to memory and vcores. It will be part of Resource object.
@@ -422,14 +425,15 @@ definitions:
           type: string
         description: A list of quicklink keys defined at the service level, and to be resolved by this component.
   ReadinessCheck:
-    description: A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.
+    description: A check to be performed to determine the readiness of a component instance (a container). If no readiness check is specified, the default readiness check will be used unless the yarn.service.default-readiness-check.enabled configuration property is set to false at the component, service, or system level. The artifact field is currently unsupported but may be implemented in the future, enabling a pluggable helper container to support advanced use cases.
     required:
     - type
     properties:
       type:
         type: string
-        description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
+        description: DEFAULT (AM checks whether the container has an IP and optionally performs a DNS lookup for the container hostname), HTTP (AM performs default checks, plus sends a REST call to the container and expects a response code between 200 and 299), or PORT (AM performs default checks, plus attempts to open a socket connection to the container on a specified port).
         enum:
+          - DEFAULT
           - HTTP
           - PORT
       properties:

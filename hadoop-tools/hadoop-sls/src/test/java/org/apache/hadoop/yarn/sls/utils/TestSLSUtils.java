@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.sls.utils;
 
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class TestSLSUtils {
@@ -37,6 +40,28 @@ public class TestSLSUtils {
     rackHostname = SLSUtils.getRackHostName(str);
     Assert.assertEquals(rackHostname[0], "rackA/rackB");
     Assert.assertEquals(rackHostname[1], "node1");
+  }
+
+  @Test
+  public void testParseNodesFromNodeFile() throws Exception {
+    String nodeFile = "src/test/resources/nodes.json";
+    Map<String, Resource> nodeResourceMap = SLSUtils.parseNodesFromNodeFile(
+        nodeFile, Resources.createResource(1024, 2));
+    Assert.assertEquals(20, nodeResourceMap.size());
+
+    nodeFile = "src/test/resources/nodes-with-resources.json";
+    nodeResourceMap = SLSUtils.parseNodesFromNodeFile(
+        nodeFile, Resources.createResource(1024, 2));
+    Assert.assertEquals(4,
+        nodeResourceMap.size());
+    Assert.assertEquals(2048,
+        nodeResourceMap.get("/rack1/node1").getMemorySize());
+    Assert.assertEquals(6,
+        nodeResourceMap.get("/rack1/node1").getVirtualCores());
+    Assert.assertEquals(1024,
+        nodeResourceMap.get("/rack1/node2").getMemorySize());
+    Assert.assertEquals(2,
+        nodeResourceMap.get("/rack1/node2").getVirtualCores());
   }
 
   @Test

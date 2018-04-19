@@ -234,9 +234,10 @@ public class ServiceScheduler extends CompositeService {
     createConfigFileCache(context.fs.getFileSystem());
 
     createAllComponents();
-    containerRecoveryTimeout = getConfig().getInt(
+    containerRecoveryTimeout = YarnServiceConf.getInt(
         YarnServiceConf.CONTAINER_RECOVERY_TIMEOUT_MS,
-        YarnServiceConf.DEFAULT_CONTAINER_RECOVERY_TIMEOUT_MS);
+        YarnServiceConf.DEFAULT_CONTAINER_RECOVERY_TIMEOUT_MS,
+        app.getConfiguration(), getConfig());
   }
 
   protected YarnRegistryViewForProviders createYarnRegistryOperations(

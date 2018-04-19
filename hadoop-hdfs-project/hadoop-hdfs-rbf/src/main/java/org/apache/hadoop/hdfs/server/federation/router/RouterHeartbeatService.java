@@ -100,7 +100,7 @@ public class RouterHeartbeatService extends PeriodicService {
           LOG.debug("Router heartbeat for router {}", routerId);
         }
       } catch (IOException e) {
-        LOG.error("Cannot heartbeat router {}: {}", routerId, e.getMessage());
+        LOG.error("Cannot heartbeat router {}", routerId, e);
       }
     } else {
       LOG.warn("Cannot heartbeat router {}: State Store unavailable", routerId);
@@ -132,7 +132,7 @@ public class RouterHeartbeatService extends PeriodicService {
         }
       }
     } catch (Exception e) {
-      LOG.error("Cannot get version for {}: {}", clazz, e.getMessage());
+      LOG.error("Cannot get version for {}", clazz, e);
     }
     return version;
   }

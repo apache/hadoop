@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,17 +57,24 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.TestRefreshUserMappings;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -101,6 +109,7 @@ public class TestDFSAdmin {
   private final ByteArrayOutputStream err = new ByteArrayOutputStream();
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
+  private String tempResource = null;
 
   @Before
   public void setUp() throws Exception {
@@ -108,7 +117,7 @@ public class TestDFSAdmin {
     conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
     restartCluster();
 
-    admin = new DFSAdmin();
+    admin = new DFSAdmin(conf);
   }
 
   private void redirectStream() {
@@ -137,6 +146,11 @@ public class TestDFSAdmin {
     }
 
     resetStream();
+    if (tempResource != null) {
+      File f = new File(tempResource);
+      FileUtils.deleteQuietly(f);
+      tempResource = null;
+    }
   }
 
   private void restartCluster() throws IOException {
@@ -922,5 +936,69 @@ public class TestDFSAdmin {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testRefreshProxyUser() throws Exception {
+    Path dirPath = new Path("/testdir1");
+    Path subDirPath = new Path("/testdir1/subdir1");
+    UserGroupInformation loginUserUgi =  UserGroupInformation.getLoginUser();
+    String proxyUser = "fakeuser";
+    String realUser = loginUserUgi.getShortUserName();
+
+    UserGroupInformation proxyUgi =
+        UserGroupInformation.createProxyUserForTesting(proxyUser,
+            loginUserUgi, loginUserUgi.getGroupNames());
+
+    // create a directory as login user and re-assign it to proxy user
+    loginUserUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws Exception {
+        cluster.getFileSystem().mkdirs(dirPath);
+        cluster.getFileSystem().setOwner(dirPath, proxyUser,
+            proxyUgi.getPrimaryGroupName());
+        return 0;
+      }
+    });
+
+    // try creating subdirectory inside the directory as proxy user,
+    // This should fail because of the current user hasn't still been proxied
+    try {
+      proxyUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+        @Override public Integer run() throws Exception {
+          cluster.getFileSystem().mkdirs(subDirPath);
+          return 0;
+        }
+      });
+    } catch (RemoteException re) {
+      Assert.assertTrue(re.unwrapRemoteException()
+          instanceof AccessControlException);
+      Assert.assertTrue(re.unwrapRemoteException().getMessage()
+          .equals("User: " + realUser +
+              " is not allowed to impersonate " + proxyUser));
+    }
+
+    // refresh will look at configuration on the server side
+    // add additional resource with the new value
+    // so the server side will pick it up
+    String userKeyGroups = DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserGroupConfKey(realUser);
+    String userKeyHosts = DefaultImpersonationProvider.getTestProvider().
+        getProxySuperuserIpConfKey(realUser);
+    String rsrc = "testGroupMappingRefresh_rsrc.xml";
+    tempResource = TestRefreshUserMappings.addNewConfigResource(rsrc,
+        userKeyGroups, "*", userKeyHosts, "*");
+
+    String[] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
+    admin.run(args);
+
+    // After proxying the fakeuser, the mkdir should work
+    proxyUgi.doAs(new PrivilegedExceptionAction<Integer>() {
+      @Override
+      public Integer run() throws Exception {
+        cluster.getFileSystem().mkdirs(dirPath);
+        return 0;
+      }
+    });
   }
 }

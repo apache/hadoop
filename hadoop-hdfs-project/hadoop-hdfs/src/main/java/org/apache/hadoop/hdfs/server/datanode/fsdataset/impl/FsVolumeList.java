@@ -231,12 +231,11 @@ class FsVolumeList {
   }
 
   /**
-   * Calls {@link FsVolumeImpl#checkDirs()} on each volume.
-   * 
-   * Use {@link checkDirsLock} to allow only one instance of checkDirs() call.
+   * Updates the failed volume info in the volumeFailureInfos Map
+   * and calls {@link #removeVolume(FsVolumeImpl)} to remove the volume
+   * from the volume list for each of the failed volumes.
    *
-   * @return list of all the failed volumes.
-   * @param failedVolumes
+   * @param failedVolumes set of volumes marked failed.
    */
   void handleVolumeFailures(Set<FsVolumeSpi> failedVolumes) {
     try (AutoCloseableLock lock = checkDirsLock.acquire()) {

@@ -43,6 +43,7 @@ import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanc
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.BECOME_READY;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState.READY;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURE_WINDOW;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_FAILURE_WINDOW;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_READINESS_CHECK_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.READINESS_CHECK_INTERVAL;
 
@@ -81,7 +82,7 @@ public class ServiceMonitor extends AbstractService {
 
     // Default 6 hours.
     long failureResetInterval = YarnServiceConf
-        .getLong(CONTAINER_FAILURE_WINDOW, 21600,
+        .getLong(CONTAINER_FAILURE_WINDOW, DEFAULT_CONTAINER_FAILURE_WINDOW,
             context.service.getConfiguration(), conf);
 
     executorService
@@ -109,11 +110,15 @@ public class ServiceMonitor extends AbstractService {
         ProbeStatus status = instance.ping();
         if (status.isSuccess()) {
           if (instance.getState() == STARTED) {
+            LOG.info("Readiness check succeeded for {}: {}", instance
+                .getCompInstanceName(), status);
             // synchronously update the state.
             instance.handle(
                 new ComponentInstanceEvent(entry.getKey(), BECOME_READY));
           }
         } else {
+          LOG.info("Readiness check failed for {}: {}", instance
+              .getCompInstanceName(), status);
           if (instance.getState() == READY) {
             instance.handle(
                 new ComponentInstanceEvent(entry.getKey(), BECOME_NOT_READY));

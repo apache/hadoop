@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ZookeeperUtils;
+import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 import org.slf4j.Logger;
@@ -668,8 +669,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       submissionContext.setApplicationTimeouts(appTimeout);
     }
     submissionContext.setMaxAppAttempts(YarnServiceConf
-        .getInt(YarnServiceConf.AM_RESTART_MAX, 20, app.getConfiguration(),
-            conf));
+        .getInt(YarnServiceConf.AM_RESTART_MAX, DEFAULT_AM_RESTART_MAX, app
+            .getConfiguration(), conf));
 
     setLogAggregationContext(app, conf, submissionContext);
 
@@ -695,7 +696,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             conf), 1));
     String queue = app.getQueue();
     if (StringUtils.isEmpty(queue)) {
-      queue = conf.get(YARN_QUEUE, "default");
+      queue = conf.get(YARN_QUEUE, DEFAULT_YARN_QUEUE);
     }
     submissionContext.setQueue(queue);
     submissionContext.setApplicationName(serviceName);
@@ -710,7 +711,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     amLaunchContext.setCommands(Collections.singletonList(cmdStr));
     amLaunchContext.setEnvironment(env);
     amLaunchContext.setLocalResources(localResources);
-    addHdfsDelegationTokenIfSecure(amLaunchContext);
+    addCredentials(amLaunchContext, app);
     submissionContext.setAMContainerSpec(amLaunchContext);
     yarnClient.submitApplication(submissionContext);
     return submissionContext.getApplicationId();
@@ -933,28 +934,37 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return appDir;
   }
 
-  private void addHdfsDelegationTokenIfSecure(ContainerLaunchContext amContext)
+  private void addCredentials(ContainerLaunchContext amContext, Service app)
       throws IOException {
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return;
-    }
-    Credentials credentials = new Credentials();
-    String tokenRenewer = YarnClientUtils.getRmPrincipal(getConfig());
-    if (StringUtils.isEmpty(tokenRenewer)) {
-      throw new IOException(
-          "Can't get Master Kerberos principal for the RM to use as renewer");
-    }
-    // Get hdfs dt
-    final org.apache.hadoop.security.token.Token<?>[] tokens =
-        fs.getFileSystem().addDelegationTokens(tokenRenewer, credentials);
-    if (tokens != null && tokens.length != 0) {
-      for (Token<?> token : tokens) {
-        LOG.debug("Got DT: " + token);
+    Credentials allCreds = new Credentials();
+    // HDFS DT
+    if (UserGroupInformation.isSecurityEnabled()) {
+      String tokenRenewer = YarnClientUtils.getRmPrincipal(getConfig());
+      if (StringUtils.isEmpty(tokenRenewer)) {
+        throw new IOException(
+            "Can't get Master Kerberos principal for the RM to use as renewer");
       }
+      final org.apache.hadoop.security.token.Token<?>[] tokens =
+          fs.getFileSystem().addDelegationTokens(tokenRenewer, allCreds);
+      if (LOG.isDebugEnabled()) {
+        if (tokens != null && tokens.length != 0) {
+          for (Token<?> token : tokens) {
+            LOG.debug("Got DT: " + token);
+          }
+        }
+      }
+    }
+
+    if (!StringUtils.isEmpty(app.getDockerClientConfig())) {
+      allCreds.addAll(DockerClientConfigHandler.readCredentialsFromConfigFile(
+          new Path(app.getDockerClientConfig()), getConfig(), app.getName()));
+    }
+
+    if (allCreds.numberOfTokens() > 0) {
       DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-      amContext.setTokens(fsTokens);
+      allCreds.writeTokenStorageToStream(dob);
+      ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      amContext.setTokens(tokens);
     }
   }
 

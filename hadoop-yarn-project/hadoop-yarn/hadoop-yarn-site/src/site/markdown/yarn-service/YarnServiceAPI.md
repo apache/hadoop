@@ -349,11 +349,13 @@ The type of placement - affinity/anti-affinity/affinity-with-cardinality with co
 
 ### ReadinessCheck
 
-A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.
+A check to be performed to determine the readiness of a component instance (a container).
+If no readiness check is specified, the default readiness check will be used unless the yarn.service.default-readiness-check.enabled configuration property is set to false at the component or global level.
+The artifact field is currently unsupported but may be implemented in the future, enabling a pluggable helper container to support advanced use cases.
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|type|E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).|true|enum (HTTP, PORT)||
+|type|DEFAULT (AM checks whether the container has an IP and optionally performs a DNS lookup for the container hostname), HTTP (AM performs default checks, plus sends a REST call to the container and expects a response code between 200 and 299), or PORT (AM performs default checks, plus attempts to open a socket connection to the container on a specified port).|true|enum (DEFAULT, HTTP, PORT)||
 |properties|A blob of key value pairs that will be used to configure the check.|false|object||
 |artifact|Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits service owners who can run services without any packaging modifications. Note, artifacts of type docker only is supported for now. NOT IMPLEMENTED YET|false|Artifact||
 
@@ -401,6 +403,7 @@ a service resource has the following attributes.
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
 |kerberos_principal | The principal info of the user who launches the service|false|KerberosPrincipal||
+|docker_client_config|URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json)|false|string||
 
 ### ServiceState
 
