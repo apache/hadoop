@@ -17,38 +17,33 @@
  */
 
 import { moduleForModel, test } from 'ember-qunit';
-import Ember from 'ember';
+import Converter from 'yarn-ui/utils/converter';
 
-moduleForModel('yarn-node-app', 'Unit | Model | NodeApp', {
+moduleForModel('yarn-container', 'Unit | Model | yarn container', {
   needs: []
 });
 
 test('Basic creation test', function(assert) {
   let model = this.subject();
-
   assert.ok(model);
-  assert.ok(model._notifyProperties);
-  assert.ok(model.didLoad);
-  assert.ok(model.appId);
-  assert.ok(model.state);
-  assert.ok(model.user);
-  assert.ok(model.containers);
+  assert.ok(model.allocatedMB);
+  assert.ok(model.allocatedVCores);
+  assert.ok(model.assignedNodeId);
+  assert.ok(model.priority);
+  assert.ok(model.startedTime);
+  assert.ok(model.finishedTime);
+  assert.ok(model.logUrl);
+  assert.ok(model.containerExitStatus);
+  assert.ok(model.containerState);
+  assert.ok(model.nodeHttpAddress);
 });
 
-test('test fields', function(assert) {
-  let model = this.subject();
-
-  assert.expect(5);
-  Ember.run(function () {
-    model.set("id", "application_1456251210105_0002");
-    model.set("state", "RUNNING");
-    assert.equal(model.get("appStateStyle"), "label label-primary");
-    assert.equal(model.get("isDummyApp"), false);
-    model.set("id", "dummy");
-    assert.equal(model.get("isDummyApp"), true);
-    model.set("state", "FINISHED");
-    assert.equal(model.get("appStateStyle"), "label label-success");
-    model.set("state", "NEW");
-    assert.equal(model.get("appStateStyle"), "label label-default");
+test('Testing fields', function(assert) {
+  let model = this.subject({
+    startedTime: Converter.timeStampToDate(1481696493793),
+    finishedTime: Converter.timeStampToDate(1481696501857)
   });
+  assert.equal(model.get('startTs'), 1481696493000);
+  assert.equal(model.get('finishedTs'), 1481696501000);
+  assert.equal(model.get('elapsedTime'), '8 Secs');
 });

@@ -16,25 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import { initialize } from '../../../initializers/env';
-import { module, test } from 'qunit';
+import { moduleFor, test } from 'ember-qunit';
 
-var application;
-
-module('Unit | Initializer | env', {
-  beforeEach: function() {
-    Ember.run(function() {
-      application = Ember.Application.create();
-      application.deferReadiness();
-    });
-  }
+moduleFor('serializer:yarn-container', 'Unit | Serializer | yarn container', {
+	unit: true
 });
 
-// Replace this with your real tests.
-test('it works', function(assert) {
-  initialize(application);
-
-  // you would normally confirm the results of the initializer here
-  assert.ok(true);
+test('Basic creation test', function(assert) {
+  let serializer = this.subject();
+  assert.ok(serializer);
+  assert.ok(serializer.normalizeSingleResponse);
+  assert.ok(serializer.normalizeArrayResponse);
 });

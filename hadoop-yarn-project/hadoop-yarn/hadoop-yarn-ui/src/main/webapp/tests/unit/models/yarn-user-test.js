@@ -16,13 +16,17 @@
  * limitations under the License.
  */
 
-import { nodeName } from '../../../helpers/node-name';
-import { module, test } from 'qunit';
+import { moduleForModel, test } from 'ember-qunit';
 
-module('Unit | Helper | node name');
+moduleForModel('yarn-user', 'Unit | Model | yarn user', {
+  needs: []
+});
 
-// Replace this with your real tests.
-test('it works', function(assert) {
-  let result = nodeName(42);
-  assert.ok(result);
+test('Basic creation test', function(assert) {
+  let model = this.subject();
+  assert.ok(model);
+  assert.ok(model.name);
+  assert.ok(model.queueName);
+  assert.ok(model.usedMemoryMB);
+  assert.ok(model.usedVCore);
 });

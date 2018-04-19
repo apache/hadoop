@@ -17,42 +17,43 @@
  */
 
 import { moduleFor, test } from 'ember-qunit';
+import Converter from 'yarn-ui/utils/converter';
 
-moduleFor('adapter:yarn-app', 'Unit | Adapter | yarn app', {
+moduleFor('adapter:yarn-app-attempt', 'Unit | Adapter | yarn app attempt', {
   unit: true
 });
 
-// Replace this with your real tests.
 test('Basic creation test', function(assert) {
-  var adapter = this.subject({
+  let adapter = this.subject({
     host: "localhost:8088",
     namespace: "ws/v1/cluster"
   });
   assert.ok(adapter);
-  assert.ok(adapter.urlForQuery);
-  assert.ok(adapter.urlForFindRecord);
   assert.ok(adapter.host);
   assert.ok(adapter.namespace);
+  assert.ok(adapter.urlForQuery);
+  assert.ok(adapter.urlForFindRecord);
   assert.equal(adapter.namespace, "ws/v1/cluster");
 });
 
 test("urlForQuery test", function(assert) {
-	var adapter = this.subject({
+	let adapter = this.subject({
     host: "localhost:8088",
     namespace: "ws/v1/cluster"
   });
   var host = adapter.host;
-  assert.equal(adapter.urlForQuery({state: "RUNNING"}),
-    host + "/ws/v1/cluster/apps/?state=RUNNING");
+  assert.equal(adapter.urlForQuery({appId: "application_1472139065385_0007"}),
+    host + "/ws/v1/cluster/apps/application_1472139065385_0007/appattempts");
 });
 
 test("urlForFindRecord test", function(assert) {
-	var adapter = this.subject({
+	let adapter = this.subject({
     host: "localhost:8088",
     namespace: "ws/v1/cluster"
   });
   var host = adapter.host;
-  var appId= "application_1111111111_1111";
-  assert.equal(adapter.urlForFindRecord(appId),
-    host + "/ws/v1/cluster/apps/" + appId);
+  var attemptId = "appattempt_1472139065385_0007_000001";
+	assert.equal(adapter.urlForFindRecord(attemptId),
+		host + "/ws/v1/cluster/apps/" +
+		Converter.attemptIdToAppId(attemptId) + "/appattempts/" + attemptId);
 });

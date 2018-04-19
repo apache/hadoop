@@ -19,18 +19,69 @@
 import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
 
-moduleFor('route:yarn-apps', 'Unit | Route | yarn apps', {
+moduleFor('route:cluster-overview', 'Unit | Route | cluster overview', {
   unit: true
 });
 
 test('Basic creation test', function(assert) {
-  var route = this.subject();
+  let route = this.subject();
   assert.ok(route);
   assert.ok(route.model);
+  assert.ok(route.afterModel);
   assert.ok(route.unloadAll);
 });
 
-test("Test getting yarn applications data", function(assert) {
+test('Test getting cluster metrics data', function(assert) {
+	var response = {
+		clusterMetrics: {
+	    appsSubmitted: 0,
+	    appsCompleted: 0,
+	    appsPending: 0,
+	    appsRunning: 0,
+	    appsFailed: 0,
+	    appsKilled: 0,
+	    reservedMB: 0,
+	    availableMB: 17408,
+	    allocatedMB: 0,
+	    reservedVirtualCores: 0,
+	    availableVirtualCores: 7,
+	    allocatedVirtualCores: 1,
+	    containersAllocated: 0,
+	    containersReserved: 0,
+	    containersPending: 0,
+	    totalMB: 17408,
+	    totalVirtualCores: 8,
+	    totalNodes: 1,
+	    lostNodes: 0,
+	    unhealthyNodes: 0,
+	    decommissionedNodes: 0,
+	    rebootedNodes: 0,
+	    activeNodes: 1
+	  }
+	};
+	var store = {
+		findAll: function() {
+			return new Ember.RSVP.Promise(function(resolve) {
+        resolve(response);
+      });
+		},
+		query: function() {
+			return new Ember.RSVP.Promise(function(resolve) {
+        resolve({});
+      });
+		}
+	};
+	var route = this.subject();
+	route.set('store', store);
+	assert.expect(3);
+	route.model().then(function(model) {
+		assert.ok(model);
+		assert.ok(model.clusterMetrics);
+		assert.deepEqual(model.clusterMetrics, response);
+	});
+});
+
+test("Test getting yarn app data", function(assert) {
 	var response = {
 	  "apps": {
 	    "app": [{
@@ -66,7 +117,12 @@ test("Test getting yarn applications data", function(assert) {
 	  }
 	};
 	var store = {
-		findAll: function(type) {
+		findAll: function() {
+			return new Ember.RSVP.Promise(function(resolve) {
+        resolve({});
+      });
+		},
+		query: function(type) {
 			return new Ember.RSVP.Promise(function(resolve) {
 				if (type === 'yarn-app') {
 					resolve(response);
@@ -83,54 +139,5 @@ test("Test getting yarn applications data", function(assert) {
 		assert.ok(model);
 		assert.ok(model.apps);
 		assert.deepEqual(model.apps, response);
-	});
-});
-
-test('Test getting cluster metrics data', function(assert) {
-	var response = {
-		"clusterMetrics": {
-	    "appsSubmitted": 0,
-	    "appsCompleted": 0,
-	    "appsPending": 0,
-	    "appsRunning": 0,
-	    "appsFailed": 0,
-	    "appsKilled": 0,
-	    "reservedMB": 0,
-	    "availableMB": 17408,
-	    "allocatedMB": 0,
-	    "reservedVirtualCores": 0,
-	    "availableVirtualCores": 7,
-	    "allocatedVirtualCores": 1,
-	    "containersAllocated": 0,
-	    "containersReserved": 0,
-	    "containersPending": 0,
-	    "totalMB": 17408,
-	    "totalVirtualCores": 8,
-	    "totalNodes": 1,
-	    'lostNodes': 0,
-	    "unhealthyNodes": 0,
-	    "decommissionedNodes": 0,
-	    'rebootedNodes': 0,
-	    "activeNodes": 1
-	  }
-	};
-	var store = {
-		findAll: function(type) {
-			return new Ember.RSVP.Promise(function(resolve) {
-				if (type === 'ClusterMetric') {
-					resolve(response);
-				} else {
-					resolve({});
-				}
-      });
-		}
-	};
-	var route = this.subject();
-	route.set('store', store);
-	assert.expect(3);
-	route.model().then(function(model) {
-		assert.ok(model);
-		assert.ok(model.clusterMetrics);
-		assert.deepEqual(model.clusterMetrics, response);
 	});
 });
