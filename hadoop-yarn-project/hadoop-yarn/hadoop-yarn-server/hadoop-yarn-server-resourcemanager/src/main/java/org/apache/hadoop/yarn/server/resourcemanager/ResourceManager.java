@@ -1273,8 +1273,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceStart() throws Exception {
     if (this.rmContext.isHAEnabled()) {
       transitionToStandby(false);
-    } else {
-      transitionToActive();
     }
 
     startWepApp();
@@ -1284,6 +1282,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
       WebAppUtils.setRMWebAppPort(conf, port);
     }
     super.serviceStart();
+
+    // Non HA case, start after RM services are started.
+    if (!this.rmContext.isHAEnabled()) {
+      transitionToActive();
+    }
   }
   
   protected void doSecureLogin() throws IOException {
