@@ -2197,24 +2197,61 @@ public class RouterRpcServer extends AbstractService
   private Map<String, Long> getMountPointDates(String path) {
     Map<String, Long> ret = new TreeMap<>();
     if (subclusterResolver instanceof MountTableResolver) {
-      MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
-      String srcPath;
       try {
         final List<String> children = subclusterResolver.getMountPoints(path);
         for (String child : children) {
-          if (path.equals(Path.SEPARATOR)) {
-            srcPath = Path.SEPARATOR + child;
-          } else {
-            srcPath = path + Path.SEPARATOR + child;
-          }
-          MountTable entry = mountTable.getMountPoint(srcPath);
-          ret.put(child, entry.getDateModified());
+          Long modTime = getModifiedTime(ret, path, child);
+          ret.put(child, modTime);
         }
       } catch (IOException e) {
         LOG.error("Cannot get mount point", e);
       }
     }
     return ret;
+  }
+
+  /**
+   * Get modified time for child. If the child is present in mount table it
+   * will return the modified time. If the child is not present but subdirs of
+   * this child are present then it will return latest modified subdir's time
+   * as modified time of the requested child.
+   * @param ret contains children and modified times.
+   * @param mountTable.
+   * @param path Name of the path to start checking dates from.
+   * @param child child of the requested path.
+   * @return modified time.
+   */
+  private long getModifiedTime(Map<String, Long> ret, String path,
+      String child) {
+    MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
+    String srcPath;
+    if (path.equals(Path.SEPARATOR)) {
+      srcPath = Path.SEPARATOR + child;
+    } else {
+      srcPath = path + Path.SEPARATOR + child;
+    }
+    Long modTime = 0L;
+    try {
+      // Get mount table entry for the srcPath
+      MountTable entry = mountTable.getMountPoint(srcPath);
+      // if srcPath is not in mount table but its subdirs are in mount
+      // table we will display latest modified subdir date/time.
+      if (entry == null) {
+        List<MountTable> entries = mountTable.getMounts(srcPath);
+        for (MountTable eachEntry : entries) {
+          // Get the latest date
+          if (ret.get(child) == null ||
+              ret.get(child) < eachEntry.getDateModified()) {
+            modTime = eachEntry.getDateModified();
+          }
+        }
+      } else {
+        modTime = entry.getDateModified();
+      }
+    } catch (IOException e) {
+      LOG.error("Cannot get mount point", e);
+    }
+    return modTime;
   }
 
   /**
