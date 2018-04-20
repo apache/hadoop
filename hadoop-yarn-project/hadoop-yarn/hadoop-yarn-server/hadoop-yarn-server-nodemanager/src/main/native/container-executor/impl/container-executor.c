@@ -1279,6 +1279,15 @@ char *construct_docker_command(const char *command_file) {
   int ret = 0;
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
   char *buffer = alloc_and_clear_memory(command_size, sizeof(char));
+
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    fprintf(ERRORFILE, "Cannot change effective user to nm");
+    fflush(ERRORFILE);
+    exit(SETUID_OPER_FAILED);
+  }
+
   ret = get_docker_command(command_file, &CFG, buffer, command_size);
   if (ret != 0) {
     fprintf(ERRORFILE, "Error constructing docker command, docker error code=%d, error message='%s'\n", ret,
@@ -1286,6 +1295,13 @@ char *construct_docker_command(const char *command_file) {
     fflush(ERRORFILE);
     exit(DOCKER_RUN_FAILED);
   }
+
+  if (change_effective_user(user, group)) {
+    fprintf(ERRORFILE, "Cannot change effective user from nm back to original");
+    fflush(ERRORFILE);
+    exit(SETUID_OPER_FAILED);
+  }
+
   return buffer;
 }
 

@@ -341,6 +341,7 @@ int docker_module_enabled(const struct configuration *conf) {
 int get_docker_command(const char *command_file, const struct configuration *conf, char *out, const size_t outlen) {
   int ret = 0;
   struct configuration command_config = {0, NULL};
+
   ret = read_config(command_file, &command_config);
   if (ret != 0) {
     return INVALID_COMMAND_FILE;
