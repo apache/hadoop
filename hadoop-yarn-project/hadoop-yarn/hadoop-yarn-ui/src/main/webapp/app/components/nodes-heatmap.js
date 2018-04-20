@@ -228,8 +228,8 @@ export default BaseChartComponent.extend({
       rect.attr("fill", "DimGray");
     }
     var node_id = data.get("id"),
-        node_addr = data.get("nodeHTTPAddress"),
-        href = `#/yarn-node/${node_id}/${node_addr}`;
+        node_addr = encodeURIComponent(data.get("nodeHTTPAddress")),
+        href = `#/yarn-node/${node_id}/${node_addr}/info`;
     var a = g.append("a")
       .attr("href", href);
     a.append("text")
