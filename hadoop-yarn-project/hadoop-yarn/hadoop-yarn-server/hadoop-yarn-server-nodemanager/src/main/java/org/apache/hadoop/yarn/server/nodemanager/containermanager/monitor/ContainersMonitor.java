@@ -23,10 +23,24 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.NMAllocationPolicy;
 
 public interface ContainersMonitor extends Service,
     EventHandler<ContainersMonitorEvent>, ResourceView {
-  ResourceUtilization getContainersUtilization();
+
+  /**
+   * Get the aggregate resource utilization of containers running on the node,
+   * with a timestamp of the measurement.
+   * @param latest true if the latest result should be returned
+   * @return ResourceUtilization resource utilization of all containers
+   */
+  ContainersResourceUtilization getContainersUtilization(boolean latest);
+
+  /**
+   * Get the policy to over-allocate containers when over-allocation is on.
+   * @return null if over-allocation is turned off
+   */
+  NMAllocationPolicy getContainerOverAllocationPolicy();
 
   float getVmemRatio();
 
@@ -65,5 +79,27 @@ public interface ContainersMonitor extends Service,
     int vmem = (int) (resource.getMemorySize()
         * containersMonitor.getVmemRatio());
     resourceUtil.subtractFrom((int)resource.getMemorySize(), vmem, vCores);
+  }
+
+  /**
+   * A snapshot of resource utilization of all containers with the timestamp.
+   */
+  final class ContainersResourceUtilization {
+    private final ResourceUtilization utilization;
+    private final long timestamp;
+
+    public ContainersResourceUtilization(
+        ResourceUtilization utilization, long timestamp) {
+      this.utilization = utilization;
+      this.timestamp = timestamp;
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    public ResourceUtilization getUtilization() {
+      return utilization;
+    }
   }
 }
