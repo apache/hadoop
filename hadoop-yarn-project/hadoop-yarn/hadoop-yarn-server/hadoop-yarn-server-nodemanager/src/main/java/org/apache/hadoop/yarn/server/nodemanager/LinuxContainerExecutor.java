@@ -113,6 +113,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerLimitUsers;
   private ResourceHandler resourceHandlerChain;
   private LinuxContainerRuntime linuxContainerRuntime;
+  private Context nmContext;
 
   /**
    * The container exit code.
@@ -284,8 +285,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init(Context nmContext) throws IOException {
+  public void init(Context context) throws IOException {
     Configuration conf = super.getConf();
+    this.nmContext = context;
 
     // Send command to executor which will just start up,
     // verify configuration/permissions and exit
@@ -956,11 +958,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           PrivilegedOperationExecutor.getInstance(super.getConf());
       if (DockerCommandExecutor.isRemovable(
           DockerCommandExecutor.getContainerStatus(containerId,
-              super.getConf(), privOpExecutor))) {
+              super.getConf(), privOpExecutor, nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            null, super.getConf(), privOpExecutor, false);
+            null, super.getConf(), privOpExecutor, false, nmContext);
       }
     } catch (ContainerExecutionException e) {
       LOG.warn("Unable to remove docker container: " + containerId);
