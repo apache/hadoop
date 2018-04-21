@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -35,9 +36,16 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
@@ -336,5 +344,46 @@ public class TestRouterAdmin {
     GetMountTableEntriesResponse response =
         mountTable.getMountTableEntries(request);
     return response.getEntries();
+  }
+
+  @Test
+  public void testNameserviceManager() throws IOException {
+
+    RouterClient client = routerContext.getAdminClient();
+    NameserviceManager nsManager = client.getNameserviceManager();
+
+    // There shouldn't be any name service disabled
+    Set<String> disabled = getDisabledNameservices(nsManager);
+    assertTrue(disabled.isEmpty());
+
+    // Disable one and see it
+    DisableNameserviceRequest disableReq =
+        DisableNameserviceRequest.newInstance("ns0");
+    DisableNameserviceResponse disableResp =
+        nsManager.disableNameservice(disableReq);
+    assertTrue(disableResp.getStatus());
+    // Refresh the cache
+    disabled = getDisabledNameservices(nsManager);
+    assertEquals(1, disabled.size());
+    assertTrue(disabled.contains("ns0"));
+
+    // Enable one and we should have no disabled name services
+    EnableNameserviceRequest enableReq =
+        EnableNameserviceRequest.newInstance("ns0");
+    EnableNameserviceResponse enableResp =
+        nsManager.enableNameservice(enableReq);
+    assertTrue(enableResp.getStatus());
+    disabled = getDisabledNameservices(nsManager);
+    assertTrue(disabled.isEmpty());
+  }
+
+  private Set<String> getDisabledNameservices(NameserviceManager nsManager)
+      throws IOException {
+    stateStore.loadCache(DisabledNameserviceStoreImpl.class, true);
+    GetDisabledNameservicesRequest getReq =
+        GetDisabledNameservicesRequest.newInstance();
+    GetDisabledNameservicesResponse response =
+        nsManager.getDisabledNameservices(getReq);
+    return response.getNameservices();
   }
 }

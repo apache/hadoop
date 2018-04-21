@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMBean;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
+import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MembershipStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.RouterStoreImpl;
@@ -75,6 +76,7 @@ import com.google.common.annotations.VisibleForTesting;
  * See {@link org.apache.hadoop.fs.viewfs.ViewFs ViewFs}.
  * <li>{@link RebalancerStore}: Log of the rebalancing operations.
  * <li>{@link RouterStore}: Router state in the federation.
+ * <li>{@link DisabledNameserviceStore}: Disabled name services.
  * <li>{@link TokenStore}: Tokens in the federation.
  * </ul>
  */
@@ -152,6 +154,7 @@ public class StateStoreService extends CompositeService {
     addRecordStore(MembershipStoreImpl.class);
     addRecordStore(MountTableStoreImpl.class);
     addRecordStore(RouterStoreImpl.class);
+    addRecordStore(DisabledNameserviceStoreImpl.class);
 
     // Check the connection to the State Store periodically
     this.monitorService = new StateStoreConnectionMonitorService(this);

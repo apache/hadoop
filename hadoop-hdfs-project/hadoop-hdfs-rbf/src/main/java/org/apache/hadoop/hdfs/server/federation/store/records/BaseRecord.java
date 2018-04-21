@@ -21,6 +21,8 @@ import java.util.Map;
 
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Abstract base of a data record in the StateStore. All StateStore records are
  * derived from this class. Data records are persisted in the data store and
@@ -107,6 +109,17 @@ public abstract class BaseRecord implements Comparable<BaseRecord> {
    */
   public String getPrimaryKey() {
     return generateMashupKey(getPrimaryKeys());
+  }
+
+  /**
+   * If the record has fields others than the primary keys. This is used by
+   * TestStateStoreDriverBase to skip the modification check.
+   *
+   * @return If the record has more fields.
+   */
+  @VisibleForTesting
+  public boolean hasOtherFields() {
+    return true;
   }
 
   /**

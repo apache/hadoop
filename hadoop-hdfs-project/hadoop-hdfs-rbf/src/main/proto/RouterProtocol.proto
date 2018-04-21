@@ -59,4 +59,19 @@ service RouterAdminProtocolService {
    * Verify if current Router state is safe mode state.
    */
   rpc getSafeMode(GetSafeModeRequestProto) returns (GetSafeModeResponseProto);
+
+  /**
+   * Disable a name service.
+   */
+  rpc disableNameservice(DisableNameserviceRequestProto) returns (DisableNameserviceResponseProto);
+
+  /**
+   * Enable a name service.
+   */
+  rpc enableNameservice(EnableNameserviceRequestProto) returns (EnableNameserviceResponseProto);
+
+  /**
+   * Get the list of disabled name services.
+   */
+  rpc getDisabledNameservices(GetDisabledNameservicesRequestProto) returns (GetDisabledNameservicesResponseProto);
 }
