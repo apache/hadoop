@@ -23,8 +23,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.DisableNameserviceRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.DisableNameserviceResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnableNameserviceRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnableNameserviceResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnterSafeModeRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.EnterSafeModeResponseProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesRequestProto;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetDisabledNameservicesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.GetSafeModeRequestProto;
@@ -38,8 +44,14 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
@@ -52,8 +64,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntryResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.DisableNameserviceRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.DisableNameserviceResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnableNameserviceRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnableNameserviceResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnterSafeModeRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.EnterSafeModeResponsePBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDisabledNameservicesRequestPBImpl;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetDisabledNameservicesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetMountTableEntriesRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.GetSafeModeRequestPBImpl;
@@ -203,6 +221,55 @@ public class RouterAdminProtocolServerSideTranslatorPB implements
       GetSafeModeResponse response = server.getSafeMode(req);
       GetSafeModeResponsePBImpl responsePB =
           (GetSafeModeResponsePBImpl) response;
+      return responsePB.getProto();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DisableNameserviceResponseProto disableNameservice(
+      RpcController controller, DisableNameserviceRequestProto request)
+      throws ServiceException {
+    try {
+      DisableNameserviceRequest req =
+          new DisableNameserviceRequestPBImpl(request);
+      DisableNameserviceResponse response = server.disableNameservice(req);
+      DisableNameserviceResponsePBImpl responsePB =
+          (DisableNameserviceResponsePBImpl) response;
+      return responsePB.getProto();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public EnableNameserviceResponseProto enableNameservice(
+      RpcController controller, EnableNameserviceRequestProto request)
+          throws ServiceException {
+    try {
+      EnableNameserviceRequest req =
+          new EnableNameserviceRequestPBImpl(request);
+      EnableNameserviceResponse response = server.enableNameservice(req);
+      EnableNameserviceResponsePBImpl responsePB =
+          (EnableNameserviceResponsePBImpl) response;
+      return responsePB.getProto();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetDisabledNameservicesResponseProto getDisabledNameservices(
+      RpcController controller, GetDisabledNameservicesRequestProto request)
+      throws ServiceException {
+    try {
+      GetDisabledNameservicesRequest req =
+          new GetDisabledNameservicesRequestPBImpl(request);
+      GetDisabledNameservicesResponse response =
+          server.getDisabledNameservices(req);
+      GetDisabledNameservicesResponsePBImpl responsePB =
+          (GetDisabledNameservicesResponsePBImpl)response;
       return responsePB.getProto();
     } catch (IOException e) {
       throw new ServiceException(e);
