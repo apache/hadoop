@@ -242,3 +242,36 @@ message GetSafeModeRequestProto {
 message GetSafeModeResponseProto {
   optional bool isInSafeMode = 1;
 }
+
+/////////////////////////////////////////////////
+// Disabled Nameservice State
+/////////////////////////////////////////////////
+
+message DisabledNameserviceRecordProto {
+  optional uint64 dateCreated = 1;
+  optional uint64 dateModified = 2;
+  optional string nameServiceId = 3;
+}
+
+message DisableNameserviceRequestProto {
+  optional string nameServiceId = 1;
+}
+
+message DisableNameserviceResponseProto {
+  optional bool status = 1;
+}
+
+message EnableNameserviceRequestProto {
+  optional string nameServiceId = 1;
+}
+
+message EnableNameserviceResponseProto {
+  optional bool status = 1;
+}
+
+message GetDisabledNameservicesRequestProto {
+}
+
+message GetDisabledNameservicesResponseProto {
+  repeated string nameServiceIds = 1;
+}

@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
+import org.apache.hadoop.hdfs.server.federation.store.records.DisabledNameservice;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
@@ -139,6 +140,11 @@ public class TestStateStoreDriverBase {
       StateStoreVersion version = generateFakeRecord(StateStoreVersion.class);
       routerState.setStateStoreVersion(version);
       return (T) routerState;
+    } else if (recordClass == DisabledNameservice.class) {
+      return (T) DisabledNameservice.newInstance(generateRandomString());
+    } else if (recordClass == StateStoreVersion.class) {
+      return (T) StateStoreVersion.newInstance(
+          generateRandomLong(), generateRandomLong());
     }
 
     return null;
@@ -186,6 +192,8 @@ public class TestStateStoreDriverBase {
   public static void removeAll(StateStoreDriver driver) throws IOException {
     driver.removeAll(MembershipState.class);
     driver.removeAll(MountTable.class);
+    driver.removeAll(RouterState.class);
+    driver.removeAll(DisabledNameservice.class);
   }
 
   public <T extends BaseRecord> void testInsert(
@@ -290,7 +298,7 @@ public class TestStateStoreDriverBase {
 
     // Verify no update occurred, all original records are unchanged
     QueryResult<T> newRecords = driver.get(clazz);
-    assertTrue(newRecords.getRecords().size() == 10);
+    assertEquals(10, newRecords.getRecords().size());
     assertEquals("A single entry was improperly updated in the store", 10,
         countMatchingEntries(records.getRecords(), newRecords.getRecords()));
 
@@ -300,9 +308,12 @@ public class TestStateStoreDriverBase {
     // Verify that one entry no longer matches the original set
     newRecords = driver.get(clazz);
     assertEquals(10, newRecords.getRecords().size());
-    assertEquals(
-        "Record of type " + clazz + " not updated in the store", 9,
-        countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+    T record = records.getRecords().get(0);
+    if (record.hasOtherFields()) {
+      assertEquals(
+          "Record of type " + clazz + " not updated in the store", 9,
+          countMatchingEntries(records.getRecords(), newRecords.getRecords()));
+    }
   }
 
   private int countMatchingEntries(
@@ -379,6 +390,8 @@ public class TestStateStoreDriverBase {
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testInsert(driver, MembershipState.class);
     testInsert(driver, MountTable.class);
+    testInsert(driver, RouterState.class);
+    testInsert(driver, DisabledNameservice.class);
   }
 
   public void testPut(StateStoreDriver driver)
@@ -386,18 +399,24 @@ public class TestStateStoreDriverBase {
       IOException, SecurityException {
     testPut(driver, MembershipState.class);
     testPut(driver, MountTable.class);
+    testPut(driver, RouterState.class);
+    testPut(driver, DisabledNameservice.class);
   }
 
   public void testRemove(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testRemove(driver, MembershipState.class);
     testRemove(driver, MountTable.class);
+    testRemove(driver, RouterState.class);
+    testRemove(driver, DisabledNameservice.class);
   }
 
   public void testFetchErrors(StateStoreDriver driver)
       throws IllegalArgumentException, IllegalAccessException, IOException {
     testFetchErrors(driver, MembershipState.class);
     testFetchErrors(driver, MountTable.class);
+    testFetchErrors(driver, RouterState.class);
+    testFetchErrors(driver, DisabledNameservice.class);
   }
 
   public void testMetrics(StateStoreDriver driver)
