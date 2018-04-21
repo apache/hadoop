@@ -157,7 +157,7 @@ public abstract class FSEditLogOp {
   int rpcCallId;
 
   public static class OpInstanceCache {
-    private static ThreadLocal<OpInstanceCacheMap> cache =
+    private static final ThreadLocal<OpInstanceCacheMap> CACHE =
         new ThreadLocal<OpInstanceCacheMap>() {
       @Override
       protected OpInstanceCacheMap initialValue() {
@@ -188,7 +188,7 @@ public abstract class FSEditLogOp {
 
     @SuppressWarnings("unchecked")
     public <T extends FSEditLogOp> T get(FSEditLogOpCodes opCode) {
-      return useCache ? (T)cache.get().get(opCode) : (T)newInstance(opCode);
+      return useCache ? (T)CACHE.get().get(opCode) : (T)newInstance(opCode);
     }
 
     private static FSEditLogOp newInstance(FSEditLogOpCodes opCode) {
