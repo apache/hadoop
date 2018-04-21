@@ -22,20 +22,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
@@ -65,7 +65,9 @@ public class TestRouterAdminCLI {
   private static final String TEST_USER = "test-user";
 
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+  private final ByteArrayOutputStream err = new ByteArrayOutputStream();
   private static final PrintStream OLD_OUT = System.out;
+  private static final PrintStream OLD_ERR = System.err;
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -102,8 +104,9 @@ public class TestRouterAdminCLI {
 
   @After
   public void tearDown() {
-    // set back system out
+    // set back system out/err
     System.setOut(OLD_OUT);
+    System.setErr(OLD_ERR);
   }
 
   @Test
@@ -460,6 +463,45 @@ public class TestRouterAdminCLI {
     argv = new String[] {
         "-add", "/test-createInvalidEntry", "", "/createInvalidEntry"};
     assertEquals(-1, ToolRunner.run(admin, argv));
+  }
+
+  @Test
+  public void testNameserviceManager() throws Exception {
+    // Disable a name service and check if it's disabled
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-nameservice", "disable", "ns0"}));
+
+    stateStore.loadCache(DisabledNameserviceStoreImpl.class, true);
+    System.setOut(new PrintStream(out));
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-getDisabledNameservices"}));
+    assertTrue("ns0 should be reported: " + out,
+        out.toString().contains("ns0"));
+
+    // Enable a name service and check if it's there
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-nameservice", "enable", "ns0"}));
+
+    out.reset();
+    stateStore.loadCache(DisabledNameserviceStoreImpl.class, true);
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-getDisabledNameservices"}));
+    assertFalse("ns0 should not be reported: " + out,
+        out.toString().contains("ns0"));
+
+    // Wrong commands
+    System.setErr(new PrintStream(err));
+    assertEquals(-1, ToolRunner.run(admin,
+        new String[] {"-nameservice", "enable"}));
+    String msg = "Not enough parameters specificed for cmd -nameservice";
+    assertTrue("Got error: " + err.toString(),
+        err.toString().startsWith(msg));
+
+    err.reset();
+    assertEquals(-1, ToolRunner.run(admin,
+        new String[] {"-nameservice", "wrong", "ns0"}));
+    assertTrue("Got error: " + err.toString(),
+        err.toString().startsWith("nameservice: Unknown command: wrong"));
   }
 
   /**

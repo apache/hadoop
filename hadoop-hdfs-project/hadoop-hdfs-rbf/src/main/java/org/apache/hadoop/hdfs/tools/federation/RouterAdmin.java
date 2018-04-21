@@ -32,14 +32,21 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
-import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
+import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
@@ -95,7 +102,9 @@ public class RouterAdmin extends Configured implements Tool {
         + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
         + "<quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
-        + "\t[-safemode enter | leave | get]\n";
+        + "\t[-safemode enter | leave | get]\n"
+        + "\t[-nameservice enable | disable <nameservice>]\n"
+        + "\t[-getDisabledNameservices]\n";
 
     System.out.println(usage);
   }
@@ -139,6 +148,12 @@ public class RouterAdmin extends Configured implements Tool {
       }
     } else if ("-safemode".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
+        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-nameservice".equalsIgnoreCase(cmd)) {
+      if (argv.length < 3) {
         System.err.println("Not enough parameters specificed for cmd " + cmd);
         printUsage();
         return exitCode;
@@ -190,6 +205,12 @@ public class RouterAdmin extends Configured implements Tool {
         }
       } else if ("-safemode".equals(cmd)) {
         manageSafeMode(argv[i]);
+      } else if ("-nameservice".equals(cmd)) {
+        String subcmd = argv[i];
+        String nsId = argv[i + 1];
+        manageNameservice(subcmd, nsId);
+      } else if ("-getDisabledNameservices".equals(cmd)) {
+        getDisabledNameservices();
       } else {
         printUsage();
         return exitCode;
@@ -609,6 +630,57 @@ public class RouterAdmin extends Configured implements Tool {
     GetSafeModeResponse response = stateManager.getSafeMode(
         GetSafeModeRequest.newInstance());
     return response.isInSafeMode();
+  }
+
+  /**
+   * Manage the name service: enabling/disabling.
+   * @param cmd Input command, disable or enable.
+   * @throws IOException
+   */
+  private void manageNameservice(String cmd, String nsId) throws IOException {
+    if (cmd.equals("enable")) {
+      if (enableNameservice(nsId)) {
+        System.out.println("Successfully enabled nameservice " + nsId);
+      } else {
+        System.err.println("Cannot enable " + nsId);
+      }
+    } else if (cmd.equals("disable")) {
+      if (disableNameservice(nsId)) {
+        System.out.println("Successfully disabled nameservice " + nsId);
+      } else {
+        System.err.println("Cannot disable " + nsId);
+      }
+    } else {
+      throw new IllegalArgumentException("Unknown command: " + cmd);
+    }
+  }
+
+  private boolean disableNameservice(String nsId) throws IOException {
+    NameserviceManager nameserviceManager = client.getNameserviceManager();
+    DisableNameserviceResponse response =
+        nameserviceManager.disableNameservice(
+            DisableNameserviceRequest.newInstance(nsId));
+    return response.getStatus();
+  }
+
+  private boolean enableNameservice(String nsId) throws IOException {
+    NameserviceManager nameserviceManager = client.getNameserviceManager();
+    EnableNameserviceResponse response =
+        nameserviceManager.enableNameservice(
+            EnableNameserviceRequest.newInstance(nsId));
+    return response.getStatus();
+  }
+
+  private void getDisabledNameservices() throws IOException {
+    NameserviceManager nameserviceManager = client.getNameserviceManager();
+    GetDisabledNameservicesRequest request =
+        GetDisabledNameservicesRequest.newInstance();
+    GetDisabledNameservicesResponse response =
+        nameserviceManager.getDisabledNameservices(request);
+    System.out.println("List of disabled nameservices:");
+    for (String nsId : response.getNameservices()) {
+      System.out.println(nsId);
+    }
   }
 
   /**
