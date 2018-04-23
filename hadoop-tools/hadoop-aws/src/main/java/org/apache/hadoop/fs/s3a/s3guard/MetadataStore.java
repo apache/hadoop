@@ -238,7 +238,7 @@ public interface MetadataStore extends Closeable {
   /**
    * Get any diagnostics information from a store, as a list of (key, value)
    * tuples for display. Arbitrary values; no guarantee of stability.
-   * These are for debugging only.
+   * These are for debugging and testing only.
    * @return a map of strings.
    * @throws IOException if there is an error
    */

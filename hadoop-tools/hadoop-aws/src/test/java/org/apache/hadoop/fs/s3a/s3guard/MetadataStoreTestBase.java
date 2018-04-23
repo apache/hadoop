@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Map;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
@@ -503,12 +504,40 @@ public abstract class MetadataStoreTestBase extends Assert {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
     }
 
-    // TODO HADOOP-14756 instrument MetadataStore for asserting & testing
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     if (!allowMissing() || dirMeta != null) {
       assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
           "/a1/b1/c1");
     }
+  }
+
+  private boolean isMetadataStoreAuthoritative() throws IOException {
+    Map<String, String> diags = ms.getDiagnostics();
+    String isAuth =
+        diags.get(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT);
+    if(isAuth == null){
+      return false;
+    }
+    return Boolean.valueOf(isAuth);
+  }
+
+  @Test
+  public void testListChildrenAuthoritative() throws IOException {
+    Assume.assumeTrue("MetadataStore should be capable for authoritative "
+        + "storage of directories to run this test.",
+        isMetadataStoreAuthoritative());
+
+    setupListStatus();
+
+    DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    dirMeta.setAuthoritative(true);
+    dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
+    ms.put(dirMeta);
+
+    dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
+        "/a1/b1/c1", "/a1/b1/file_new");
+    assertTrue(dirMeta.isAuthoritative());
   }
 
   @Test

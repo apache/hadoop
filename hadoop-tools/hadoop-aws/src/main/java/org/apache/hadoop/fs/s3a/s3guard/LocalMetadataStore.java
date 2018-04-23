@@ -447,6 +447,8 @@ public class LocalMetadataStore implements MetadataStore {
     map.put("name", "local://metadata");
     map.put("uriHost", uriHost);
     map.put("description", "Local in-VM metadata store for testing");
+    map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
+        Boolean.toString(true));
     return map;
   }
 
