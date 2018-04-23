@@ -58,9 +58,9 @@ public class KMSTokenRenewer extends TokenRenewer {
     try {
       if (!(keyProvider instanceof
           KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
-        LOG.warn("keyProvider {} cannot renew token {}.",
-            keyProvider == null ? "null" : keyProvider.getClass(), token);
-        return 0;
+        throw new IOException(String
+            .format("keyProvider %s cannot renew token [%s]",
+                keyProvider == null ? "null" : keyProvider.getClass(), token));
       }
       return ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
           keyProvider).renewDelegationToken(token);
@@ -78,9 +78,9 @@ public class KMSTokenRenewer extends TokenRenewer {
     try {
       if (!(keyProvider instanceof
           KeyProviderDelegationTokenExtension.DelegationTokenExtension)) {
-        LOG.warn("keyProvider {} cannot cancel token {}.",
-            keyProvider == null ? "null" : keyProvider.getClass(), token);
-        return;
+        throw new IOException(String
+            .format("keyProvider %s cannot cancel token [%s]",
+                keyProvider == null ? "null" : keyProvider.getClass(), token));
       }
       ((KeyProviderDelegationTokenExtension.DelegationTokenExtension)
           keyProvider).cancelDelegationToken(token);
