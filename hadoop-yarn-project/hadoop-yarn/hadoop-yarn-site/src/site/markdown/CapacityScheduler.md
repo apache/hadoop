@@ -332,7 +332,7 @@ support other pre-configured queues to co-exist along with auto-created queues. 
 The parent queue which has been enabled for auto leaf queue creation,supports
  the configuration of template parameters for automatic configuration of the auto-created leaf queues. The auto-created queues support all of the
  leaf queue configuration parameters except for **Queue ACL**, **Absolute
- Resource** configurations and **Node Labels**. Queue ACLs and Node Labels are
+ Resource** configurations. Queue ACLs are
  currently inherited from the parent queue i.e they are not configurable on the leaf queue template
 
 | Property | Description |
@@ -362,6 +362,22 @@ Example:
  <property>
     <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.ordering-policy</name>
     <value>fair</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.GPU.capacity</name>
+    <value>50</value>
+ </property>
+ <property>
+     <name>yarn.scheduler.capacity.root.parent1.accessible-node-labels</name>
+     <value>GPU,SSD</value>
+   </property>
+ <property>
+     <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.accessible-node-labels</name>
+     <value>GPU</value>
+  </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.accessible-node-labels.GPU.capacity</name>
+    <value>5</value>
  </property>
 ```
 
