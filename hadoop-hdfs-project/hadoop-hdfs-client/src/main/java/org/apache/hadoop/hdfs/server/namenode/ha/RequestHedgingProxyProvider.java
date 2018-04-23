@@ -79,6 +79,20 @@ public class RequestHedgingProxyProvider<T> extends
     public Object
     invoke(Object proxy, final Method method, final Object[] args)
             throws Throwable {
+      if (currentUsedProxy != null) {
+        try {
+          Object retVal = method.invoke(currentUsedProxy.proxy, args);
+          LOG.debug("Invocation successful on [{}]",
+              currentUsedProxy.proxyInfo);
+          return retVal;
+        } catch (InvocationTargetException ex) {
+          Exception unwrappedException = unwrapInvocationTargetException(ex);
+          logProxyException(unwrappedException, currentUsedProxy.proxyInfo);
+          LOG.trace("Unsuccessful invocation on [{}]",
+              currentUsedProxy.proxyInfo);
+          throw unwrappedException;
+        }
+      }
       Map<Future<Object>, ProxyInfo<T>> proxyMap = new HashMap<>();
       int numAttempts = 0;
 
