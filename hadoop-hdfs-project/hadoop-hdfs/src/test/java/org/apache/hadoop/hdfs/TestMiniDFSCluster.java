@@ -201,9 +201,8 @@ public class TestMiniDFSCluster {
   public void testIsClusterUpAfterShutdown() throws Throwable {
     Configuration conf = new HdfsConfiguration();
     File testDataCluster4 = new File(testDataPath, CLUSTER_4);
-    String c4Path = testDataCluster4.getAbsolutePath();
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c4Path);
-    MiniDFSCluster cluster4 = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster4 =
+        new MiniDFSCluster.Builder(conf, testDataCluster4).build();
     try {
       DistributedFileSystem dfs = cluster4.getFileSystem();
       dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
@@ -222,12 +221,11 @@ public class TestMiniDFSCluster {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "MYHOST");
     File testDataCluster5 = new File(testDataPath, CLUSTER_5);
-    String c5Path = testDataCluster5.getAbsolutePath();
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c5Path);
-    try (MiniDFSCluster cluster5 = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1)
-        .checkDataNodeHostConfig(true)
-        .build()) {
+    try (MiniDFSCluster cluster5 =
+        new MiniDFSCluster.Builder(conf, testDataCluster5)
+          .numDataNodes(1)
+          .checkDataNodeHostConfig(true)
+          .build()) {
       assertEquals("DataNode hostname config not respected", "MYHOST",
           cluster5.getDataNodes().get(0).getDatanodeId().getHostName());
     }
