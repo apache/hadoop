@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -1262,4 +1263,21 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 
+  // Test if the token renewer returned an invalid expiration time, that token's
+  // renewal should be ignored.
+  @Test
+  public void testTokenRenewerInvalidReturn() throws Exception {
+    DelegationTokenToRenew mockDttr = mock(DelegationTokenToRenew.class);
+    mockDttr.expirationDate = 0;
+    delegationTokenRenewer.setTimerForTokenRenewal(mockDttr);
+    assertNull(mockDttr.timerTask);
+
+    mockDttr.expirationDate = -1;
+    delegationTokenRenewer.setTimerForTokenRenewal(mockDttr);
+    assertNull(mockDttr.timerTask);
+
+    mockDttr.expirationDate = System.currentTimeMillis() - 1;
+    delegationTokenRenewer.setTimerForTokenRenewal(mockDttr);
+    assertNull(mockDttr.timerTask);
+  }
 }
