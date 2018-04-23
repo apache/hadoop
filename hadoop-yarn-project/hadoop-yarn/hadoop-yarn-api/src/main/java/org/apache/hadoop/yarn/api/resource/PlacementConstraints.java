@@ -258,15 +258,17 @@ public final class PlacementConstraints {
 
     /**
      * Constructs a target expression on an allocation tag. It is satisfied if
-     * there are allocations with one of the given tags.
+     * there are allocations with one of the given tags. The default namespace
+     * for these tags is {@link AllocationTagNamespaceType#SELF}, this only
+     * checks tags within the application.
      *
      * @param allocationTags the set of tags that the attribute should take
      *          values from
      * @return the resulting expression on the allocation tags
      */
     public static TargetExpression allocationTag(String... allocationTags) {
-      return new TargetExpression(TargetType.ALLOCATION_TAG, null,
-          allocationTags);
+      return allocationTagWithNamespace(
+          AllocationTagNamespaceType.SELF.toString(), allocationTags);
     }
 
     /**
@@ -281,22 +283,6 @@ public final class PlacementConstraints {
         String... allocationTags) {
       return new TargetExpression(TargetType.ALLOCATION_TAG,
           namespace, allocationTags);
-    }
-
-    /**
-     * Constructs a target expression on an allocation tag. It is satisfied if
-     * there are allocations with one of the given tags. Comparing to
-     * {@link PlacementTargets#allocationTag(String...)}, this only checks tags
-     * within the application.
-     *
-     * @param allocationTags the set of tags that the attribute should take
-     *          values from
-     * @return the resulting expression on the allocation tags
-     */
-    public static TargetExpression allocationTagToIntraApp(
-        String... allocationTags) {
-      return new TargetExpression(TargetType.ALLOCATION_TAG,
-          AllocationTagNamespaceType.SELF.toString(), allocationTags);
     }
   }
 

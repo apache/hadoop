@@ -20,7 +20,6 @@ import { moduleForModel, test } from 'ember-qunit';
 import Ember from 'ember';
 
 moduleForModel('yarn-node-app', 'Unit | Model | NodeApp', {
-  // Specify the other units that are required for this test.
   needs: []
 });
 
@@ -39,20 +38,10 @@ test('Basic creation test', function(assert) {
 test('test fields', function(assert) {
   let model = this.subject();
 
-  assert.expect(9);
+  assert.expect(5);
   Ember.run(function () {
-    model.set("appId", "application_1456251210105_0002");
     model.set("id", "application_1456251210105_0002");
     model.set("state", "RUNNING");
-    model.set("user", "hadoop");
-    model.set("containers", ["container_e38_1456251210105_0002_01_000001",
-        "container_e38_1456251210105_0002_01_000002"]);
-    assert.equal(model.get("appId"), "application_1456251210105_0002");
-    assert.equal(model.get("state"), "RUNNING");
-    assert.equal(model.get("user"), "hadoop");
-    assert.deepEqual(model.get("containers"),
-        ["container_e38_1456251210105_0002_01_000001",
-        "container_e38_1456251210105_0002_01_000002"]);
     assert.equal(model.get("appStateStyle"), "label label-primary");
     assert.equal(model.get("isDummyApp"), false);
     model.set("id", "dummy");
@@ -63,4 +52,3 @@ test('test fields', function(assert) {
     assert.equal(model.get("appStateStyle"), "label label-default");
   });
 });
-

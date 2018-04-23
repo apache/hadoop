@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -53,11 +54,14 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST_KEY;
+
 
 @InterfaceAudience.Private
 @VisibleForTesting
 public class JournalNodeRpcServer implements QJournalProtocol,
     InterQJournalProtocol {
+  private static final Log LOG = JournalNode.LOG;
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
@@ -73,6 +77,12 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         true);
     
     InetSocketAddress addr = getAddress(confCopy);
+    String bindHost = conf.getTrimmed(DFS_JOURNALNODE_RPC_BIND_HOST_KEY, null);
+    if (bindHost == null) {
+      bindHost = addr.getHostName();
+    }
+    LOG.info("RPC server is binding to " + bindHost + ":" + addr.getPort());
+
     RPC.setProtocolEngine(confCopy, QJournalProtocolPB.class,
         ProtobufRpcEngine.class);
     QJournalProtocolServerSideTranslatorPB translator =
@@ -81,13 +91,13 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         .newReflectiveBlockingService(translator);
     
     this.server = new RPC.Builder(confCopy)
-      .setProtocol(QJournalProtocolPB.class)
-      .setInstance(service)
-      .setBindAddress(addr.getHostName())
-      .setPort(addr.getPort())
-      .setNumHandlers(HANDLER_COUNT)
-      .setVerbose(false)
-      .build();
+        .setProtocol(QJournalProtocolPB.class)
+        .setInstance(service)
+        .setBindAddress(bindHost)
+        .setPort(addr.getPort())
+        .setNumHandlers(HANDLER_COUNT)
+        .setVerbose(false)
+        .build();
 
 
     //Adding InterQJournalProtocolPB to server
@@ -297,5 +307,11 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         .setHttpPort(jn.getBoundHttpAddress().getPort())
         .setFromURL(jn.getHttpServerURI())
         .build();
+  }
+
+  /** Allow access to the RPC server for testing. */
+  @VisibleForTesting
+  Server getRpcServer() {
+    return server;
   }
 }

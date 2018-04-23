@@ -30,6 +30,9 @@ export default Ember.Component.extend({
   actions: {
     changeViewType(param) {
       this.sendAction("changeViewType", param);
+      if (this.get('attemptModel')) {
+        this.setAttemptsGridColumnsAndRows();
+      }
     }
   },
 
@@ -324,10 +327,13 @@ export default Ember.Component.extend({
       minWidth: '300px',
       getCellContent: function(row) {
         var attemptId = row.get('id');
-        var query = serviceName? '?service='+serviceName : '';
+        var query = 'viewType=' + self.get("viewType");
+        if (serviceName) {
+          query += '&service=' + serviceName;
+        }
         return {
           displayText: attemptId,
-          href: `#/yarn-app-attempt/${attemptId}${query}`
+          href: `#/yarn-app-attempt/${attemptId}?${query}`
         };
       }
     }, {

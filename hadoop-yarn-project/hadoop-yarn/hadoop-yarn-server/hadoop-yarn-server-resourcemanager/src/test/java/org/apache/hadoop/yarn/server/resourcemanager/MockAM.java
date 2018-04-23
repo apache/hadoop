@@ -336,7 +336,7 @@ public class MockAM {
             .placementConstraintExpression(PlacementConstraints
                 .targetNotIn(PlacementConstraints.NODE,
                     PlacementConstraints.PlacementTargets
-                        .allocationTagToIntraApp(tags),
+                        .allocationTag(tags),
                     PlacementConstraints.PlacementTargets
                         .nodePartition(nodePartition)).build())
             .resourceSizing(resourceSizing).build()), null);

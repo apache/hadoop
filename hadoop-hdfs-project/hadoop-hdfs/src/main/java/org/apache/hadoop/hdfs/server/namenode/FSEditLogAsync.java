@@ -40,7 +40,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   // use separate mutex to avoid possible deadlock when stopping the thread.
   private final Object syncThreadLock = new Object();
   private Thread syncThread;
-  private static ThreadLocal<Edit> threadEdit = new ThreadLocal<Edit>();
+  private static final ThreadLocal<Edit> THREAD_EDIT = new ThreadLocal<Edit>();
 
   // requires concurrent access from caller threads and syncing thread.
   private final BlockingQueue<Edit> editPendingQ =
@@ -114,16 +114,16 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   @Override
   void logEdit(final FSEditLogOp op) {
     Edit edit = getEditInstance(op);
-    threadEdit.set(edit);
+    THREAD_EDIT.set(edit);
     enqueueEdit(edit);
   }
 
   @Override
   public void logSync() {
-    Edit edit = threadEdit.get();
+    Edit edit = THREAD_EDIT.get();
     if (edit != null) {
       // do NOT remove to avoid expunge & rehash penalties.
-      threadEdit.set(null);
+      THREAD_EDIT.set(null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("logSync " + edit);
       }

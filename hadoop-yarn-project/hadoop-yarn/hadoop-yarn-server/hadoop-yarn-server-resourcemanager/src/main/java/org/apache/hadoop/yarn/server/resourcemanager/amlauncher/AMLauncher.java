@@ -105,7 +105,7 @@ public class AMLauncher implements Runnable {
     connect();
     ContainerId masterContainerID = masterContainer.getId();
     ApplicationSubmissionContext applicationContext =
-      application.getSubmissionContext();
+        application.getSubmissionContext();
     LOG.info("Setting up container " + masterContainer
         + " for AM " + application.getAppAttemptId());
     ContainerLaunchContext launchContext =
@@ -189,6 +189,10 @@ public class AMLauncher implements Runnable {
     ContainerLaunchContext container =
         applicationMasterContext.getAMContainerSpec();
 
+    if (container == null){
+      throw new IOException(containerID +
+            " has been cleaned before launched");
+    }
     // Finalize the container
     setupTokens(container, containerID);
     // set the flow context optionally for timeline service v.2
@@ -303,13 +307,9 @@ public class AMLauncher implements Runnable {
         LOG.info("Launching master" + application.getAppAttemptId());
         launch();
         handler.handle(new RMAppAttemptEvent(application.getAppAttemptId(),
-            RMAppAttemptEventType.LAUNCHED));
+            RMAppAttemptEventType.LAUNCHED, System.currentTimeMillis()));
       } catch(Exception ie) {
-        String message = "Error launching " + application.getAppAttemptId()
-            + ". Got exception: " + StringUtils.stringifyException(ie);
-        LOG.info(message);
-        handler.handle(new RMAppAttemptEvent(application
-            .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
+        onAMLaunchFailed(masterContainer.getId(), ie);
       }
       break;
     case CLEANUP:
@@ -343,5 +343,14 @@ public class AMLauncher implements Runnable {
     } else {
       throw (IOException) t;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void onAMLaunchFailed(ContainerId containerId, Exception ie) {
+    String message = "Error launching " + application.getAppAttemptId()
+            + ". Got exception: " + StringUtils.stringifyException(ie);
+    LOG.info(message);
+    handler.handle(new RMAppAttemptEvent(application
+           .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
   }
 }

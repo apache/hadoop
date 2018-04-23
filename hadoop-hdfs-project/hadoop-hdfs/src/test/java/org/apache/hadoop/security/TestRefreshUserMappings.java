@@ -208,7 +208,8 @@ public class TestRefreshUserMappings {
     // add additional resource with the new value
     // so the server side will pick it up
     String rsrc = "testGroupMappingRefresh_rsrc.xml";
-    addNewConfigResource(rsrc, userKeyGroups, "gr2", userKeyHosts, "127.0.0.1");  
+    tempResource = addNewConfigResource(rsrc, userKeyGroups, "gr2",
+        userKeyHosts, "127.0.0.1");
     
     DFSAdmin admin = new DFSAdmin(config);
     String [] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
@@ -232,7 +233,7 @@ public class TestRefreshUserMappings {
     
   }
 
-  private void addNewConfigResource(String rsrcName, String keyGroup,
+  public static String addNewConfigResource(String rsrcName, String keyGroup,
       String groups, String keyHosts, String hosts)
           throws FileNotFoundException, UnsupportedEncodingException {
     // location for temp resource should be in CLASSPATH
@@ -242,17 +243,18 @@ public class TestRefreshUserMappings {
     String urlPath = URLDecoder.decode(url.getPath().toString(), "UTF-8");
     Path p = new Path(urlPath);
     Path dir = p.getParent();
-    tempResource = dir.toString() + "/" + rsrcName;
+    String tmp = dir.toString() + "/" + rsrcName;
 
     String newResource =
     "<configuration>"+
     "<property><name>" + keyGroup + "</name><value>"+groups+"</value></property>" +
     "<property><name>" + keyHosts + "</name><value>"+hosts+"</value></property>" +
     "</configuration>";
-    PrintWriter writer = new PrintWriter(new FileOutputStream(tempResource));
+    PrintWriter writer = new PrintWriter(new FileOutputStream(tmp));
     writer.println(newResource);
     writer.close();
 
     Configuration.addDefaultResource(rsrcName);
+    return tmp;
   }
 }

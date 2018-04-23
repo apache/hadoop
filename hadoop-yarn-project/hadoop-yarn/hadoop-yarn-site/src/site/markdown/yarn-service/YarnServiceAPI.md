@@ -403,6 +403,7 @@ a service resource has the following attributes.
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
 |kerberos_principal | The principal info of the user who launches the service|false|KerberosPrincipal||
+|docker_client_config|URI of the file containing the docker client configuration (e.g. hdfs:///tmp/config.json)|false|string||
 
 ### ServiceState
 

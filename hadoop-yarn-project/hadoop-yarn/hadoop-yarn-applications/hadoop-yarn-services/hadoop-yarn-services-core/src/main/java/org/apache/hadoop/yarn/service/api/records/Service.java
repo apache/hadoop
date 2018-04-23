@@ -73,6 +73,7 @@ public class Service extends BaseResource {
   private KerberosPrincipal kerberosPrincipal = new KerberosPrincipal();
   private String version = null;
   private String description = null;
+  private String dockerClientConfig = null;
 
   /**
    * A unique service name.
@@ -370,6 +371,27 @@ public class Service extends BaseResource {
     this.kerberosPrincipal = kerberosPrincipal;
   }
 
+  @JsonProperty("docker_client_config")
+  @XmlElement(name = "docker_client_config")
+  @SuppressWarnings("checkstyle:hiddenfield")
+  public Service dockerClientConfig(String dockerClientConfig) {
+    this.dockerClientConfig = dockerClientConfig;
+    return this;
+  }
+
+  /**
+   * The Docker client config for the service.
+   * @return dockerClientConfig
+   */
+  @ApiModelProperty(value = "The Docker client config for the service")
+  public String getDockerClientConfig() {
+    return dockerClientConfig;
+  }
+
+  public void setDockerClientConfig(String dockerClientConfig) {
+    this.dockerClientConfig = dockerClientConfig;
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -414,6 +436,8 @@ public class Service extends BaseResource {
     sb.append("    queue: ").append(toIndentedString(queue)).append("\n");
     sb.append("    kerberosPrincipal: ")
         .append(toIndentedString(kerberosPrincipal)).append("\n");
+    sb.append("    dockerClientConfig: ")
+        .append(toIndentedString(dockerClientConfig)).append("\n");
     sb.append("}");
     return sb.toString();
   }

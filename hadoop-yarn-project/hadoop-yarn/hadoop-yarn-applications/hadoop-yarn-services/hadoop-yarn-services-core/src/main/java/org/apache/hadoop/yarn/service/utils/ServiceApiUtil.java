@@ -116,6 +116,13 @@ public class ServiceApiUtil {
       }
     }
 
+    // Validate the Docker client config.
+    try {
+      validateDockerClientConfiguration(service, conf);
+    } catch (IOException e) {
+      throw new IllegalArgumentException(e);
+    }
+
     // Validate there are no component name collisions (collisions are not
     // currently supported) and add any components from external services
     Configuration globalConf = service.getConfiguration();
@@ -211,6 +218,20 @@ public class ServiceApiUtil {
     // Service lifetime if not specified, is set to unlimited lifetime
     if (service.getLifetime() == null) {
       service.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
+    }
+  }
+
+  private static void validateDockerClientConfiguration(Service service,
+      org.apache.hadoop.conf.Configuration conf) throws IOException {
+    String dockerClientConfig = service.getDockerClientConfig();
+    if (!StringUtils.isEmpty(dockerClientConfig)) {
+      Path dockerClientConfigPath = new Path(dockerClientConfig);
+      FileSystem fs = dockerClientConfigPath.getFileSystem(conf);
+      if (!fs.exists(dockerClientConfigPath)) {
+        throw new IOException(
+            "The supplied Docker client config does not exist: "
+                + dockerClientConfig);
+      }
     }
   }
 

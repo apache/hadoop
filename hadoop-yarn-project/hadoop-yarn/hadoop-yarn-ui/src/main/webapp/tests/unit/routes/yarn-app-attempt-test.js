@@ -16,26 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import { initialize } from '../../../initializers/jquery';
-import { module, test } from 'qunit';
+import { moduleFor, test } from 'ember-qunit';
 
-var registry, application;
-
-module('Unit | Initializer | jquery', {
-  beforeEach: function() {
-    Ember.run(function() {
-      application = Ember.Application.create();
-      registry = application.registry;
-      application.deferReadiness();
-    });
-  }
+moduleFor('route:yarn-app-attempt', 'Unit | Route | yarn app attempt', {
+  unit: true
 });
 
-// Replace this with your real tests.
-test('it works', function(assert) {
-  initialize(registry, application);
-
-  // you would normally confirm the results of the initializer here
-  assert.ok(true);
+test('Basic creation test', function(assert) {
+  let route = this.subject();
+  assert.ok(route);
+  assert.ok(route.model);
+  assert.ok(route.unloadAll);
 });

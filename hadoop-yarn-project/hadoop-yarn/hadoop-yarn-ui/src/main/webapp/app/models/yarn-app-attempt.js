@@ -140,4 +140,9 @@ export default DS.Model.extend({
     return this.get("state");
   }.property(),
 
+  masterNodeURL: function() {
+    var addr = encodeURIComponent(this.get("nodeHttpAddress"));
+    return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
+  }.property("nodeId", "nodeHttpAddress"),
+
 });

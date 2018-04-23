@@ -65,10 +65,11 @@ test('Test getting nodes', function(assert) {
   };
   var route = this.subject();
   route.set('store', store);
-  var model = route.model()._result;
-  assert.expect(4);
-  assert.ok(model);
-  assert.equal(model.length, 2);
-  assert.deepEqual(response[0], model[0]);
-  assert.deepEqual(response[1], model[1]);
+  route.model().then(function(model) {
+    assert.expect(4);
+    assert.ok(model.nodes);
+    assert.equal(model.nodes.length, 2);
+    assert.deepEqual(response[0], model.nodes[0]);
+    assert.deepEqual(response[1], model.nodes[1]);
+  });
 });

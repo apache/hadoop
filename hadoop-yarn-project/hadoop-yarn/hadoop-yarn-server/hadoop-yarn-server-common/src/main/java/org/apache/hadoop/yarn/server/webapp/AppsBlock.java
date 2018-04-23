@@ -150,7 +150,9 @@ public class AppsBlock extends HtmlBlock {
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
           .th(".queue", "Queue").th(".priority", "Application Priority")
-          .th(".starttime", "StartTime").th(".finishtime", "FinishTime")
+          .th(".starttime", "StartTime")
+          .th(".launchtime", "LaunchTime")
+          .th(".finishtime", "FinishTime")
           .th(".state", "State").th(".finalstatus", "FinalStatus")
           .th(".progress", "Progress").th(".ui", "Tracking UI").__().__().tbody();
 
@@ -188,6 +190,7 @@ public class AppsBlock extends HtmlBlock {
             .getQueue()))).append("\",\"").append(String
                 .valueOf(app.getPriority()))
         .append("\",\"").append(app.getStartedTime())
+        .append("\",\"").append(app.getLaunchTime())
         .append("\",\"").append(app.getFinishedTime())
         .append("\",\"")
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())

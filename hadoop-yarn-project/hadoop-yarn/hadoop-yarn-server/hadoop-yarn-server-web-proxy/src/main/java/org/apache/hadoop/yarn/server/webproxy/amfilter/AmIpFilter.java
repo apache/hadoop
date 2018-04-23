@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Public
 public class AmIpFilter implements Filter {
@@ -59,7 +61,7 @@ public class AmIpFilter implements Filter {
   public static final String PROXY_URI_BASES_DELIMITER = ",";
   private static final String PROXY_PATH = "/proxy";
   //update the proxy IP list about every 5 min
-  private static final long UPDATE_INTERVAL = 5 * 60 * 1000;
+  private static long updateInterval = TimeUnit.MINUTES.toMillis(5);
 
   private String[] proxyHosts;
   private Set<String> proxyAddresses = null;
@@ -99,9 +101,9 @@ public class AmIpFilter implements Filter {
   }
 
   protected Set<String> getProxyAddresses() throws ServletException {
-    long now = System.currentTimeMillis();
+    long now = Time.monotonicNow();
     synchronized(this) {
-      if (proxyAddresses == null || (lastUpdate + UPDATE_INTERVAL) >= now) {
+      if (proxyAddresses == null || (lastUpdate + updateInterval) <= now) {
         proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
@@ -225,5 +227,10 @@ public class AmIpFilter implements Filter {
       LOG.debug("Failed to connect to " + url + ": " + e.toString());
     }
     return isValid;
+  }
+
+  @VisibleForTesting
+  protected static void setUpdateInterval(long updateInterval) {
+    AmIpFilter.updateInterval = updateInterval;
   }
 }

@@ -257,7 +257,7 @@ public class TestRMWebApp {
               app.getName(), (String) null, 0, (Token) null,
               app.createApplicationState(),
               app.getDiagnostics().toString(), (String) null,
-              app.getStartTime(), app.getFinishTime(),
+              app.getStartTime(), app.getLaunchTime(), app.getFinishTime(),
               app.getFinalApplicationStatus(),
               (ApplicationResourceUsageReport) null, app.getTrackingUrl(),
               app.getProgress(), app.getApplicationType(), (Token) null);

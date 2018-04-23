@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -167,6 +168,12 @@ public class TestRouterMountTable {
     addEntry = MountTable.newInstance(
         "/testdir/subdir", Collections.singletonMap("ns0", "/testdir/subdir"));
     assertTrue(addMountTable(addEntry));
+    addEntry = MountTable.newInstance(
+        "/testdir3/subdir1", Collections.singletonMap("ns0", "/testdir3"));
+    assertTrue(addMountTable(addEntry));
+    addEntry = MountTable.newInstance(
+        "/testA/testB/testC/testD", Collections.singletonMap("ns0", "/test"));
+    assertTrue(addMountTable(addEntry));
 
     // Create test dir in NN
     final FileSystem nnFs = nnContext.getFileSystem();
@@ -174,8 +181,18 @@ public class TestRouterMountTable {
 
     Map<String, Long> pathModTime = new TreeMap<>();
     for (String mount : mountTable.getMountPoints("/")) {
-      pathModTime.put(mount, mountTable.getMountPoint("/"+mount)
-          .getDateModified());
+      if (mountTable.getMountPoint("/"+mount) != null) {
+        pathModTime.put(mount, mountTable.getMountPoint("/"+mount)
+            .getDateModified());
+      } else {
+        List<MountTable> entries = mountTable.getMounts("/"+mount);
+        for (MountTable entry : entries) {
+          if (pathModTime.get(mount) == null ||
+              pathModTime.get(mount) < entry.getDateModified()) {
+            pathModTime.put(mount, entry.getDateModified());
+          }
+        }
+      }
     }
     FileStatus[] iterator = nnFs.listStatus(new Path("/"));
     for (FileStatus file : iterator) {

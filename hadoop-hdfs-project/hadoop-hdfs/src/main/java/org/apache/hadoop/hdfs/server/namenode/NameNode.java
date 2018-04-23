@@ -454,43 +454,6 @@ public class NameNode extends ReconfigurableBase implements
   }
 
   /**
-   * Set the namenode address that will be used by clients to access this
-   * namenode or name service. This needs to be called before the config
-   * is overriden.
-   */
-  public void setClientNamenodeAddress(Configuration conf) {
-    String nnAddr = conf.get(FS_DEFAULT_NAME_KEY);
-    if (nnAddr == null) {
-      // default fs is not set.
-      clientNamenodeAddress = null;
-      return;
-    }
-
-    LOG.info("{} is {}", FS_DEFAULT_NAME_KEY, nnAddr);
-    URI nnUri = URI.create(nnAddr);
-
-    String nnHost = nnUri.getHost();
-    if (nnHost == null) {
-      clientNamenodeAddress = null;
-      return;
-    }
-
-    if (DFSUtilClient.getNameServiceIds(conf).contains(nnHost)) {
-      // host name is logical
-      clientNamenodeAddress = nnHost;
-    } else if (nnUri.getPort() > 0) {
-      // physical address with a valid port
-      clientNamenodeAddress = nnUri.getAuthority();
-    } else {
-      // the port is missing or 0. Figure out real bind address later.
-      clientNamenodeAddress = null;
-      return;
-    }
-    LOG.info("Clients are to use {} to access"
-        + " this namenode/service.", clientNamenodeAddress );
-  }
-
-  /**
    * Get the namenode address to be used by clients.
    * @return nn address
    */
@@ -956,9 +919,15 @@ public class NameNode extends ReconfigurableBase implements
     this.tracerConfigurationManager =
         new TracerConfigurationManager(NAMENODE_HTRACE_PREFIX, conf);
     this.role = role;
-    setClientNamenodeAddress(conf);
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    clientNamenodeAddress = NameNodeUtils.getClientNamenodeAddress(
+        conf, nsId);
+
+    if (clientNamenodeAddress != null) {
+      LOG.info("Clients should use {} to access"
+          + " this namenode/service.", clientNamenodeAddress);
+    }
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
     state = createHAState(getStartupOption(conf));
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);

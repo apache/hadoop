@@ -1,0 +1,19 @@
+{
+  "rack": "rack1",
+  "nodes": [
+    {
+      "node": "node1",
+      "memory-mb" : 2048,
+      "vcores" : 6
+    },
+    {
+      "node": "node2"
+    },
+    {
+      "node": "node3"
+    },
+    {
+      "node": "node4"
+    }
+  ]
+}

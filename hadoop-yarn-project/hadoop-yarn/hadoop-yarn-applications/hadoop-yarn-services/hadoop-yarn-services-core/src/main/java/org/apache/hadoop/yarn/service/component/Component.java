@@ -486,7 +486,7 @@ public class Component implements EventHandler<ComponentEvent> {
         List<TargetExpression> targetExpressions = new ArrayList<>();
         // Currently only intra-application allocation tags are supported.
         if (!yarnServiceConstraint.getTargetTags().isEmpty()) {
-          targetExpressions.add(PlacementTargets.allocationTagToIntraApp(
+          targetExpressions.add(PlacementTargets.allocationTag(
               yarnServiceConstraint.getTargetTags().toArray(new String[0])));
         }
         // Add all node attributes

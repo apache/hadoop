@@ -383,7 +383,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       Container container) throws ContainerExecutionException {
     try {
       String commandFile = dockerClient.writeCommandToTempFile(
-          dockerVolumeCommand, container.getContainerId().toString());
+          dockerVolumeCommand, container, nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);
@@ -902,7 +902,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
-        containerIdStr);
+        container, nmContext);
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
         commandFile, runCommand);
 
@@ -926,12 +926,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     // Check to see if the container already exists for relaunch
     DockerCommandExecutor.DockerContainerStatus containerStatus =
         DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
-            privilegedOperationExecutor);
+            privilegedOperationExecutor, nmContext);
     if (containerStatus != null &&
         DockerCommandExecutor.isStartable(containerStatus)) {
       DockerStartCommand startCommand = new DockerStartCommand(containerIdStr);
       String commandFile = dockerClient.writeCommandToTempFile(startCommand,
-          containerIdStr);
+          container, nmContext);
       PrivilegedOperation launchOp = buildLaunchOp(ctx, commandFile,
           startCommand);
 
@@ -1041,7 +1041,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         new DockerInspectCommand(containerId).getIpAndHost();
     try {
       String commandFile = dockerClient.writeCommandToTempFile(inspectCommand,
-          containerId);
+          container, nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);
@@ -1183,12 +1183,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     DockerCommandExecutor.DockerContainerStatus containerStatus =
         DockerCommandExecutor.getContainerStatus(containerId, conf,
-            privilegedOperationExecutor);
+            privilegedOperationExecutor, nmContext);
     if (DockerCommandExecutor.isStoppable(containerStatus)) {
       DockerStopCommand dockerStopCommand = new DockerStopCommand(
           containerId).setGracePeriod(dockerStopGracePeriod);
       DockerCommandExecutor.executeDockerCommand(dockerStopCommand, containerId,
-          env, conf, privilegedOperationExecutor, false);
+          env, conf, privilegedOperationExecutor, false, nmContext);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -1202,12 +1202,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       ContainerExecutor.Signal signal) throws ContainerExecutionException {
     DockerCommandExecutor.DockerContainerStatus containerStatus =
         DockerCommandExecutor.getContainerStatus(containerId, conf,
-            privilegedOperationExecutor);
+            privilegedOperationExecutor, nmContext);
     if (DockerCommandExecutor.isKillable(containerStatus)) {
       DockerKillCommand dockerKillCommand =
           new DockerKillCommand(containerId).setSignal(signal.name());
       DockerCommandExecutor.executeDockerCommand(dockerKillCommand, containerId,
-          env, conf, privilegedOperationExecutor, false);
+          env, conf, privilegedOperationExecutor, false, nmContext);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -1227,11 +1227,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     } else {
       DockerCommandExecutor.DockerContainerStatus containerStatus =
           DockerCommandExecutor.getContainerStatus(containerId, conf,
-              privilegedOperationExecutor);
+              privilegedOperationExecutor, nmContext);
       if (DockerCommandExecutor.isRemovable(containerStatus)) {
         DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            env, conf, privilegedOperationExecutor, false);
+            env, conf, privilegedOperationExecutor, false, nmContext);
       }
     }
   }

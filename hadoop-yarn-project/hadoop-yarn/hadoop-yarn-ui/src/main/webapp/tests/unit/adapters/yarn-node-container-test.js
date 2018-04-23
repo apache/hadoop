@@ -19,10 +19,14 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:yarn-node-container', 'Unit | Adapter | NodeContainer', {
+  unit: true
 });
 
 test('Basic creation', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   assert.expect(11);
   assert.ok(adapter);
   assert.ok(adapter.urlForQueryRecord);
@@ -34,13 +38,16 @@ test('Basic creation', function(assert) {
   assert.ok(adapter.host);
   assert.ok(adapter.namespace);
   assert.equal("application/json", adapter.headers.Accept);
-  assert.equal("ws/v1/node", adapter.namespace);
+  assert.equal("{nodeAddress}/ws/v1/node", adapter.namespace);
 });
 
 test('urlForQueryRecord test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   let host = adapter.host;
-  assert.equal(host + "localhost:8042/ws/v1/node/containers/" +
+  assert.equal(host + "/localhost:8042/ws/v1/node/containers/" +
       "container_e27_11111111111_0001_01_000001",
       adapter.urlForQueryRecord(
       {nodeHttpAddr: "localhost:8042",
@@ -48,22 +55,28 @@ test('urlForQueryRecord test', function(assert) {
 });
 
 test('urlForQuery test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   let host = adapter.host;
-  assert.equal(host + "localhost:8042/ws/v1/node/containers",
+  assert.equal(host + "/localhost:8042/ws/v1/node/containers",
       adapter.urlForQuery({nodeHttpAddr: "localhost:8042"}));
 });
 
 test('query test', function(assert) {
-  let adapter = this.subject(),
-      testModel = { modelName: "testModel" },
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
+  let testModel = { modelName: "testModel" },
       testStore = {},
       testQuery = {nodeHttpAddr: "localhost:8042"};
   let host = adapter.host;
   assert.expect(3);
 
   adapter.ajax = function (url, method, hash) {
-    assert.equal(host + "localhost:8042/ws/v1/node/containers", url);
+    assert.equal(host + "/localhost:8042/ws/v1/node/containers", url);
     assert.equal('GET', method);
     assert.equal(null, hash.data);
   };
@@ -72,8 +85,11 @@ test('query test', function(assert) {
 });
 
 test('queryRecord test', function(assert) {
-  let adapter = this.subject(),
-      testModel = { modelName: "testModel" },
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
+  let testModel = { modelName: "testModel" },
       testStore = {},
       testQuery = {
         nodeHttpAddr: "localhost:8042",
@@ -83,7 +99,7 @@ test('queryRecord test', function(assert) {
   assert.expect(3);
 
   adapter.ajax = function (url, method, hash) {
-    assert.equal(host + "localhost:8042/ws/v1/node/containers/" +
+    assert.equal(host + "/localhost:8042/ws/v1/node/containers/" +
         "container_e27_11111111111_0001_01_000001", url);
     assert.equal('GET', method);
     assert.equal(null, hash.data);
