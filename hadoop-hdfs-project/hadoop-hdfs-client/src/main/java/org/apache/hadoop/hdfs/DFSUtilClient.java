@@ -191,7 +191,7 @@ public class DFSUtilClient {
   /**
    * Returns collection of nameservice Ids from the configuration.
    * @param conf configuration
-   * @return collection of nameservice Ids, or null if not specified
+   * @return collection of nameservice Ids. Empty list if unspecified.
    */
   public static Collection<String> getNameServiceIds(Configuration conf) {
     return conf.getTrimmedStringCollection(DFS_NAMESERVICES);
