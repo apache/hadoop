@@ -43,7 +43,10 @@ import "HdfsServer.proto";
 message GetBlocksRequestProto {
   required DatanodeIDProto datanode = 1; // Datanode ID
   required uint64 size = 2;              // Size in bytes
-  optional uint64 minBlockSize = 3 [default = 0]; // Minimum Block Size in bytes
+  // Minimum Block Size in bytes, adding default value to 10MB, as this might
+  // cause problem during rolling upgrade, when balancers are upgraded later.
+  // For more info refer HDFS-13356
+  optional uint64 minBlockSize = 3 [default = 10485760];
 }
 
  
