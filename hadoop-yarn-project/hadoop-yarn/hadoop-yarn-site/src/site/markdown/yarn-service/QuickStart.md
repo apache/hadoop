@@ -18,10 +18,21 @@ This document describes how to deploy services on YARN using the YARN Service fr
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
-## Start HDFS and YARN components
+## Configure and start HDFS and YARN components
 
- Start all the hadoop components HDFS, YARN as usual.
+Start all the hadoop components for HDFS and YARN as usual.
+To enable the YARN Service framework, add this property to `yarn-site.xml` and restart the ResourceManager or set the property before the ResourceManager is started.
+This property is required for using the YARN Service framework through the CLI or the REST API.
 
+```
+  <property>
+    <description>
+      Enable services rest api on ResourceManager.
+    </description>
+    <name>yarn.webapp.api-service.enable</name>
+    <value>true</value>
+  </property>
+```
 
 ## Example service 
 Below is a simple service definition that launches sleep containers on YARN by writing a simple spec file and without writing any code.
@@ -104,20 +115,7 @@ yarn app -destroy ${SERVICE_NAME}
 
 ## Manage services on YARN via REST API
 
-YARN API Server REST API can be activated as part of the ResourceManager.
-
-### Start Embedded API-Server as part of ResourceManager
-For running inside ResourceManager, add this property to `yarn-site.xml` and restart ResourceManager.
-
-```
-  <property>
-    <description>
-      Enable services rest api on ResourceManager.
-    </description>
-    <name>yarn.webapp.api-service.enable</name>
-    <value>true</value>
-  </property>
-```
+The YARN API Server REST API is activated as part of the ResourceManager when `yarn.webapp.api-service.enable` is set to true.
 
 Services can be deployed on YARN through the ResourceManager web endpoint.
 
