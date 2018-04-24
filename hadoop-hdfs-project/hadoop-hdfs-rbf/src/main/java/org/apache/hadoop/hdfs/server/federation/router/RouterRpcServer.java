@@ -1386,7 +1386,8 @@ public class RouterRpcServer extends AbstractService
         action, isChecked);
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, Boolean> results =
-        rpcClient.invokeConcurrent(nss, method, true, true, Boolean.class);
+        rpcClient.invokeConcurrent(
+            nss, method, true, !isChecked, Boolean.class);
 
     // We only report true if all the name space are in safe mode
     int numSafemode = 0;
