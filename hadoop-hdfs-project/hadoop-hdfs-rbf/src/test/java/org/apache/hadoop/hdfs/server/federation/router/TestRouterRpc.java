@@ -1015,6 +1015,23 @@ public class TestRouterRpc {
     boolean nnSafemode =
         nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, false);
     assertEquals(nnSafemode, routerSafemode);
+
+    routerSafemode =
+        routerProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+    nnSafemode =
+        nnProtocol.setSafeMode(SafeModeAction.SAFEMODE_GET, true);
+    assertEquals(nnSafemode, routerSafemode);
+
+    assertFalse(routerProtocol.setSafeMode(
+        SafeModeAction.SAFEMODE_GET, false));
+    assertTrue(routerProtocol.setSafeMode(
+        SafeModeAction.SAFEMODE_ENTER, false));
+    assertTrue(routerProtocol.setSafeMode(
+        SafeModeAction.SAFEMODE_GET, false));
+    assertFalse(routerProtocol.setSafeMode(
+        SafeModeAction.SAFEMODE_LEAVE, false));
+    assertFalse(routerProtocol.setSafeMode(
+        SafeModeAction.SAFEMODE_GET, false));
   }
 
   @Test
