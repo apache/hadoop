@@ -235,7 +235,7 @@ class NodesPage extends RmView {
         .append(", aoColumnDefs: [");
     b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
     b.append(", {'sType': 'title-numeric', 'bSearchable': false, "
-        + "'aTargets': [ 8, 9 ] }");
+        + "'aTargets': [ 9, 10 ] }");
     b.append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}");
     b.append("]}");
     return b.toString();
