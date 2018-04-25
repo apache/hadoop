@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -92,6 +93,7 @@ public class DFSStripedInputStream extends DFSInputStream {
       LocatedBlocks locatedBlocks) throws IOException {
     super(dfsClient, src, verifyChecksum, locatedBlocks);
 
+    this.readStatistics.setBlockType(BlockType.STRIPED);
     assert ecPolicy != null;
     this.ecPolicy = ecPolicy;
     this.cellSize = ecPolicy.getCellSize();
