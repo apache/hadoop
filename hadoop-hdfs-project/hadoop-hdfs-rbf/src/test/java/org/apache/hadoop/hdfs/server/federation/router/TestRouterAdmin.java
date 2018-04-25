@@ -17,21 +17,27 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
@@ -52,6 +58,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -86,6 +93,14 @@ public class TestRouterAdmin {
     mockMountTable = cluster.generateMockMountTable();
     Router router = routerContext.getRouter();
     stateStore = router.getStateStore();
+
+    // Add two name services for testing disabling
+    ActiveNamenodeResolver membership = router.getNamenodeResolver();
+    membership.registerNamenode(
+        createNamenodeReport("ns0", "nn1", HAServiceState.ACTIVE));
+    membership.registerNamenode(
+        createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
+    stateStore.refreshCaches(true);
   }
 
   @AfterClass
@@ -97,6 +112,8 @@ public class TestRouterAdmin {
   public void testSetup() throws Exception {
     assertTrue(
         synchronizeRecords(stateStore, mockMountTable, MountTable.class));
+    // Avoid running with random users
+    routerContext.resetAdminClient();
   }
 
   @Test
@@ -375,6 +392,37 @@ public class TestRouterAdmin {
     assertTrue(enableResp.getStatus());
     disabled = getDisabledNameservices(nsManager);
     assertTrue(disabled.isEmpty());
+
+    // Non existing name services should fail
+    disableReq = DisableNameserviceRequest.newInstance("nsunknown");
+    disableResp = nsManager.disableNameservice(disableReq);
+    assertFalse(disableResp.getStatus());
+  }
+
+  @Test
+  public void testNameserviceManagerUnauthorized() throws Exception {
+
+    // Try to disable a name service with a random user
+    final String username = "baduser";
+    UserGroupInformation user =
+        UserGroupInformation.createRemoteUser(username);
+    user.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        RouterClient client = routerContext.getAdminClient();
+        NameserviceManager nameservices = client.getNameserviceManager();
+        DisableNameserviceRequest disableReq =
+            DisableNameserviceRequest.newInstance("ns0");
+        try {
+          nameservices.disableNameservice(disableReq);
+          fail("We should not be able to disable nameservices");
+        } catch (IOException ioe) {
+          assertExceptionContains(
+              username + " is not a super user", ioe);
+        }
+        return null;
+      }
+    });
   }
 
   private Set<String> getDisabledNameservices(NameserviceManager nsManager)

@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -260,6 +261,11 @@ public class MockResolver
   @Override
   public Set<FederationNamespaceInfo> getNamespaces() throws IOException {
     return this.namespaces;
+  }
+
+  @Override
+  public Set<String> getDisabledNamespaces() throws IOException {
+    return new TreeSet<>();
   }
 
   @Override
