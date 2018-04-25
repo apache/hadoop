@@ -60,12 +60,12 @@ public class TestDistCpViewFs {
       ConfigUtil.addLink(vConf, "/usr", new URI(fswd.toString())); 
       fs = FileSystem.get(FsConstants.VIEWFS_URI, vConf);
       fs.setWorkingDirectory(new Path("/usr"));
-      listFile = new Path("target/tmp/listing").makeQualified(fs.getUri(),
+      root = new Path("target/TestDistCpViewFs").makeQualified(fs.getUri(),
+          fs.getWorkingDirectory()).toString();
+      listFile = new Path(root, "listing").makeQualified(fs.getUri(),
               fs.getWorkingDirectory());
-      target = new Path("target/tmp/target").makeQualified(fs.getUri(),
+      target = new Path(root, "target").makeQualified(fs.getUri(),
               fs.getWorkingDirectory()); 
-      root = new Path("target/tmp").makeQualified(fs.getUri(),
-              fs.getWorkingDirectory()).toString();
       TestDistCpUtils.delete(fs, root);
     } catch (IOException e) {
       LOG.error("Exception encountered ", e);
