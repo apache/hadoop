@@ -209,6 +209,17 @@ Mount table permission can be set by following command:
 
 The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
+### Disabling nameservices
+
+To prevent accessing a nameservice (sublcuster), it can be disabled from the federation.
+For example, one can disable `ns1`, list it and enable it again:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -nameservice disable ns1
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -getDisabledNameservices
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -nameservice enable ns1
+
+This is useful when decommissioning subclusters or when one subcluster is missbehaving (e.g., low performance or unavailability).
+
 Client configuration
 --------------------
 
