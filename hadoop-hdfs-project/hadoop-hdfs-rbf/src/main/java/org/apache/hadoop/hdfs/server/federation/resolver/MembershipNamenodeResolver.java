@@ -29,10 +29,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
+import org.apache.hadoop.hdfs.server.federation.store.RecordStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreCache;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
@@ -63,6 +66,8 @@ public class MembershipNamenodeResolver
   private final StateStoreService stateStore;
   /** Membership State Store interface. */
   private MembershipStore membershipInterface;
+  /** Disabled Nameservice State Store interface. */
+  private DisabledNameserviceStore disabledNameserviceInterface;
 
   /** Parent router ID. */
   private String routerId;
@@ -88,14 +93,28 @@ public class MembershipNamenodeResolver
 
   private synchronized MembershipStore getMembershipStore() throws IOException {
     if (this.membershipInterface == null) {
-      this.membershipInterface = this.stateStore.getRegisteredRecordStore(
-          MembershipStore.class);
-      if (this.membershipInterface == null) {
-        throw new IOException("State Store does not have an interface for " +
-            MembershipStore.class.getSimpleName());
-      }
+      this.membershipInterface = getStoreInterface(MembershipStore.class);
     }
     return this.membershipInterface;
+  }
+
+  private synchronized DisabledNameserviceStore getDisabledNameserviceStore()
+      throws IOException {
+    if (this.disabledNameserviceInterface == null) {
+      this.disabledNameserviceInterface =
+          getStoreInterface(DisabledNameserviceStore.class);
+    }
+    return this.disabledNameserviceInterface;
+  }
+
+  private <T extends RecordStore<?>> T getStoreInterface(Class<T> clazz)
+      throws IOException{
+    T store = this.stateStore.getRegisteredRecordStore(clazz);
+    if (store == null) {
+      throw new IOException("State Store does not have an interface for " +
+          clazz.getSimpleName());
+    }
+    return store;
   }
 
   @Override
@@ -104,6 +123,8 @@ public class MembershipNamenodeResolver
     try {
       MembershipStore membership = getMembershipStore();
       membership.loadCache(force);
+      DisabledNameserviceStore disabled = getDisabledNameserviceStore();
+      disabled.loadCache(force);
     } catch (IOException e) {
       LOG.error("Cannot update membership from the State Store", e);
     }
@@ -151,30 +172,48 @@ public class MembershipNamenodeResolver
       final String nsId) throws IOException {
 
     List<? extends FederationNamenodeContext> ret = cacheNS.get(nsId);
-    if (ret == null) {
-      try {
-        MembershipState partial = MembershipState.newInstance();
-        partial.setNameserviceId(nsId);
-        GetNamenodeRegistrationsRequest request =
-            GetNamenodeRegistrationsRequest.newInstance(partial);
-
-        final List<MembershipState> result =
-            getRecentRegistrationForQuery(request, true, false);
-        if (result == null || result.isEmpty()) {
-          LOG.error("Cannot locate eligible NNs for {}", nsId);
-          return null;
-        } else {
-          cacheNS.put(nsId, result);
-          ret = result;
-        }
-      } catch (StateStoreUnavailableException e) {
-        LOG.error("Cannot get active NN for {}, State Store unavailable", nsId);
-      }
+    if (ret != null) {
+      return ret;
     }
-    if (ret == null) {
+
+    // Not cached, generate the value
+    final List<MembershipState> result;
+    try {
+      MembershipState partial = MembershipState.newInstance();
+      partial.setNameserviceId(nsId);
+      GetNamenodeRegistrationsRequest request =
+          GetNamenodeRegistrationsRequest.newInstance(partial);
+      result = getRecentRegistrationForQuery(request, true, false);
+    } catch (StateStoreUnavailableException e) {
+      LOG.error("Cannot get active NN for {}, State Store unavailable", nsId);
       return null;
     }
-    return Collections.unmodifiableList(ret);
+    if (result == null || result.isEmpty()) {
+      LOG.error("Cannot locate eligible NNs for {}", nsId);
+      return null;
+    }
+
+    // Mark disabled name services
+    try {
+      Set<String> disabled =
+          getDisabledNameserviceStore().getDisabledNameservices();
+      if (disabled == null) {
+        LOG.error("Cannot get disabled name services");
+      } else {
+        for (MembershipState nn : result) {
+          if (disabled.contains(nn.getNameserviceId())) {
+            nn.setState(FederationNamenodeServiceState.DISABLED);
+          }
+        }
+      }
+    } catch (StateStoreUnavailableException e) {
+      LOG.error("Cannot get disabled name services, State Store unavailable");
+    }
+
+    // Cache the response
+    ret = Collections.unmodifiableList(result);
+    cacheNS.put(nsId, result);
+    return ret;
   }
 
   @Override
@@ -260,7 +299,24 @@ public class MembershipNamenodeResolver
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
         getMembershipStore().getNamespaceInfo(request);
-    return response.getNamespaceInfo();
+    Set<FederationNamespaceInfo> nss = response.getNamespaceInfo();
+
+    // Filter disabled namespaces
+    Set<FederationNamespaceInfo> ret = new TreeSet<>();
+    Set<String> disabled = getDisabledNamespaces();
+    for (FederationNamespaceInfo ns : nss) {
+      if (!disabled.contains(ns.getNameserviceId())) {
+        ret.add(ns);
+      }
+    }
+
+    return ret;
+  }
+
+  @Override
+  public Set<String> getDisabledNamespaces() throws IOException {
+    DisabledNameserviceStore store = getDisabledNameserviceStore();
+    return store.getDisabledNameservices();
   }
 
   /**

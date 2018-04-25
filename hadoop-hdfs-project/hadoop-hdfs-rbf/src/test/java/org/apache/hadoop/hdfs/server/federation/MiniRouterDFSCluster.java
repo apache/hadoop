@@ -185,6 +185,10 @@ public class MiniRouterDFSCluster {
       return this.fileContext;
     }
 
+    public URI getFileSystemURI() {
+      return fileSystemUri;
+    }
+
     public String getHttpAddress() {
       InetSocketAddress httpAddress = router.getHttpServerAddress();
       return NetUtils.getHostPortString(httpAddress);
@@ -234,6 +238,10 @@ public class MiniRouterDFSCluster {
         adminClient = new RouterClient(routerSocket, conf);
       }
       return adminClient;
+    }
+
+    public void resetAdminClient() {
+      adminClient = null;
     }
 
     public DFSClient getClient() throws IOException, URISyntaxException {

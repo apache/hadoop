@@ -229,6 +229,17 @@ Ls command will show below information for each mount table entry:
     Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage
     /path                     ns0->/path                root                      supergroup                rwxr-xr-x                 [NsQuota: 50/0, SsQuota: 100 B/0 B]
 
+### Disabling nameservices
+
+To prevent accessing a nameservice (sublcuster), it can be disabled from the federation.
+For example, one can disable `ns1`, list it and enable it again:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -nameservice disable ns1
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -getDisabledNameservices
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -nameservice enable ns1
+
+This is useful when decommissioning subclusters or when one subcluster is missbehaving (e.g., low performance or unavailability).
+
 Client configuration
 --------------------
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -27,10 +28,12 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
@@ -93,6 +96,14 @@ public class TestRouterAdminCLI {
         routerSocket);
     admin = new RouterAdmin(routerConf);
     client = routerContext.getAdminClient();
+
+    // Add two fake name services to testing disabling them
+    ActiveNamenodeResolver membership = router.getNamenodeResolver();
+    membership.registerNamenode(
+        createNamenodeReport("ns0", "nn1", HAServiceState.ACTIVE));
+    membership.registerNamenode(
+        createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
+    stateStore.refreshCaches(true);
   }
 
   @AfterClass

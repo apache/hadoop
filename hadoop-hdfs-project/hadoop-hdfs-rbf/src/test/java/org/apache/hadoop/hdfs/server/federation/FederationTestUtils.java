@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.server.federation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -49,9 +52,18 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
 
@@ -59,6 +71,9 @@ import com.google.common.base.Supplier;
  * Helper utilities for testing HDFS Federation.
  */
 public final class FederationTestUtils {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FederationTestUtils.class);
 
   public final static String[] NAMESERVICES = {"ns0", "ns1"};
   public final static String[] NAMENODES = {"nn0", "nn1", "nn2", "nn3"};
@@ -273,5 +288,32 @@ public final class FederationTestUtils {
   public static boolean deleteFile(FileSystem fs, String path)
       throws IOException {
     return fs.delete(new Path(path), true);
+  }
+
+  /**
+   * Simulate that a Namenode is slow by adding a sleep to the check operation
+   * in the NN.
+   * @param nn Namenode to simulate slow.
+   * @param seconds Number of seconds to add to the Namenode.
+   * @throws Exception If we cannot add the sleep time.
+   */
+  public static void simulateSlowNamenode(final NameNode nn, final int seconds)
+      throws Exception {
+    FSNamesystem namesystem = nn.getNamesystem();
+    HAContext haContext = namesystem.getHAContext();
+    HAContext spyHAContext = spy(haContext);
+    doAnswer(new Answer<Object>() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        LOG.info("Simulating slow namenode {}", invocation.getMock());
+        try {
+          Thread.sleep(seconds * 1000);
+        } catch(InterruptedException e) {
+          LOG.error("Simulating a slow namenode aborted");
+        }
+        return null;
+      }
+    }).when(spyHAContext).checkOperation(any(OperationCategory.class));
+    Whitebox.setInternalState(namesystem, "haContext", spyHAContext);
   }
 }

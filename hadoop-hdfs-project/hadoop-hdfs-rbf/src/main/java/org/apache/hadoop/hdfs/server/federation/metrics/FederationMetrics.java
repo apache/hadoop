@@ -686,7 +686,7 @@ public class FederationMetrics implements FederationMBean {
           namenodeResolver.getNamenodesForNameserviceId(nsId);
       if (nns != null) {
         FederationNamenodeContext nn = nns.get(0);
-        if (nn != null && nn instanceof MembershipState) {
+        if (nn instanceof MembershipState) {
           resultList.add((MembershipState) nn);
         }
       }
