@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -2270,7 +2271,15 @@ public class RouterRpcServer extends AbstractService
         }
       }
 
-      return location.getDestinations();
+      // Filter disabled subclusters
+      Set<String> disabled = namenodeResolver.getDisabledNamespaces();
+      List<RemoteLocation> locs = new ArrayList<>();
+      for (RemoteLocation loc : location.getDestinations()) {
+        if (!disabled.contains(loc.getNameserviceId())) {
+          locs.add(loc);
+        }
+      }
+      return locs;
     } catch (IOException ioe) {
       if (this.rpcMonitor != null) {
         this.rpcMonitor.routerFailureStateStore();

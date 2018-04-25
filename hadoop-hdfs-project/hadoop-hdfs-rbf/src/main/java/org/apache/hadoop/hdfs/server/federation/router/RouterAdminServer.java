@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -282,28 +284,60 @@ public class RouterAdminServer extends AbstractService
   @Override
   public DisableNameserviceResponse disableNameservice(
       DisableNameserviceRequest request) throws IOException {
-    // TODO check permissions
+
+    RouterPermissionChecker pc = getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+
     String nsId = request.getNameServiceId();
-    // TODO check that the name service exists
-    boolean success = getDisabledNameserviceStore().disableNameservice(nsId);
+    boolean success = false;
+    if (namespaceExists(nsId)) {
+      success = getDisabledNameserviceStore().disableNameservice(nsId);
+    } else {
+      LOG.error("Cannot disable {}, it does not exists", nsId);
+    }
     return DisableNameserviceResponse.newInstance(success);
+  }
+
+  private boolean namespaceExists(final String nsId) throws IOException {
+    boolean found = false;
+    ActiveNamenodeResolver resolver = router.getNamenodeResolver();
+    Set<FederationNamespaceInfo> nss = resolver.getNamespaces();
+    for (FederationNamespaceInfo ns : nss) {
+      if (nsId.equals(ns.getNameserviceId())) {
+        found = true;
+        break;
+      }
+    }
+    return found;
   }
 
   @Override
   public EnableNameserviceResponse enableNameservice(
       EnableNameserviceRequest request) throws IOException {
-    // TODO check permissions
+    RouterPermissionChecker pc = getPermissionChecker();
+    if (pc != null) {
+      pc.checkSuperuserPrivilege();
+    }
+
     String nsId = request.getNameServiceId();
-    // TODO check that the name service exists
-    boolean success = getDisabledNameserviceStore().enableNameservice(nsId);
+    DisabledNameserviceStore store = getDisabledNameserviceStore();
+    Set<String> disabled = store.getDisabledNameservices();
+    boolean success = false;
+    if (disabled.contains(nsId)) {
+      success = store.enableNameservice(nsId);
+    } else {
+      LOG.error("Cannot enable {}, it was not disabled", nsId);
+    }
     return EnableNameserviceResponse.newInstance(success);
   }
 
   @Override
   public GetDisabledNameservicesResponse getDisabledNameservices(
       GetDisabledNameservicesRequest request) throws IOException {
-    // TODO check permissions
-    Set<String> nsIds = getDisabledNameserviceStore().getDisabledNameservices();
+    Set<String> nsIds =
+        getDisabledNameserviceStore().getDisabledNameservices();
     return GetDisabledNameservicesResponse.newInstance(nsIds);
   }
 

@@ -27,7 +27,8 @@ public enum FederationNamenodeServiceState {
   ACTIVE, // HAServiceState.ACTIVE or operational.
   STANDBY, // HAServiceState.STANDBY.
   UNAVAILABLE, // When the namenode cannot be reached.
-  EXPIRED; // When the last update is too old.
+  EXPIRED, // When the last update is too old.
+  DISABLED; // When the nameservice is disabled.
 
   public static FederationNamenodeServiceState getState(HAServiceState state) {
     switch(state) {
