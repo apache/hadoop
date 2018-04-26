@@ -250,8 +250,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       }
       compInstance.component.decRunningContainers();
       boolean shouldExit = false;
-      // check if it exceeds the failure threshold
-      if (comp.currentContainerFailure.get() > comp.maxContainerFailurePerComp) {
+      // Check if it exceeds the failure threshold, but only if health threshold
+      // monitor is not enabled
+      if (!comp.isHealthThresholdMonitorEnabled()
+          && comp.currentContainerFailure
+              .get() > comp.maxContainerFailurePerComp) {
         String exitDiag = MessageFormat.format(
             "[COMPONENT {0}]: Failed {1} times, exceeded the limit - {2}. Shutting down now... "
                 + System.lineSeparator(),

@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.monitor.ComponentHealthThresholdMonitor;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
@@ -73,6 +74,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -83,10 +85,7 @@ import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
 import static org.apache.hadoop.yarn.service.component.ComponentState.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURE_THRESHOLD;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_FAILURE_THRESHOLD;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_READINESS_CHECK_ENABLED;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_READINESS_CHECK_ENABLED_DEFAULT;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
 
 public class Component implements EventHandler<ComponentEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(Component.class);
@@ -112,6 +111,7 @@ public class Component implements EventHandler<ComponentEvent> {
   // The number of containers failed since last reset. This excludes preempted,
   // disk_failed containers etc. This will be reset to 0 periodically.
   public AtomicInteger currentContainerFailure = new AtomicInteger(0);
+  private boolean healthThresholdMonitorEnabled = false;
 
   private AtomicBoolean upgradeInProgress = new AtomicBoolean(false);
   private ComponentEvent upgradeEvent;
@@ -205,6 +205,7 @@ public class Component implements EventHandler<ComponentEvent> {
         componentSpec.getConfiguration(), scheduler.getConfig());
     createNumCompInstances(component.getNumberOfContainers());
     setDesiredContainers(component.getNumberOfContainers().intValue());
+    checkAndScheduleHealthThresholdMonitor();
   }
 
   private void createNumCompInstances(long count) {
@@ -220,6 +221,73 @@ public class Component implements EventHandler<ComponentEvent> {
     ComponentInstance instance = new ComponentInstance(this, id);
     compInstances.put(instance.getCompInstanceName(), instance);
     pendingInstances.add(instance);
+  }
+
+  private void checkAndScheduleHealthThresholdMonitor() {
+    // Determine health threshold percent
+    int healthThresholdPercent = YarnServiceConf.getInt(
+        CONTAINER_HEALTH_THRESHOLD_PERCENT,
+        DEFAULT_CONTAINER_HEALTH_THRESHOLD_PERCENT,
+        componentSpec.getConfiguration(), scheduler.getConfig());
+    // Validations
+    if (healthThresholdPercent == CONTAINER_HEALTH_THRESHOLD_PERCENT_DISABLED) {
+      LOG.info("No health threshold monitor enabled for component {}",
+          componentSpec.getName());
+      return;
+    }
+    // If threshold is set to outside acceptable range then don't enable monitor
+    if (healthThresholdPercent <= 0 || healthThresholdPercent > 100) {
+      LOG.error(
+          "Invalid health threshold percent {}% for component {}. Monitor not "
+              + "enabled.",
+          healthThresholdPercent, componentSpec.getName());
+      return;
+    }
+    // Determine the threshold properties
+    long window = YarnServiceConf.getLong(CONTAINER_HEALTH_THRESHOLD_WINDOW_SEC,
+        DEFAULT_CONTAINER_HEALTH_THRESHOLD_WINDOW_SEC,
+        componentSpec.getConfiguration(), scheduler.getConfig());
+    long initDelay = YarnServiceConf.getLong(
+        CONTAINER_HEALTH_THRESHOLD_INIT_DELAY_SEC,
+        DEFAULT_CONTAINER_HEALTH_THRESHOLD_INIT_DELAY_SEC,
+        componentSpec.getConfiguration(), scheduler.getConfig());
+    long pollFrequency = YarnServiceConf.getLong(
+        CONTAINER_HEALTH_THRESHOLD_POLL_FREQUENCY_SEC,
+        DEFAULT_CONTAINER_HEALTH_THRESHOLD_POLL_FREQUENCY_SEC,
+        componentSpec.getConfiguration(), scheduler.getConfig());
+    // Validations
+    if (window <= 0) {
+      LOG.error(
+          "Invalid health monitor window {} secs for component {}. Monitor not "
+              + "enabled.",
+          window, componentSpec.getName());
+      return;
+    }
+    if (initDelay < 0) {
+      LOG.error("Invalid health monitor init delay {} secs for component {}. "
+          + "Monitor not enabled.", initDelay, componentSpec.getName());
+      return;
+    }
+    if (pollFrequency <= 0) {
+      LOG.error(
+          "Invalid health monitor poll frequency {} secs for component {}. "
+              + "Monitor not enabled.",
+          pollFrequency, componentSpec.getName());
+      return;
+    }
+    LOG.info(
+        "Scheduling the health threshold monitor for component {} with percent "
+            + "= {}%, window = {} secs, poll freq = {} secs, init-delay = {} "
+            + "secs",
+        componentSpec.getName(), healthThresholdPercent, window, pollFrequency,
+        initDelay);
+    // Add 3 extra seconds to initial delay to account for the time taken to
+    // request containers before the monitor starts calculating health.
+    this.scheduler.executorService.scheduleAtFixedRate(
+        new ComponentHealthThresholdMonitor(this, healthThresholdPercent,
+            window),
+        initDelay + 3, pollFrequency, TimeUnit.SECONDS);
+    setHealthThresholdMonitorEnabled(true);
   }
 
   private static class FlexComponentTransition implements
@@ -871,5 +939,14 @@ public class Component implements EventHandler<ComponentEvent> {
   // Only for testing
   public List<ComponentInstance> getPendingInstances() {
     return pendingInstances;
+  }
+
+  public boolean isHealthThresholdMonitorEnabled() {
+    return healthThresholdMonitorEnabled;
+  }
+
+  public void setHealthThresholdMonitorEnabled(
+      boolean healthThresholdMonitorEnabled) {
+    this.healthThresholdMonitorEnabled = healthThresholdMonitorEnabled;
   }
 }

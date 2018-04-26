@@ -823,3 +823,38 @@ fulfilled and the service will be in non-STABLE state.
     "quicklinks": {}
 }
 ```
+
+### Create a service with health threshold monitor enabled for a component
+POST URL - http://localhost:8088/app/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with health threshold monitor",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 100,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256"
+        },
+        "configuration": {
+          "properties": {
+            "yarn.service.container-health-threshold.percent": "90",
+            "yarn.service.container-health-threshold.window-secs": "400",
+            "yarn.service.container-health-threshold.init-delay-secs": "800"
+          }
+        }
+      }
+    ]
+}
+```

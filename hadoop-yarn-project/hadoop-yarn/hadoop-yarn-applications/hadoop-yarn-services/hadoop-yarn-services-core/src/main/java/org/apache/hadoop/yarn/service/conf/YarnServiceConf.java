@@ -124,6 +124,57 @@ public class YarnServiceConf {
   public static final String DEPENDENCY_TARBALL_PATH = YARN_SERVICE_PREFIX
       + "framework.path";
 
+  public static final String YARN_SERVICE_CONTAINER_HEALTH_THRESHOLD_PREFIX =
+      YARN_SERVICE_PREFIX + "container-health-threshold.";
+
+  /**
+   * The container health threshold percent when explicitly set for a specific
+   * component or globally for all components, will schedule a health check
+   * monitor to periodically check for the percentage of healthy containers. It
+   * runs the check at a specified/default poll frequency. It allows a component
+   * to be below the health threshold for a specified/default window after which
+   * it considers the service to be unhealthy and triggers a service stop. When
+   * health threshold percent is enabled, CONTAINER_FAILURE_THRESHOLD is
+   * ignored.
+   */
+  public static final String CONTAINER_HEALTH_THRESHOLD_PERCENT =
+      YARN_SERVICE_CONTAINER_HEALTH_THRESHOLD_PREFIX + "percent";
+  /**
+   * Health check monitor poll frequency. It is an advanced setting and does not
+   * need to be set unless the service owner understands the implication and
+   * does not want the default.
+   */
+  public static final String CONTAINER_HEALTH_THRESHOLD_POLL_FREQUENCY_SEC =
+      YARN_SERVICE_CONTAINER_HEALTH_THRESHOLD_PREFIX + "poll-frequency-secs";
+  /**
+   * The amount of time the health check monitor allows a specific component to
+   * be below the health threshold after which it considers the service to be
+   * unhealthy.
+   */
+  public static final String CONTAINER_HEALTH_THRESHOLD_WINDOW_SEC =
+      YARN_SERVICE_CONTAINER_HEALTH_THRESHOLD_PREFIX + "window-secs";
+  /**
+   * The amount of initial time the health check monitor waits before the first
+   * check kicks in. It gives a lead time for the service containers to come up
+   * for the first time.
+   */
+  public static final String CONTAINER_HEALTH_THRESHOLD_INIT_DELAY_SEC =
+      YARN_SERVICE_CONTAINER_HEALTH_THRESHOLD_PREFIX + "init-delay-secs";
+  /**
+   * By default the health threshold percent does not come into play until it is
+   * explicitly set in resource config for a specific component or globally for
+   * all components. -1 signifies disabled.
+   */
+  public static final int CONTAINER_HEALTH_THRESHOLD_PERCENT_DISABLED = -1;
+
+  public static final int DEFAULT_CONTAINER_HEALTH_THRESHOLD_PERCENT =
+      CONTAINER_HEALTH_THRESHOLD_PERCENT_DISABLED;
+  public static final long DEFAULT_CONTAINER_HEALTH_THRESHOLD_POLL_FREQUENCY_SEC = 10;
+  public static final long DEFAULT_CONTAINER_HEALTH_THRESHOLD_WINDOW_SEC = 600;
+  // The default for initial delay is same as default health window
+  public static final long DEFAULT_CONTAINER_HEALTH_THRESHOLD_INIT_DELAY_SEC =
+      DEFAULT_CONTAINER_HEALTH_THRESHOLD_WINDOW_SEC;
+
   /**
    * Get long value for the property. First get from the userConf, if not
    * present, get from systemConf.
