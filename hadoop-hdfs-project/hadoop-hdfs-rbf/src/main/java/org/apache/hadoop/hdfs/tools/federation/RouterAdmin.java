@@ -94,7 +94,10 @@ public class RouterAdmin extends Configured implements Tool {
    */
   public void printUsage() {
     String usage = "Federation Admin Tools:\n"
-        + "\t[-add <source> <nameservice> <destination> "
+        + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+        + "-owner <owner> -group <group> -mode <mode>]\n"
+        + "\t[-update <source> <nameservice1, nameservice2, ...> <destination> "
         + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-rm <source>]\n"
@@ -112,7 +115,7 @@ public class RouterAdmin extends Configured implements Tool {
   @Override
   public int run(String[] argv) throws Exception {
     if (argv.length < 1) {
-      System.err.println("Not enough parameters specificed");
+      System.err.println("Not enough parameters specified");
       printUsage();
       return -1;
     }
@@ -124,31 +127,37 @@ public class RouterAdmin extends Configured implements Tool {
     // Verify that we have enough command line parameters
     if ("-add".equals(cmd)) {
       if (argv.length < 4) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        System.err.println("Not enough parameters specified for cmd " + cmd);
+        printUsage();
+        return exitCode;
+      }
+    } else if ("-update".equals(cmd)) {
+      if (argv.length < 4) {
+        System.err.println("Not enough parameters specified for cmd " + cmd);
         printUsage();
         return exitCode;
       }
     } else if ("-rm".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        System.err.println("Not enough parameters specified for cmd " + cmd);
         printUsage();
         return exitCode;
       }
     } else if ("-setQuota".equalsIgnoreCase(cmd)) {
       if (argv.length < 4) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        System.err.println("Not enough parameters specified for cmd " + cmd);
         printUsage();
         return exitCode;
       }
     } else if ("-clrQuota".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        System.err.println("Not enough parameters specified for cmd " + cmd);
         printUsage();
         return exitCode;
       }
     } else if ("-safemode".equalsIgnoreCase(cmd)) {
       if (argv.length < 2) {
-        System.err.println("Not enough parameters specificed for cmd " + cmd);
+        System.err.println("Not enough parameters specified for cmd " + cmd);
         printUsage();
         return exitCode;
       }
@@ -181,7 +190,11 @@ public class RouterAdmin extends Configured implements Tool {
     try {
       if ("-add".equals(cmd)) {
         if (addMount(argv, i)) {
-          System.out.println("Successfuly added mount point " + argv[i]);
+          System.out.println("Successfully added mount point " + argv[i]);
+        }
+      } else if ("-update".equals(cmd)) {
+        if (updateMount(argv, i)) {
+          System.out.println("Successfully updated mount point " + argv[i]);
         }
       } else if ("-rm".equals(cmd)) {
         if (removeMount(argv[i])) {
@@ -396,6 +409,107 @@ public class RouterAdmin extends Configured implements Tool {
       }
       return updated;
     }
+  }
+
+  /**
+   * Update a mount table entry.
+   *
+   * @param parameters Parameters for the mount point.
+   * @param i Index in the parameters.
+   */
+  public boolean updateMount(String[] parameters, int i) throws IOException {
+    // Mandatory parameters
+    String mount = parameters[i++];
+    String[] nss = parameters[i++].split(",");
+    String dest = parameters[i++];
+
+    // Optional parameters
+    boolean readOnly = false;
+    String owner = null;
+    String group = null;
+    FsPermission mode = null;
+    DestinationOrder order = null;
+    while (i < parameters.length) {
+      if (parameters[i].equals("-readonly")) {
+        readOnly = true;
+      } else if (parameters[i].equals("-order")) {
+        i++;
+        try {
+          order = DestinationOrder.valueOf(parameters[i]);
+        } catch(Exception e) {
+          System.err.println("Cannot parse order: " + parameters[i]);
+        }
+      } else if (parameters[i].equals("-owner")) {
+        i++;
+        owner = parameters[i];
+      } else if (parameters[i].equals("-group")) {
+        i++;
+        group = parameters[i];
+      } else if (parameters[i].equals("-mode")) {
+        i++;
+        short modeValue = Short.parseShort(parameters[i], 8);
+        mode = new FsPermission(modeValue);
+      }
+
+      i++;
+    }
+
+    return updateMount(mount, nss, dest, readOnly, order,
+        new ACLEntity(owner, group, mode));
+  }
+
+  /**
+   * Update a mount table entry.
+   *
+   * @param mount Mount point.
+   * @param nss Nameservices where this is mounted to.
+   * @param dest Destination path.
+   * @param readonly If the mount point is read only.
+   * @param order Order of the destination locations.
+   * @param aclInfo the ACL info for mount point.
+   * @return If the mount point was updated.
+   * @throws IOException Error updating the mount point.
+   */
+  public boolean updateMount(String mount, String[] nss, String dest,
+      boolean readonly, DestinationOrder order, ACLEntity aclInfo)
+      throws IOException {
+    MountTableManager mountTable = client.getMountTableManager();
+
+    // Create a new entry
+    Map<String, String> destMap = new LinkedHashMap<>();
+    for (String ns : nss) {
+      destMap.put(ns, dest);
+    }
+    MountTable newEntry = MountTable.newInstance(mount, destMap);
+
+    newEntry.setReadOnly(readonly);
+
+    if (order != null) {
+      newEntry.setDestOrder(order);
+    }
+
+    // Update ACL info of mount table entry
+    if (aclInfo.getOwner() != null) {
+      newEntry.setOwnerName(aclInfo.getOwner());
+    }
+
+    if (aclInfo.getGroup() != null) {
+      newEntry.setGroupName(aclInfo.getGroup());
+    }
+
+    if (aclInfo.getMode() != null) {
+      newEntry.setMode(aclInfo.getMode());
+    }
+
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(newEntry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTable.updateMountTableEntry(updateRequest);
+    boolean updated = updateResponse.getStatus();
+    if (!updated) {
+      System.err.println("Cannot update mount point " + mount);
+    }
+    return updated;
   }
 
   /**
