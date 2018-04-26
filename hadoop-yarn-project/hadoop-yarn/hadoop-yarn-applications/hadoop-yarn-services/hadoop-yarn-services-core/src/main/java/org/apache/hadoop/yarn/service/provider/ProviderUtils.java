@@ -27,12 +27,12 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
+import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.PublishedConfiguration;
@@ -51,7 +51,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
-import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_ID;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_INSTANCE_NAME;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_NAME;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_NAME_LC;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.CONTAINER_ID;
 
 /**
  * This is a factoring out of methods handy for providers. It's bonded to a log
@@ -160,9 +164,11 @@ public class ProviderUtils implements YarnServiceConstants {
   }
 
   public static Path initCompInstanceDir(SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       ComponentInstance instance) {
     Path compDir = new Path(new Path(fs.getAppDir(), "components"),
-        instance.getCompName());
+        compLaunchContext.getServiceVersion() + "/" +
+            compLaunchContext.getName());
     Path compInstanceDir = new Path(compDir, instance.getCompInstanceName());
     instance.setCompInstanceDir(compInstanceDir);
     return compInstanceDir;
@@ -171,10 +177,11 @@ public class ProviderUtils implements YarnServiceConstants {
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public static synchronized void createConfigFileAndAddLocalResource(
-      AbstractLauncher launcher, SliderFileSystem fs, Component component,
+      AbstractLauncher launcher, SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
       ServiceContext context) throws IOException {
-    Path compInstanceDir = initCompInstanceDir(fs, instance);
+    Path compInstanceDir = initCompInstanceDir(fs, compLaunchContext, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
       log.info(instance.getCompInstanceId() + ": Creating dir on hdfs: " + compInstanceDir);
       fs.getFileSystem().mkdirs(compInstanceDir,
@@ -189,7 +196,8 @@ public class ProviderUtils implements YarnServiceConstants {
           + tokensForSubstitution);
     }
 
-    for (ConfigFile originalFile : component.getConfiguration().getFiles()) {
+    for (ConfigFile originalFile : compLaunchContext.getConfiguration()
+        .getFiles()) {
       ConfigFile configFile = originalFile.copy();
       String fileName = new Path(configFile.getDestFile()).getName();
 
@@ -343,11 +351,12 @@ public class ProviderUtils implements YarnServiceConstants {
    * @return tokens to replace
    */
   public static Map<String, String> initCompTokensForSubstitute(
-      ComponentInstance instance, Container container) {
+      ComponentInstance instance, Container container,
+      ContainerLaunchService.ComponentLaunchContext componentLaunchContext) {
     Map<String, String> tokens = new HashMap<>();
-    tokens.put(COMPONENT_NAME, instance.getCompSpec().getName());
+    tokens.put(COMPONENT_NAME, componentLaunchContext.getName());
     tokens
-        .put(COMPONENT_NAME_LC, instance.getCompSpec().getName().toLowerCase());
+        .put(COMPONENT_NAME_LC, componentLaunchContext.getName().toLowerCase());
     tokens.put(COMPONENT_INSTANCE_NAME, instance.getCompInstanceName());
     tokens.put(CONTAINER_ID, container.getId().toString());
     tokens.put(COMPONENT_ID,

@@ -25,5 +25,5 @@ public enum ComponentEventType {
   CONTAINER_STARTED,
   CONTAINER_COMPLETED,
   UPGRADE,
-  STOP_UPGRADE
+  CHECK_STABLE
 }

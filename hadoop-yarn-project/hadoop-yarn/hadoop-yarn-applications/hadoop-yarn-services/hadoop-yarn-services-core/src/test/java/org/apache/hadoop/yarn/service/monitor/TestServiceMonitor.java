@@ -81,6 +81,7 @@ public class TestServiceMonitor extends ServiceTestUtils {
   public void testComponentDependency() throws Exception{
     ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
     Service exampleApp = new Service();
+    exampleApp.setVersion("v1");
     exampleApp.setId(applicationId.toString());
     exampleApp.setName("testComponentDependency");
     exampleApp.addComponent(createComponent("compa", 1, "sleep 1000"));

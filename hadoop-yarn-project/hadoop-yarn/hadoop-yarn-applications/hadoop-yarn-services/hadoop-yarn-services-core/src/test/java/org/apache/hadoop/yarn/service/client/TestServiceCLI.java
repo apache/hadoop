@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.service.client;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
@@ -36,12 +36,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.io.PrintStream;
 import java.util.List;
 
+import static org.apache.hadoop.yarn.client.api.AppAdminClient.YARN_APP_ADMIN_CLIENT_PREFIX;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
+import static org.mockito.Mockito.spy;
 
 public class TestServiceCLI {
   private static final Logger LOG = LoggerFactory.getLogger(TestServiceCLI
@@ -51,33 +54,36 @@ public class TestServiceCLI {
   private File basedir;
   private SliderFileSystem fs;
   private String basedirProp;
+  private ApplicationCLI cli;
 
-  private void runCLI(String[] args) throws Exception {
-    LOG.info("running CLI: yarn {}", Arrays.asList(args));
-    ApplicationCLI cli = new ApplicationCLI();
-    cli.setSysOutPrintStream(System.out);
-    cli.setSysErrPrintStream(System.err);
-    int res = ToolRunner.run(cli, ApplicationCLI.preProcessArgs(args));
-    cli.stop();
+  private void createCLI() {
+    cli = new ApplicationCLI();
+    PrintStream sysOut = spy(new PrintStream(new ByteArrayOutputStream()));
+    PrintStream sysErr = spy(new PrintStream(new ByteArrayOutputStream()));
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
+        DummyServiceClient.class.getName());
+    cli.setConf(conf);
   }
 
   private void buildApp(String serviceName, String appDef) throws Throwable {
     String[] args = {"app",
         "-D", basedirProp, "-save", serviceName,
         ExampleAppJson.resourceName(appDef),
-        "-appTypes", AppAdminClient.UNIT_TEST_TYPE};
-    runCLI(args);
+        "-appTypes", DUMMY_APP_TYPE};
+    ToolRunner.run(cli, ApplicationCLI.preProcessArgs(args));
   }
 
-  private void buildApp(String serviceName, String appDef, String lifetime,
-      String queue) throws Throwable {
+  private void buildApp(String serviceName, String appDef,
+      String lifetime, String queue) throws Throwable {
     String[] args = {"app",
         "-D", basedirProp, "-save", serviceName,
         ExampleAppJson.resourceName(appDef),
-        "-appTypes", AppAdminClient.UNIT_TEST_TYPE,
+        "-appTypes", DUMMY_APP_TYPE,
         "-updateLifetime", lifetime,
         "-changeQueue", queue};
-    runCLI(args);
+    ToolRunner.run(cli, ApplicationCLI.preProcessArgs(args));
   }
 
   @Before
@@ -91,6 +97,7 @@ public class TestServiceCLI {
     } else {
       basedir.mkdirs();
     }
+    createCLI();
   }
 
   @After
@@ -98,6 +105,7 @@ public class TestServiceCLI {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
     }
+    cli.stop();
   }
 
   @Test
@@ -114,6 +122,38 @@ public class TestServiceCLI {
     checkApp(serviceName, "master", 1L, 1000L, "qname");
   }
 
+  @Test
+  public void testInitiateServiceUpgrade() throws Exception {
+    String[] args = {"app", "-upgrade", "app-1",
+        "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
+        "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
+  @Test
+  public void testInitiateAutoFinalizeServiceUpgrade() throws Exception {
+    String[] args =  {"app", "-upgrade", "app-1",
+        "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
+        "-autoFinalize",
+        "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
+  @Test
+  public void testUpgradeInstances() throws Exception {
+    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
+        DummyServiceClient.class.getName());
+    cli.setConf(conf);
+    String[] args = {"app", "-upgrade", "app-1",
+        "-instances", "comp1-0,comp1-1",
+        "-appTypes", DUMMY_APP_TYPE};
+    int result = cli.run(ApplicationCLI.preProcessArgs(args));
+    Assert.assertEquals(result, 0);
+  }
+
+
   private void checkApp(String serviceName, String compName, long count, Long
       lifetime, String queue) throws IOException {
     Service service = ServiceApiUtil.loadService(fs, serviceName);
@@ -129,5 +169,25 @@ public class TestServiceCLI {
       }
     }
     Assert.fail();
+  }
+
+  private static final String DUMMY_APP_TYPE = "dummy";
+
+  /**
+   * Dummy service client for test purpose.
+   */
+  public static class DummyServiceClient extends ServiceClient {
+
+    @Override
+    public int initiateUpgrade(String appName, String fileName,
+        boolean autoFinalize) throws IOException, YarnException {
+      return 0;
+    }
+
+    @Override
+    public int actionUpgradeInstances(String appName,
+        List<String> componentInstances) throws IOException, YarnException {
+      return 0;
+    }
   }
 }

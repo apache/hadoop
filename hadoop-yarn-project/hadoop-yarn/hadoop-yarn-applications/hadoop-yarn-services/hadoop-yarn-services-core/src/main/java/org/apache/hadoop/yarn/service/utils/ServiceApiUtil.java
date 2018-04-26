@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.service.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -27,12 +29,13 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.Resource;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
@@ -65,6 +68,8 @@ public class ServiceApiUtil {
 
   private static final PatternValidator userNamePattern
       = new PatternValidator("[a-z][a-z0-9-.]*");
+
+
 
   @VisibleForTesting
   public static void setJsonSerDeser(JsonSerDeser jsd) {
@@ -494,6 +499,47 @@ public class ServiceApiUtil {
     Path appJson = new Path(appDir, service.getName() + ".json");
     jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
     return appJson;
+  }
+
+  public static List<Container> getLiveContainers(Service service,
+      List<String> componentInstances)
+      throws YarnException {
+    List<Container> result = new ArrayList<>();
+
+    // In order to avoid iterating over all the containers of all components,
+    // first find the affected components by parsing the instance name.
+    Multimap<String, String> affectedComps = ArrayListMultimap.create();
+    for (String instanceName : componentInstances) {
+      affectedComps.put(
+          ServiceApiUtil.parseComponentName(instanceName), instanceName);
+    }
+
+    service.getComponents().forEach(comp -> {
+      // Iterating once over the containers of the affected component to
+      // find all the containers. Avoiding multiple calls to
+      // service.getComponent(...) and component.getContainer(...) because they
+      // iterate over all the components of the service and all the containers
+      // of the components respectively.
+      if (affectedComps.get(comp.getName()) != null) {
+        Collection<String> instanceNames = affectedComps.get(comp.getName());
+        comp.getContainers().forEach(container -> {
+          if (instanceNames.contains(container.getComponentInstanceName())) {
+            result.add(container);
+          }
+        });
+      }
+    });
+    return result;
+  }
+
+  private static String parseComponentName(String componentInstanceName)
+      throws YarnException {
+    int idx = componentInstanceName.lastIndexOf('-');
+    if (idx == -1) {
+      throw new YarnException("Invalid component instance (" +
+          componentInstanceName + ") name.");
+    }
+    return componentInstanceName.substring(0, idx);
   }
 
   public static String $(String s) {

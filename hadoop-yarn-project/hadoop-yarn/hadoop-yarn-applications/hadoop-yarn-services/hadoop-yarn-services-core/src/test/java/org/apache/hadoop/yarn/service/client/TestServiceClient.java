@@ -24,17 +24,29 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceRequestProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.UpgradeServiceResponseProto;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Matchers;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,79 +59,152 @@ import static org.mockito.Mockito.when;
  */
 public class TestServiceClient {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestServiceClient.class);
+
   @Rule
   public ServiceTestUtils.ServiceFSWatcher rule =
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
-  public void testActionUpgrade() throws Exception {
-    ApplicationId applicationId = ApplicationId.newInstance(
-        System.currentTimeMillis(), 1);
-    ServiceClient client = createServiceClient(applicationId);
-
-    Service service = ServiceTestUtils.createExampleApplication();
-    service.setVersion("v1");
-    client.actionCreate(service);
+  public void testActionServiceUpgrade() throws Exception {
+    Service service = createService();
+    ServiceClient client = MockServiceClient.create(rule, service);
 
     //upgrade the service
     service.setVersion("v2");
-    client.actionUpgrade(service);
+    client.initiateUpgrade(service);
 
-    //wait for service to be in upgrade state
     Service fromFs = ServiceApiUtil.loadServiceUpgrade(rule.getFs(),
         service.getName(), service.getVersion());
     Assert.assertEquals(service.getName(), fromFs.getName());
     Assert.assertEquals(service.getVersion(), fromFs.getVersion());
+    client.stop();
   }
 
+  @Test
+  public void testActionCompInstanceUpgrade() throws Exception {
+    Service service = createService();
+    MockServiceClient client = MockServiceClient.create(rule, service);
 
-  private ServiceClient createServiceClient(ApplicationId applicationId)
-      throws Exception {
-    ClientAMProtocol amProxy = mock(ClientAMProtocol.class);
-    YarnClient yarnClient = createMockYarnClient();
-    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
-        applicationId, 1);
-    ApplicationAttemptReport attemptReport =
-        ApplicationAttemptReport.newInstance(attemptId, "localhost", 0,
-            null, null, null,
-        YarnApplicationAttemptState.RUNNING, null);
+    //upgrade the service
+    service.setVersion("v2");
+    client.initiateUpgrade(service);
 
-    ApplicationReport appReport = mock(ApplicationReport.class);
-    when(appReport.getHost()).thenReturn("localhost");
+    //add containers to the component that needs to be upgraded.
+    Component comp = service.getComponents().iterator().next();
+    ContainerId containerId = ContainerId.newContainerId(client.attemptId, 1L);
+    comp.addContainer(new Container().id(containerId.toString()));
 
-    when(yarnClient.getApplicationAttemptReport(Matchers.any()))
-        .thenReturn(attemptReport);
-    when(yarnClient.getApplicationReport(applicationId)).thenReturn(appReport);
-
-    ServiceClient client = new ServiceClient() {
-      @Override
-      protected void serviceInit(Configuration configuration) throws Exception {
-      }
-
-      @Override
-      protected ClientAMProtocol createAMProxy(String serviceName,
-          ApplicationReport appReport) throws IOException, YarnException {
-        return amProxy;
-      }
-
-      @Override
-      ApplicationId submitApp(Service app) throws IOException, YarnException {
-        return applicationId;
-      }
-    };
-
-    client.setFileSystem(rule.getFs());
-    client.setYarnClient(yarnClient);
-
-    client.init(rule.getConf());
-    client.start();
-    return client;
+    client.actionUpgrade(service, comp.getContainers());
+    CompInstancesUpgradeResponseProto response = client.getLastProxyResponse(
+        CompInstancesUpgradeResponseProto.class);
+    Assert.assertNotNull("upgrade did not complete", response);
+    client.stop();
   }
 
-  private YarnClient createMockYarnClient() throws IOException, YarnException {
+  private Service createService() throws IOException,
+      YarnException {
+    Service service = ServiceTestUtils.createExampleApplication();
+    service.setVersion("v1");
+    service.setState(ServiceState.UPGRADING);
+    return service;
+  }
+
+  private static final class MockServiceClient extends ServiceClient {
+
+    private final ApplicationId appId;
+    private final ApplicationAttemptId attemptId;
+    private final ClientAMProtocol amProxy;
+    private Object proxyResponse;
+    private Service service;
+
+    private MockServiceClient()  {
+      amProxy = mock(ClientAMProtocol.class);
+      appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+      LOG.debug("mocking service client for {}", appId);
+      attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    }
+
+    static MockServiceClient create(ServiceTestUtils.ServiceFSWatcher rule,
+        Service service)
+        throws IOException, YarnException {
+      MockServiceClient client = new MockServiceClient();
+
+      YarnClient yarnClient = createMockYarnClient();
+      ApplicationReport appReport = mock(ApplicationReport.class);
+      when(appReport.getHost()).thenReturn("localhost");
+      when(appReport.getYarnApplicationState()).thenReturn(
+          YarnApplicationState.RUNNING);
+
+      ApplicationAttemptReport attemptReport =
+          ApplicationAttemptReport.newInstance(client.attemptId, "localhost", 0,
+              null, null, null,
+              YarnApplicationAttemptState.RUNNING, null);
+      when(yarnClient.getApplicationAttemptReport(Matchers.any()))
+          .thenReturn(attemptReport);
+      when(yarnClient.getApplicationReport(client.appId)).thenReturn(appReport);
+      when(client.amProxy.upgrade(
+          Matchers.any(UpgradeServiceRequestProto.class))).thenAnswer(
+          (Answer<UpgradeServiceResponseProto>) invocation -> {
+              UpgradeServiceResponseProto response =
+                  UpgradeServiceResponseProto.newBuilder().build();
+              client.proxyResponse = response;
+              return response;
+            });
+      when(client.amProxy.upgrade(Matchers.any(
+          CompInstancesUpgradeRequestProto.class))).thenAnswer(
+          (Answer<CompInstancesUpgradeResponseProto>) invocation -> {
+              CompInstancesUpgradeResponseProto response =
+                CompInstancesUpgradeResponseProto.newBuilder().build();
+              client.proxyResponse = response;
+              return response;
+            });
+      client.setFileSystem(rule.getFs());
+      client.setYarnClient(yarnClient);
+      client.service = service;
+
+      client.init(rule.getConf());
+      client.start();
+      client.actionCreate(service);
+      return client;
+    }
+
+    @Override
+    protected void serviceInit(Configuration configuration) throws Exception {
+    }
+
+    @Override
+    protected ClientAMProtocol createAMProxy(String serviceName,
+        ApplicationReport appReport) throws IOException, YarnException {
+      return amProxy;
+    }
+
+    @Override
+    ApplicationId submitApp(Service app) throws IOException, YarnException {
+      return appId;
+    }
+
+    @Override
+    public Service getStatus(String serviceName) throws IOException,
+        YarnException {
+      service.setState(ServiceState.STABLE);
+      return service;
+    }
+
+    private <T> T getLastProxyResponse(Class<T> clazz) {
+      if (clazz.isInstance(proxyResponse)) {
+        return clazz.cast(proxyResponse);
+      }
+      return null;
+    }
+  }
+
+  private static YarnClient createMockYarnClient() throws IOException,
+      YarnException {
     YarnClient yarnClient = mock(YarnClient.class);
-    when(yarnClient.getApplications(Matchers.any(GetApplicationsRequest.class)))
-        .thenReturn(new ArrayList<>());
+    when(yarnClient.getApplications(Matchers.any(
+        GetApplicationsRequest.class))).thenReturn(new ArrayList<>());
     return yarnClient;
   }
 }

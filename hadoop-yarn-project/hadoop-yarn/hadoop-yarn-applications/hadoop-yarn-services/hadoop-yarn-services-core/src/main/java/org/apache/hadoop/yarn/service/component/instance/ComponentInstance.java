@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
+import org.apache.hadoop.yarn.service.component.ComponentEvent;
+import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
@@ -116,9 +118,14 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       .addTransition(READY, STARTED, BECOME_NOT_READY,
           new ContainerBecomeNotReadyTransition())
       .addTransition(READY, INIT, STOP, new ContainerStoppedTransition())
+      .addTransition(READY, UPGRADING, UPGRADE,
+          new ContainerUpgradeTransition())
+      .addTransition(UPGRADING, UPGRADING, UPGRADE,
+          new ContainerUpgradeTransition())
+      .addTransition(UPGRADING, READY, BECOME_READY,
+          new ContainerBecomeReadyTransition())
+      .addTransition(UPGRADING, INIT, STOP, new ContainerStoppedTransition())
       .installTopology();
-
-
 
   public ComponentInstance(Component component,
       ComponentInstanceId compInstanceId) {
@@ -186,7 +193,17 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       compInstance.containerSpec.setState(ContainerState.READY);
-      compInstance.component.incContainersReady();
+      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
+        compInstance.component.incContainersReady(false);
+        compInstance.component.decContainersThatNeedUpgrade();
+        ComponentEvent checkState = new ComponentEvent(
+            compInstance.component.getName(), ComponentEventType.CHECK_STABLE);
+        compInstance.scheduler.getDispatcher().getEventHandler().handle(
+            checkState);
+
+      } else {
+        compInstance.component.incContainersReady(true);
+      }
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
             .componentInstanceBecomeReady(compInstance.containerSpec);
@@ -199,7 +216,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
       compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
-      compInstance.component.decContainersReady();
+      compInstance.component.decContainersReady(true);
     }
   }
 
@@ -225,9 +242,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               .getDiagnostics();
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
       compInstance.cancelContainerStatusRetriever();
-
+      if (compInstance.getState().equals(ComponentInstanceState.UPGRADING)) {
+        compInstance.component.decContainersThatNeedUpgrade();
+      }
       if (compInstance.getState().equals(READY)) {
-        compInstance.component.decContainersReady();
+        compInstance.component.decContainersReady(true);
       }
       compInstance.component.decRunningContainers();
       boolean shouldExit = false;
@@ -284,6 +303,23 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         }
         ExitUtil.terminate(-1);
       }
+    }
+  }
+
+  private static class ContainerUpgradeTransition extends BaseTransition {
+
+    @Override
+    public void transition(ComponentInstance compInstance,
+        ComponentInstanceEvent event) {
+      compInstance.containerSpec.setState(ContainerState.UPGRADING);
+      compInstance.component.decContainersReady(false);
+      ComponentEvent upgradeEvent = compInstance.component.getUpgradeEvent();
+      compInstance.scheduler.getContainerLaunchService()
+          .reInitCompInstance(compInstance.scheduler.getApp(), compInstance,
+              compInstance.container,
+              compInstance.component.createLaunchContext(
+                  upgradeEvent.getTargetSpec(),
+                  upgradeEvent.getUpgradeVersion()));
     }
   }
 
@@ -422,7 +458,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       component.decRunningContainers();
     }
     if (getState() == READY) {
-      component.decContainersReady();
+      component.decContainersReady(true);
       component.decRunningContainers();
     }
     getCompSpec().removeContainer(containerSpec);

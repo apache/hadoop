@@ -30,6 +30,8 @@ service ClientAMProtocolService {
     returns (UpgradeServiceResponseProto);
   rpc restartService(RestartServiceRequestProto)
     returns (RestartServiceResponseProto);
+  rpc upgrade(CompInstancesUpgradeRequestProto) returns
+    (CompInstancesUpgradeResponseProto);
 }
 
 message FlexComponentsRequestProto {
@@ -61,13 +63,22 @@ message StopResponseProto {
 
 message UpgradeServiceRequestProto {
   optional string version = 1;
+  optional bool autoFinalize = 2;
 }
 
 message UpgradeServiceResponseProto {
+  optional string error = 1;
 }
 
 message RestartServiceRequestProto {
 }
 
 message RestartServiceResponseProto {
+}
+
+message CompInstancesUpgradeRequestProto {
+    repeated string containerIds = 1;
+}
+
+message CompInstancesUpgradeResponseProto {
 }

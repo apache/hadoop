@@ -26,5 +26,5 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public enum ContainerState {
-  RUNNING_BUT_UNREADY, READY, STOPPED
+  RUNNING_BUT_UNREADY, READY, STOPPED, NEEDS_UPGRADE, UPGRADING;
 }

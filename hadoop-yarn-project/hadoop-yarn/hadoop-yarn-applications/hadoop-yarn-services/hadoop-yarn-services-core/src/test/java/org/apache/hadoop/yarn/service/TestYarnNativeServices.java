@@ -31,9 +31,9 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.service.api.records.ComponentState;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
@@ -372,25 +372,47 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   }
 
   @Test(timeout = 200000)
-  public void testUpgradeService() throws Exception {
+  public void testUpgrade() throws Exception {
     setupInternal(NUM_NMS);
     ServiceClient client = createClient(getConf());
 
     Service service = createExampleApplication();
     client.actionCreate(service);
-    waitForServiceToBeStarted(client, service);
+    waitForServiceToBeStable(client, service);
 
-    //upgrade the service
+    // upgrade the service
+    Component component = service.getComponents().iterator().next();
+    service.setState(ServiceState.UPGRADING);
     service.setVersion("v2");
-    client.actionUpgrade(service);
+    component.getConfiguration().getEnv().put("key1", "val1");
+    client.initiateUpgrade(service);
 
-    //wait for service to be in upgrade state
+    // wait for service to be in upgrade state
     waitForServiceToBeInState(client, service, ServiceState.UPGRADING);
     SliderFileSystem fs = new SliderFileSystem(getConf());
     Service fromFs = ServiceApiUtil.loadServiceUpgrade(fs,
         service.getName(), service.getVersion());
     Assert.assertEquals(service.getName(), fromFs.getName());
     Assert.assertEquals(service.getVersion(), fromFs.getVersion());
+
+    // upgrade containers
+    Service liveService = client.getStatus(service.getName());
+    client.actionUpgrade(service,
+        liveService.getComponent(component.getName()).getContainers());
+    waitForAllCompToBeReady(client, service);
+
+    // finalize the upgrade
+    client.actionStart(service.getName());
+    waitForServiceToBeStable(client, service);
+    Service active = client.getStatus(service.getName());
+    Assert.assertEquals("component not stable", ComponentState.STABLE,
+        active.getComponent(component.getName()).getState());
+    Assert.assertEquals("comp does not have new env", "val1",
+        active.getComponent(component.getName()).getConfiguration()
+            .getEnv("key1"));
+    LOG.info("Stop/destroy service {}", service);
+    client.actionStop(service.getName(), true);
+    client.actionDestroy(service.getName());
   }
 
   // Test to verify ANTI_AFFINITY placement policy

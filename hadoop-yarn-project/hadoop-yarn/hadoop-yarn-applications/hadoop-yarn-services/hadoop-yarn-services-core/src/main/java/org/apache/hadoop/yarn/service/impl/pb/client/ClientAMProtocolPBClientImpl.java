@@ -30,6 +30,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeResponseProto;
+import org.apache.hadoop.yarn.proto.ClientAMProtocol.CompInstancesUpgradeRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsRequestProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.FlexComponentsResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusRequestProto;
@@ -109,6 +111,18 @@ public class ClientAMProtocolPBClientImpl
       throws IOException, YarnException {
     try {
       return proxy.restartService(null, request);
+    } catch (ServiceException e) {
+      RPCUtil.unwrapAndThrowException(e);
+    }
+    return null;
+  }
+
+  @Override
+  public CompInstancesUpgradeResponseProto upgrade(
+      CompInstancesUpgradeRequestProto request)
+      throws IOException, YarnException {
+    try {
+      return proxy.upgrade(null, request);
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
     }

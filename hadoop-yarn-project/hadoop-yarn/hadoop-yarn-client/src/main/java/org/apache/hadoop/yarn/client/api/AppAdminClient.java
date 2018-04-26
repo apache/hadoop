@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -231,18 +232,30 @@ public abstract class AppAdminClient extends CompositeService {
       IOException, YarnException;
 
   /**
-   * Upgrade a long running service.
+   * Initiate upgrade of a long running service.
    *
-   * @param appName the name of the application
-   * @param fileName specification of application upgrade to save.
-   *
+   * @param appName      the name of the application.
+   * @param fileName     specification of application upgrade to save.
+   * @param autoFinalize when true, finalization of upgrade will be done
+   *                     automatically.
    * @return exit code
-   * @throws IOException IOException
+   * @throws IOException   IOException
    * @throws YarnException exception in client or server
    */
   @Public
   @Unstable
-  public abstract int actionUpgrade(String appName, String fileName)
-      throws IOException, YarnException;
+  public abstract int initiateUpgrade(String appName, String fileName,
+      boolean autoFinalize) throws IOException, YarnException;
+
+  /**
+   * Upgrade component instances of a long running service.
+   *
+   * @param appName            the name of the application.
+   * @param componentInstances the name of the component instances.
+   */
+  @Public
+  @Unstable
+  public abstract int actionUpgradeInstances(String appName,
+      List<String> componentInstances) throws IOException, YarnException;
 
 }

@@ -28,6 +28,7 @@ public class ServiceEvent extends AbstractEvent<ServiceEventType> {
 
   private final ServiceEventType type;
   private String version;
+  private boolean autoFinalize;
 
   public ServiceEvent(ServiceEventType serviceEventType) {
     super(serviceEventType);
@@ -44,6 +45,15 @@ public class ServiceEvent extends AbstractEvent<ServiceEventType> {
 
   public ServiceEvent setVersion(String version) {
     this.version = version;
+    return this;
+  }
+
+  public boolean isAutoFinalize() {
+    return autoFinalize;
+  }
+
+  public ServiceEvent setAutoFinalize(boolean autoFinalize) {
+    this.autoFinalize = autoFinalize;
     return this;
   }
 }

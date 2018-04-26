@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.eclipse.jetty.server.Server;
@@ -255,5 +256,30 @@ public class TestApiServiceClient {
       fail();
     }
   }
+
+  @Test
+  public void testInitiateServiceUpgrade() {
+    String appName = "example-app";
+    String upgradeFileName = "target/test-classes/example-app.json";
+    try {
+      int result = asc.initiateUpgrade(appName, upgradeFileName, false);
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
+  @Test
+  public void testInstancesUpgrade() {
+    String appName = "example-app";
+    try {
+      int result = asc.actionUpgradeInstances(appName, Lists.newArrayList(
+          "comp-1", "comp-2"));
+      assertEquals(EXIT_SUCCESS, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
 
 }
