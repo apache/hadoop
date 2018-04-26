@@ -250,6 +250,15 @@ public class Component implements Serializable {
     return null;
   }
 
+  public Container getComponentInstance(String compInstanceName) {
+    for (Container container : containers) {
+      if (compInstanceName.equals(container.getComponentInstanceName())) {
+        return container;
+      }
+    }
+    return null;
+  }
+
   /**
    * Run all containers of this component in privileged mode (YARN-4262).
    **/
@@ -440,5 +449,17 @@ public class Component implements Serializable {
     if (this.getReadinessCheck() == null) {
       this.setReadinessCheck(that.getReadinessCheck());
     }
+  }
+
+  public void overwrite(Component that) {
+    setArtifact(that.getArtifact());
+    setResource(that.resource);
+    setNumberOfContainers(that.getNumberOfContainers());
+    setLaunchCommand(that.getLaunchCommand());
+    setConfiguration(that.configuration);
+    setRunPrivilegedContainer(that.getRunPrivilegedContainer());
+    setDependencies(that.getDependencies());
+    setPlacementPolicy(that.getPlacementPolicy());
+    setReadinessCheck(that.getReadinessCheck());
   }
 }

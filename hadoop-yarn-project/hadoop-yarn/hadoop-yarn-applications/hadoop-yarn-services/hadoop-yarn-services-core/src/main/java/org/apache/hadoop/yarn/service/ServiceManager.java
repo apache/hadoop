@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
@@ -39,10 +40,13 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
+
 /**
- * Manages the state of the service.
+ * Manages the state of Service.
  */
 public class ServiceManager implements EventHandler<ServiceEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -56,10 +60,10 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
 
   private final StateMachine<State, ServiceEventType, ServiceEvent>
       stateMachine;
+  private final UpgradeComponentsFinder componentsFinder;
 
   private final AsyncDispatcher dispatcher;
   private final SliderFileSystem fs;
-  private final UpgradeComponentsFinder componentsFinder;
 
   private String upgradeVersion;
 
@@ -72,9 +76,16 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
               State.UPGRADING), ServiceEventType.UPGRADE,
               new StartUpgradeTransition())
 
+          .addTransition(State.STABLE, EnumSet.of(State.STABLE),
+              ServiceEventType.CHECK_STABLE, new CheckStableTransition())
+
           .addTransition(State.UPGRADING, EnumSet.of(State.STABLE,
               State.UPGRADING), ServiceEventType.START,
-              new StopUpgradeTransition())
+              new CheckStableTransition())
+
+          .addTransition(State.UPGRADING, EnumSet.of(State.STABLE,
+              State.UPGRADING), ServiceEventType.CHECK_STABLE,
+              new CheckStableTransition())
           .installTopology();
 
   public ServiceManager(ServiceContext context) {
@@ -102,7 +113,7 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
         stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
         LOG.error(MessageFormat.format(
-            "[SERVICE]: Invalid event {0} at {1}.", event.getType(),
+            "[SERVICE]: Invalid event {1} at {2}.", event.getType(),
             oldState), e);
       }
       if (oldState != getState()) {
@@ -130,22 +141,11 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
     public State transition(ServiceManager serviceManager,
         ServiceEvent event) {
       try {
-        Service targetSpec = ServiceApiUtil.loadServiceUpgrade(
-            serviceManager.fs, serviceManager.getName(), event.getVersion());
-
-        serviceManager.serviceSpec.setState(ServiceState.UPGRADING);
-        List<org.apache.hadoop.yarn.service.api.records.Component>
-            compsThatNeedUpgrade = serviceManager.componentsFinder.
-            findTargetComponentSpecs(serviceManager.serviceSpec, targetSpec);
-
-        if (compsThatNeedUpgrade != null && !compsThatNeedUpgrade.isEmpty()) {
-          compsThatNeedUpgrade.forEach(component -> {
-            ComponentEvent needUpgradeEvent = new ComponentEvent(
-                component.getName(), ComponentEventType.UPGRADE).
-                setTargetSpec(component);
-            serviceManager.dispatcher.getEventHandler().handle(
-                needUpgradeEvent);
-          });
+        if (!event.isAutoFinalize()) {
+          serviceManager.serviceSpec.setState(ServiceState.UPGRADING);
+        } else {
+          serviceManager.serviceSpec.setState(
+              ServiceState.UPGRADING_AUTO_FINALIZE);
         }
         serviceManager.upgradeVersion = event.getVersion();
         return State.UPGRADING;
@@ -157,22 +157,29 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
     }
   }
 
-  private static class StopUpgradeTransition implements
+  private static class CheckStableTransition implements
       MultipleArcTransition<ServiceManager, ServiceEvent, State> {
 
     @Override
     public State transition(ServiceManager serviceManager,
         ServiceEvent event) {
-      //abort is not supported currently
-      //trigger re-check of service state
-      ServiceMaster.checkAndUpdateServiceState(serviceManager.scheduler,
-          true);
-      if (serviceManager.serviceSpec.getState().equals(ServiceState.STABLE)) {
-        return serviceManager.finalizeUpgrade() ? State.STABLE :
-            State.UPGRADING;
-      } else {
-        return State.UPGRADING;
+      //trigger check of service state
+      ServiceState currState = serviceManager.serviceSpec.getState();
+      if (currState.equals(ServiceState.STABLE)) {
+        return State.STABLE;
       }
+      if (currState.equals(ServiceState.UPGRADING_AUTO_FINALIZE) ||
+          event.getType().equals(ServiceEventType.START)) {
+        ServiceState targetState = checkIfStable(serviceManager.serviceSpec);
+        if (targetState.equals(ServiceState.STABLE)) {
+          if (serviceManager.finalizeUpgrade()) {
+            LOG.info("Service def state changed from {} -> {}", currState,
+                serviceManager.serviceSpec.getState());
+            return State.STABLE;
+          }
+        }
+      }
+      return State.UPGRADING;
     }
   }
 
@@ -181,12 +188,21 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
    */
   private boolean finalizeUpgrade() {
     try {
-      Service upgradeSpec = ServiceApiUtil.loadServiceUpgrade(
+      // save the application id and state to
+      Service targetSpec = ServiceApiUtil.loadServiceUpgrade(
           fs, getName(), upgradeVersion);
-      ServiceApiUtil.writeAppDefinition(fs,
-          ServiceApiUtil.getServiceJsonPath(fs, getName()), upgradeSpec);
+      targetSpec.setId(serviceSpec.getId());
+      targetSpec.setState(ServiceState.STABLE);
+      Map<String, Component> allComps = scheduler.getAllComponents();
+      targetSpec.getComponents().forEach(compSpec -> {
+        Component comp = allComps.get(compSpec.getName());
+        compSpec.setState(comp.getComponentSpec().getState());
+      });
+      jsonSerDeser.save(fs.getFileSystem(),
+          ServiceApiUtil.getServiceJsonPath(fs, getName()), targetSpec, true);
+      fs.deleteClusterUpgradeDir(getName(), upgradeVersion);
     } catch (IOException e) {
-      LOG.error("Upgrade did not complete because unable to overwrite the" +
+      LOG.error("Upgrade did not complete because unable to re-write the" +
           " service definition", e);
       return false;
     }
@@ -195,11 +211,77 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
       fs.deleteClusterUpgradeDir(getName(), upgradeVersion);
     } catch (IOException e) {
       LOG.warn("Unable to delete upgrade definition for service {} " +
-              "version {}", getName(), upgradeVersion);
+          "version {}", getName(), upgradeVersion);
     }
+    serviceSpec.setState(ServiceState.STABLE);
     serviceSpec.setVersion(upgradeVersion);
     upgradeVersion = null;
     return true;
+  }
+
+  private static ServiceState checkIfStable(Service service) {
+    // if desired == running
+    for (org.apache.hadoop.yarn.service.api.records.Component comp :
+        service.getComponents()) {
+      if (!comp.getState().equals(
+          org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE)) {
+        return service.getState();
+      }
+    }
+    return ServiceState.STABLE;
+  }
+
+  /**
+   * Service state gets directly modified by ServiceMaster and Component.
+   * This is a problem for upgrade and flexing. For now, invoking
+   * ServiceMaster.checkAndUpdateServiceState here to make it easy to fix
+   * this in future.
+   */
+  public void checkAndUpdateServiceState(boolean isIncrement) {
+    writeLock.lock();
+    try {
+      if (!getState().equals(State.UPGRADING)) {
+        ServiceMaster.checkAndUpdateServiceState(this.scheduler,
+            isIncrement);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  void processUpgradeRequest(String upgradeVersion,
+      boolean autoFinalize) throws IOException {
+    Service targetSpec = ServiceApiUtil.loadServiceUpgrade(
+        context.fs, context.service.getName(), upgradeVersion);
+
+    List<org.apache.hadoop.yarn.service.api.records.Component>
+        compsThatNeedUpgrade = componentsFinder.
+        findTargetComponentSpecs(context.service, targetSpec);
+    ServiceEvent event = new ServiceEvent(ServiceEventType.UPGRADE)
+        .setVersion(upgradeVersion)
+        .setAutoFinalize(autoFinalize);
+    context.scheduler.getDispatcher().getEventHandler().handle(event);
+
+    if (compsThatNeedUpgrade != null && !compsThatNeedUpgrade.isEmpty()) {
+      if (autoFinalize) {
+        event.setAutoFinalize(true);
+      }
+      compsThatNeedUpgrade.forEach(component -> {
+        ComponentEvent needUpgradeEvent = new ComponentEvent(
+            component.getName(), ComponentEventType.UPGRADE)
+            .setTargetSpec(component)
+            .setUpgradeVersion(event.getVersion());
+        context.scheduler.getDispatcher().getEventHandler().handle(
+            needUpgradeEvent);
+      });
+    } else {
+      // nothing to upgrade if upgrade auto finalize is requested, trigger a
+      // state check.
+      if (autoFinalize) {
+        context.scheduler.getDispatcher().getEventHandler().handle(
+            new ServiceEvent(ServiceEventType.CHECK_STABLE));
+      }
+    }
   }
 
   /**
@@ -216,10 +298,8 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
     STABLE, UPGRADING
   }
 
-
   @VisibleForTesting
   Service getServiceSpec() {
     return serviceSpec;
   }
-
 }

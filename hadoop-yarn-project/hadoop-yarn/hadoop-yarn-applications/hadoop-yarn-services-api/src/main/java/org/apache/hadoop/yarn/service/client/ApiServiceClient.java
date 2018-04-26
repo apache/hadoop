@@ -26,6 +26,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,11 +41,16 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
+import org.apache.hadoop.yarn.service.conf.RestApiConstants;
+import org.apache.hadoop.yarn.service.utils.JsonSerDeser;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.codehaus.jackson.map.PropertyNamingStrategy;
 import org.eclipse.jetty.util.UrlEncoded;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +137,7 @@ public class ApiServiceClient extends AppAdminClient {
    * @return URI to API Service
    * @throws IOException
    */
-  private String getApiUrl(String appName) throws IOException {
+  private String getServicePath(String appName) throws IOException {
     String url = getRMWebAddress();
     StringBuilder api = new StringBuilder();
     api.append(url);
@@ -148,23 +154,40 @@ public class ApiServiceClient extends AppAdminClient {
     return api.toString();
   }
 
+  private String getInstancesPath(String appName) throws IOException {
+    Preconditions.checkNotNull(appName);
+    String url = getRMWebAddress();
+    StringBuilder api = new StringBuilder();
+    api.append(url);
+    api.append("/app/v1/services/").append(appName).append("/")
+        .append(RestApiConstants.COMP_INSTANCES);
+    Configuration conf = getConfig();
+    if (conf.get("hadoop.http.authentication.type").equalsIgnoreCase(
+        "simple")) {
+      api.append("?user.name=" + UrlEncoded
+          .encodeString(System.getProperty("user.name")));
+    }
+    return api.toString();
+  }
+
   private Builder getApiClient() throws IOException {
-    return getApiClient(null);
+    return getApiClient(getServicePath(null));
   }
 
   /**
    * Setup API service web request.
    *
-   * @param appName
+   * @param requestPath
    * @return
    * @throws IOException
    */
-  private Builder getApiClient(String appName) throws IOException {
+  private Builder getApiClient(String requestPath)
+      throws IOException {
     Client client = Client.create(getClientConfig());
     Configuration conf = getConfig();
     client.setChunkedEncodingSize(null);
     Builder builder = client
-        .resource(getApiUrl(appName)).type(MediaType.APPLICATION_JSON);
+        .resource(requestPath).type(MediaType.APPLICATION_JSON);
     if (conf.get("hadoop.http.authentication.type").equals("kerberos")) {
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
       builder.header("WWW-Authenticate", token);
@@ -312,7 +335,7 @@ public class ApiServiceClient extends AppAdminClient {
       service.setName(appName);
       service.setState(ServiceState.STOPPED);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(appName)
+      ClientResponse response = getApiClient(getServicePath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
     } catch (Exception e) {
@@ -335,7 +358,7 @@ public class ApiServiceClient extends AppAdminClient {
       service.setName(appName);
       service.setState(ServiceState.STARTED);
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(appName)
+      ClientResponse response = getApiClient(getServicePath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
     } catch (Exception e) {
@@ -381,7 +404,7 @@ public class ApiServiceClient extends AppAdminClient {
   public int actionDestroy(String appName) throws IOException, YarnException {
     int result = EXIT_SUCCESS;
     try {
-      ClientResponse response = getApiClient(appName)
+      ClientResponse response = getApiClient(getServicePath(appName))
           .delete(ClientResponse.class);
       result = processResponse(response);
     } catch (Exception e) {
@@ -413,7 +436,7 @@ public class ApiServiceClient extends AppAdminClient {
         service.addComponent(component);
       }
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient(appName)
+      ClientResponse response = getApiClient(getServicePath(appName))
           .put(ClientResponse.class, buffer);
       result = processResponse(response);
     } catch (Exception e) {
@@ -454,7 +477,8 @@ public class ApiServiceClient extends AppAdminClient {
       ServiceApiUtil.validateNameFormat(appName, getConfig());
     }
     try {
-      ClientResponse response = getApiClient(appName).get(ClientResponse.class);
+      ClientResponse response = getApiClient(getServicePath(appName))
+          .get(ClientResponse.class);
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
         sb.append(appName);
@@ -470,16 +494,20 @@ public class ApiServiceClient extends AppAdminClient {
   }
 
   @Override
-  public int actionUpgrade(String appName,
-      String fileName) throws IOException, YarnException {
+  public int initiateUpgrade(String appName,
+      String fileName, boolean autoFinalize) throws IOException, YarnException {
     int result;
     try {
       Service service =
           loadAppJsonFromLocalFS(fileName, appName, null, null);
-      service.setState(ServiceState.UPGRADING);
+      if (autoFinalize) {
+        service.setState(ServiceState.UPGRADING_AUTO_FINALIZE);
+      } else {
+        service.setState(ServiceState.UPGRADING);
+      }
       String buffer = jsonSerDeser.toJson(service);
-      ClientResponse response = getApiClient()
-          .post(ClientResponse.class, buffer);
+      ClientResponse response = getApiClient(getServicePath(appName))
+          .put(ClientResponse.class, buffer);
       result = processResponse(response);
     } catch (Exception e) {
       LOG.error("Failed to upgrade application: ", e);
@@ -487,4 +515,32 @@ public class ApiServiceClient extends AppAdminClient {
     }
     return result;
   }
+
+  @Override
+  public int actionUpgradeInstances(String appName, List<String> compInstances)
+      throws IOException, YarnException {
+    int result;
+    Container[] toUpgrade = new Container[compInstances.size()];
+    try {
+      int idx = 0;
+      for (String instanceName : compInstances) {
+        Container container = new Container();
+        container.setComponentInstanceName(instanceName);
+        container.setState(ContainerState.UPGRADING);
+        toUpgrade[idx++] = container;
+      }
+      String buffer = containerJsonSerde.toJson(toUpgrade);
+      ClientResponse response = getApiClient(getInstancesPath(appName))
+          .put(ClientResponse.class, buffer);
+      result = processResponse(response);
+    } catch (Exception e) {
+      LOG.error("Failed to upgrade component instance: ", e);
+      result = EXIT_EXCEPTION_THROWN;
+    }
+    return result;
+  }
+
+  private static JsonSerDeser<Container[]> containerJsonSerde =
+      new JsonSerDeser<>(Container[].class,
+      PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
 }

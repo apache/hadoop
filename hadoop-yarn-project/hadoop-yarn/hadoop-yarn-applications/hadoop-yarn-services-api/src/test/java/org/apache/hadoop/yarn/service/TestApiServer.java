@@ -35,12 +35,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
-import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.webapp.ApiServer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -52,18 +54,24 @@ import org.mockito.Mockito;
 public class TestApiServer {
   private ApiServer apiServer;
   private HttpServletRequest request;
+  private ServiceClientTest mockServerClient;
 
   @Before
   public void setup() throws Exception {
     request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteUser())
         .thenReturn(System.getProperty("user.name"));
-    ServiceClient mockServerClient = new ServiceClientTest();
+    mockServerClient = new ServiceClientTest();
     Configuration conf = new Configuration();
     conf.set("yarn.api-service.service.client.class",
         ServiceClientTest.class.getName());
     apiServer = new ApiServer(conf);
     apiServer.setServiceClient(mockServerClient);
+  }
+
+  @After
+  public void teardown() {
+    mockServerClient.forceStop();
   }
 
   @Test
@@ -107,24 +115,7 @@ public class TestApiServer {
     BufferedWriter bw = new BufferedWriter(new FileWriter(dockerConfig));
     bw.write(json);
     bw.close();
-    Service service = new Service();
-    service.setName("jenkins");
-    service.setVersion("v1");
-    Artifact artifact = new Artifact();
-    artifact.setType(TypeEnum.DOCKER);
-    artifact.setId("jenkins:latest");
-    Resource resource = new Resource();
-    resource.setCpus(1);
-    resource.setMemory("2048");
-    List<Component> components = new ArrayList<Component>();
-    Component c = new Component();
-    c.setName("jenkins");
-    c.setNumberOfContainers(1L);
-    c.setArtifact(artifact);
-    c.setLaunchCommand("");
-    c.setResource(resource);
-    components.add(c);
-    service.setComponents(components);
+    Service service = ServiceClientTest.buildGoodService();
     final Response actual = apiServer.createService(request, service);
     assertEquals("Create service is ",
         Response.status(Status.ACCEPTED).build().getStatus(),
@@ -494,5 +485,61 @@ public class TestApiServer {
         "Component name in the request object (jenkins-slave) does not match "
             + "that in the URI path (jenkins-master)",
         serviceStatus.getDiagnostics());
+  }
+
+  @Test
+  public void testInitiateUpgrade() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    goodService.setVersion("v2");
+    goodService.setState(ServiceState.UPGRADING);
+    final Response actual = apiServer.updateService(request,
+        goodService.getName(), goodService);
+    assertEquals("Initiate upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeSingleInstance() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    Component comp = goodService.getComponents().iterator().next();
+    Container container = comp.getContainers().iterator().next();
+    container.setState(ContainerState.UPGRADING);
+
+    // To be able to upgrade, the service needs to be in UPGRADING
+    // and container state needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    serviceStatus.getComponents().iterator().next().getContainers().iterator()
+        .next().setState(ContainerState.NEEDS_UPGRADE);
+
+    final Response actual = apiServer.updateComponentInstance(request,
+        goodService.getName(), comp.getName(),
+        container.getComponentInstanceName(), container);
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
+  }
+
+  @Test
+  public void testUpgradeMultipleInstances() {
+    Service goodService = ServiceClientTest.buildLiveGoodService();
+    Component comp = goodService.getComponents().iterator().next();
+    comp.getContainers().forEach(container ->
+        container.setState(ContainerState.UPGRADING));
+
+    // To be able to upgrade, the service needs to be in UPGRADING
+    // and container state needs to be in NEEDS_UPGRADE.
+    Service serviceStatus = mockServerClient.getGoodServiceStatus();
+    serviceStatus.setState(ServiceState.UPGRADING);
+    serviceStatus.getComponents().iterator().next().getContainers().forEach(
+        container -> container.setState(ContainerState.NEEDS_UPGRADE)
+    );
+
+    final Response actual = apiServer.updateComponentInstances(request,
+        goodService.getName(), comp.getContainers());
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 }

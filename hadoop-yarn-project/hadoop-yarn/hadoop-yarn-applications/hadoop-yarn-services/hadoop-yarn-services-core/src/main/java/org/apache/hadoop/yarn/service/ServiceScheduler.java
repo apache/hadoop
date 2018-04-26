@@ -329,6 +329,7 @@ public class ServiceScheduler extends CompositeService {
     // Since AM has been started and registered, the service is in STARTED state
     app.setState(ServiceState.STARTED);
     serviceManager = new ServiceManager(context);
+    context.setServiceManager(serviceManager);
 
     // recover components based on containers sent from RM
     recoverComponents(response);
@@ -755,6 +756,32 @@ public class ServiceScheduler extends CompositeService {
       amRMClient.releaseAssignedContainer(containerId);
       // After container released, it'll get CONTAINER_COMPLETED event from RM
       // automatically which will trigger stopping COMPONENT INSTANCE
+    }
+
+    @Override
+    public void onContainerReInitialize(ContainerId containerId) {
+      ComponentInstance instance = liveInstances.get(containerId);
+      if (instance == null) {
+        LOG.error("No component instance exists for {}", containerId);
+        return;
+      }
+      ComponentInstanceEvent becomeReadyEvent = new ComponentInstanceEvent(
+          containerId, ComponentInstanceEventType.BECOME_READY);
+      dispatcher.getEventHandler().handle(becomeReadyEvent);
+    }
+
+    @Override
+    public void onContainerReInitializeError(ContainerId containerId,
+        Throwable t) {
+      ComponentInstance instance = liveInstances.get(containerId);
+      if (instance == null) {
+        LOG.error("No component instance exists for {}", containerId);
+        return;
+      }
+      ComponentEvent event = new ComponentEvent(instance.getCompName(),
+          ComponentEventType.CONTAINER_COMPLETED)
+          .setInstance(instance).setContainerId(containerId);
+      dispatcher.getEventHandler().handle(event);
     }
 
     @Override public void onContainerResourceIncreased(ContainerId containerId,

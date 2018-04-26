@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.service.webapp;
 
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -28,10 +29,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
+import org.apache.hadoop.yarn.service.conf.RestApiConstants;
+import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,9 +58,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
@@ -177,17 +185,7 @@ public class ApiServer {
       }
       UserGroupInformation ugi = getProxyUser(request);
       LOG.info("GET: getService for appName = {} user = {}", appName, ugi);
-      Service app = ugi.doAs(new PrivilegedExceptionAction<Service>() {
-        @Override
-        public Service run() throws IOException, YarnException {
-          ServiceClient sc = getServiceClient();
-          sc.init(YARN_CONFIG);
-          sc.start();
-          Service app = sc.getStatus(appName);
-          sc.close();
-          return app;
-        }
-      });
+      Service app = getServiceFromClient(ugi, appName);
       return Response.ok(app).build();
     } catch (AccessControlException e) {
       return formatResponse(Status.FORBIDDEN, e.getMessage());
@@ -393,16 +391,18 @@ public class ApiServer {
         return startService(appName, ugi);
       }
 
+      // If an UPGRADE is requested
+      if (updateServiceData.getState() != null && (
+          updateServiceData.getState() == ServiceState.UPGRADING ||
+              updateServiceData.getState() ==
+                  ServiceState.UPGRADING_AUTO_FINALIZE)) {
+        return upgradeService(updateServiceData, ugi);
+      }
+
       // If new lifetime value specified then update it
       if (updateServiceData.getLifetime() != null
           && updateServiceData.getLifetime() > 0) {
         return updateLifetime(appName, updateServiceData, ugi);
-      }
-
-      // If an UPGRADE is requested
-      if (updateServiceData.getState() != null &&
-          updateServiceData.getState() == ServiceState.UPGRADING) {
-        return upgradeService(updateServiceData, ugi);
       }
     } catch (UndeclaredThrowableException e) {
       return formatResponse(Status.BAD_REQUEST,
@@ -424,6 +424,103 @@ public class ApiServer {
     }
 
     // If nothing happens consider it a no-op
+    return Response.status(Status.NO_CONTENT).build();
+  }
+
+  @PUT
+  @Path(COMP_INSTANCE_LONG_PATH)
+  @Consumes({MediaType.APPLICATION_JSON})
+  @Produces({RestApiConstants.MEDIA_TYPE_JSON_UTF8, MediaType.TEXT_PLAIN})
+  public Response updateComponentInstance(@Context HttpServletRequest request,
+      @PathParam(SERVICE_NAME) String serviceName,
+      @PathParam(COMPONENT_NAME) String componentName,
+      @PathParam(COMP_INSTANCE_NAME) String compInstanceName,
+      Container reqContainer) {
+
+    try {
+      UserGroupInformation ugi = getProxyUser(request);
+      LOG.info("PUT: update component instance {} for component = {}" +
+              " service = {} user = {}", compInstanceName, componentName,
+          serviceName, ugi);
+      if (reqContainer == null) {
+        throw new YarnException("No container data provided.");
+      }
+      Service service = getServiceFromClient(ugi, serviceName);
+      Component component = service.getComponent(componentName);
+      if (component == null) {
+        throw new YarnException(String.format(
+            "The component name in the URI path (%s) is invalid.",
+            componentName));
+      }
+
+      Container liveContainer = component.getComponentInstance(
+          compInstanceName);
+      if (liveContainer == null) {
+        throw new YarnException(String.format(
+            "The component (%s) does not have a component instance (%s).",
+            componentName, compInstanceName));
+      }
+
+      if (reqContainer.getState() != null
+          && reqContainer.getState().equals(ContainerState.UPGRADING)) {
+        return processContainerUpgrade(ugi, service,
+            Lists.newArrayList(liveContainer));
+      }
+    } catch (AccessControlException e) {
+      return formatResponse(Response.Status.FORBIDDEN, e.getMessage());
+    } catch (YarnException e) {
+      return formatResponse(Response.Status.BAD_REQUEST, e.getMessage());
+    } catch (IOException | InterruptedException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getMessage());
+    } catch (UndeclaredThrowableException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getCause().getMessage());
+    }
+    return Response.status(Status.NO_CONTENT).build();
+  }
+
+  @PUT
+  @Path(COMP_INSTANCES_PATH)
+  @Consumes({MediaType.APPLICATION_JSON})
+  @Produces({RestApiConstants.MEDIA_TYPE_JSON_UTF8, MediaType.TEXT_PLAIN})
+  public Response updateComponentInstances(@Context HttpServletRequest request,
+      @PathParam(SERVICE_NAME) String serviceName,
+      List<Container> requestContainers) {
+
+    try {
+      if (requestContainers == null || requestContainers.isEmpty()) {
+        throw new YarnException("No containers provided.");
+      }
+      UserGroupInformation ugi = getProxyUser(request);
+      List<String> toUpgrade = new ArrayList<>();
+      for (Container reqContainer : requestContainers) {
+        if (reqContainer.getState() != null &&
+            reqContainer.getState().equals(ContainerState.UPGRADING)) {
+          toUpgrade.add(reqContainer.getComponentInstanceName());
+        }
+      }
+
+      if (!toUpgrade.isEmpty()) {
+        Service service = getServiceFromClient(ugi, serviceName);
+        LOG.info("PUT: upgrade component instances {} for service = {} " +
+            "user = {}", toUpgrade, serviceName, ugi);
+        List<Container> liveContainers = ServiceApiUtil
+            .getLiveContainers(service, toUpgrade);
+
+        return processContainerUpgrade(ugi, service, liveContainers);
+      }
+    } catch (AccessControlException e) {
+      return formatResponse(Response.Status.FORBIDDEN, e.getMessage());
+    } catch (YarnException e) {
+      return formatResponse(Response.Status.BAD_REQUEST, e.getMessage());
+    } catch (IOException | InterruptedException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getMessage());
+    } catch (UndeclaredThrowableException e) {
+      return formatResponse(Response.Status.INTERNAL_SERVER_ERROR,
+          e.getCause().getMessage());
+    }
     return Response.status(Status.NO_CONTENT).build();
   }
 
@@ -511,15 +608,68 @@ public class ApiServer {
       ServiceClient sc = getServiceClient();
       sc.init(YARN_CONFIG);
       sc.start();
-      sc.actionUpgrade(service);
+      sc.initiateUpgrade(service);
       sc.close();
       return null;
     });
-    LOG.info("Service {} version {} upgrade initialized");
+    LOG.info("Service {} version {} upgrade initialized", service.getName(),
+        service.getVersion());
     status.setDiagnostics("Service " + service.getName() +
         " version " + service.getVersion() + " saved.");
     status.setState(ServiceState.ACCEPTED);
     return formatResponse(Status.ACCEPTED, status);
+  }
+
+  private Response processContainerUpgrade(UserGroupInformation ugi,
+      Service service, List<Container> containers) throws YarnException,
+      IOException, InterruptedException {
+
+    if (service.getState() != ServiceState.UPGRADING) {
+      throw new YarnException(
+          String.format("The upgrade of service %s has not been initiated.",
+              service.getName()));
+    }
+    for (Container liveContainer : containers) {
+      if (liveContainer.getState() != ContainerState.NEEDS_UPGRADE) {
+        // Nothing to upgrade
+        throw new YarnException(String.format(
+            "The component instance (%s) does not need an upgrade.",
+            liveContainer.getComponentInstanceName()));
+      }
+    }
+
+    Integer result = ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
+      int result1;
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      result1 = sc.actionUpgrade(service, containers);
+      sc.close();
+      return result1;
+    });
+
+    if (result == EXIT_SUCCESS) {
+      ServiceStatus status = new ServiceStatus();
+      status.setDiagnostics(
+          "Upgrading component instances " + containers.stream()
+              .map(Container::getId).collect(Collectors.joining(",")) + ".");
+      return formatResponse(Response.Status.ACCEPTED, status);
+    }
+    // If result is not a success, consider it a no-op
+    return Response.status(Response.Status.NO_CONTENT).build();
+  }
+
+  private Service getServiceFromClient(UserGroupInformation ugi,
+      String serviceName) throws IOException, InterruptedException {
+
+    return ugi.doAs((PrivilegedExceptionAction<Service>) () -> {
+      ServiceClient sc = getServiceClient();
+      sc.init(YARN_CONFIG);
+      sc.start();
+      Service app1 = sc.getStatus(serviceName);
+      sc.close();
+      return app1;
+    });
   }
 
   /**
