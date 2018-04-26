@@ -167,8 +167,13 @@ public class ApiServer {
       String message = "Failed to create service " + service.getName()
           + ": {}";
       LOG.error(message, e);
+      if (e.getCause().getMessage().contains("already exists")) {
+        message = "Service name " + service.getName() + " is already taken.";
+      } else {
+        message = e.getCause().getMessage();
+      }
       return formatResponse(Status.INTERNAL_SERVER_ERROR,
-          e.getCause().getMessage());
+          message);
     }
   }
 
