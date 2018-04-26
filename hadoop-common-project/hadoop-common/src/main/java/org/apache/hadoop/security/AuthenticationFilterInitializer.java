@@ -69,14 +69,10 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
 
     //setting the cookie path to root '/' so it is used for all resources.
     filterConfig.put(AuthenticationFilter.COOKIE_PATH, "/");
+    Map<String, String> propsWithPrefix = conf.getPropsWithPrefix(prefix);
 
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(prefix)) {
-        String value = conf.get(name);
-        name = name.substring(prefix.length());
-        filterConfig.put(name, value);
-      }
+    for (Map.Entry<String, String> entry : propsWithPrefix.entrySet()) {
+      filterConfig.put(entry.getKey(), entry.getValue());
     }
 
     //Resolve _HOST into bind address
