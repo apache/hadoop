@@ -69,7 +69,8 @@
          APR (HTTP/AJP) Connector: /docs/apr.html
          Define a non-SSL HTTP/1.1 Connector on port ${httpfs.http.port}
     -->
-    <Connector port="${httpfs.http.port}" protocol="HTTP/1.1"
+    <Connector address="${httpfs.http.hostname}"
+               port="${httpfs.http.port}" protocol="HTTP/1.1"
                connectionTimeout="20000"
                maxHttpHeaderSize="${httpfs.max.http.header.size}"
                redirectPort="8443"/>

@@ -68,7 +68,8 @@
          This connector uses the JSSE configuration, when using APR, the
          connector should be using the OpenSSL style configuration
          described in the APR documentation -->
-    <Connector port="${httpfs.http.port}" protocol="HTTP/1.1" SSLEnabled="true"
+    <Connector address="${httpfs.http.hostname}"
+               port="${httpfs.http.port}" protocol="HTTP/1.1" SSLEnabled="true"
                maxThreads="150" scheme="https" secure="true"
                maxHttpHeaderSize="${httpfs.max.http.header.size}"
                clientAuth="${httpfs.ssl.client.auth}"
