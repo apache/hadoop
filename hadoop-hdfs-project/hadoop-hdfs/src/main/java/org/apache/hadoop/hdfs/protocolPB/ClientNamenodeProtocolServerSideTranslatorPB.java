@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -1749,25 +1748,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       Map<String, String> codecs = server.getErasureCodingCodecs();
-      GetErasureCodingCodecsResponseProto.Builder resBuilder =
-          GetErasureCodingCodecsResponseProto.newBuilder();
-      for (Map.Entry<String, String> codec : codecs.entrySet()) {
-        resBuilder.addCodec(
-            PBHelperClient.convertErasureCodingCodec(
-                codec.getKey(), codec.getValue()));
-      }
-      return resBuilder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-  }
-
-  @Override
-  public GetErasureCodingCodecsResponseProto getErasureCodingCodecs(
-      RpcController controller, GetErasureCodingCodecsRequestProto request)
-      throws ServiceException {
-    try {
-      HashMap<String, String> codecs = server.getErasureCodingCodecs();
       GetErasureCodingCodecsResponseProto.Builder resBuilder =
           GetErasureCodingCodecsResponseProto.newBuilder();
       for (Map.Entry<String, String> codec : codecs.entrySet()) {

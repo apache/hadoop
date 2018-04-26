@@ -21,7 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -85,7 +85,7 @@ public final class RequestContentObjectStoreChannelHandler
       ChannelFuture respFuture = ctx.writeAndFlush(new ChunkedStream(
           this.respIn));
       respFuture.addListener(new CloseableCleanupListener(this.respIn));
-      if (!HttpHeaderUtil.isKeepAlive(this.nettyReq)) {
+      if (!HttpHeaders.isKeepAlive(this.nettyReq)) {
         respFuture.addListener(ChannelFutureListener.CLOSE);
       } else {
         respFuture.addListener(new ChannelFutureListener() {

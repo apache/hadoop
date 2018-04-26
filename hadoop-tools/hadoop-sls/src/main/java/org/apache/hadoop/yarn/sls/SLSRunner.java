@@ -216,13 +216,6 @@ public class SLSRunner extends Configured implements Tool {
     return Collections.unmodifiableMap(simulateInfoMap);
   }
 
-  /**
-   * @return an unmodifiable view of the simulated info map.
-   */
-  public static Map<String, Object> getSimulateInfoMap() {
-    return Collections.unmodifiableMap(simulateInfoMap);
-  }
-
   public void setSimulationParams(TraceType inType, String[] inTraces,
       String nodes, String outDir, Set<String> trackApps,
       boolean printsimulation) throws IOException, ClassNotFoundException {

@@ -894,40 +894,11 @@ public class TestDataNodeHotSwapVolumes {
           1, fsVolumeReferences.size());
     }
 
-    // Add a new DataNode to help with the pipeline recover.
-    cluster.startDataNodes(conf, 1, true, null, null, null);
-
     // Verify the file has sufficient replications.
     DFSTestUtil.waitReplication(fs, testFile, REPLICATION);
     // Read the content back
     byte[] content = DFSTestUtil.readFileBuffer(fs, testFile);
     assertEquals(BLOCK_SIZE, content.length);
-
-    // Write more files to make sure that the DataNode that has removed volume
-    // is still alive to receive data.
-    for (int i = 0; i < 10; i++) {
-      final Path file = new Path("/after-" + i);
-      try (FSDataOutputStream fout = fs.create(file, REPLICATION)) {
-        rb.nextBytes(writeBuf);
-        fout.write(writeBuf);
-      }
-    }
-
-    try (FsDatasetSpi.FsVolumeReferences fsVolumeReferences = fsDatasetSpi
-        .getFsVolumeReferences()) {
-      assertEquals("Volume remove wasn't successful.",
-          1, fsVolumeReferences.size());
-      FsVolumeSpi volume = fsVolumeReferences.get(0);
-      String bpid = cluster.getNamesystem().getBlockPoolId();
-      FsVolumeSpi.BlockIterator blkIter = volume.newBlockIterator(bpid, "test");
-      int blockCount = 0;
-      while (!blkIter.atEnd()) {
-        blkIter.nextBlock();
-        blockCount++;
-      }
-      assertTrue(String.format("DataNode(%d) should have more than 1 blocks",
-          dataNodeIdx), blockCount > 1);
-    }
 
     // Write more files to make sure that the DataNode that has removed volume
     // is still alive to receive data.

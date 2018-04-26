@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.web.netty;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import org.apache.hadoop.io.IOUtils;
@@ -67,7 +67,7 @@ public final class RequestDispatchObjectStoreChannelHandler
       throws Exception {
     LOG.trace("begin RequestDispatchObjectStoreChannelHandler channelRead0, " +
         "ctx = {}, nettyReq = {}", ctx, nettyReq);
-    if (!nettyReq.decoderResult().isSuccess()) {
+    if (!nettyReq.getDecoderResult().isSuccess()) {
       sendErrorResponse(ctx, BAD_REQUEST);
       return;
     }
@@ -77,7 +77,7 @@ public final class RequestDispatchObjectStoreChannelHandler
     this.respIn = new PipedInputStream();
     this.respOut = new PipedOutputStream(respIn);
 
-    if (HttpHeaderUtil.is100ContinueExpected(nettyReq)) {
+    if (HttpHeaders.is100ContinueExpected(nettyReq)) {
       LOG.trace("Sending continue response.");
       ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
     }

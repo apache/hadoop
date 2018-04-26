@@ -46,7 +46,7 @@ import com.sun.jersey.spi.container.ContainerResponseWriter;
 import com.sun.jersey.spi.container.WebApplication;
 
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
+//import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -263,7 +263,7 @@ public final class ObjectStoreJerseyContainer {
       this.nettyResp = jerseyResponseToNettyResponse(jerseyResp);
       this.nettyResp.headers().set(CONTENT_LENGTH, Math.max(0, contentLength));
       this.nettyResp.headers().set(CONNECTION,
-          HttpHeaderUtil.isKeepAlive(this.nettyReq) ? KEEP_ALIVE : CLOSE);
+          HttpHeaders.isKeepAlive(this.nettyReq) ? KEEP_ALIVE : CLOSE);
       this.latch.countDown();
       LOG.trace(
           "end writeStatusAndHeaders, contentLength = {}, jerseyResp = {}.",
@@ -340,9 +340,9 @@ public final class ObjectStoreJerseyContainer {
     String host = nettyHeaders.get(HOST);
     String scheme = host.startsWith("https") ? "https://" : "http://";
     String baseUri = scheme + host + "/";
-    String reqUri = scheme + host + nettyReq.uri();
+    String reqUri = scheme + host + nettyReq.getUri();
     LOG.trace("baseUri = {}, reqUri = {}", baseUri, reqUri);
-    return new ContainerRequest(webapp, nettyReq.method().name(),
+    return new ContainerRequest(webapp, nettyReq.getMethod().name(),
         new URI(baseUri), new URI(reqUri), jerseyHeaders, reqIn);
   }
 }
