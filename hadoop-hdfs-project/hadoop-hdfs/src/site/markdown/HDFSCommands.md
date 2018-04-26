@@ -409,7 +409,8 @@ Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more i
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice> <destination> [-readonly] -owner <owner> -group <group> -mode <mode>]
+          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-update <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls <path>]
           [-safemode enter | leave | get]
@@ -418,7 +419,8 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-add` *source* *nameservice* *destination* | Add a mount table entry or update if it exists. |
+| `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry or create one if it does not exist. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` *path* | List mount points under specified path. |
 | `-safemode` `enter` `leave` `get` | Manually set the Router entering or leaving safe mode. The option *get* will be used for verifying if the Router is in safe mode state. |
