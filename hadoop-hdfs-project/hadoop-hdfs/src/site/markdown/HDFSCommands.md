@@ -425,7 +425,8 @@ Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more i
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice> <destination> [-readonly] -owner <owner> -group <group> -mode <mode>]
+          [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-update <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls <path>]
           [-setQuota <path> -nsQuota <nsQuota> -ssQuota <quota in bytes or quota size string>]
@@ -436,7 +437,8 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-add` *source* *nameservice* *destination* | Add a mount table entry or update if it exists. |
+| `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry or create one if it does not exist. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` *path* | List mount points under specified path. |
 | `-setQuota` *path* `-nsQuota` *nsQuota* `-ssQuota` *ssQuota* | Set quota for specified path. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html) for the quota detail. |
