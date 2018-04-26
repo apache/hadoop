@@ -73,6 +73,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
@@ -589,6 +591,7 @@ public class TestJobHistoryEventHandler {
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
               t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1),
               currentTime - 10));
+      jheh.getDispatcher().await();
       TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
               null, null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -605,6 +608,7 @@ public class TestJobHistoryEventHandler {
               "user", 200, "/foo/job.xml",
               new HashMap<JobACL, AccessControlList>(), "default"),
               currentTime + 10));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -623,6 +627,7 @@ public class TestJobHistoryEventHandler {
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobQueueChangeEvent(TypeConverter.fromYarn(t.jobId), "q2"),
               currentTime - 20));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -645,6 +650,7 @@ public class TestJobHistoryEventHandler {
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0,
               0, 0, 0, new Counters(), new Counters(), new Counters()), currentTime));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -672,6 +678,7 @@ public class TestJobHistoryEventHandler {
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId),
             0, 0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString()),
             currentTime + 20));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -701,6 +708,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.MAP, "")));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -714,6 +722,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.REDUCE, "")));
+      jheh.getDispatcher().await();
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -1031,6 +1040,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   private EventWriter eventWriter;
   private boolean mockHistoryProcessing = true;
+  private DrainDispatcher dispatcher;
   public JHEvenHandlerForTest(AppContext context, int startCount) {
     super(context, startCount);
     JobHistoryEventHandler.fileMap.clear();
@@ -1043,12 +1053,31 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   }
 
   @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    super.serviceInit(conf);
+
+  }
+
+  @Override
   protected void serviceStart() {
     if (timelineClient != null) {
       timelineClient.start();
     } else if (timelineV2Client != null) {
       timelineV2Client.start();
     }
+    if (handleTimelineEvent) {
+      atsEventDispatcher.start();
+    }
+  }
+
+  @Override
+  protected AsyncDispatcher createDispatcher() {
+    dispatcher = new DrainDispatcher();
+    return dispatcher;
+  }
+
+  public DrainDispatcher getDispatcher() {
+    return dispatcher;
   }
 
   @Override
