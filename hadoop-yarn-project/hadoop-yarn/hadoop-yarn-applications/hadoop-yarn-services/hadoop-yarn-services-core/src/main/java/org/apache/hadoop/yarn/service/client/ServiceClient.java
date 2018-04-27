@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.service.containerlaunch.ClasspathConstructor;
 import org.apache.hadoop.yarn.service.containerlaunch.JavaCommandLineBuilder;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
@@ -224,6 +225,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
   public int initiateUpgrade(Service service) throws YarnException,
       IOException {
+    boolean upgradeEnabled = getConfig().getBoolean(
+        YARN_SERVICE_UPGRADE_ENABLED,
+        YARN_SERVICE_UPGRADE_ENABLED_DEFAULT);
+    if (!upgradeEnabled) {
+      throw new YarnException(ErrorStrings.SERVICE_UPGRADE_DISABLED);
+    }
     Service persistedService =
         ServiceApiUtil.loadService(fs, service.getName());
     if (!StringUtils.isEmpty(persistedService.getId())) {
