@@ -1111,7 +1111,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     // to ensure we replace the previous token setup by the RM.
     // Afterwards we can update the service address for the RPC layer.
     UserGroupInformation currentUGI = UserGroupInformation.getCurrentUser();
-    LOG.info("Updating with new AMRMToken");
     currentUGI.addToken(amrmToken);
     amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConfig()));
   }
