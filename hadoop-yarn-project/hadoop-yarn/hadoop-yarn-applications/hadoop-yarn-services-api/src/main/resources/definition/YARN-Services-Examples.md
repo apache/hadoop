@@ -15,7 +15,7 @@
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
-POST URL - http://localhost:9191/ws/v1/services
+POST URL - http://localhost:8088/app/v1/services
 
 ##### POST Request JSON
 ```json
@@ -27,7 +27,7 @@ POST URL - http://localhost:9191/ws/v1/services
     [
       {
         "name": "hello",
-        "number_of_containers": 1,
+        "number_of_containers": 2,
         "artifact": {
           "id": "nginx:latest",
           "type": "DOCKER"
@@ -36,14 +36,14 @@ POST URL - http://localhost:9191/ws/v1/services
         "resource": {
           "cpus": 1,
           "memory": "256"
-       }
+        }
       }
     ]
 }
 ```
 
 ##### GET Response JSON
-GET URL - http://localhost:9191/ws/v1/services/hello-world
+GET URL - http://localhost:8088/app/v1/services/hello-world
 
 Note, lifetime value of -1 means unlimited lifetime.
 
@@ -54,10 +54,11 @@ Note, lifetime value of -1 means unlimited lifetime.
     "description": "hello world example",
     "id": "application_1503963985568_0002",
     "lifetime": -1,
+    "state": "STABLE",
     "components": [
         {
             "name": "hello",
-            "dependencies": [],
+            "state": "STABLE",
             "resource": {
                 "cpus": 1,
                 "memory": "256"
@@ -70,21 +71,21 @@ Note, lifetime value of -1 means unlimited lifetime.
             "quicklinks": [],
             "containers": [
                 {
-                    "id": "container_e03_1503963985568_0002_01_000001",
+                    "id": "container_e03_1503963985568_0002_01_000002",
                     "ip": "10.22.8.143",
-                    "hostname": "myhost.local",
+                    "hostname": "ctr-e03-1503963985568-0002-01-000002.example.site",
                     "state": "READY",
                     "launch_time": 1504051512412,
-                    "bare_host": "10.22.8.143",
+                    "bare_host": "host100.cloud.com",
                     "component_instance_name": "hello-0"
                 },
                 {
-                    "id": "container_e03_1503963985568_0002_01_000002",
-                    "ip": "10.22.8.143",
-                    "hostname": "myhost.local",
+                    "id": "container_e03_1503963985568_0002_01_000003",
+                    "ip": "10.22.8.144",
+                    "hostname": "ctr-e03-1503963985568-0002-01-000003.example.site",
                     "state": "READY",
                     "launch_time": 1504051536450,
-                    "bare_host": "10.22.8.143",
+                    "bare_host": "host100.cloud.com",
                     "component_instance_name": "hello-1"
                 }
             ],
@@ -103,7 +104,7 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 
@@ -115,43 +116,59 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
 {
-    "state": "STOPPED"
+  "state": "STOPPED"
 }
 ```
 
 ### Start a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
 {
-    "state": "STARTED"
+  "state": "STARTED"
 }
 ```
 
-### Update to flex up/down the no of containers (instances) of a component of a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world/components/hello
+### Update to flex up/down the number of containers (instances) of a component of a service
+PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 
 ##### PUT Request JSON
 ```json
 {
-    "name": "hello",
-    "number_of_containers": 3
+  "number_of_containers": 3
+}
+```
+
+Alternatively, you can specify the entire "components" section instead.
+
+PUT URL - http://localhost:8088/app/v1/services/hello-world
+##### PUT Request JSON
+```json
+{
+  "state": "FLEX",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 3
+      }
+    ]
 }
 ```
 
 ### Destroy a service
-DELETE URL - http://localhost:9191/ws/v1/services/hello-world
+DELETE URL - http://localhost:8088/app/v1/services/hello-world
 
 ***
 
 ### Create a complicated service  - HBase
-POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
+POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 
 ##### POST Request JSON
 
@@ -249,3 +266,176 @@ POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
   }
 }
 ```
+
+### Create a service requesting GPUs in addition to CPUs and RAM
+POST URL - http://localhost:8088/app/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with GPUs",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 2,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256",
+          "additional" : {
+            "yarn.io/gpu" : {
+              "value" : 4,
+              "unit" : ""
+            }
+          }
+        }
+      }
+    ]
+}
+```
+
+### Create a service with a component requesting anti-affinity placement policy
+POST URL - http://localhost:8088/app/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "version": "1.0.0",
+  "description": "hello world example with anti-affinity",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 3,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256"
+        },
+        "placement_policy": {
+          "constraints": [
+            {
+              "type": "ANTI_AFFINITY",
+              "scope": "NODE",
+              "node_attributes": {
+                "os": ["linux", "windows"],
+                "fault_domain": ["fd1", "fd2"]
+              },
+              "node_partitions": [
+                "gpu",
+                "fast-disk"
+              ],
+              "target_tags": [
+                "hello"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+}
+```
+
+##### GET Response JSON
+GET URL - http://localhost:8088/app/v1/services/hello-world
+
+Note, that the 3 containers will come up on 3 different nodes. If there are less
+than 3 NMs running in the cluster, then all 3 container requests will not be
+fulfilled and the service will be in non-STABLE state.
+
+```json
+{
+    "name": "hello-world",
+    "version": "1.0.0",
+    "description": "hello world example with anti-affinity",
+    "id": "application_1503963985568_0003",
+    "lifetime": -1,
+    "state": "STABLE",
+    "components": [
+        {
+            "name": "hello",
+            "state": "STABLE",
+            "resource": {
+                "cpus": 1,
+                "memory": "256"
+            },
+            "placement_policy": {
+              "constraints": [
+                {
+                  "type": "ANTI_AFFINITY",
+                  "scope": "NODE",
+                  "node_attributes": {
+                    "os": ["linux", "windows"],
+                    "fault_domain": ["fd1", "fd2"]
+                  },
+                  "node_partitions": [
+                    "gpu",
+                    "fast-disk"
+                  ],
+                  "target_tags": [
+                    "hello"
+                  ]
+                }
+              ]
+            },
+            "configuration": {
+                "properties": {},
+                "env": {},
+                "files": []
+            },
+            "quicklinks": [],
+            "containers": [
+                {
+                    "id": "container_e03_1503963985568_0003_01_000002",
+                    "ip": "10.22.8.143",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000002.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051512412,
+                    "bare_host": "host100.cloud.com",
+                    "component_instance_name": "hello-0"
+                },
+                {
+                    "id": "container_e03_1503963985568_0003_01_000003",
+                    "ip": "10.22.8.144",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000003.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051536450,
+                    "bare_host": "host101.cloud.com",
+                    "component_instance_name": "hello-1"
+                },
+                {
+                    "id": "container_e03_1503963985568_0003_01_000004",
+                    "ip": "10.22.8.145",
+                    "hostname": "ctr-e03-1503963985568-0003-01-000004.example.site",
+                    "state": "READY",
+                    "launch_time": 1504051536450,
+                    "bare_host": "host102.cloud.com",
+                    "component_instance_name": "hello-2"
+                }
+            ],
+            "launch_command": "./start_nginx.sh",
+            "number_of_containers": 1,
+            "run_privileged_container": false
+        }
+    ],
+    "configuration": {
+        "properties": {},
+        "env": {},
+        "files": []
+    },
+    "quicklinks": {}
+}
+```
+
