@@ -128,6 +128,13 @@ public class YarnServiceConf {
       YARN_SERVICE_PREFIX + "container-health-threshold.";
 
   /**
+   * Upgrade feature enabled for services.
+   */
+  public static final String YARN_SERVICE_UPGRADE_ENABLED =
+      "yarn.service.upgrade.enabled";
+  public static final boolean YARN_SERVICE_UPGRADE_ENABLED_DEFAULT = false;
+
+  /**
    * The container health threshold percent when explicitly set for a specific
    * component or globally for all components, will schedule a health check
    * monitor to periodically check for the percentage of healthy containers. It

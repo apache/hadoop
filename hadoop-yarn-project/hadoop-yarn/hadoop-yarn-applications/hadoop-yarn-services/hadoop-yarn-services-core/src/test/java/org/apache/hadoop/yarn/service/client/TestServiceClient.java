@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -67,9 +69,26 @@ public class TestServiceClient {
       new ServiceTestUtils.ServiceFSWatcher();
 
   @Test
+  public void testUpgradeDisabledByDefault() throws Exception {
+    Service service = createService();
+    ServiceClient client = MockServiceClient.create(rule, service, false);
+
+    //upgrade the service
+    service.setVersion("v2");
+    try {
+      client.initiateUpgrade(service);
+    } catch (YarnException ex) {
+      Assert.assertEquals(ErrorStrings.SERVICE_UPGRADE_DISABLED,
+          ex.getMessage());
+      return;
+    }
+    Assert.fail();
+  }
+
+  @Test
   public void testActionServiceUpgrade() throws Exception {
     Service service = createService();
-    ServiceClient client = MockServiceClient.create(rule, service);
+    ServiceClient client = MockServiceClient.create(rule, service, true);
 
     //upgrade the service
     service.setVersion("v2");
@@ -85,7 +104,7 @@ public class TestServiceClient {
   @Test
   public void testActionCompInstanceUpgrade() throws Exception {
     Service service = createService();
-    MockServiceClient client = MockServiceClient.create(rule, service);
+    MockServiceClient client = MockServiceClient.create(rule, service, true);
 
     //upgrade the service
     service.setVersion("v2");
@@ -127,7 +146,7 @@ public class TestServiceClient {
     }
 
     static MockServiceClient create(ServiceTestUtils.ServiceFSWatcher rule,
-        Service service)
+        Service service, boolean enableUpgrade)
         throws IOException, YarnException {
       MockServiceClient client = new MockServiceClient();
 
@@ -163,7 +182,8 @@ public class TestServiceClient {
       client.setFileSystem(rule.getFs());
       client.setYarnClient(yarnClient);
       client.service = service;
-
+      rule.getConf().setBoolean(YarnServiceConf.YARN_SERVICE_UPGRADE_ENABLED,
+          enableUpgrade);
       client.init(rule.getConf());
       client.start();
       client.actionCreate(service);

@@ -375,6 +375,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
   @Test(timeout = 200000)
   public void testUpgrade() throws Exception {
     setupInternal(NUM_NMS);
+    getConf().setBoolean(YARN_SERVICE_UPGRADE_ENABLED, true);
     ServiceClient client = createClient(getConf());
 
     Service service = createExampleApplication();
