@@ -382,6 +382,7 @@ public class TestSystemMetricsPublisherForV2 {
 
     when(app.getApplicationSubmissionContext())
         .thenReturn(appSubmissionContext);
+    when(app.getState()).thenReturn(RMAppState.SUBMITTED);
     return app;
   }
 

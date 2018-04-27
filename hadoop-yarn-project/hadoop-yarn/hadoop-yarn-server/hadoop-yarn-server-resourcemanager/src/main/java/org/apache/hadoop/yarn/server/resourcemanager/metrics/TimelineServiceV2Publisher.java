@@ -139,6 +139,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         app.getApplicationSubmissionContext().getAMContainerSpec();
     entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
         amContainerSpec.getCommands());
+    entityInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        RMServerUtils.createApplicationState(app.getState()).toString());
 
     entity.setInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
