@@ -36,8 +36,8 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 # the domain of the service
-host: host.mycompany.com
-port: 9191(default)
+host: localhost
+port: 8088(default)
 # array of all schemes that your API supports
 schemes:
   - http
@@ -249,7 +249,7 @@ definitions:
         type: string
         description: The YARN queue that this service should be submitted to.
       kerberos_principal:
-        description: The Kerberos Principal of the service
+        description: The principal info of the user who launches the service.
         $ref: '#/definitions/KerberosPrincipal'
       docker_client_config:
         type: string
@@ -283,7 +283,7 @@ definitions:
         type: object
         additionalProperties:
           $ref: '#/definitions/ResourceInformation'
-        description: Map of resource name to ResourceInformation
+        description: A map of resource type name to resource type information. Including value (integer), and unit (string). This will be used to specify resource other than cpu and memory. Please refer to example below.
   PlacementPolicy:
     description: Advanced placement policy of the components of a service.
     required:
@@ -535,6 +535,7 @@ definitions:
           - STOPPED
           - FAILED
           - FLEX
+          - UPGRADING
   ContainerState:
     description: The current state of the container of a service.
     properties:
@@ -552,8 +553,10 @@ definitions:
         type: string
         description: enum of the state of the component
         enum:
+          - INIT
           - FLEXING
           - STABLE
+          - UPGRADING
   ServiceStatus:
     description: The current status of a submitted service, returned as a response to the GET API.
     properties:
@@ -572,10 +575,10 @@ definitions:
     properties:
       principal_name:
         type: string
-        description: The principal name of the user who launches the service.
+        description: The principal name of the user who launches the service. Note that `_HOST` is required in the `principal_name` field such as `testuser/_HOST@EXAMPLE.COM` because Hadoop client validates that the server's (in this case, the AM's) principal has hostname present when communicating to the server.
       keytab:
         type: string
-        description: |
-          The URI of the kerberos keytab. It supports two modes:
-          URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host.
-          URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.
+        description: The URI of the kerberos keytab. Currently supports only files present on the bare host. URI starts with "file\://" - A path on the local host where the keytab is stored. It is assumed that admin pre-installs the keytabs on the local host before AM launches.
+
+
+

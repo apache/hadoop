@@ -30,7 +30,7 @@ public class BaseResource implements Serializable {
 
   /**
    * Resource location for a service, e.g.
-   * /ws/v1/services/helloworld
+   * /app/v1/services/helloworld
    *
    **/
   public String getUri() {
