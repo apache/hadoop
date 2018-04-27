@@ -118,10 +118,8 @@ public final class DockerClientConfigHandler {
                 tokenId.getKind(), new Text(registryUrl));
         credentials.addToken(
             new Text(registryUrl + "-" + applicationId), token);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Token read from Docker client configuration file: "
-              + token.toString());
-        }
+        LOG.info("Token read from Docker client configuration file: "
+                + token.toString());
       }
     }
     return credentials;
