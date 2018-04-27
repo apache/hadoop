@@ -28,13 +28,10 @@ import java.net.URI;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -96,6 +93,27 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
         fsdis.close();
       }
     }
+  }
+
+  @Test
+  public void testCrcFileDelete() throws IOException {
+    Path fsTargetFilePath = new Path("debug.log");
+    fileSystemTestHelper.createFile(fsTarget, fsTargetFilePath);
+    FileStatus fileStatus = fsTarget.getFileStatus(fsTargetFilePath);
+    Configuration newConf = new Configuration(conf);
+    newConf.setLong("fs.trash.interval", 1000);
+    Trash lTrash = new Trash(fsTarget, newConf);
+    boolean trashed = lTrash.moveToTrash(fsTargetFilePath);
+    Assert.assertTrue("File " + fileStatus + " move to " +
+            "trash failed.", trashed);
+    if(fsTarget instanceof ChecksumFileSystem) {
+      Path crcPath = new Path(fsTargetFilePath.getParent(), "." + fsTargetFilePath.getName() + ".crc");
+      Assert.assertTrue("Crc file " + crcPath + " move to trash failed.",!fsTarget.exists(crcPath));
+    }
+
+    // Verify ViewFileSystem trash roots shows the ones from
+    // target mounted FileSystem.
+    Assert.assertTrue("", fsView.getTrashRoots(true).size() > 0);
   }
 
 
