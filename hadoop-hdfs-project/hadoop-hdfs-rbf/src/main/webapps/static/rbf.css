@@ -53,6 +53,11 @@
     content: "\e090";
 }
 
+.federationhealth-namenode-disabled:before {
+    color: #eea236;
+    content: "\e136";
+}
+
 .federationhealth-namenode-legend {
     list-style-type: none;
     text-align: right;
