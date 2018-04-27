@@ -866,9 +866,9 @@ public class UserGroupInformation {
             if (now < nextRefresh) {
               Thread.sleep(nextRefresh - now);
             }
-            Shell.execCommand(cmd, "-R");
+            String output = Shell.execCommand(cmd, "-R");
             if (LOG.isDebugEnabled()) {
-              LOG.debug("renewed ticket");
+              LOG.debug("Renewed ticket. kinit output: {}", output);
             }
             reloginFromTicketCache();
             tgt = getTGT();
