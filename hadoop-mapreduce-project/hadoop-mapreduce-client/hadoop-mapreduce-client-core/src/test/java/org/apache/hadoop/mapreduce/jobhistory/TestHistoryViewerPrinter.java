@@ -859,6 +859,46 @@ public class TestHistoryViewerPrinter {
         "}\n", outStr, JSONCompareMode.NON_EXTENSIBLE);
   }
 
+  @Test
+  public void testHumanDupePrinter() throws Exception {
+    JobHistoryParser.JobInfo job = createJobInfo2();
+    // Counters are only part of the overview so printAll can be false or true
+    // this does not affect the test, task counters are not printed
+    HumanReadableHistoryViewerPrinter printer =
+        new HumanReadableHistoryViewerPrinter(job, false, "http://",
+            TimeZone.getTimeZone("GMT"));
+    String outStr = run(printer);
+    // We are not interested in anything but the duplicate counter
+    int count1 = outStr.indexOf(
+        "|Map-Reduce Framework          |Map input records             |");
+    Assert.assertNotEquals("First counter occurrence not found", -1, count1);
+    int count2 = outStr.indexOf(
+        "|Map-Reduce Framework          |Map input records             |",
+        count1 + 1);
+    Assert.assertEquals("Duplicate counter found at: " + count1 +
+        " and " + count2, -1, count2);
+  }
+
+  @Test
+  public void testJSONDupePrinter() throws Exception {
+    JobHistoryParser.JobInfo job = createJobInfo2();
+    // Counters are part of the overview and task info
+    // Tasks only have bogus counters in the test if that is changed printAll
+    // must then be kept as false for this test to pass
+    JSONHistoryViewerPrinter printer =
+        new JSONHistoryViewerPrinter(job, false, "http://");
+    String outStr = run(printer);
+    // We are not interested in anything but the duplicate counter
+    int count1 = outStr.indexOf(
+        "\"counterName\":\"MAP_INPUT_RECORDS\"");
+    Assert.assertNotEquals("First counter occurrence not found", -1, count1);
+    int count2 = outStr.indexOf(
+        "\"counterName\":\"MAP_INPUT_RECORDS\"",
+        count1 + 1);
+    Assert.assertEquals("Duplicate counter found at: " + count1 +
+        " and " + count2, -1, count2);
+  }
+
   private String run(HistoryViewerPrinter printer) throws Exception {
     ByteArrayOutputStream boas = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(boas, true);
@@ -901,12 +941,48 @@ public class TestHistoryViewerPrinter {
     addTaskInfo(job, TaskType.JOB_CLEANUP, 9, TaskStatus.State.SUCCEEDED);
     return job;
   }
+  private static JobHistoryParser.JobInfo createJobInfo2() {
+    JobHistoryParser.JobInfo job = new JobHistoryParser.JobInfo();
+    job.submitTime = 1317928501754L;
+    job.finishTime = job.submitTime + 15000;
+    job.jobid = JobID.forName("job_1317928501754_0001");
+    job.username = "test";
+    job.jobname = "Dupe counter output";
+    job.jobQueueName = "root.test";
+    job.jobConfPath = "/tmp/job.xml";
+    job.launchTime = job.submitTime + 1000;
+    job.totalMaps = 1;
+    job.totalReduces = 0;
+    job.finishedMaps = 1;
+    job.finishedReduces = 0;
+    job.failedMaps = 0;
+    job.failedReduces = 0;
+    job.jobStatus = JobStatus.State.SUCCEEDED.name();
+    job.totalCounters = createDeprecatedCounters();
+    job.mapCounters = createDeprecatedCounters();
+    job.reduceCounters = createDeprecatedCounters();
+    job.tasksMap = new HashMap<>();
+    addTaskInfo(job, TaskType.JOB_SETUP, 1, TaskStatus.State.SUCCEEDED);
+    addTaskInfo(job, TaskType.MAP, 2, TaskStatus.State.SUCCEEDED);
+    addTaskInfo(job, TaskType.JOB_CLEANUP, 3, TaskStatus.State.SUCCEEDED);
+    return job;
+  }
 
   private static Counters createCounters() {
     Counters counters = new Counters();
     counters.findCounter("group1", "counter1").setValue(5);
     counters.findCounter("group1", "counter2").setValue(10);
     counters.findCounter("group2", "counter1").setValue(15);
+    return counters;
+  }
+
+  private static Counters createDeprecatedCounters() {
+    Counters counters = new Counters();
+    // Deprecated counter: make sure it is only printed once
+    counters.findCounter("org.apache.hadoop.mapred.Task$Counter",
+        "MAP_INPUT_RECORDS").setValue(1);
+    counters.findCounter("File System Counters",
+        "FILE: Number of bytes read").setValue(1);
     return counters;
   }
 

@@ -148,7 +148,8 @@ class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
           "Total Value"));
       buff.append("\n------------------------------------------" +
           "---------------------------------------------");
-      for (String groupName : totalCounters.getGroupNames()) {
+      for (CounterGroup counterGroup : totalCounters) {
+        String groupName = counterGroup.getName();
         CounterGroup totalGroup = totalCounters.getGroup(groupName);
         CounterGroup mapGroup = mapCounters.getGroup(groupName);
         CounterGroup reduceGroup = reduceCounters.getGroup(groupName);
