@@ -53,7 +53,6 @@ public class TestNMTimelinePublisher {
     @SuppressWarnings("unchecked")
     final DummyTimelineClient timelineClient = new DummyTimelineClient(null);
     when(context.getNodeId()).thenReturn(NodeId.newInstance("localhost", 0));
-    when(context.getHttpPort()).thenReturn(0);
 
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
