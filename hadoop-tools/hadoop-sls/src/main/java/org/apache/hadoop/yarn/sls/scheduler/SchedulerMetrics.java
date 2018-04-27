@@ -89,11 +89,15 @@ public abstract class SchedulerMetrics {
 
   // counters for scheduler allocate/handle operations
   private Counter schedulerAllocateCounter;
+  private Counter schedulerCommitSuccessCounter;
+  private Counter schedulerCommitFailureCounter;
   private Counter schedulerHandleCounter;
   private Map<SchedulerEventType, Counter> schedulerHandleCounterMap;
 
   // Timers for scheduler allocate/handle operations
   private Timer schedulerAllocateTimer;
+  private Timer schedulerCommitSuccessTimer;
+  private Timer schedulerCommitFailureTimer;
   private Timer schedulerHandleTimer;
   private Map<SchedulerEventType, Timer> schedulerHandleTimerMap;
   private List<Histogram> schedulerHistogramList;
@@ -387,6 +391,10 @@ public abstract class SchedulerMetrics {
       // counters for scheduler operations
       schedulerAllocateCounter = metrics.counter(
           "counter.scheduler.operation.allocate");
+      schedulerCommitSuccessCounter = metrics.counter(
+          "counter.scheduler.operation.commit.success");
+      schedulerCommitFailureCounter = metrics.counter(
+          "counter.scheduler.operation.commit.failure");
       schedulerHandleCounter = metrics.counter(
           "counter.scheduler.operation.handle");
       schedulerHandleCounterMap = new HashMap<>();
@@ -400,6 +408,10 @@ public abstract class SchedulerMetrics {
           SLSConfiguration.METRICS_TIMER_WINDOW_SIZE,
           SLSConfiguration.METRICS_TIMER_WINDOW_SIZE_DEFAULT);
       schedulerAllocateTimer = new Timer(
+          new SlidingWindowReservoir(timeWindowSize));
+      schedulerCommitSuccessTimer = new Timer(
+          new SlidingWindowReservoir(timeWindowSize));
+      schedulerCommitFailureTimer = new Timer(
           new SlidingWindowReservoir(timeWindowSize));
       schedulerHandleTimer = new Timer(
           new SlidingWindowReservoir(timeWindowSize));
@@ -417,6 +429,20 @@ public abstract class SchedulerMetrics {
           schedulerAllocateHistogram);
       schedulerHistogramList.add(schedulerAllocateHistogram);
       histogramTimerMap.put(schedulerAllocateHistogram, schedulerAllocateTimer);
+      Histogram schedulerCommitHistogram = new Histogram(
+          new SlidingWindowReservoir(SAMPLING_SIZE));
+      metrics.register("sampler.scheduler.operation.commit.success.timecost",
+          schedulerCommitHistogram);
+      schedulerHistogramList.add(schedulerCommitHistogram);
+      histogramTimerMap
+          .put(schedulerCommitHistogram, schedulerCommitSuccessTimer);
+      Histogram schedulerCommitFailureHistogram =
+          new Histogram(new SlidingWindowReservoir(SAMPLING_SIZE));
+      metrics.register("sampler.scheduler.operation.commit.failure.timecost",
+          schedulerCommitFailureHistogram);
+      schedulerHistogramList.add(schedulerCommitFailureHistogram);
+      histogramTimerMap
+          .put(schedulerCommitFailureHistogram, schedulerCommitFailureTimer);
       Histogram schedulerHandleHistogram = new Histogram(
           new SlidingWindowReservoir(SAMPLING_SIZE));
       metrics.register("sampler.scheduler.operation.handle.timecost",
@@ -534,6 +560,14 @@ public abstract class SchedulerMetrics {
     schedulerAllocateCounter.inc();
   }
 
+  void increaseSchedulerCommitSuccessCounter() {
+    schedulerCommitSuccessCounter.inc();
+  }
+
+  void increaseSchedulerCommitFailureCounter() {
+    schedulerCommitFailureCounter.inc();
+  }
+
   void increaseSchedulerHandleCounter(SchedulerEventType schedulerEventType) {
     schedulerHandleCounter.inc();
     schedulerHandleCounterMap.get(schedulerEventType).inc();
@@ -541,6 +575,14 @@ public abstract class SchedulerMetrics {
 
   Timer getSchedulerAllocateTimer() {
     return schedulerAllocateTimer;
+  }
+
+  Timer getSchedulerCommitSuccessTimer() {
+    return schedulerCommitSuccessTimer;
+  }
+
+  Timer getSchedulerCommitFailureTimer() {
+    return schedulerCommitFailureTimer;
   }
 
   Timer getSchedulerHandleTimer() {
