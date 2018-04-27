@@ -738,6 +738,33 @@ public abstract class MetadataStoreTestBase extends Assert {
     }
   }
 
+  @Test
+  public void testPutDirListingMetadataPutsFileMetadata()
+      throws IOException {
+    boolean authoritative = true;
+    String[] filenames = {"/dir1/file1", "/dir1/file2", "/dir1/file3"};
+    String dirPath = "/dir1";
+
+    ArrayList<PathMetadata> metas = new ArrayList<>(filenames.length);
+    for (String filename : filenames) {
+      metas.add(new PathMetadata(makeFileStatus(filename, 100)));
+    }
+    DirListingMetadata dirMeta =
+        new DirListingMetadata(strToPath(dirPath), metas, authoritative);
+    ms.put(dirMeta);
+
+    if (!allowMissing()) {
+      assertDirectorySize(dirPath, filenames.length);
+      PathMetadata metadata;
+      for(String fileName : filenames){
+        metadata = ms.get(strToPath(fileName));
+        assertNotNull(String.format(
+            "PathMetadata for file %s should not be null.", fileName),
+            metadata);
+      }
+    }
+  }
+
   /*
    * Helper functions.
    */

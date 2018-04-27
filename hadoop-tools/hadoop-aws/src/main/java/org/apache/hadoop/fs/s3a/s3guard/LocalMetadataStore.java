@@ -281,6 +281,7 @@ public class LocalMetadataStore implements MetadataStore {
       LOG.debug("put dirMeta {}", meta.prettyPrint());
     }
     dirHash.put(standardize(meta.getPath()), meta);
+    put(meta.getListing());
   }
 
   public synchronized void put(Collection<PathMetadata> metas) throws
