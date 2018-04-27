@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -322,6 +323,7 @@ public class RouterAdmin extends Configured implements Tool {
   public boolean addMount(String mount, String[] nss, String dest,
       boolean readonly, DestinationOrder order, ACLEntity aclInfo)
       throws IOException {
+    mount = normalizeFileSystemPath(mount);
     // Get the existing entry
     MountTableManager mountTable = client.getMountTableManager();
     GetMountTableEntriesRequest getRequest =
@@ -473,6 +475,7 @@ public class RouterAdmin extends Configured implements Tool {
   public boolean updateMount(String mount, String[] nss, String dest,
       boolean readonly, DestinationOrder order, ACLEntity aclInfo)
       throws IOException {
+    mount = normalizeFileSystemPath(mount);
     MountTableManager mountTable = client.getMountTableManager();
 
     // Create a new entry
@@ -519,6 +522,7 @@ public class RouterAdmin extends Configured implements Tool {
    * @throws IOException If it cannot be removed.
    */
   public boolean removeMount(String path) throws IOException {
+    path = normalizeFileSystemPath(path);
     MountTableManager mountTable = client.getMountTableManager();
     RemoveMountTableEntryRequest request =
         RemoveMountTableEntryRequest.newInstance(path);
@@ -538,6 +542,7 @@ public class RouterAdmin extends Configured implements Tool {
    * @throws IOException If it cannot be listed.
    */
   public void listMounts(String path) throws IOException {
+    path = normalizeFileSystemPath(path);
     MountTableManager mountTable = client.getMountTableManager();
     GetMountTableEntriesRequest request =
         GetMountTableEntriesRequest.newInstance(path);
@@ -795,6 +800,17 @@ public class RouterAdmin extends Configured implements Tool {
     for (String nsId : response.getNameservices()) {
       System.out.println(nsId);
     }
+  }
+
+  /**
+   * Normalize a path for that filesystem.
+   *
+   * @param path Path to normalize.
+   * @return Normalized path.
+   */
+  private static String normalizeFileSystemPath(final String path) {
+    Path normalizedPath = new Path(path);
+    return normalizedPath.toString();
   }
 
   /**
