@@ -232,6 +232,7 @@ public class ServiceApiUtil {
     if (!StringUtils.isEmpty(dockerClientConfig)) {
       Path dockerClientConfigPath = new Path(dockerClientConfig);
       FileSystem fs = dockerClientConfigPath.getFileSystem(conf);
+      LOG.info("The supplied Docker client config is " + dockerClientConfig);
       if (!fs.exists(dockerClientConfigPath)) {
         throw new IOException(
             "The supplied Docker client config does not exist: "
