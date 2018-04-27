@@ -21,7 +21,7 @@ Introduction
 ------------
 
 NameNodes have scalability limits because of the metadata overhead comprised of inodes (files and directories) and file blocks, the number of Datanode heartbeats, and the number of HDFS RPC client requests.
-The common solution is to split the filesystem into smaller subclusters [HDFS Federation](./Federation.html) and provide a federated view [ViewFs](./ViewFs.html).
+The common solution is to split the filesystem into smaller subclusters [HDFS Federation](../hadoop-hdfs/Federation.html) and provide a federated view [ViewFs](../hadoop-hdfs/ViewFs.html).
 The problem is how to maintain the split of the subclusters (e.g., namespace partition), which forces users to connect to multiple subclusters and manage the allocation of folders/files to them.
 
 
@@ -37,8 +37,8 @@ This layer must be scalable, highly available, and fault tolerant.
 
 This federation layer comprises multiple components.
 The _Router_ component that has the same interface as a NameNode, and forwards the client requests to the correct subcluster, based on ground-truth information from a State Store.
-The _State Store_ combines a remote _Mount Table_ (in the flavor of [ViewFs](./ViewFs.html), but shared between clients) and utilization (load/capacity) information about the subclusters.
-This approach has the same architecture as [YARN federation](../hadoop-yarn/Federation.html).
+The _State Store_ combines a remote _Mount Table_ (in the flavor of [ViewFs](../hadoop-hdfs/ViewFs.html), but shared between clients) and utilization (load/capacity) information about the subclusters.
+This approach has the same architecture as [YARN federation](../../hadoop-yarn/hadoop-yarn-site/Federation.html).
 
 ![Router-based Federation Sequence Diagram | width=800](./images/routerfederation.png)
 
@@ -140,7 +140,7 @@ Examples users may encounter include the following.
 ### Quota management
 Federation supports and controls global quota at mount table level.
 For performance reasons, the Router caches the quota usage and updates it periodically. These quota usage values
-will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](./HdfsQuotaAdminGuide.html)
+will be used for quota-verification during each WRITE RPC call invoked in RouterRPCSever. See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html)
 for the quota detail.
 
 ### State Store
@@ -163,7 +163,7 @@ The Routers discard the entries older than a certain threshold (e.g., ten Router
 
 * **Mount Table**:
 This table hosts the mapping between folders and subclusters.
-It is similar to the mount table in [ViewFs](.ViewFs.html) where it specifies the federated folder, the destination subcluster and the path in that folder.
+It is similar to the mount table in [ViewFs](../hadoop-hdfs/ViewFs.html) where it specifies the federated folder, the destination subcluster and the path in that folder.
 
 
 ### Security
@@ -175,7 +175,7 @@ Deployment
 
 By default, the Router is ready to take requests and monitor the NameNode in the local machine.
 It needs to know the State Store endpoint by setting `dfs.federation.router.store.driver.class`.
-The rest of the options are documented in [hdfs-default.xml](./hdfs-default.xml).
+The rest of the options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
 
 Once the Router is configured, it can be started:
 
@@ -187,7 +187,7 @@ And to stop it:
 
 ### Mount table management
 
-The mount table entries are pretty much the same as in [ViewFs](./ViewFs.html).
+The mount table entries are pretty much the same as in [ViewFs](../hadoop-hdfs/ViewFs.html).
 A good practice for simplifying the management is to name the federated namespace with the same names as the destination namespaces.
 For example, if we to mount `/data/app1` in the federated namespace, it is recommended to have that same name as in the destination namespace.
 
@@ -290,7 +290,7 @@ Router configuration
 --------------------
 
 One can add the configurations for Router-based federation to **hdfs-site.xml**.
-The main options are documented in [hdfs-default.xml](./hdfs-default.xml).
+The main options are documented in [hdfs-default.xml](../hadoop-hdfs/hdfs-default.xml).
 The configuration values are described in this section.
 
 ### RPC server
