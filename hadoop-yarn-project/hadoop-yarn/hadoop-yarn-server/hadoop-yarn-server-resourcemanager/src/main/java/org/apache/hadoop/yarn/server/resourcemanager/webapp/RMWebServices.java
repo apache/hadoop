@@ -229,6 +229,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
+  private boolean displayPerUserApps = false;
 
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
@@ -241,6 +242,9 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     this.conf = conf;
     isCentralizedNodeLabelConfiguration =
         YarnConfiguration.isCentralizedNodeLabelConfiguration(conf);
+    this.displayPerUserApps  = conf.getBoolean(
+        YarnConfiguration.DISPLAY_APPS_FOR_LOGGED_IN_USER,
+        YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -609,7 +613,14 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       DeSelectFields deSelectFields = new DeSelectFields();
       deSelectFields.initFields(unselectedFields);
 
-      AppInfo app = new AppInfo(rm, rmapp, hasAccess(rmapp, hsr),
+      boolean allowAccess = hasAccess(rmapp, hsr);
+      // Given RM is configured to display apps per user, skip apps to which
+      // this caller doesn't have access to view.
+      if (displayPerUserApps && !allowAccess) {
+        continue;
+      }
+
+      AppInfo app = new AppInfo(rm, rmapp, allowAccess,
           WebAppUtils.getHttpSchemePrefix(conf), deSelectFields);
       allApps.add(app);
     }
