@@ -76,6 +76,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -802,6 +803,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           ch.socket().getPort(),
           ch.socket().getLocalAddress().getHostName(),
           ch.socket().getLocalPort(), e);
+    } catch (BufferUnderflowException e) {
+      // Ignore system monitor ping packets
     } finally {
       IOUtils.closeStream(ch);
     }
