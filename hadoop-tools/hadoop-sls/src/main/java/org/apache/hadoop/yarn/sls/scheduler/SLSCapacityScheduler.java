@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -126,6 +128,33 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       return super.allocate(attemptId, resourceRequests, schedulingRequests,
           containerIds, strings,
           strings2, updateRequests);
+    }
+  }
+
+
+  @Override
+  public boolean tryCommit(Resource cluster, ResourceCommitRequest r,
+      boolean updatePending) {
+    if (metricsON) {
+      boolean isSuccess = false;
+      long startTimeNs = System.nanoTime();
+      try {
+        isSuccess = super.tryCommit(cluster, r, updatePending);
+        return isSuccess;
+      } finally {
+        long elapsedNs = System.nanoTime() - startTimeNs;
+        if (isSuccess) {
+          schedulerMetrics.getSchedulerCommitSuccessTimer()
+              .update(elapsedNs, TimeUnit.NANOSECONDS);
+          schedulerMetrics.increaseSchedulerCommitSuccessCounter();
+        } else {
+          schedulerMetrics.getSchedulerCommitFailureTimer()
+              .update(elapsedNs, TimeUnit.NANOSECONDS);
+          schedulerMetrics.increaseSchedulerCommitFailureCounter();
+        }
+      }
+    } else {
+      return super.tryCommit(cluster, r, updatePending);
     }
   }
 
