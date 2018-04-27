@@ -130,6 +130,9 @@
           } else if (nodes[i].state === "UNAVAILABLE") {
             n.title = capitalise(n.state);
             n.iconState = "unavailable";
+          } else if (nodes[i].state === "DISABLED") {
+            n.title = capitalise(n.state);
+            n.iconState = "disabled";
           }
           if (n.namenodeId === "null") {
             n.namenodeId = "";
