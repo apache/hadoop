@@ -49,11 +49,11 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.BestEffortLongFile;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
-import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * Tests for upgrading with HA enabled.

@@ -36,9 +36,9 @@ import java.net.URL;
 
 import com.google.common.net.HttpHeaders;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream.InputStreamAndFileLength;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestByteRangeInputStream {
   private class ByteRangeInputStreamImpl extends ByteRangeInputStream {

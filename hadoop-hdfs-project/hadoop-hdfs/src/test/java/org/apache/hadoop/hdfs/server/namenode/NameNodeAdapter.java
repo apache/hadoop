@@ -48,8 +48,8 @@ import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.Whitebox;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
