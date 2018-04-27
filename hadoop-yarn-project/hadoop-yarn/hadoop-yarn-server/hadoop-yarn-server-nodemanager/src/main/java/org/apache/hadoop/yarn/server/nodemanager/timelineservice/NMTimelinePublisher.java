@@ -23,6 +23,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +82,7 @@ public class NMTimelinePublisher extends CompositeService {
   private NodeId nodeId;
 
   private String httpAddress;
+  private String httpPort;
 
   private UserGroupInformation nmLoginUGI;
 
@@ -101,6 +104,12 @@ public class NMTimelinePublisher extends CompositeService {
         UserGroupInformation.getLoginUser() :
         UserGroupInformation.getCurrentUser();
     LOG.info("Initialized NMTimelinePublisher UGI to " + nmLoginUGI);
+
+    String webAppURLWithoutScheme =
+        WebAppUtils.getNMWebAppURLWithoutScheme(conf);
+    if (webAppURLWithoutScheme.contains(":")) {
+      httpPort = webAppURLWithoutScheme.split(":")[1];
+    }
     super.serviceInit(conf);
   }
 
@@ -110,6 +119,7 @@ public class NMTimelinePublisher extends CompositeService {
     // context will be updated after containerManagerImpl is started
     // hence NMMetricsPublisher is added subservice of containerManagerImpl
     this.nodeId = context.getNodeId();
+    this.httpAddress = nodeId.getHost() + ":" + httpPort;
   }
 
   @Override
@@ -331,11 +341,6 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void publishContainerEvent(ContainerEvent event) {
     // publish only when the desired event is received
-    if (this.httpAddress == null) {
-      // update httpAddress for first time. When this service started,
-      // web server will not be started.
-      this.httpAddress = nodeId.getHost() + ":" + context.getHttpPort();
-    }
     switch (event.getType()) {
     case INIT_CONTAINER:
       publishContainerCreatedEvent(event);
