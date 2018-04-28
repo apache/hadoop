@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -120,7 +121,9 @@ public class TestFileAppend{
   @Test
   public void testBreakHardlinksIfNeeded() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     FileSystem fs = cluster.getFileSystem();
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                    cluster.getNameNodePort());
@@ -186,7 +189,9 @@ public class TestFileAppend{
   public void testSimpleFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     DistributedFileSystem fs = cluster.getFileSystem();
     try {
 
@@ -239,7 +244,9 @@ public class TestFileAppend{
   public void testComplexFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     DistributedFileSystem fs = cluster.getFileSystem();
     try {
 
@@ -286,7 +293,9 @@ public class TestFileAppend{
   @Test(expected = FileNotFoundException.class)
   public void testFileNotFound() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     FileSystem fs = cluster.getFileSystem();
     try {
       Path file1 = new Path("/nonexistingfile.dat");
@@ -301,7 +310,9 @@ public class TestFileAppend{
   @Test
   public void testAppendTwice() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     final FileSystem fs1 = cluster.getFileSystem();
     final FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(conf);
     try {
@@ -340,7 +351,9 @@ public class TestFileAppend{
   @Test
   public void testAppend2Twice() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     final DistributedFileSystem fs1 = cluster.getFileSystem();
     final FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(conf);
     try {
@@ -386,8 +399,9 @@ public class TestFileAppend{
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
         false);
 
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(4).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
+        builderBaseDir).numDataNodes(4).build();
     final DistributedFileSystem fs = cluster.getFileSystem();
     try {
       final Path p = new Path("/testMultipleAppend/foo");
@@ -438,8 +452,9 @@ public class TestFileAppend{
     final long softLimit = 1L;
     final long hardLimit = 9999999L;
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .numDataNodes(1).build();
     cluster.setLeasePeriod(softLimit, hardLimit);
     cluster.waitActive();
 
@@ -478,8 +493,9 @@ public class TestFileAppend{
     final long softLimit = 1L;
     final long hardLimit = 9999999L;
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .numDataNodes(1).build();
     cluster.setLeasePeriod(softLimit, hardLimit);
     cluster.waitActive();
 
@@ -525,8 +541,9 @@ public class TestFileAppend{
     Configuration conf = new HdfsConfiguration();
     conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
         "false");
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .numDataNodes(3).build();
     DistributedFileSystem fs = null;
     try {
       fs = cluster.getFileSystem();
@@ -578,8 +595,9 @@ public class TestFileAppend{
     Configuration conf = new HdfsConfiguration();
     conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
         "false");
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .numDataNodes(3).build();
     DistributedFileSystem fs = null;
     final String hello = "hello\n";
     try {
@@ -650,8 +668,9 @@ public class TestFileAppend{
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     conf.setInt("dfs.min.replication", 1);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
-        .build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .numDataNodes(1).build();
     try {
       DistributedFileSystem fs = cluster.getFileSystem();
       Path fileName = new Path("/appendCorruptBlock");
@@ -676,7 +695,9 @@ public class TestFileAppend{
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     conf.setInt("dfs.min.replication", 1);
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
+        .build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -693,9 +714,9 @@ public class TestFileAppend{
       // Call FsDatasetImpl#append to append the block file,
       // which converts it to a rbw replica.
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
-      long newGS = block.getGenerationStamp()+1;
-      ReplicaHandler
-          replicaHandler = dataSet.append(block, newGS, initialFileLength);
+      long newGS = block.getGenerationStamp() + 1;
+      ReplicaHandler replicaHandler =
+          dataSet.append(block, newGS, initialFileLength);
 
       // write data to block file
       ReplicaBeingWritten rbw =
@@ -711,9 +732,8 @@ public class TestFileAppend{
 
       // update checksum file
       final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
-      FsDatasetUtil.computeChecksum(
-          rbw.getMetaFile(), rbw.getMetaFile(), rbw.getBlockFile(),
-          smallBufferSize, conf);
+      FsDatasetUtil.computeChecksum(rbw.getMetaFile(), rbw.getMetaFile(),
+          rbw.getBlockFile(), smallBufferSize, conf);
 
       // read the block
       // the DataNode BlockSender should read from the rbw replica's in-memory
@@ -725,5 +745,4 @@ public class TestFileAppend{
       cluster.shutdown();
     }
   }
-
 }
