@@ -22,13 +22,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.AttemptedItemInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.StorageTypeNodePair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -92,14 +97,16 @@ public class TestBlockStorageMovementAttemptedItems {
    */
   @Test(timeout = 30000)
   public void testAddReportedMoveAttemptFinishedBlocks() throws Exception {
-    bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    List<Block> blocks = new ArrayList<Block>();
-    blocks.add(new Block(item));
-    bsmAttemptedItems.add(new AttemptedItemInfo<Long>(0L, 0L, 0L, blocks, 0));
-    Block[] blockArray = new Block[blocks.size()];
-    blocks.toArray(blockArray);
-    bsmAttemptedItems.notifyMovementTriedBlocks(blockArray);
+    Block block = new Block(item);
+    DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);
+    Set<StorageTypeNodePair> locs = new HashSet<>();
+    locs.add(new StorageTypeNodePair(StorageType.ARCHIVE, dnInfo));
+    Map<Block, Set<StorageTypeNodePair>> blocksMap = new HashMap<>();
+    blocksMap.put(block, locs);
+    bsmAttemptedItems.add(0L, 0L, 0L, blocksMap, 0);
+    bsmAttemptedItems.notifyReportedBlock(dnInfo, StorageType.ARCHIVE,
+        block);
     assertEquals("Failed to receive result!", 1,
         bsmAttemptedItems.getMovementFinishedBlocksCount());
   }
@@ -111,9 +118,13 @@ public class TestBlockStorageMovementAttemptedItems {
   public void testNoBlockMovementAttemptFinishedReportAdded() throws Exception {
     bsmAttemptedItems.start(); // start block movement report monitor thread
     Long item = new Long(1234);
-    List<Block> blocks = new ArrayList<>();
-    blocks.add(new Block(item));
-    bsmAttemptedItems.add(new AttemptedItemInfo<Long>(0L, 0L, 0L, blocks, 0));
+    Block block = new Block(item);
+    DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);
+    Set<StorageTypeNodePair> locs = new HashSet<>();
+    locs.add(new StorageTypeNodePair(StorageType.ARCHIVE, dnInfo));
+    Map<Block, Set<StorageTypeNodePair>> blocksMap = new HashMap<>();
+    blocksMap.put(block, locs);
+    bsmAttemptedItems.add(0L, 0L, 0L, blocksMap, 0);
     assertEquals("Shouldn't receive result", 0,
         bsmAttemptedItems.getMovementFinishedBlocksCount());
     assertEquals("Item doesn't exist in the attempted list", 1,
@@ -129,15 +140,18 @@ public class TestBlockStorageMovementAttemptedItems {
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried1() throws Exception {
     Long item = new Long(1234);
-    List<Block> blocks = new ArrayList<>();
-    blocks.add(new Block(item));
-    blocks.add(new Block(5678L));
+    Block block1 = new Block(item);
+    Block block2 = new Block(5678L);
     Long trackID = 0L;
-    bsmAttemptedItems
-        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
-    Block[] blksMovementReport = new Block[1];
-    blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
+    DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);
+    Set<StorageTypeNodePair> locs = new HashSet<>();
+    locs.add(new StorageTypeNodePair(StorageType.ARCHIVE, dnInfo));
+    Map<Block, Set<StorageTypeNodePair>> blocksMap = new HashMap<>();
+    blocksMap.put(block1, locs);
+    blocksMap.put(block2, locs);
+    bsmAttemptedItems.add(trackID, trackID, 0L, blocksMap, 0);
+    bsmAttemptedItems.notifyReportedBlock(dnInfo, StorageType.ARCHIVE,
+        block1);
 
     // start block movement report monitor thread
     bsmAttemptedItems.start();
@@ -155,14 +169,16 @@ public class TestBlockStorageMovementAttemptedItems {
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried2() throws Exception {
     Long item = new Long(1234);
+    Block block = new Block(item);
     Long trackID = 0L;
-    List<Block> blocks = new ArrayList<>();
-    blocks.add(new Block(item));
-    bsmAttemptedItems
-        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
-    Block[] blksMovementReport = new Block[1];
-    blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
+    DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);
+    Set<StorageTypeNodePair> locs = new HashSet<>();
+    locs.add(new StorageTypeNodePair(StorageType.ARCHIVE, dnInfo));
+    Map<Block, Set<StorageTypeNodePair>> blocksMap = new HashMap<>();
+    blocksMap.put(block, locs);
+    bsmAttemptedItems.add(trackID, trackID, 0L, blocksMap, 0);
+    bsmAttemptedItems.notifyReportedBlock(dnInfo, StorageType.ARCHIVE,
+        block);
 
     Thread.sleep(selfRetryTimeout * 2); // Waiting to get timed out
 
@@ -183,14 +199,16 @@ public class TestBlockStorageMovementAttemptedItems {
   public void testPartialBlockMovementWithEmptyAttemptedQueue()
       throws Exception {
     Long item = new Long(1234);
+    Block block = new Block(item);
     Long trackID = 0L;
-    List<Block> blocks = new ArrayList<>();
-    blocks.add(new Block(item));
-    bsmAttemptedItems
-        .add(new AttemptedItemInfo<Long>(trackID, trackID, 0L, blocks, 0));
-    Block[] blksMovementReport = new Block[1];
-    blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
+    DatanodeInfo dnInfo = DFSTestUtil.getLocalDatanodeInfo(9867);
+    Set<StorageTypeNodePair> locs = new HashSet<>();
+    locs.add(new StorageTypeNodePair(StorageType.ARCHIVE, dnInfo));
+    Map<Block, Set<StorageTypeNodePair>> blocksMap = new HashMap<>();
+    blocksMap.put(block, locs);
+    bsmAttemptedItems.add(trackID, trackID, 0L, blocksMap, 0);
+    bsmAttemptedItems.notifyReportedBlock(dnInfo, StorageType.ARCHIVE,
+        block);
     assertFalse(
         "Should not add in queue again if it is not there in"
             + " storageMovementAttemptedItems",

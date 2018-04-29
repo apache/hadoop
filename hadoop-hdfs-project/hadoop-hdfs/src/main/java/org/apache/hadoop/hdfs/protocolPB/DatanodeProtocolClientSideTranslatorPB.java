@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlock
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -139,8 +138,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks,
-      BlocksStorageMoveAttemptFinished storageMovementFinishedBlks)
+      @Nonnull SlowDiskReports slowDisks)
           throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
@@ -163,13 +161,6 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     if (slowDisks.haveSlowDisks()) {
       builder.addAllSlowDisks(PBHelper.convertSlowDiskInfo(slowDisks));
-    }
-
-    // Adding blocks movement results to the heart beat request.
-    if (storageMovementFinishedBlks != null
-        && storageMovementFinishedBlks.getBlocks() != null) {
-      builder.setStorageMoveAttemptFinishedBlks(
-          PBHelper.convertBlksMovReport(storageMovementFinishedBlks));
     }
 
     HeartbeatResponseProto resp;

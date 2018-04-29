@@ -24,7 +24,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -38,18 +37,16 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.sps.BlockDispatcher;
 import org.apache.hadoop.hdfs.server.common.sps.BlockMovementAttemptFinished;
 import org.apache.hadoop.hdfs.server.common.sps.BlockMovementStatus;
 import org.apache.hadoop.hdfs.server.common.sps.BlockStorageMovementTracker;
 import org.apache.hadoop.hdfs.server.common.sps.BlocksMovementsStatusHandler;
-import org.apache.hadoop.hdfs.server.common.sps.BlockDispatcher;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * StoragePolicySatisfyWorker handles the storage policy satisfier commands.
@@ -67,19 +64,19 @@ public class StoragePolicySatisfyWorker {
 
   private final int moverThreads;
   private final ExecutorService moveExecutor;
-  private final CompletionService<BlockMovementAttemptFinished> moverCompletionService;
-  private final BlocksMovementsStatusHandler handler;
+  private final CompletionService<BlockMovementAttemptFinished>
+      moverCompletionService;
   private final BlockStorageMovementTracker movementTracker;
   private Daemon movementTrackerThread;
   private final BlockDispatcher blkDispatcher;
 
-  public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode) {
+  public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode,
+      BlocksMovementsStatusHandler handler) {
     this.datanode = datanode;
-    // Defaulting to 10. This is to minimise the number of move ops.
+    // Defaulting to 10. This is to minimize the number of move ops.
     moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 10);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);
     moverCompletionService = new ExecutorCompletionService<>(moveExecutor);
-    handler = new BlocksMovementsStatusHandler();
     movementTracker = new BlockStorageMovementTracker(moverCompletionService,
         handler);
     movementTrackerThread = new Daemon(movementTracker);
@@ -88,7 +85,6 @@ public class StoragePolicySatisfyWorker {
     int ioFileBufferSize = DFSUtilClient.getIoFileBufferSize(conf);
     blkDispatcher = new BlockDispatcher(dnConf.getSocketTimeout(),
         ioFileBufferSize, dnConf.getConnectToDnViaHostname());
-    // TODO: Needs to manage the number of concurrent moves per DataNode.
   }
 
   /**
@@ -100,22 +96,17 @@ public class StoragePolicySatisfyWorker {
   }
 
   /**
-   * Stop StoragePolicySatisfyWorker, which will stop block movement tracker
-   * thread.
+   * Stop StoragePolicySatisfyWorker, which will terminate executor service and
+   * stop block movement tracker thread.
    */
   void stop() {
     movementTracker.stopTracking();
     movementTrackerThread.interrupt();
-  }
-
-  /**
-   * Timed wait to stop BlockStorageMovement tracker daemon thread.
-   */
-  void waitToFinishWorkerThread() {
+    moveExecutor.shutdown();
     try {
-      movementTrackerThread.join(3000);
-    } catch (InterruptedException ignore) {
-      // ignore
+      moveExecutor.awaitTermination(500, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted while waiting for mover thread to terminate", e);
     }
   }
 
@@ -160,10 +151,7 @@ public class StoragePolicySatisfyWorker {
           : "Source and Target storage type shouldn't be same!";
       BlockMovingTask blockMovingTask = new BlockMovingTask(blockPoolID,
           blkMovingInfo);
-      Future<BlockMovementAttemptFinished> moveCallable = moverCompletionService
-          .submit(blockMovingTask);
-      movementTracker.addBlock(blkMovingInfo.getBlock(),
-          moveCallable);
+      moverCompletionService.submit(blockMovingTask);
     }
   }
 
@@ -185,7 +173,8 @@ public class StoragePolicySatisfyWorker {
     public BlockMovementAttemptFinished call() {
       BlockMovementStatus status = moveBlock();
       return new BlockMovementAttemptFinished(blkMovingInfo.getBlock(),
-          blkMovingInfo.getSource(), blkMovingInfo.getTarget(), status);
+          blkMovingInfo.getSource(), blkMovingInfo.getTarget(),
+          blkMovingInfo.getTargetStorageType(), status);
     }
 
     private BlockMovementStatus moveBlock() {
@@ -217,11 +206,6 @@ public class StoragePolicySatisfyWorker {
     }
   }
 
-  @VisibleForTesting
-  BlocksMovementsStatusHandler getBlocksMovementsStatusHandler() {
-    return handler;
-  }
-
   /**
    * Drop the in-progress SPS work queues.
    */
@@ -229,7 +213,5 @@ public class StoragePolicySatisfyWorker {
     LOG.info("Received request to drop StoragePolicySatisfierWorker queues. "
         + "So, none of the SPS Worker queued block movements will"
         + " be scheduled.");
-    movementTracker.removeAll();
-    handler.removeAll();
   }
 }

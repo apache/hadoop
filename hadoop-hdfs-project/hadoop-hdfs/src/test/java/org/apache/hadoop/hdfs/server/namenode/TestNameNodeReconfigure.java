@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -250,10 +251,9 @@ public class TestNameNodeReconfigure {
         StoragePolicySatisfierMode.INTERNAL.toString());
 
     // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
-    assertEquals("SPS shouldn't start as "
-        + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled", false,
-            nameNode.getNamesystem().getBlockManager().getSPSManager()
-            .isInternalSatisfierRunning());
+    assertNull("SPS shouldn't start as "
+        + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled",
+            nameNode.getNamesystem().getBlockManager().getSPSManager());
     verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.INTERNAL, false);
 
@@ -352,9 +352,12 @@ public class TestNameNodeReconfigure {
 
   void verifySPSEnabled(final NameNode nameNode, String property,
       StoragePolicySatisfierMode expected, boolean isSatisfierRunning) {
-    assertEquals(property + " has wrong value", isSatisfierRunning, nameNode
-        .getNamesystem().getBlockManager().getSPSManager()
-        .isInternalSatisfierRunning());
+    StoragePolicySatisfyManager spsMgr = nameNode
+            .getNamesystem().getBlockManager().getSPSManager();
+    boolean isInternalSatisfierRunning = spsMgr != null
+        ? spsMgr.isInternalSatisfierRunning() : false;
+    assertEquals(property + " has wrong value", isSatisfierRunning,
+        isInternalSatisfierRunning);
     String actual = nameNode.getConf().get(property,
         DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
     assertEquals(property + " has wrong value", expected,

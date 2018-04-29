@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier.ExternalBlockMovementListener;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +71,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private int cellSize;
   private int defaultStripeBlockSize;
   private Configuration conf;
+  private ExternalBlockMovementListener blkMoveListener =
+      new ExternalBlockMovementListener();
 
   private ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
@@ -131,6 +134,15 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
+
+      // Sets external listener for assertion.
+      blkMoveListener.clear();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      final StoragePolicySatisfier<Long> sps =
+          (StoragePolicySatisfier<Long>) blockManager
+          .getSPSManager().getInternalSPSService();
+      sps.setBlockMovementListener(blkMoveListener);
+
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -240,6 +252,15 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
+
+      // Sets external listener for assertion.
+      blkMoveListener.clear();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      final StoragePolicySatisfier<Long> sps =
+          (StoragePolicySatisfier<Long>) blockManager
+          .getSPSManager().getInternalSPSService();
+      sps.setBlockMovementListener(blkMoveListener);
+
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -328,6 +349,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
     conf.set(DFSConfigKeys
         .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
+    conf.set(DFSConfigKeys
+        .DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+        "5000");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
@@ -559,22 +583,16 @@ public class TestStoragePolicySatisfierWithStripedFile {
   private void waitForBlocksMovementAttemptReport(MiniDFSCluster cluster,
       long expectedMoveFinishedBlks, int timeout)
           throws TimeoutException, InterruptedException {
-    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier<Long> sps =
-        (StoragePolicySatisfier<Long>) blockManager
-        .getSPSManager().getInternalSPSService();
-    Assert.assertNotNull("Failed to get SPS object reference!", sps);
-
+    Assert.assertNotNull("Didn't set external block move listener",
+        blkMoveListener);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
+        int actualCount = blkMoveListener.getActualBlockMovements().size();
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
             expectedMoveFinishedBlks,
-            ((BlockStorageMovementAttemptedItems<Long>) sps
-                .getAttemptedItemsMonitor()).getMovementFinishedBlocksCount());
-        return ((BlockStorageMovementAttemptedItems<Long>) sps
-            .getAttemptedItemsMonitor())
-                .getMovementFinishedBlocksCount() >= expectedMoveFinishedBlks;
+            actualCount);
+        return actualCount >= expectedMoveFinishedBlks;
       }
     }, 100, timeout);
   }

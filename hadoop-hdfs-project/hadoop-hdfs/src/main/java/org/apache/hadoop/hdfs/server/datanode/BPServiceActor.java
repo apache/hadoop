@@ -514,12 +514,6 @@ class BPServiceActor implements Runnable {
             SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
             SlowDiskReports.EMPTY_REPORT;
 
-    // Get the blocks storage move attempt finished blocks
-    List<Block> results = dn.getStoragePolicySatisfyWorker()
-        .getBlocksMovementsStatusHandler().getMoveAttemptFinishedBlocks();
-    BlocksStorageMoveAttemptFinished storageMoveAttemptFinishedBlks =
-        getStorageMoveAttemptFinishedBlocks(results);
-
     HeartbeatResponse response = bpNamenode.sendHeartbeat(bpRegistration,
         reports,
         dn.getFSDataset().getCacheCapacity(),
@@ -530,18 +524,12 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary,
         requestBlockReportLease,
         slowPeers,
-        slowDisks,
-        storageMoveAttemptFinishedBlks);
+        slowDisks);
 
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
       scheduler.scheduleNextOutlierReport();
     }
-
-    // Remove the blocks movement results after successfully transferring
-    // to namenode.
-    dn.getStoragePolicySatisfyWorker().getBlocksMovementsStatusHandler()
-        .remove(results);
 
     return response;
   }

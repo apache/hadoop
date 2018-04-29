@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -92,6 +93,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.sps.SPSService;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -427,8 +429,11 @@ public class BlockManager implements BlockStatsMXBean {
 
   private final BlockIdManager blockIdManager;
 
-  /** For satisfying block storage policies. */
-  private final StoragePolicySatisfyManager spsManager;
+  /**
+   * For satisfying block storage policies. Instantiates if sps is enabled
+   * internally or externally.
+   */
+  private StoragePolicySatisfyManager spsManager;
 
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
@@ -469,8 +474,7 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT)
         * 1000L);
 
-    // sps manager manages the user invoked sps paths and does the movement.
-    spsManager = new StoragePolicySatisfyManager(conf, namesystem, this);
+    createSPSManager(conf);
 
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
@@ -699,7 +703,9 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void close() {
-    getSPSManager().stop();
+    if (getSPSManager() != null) {
+      getSPSManager().stop();
+    }
     bmSafeMode.close();
     try {
       redundancyThread.interrupt();
@@ -713,7 +719,9 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.close();
     pendingReconstruction.stop();
     blocksMap.close();
-    getSPSManager().stopGracefully();
+    if (getSPSManager() != null) {
+      getSPSManager().stopGracefully();
+    }
   }
 
   /** @return the datanodeManager */
@@ -3881,6 +3889,21 @@ public class BlockManager implements BlockStatsMXBean {
     }
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
+
+    // notify SPS about the reported block
+    notifyStorageMovementAttemptFinishedBlk(storageInfo, block);
+  }
+
+  private void notifyStorageMovementAttemptFinishedBlk(
+      DatanodeStorageInfo storageInfo, Block block) {
+    if (getSPSManager() != null) {
+      SPSService<Long> sps = getSPSManager().getInternalSPSService();
+      if (sps.isRunning()) {
+        sps.notifyStorageMovementAttemptFinishedBlk(
+            storageInfo.getDatanodeDescriptor(), storageInfo.getStorageType(),
+            block);
+      }
+    }
   }
   
   private void processAndHandleReportedBlock(
@@ -5023,6 +5046,57 @@ public class BlockManager implements BlockStatsMXBean {
     } finally {
       namesystem.readUnlock();
     }
+  }
+
+  /**
+   * Create SPS manager instance. It manages the user invoked sps paths and does
+   * the movement.
+   *
+   * @param conf
+   *          configuration
+   * @return true if the instance is successfully created, false otherwise.
+   */
+  private boolean createSPSManager(final Configuration conf) {
+    return createSPSManager(conf, null);
+  }
+
+  /**
+   * Create SPS manager instance. It manages the user invoked sps paths and does
+   * the movement.
+   *
+   * @param conf
+   *          configuration
+   * @param spsMode
+   *          satisfier mode
+   * @return true if the instance is successfully created, false otherwise.
+   */
+  public boolean createSPSManager(final Configuration conf,
+      final String spsMode) {
+    // sps manager manages the user invoked sps paths and does the movement.
+    // StoragePolicySatisfier(SPS) configs
+    boolean storagePolicyEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT);
+    String modeVal = spsMode;
+    if (org.apache.commons.lang.StringUtils.isBlank(modeVal)) {
+      modeVal = conf.get(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
+    }
+    StoragePolicySatisfierMode mode = StoragePolicySatisfierMode
+        .fromString(modeVal);
+    if (!storagePolicyEnabled || mode == StoragePolicySatisfierMode.NONE) {
+      LOG.info("Storage policy satisfier is disabled");
+      return false;
+    }
+    spsManager = new StoragePolicySatisfyManager(conf, namesystem, this);
+    return true;
+  }
+
+  /**
+   * Nullify SPS manager as this feature is disabled fully.
+   */
+  public void disableSPS() {
+    spsManager = null;
   }
 
   /**

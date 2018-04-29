@@ -1427,7 +1427,7 @@ public class DataNode extends ReconfigurableBase
     ecWorker = new ErasureCodingWorker(getConf(), this);
     blockRecoveryWorker = new BlockRecoveryWorker(this);
     storagePolicySatisfyWorker =
-        new StoragePolicySatisfyWorker(getConf(), this);
+        new StoragePolicySatisfyWorker(getConf(), this, null);
     storagePolicySatisfyWorker.start();
 
     blockPoolManager = new BlockPoolManager(this);
@@ -2137,11 +2137,6 @@ public class DataNode extends ReconfigurableBase
       notifyAll();
     }
     tracer.close();
-
-    // Waiting to finish SPS worker thread.
-    if (storagePolicySatisfyWorker != null) {
-      storagePolicySatisfyWorker.waitToFinishWorkerThread();
-    }
   }
 
   /**

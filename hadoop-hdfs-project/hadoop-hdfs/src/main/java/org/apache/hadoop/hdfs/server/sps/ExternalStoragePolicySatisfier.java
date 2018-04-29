@@ -86,7 +86,6 @@ public final class ExternalStoragePolicySatisfier {
           new ExternalBlockMovementListener();
       ExternalSPSBlockMoveTaskHandler externalHandler =
           new ExternalSPSBlockMoveTaskHandler(spsConf, nnc, sps);
-      externalHandler.init();
       sps.init(context, new ExternalSPSFilePathCollector(sps), externalHandler,
           blkMoveListener);
       sps.start(true, StoragePolicySatisfierMode.EXTERNAL);
@@ -147,7 +146,7 @@ public final class ExternalStoragePolicySatisfier {
       for (Block block : moveAttemptFinishedBlks) {
         actualBlockMovements.add(block);
       }
-      LOG.info("Movement attempted blocks", actualBlockMovements);
+      LOG.info("Movement attempted blocks:{}", actualBlockMovements);
     }
   }
 }

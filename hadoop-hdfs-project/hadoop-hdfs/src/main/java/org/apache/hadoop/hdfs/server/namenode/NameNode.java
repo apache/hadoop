@@ -2147,7 +2147,24 @@ public class NameNode extends ReconfigurableBase implements
     }
     StoragePolicySatisfierMode mode = StoragePolicySatisfierMode
         .fromString(newVal);
-    namesystem.getBlockManager().getSPSManager().changeModeEvent(mode);
+    if (mode == StoragePolicySatisfierMode.NONE) {
+      // disabling sps service
+      if (namesystem.getBlockManager().getSPSManager() != null) {
+        namesystem.getBlockManager().getSPSManager().changeModeEvent(mode);
+        namesystem.getBlockManager().disableSPS();
+      }
+    } else {
+      // enabling sps service
+      boolean spsCreated = (namesystem.getBlockManager()
+          .getSPSManager() != null);
+      if (!spsCreated) {
+        spsCreated = namesystem.getBlockManager().createSPSManager(getConf(),
+            newVal);
+      }
+      if (spsCreated) {
+        namesystem.getBlockManager().getSPSManager().changeModeEvent(mode);
+      }
+    }
     return newVal;
   }
 

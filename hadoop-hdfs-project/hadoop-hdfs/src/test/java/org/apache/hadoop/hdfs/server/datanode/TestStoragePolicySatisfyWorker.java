@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -35,8 +33,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -173,8 +171,10 @@ public class TestStoragePolicySatisfyWorker {
     DatanodeInfo targetDnInfo = DFSTestUtil
         .getLocalDatanodeInfo(src.getXferPort());
 
+    SimpleBlocksMovementsStatusHandler handler =
+        new SimpleBlocksMovementsStatusHandler();
     StoragePolicySatisfyWorker worker = new StoragePolicySatisfyWorker(conf,
-        src);
+        src, handler);
     try {
       worker.start();
       List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
@@ -184,81 +184,19 @@ public class TestStoragePolicySatisfyWorker {
       blockMovingInfos.add(blockMovingInfo);
       worker.processBlockMovingTasks(cluster.getNamesystem().getBlockPoolId(),
           blockMovingInfos);
-
-      waitForBlockMovementCompletion(worker, 1, 30000);
+      waitForBlockMovementCompletion(handler, 1, 30000);
     } finally {
       worker.stop();
     }
-  }
-
-  /**
-   * Tests that drop SPS work method clears all the queues.
-   *
-   * @throws Exception
-   */
-  @Test(timeout = 120000)
-  public void testDropSPSWork() throws Exception {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(20).build();
-
-    cluster.waitActive();
-    final DistributedFileSystem dfs = cluster.getFileSystem();
-    final String file = "/testDropSPSWork";
-    DFSTestUtil.createFile(dfs, new Path(file), false, 1024, 50 * 100,
-        DEFAULT_BLOCK_SIZE, (short) 2, 0, false, null);
-
-    // move to ARCHIVE
-    dfs.setStoragePolicy(new Path(file), "COLD");
-
-    DataNode src = cluster.getDataNodes().get(2);
-    DatanodeInfo targetDnInfo =
-        DFSTestUtil.getLocalDatanodeInfo(src.getXferPort());
-
-    StoragePolicySatisfyWorker worker =
-        new StoragePolicySatisfyWorker(conf, src);
-    worker.start();
-    try {
-      List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-      List<LocatedBlock> locatedBlocks =
-          dfs.getClient().getLocatedBlocks(file, 0).getLocatedBlocks();
-      for (LocatedBlock locatedBlock : locatedBlocks) {
-        BlockMovingInfo blockMovingInfo =
-            prepareBlockMovingInfo(locatedBlock.getBlock().getLocalBlock(),
-                locatedBlock.getLocations()[0], targetDnInfo,
-                locatedBlock.getStorageTypes()[0], StorageType.ARCHIVE);
-        blockMovingInfos.add(blockMovingInfo);
-      }
-      worker.processBlockMovingTasks(cluster.getNamesystem().getBlockPoolId(),
-          blockMovingInfos);
-      // Wait till results queue build up
-      waitForBlockMovementResult(worker, 30000);
-      worker.dropSPSWork();
-      assertTrue(worker.getBlocksMovementsStatusHandler()
-          .getMoveAttemptFinishedBlocks().size() == 0);
-    } finally {
-      worker.stop();
-    }
-  }
-
-  private void waitForBlockMovementResult(
-      final StoragePolicySatisfyWorker worker, int timeout) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        List<Block> completedBlocks = worker.getBlocksMovementsStatusHandler()
-            .getMoveAttemptFinishedBlocks();
-        return completedBlocks.size() > 0;
-      }
-    }, 100, timeout);
   }
 
   private void waitForBlockMovementCompletion(
-      final StoragePolicySatisfyWorker worker,
+      final SimpleBlocksMovementsStatusHandler handler,
       int expectedFinishedItemsCount, int timeout) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        List<Block> completedBlocks = worker.getBlocksMovementsStatusHandler()
-            .getMoveAttemptFinishedBlocks();
+        List<Block> completedBlocks = handler.getMoveAttemptFinishedBlocks();
         int finishedCount = completedBlocks.size();
         LOG.info("Block movement completed count={}, expected={} and actual={}",
             completedBlocks.size(), expectedFinishedItemsCount, finishedCount);

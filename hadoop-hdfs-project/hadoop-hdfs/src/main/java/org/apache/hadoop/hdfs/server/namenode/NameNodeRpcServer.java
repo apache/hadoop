@@ -156,8 +156,8 @@ import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -1517,16 +1517,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       int failedVolumes, VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks,
-      BlocksStorageMoveAttemptFinished storageMovementFinishedBlks)
+      @Nonnull SlowDiskReports slowDisks)
           throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease,
-        slowPeers, slowDisks,
-        storageMovementFinishedBlks);
+        slowPeers, slowDisks);
   }
 
   @Override // DatanodeProtocol
@@ -2543,10 +2541,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    boolean isSPSRunning = namesystem.getBlockManager().getSPSManager()
-        .isInternalSatisfierRunning();
+    StoragePolicySatisfyManager spsMgr =
+        namesystem.getBlockManager().getSPSManager();
+    boolean isInternalSatisfierRunning = (spsMgr != null
+        ? spsMgr.isInternalSatisfierRunning() : false);
     namesystem.logAuditEvent(true, operationName, null);
-    return isSPSRunning;
+    return isInternalSatisfierRunning;
   }
 
   @Override
@@ -2555,6 +2555,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
+    }
+    if (namesystem.getBlockManager().getSPSManager() == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Satisfier is not running inside namenode, so status "
+            + "can't be returned.");
+      }
+      throw new IOException("Satisfier is not running inside namenode, "
+          + "so status can't be returned.");
     }
     return namesystem.getBlockManager().getSPSManager()
         .checkStoragePolicySatisfyPathStatus(path);
@@ -2568,16 +2576,20 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }
-    // Check that SPS daemon service is running inside namenode
-    if (namesystem.getBlockManager().getSPSManager()
-        .getMode() == StoragePolicySatisfierMode.INTERNAL) {
-      LOG.debug("SPS service is internally enabled and running inside "
-          + "namenode, so external SPS is not allowed to fetch the path Ids");
-      throw new IOException("SPS service is internally enabled and running"
-          + " inside namenode, so external SPS is not allowed to fetch"
-          + " the path Ids");
+    // Check that SPS is enabled externally
+    StoragePolicySatisfyManager spsMgr =
+        namesystem.getBlockManager().getSPSManager();
+    StoragePolicySatisfierMode spsMode = (spsMgr != null ? spsMgr.getMode()
+        : StoragePolicySatisfierMode.NONE);
+    if (spsMode != StoragePolicySatisfierMode.EXTERNAL) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("SPS service mode is {}, so external SPS service is "
+            + "not allowed to fetch the path Ids", spsMode);
+      }
+      throw new IOException("SPS service mode is " + spsMode + ", so "
+          + "external SPS service is not allowed to fetch the path Ids");
     }
-    Long pathId = namesystem.getBlockManager().getSPSManager().getNextPathId();
+    Long pathId = spsMgr.getNextPathId();
     if (pathId == null) {
       return null;
     }

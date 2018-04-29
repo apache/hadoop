@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 
 import com.google.common.collect.Lists;
 
@@ -102,7 +103,11 @@ final class FSDirSatisfyStoragePolicyOp {
 
         // Adding directory in the pending queue, so FileInodeIdCollector
         // process directory child in batch and recursively
-        fsd.getBlockManager().getSPSManager().addPathId(inode.getId());
+        StoragePolicySatisfyManager spsManager =
+            fsd.getBlockManager().getSPSManager();
+        if (spsManager != null) {
+          spsManager.addPathId(inode.getId());
+        }
       }
     } finally {
       fsd.writeUnlock();
@@ -116,7 +121,11 @@ final class FSDirSatisfyStoragePolicyOp {
     } else {
       // Adding directory in the pending queue, so FileInodeIdCollector process
       // directory child in batch and recursively
-      fsd.getBlockManager().getSPSManager().addPathId(inode.getId());
+      StoragePolicySatisfyManager spsManager =
+          fsd.getBlockManager().getSPSManager();
+      if (spsManager != null) {
+        spsManager.addPathId(inode.getId());
+      }
       return true;
     }
   }

@@ -57,7 +57,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerRepo
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlocksStorageMoveAttemptFinishedProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -105,7 +104,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStr
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -969,29 +967,6 @@ public class PBHelper {
       slowDisksMap.put(proto.getBasePath(), latencyMap);
     }
     return SlowDiskReports.create(slowDisksMap);
-  }
-
-  public static BlocksStorageMoveAttemptFinished convertBlksMovReport(
-      BlocksStorageMoveAttemptFinishedProto proto) {
-
-    List<BlockProto> blocksList = proto.getBlocksList();
-    Block[] blocks = new Block[blocksList.size()];
-    for (int i = 0; i < blocksList.size(); i++) {
-      BlockProto blkProto = blocksList.get(i);
-      blocks[i] = PBHelperClient.convert(blkProto);
-    }
-    return new BlocksStorageMoveAttemptFinished(blocks);
-  }
-
-  public static BlocksStorageMoveAttemptFinishedProto convertBlksMovReport(
-      BlocksStorageMoveAttemptFinished blocksMoveAttemptFinished) {
-    BlocksStorageMoveAttemptFinishedProto.Builder builder =
-        BlocksStorageMoveAttemptFinishedProto.newBuilder();
-    Block[] blocks = blocksMoveAttemptFinished.getBlocks();
-    for (Block block : blocks) {
-      builder.addBlocks(PBHelperClient.convert(block));
-    }
-    return builder.build();
   }
 
   public static JournalInfo convert(JournalInfoProto info) {

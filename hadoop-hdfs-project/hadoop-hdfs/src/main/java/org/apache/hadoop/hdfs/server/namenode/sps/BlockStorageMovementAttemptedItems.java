@@ -17,21 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
-import static org.apache.hadoop.util.Time.monotonicNow;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.AttemptedItemInfo;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.StorageTypeNodePair;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,10 +67,13 @@ public class BlockStorageMovementAttemptedItems<T> {
    * processing and sent to DNs.
    */
   private final List<AttemptedItemInfo<T>> storageMovementAttemptedItems;
-  private final List<Block> movementFinishedBlocks;
+  private Map<Block, Set<StorageTypeNodePair>> scheduledBlkLocs;
+  // Maintains separate Queue to keep the movement finished blocks. This Q
+  // is used to update the storageMovementAttemptedItems list asynchronously.
+  private final BlockingQueue<Block> movementFinishedBlocks;
   private volatile boolean monitorRunning = true;
   private Daemon timerThread = null;
-  private final BlockMovementListener blkMovementListener;
+  private BlockMovementListener blkMovementListener;
   //
   // It might take anywhere between 5 to 10 minutes before
   // a request is timed out.
@@ -94,7 +104,8 @@ public class BlockStorageMovementAttemptedItems<T> {
         DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT);
     this.blockStorageMovementNeeded = unsatisfiedStorageMovementFiles;
     storageMovementAttemptedItems = new ArrayList<>();
-    movementFinishedBlocks = new ArrayList<>();
+    scheduledBlkLocs = new HashMap<>();
+    movementFinishedBlocks = new LinkedBlockingQueue<>();
     this.blkMovementListener = blockMovementListener;
   }
 
@@ -105,29 +116,67 @@ public class BlockStorageMovementAttemptedItems<T> {
    * @param itemInfo
    *          - tracking info
    */
-  public void add(AttemptedItemInfo<T> itemInfo) {
+  public void add(T startPath, T file, long monotonicNow,
+      Map<Block, Set<StorageTypeNodePair>> assignedBlocks, int retryCount) {
+    AttemptedItemInfo<T> itemInfo = new AttemptedItemInfo<T>(startPath, file,
+        monotonicNow, assignedBlocks.keySet(), retryCount);
     synchronized (storageMovementAttemptedItems) {
       storageMovementAttemptedItems.add(itemInfo);
+    }
+    synchronized (scheduledBlkLocs) {
+      scheduledBlkLocs.putAll(assignedBlocks);
     }
   }
 
   /**
-   * Add the storage movement attempt finished blocks to
-   * storageMovementFinishedBlocks.
+   * Notify the storage movement attempt finished block.
    *
-   * @param moveAttemptFinishedBlks
-   *          storage movement attempt finished blocks
+   * @param reportedDn
+   *          reported datanode
+   * @param type
+   *          storage type
+   * @param reportedBlock
+   *          reported block
    */
-  public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
-    if (moveAttemptFinishedBlks.length == 0) {
-      return;
+  public void notifyReportedBlock(DatanodeInfo reportedDn, StorageType type,
+      Block reportedBlock) {
+    synchronized (scheduledBlkLocs) {
+      if (scheduledBlkLocs.size() <= 0) {
+        return;
+      }
+      matchesReportedBlock(reportedDn, type, reportedBlock);
     }
-    synchronized (movementFinishedBlocks) {
-      movementFinishedBlocks.addAll(Arrays.asList(moveAttemptFinishedBlks));
+  }
+
+  private void matchesReportedBlock(DatanodeInfo reportedDn, StorageType type,
+      Block reportedBlock) {
+    Set<StorageTypeNodePair> blkLocs = scheduledBlkLocs.get(reportedBlock);
+    if (blkLocs == null) {
+      return; // unknown block, simply skip.
     }
-    // External listener if it is plugged-in
-    if (blkMovementListener != null) {
-      blkMovementListener.notifyMovementTriedBlocks(moveAttemptFinishedBlks);
+
+    for (StorageTypeNodePair dn : blkLocs) {
+      boolean foundDn = dn.getDatanodeInfo().compareTo(reportedDn) == 0 ? true
+          : false;
+      boolean foundType = dn.getStorageType().equals(type);
+      if (foundDn && foundType) {
+        blkLocs.remove(dn);
+        // listener if it is plugged-in
+        if (blkMovementListener != null) {
+          blkMovementListener
+              .notifyMovementTriedBlocks(new Block[] {reportedBlock});
+        }
+        // All the block locations has reported.
+        if (blkLocs.size() <= 0) {
+          movementFinishedBlocks.add(reportedBlock);
+          scheduledBlkLocs.remove(reportedBlock); // clean-up reported block
+        }
+        return; // found
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Reported block:{} not found in attempted blocks. Datanode:{}"
+          + ", StorageType:{}", reportedBlock, reportedDn, type);
     }
   }
 
@@ -203,14 +252,12 @@ public class BlockStorageMovementAttemptedItems<T> {
         if (now > itemInfo.getLastAttemptedOrReportedTime()
             + selfRetryTimeout) {
           T file = itemInfo.getFile();
-          synchronized (movementFinishedBlocks) {
-            ItemInfo<T> candidate = new ItemInfo<T>(itemInfo.getStartPath(),
-                file, itemInfo.getRetryCount() + 1);
-            blockStorageMovementNeeded.add(candidate);
-            iter.remove();
-            LOG.info("TrackID: {} becomes timed out and moved to needed "
-                + "retries queue for next iteration.", file);
-          }
+          ItemInfo<T> candidate = new ItemInfo<T>(itemInfo.getStartPath(), file,
+              itemInfo.getRetryCount() + 1);
+          blockStorageMovementNeeded.add(candidate);
+          iter.remove();
+          LOG.info("TrackID: {} becomes timed out and moved to needed "
+              + "retries queue for next iteration.", file);
         }
       }
     }
@@ -218,29 +265,25 @@ public class BlockStorageMovementAttemptedItems<T> {
 
   @VisibleForTesting
   void blockStorageMovementReportedItemsCheck() throws IOException {
-    synchronized (movementFinishedBlocks) {
-      Iterator<Block> finishedBlksIter = movementFinishedBlocks.iterator();
-      while (finishedBlksIter.hasNext()) {
-        Block blk = finishedBlksIter.next();
-        synchronized (storageMovementAttemptedItems) {
-          Iterator<AttemptedItemInfo<T>> iterator =
-              storageMovementAttemptedItems.iterator();
-          while (iterator.hasNext()) {
-            AttemptedItemInfo<T> attemptedItemInfo = iterator.next();
-            attemptedItemInfo.getBlocks().remove(blk);
-            if (attemptedItemInfo.getBlocks().isEmpty()) {
-              // TODO: try add this at front of the Queue, so that this element
-              // gets the chance first and can be cleaned from queue quickly as
-              // all movements already done.
-              blockStorageMovementNeeded.add(new ItemInfo<T>(attemptedItemInfo
-                  .getStartPath(), attemptedItemInfo.getFile(),
-                  attemptedItemInfo.getRetryCount() + 1));
-              iterator.remove();
-            }
+    // Removes all available blocks from this queue and process it.
+    Collection<Block> finishedBlks = new ArrayList<>();
+    movementFinishedBlocks.drainTo(finishedBlks);
+
+    // Update attempted items list
+    for (Block blk : finishedBlks) {
+      synchronized (storageMovementAttemptedItems) {
+        Iterator<AttemptedItemInfo<T>> iterator = storageMovementAttemptedItems
+            .iterator();
+        while (iterator.hasNext()) {
+          AttemptedItemInfo<T> attemptedItemInfo = iterator.next();
+          attemptedItemInfo.getBlocks().remove(blk);
+          if (attemptedItemInfo.getBlocks().isEmpty()) {
+            blockStorageMovementNeeded.add(new ItemInfo<T>(
+                attemptedItemInfo.getStartPath(), attemptedItemInfo.getFile(),
+                attemptedItemInfo.getRetryCount() + 1));
+            iterator.remove();
           }
         }
-        // Remove attempted blocks from movementFinishedBlocks list.
-        finishedBlksIter.remove();
       }
     }
   }
@@ -252,15 +295,29 @@ public class BlockStorageMovementAttemptedItems<T> {
 
   @VisibleForTesting
   public int getAttemptedItemsCount() {
-    return storageMovementAttemptedItems.size();
+    synchronized (storageMovementAttemptedItems) {
+      return storageMovementAttemptedItems.size();
+    }
   }
 
   public void clearQueues() {
-    synchronized (movementFinishedBlocks) {
-      movementFinishedBlocks.clear();
-    }
+    movementFinishedBlocks.clear();
     synchronized (storageMovementAttemptedItems) {
       storageMovementAttemptedItems.clear();
     }
+    synchronized (scheduledBlkLocs) {
+      scheduledBlkLocs.clear();
+    }
+  }
+
+  /**
+   * Sets external listener for testing.
+   *
+   * @param blkMoveListener
+   *          block movement listener callback object
+   */
+  @VisibleForTesting
+  void setBlockMovementListener(BlockMovementListener blkMoveListener) {
+    this.blkMovementListener = blkMoveListener;
   }
 }

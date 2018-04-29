@@ -22,8 +22,10 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 
 /**
  * An interface for SPSService, which exposes life cycle and processing APIs.
@@ -131,11 +133,16 @@ public interface SPSService<T> {
   void markScanCompletedForPath(T spsPath);
 
   /**
-   * Notify the details of storage movement attempt finished blocks.
+   * Given node is reporting that it received a certain movement attempt
+   * finished block.
    *
-   * @param moveAttemptFinishedBlks
-   *          - array contains all the blocks that are attempted to move
+   * @param dnInfo
+   *          - reported datanode
+   * @param storageType
+   *          - storage type
+   * @param block
+   *          - block that is attempted to move
    */
-  void notifyStorageMovementAttemptFinishedBlks(
-      BlocksStorageMoveAttemptFinished moveAttemptFinishedBlks);
+  void notifyStorageMovementAttemptFinishedBlk(DatanodeInfo dnInfo,
+      StorageType storageType, Block block);
 }

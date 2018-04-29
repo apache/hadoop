@@ -54,11 +54,9 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockStorageMovementAttemptedItems;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.sps.TestStoragePolicySatisfier;
@@ -92,6 +90,8 @@ public class TestExternalStoragePolicySatisfier
   private File baseDir;
   private StoragePolicySatisfier<String> externalSps;
   private ExternalSPSContext externalCtxt;
+  private ExternalBlockMovementListener blkMoveListener =
+      new ExternalBlockMovementListener();
 
   @After
   public void destroy() throws Exception {
@@ -144,15 +144,12 @@ public class TestExternalStoragePolicySatisfier
     nnc = getNameNodeConnector(getConf());
 
     externalSps = new StoragePolicySatisfier<String>(getConf());
-    externalCtxt = new ExternalSPSContext(externalSps,
-        getNameNodeConnector(conf));
+    externalCtxt = new ExternalSPSContext(externalSps, nnc);
 
-    ExternalBlockMovementListener blkMoveListener =
-        new ExternalBlockMovementListener();
+    blkMoveListener.clear();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(conf, nnc,
             externalSps);
-    externalHandler.init();
     externalSps.init(externalCtxt,
         new ExternalSPSFilePathCollector(externalSps), externalHandler,
         blkMoveListener);
@@ -169,31 +166,15 @@ public class TestExternalStoragePolicySatisfier
     getCluster().waitActive();
     externalSps = new StoragePolicySatisfier<>(getConf());
 
-    externalCtxt = new ExternalSPSContext(externalSps,
-        getNameNodeConnector(getConf()));
-    ExternalBlockMovementListener blkMoveListener =
-        new ExternalBlockMovementListener();
+    externalCtxt = new ExternalSPSContext(externalSps, nnc);
+    blkMoveListener.clear();
     ExternalSPSBlockMoveTaskHandler externalHandler =
         new ExternalSPSBlockMoveTaskHandler(getConf(), nnc,
             externalSps);
-    externalHandler.init();
     externalSps.init(externalCtxt,
         new ExternalSPSFilePathCollector(externalSps), externalHandler,
         blkMoveListener);
     externalSps.start(true, StoragePolicySatisfierMode.EXTERNAL);
-  }
-
-  private class ExternalBlockMovementListener implements BlockMovementListener {
-
-    private List<Block> actualBlockMovements = new ArrayList<>();
-
-    @Override
-    public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
-      for (Block block : moveAttemptFinishedBlks) {
-        actualBlockMovements.add(block);
-      }
-      LOG.info("Movement attempted blocks", actualBlockMovements);
-    }
   }
 
   private NameNodeConnector getNameNodeConnector(Configuration conf)
@@ -237,16 +218,15 @@ public class TestExternalStoragePolicySatisfier
   public void waitForBlocksMovementAttemptReport(
       long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
+    Assert.assertNotNull("Didn't set external block move listener",
+        blkMoveListener);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
+        int actualCount = blkMoveListener.getActualBlockMovements().size();
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
-            expectedMovementFinishedBlocksCount,
-            ((BlockStorageMovementAttemptedItems<String>) (externalSps
-                .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount());
-        return ((BlockStorageMovementAttemptedItems<String>) (externalSps
-            .getAttemptedItemsMonitor()))
-                .getMovementFinishedBlocksCount()
+            expectedMovementFinishedBlocksCount, actualCount);
+        return actualCount
             >= expectedMovementFinishedBlocksCount;
       }
     }, 100, timeout);
@@ -352,6 +332,8 @@ public class TestExternalStoragePolicySatisfier
       files.add(FILE);
       DistributedFileSystem fs = getFS();
 
+      // stops sps to make the SPS Q with many outstanding requests.
+      externalSps.stopGracefully();
       // Creates 4 more files. Send all of them for satisfying the storage
       // policy together.
       for (int i = 0; i < 3; i++) {

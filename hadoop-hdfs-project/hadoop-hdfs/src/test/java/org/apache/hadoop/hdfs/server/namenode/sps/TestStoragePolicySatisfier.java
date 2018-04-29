@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -107,6 +108,8 @@ public class TestStoragePolicySatisfier {
   public static final long CAPACITY = 2 * 256 * 1024 * 1024;
   public static final String FILE = "/testMoveToSatisfyStoragePolicy";
   public static final int DEFAULT_BLOCK_SIZE = 1024;
+  private ExternalBlockMovementListener blkMoveListener =
+      new ExternalBlockMovementListener();
 
   /**
    * Sets hdfs cluster.
@@ -1029,6 +1032,9 @@ public class TestStoragePolicySatisfier {
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+          "5000");
       StorageType[][] newtypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK},
@@ -1072,6 +1078,9 @@ public class TestStoragePolicySatisfier {
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+          "5000");
       StorageType[][] newtypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
           {StorageType.ARCHIVE, StorageType.DISK},
@@ -1089,7 +1098,7 @@ public class TestStoragePolicySatisfier {
       fs.setStoragePolicy(filePath, "COLD");
       fs.satisfyStoragePolicy(filePath);
       DFSTestUtil.waitExpectedStorageType(filePath.toString(),
-          StorageType.ARCHIVE, 3, 30000, hdfsCluster.getFileSystem());
+          StorageType.ARCHIVE, 3, 60000, hdfsCluster.getFileSystem());
       assertFalse("Log output does not contain expected log message: ",
           logs.getOutput().contains("some of the blocks are low redundant"));
     } finally {
@@ -1425,6 +1434,9 @@ public class TestStoragePolicySatisfier {
       config.set(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+          "5000");
       config.setBoolean(DFSConfigKeys
           .DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_KEY,
           false);
@@ -1467,7 +1479,7 @@ public class TestStoragePolicySatisfier {
       for (int i = 1; i <= 10; i++) {
         Path filePath = new Path("/file" + i);
         DFSTestUtil.waitExpectedStorageType(filePath.toString(),
-            StorageType.DISK, 4, 30000, hdfsCluster.getFileSystem());
+            StorageType.DISK, 4, 60000, hdfsCluster.getFileSystem());
       }
       for (int i = 11; i <= 20; i++) {
         Path filePath = new Path("/file" + i);
@@ -1725,20 +1737,16 @@ public class TestStoragePolicySatisfier {
   public void waitForBlocksMovementAttemptReport(
       long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
-    BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
-    final StoragePolicySatisfier<Long> sps =
-        (StoragePolicySatisfier<Long>) blockManager
-        .getSPSManager().getInternalSPSService();
+    Assert.assertNotNull("Didn't set external block move listener",
+        blkMoveListener);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
+        int actualCount = blkMoveListener.getActualBlockMovements().size();
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
             expectedMovementFinishedBlocksCount,
-            ((BlockStorageMovementAttemptedItems<Long>) (sps
-                .getAttemptedItemsMonitor())).getMovementFinishedBlocksCount());
-        return ((BlockStorageMovementAttemptedItems<Long>) (sps
-            .getAttemptedItemsMonitor()))
-                .getMovementFinishedBlocksCount()
+            actualCount);
+        return actualCount
             >= expectedMovementFinishedBlocksCount;
       }
     }, 100, timeout);
@@ -1790,11 +1798,54 @@ public class TestStoragePolicySatisfier {
         .numDataNodes(numberOfDatanodes).storagesPerDatanode(storagesPerDn)
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
+
+    // Sets external listener for assertion.
+    blkMoveListener.clear();
+    BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+    final StoragePolicySatisfier<Long> sps =
+        (StoragePolicySatisfier<Long>) blockManager
+        .getSPSManager().getInternalSPSService();
+    sps.setBlockMovementListener(blkMoveListener);
     return cluster;
   }
 
   public void restartNamenode() throws IOException {
     hdfsCluster.restartNameNodes();
     hdfsCluster.waitActive();
+    BlockManager blockManager = hdfsCluster.getNamesystem().getBlockManager();
+    StoragePolicySatisfyManager spsMgr = blockManager.getSPSManager();
+    if (spsMgr != null && spsMgr.isInternalSatisfierRunning()) {
+      // Sets external listener for assertion.
+      blkMoveListener.clear();
+      final StoragePolicySatisfier<Long> sps =
+          (StoragePolicySatisfier<Long>) spsMgr.getInternalSPSService();
+      sps.setBlockMovementListener(blkMoveListener);
+    }
+  }
+
+  /**
+   * Implementation of listener callback, where it collects all the sps move
+   * attempted blocks for assertion.
+   */
+  public static final class ExternalBlockMovementListener
+      implements BlockMovementListener {
+
+    private List<Block> actualBlockMovements = new ArrayList<>();
+
+    @Override
+    public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
+      for (Block block : moveAttemptFinishedBlks) {
+        actualBlockMovements.add(block);
+      }
+      LOG.info("Movement attempted blocks:{}", actualBlockMovements);
+    }
+
+    public List<Block> getActualBlockMovements() {
+      return actualBlockMovements;
+    }
+
+    public void clear() {
+      actualBlockMovements.clear();
+    }
   }
 }

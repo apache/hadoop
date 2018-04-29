@@ -185,14 +185,6 @@ message BlockMovingInfoProto {
 }
 
 /**
- * Blocks for which storage movements has been attempted and finished
- * with either success or failure.
- */
-message BlocksStorageMoveAttemptFinishedProto {
-  repeated BlockProto blocks = 1;
-}
-
-/**
  * registration - Information of the datanode registering with the namenode
  */
 message RegisterDatanodeRequestProto {
@@ -249,7 +241,6 @@ message HeartbeatRequestProto {
   optional bool requestFullBlockReportLease = 9 [ default = false ];
   repeated SlowPeerReportProto slowPeers = 10;
   repeated SlowDiskReportProto slowDisks = 11;
-  optional BlocksStorageMoveAttemptFinishedProto storageMoveAttemptFinishedBlks = 12;
 }
 
 /**

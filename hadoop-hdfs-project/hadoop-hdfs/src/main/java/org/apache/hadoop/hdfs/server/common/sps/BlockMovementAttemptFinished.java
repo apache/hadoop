@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.common.sps;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
@@ -33,6 +34,7 @@ public class BlockMovementAttemptFinished {
   private final Block block;
   private final DatanodeInfo src;
   private final DatanodeInfo target;
+  private final StorageType targetType;
   private final BlockMovementStatus status;
 
   /**
@@ -44,14 +46,17 @@ public class BlockMovementAttemptFinished {
    *          src datanode
    * @param target
    *          target datanode
+   * @param targetType
+   *          target storage type
    * @param status
    *          movement status
    */
   public BlockMovementAttemptFinished(Block block, DatanodeInfo src,
-      DatanodeInfo target, BlockMovementStatus status) {
+      DatanodeInfo target, StorageType targetType, BlockMovementStatus status) {
     this.block = block;
     this.src = src;
     this.target = target;
+    this.targetType = targetType;
     this.status = status;
   }
 
@@ -61,6 +66,20 @@ public class BlockMovementAttemptFinished {
    */
   public Block getBlock() {
     return block;
+  }
+
+  /**
+   * @return the target datanode where it moved the block.
+   */
+  public DatanodeInfo getTargetDatanode() {
+    return target;
+  }
+
+  /**
+   * @return target storage type.
+   */
+  public StorageType getTargetType() {
+    return targetType;
   }
 
   /**
@@ -74,7 +93,8 @@ public class BlockMovementAttemptFinished {
   public String toString() {
     return new StringBuilder().append("Block movement attempt finished(\n  ")
         .append(" block : ").append(block).append(" src node: ").append(src)
-        .append(" target node: ").append(target).append(" movement status: ")
+        .append(" target node: ").append(target).append(" target type: ")
+        .append(targetType).append(" movement status: ")
         .append(status).append(")").toString();
   }
 }

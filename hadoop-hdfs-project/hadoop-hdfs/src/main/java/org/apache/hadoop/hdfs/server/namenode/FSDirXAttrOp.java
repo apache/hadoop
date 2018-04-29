@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
@@ -209,8 +210,11 @@ class FSDirXAttrOp {
       for (XAttr xattr : toRemove) {
         if (XATTR_SATISFY_STORAGE_POLICY
             .equals(XAttrHelper.getPrefixedName(xattr))) {
-          fsd.getBlockManager().getSPSManager().getInternalSPSService()
-              .clearQueue(inode.getId());
+          StoragePolicySatisfyManager spsManager =
+              fsd.getBlockManager().getSPSManager();
+          if (spsManager != null) {
+            spsManager.getInternalSPSService().clearQueue(inode.getId());
+          }
           break;
         }
       }
