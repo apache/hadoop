@@ -270,7 +270,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   ProvidedVolumeImpl(FsDatasetImpl dataset, String storageID,
       StorageDirectory sd, FileIoProvider fileIoProvider,
       Configuration conf) throws IOException {
-    super(dataset, storageID, sd, fileIoProvider, conf);
+    super(dataset, storageID, sd, fileIoProvider, conf, null);
     assert getStorageLocation().getStorageType() == StorageType.PROVIDED:
       "Only provided storages must use ProvidedVolume";
 
