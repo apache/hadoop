@@ -86,7 +86,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
     long size = 0;
     do {
       size = in.read(data);
-    } while (size > 0)
+    } while (size > 0);
     in.close();
     printMeasurements();
   }
