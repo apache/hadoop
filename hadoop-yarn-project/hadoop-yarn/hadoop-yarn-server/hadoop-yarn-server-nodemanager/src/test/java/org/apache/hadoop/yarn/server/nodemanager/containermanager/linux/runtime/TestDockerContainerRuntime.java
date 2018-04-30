@@ -1539,6 +1539,19 @@ public class TestDockerContainerRuntime {
     }
   }
 
+  @Test
+  public void testValidDockerHostnameLength() throws Exception {
+    String validLength = "example.test.site";
+    DockerLinuxContainerRuntime.validateHostname(validLength);
+  }
+
+  @Test(expected = ContainerExecutionException.class)
+  public void testInvalidDockerHostnameLength() throws Exception {
+    String invalidLength =
+        "exampleexampleexampleexampleexampleexampleexampleexample.test.site";
+    DockerLinuxContainerRuntime.validateHostname(invalidLength);
+  }
+
   @SuppressWarnings("unchecked")
   private void checkVolumeCreateCommand()
       throws PrivilegedOperationException, IOException {

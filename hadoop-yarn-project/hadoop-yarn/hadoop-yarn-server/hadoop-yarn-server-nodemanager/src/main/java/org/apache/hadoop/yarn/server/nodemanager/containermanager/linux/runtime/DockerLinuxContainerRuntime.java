@@ -199,6 +199,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       HOSTNAME_PATTERN);
   private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
       "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
+  private static final int HOST_NAME_LENGTH = 64;
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -540,6 +541,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       if (!hostnamePattern.matcher(hostname).matches()) {
         throw new ContainerExecutionException("Hostname '" + hostname
             + "' doesn't match docker hostname pattern");
+      }
+      if (hostname.length() > HOST_NAME_LENGTH) {
+        throw new ContainerExecutionException(
+            "Hostname can not be greater than " + HOST_NAME_LENGTH
+                + " characters: " + hostname);
       }
     }
   }
