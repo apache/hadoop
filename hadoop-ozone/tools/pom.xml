@@ -68,4 +68,18 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <version>1.19</version>
     </dependency>
   </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <configuration>
+          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml
+          </excludeFilterFile>
+          <fork>true</fork>
+          <maxHeap>2048</maxHeap>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
