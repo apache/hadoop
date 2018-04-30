@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -99,7 +98,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       = new ConcurrentHashMap<String, BlockPoolSlice>();
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;
-  private final long reserved;
+  private final ReservedSpaceCalculator reserved;
   private CloseableReferenceCount reference = new CloseableReferenceCount();
 
   // Disk space reserved for blocks (RBW or Re-replicating) open for write.
@@ -123,24 +122,33 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   FsVolumeImpl(FsDatasetImpl dataset, String storageID, File currentDir,
       Configuration conf, StorageType storageType) throws IOException {
+    // outside tests, usage created in ReservedSpaceCalculator.Builder
+    this(dataset, storageID, currentDir, conf, storageType, null);
+  }
+
+  FsVolumeImpl(FsDatasetImpl dataset, String storageID, File currentDir,
+      Configuration conf, StorageType storageType, DF usage)
+      throws IOException {
     this.dataset = dataset;
     this.storageID = storageID;
-    this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY
-        + "." + StringUtils.toLowerCase(storageType.toString()), conf.getLong(
-        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
-        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT));
     this.reservedForReplicas = new AtomicLong(0L);
     this.currentDir = currentDir;
     File parent = currentDir.getParentFile();
-    this.usage = new DF(parent, conf);
     this.storageType = storageType;
     this.configuredCapacity = -1;
+
+    if (usage == null) {
+      usage = new DF(parent, conf);
+    }
+    this.usage = usage;
     // dataset.datanode may be null in some tests.
     this.fileIoProvider = dataset.datanode != null ?
         dataset.datanode.getFileIoProvider() :
         new FileIoProvider(conf, dataset.datanode);
     cacheExecutor = initializeCacheExecutor(parent);
     this.metrics = DataNodeVolumeMetrics.create(conf, parent.getAbsolutePath());
+    this.reserved = new ReservedSpaceCalculator.Builder(conf)
+        .setUsage(usage).setStorageType(storageType).build();
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -370,7 +378,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getCapacity() {
     if (configuredCapacity < 0) {
-      long remaining = usage.getCapacity() - reserved;
+      long remaining = usage.getCapacity() - getReserved();
       return remaining > 0 ? remaining : 0;
     }
 
@@ -410,8 +418,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   private long getRemainingReserved() throws IOException {
     long actualNonDfsUsed = getActualNonDfsUsed();
-    if (actualNonDfsUsed < reserved) {
-      return reserved - actualNonDfsUsed;
+    long actualReserved = getReserved();
+    if (actualNonDfsUsed < actualReserved) {
+      return actualReserved - actualNonDfsUsed;
     }
     return 0L;
   }
@@ -424,10 +433,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
    */
   public long getNonDfsUsed() throws IOException {
     long actualNonDfsUsed = getActualNonDfsUsed();
-    if (actualNonDfsUsed < reserved) {
+    long actualReserved = getReserved();
+    if (actualNonDfsUsed < actualReserved) {
       return 0L;
     }
-    return actualNonDfsUsed - reserved;
+    return actualNonDfsUsed - actualReserved;
   }
 
   @VisibleForTesting
@@ -446,7 +456,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getReserved(){
-    return reserved;
+    return reserved.getReserved();
   }
 
   BlockPoolSlice getBlockPoolSlice(String bpid) throws IOException {
