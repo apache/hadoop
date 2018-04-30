@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -105,6 +106,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -1060,32 +1062,48 @@ public class ApplicationMaster {
     public void onContainersAllocated(List<Container> allocatedContainers) {
       LOG.info("Got response from RM for container ask, allocatedCnt="
           + allocatedContainers.size());
-      numAllocatedContainers.addAndGet(allocatedContainers.size());
       for (Container allocatedContainer : allocatedContainers) {
-        String yarnShellId = Integer.toString(yarnShellIdCounter);
-        yarnShellIdCounter++;
-        LOG.info("Launching shell command on a new container."
-            + ", containerId=" + allocatedContainer.getId()
-            + ", yarnShellId=" + yarnShellId
-            + ", containerNode=" + allocatedContainer.getNodeId().getHost()
-            + ":" + allocatedContainer.getNodeId().getPort()
-            + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
-            + ", containerResourceMemory"
-            + allocatedContainer.getResource().getMemorySize()
-            + ", containerResourceVirtualCores"
-            + allocatedContainer.getResource().getVirtualCores());
-        // + ", containerToken"
-        // +allocatedContainer.getContainerToken().getIdentifier().toString());
+        if (numAllocatedContainers.get() == numTotalContainers) {
+          LOG.info("The requested number of containers have been allocated."
+              + " Releasing the extra container allocation from the RM.");
+          amRMClient.releaseAssignedContainer(allocatedContainer.getId());
+        } else {
+          numAllocatedContainers.addAndGet(1);
+          String yarnShellId = Integer.toString(yarnShellIdCounter);
+          yarnShellIdCounter++;
+          LOG.info(
+              "Launching shell command on a new container."
+                  + ", containerId=" + allocatedContainer.getId()
+                  + ", yarnShellId=" + yarnShellId
+                  + ", containerNode="
+                  + allocatedContainer.getNodeId().getHost()
+                  + ":" + allocatedContainer.getNodeId().getPort()
+                  + ", containerNodeURI="
+                  + allocatedContainer.getNodeHttpAddress()
+                  + ", containerResourceMemory"
+                  + allocatedContainer.getResource().getMemorySize()
+                  + ", containerResourceVirtualCores"
+                  + allocatedContainer.getResource().getVirtualCores());
 
-        Thread launchThread = createLaunchContainerThread(allocatedContainer,
-            yarnShellId);
+          Thread launchThread =
+              createLaunchContainerThread(allocatedContainer, yarnShellId);
 
-        // launch and start the container on a separate thread to keep
-        // the main thread unblocked
-        // as all containers may not be allocated at one go.
-        launchThreads.add(launchThread);
-        launchedContainers.add(allocatedContainer.getId());
-        launchThread.start();
+          // launch and start the container on a separate thread to keep
+          // the main thread unblocked
+          // as all containers may not be allocated at one go.
+          launchThreads.add(launchThread);
+          launchedContainers.add(allocatedContainer.getId());
+          launchThread.start();
+
+          // Remove the corresponding request
+          Collection<AMRMClient.ContainerRequest> requests =
+              amRMClient.getMatchingRequests(
+                  allocatedContainer.getAllocationRequestId());
+          if (requests.iterator().hasNext()) {
+            AMRMClient.ContainerRequest request = requests.iterator().next();
+            amRMClient.removeContainerRequest(request);
+          }
+        }
       }
     }
 
