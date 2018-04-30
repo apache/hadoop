@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -38,15 +39,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestFsVolumeList {
 
-  private final Configuration conf = new Configuration();
+  private Configuration conf;
   private VolumeChoosingPolicy<FsVolumeImpl> blockChooser =
       new RoundRobinVolumeChoosingPolicy<>();
   private FsDatasetImpl dataset = null;
@@ -61,6 +65,7 @@ public class TestFsVolumeList {
     blockScannerConf.setInt(DFSConfigKeys.
         DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
     blockScanner = new BlockScanner(null, blockScannerConf);
+    conf = new Configuration();
   }
 
   @Test(timeout=30000)
@@ -184,5 +189,57 @@ public class TestFsVolumeList {
     long expectedNonDfsUsage =
         actualNonDfsUsage - duReserved;
     assertEquals(expectedNonDfsUsage, spyVolume.getNonDfsUsed());
+  }
+
+  @Test
+  public void testDfsReservedPercentageForDifferentStorageTypes()
+      throws IOException {
+    conf.setClass(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_CALCULATOR_KEY,
+        ReservedSpaceCalculator.ReservedSpaceCalculatorPercentage.class,
+        ReservedSpaceCalculator.class);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY, 15);
+
+    File volDir = new File(baseDir, "volume-0");
+    volDir.mkdirs();
+
+    DF usage = mock(DF.class);
+    when(usage.getCapacity()).thenReturn(4000L);
+    when(usage.getAvailable()).thenReturn(1000L);
+
+    // when storage type reserved is not configured, should consider
+    // dfs.datanode.du.reserved.pct
+    FsVolumeImpl volume = new FsVolumeImpl(dataset, "storage-id", volDir,
+        conf, StorageType.RAM_DISK, usage);
+
+    assertEquals(600, volume.getReserved());
+    assertEquals(3400, volume.getCapacity());
+    assertEquals(400, volume.getAvailable());
+
+    // when storage type reserved is configured.
+    conf.setLong(
+        DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "."
+            + StringUtils.toLowerCase(StorageType.RAM_DISK.toString()), 10);
+    conf.setLong(
+        DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "."
+            + StringUtils.toLowerCase(StorageType.SSD.toString()), 50);
+    FsVolumeImpl volume1 = new FsVolumeImpl(dataset, "storage-id", volDir,
+        conf, StorageType.RAM_DISK, usage);
+    assertEquals(400, volume1.getReserved());
+    assertEquals(3600, volume1.getCapacity());
+    assertEquals(600, volume1.getAvailable());
+
+    FsVolumeImpl volume2 = new FsVolumeImpl(dataset, "storage-id", volDir,
+        conf, StorageType.SSD, usage);
+    assertEquals(2000, volume2.getReserved());
+    assertEquals(2000, volume2.getCapacity());
+    assertEquals(0, volume2.getAvailable());
+
+    FsVolumeImpl volume3 = new FsVolumeImpl(dataset, "storage-id", volDir,
+        conf, StorageType.DISK, usage);
+    assertEquals(600, volume3.getReserved());
+
+    FsVolumeImpl volume4 = new FsVolumeImpl(dataset, "storage-id", volDir,
+        conf, StorageType.ARCHIVE, usage);
+    assertEquals(600, volume4.getReserved());
   }
 }
