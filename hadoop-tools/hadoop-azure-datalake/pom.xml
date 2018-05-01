@@ -33,7 +33,7 @@
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <azure.data.lake.store.sdk.version>2.2.7</azure.data.lake.store.sdk.version>
+    <azure.data.lake.store.sdk.version>2.2.9</azure.data.lake.store.sdk.version>
   </properties>
   <build>
     <plugins>
