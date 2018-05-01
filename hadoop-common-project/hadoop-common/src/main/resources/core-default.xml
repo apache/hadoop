@@ -3051,4 +3051,12 @@
       System tags to group related properties together.
     </description>
   </property>
+
+  <property>
+    <name>ipc.client.bind.wildcard.addr</name>
+    <value>false</value>
+    <description>When set to true Clients will bind socket to wildcard
+      address. (i.e 0.0.0.0)
+    </description>
+  </property>
 </configuration>

@@ -341,6 +341,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY = "ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
+  public static final String  IPC_CLIENT_BIND_WILDCARD_ADDR_KEY = "ipc.client"
+      + ".bind.wildcard.addr";
+  public static final boolean IPC_CLIENT_BIND_WILDCARD_ADDR_DEFAULT = false;
+
   public static final String IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY =
     "ipc.client.connect.max.retries.on.sasl";
   public static final int    IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT = 5;
