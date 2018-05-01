@@ -21,7 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.VersionInfo;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
@@ -849,10 +849,11 @@ public class SCMNodeManager
               .setNodeReport(nodeReport)
               .setContainerReportState(containerReportState)
               .build());
+      return commandQueue.getCommand(datanodeDetails.getUuid());
     } else {
       LOG.error("Datanode ID in heartbeat is null");
     }
-    return commandQueue.getCommand(datanodeDetails.getUuid());
+    return null;
   }
 
   /**

@@ -21,7 +21,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.junit.After;
@@ -70,7 +70,8 @@ public class TestContainerStateManager {
   public void testAllocateContainer() throws IOException {
     // Allocate a container and verify the container info
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
     ContainerInfo info = containerStateManager
         .getMatchingContainer(OzoneConsts.GB * 3, containerOwner,
@@ -87,7 +88,8 @@ public class TestContainerStateManager {
 
     // Check there are two containers in ALLOCATED state after allocation
     String container2 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2, containerOwner);
     int numContainers = containerStateManager
         .getMatchingContainerIDs(containerOwner,
@@ -101,7 +103,8 @@ public class TestContainerStateManager {
     // Allocate 5 containers in ALLOCATED state and 5 in CREATING state
     String cname = "container" + RandomStringUtils.randomNumeric(5);
     for (int i = 0; i < 10; i++) {
-      scm.allocateContainer(xceiverClientManager.getType(),
+      scm.getClientProtocolServer().allocateContainer(
+          xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), cname + i, containerOwner);
       if (i >= 5) {
         scm.getScmContainerManager()
@@ -128,7 +131,8 @@ public class TestContainerStateManager {
   @Test
   public void testGetMatchingContainer() throws IOException {
     String container1 = "container-01234";
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
     scmContainerMapping.updateContainerState(container1,
         HddsProtos.LifeCycleEvent.CREATE);
@@ -136,7 +140,8 @@ public class TestContainerStateManager {
         HddsProtos.LifeCycleEvent.CREATED);
 
     String container2 = "container-56789";
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2, containerOwner);
 
     ContainerInfo info = containerStateManager
@@ -177,7 +182,8 @@ public class TestContainerStateManager {
     // Allocate container1 and update its state from ALLOCATED -> CREATING ->
     // OPEN -> CLOSING -> CLOSED -> DELETING -> DELETED
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
     containers = containerStateManager.getMatchingContainerIDs(containerOwner,
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
@@ -229,7 +235,8 @@ public class TestContainerStateManager {
     // Allocate container1 and update its state from ALLOCATED -> CREATING ->
     // DELETING
     String container2 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2, containerOwner);
     scmContainerMapping.updateContainerState(container2,
         HddsProtos.LifeCycleEvent.CREATE);
@@ -243,7 +250,8 @@ public class TestContainerStateManager {
     // Allocate container1 and update its state from ALLOCATED -> CREATING ->
     // OPEN -> CLOSING -> CLOSED
     String container3 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container3, containerOwner);
     scmContainerMapping.updateContainerState(container3,
         HddsProtos.LifeCycleEvent.CREATE);
@@ -262,7 +270,8 @@ public class TestContainerStateManager {
   @Test
   public void testUpdatingAllocatedBytes() throws Exception {
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
-    scm.allocateContainer(xceiverClientManager.getType(),
+    scm.getClientProtocolServer().allocateContainer(
+        xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1, containerOwner);
     scmContainerMapping.updateContainerState(container1,
         HddsProtos.LifeCycleEvent.CREATE);

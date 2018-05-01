@@ -29,7 +29,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
-import org.apache.hadoop.hdds.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ServicePort;
@@ -646,7 +646,8 @@ public class TestKeySpaceManager {
     keys.add(keyArgs.getResourceName());
     exception.expect(IOException.class);
     exception.expectMessage("Specified block key does not exist");
-    cluster.getStorageContainerManager().getBlockLocations(keys);
+    cluster.getStorageContainerManager().getBlockProtocolServer()
+        .getBlockLocations(keys);
 
     // Delete the key again to test deleting non-existing key.
     exception.expect(IOException.class);
@@ -818,9 +819,6 @@ public class TestKeySpaceManager {
     listKeyArgs = new ListArgs(bucketArgs, null, 100, null);
     result = storageHandler.listKeys(listKeyArgs);
     Assert.assertEquals(numKeys, result.getKeyList().size());
-    List<KeyInfo> allKeys = result.getKeyList().stream()
-        .filter(item -> item.getSize() == 4096)
-        .collect(Collectors.toList());
 
     // List keys with prefix "aKey".
     listKeyArgs = new ListArgs(bucketArgs, "aKey", 100, null);

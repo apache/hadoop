@@ -26,7 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -80,7 +80,7 @@ public class TestSCMMetrics {
       ContainerReportsRequestProto request = createContainerReport(numReport,
           stat, null);
       String fstDatanodeUuid = request.getDatanodeDetails().getUuid();
-      scmManager.sendContainerReport(request);
+      scmManager.getDatanodeProtocolServer().sendContainerReport(request);
 
       // verify container stat metrics
       MetricsRecordBuilder scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -103,7 +103,7 @@ public class TestSCMMetrics {
       // add one new report
       request = createContainerReport(1, stat, null);
       String sndDatanodeUuid = request.getDatanodeDetails().getUuid();
-      scmManager.sendContainerReport(request);
+      scmManager.getDatanodeProtocolServer().sendContainerReport(request);
 
       scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
       assertEquals(size * (numReport + 1),
@@ -125,12 +125,12 @@ public class TestSCMMetrics {
       // Re-send reports but with different value for validating
       // the aggregation.
       stat = new ContainerStat(100, 50, 3, 50, 60, 5, 6);
-      scmManager.sendContainerReport(createContainerReport(1, stat,
-          fstDatanodeUuid));
+      scmManager.getDatanodeProtocolServer().sendContainerReport(
+          createContainerReport(1, stat, fstDatanodeUuid));
 
       stat = new ContainerStat(1, 1, 1, 1, 1, 1, 1);
-      scmManager.sendContainerReport(createContainerReport(1, stat,
-          sndDatanodeUuid));
+      scmManager.getDatanodeProtocolServer().sendContainerReport(
+          createContainerReport(1, stat, sndDatanodeUuid));
 
       // the global container metrics value should be updated
       scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -175,7 +175,7 @@ public class TestSCMMetrics {
           .getDatanodeDetails().getUuidString();
       ContainerReportsRequestProto request = createContainerReport(numReport,
           stat, datanodeUuid);
-      scmManager.sendContainerReport(request);
+      scmManager.getDatanodeProtocolServer().sendContainerReport(request);
 
       MetricsRecordBuilder scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
       assertEquals(size * numReport,

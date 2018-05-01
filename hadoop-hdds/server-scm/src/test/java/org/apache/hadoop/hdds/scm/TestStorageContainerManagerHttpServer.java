@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManagerHttpServer;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
@@ -36,7 +37,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
@@ -95,7 +98,7 @@ public class TestStorageContainerManagerHttpServer {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
     conf.set(ScmConfigKeys.OZONE_SCM_HTTPS_ADDRESS_KEY, "localhost:0");
 
-    InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
+    InetSocketAddress.createUnresolved("localhost", 0);
     StorageContainerManagerHttpServer server = null;
     try {
       server = new StorageContainerManagerHttpServer(conf);
@@ -128,7 +131,7 @@ public class TestStorageContainerManagerHttpServer {
       URLConnection conn = connectionFactory.openConnection(url);
       conn.connect();
       conn.getContent();
-    } catch (Exception e) {
+    } catch (IOException e) {
       return false;
     }
     return true;

@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -124,7 +124,7 @@ public class TestSCMCli {
   public void testCreateContainer() throws Exception {
     String containerName =  "containerTestCreate";
     try {
-      scm.getContainer(containerName);
+      scm.getClientProtocolServer().getContainer(containerName);
       fail("should not be able to get the container");
     } catch (IOException ioe) {
       assertTrue(ioe.getMessage().contains(
@@ -132,14 +132,16 @@ public class TestSCMCli {
     }
     String[] args = {"-container", "-create", "-c", containerName};
     assertEquals(ResultCode.SUCCESS, cli.run(args));
-    Pipeline container = scm.getContainer(containerName);
+    Pipeline container = scm.getClientProtocolServer()
+        .getContainer(containerName);
     assertNotNull(container);
     assertEquals(containerName, container.getContainerName());
   }
 
   private boolean containerExist(String containerName) {
     try {
-      Pipeline scmPipeline = scm.getContainer(containerName);
+      Pipeline scmPipeline = scm.getClientProtocolServer()
+          .getContainer(containerName);
       return scmPipeline != null
           && containerName.equals(scmPipeline.getContainerName());
     } catch (IOException e) {
@@ -447,7 +449,8 @@ public class TestSCMCli {
     String containerName =  "containerTestClose";
     String[] args = {"-container", "-create", "-c", containerName};
     assertEquals(ResultCode.SUCCESS, cli.run(args));
-    Pipeline container = scm.getContainer(containerName);
+    Pipeline container = scm.getClientProtocolServer()
+        .getContainer(containerName);
     assertNotNull(container);
     assertEquals(containerName, container.getContainerName());
 

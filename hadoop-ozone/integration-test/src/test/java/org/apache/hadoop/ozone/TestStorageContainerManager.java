@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -32,8 +32,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCmdType;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
-import org.apache.hadoop.hdds.scm.StorageContainerManager.StartupOption;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager.StartupOption;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLog;
 import org.apache.hadoop.hdds.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -113,7 +113,7 @@ public class TestStorageContainerManager {
           .thenReturn(fakeUser);
 
       try {
-        mockScm.deleteContainer("container1");
+        mockScm.getClientProtocolServer().deleteContainer("container1");
         fail("Operation should fail, expecting an IOException here.");
       } catch (Exception e) {
         if (expectPermissionDenied) {
@@ -127,8 +127,8 @@ public class TestStorageContainerManager {
       }
 
       try {
-        Pipeline pipeLine2 = mockScm.allocateContainer(
-            xceiverClientManager.getType(),
+        Pipeline pipeLine2 = mockScm.getClientProtocolServer()
+            .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, "container2", "OZONE");
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
@@ -140,8 +140,8 @@ public class TestStorageContainerManager {
       }
 
       try {
-        Pipeline pipeLine3 = mockScm.allocateContainer(
-            xceiverClientManager.getType(),
+        Pipeline pipeLine3 = mockScm.getClientProtocolServer()
+            .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, "container3", "OZONE");
 
         if (expectPermissionDenied) {
@@ -155,7 +155,7 @@ public class TestStorageContainerManager {
       }
 
       try {
-        mockScm.getContainer("container4");
+        mockScm.getClientProtocolServer().getContainer("container4");
         fail("Operation should fail, expecting an IOException here.");
       } catch (Exception e) {
         if (expectPermissionDenied) {
@@ -436,7 +436,7 @@ public class TestStorageContainerManager {
     scmStore.initialize();
     StorageContainerManager scm = StorageContainerManager.createSCM(null, conf);
     //Reads the SCM Info from SCM instance
-    ScmInfo scmInfo = scm.getScmInfo();
+    ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     Assert.assertEquals(clusterId, scmInfo.getClusterId());
     Assert.assertEquals(scmId, scmInfo.getScmId());
   }

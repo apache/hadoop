@@ -157,7 +157,7 @@ public class TestStorageContainerManagerHelper {
   private MetadataStore getContainerMetadata(String containerName)
       throws IOException {
     Pipeline pipeline = cluster.getStorageContainerManager()
-        .getContainer(containerName);
+        .getClientProtocolServer().getContainer(containerName);
     DatanodeDetails leadDN = pipeline.getLeader();
     OzoneContainer containerServer =
         getContainerServerByDatanodeUuid(leadDN.getUuidString());

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -36,6 +36,17 @@ import java.util.concurrent.TimeoutException;
  * Interface used for MiniOzoneClusters.
  */
 public interface MiniOzoneCluster {
+
+  /**
+   * Returns the Builder to construct MiniOzoneCluster.
+   *
+   * @param conf OzoneConfiguration
+   *
+   * @return MiniOzoneCluster builder
+   */
+  static Builder newBuilder(OzoneConfiguration conf) {
+    return new MiniOzoneClusterImpl.Builder(conf);
+  }
 
   /**
    * Returns the configuration object associated with the MiniOzoneCluster.
@@ -119,8 +130,8 @@ public interface MiniOzoneCluster {
    * @return StorageContainerLocation Client
    * @throws IOException
    */
-  StorageContainerLocationProtocolClientSideTranslatorPB getStorageContainerLocationClient()
-      throws IOException;
+  StorageContainerLocationProtocolClientSideTranslatorPB
+      getStorageContainerLocationClient() throws IOException;
 
   /**
    * Restarts StorageContainerManager instance.
@@ -156,19 +167,9 @@ public interface MiniOzoneCluster {
   void shutdown();
 
   /**
-   * Returns the Builder to construct MiniOzoneCluster.
-   *
-   * @param conf OzoneConfiguration
-   *
-   * @return MiniOzoneCluster builder
-   */
-  static Builder newBuilder(OzoneConfiguration conf) {
-    return new MiniOzoneClusterImpl.Builder(conf);
-  }
-
-  /**
    * Builder class for MiniOzoneCluster.
    */
+  @SuppressWarnings("CheckStyle")
   abstract class Builder {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
@@ -260,7 +261,6 @@ public interface MiniOzoneCluster {
       numOfDatanodes = val;
       return this;
     }
-
 
     /**
      * Sets the number of HeartBeat Interval of Datanodes, the value should be

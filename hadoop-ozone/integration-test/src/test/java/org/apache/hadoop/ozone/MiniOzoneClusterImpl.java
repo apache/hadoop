@@ -35,14 +35,14 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
-import org.apache.hadoop.hdds.scm.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.ozone.ksm.KSMStorage;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.scm.StorageContainerManager;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -179,8 +179,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
    * @throws IOException if there is an I/O error
    */
   @Override
-  public StorageContainerLocationProtocolClientSideTranslatorPB getStorageContainerLocationClient()
-      throws IOException {
+  public StorageContainerLocationProtocolClientSideTranslatorPB
+      getStorageContainerLocationClient() throws IOException {
     long version = RPC.getProtocolVersion(
         StorageContainerLocationProtocolPB.class);
     InetSocketAddress address = scm.getClientRpcAddress();
@@ -226,7 +226,7 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
       File baseDir = new File(GenericTestUtils.getTempPath(
           MiniOzoneClusterImpl.class.getSimpleName() + "-" +
-              scm.getScmInfo().getClusterId()));
+              scm.getClientProtocolServer().getScmInfo().getClusterId()));
       FileUtils.deleteDirectory(baseDir);
 
       if (ksm != null) {

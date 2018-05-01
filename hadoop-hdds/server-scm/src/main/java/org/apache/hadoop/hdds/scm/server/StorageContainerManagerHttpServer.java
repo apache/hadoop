@@ -15,9 +15,10 @@
  * the License.
  */
 
-package org.apache.hadoop.hdds.scm;
+package org.apache.hadoop.hdds.scm.server;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.server.BaseHttpServer;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 
