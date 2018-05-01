@@ -28,7 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
@@ -37,8 +39,8 @@ import org.apache.hadoop.registry.client.api.RegistryOperationsFactory;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
@@ -896,13 +898,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
   protected Path addJarResource(String serviceName,
       Map<String, LocalResource> localResources)
-      throws IOException, SliderException {
+      throws IOException, YarnException {
     Path libPath = fs.buildClusterDirPath(serviceName);
     ProviderUtils
         .addProviderJar(localResources, ServiceMaster.class, SERVICE_CORE_JAR, fs,
             libPath, "lib", false);
     Path dependencyLibTarGzip = fs.getDependencyTarGzip();
-    if (fs.isFile(dependencyLibTarGzip)) {
+    if (actionDependency(null, false) == EXIT_SUCCESS) {
       LOG.info("Loading lib tar from " + dependencyLibTarGzip);
       fs.submitTarGzipAndUpdate(localResources);
     } else {
@@ -1223,18 +1225,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return actionDependency(destinationFolder, true);
   }
 
-  public int actionDependency(String destinationFolder, boolean overwrite)
-      throws IOException, YarnException {
+  public int actionDependency(String destinationFolder, boolean overwrite) {
     String currentUser = RegistryUtils.currentUser();
     LOG.info("Running command as user {}", currentUser);
 
+    Path dependencyLibTarGzip;
     if (destinationFolder == null) {
-      destinationFolder = String.format(YarnServiceConstants.DEPENDENCY_DIR,
-          VersionInfo.getVersion());
+      dependencyLibTarGzip = fs.getDependencyTarGzip();
+    } else {
+      dependencyLibTarGzip = new Path(destinationFolder,
+          YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
+              + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
     }
-    Path dependencyLibTarGzip = new Path(destinationFolder,
-        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
-            + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
 
     // Check if dependency has already been uploaded, in which case log
     // appropriately and exit success (unless overwrite has been requested)
@@ -1247,22 +1249,69 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
     String[] libDirs = ServiceUtils.getLibDirs();
     if (libDirs.length > 0) {
-      File tempLibTarGzipFile = File.createTempFile(
-          YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME + "_",
-          YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
-      // copy all jars
-      tarGzipFolder(libDirs, tempLibTarGzipFile, createJarFilter());
+      File tempLibTarGzipFile = null;
+      try {
+        if (!checkPermissions(dependencyLibTarGzip)) {
+          return EXIT_UNAUTHORIZED;
+        }
 
-      LOG.info("Version Info: " + VersionInfo.getBuildVersion());
-      fs.copyLocalFileToHdfs(tempLibTarGzipFile, dependencyLibTarGzip,
-          new FsPermission(YarnServiceConstants.DEPENDENCY_DIR_PERMISSIONS));
-      LOG.info("To let apps use this tarball, in yarn-site set config property "
-          + "{} to {}", YarnServiceConf.DEPENDENCY_TARBALL_PATH,
-          dependencyLibTarGzip);
-      return EXIT_SUCCESS;
+        tempLibTarGzipFile = File.createTempFile(
+            YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME + "_",
+            YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
+        // copy all jars
+        tarGzipFolder(libDirs, tempLibTarGzipFile, createJarFilter());
+
+        fs.copyLocalFileToHdfs(tempLibTarGzipFile, dependencyLibTarGzip,
+            new FsPermission(YarnServiceConstants.DEPENDENCY_DIR_PERMISSIONS));
+        LOG.info("To let apps use this tarball, in yarn-site set config " +
+                "property {} to {}", YarnServiceConf.DEPENDENCY_TARBALL_PATH,
+            dependencyLibTarGzip);
+        return EXIT_SUCCESS;
+      } catch (IOException e) {
+        LOG.error("Got exception creating tarball and uploading to HDFS", e);
+        return EXIT_EXCEPTION_THROWN;
+      } finally {
+        if (tempLibTarGzipFile != null) {
+          if (!tempLibTarGzipFile.delete()) {
+            LOG.warn("Failed to delete tmp file {}", tempLibTarGzipFile);
+          }
+        }
+      }
     } else {
       return EXIT_FALSE;
     }
+  }
+
+  private boolean checkPermissions(Path dependencyLibTarGzip) throws
+      IOException {
+    AccessControlList yarnAdminAcl = new AccessControlList(getConfig().get(
+        YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    AccessControlList dfsAdminAcl = new AccessControlList(
+        getConfig().get(DFSConfigKeys.DFS_ADMIN, " "));
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    if (!yarnAdminAcl.isUserAllowed(ugi) && !dfsAdminAcl.isUserAllowed(ugi)) {
+      LOG.error("User must be on the {} or {} list to have permission to " +
+          "upload AM dependency tarball", YarnConfiguration.YARN_ADMIN_ACL,
+          DFSConfigKeys.DFS_ADMIN);
+      return false;
+    }
+
+    Path parent = dependencyLibTarGzip.getParent();
+    while (parent != null) {
+      if (fs.getFileSystem().exists(parent)) {
+        FsPermission perm = fs.getFileSystem().getFileStatus(parent)
+            .getPermission();
+        if (!perm.getOtherAction().implies(FsAction.READ_EXECUTE)) {
+          LOG.error("Parent directory {} of {} tarball location {} does not " +
+              "have world read/execute permission", parent, YarnServiceConf
+              .DEPENDENCY_TARBALL_PATH, dependencyLibTarGzip);
+          return false;
+        }
+      }
+      parent = parent.getParent();
+    }
+    return true;
   }
 
   protected ClientAMProtocol createAMProxy(String serviceName,

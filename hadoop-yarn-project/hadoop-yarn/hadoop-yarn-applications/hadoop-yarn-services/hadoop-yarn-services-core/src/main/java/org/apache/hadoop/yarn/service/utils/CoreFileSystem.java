@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -362,6 +363,12 @@ public class CoreFileSystem {
         .get(YarnServiceConf.DEPENDENCY_TARBALL_PATH);
     if (configuredDependencyTarballPath != null) {
       dependencyLibTarGzip = new Path(configuredDependencyTarballPath);
+    }
+    if (dependencyLibTarGzip == null) {
+      dependencyLibTarGzip = new Path(String.format(YarnServiceConstants
+          .DEPENDENCY_DIR, VersionInfo.getVersion()),
+          YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME
+              + YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
     }
     return dependencyLibTarGzip;
   }

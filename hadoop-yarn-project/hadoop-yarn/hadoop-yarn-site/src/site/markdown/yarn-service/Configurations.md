@@ -100,7 +100,7 @@ System-wide service AM properties can only be configured in the cluster `yarn-si
 
 | System-Level Config Name | Description |
 | ------------ | ------------- |
-|yarn.service.framework.path | HDFS parent directory where the service AM dependency tarball can be found.|
+|yarn.service.framework.path | HDFS path of the service AM dependency tarball. When no file exists at this location, AM dependencies will be uploaded by the RM the first time a service is started or launched. If the RM user does not have permission to upload the file to this location or the location is not world readable, the AM dependency jars will be uploaded each time a service is started or launched. If unspecified, value will be assumed to be /yarn-services/${hadoop.version}/service-dep.tar.gz.|
 |yarn.service.base.path | HDFS parent directory where service artifacts will be stored (default ${user_home_dir}/.yarn/).
 |yarn.service.client-am.retry.max-wait-ms | Max retry time in milliseconds for the service client to talk to the service AM (default 900000, i.e. 15 minutes).|
 |yarn.service.client-am.retry-interval-ms | Retry interval in milliseconds for the service client to talk to the service AM (default 2000, i.e. 2 seconds).|
