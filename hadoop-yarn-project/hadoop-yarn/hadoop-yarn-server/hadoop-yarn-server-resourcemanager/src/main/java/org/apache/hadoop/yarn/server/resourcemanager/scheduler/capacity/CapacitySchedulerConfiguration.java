@@ -240,6 +240,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-threads";
 
   @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS =
+      SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-pending-backlogs";
+
+  @Private
+  public static final Integer
+      DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS = 100;
+
+  @Private
   public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
 
   @Private
