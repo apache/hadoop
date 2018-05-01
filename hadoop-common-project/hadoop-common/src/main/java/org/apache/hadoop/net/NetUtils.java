@@ -530,7 +530,7 @@ public class NetUtils {
       } else {
         SocketIOWithTimeout.connect(ch, endpoint, timeout);
       }
-      LOG.info("endpoint : {} , timeout : {} connect successful",endpoint,timeout);
+      LOG.info("endpoint : {} , timeout : {} connected successful",endpoint,timeout);
     } catch (SocketTimeoutException ste) {
       throw new ConnectTimeoutException(ste.getMessage());
     }
