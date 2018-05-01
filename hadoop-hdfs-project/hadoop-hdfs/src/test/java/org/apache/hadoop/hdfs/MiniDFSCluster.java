@@ -2894,7 +2894,8 @@ public class MiniDFSCluster implements AutoCloseable {
    * @return Storage directory
    */
   public File getStorageDir(int dnIndex, int dirIndex) {
-    return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
+    return new File(determineDfsBaseDir(),
+        getStorageDirPath(dnIndex, dirIndex));
   }
 
   /**
