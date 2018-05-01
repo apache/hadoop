@@ -952,4 +952,20 @@ public class NetUtils {
     }
     return port;
   }
+
+  /**
+   * Return an @{@link InetAddress} to bind to. If bindWildCardAddress is true
+   * than returns null.
+   *
+   * @param localAddr
+   * @param bindWildCardAddress
+   * @returns InetAddress
+   */
+  public static InetAddress bindToLocalAddress(InetAddress localAddr, boolean
+      bindWildCardAddress) {
+    if (!bindWildCardAddress) {
+      return localAddr;
+    }
+    return null;
+  }
 }
