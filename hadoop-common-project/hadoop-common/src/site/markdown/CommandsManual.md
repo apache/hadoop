@@ -99,6 +99,23 @@ Usage: `hadoop classpath [--glob |--jar <path> |-h |--help]`
 
 Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
+### `conftest`
+
+Usage: `hadoop conftest [-conffile <path>]...`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-conffile` | Path of a configuration file or directory to validate |
+| `-h`, `--help` | print help |
+
+Validates configuration XML files.
+If the `-conffile` option is not specified, the files in `${HADOOP_CONF_DIR}` whose name end with .xml will be verified. If specified, that path will be verified. You can specify either a file or directory, and if a directory specified, the files in that directory whose name end with `.xml` will be verified.
+You can specify `-conffile` option multiple times.
+
+The validation is fairly minimal: the XML is parsed and duplicate and empty
+property names are checked for. The command does not support XInclude; if you
+using that to pull in configuration items, it will declare the XML file invalid.
+
 ### `credential`
 
 Usage: `hadoop credential <subcommand> [options]`
