@@ -42,9 +42,12 @@ public final class Genesis {
         .include(BenchMarkMetadataStoreReads.class.getSimpleName())
         .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
         .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
-        .include(BenchMarkRocksDbStore.class.getSimpleName())
+// Commenting this test out, till we support either a command line or a config
+        // file based ability to run tests.
+//        .include(BenchMarkRocksDbStore.class.getSimpleName())
         .warmupIterations(5)
         .measurementIterations(20)
+        .addProfiler(GenesisMemoryProfiler.class)
         .shouldDoGC(true)
         .forks(1)
         .build();
@@ -52,3 +55,5 @@ public final class Genesis {
     new Runner(opt).run();
   }
 }
+
+
