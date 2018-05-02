@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -96,8 +97,9 @@ public class TokenCache {
     for(Path p: ps) {
       fsSet.add(p.getFileSystem(conf));
     }
+    String masterPrincipal = Master.getMasterPrincipal(conf);
     for (FileSystem fs : fsSet) {
-      obtainTokensForNamenodesInternal(fs, credentials, conf);
+      obtainTokensForNamenodesInternal(fs, credentials, conf, masterPrincipal);
     }
   }
 
@@ -122,15 +124,17 @@ public class TokenCache {
    * @param conf
    * @throws IOException
    */
-  static void obtainTokensForNamenodesInternal(FileSystem fs, 
-      Credentials credentials, Configuration conf) throws IOException {
+  static void obtainTokensForNamenodesInternal(FileSystem fs,
+      Credentials credentials, Configuration conf, String renewer)
+      throws IOException {
     // RM skips renewing token with empty renewer
     String delegTokenRenewer = "";
     if (!isTokenRenewalExcluded(fs, conf)) {
-      delegTokenRenewer = Master.getMasterPrincipal(conf);
-      if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
+      if (StringUtils.isEmpty(renewer)) {
         throw new IOException(
             "Can't get Master Kerberos principal for use as renewer");
+      } else {
+        delegTokenRenewer = renewer;
       }
     }
 
