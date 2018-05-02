@@ -431,4 +431,13 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.client.reject.overload</name>
+    <value>false</value>
+    <description>
+      Set to true to reject client requests when we run out of RPC client
+      threads.
+    </description>
+  </property>
+
 </configuration>

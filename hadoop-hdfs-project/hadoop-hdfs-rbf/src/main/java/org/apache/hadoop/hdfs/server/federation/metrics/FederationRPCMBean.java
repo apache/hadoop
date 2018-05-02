@@ -40,6 +40,8 @@ public interface FederationRPCMBean {
 
   long getProxyOpFailureStandby();
 
+  long getProxyOpFailureClientOverloaded();
+
   long getProxyOpNotImplemented();
 
   long getProxyOpRetries();

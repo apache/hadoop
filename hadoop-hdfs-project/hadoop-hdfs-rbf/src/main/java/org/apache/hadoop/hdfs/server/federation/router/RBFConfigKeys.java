@@ -113,6 +113,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_CLIENT_MAX_ATTEMPTS =
       FEDERATION_ROUTER_PREFIX + "client.retry.max.attempts";
   public static final int DFS_ROUTER_CLIENT_MAX_ATTEMPTS_DEFAULT = 3;
+  public static final String DFS_ROUTER_CLIENT_REJECT_OVERLOAD =
+      FEDERATION_ROUTER_PREFIX + "client.reject.overload";
+  public static final boolean DFS_ROUTER_CLIENT_REJECT_OVERLOAD_DEFAULT = false;
 
   // HDFS Router State Store connection
   public static final String FEDERATION_FILE_RESOLVER_CLIENT_CLASS =

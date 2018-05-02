@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.simulateSlowNamenode;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.apache.hadoop.test.GenericTestUtils.waitFor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,12 +44,8 @@ import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
@@ -57,11 +53,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.mockito.internal.util.reflection.Whitebox;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
 
@@ -69,9 +60,6 @@ import com.google.common.base.Supplier;
  * Test retry behavior of the Router RPC Client.
  */
 public class TestRouterRPCClientRetries {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRouterRPCClientRetries.class);
 
   private static StateStoreDFSCluster cluster;
   private static NamenodeContext nnContext1;
@@ -144,7 +132,7 @@ public class TestRouterRPCClientRetries {
       fail("Should have thrown RemoteException error.");
     } catch (RemoteException e) {
       String ns0 = cluster.getNameservices().get(0);
-      GenericTestUtils.assertExceptionContains(
+      assertExceptionContains(
           "No namenode available under nameservice " + ns0, e);
     }
 
@@ -212,14 +200,14 @@ public class TestRouterRPCClientRetries {
     // Making subcluster0 slow to reply, should only get DNs from nn1
     MiniDFSCluster dfsCluster = cluster.getCluster();
     NameNode nn0 = dfsCluster.getNameNode(0);
-    simulateNNSlow(nn0);
+    simulateSlowNamenode(nn0, 3);
     waitUpdateLiveNodes(jsonString2, metrics);
     final String jsonString3 = metrics.getLiveNodes();
     assertEquals(2, getNumDatanodes(jsonString3));
 
     // Making subcluster1 slow to reply, shouldn't get any DNs
     NameNode nn1 = dfsCluster.getNameNode(1);
-    simulateNNSlow(nn1);
+    simulateSlowNamenode(nn1, 3);
     waitUpdateLiveNodes(jsonString3, metrics);
     final String jsonString4 = metrics.getLiveNodes();
     assertEquals(0, getNumDatanodes(jsonString4));
@@ -249,36 +237,11 @@ public class TestRouterRPCClientRetries {
   private static void waitUpdateLiveNodes(
       final String oldValue, final NamenodeBeanMetrics metrics)
           throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+    waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         return !oldValue.equals(metrics.getLiveNodes());
       }
     }, 500, 5 * 1000);
-  }
-
-  /**
-   * Simulate that a Namenode is slow by adding a sleep to the check operation
-   * in the NN.
-   * @param nn Namenode to simulate slow.
-   * @throws Exception If we cannot add the sleep time.
-   */
-  private static void simulateNNSlow(final NameNode nn) throws Exception {
-    FSNamesystem namesystem = nn.getNamesystem();
-    HAContext haContext = namesystem.getHAContext();
-    HAContext spyHAContext = spy(haContext);
-    doAnswer(new Answer<Object>() {
-      @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
-        LOG.info("Simulating slow namenode {}", invocation.getMock());
-        try {
-          Thread.sleep(3 * 1000);
-        } catch(InterruptedException e) {
-          LOG.error("Simulating a slow namenode aborted");
-        }
-        return null;
-      }
-    }).when(spyHAContext).checkOperation(any(OperationCategory.class));
-    Whitebox.setInternalState(namesystem, "haContext", spyHAContext);
   }
 }
