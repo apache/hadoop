@@ -1332,6 +1332,34 @@ int run_docker(const char *command_file) {
   return exit_code;
 }
 
+int exec_docker_command(char *docker_command, char **argv,
+    int argc, int optind) {
+  int i;
+  char* docker_binary = get_docker_binary(&CFG);
+  size_t command_size = argc - optind + 2;
+
+  char **args = alloc_and_clear_memory(command_size + 1, sizeof(char));
+  args[0] = docker_binary;
+  args[1] = docker_command;
+  for(i = 2; i < command_size; i++) {
+    args[i] = (char *) argv[i];
+  }
+  args[i] = NULL;
+
+  execvp(docker_binary, args);
+
+  // will only get here if execvp fails
+  fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s\n",
+      docker_binary, strerror(errno));
+  fflush(LOGFILE);
+  fflush(ERRORFILE);
+
+  free(docker_binary);
+  free(args);
+
+  return DOCKER_RUN_FAILED;
+}
+
 int create_script_paths(const char *work_dir,
   const char *script_name, const char *cred_file,
   char** script_file_dest, char** cred_file_dest,

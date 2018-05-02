@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
@@ -384,7 +385,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       Container container) throws ContainerExecutionException {
     try {
       String commandFile = dockerClient.writeCommandToTempFile(
-          dockerVolumeCommand, container, nmContext);
+          dockerVolumeCommand, container.getContainerId(), nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);
@@ -734,6 +735,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
     Container container = ctx.getContainer();
+    ContainerId containerId = container.getContainerId();
     Map<String, String> environment = container.getLaunchContext()
         .getEnvironment();
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
@@ -750,7 +752,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     validateImageName(imageName);
 
-    String containerIdStr = container.getContainerId().toString();
+    String containerIdStr = containerId.toString();
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
     String dockerRunAsUser = runAsUser;
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
@@ -908,7 +910,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
-        container, nmContext);
+        containerId, nmContext);
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
         commandFile, runCommand);
 
@@ -927,8 +929,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void relaunchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
-    String containerIdStr = container.getContainerId().toString();
+    ContainerId containerId = ctx.getContainer().getContainerId();
+    String containerIdStr = containerId.toString();
     // Check to see if the container already exists for relaunch
     DockerCommandExecutor.DockerContainerStatus containerStatus =
         DockerCommandExecutor.getContainerStatus(containerIdStr, conf,
@@ -937,7 +939,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         DockerCommandExecutor.isStartable(containerStatus)) {
       DockerStartCommand startCommand = new DockerStartCommand(containerIdStr);
       String commandFile = dockerClient.writeCommandToTempFile(startCommand,
-          container, nmContext);
+          containerId, nmContext);
       PrivilegedOperation launchOp = buildLaunchOp(ctx, commandFile,
           startCommand);
 
@@ -1042,12 +1044,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   // ipAndHost[1] contains the hostname.
   @Override
   public String[] getIpAndHost(Container container) {
-    String containerId = container.getContainerId().toString();
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
     DockerInspectCommand inspectCommand =
-        new DockerInspectCommand(containerId).getIpAndHost();
+        new DockerInspectCommand(containerIdStr).getIpAndHost();
     try {
       String commandFile = dockerClient.writeCommandToTempFile(inspectCommand,
-          container, nmContext);
+          containerId, nmContext);
       PrivilegedOperation privOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
       privOp.appendArgs(commandFile);

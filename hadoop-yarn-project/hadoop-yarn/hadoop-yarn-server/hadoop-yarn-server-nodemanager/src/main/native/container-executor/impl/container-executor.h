@@ -47,7 +47,9 @@ enum operations {
   RUN_AS_USER_DELETE = 9,
   RUN_AS_USER_LAUNCH_DOCKER_CONTAINER = 10,
   RUN_DOCKER = 11,
-  RUN_AS_USER_LIST = 12
+  RUN_AS_USER_LIST = 12,
+  REMOVE_DOCKER_CONTAINER = 13,
+  INSPECT_DOCKER_CONTAINER = 14
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -262,6 +264,12 @@ int is_docker_support_enabled();
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
+
+/**
+ * Run a docker command without a command file
+ */
+int exec_docker_command(char *docker_command, char **argv,
+    int argc, int optind);
 
 /*
  * Compile the regex_str and determine if the input string matches.

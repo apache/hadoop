@@ -17,7 +17,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -80,14 +79,9 @@ public final class DockerCommandExecutor {
       PrivilegedOperationExecutor privilegedOperationExecutor,
       boolean disableFailureLogging, Context nmContext)
       throws ContainerExecutionException {
-    DockerClient dockerClient = new DockerClient(conf);
-    String commandFile =
-        dockerClient.writeCommandToTempFile(dockerCommand,
-        nmContext.getContainers().get(ContainerId.fromString(containerId)),
-        nmContext);
-    PrivilegedOperation dockerOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
-    dockerOp.appendArgs(commandFile);
+    PrivilegedOperation dockerOp = dockerCommand.preparePrivilegedOperation(
+        dockerCommand, containerId, env, conf, nmContext);
+
     if (disableFailureLogging) {
       dockerOp.disableFailureLogging();
     }
