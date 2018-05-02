@@ -54,7 +54,9 @@ public class PrivilegedOperation {
     GPU("--module-gpu"),
     FPGA("--module-fpga"),
     LIST_AS_USER(""), // no CLI switch supported yet.
-    ADD_NUMA_PARAMS(""); // no CLI switch supported yet.
+    ADD_NUMA_PARAMS(""), // no CLI switch supported yet.
+    REMOVE_DOCKER_CONTAINER("--remove-docker-container"),
+    INSPECT_DOCKER_CONTAINER("--inspect-docker-container");
 
     private final String option;
 

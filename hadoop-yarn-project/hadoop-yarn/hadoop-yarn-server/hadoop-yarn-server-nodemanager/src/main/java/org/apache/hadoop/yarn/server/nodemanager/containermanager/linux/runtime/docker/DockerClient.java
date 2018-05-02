@@ -28,7 +28,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.slf4j.Logger;
@@ -104,9 +103,9 @@ public final class DockerClient {
     }
   }
 
-  public String writeCommandToTempFile(DockerCommand cmd, Container container,
-      Context nmContext) throws ContainerExecutionException {
-    ContainerId containerId = container.getContainerId();
+  public String writeCommandToTempFile(DockerCommand cmd,
+      ContainerId containerId, Context nmContext)
+      throws ContainerExecutionException {
     String filePrefix = containerId.toString();
     ApplicationId appId = containerId.getApplicationAttemptId()
         .getApplicationId();

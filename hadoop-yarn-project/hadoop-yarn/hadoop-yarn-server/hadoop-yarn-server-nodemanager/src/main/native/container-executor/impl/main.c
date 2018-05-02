@@ -36,7 +36,7 @@ static void display_usage(FILE *stream) {
   fprintf(stream,
     "Usage: container-executor --checksetup\n"
     "       container-executor --mount-cgroups <hierarchy> "
-    "<controller=path>...\n" );
+    "<controller=path>\n" );
 
   if(is_tc_support_enabled()) {
     fprintf(stream,
@@ -52,10 +52,15 @@ static void display_usage(FILE *stream) {
 
   if(is_docker_support_enabled()) {
     fprintf(stream,
-      "       container-executor --run-docker <command-file>\n");
+      "       container-executor --run-docker <command-file>\n"
+      "       container-executor --remove-docker-container <container_id>\n"
+      "       container-executor --inspect-docker-container <container_id>\n");
   } else {
     fprintf(stream,
-      "[DISABLED] container-executor --run-docker <command-file>\n");
+      "[DISABLED] container-executor --run-docker <command-file>\n"
+      "[DISABLED] container-executor --remove-docker-container <container_id>\n"
+      "[DISABLED] container-executor --inspect-docker-container "
+      "<format> ... <container_id>\n");
   }
 
   fprintf(stream,
@@ -331,6 +336,36 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     }
   }
 
+  if (strcmp("--remove-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if (argc != 3) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = REMOVE_DOCKER_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
+  if (strcmp("--inspect-docker-container", argv[1]) == 0) {
+    if(is_docker_support_enabled()) {
+      if (argc != 4) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      *operation = INSPECT_DOCKER_CONTAINER;
+      return 0;
+    } else {
+        display_feature_disabled_message("docker");
+        return FEATURE_DISABLED;
+    }
+  }
+
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
     parsing here is extensive enough that it done in a separate function */
@@ -560,6 +595,12 @@ int main(int argc, char **argv) {
     break;
   case RUN_DOCKER:
     exit_code = run_docker(cmd_input.docker_command_file);
+    break;
+  case REMOVE_DOCKER_CONTAINER:
+    exit_code = exec_docker_command("rm", argv, argc, optind);
+    break;
+  case INSPECT_DOCKER_CONTAINER:
+    exit_code = exec_docker_command("inspect", argv, argc, optind);
     break;
   case RUN_AS_USER_INITIALIZE_CONTAINER:
     exit_code = set_user(cmd_input.run_as_user_name);
