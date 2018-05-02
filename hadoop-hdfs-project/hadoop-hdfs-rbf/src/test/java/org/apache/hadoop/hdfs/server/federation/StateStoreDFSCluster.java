@@ -28,6 +28,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -37,6 +41,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Test utility to mimic a federated HDFS cluster with a router and a state
@@ -144,5 +149,28 @@ public class StateStoreDFSCluster extends MiniRouterDFSCluster {
     MountTable entry = MountTable.newInstance("/", destMap);
     entries.add(entry);
     return entries;
+  }
+
+  /**
+   * Get the client configuration which targets all the Routers. It uses the HA
+   * setup to fails over between them.
+   * @return Configuration for the client which uses two routers.
+   */
+  public Configuration getRouterClientConf() {
+    List<RouterContext> routers = getRouters();
+    Configuration clientConf = DFSTestUtil.newHAConfiguration("fed");
+    int i = 0;
+    List<String> names = new ArrayList<>(routers.size());
+    for (RouterContext routerContext : routers) {
+      String name = "r" + i++;
+      clientConf.set(
+          DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + ".fed." + name,
+          "localhost:" + routerContext.getRpcPort());
+      names.add(name);
+    }
+    clientConf.set(DFSUtil.addKeySuffixes(
+        HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, "fed"),
+        StringUtils.join(",", names));
+    return clientConf;
   }
 }

@@ -76,6 +76,12 @@ public interface RouterRpcMonitor {
   void proxyOpFailureCommunicate();
 
   /**
+   * Failed to proxy an operation to a Namenode because the client was
+   * overloaded.
+   */
+  void proxyOpFailureClientOverloaded();
+
+  /**
    * Failed to proxy an operation because it is not implemented.
    */
   void proxyOpNotImplemented();
