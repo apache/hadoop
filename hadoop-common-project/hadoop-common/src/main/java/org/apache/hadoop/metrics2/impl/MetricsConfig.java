@@ -118,20 +118,23 @@ class MetricsConfig extends SubsetConfiguration {
                 .setListDelimiterHandler(new DefaultListDelimiterHandler(',')))
               .getConfiguration()
               .interpolatedConfiguration();
-        LOG.info("loaded properties from "+ fname);
-        LOG.debug(toString(cf));
+        LOG.info("Loaded properties from {}", fname);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Properties: {}", toString(cf));
+        }
         MetricsConfig mc = new MetricsConfig(cf, prefix);
-        LOG.debug(mc.toString());
+        LOG.debug("Metrics Config: {}", mc);
         return mc;
       } catch (ConfigurationException e) {
         // Commons Configuration defines the message text when file not found
         if (e.getMessage().startsWith("Could not locate")) {
+          LOG.debug("Could not locate file {}", fname, e);
           continue;
         }
         throw new MetricsConfigException(e);
       }
     }
-    LOG.warn("Cannot locate configuration: tried "+
+    LOG.warn("Cannot locate configuration: tried " +
              Joiner.on(",").join(fileNames));
     // default to an empty configuration
     return new MetricsConfig(new PropertiesConfiguration(), prefix);
@@ -168,7 +171,6 @@ class MetricsConfig extends SubsetConfiguration {
 
   Iterable<String> keys() {
     return new Iterable<String>() {
-      @SuppressWarnings("unchecked")
       @Override
       public Iterator<String> iterator() {
         return (Iterator<String>) getKeys();
@@ -186,21 +188,21 @@ class MetricsConfig extends SubsetConfiguration {
     Object value = super.getPropertyInternal(key);
     if (value == null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("poking parent '"+ getParent().getClass().getSimpleName() +
-                  "' for key: "+ key);
+        LOG.debug("poking parent '" + getParent().getClass().getSimpleName() +
+                  "' for key: " + key);
       }
       return getParent().getProperty(key.startsWith(PREFIX_DEFAULT) ? key
                                      : PREFIX_DEFAULT + key);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("returning '"+ value +"' for key: "+ key);
-    }
+    LOG.debug("Returning '{}' for key: {}", value, key);
     return value;
   }
 
   <T extends MetricsPlugin> T getPlugin(String name) {
     String clsName = getClassName(name);
-    if (clsName == null) return null;
+    if (clsName == null) {
+      return null;
+    }
     try {
       Class<?> cls = Class.forName(clsName, true, getPluginLoader());
       @SuppressWarnings("unchecked")
@@ -213,9 +215,9 @@ class MetricsConfig extends SubsetConfiguration {
   }
 
   String getClassName(String prefix) {
-    String classKey = prefix.isEmpty() ? "class" : prefix +".class";
+    String classKey = prefix.isEmpty() ? "class" : prefix.concat(".class");
     String clsName = getString(classKey);
-    LOG.debug(clsName);
+    LOG.debug("Class name for prefix {} is {}", prefix, clsName);
     if (clsName == null || clsName.isEmpty()) {
       return null;
     }
@@ -223,25 +225,29 @@ class MetricsConfig extends SubsetConfiguration {
   }
 
   ClassLoader getPluginLoader() {
-    if (pluginLoader != null) return pluginLoader;
+    if (pluginLoader != null) {
+      return pluginLoader;
+    }
     final ClassLoader defaultLoader = getClass().getClassLoader();
     Object purls = super.getProperty(PLUGIN_URLS_KEY);
-    if (purls == null) return defaultLoader;
+    if (purls == null) {
+      return defaultLoader;
+    }
     Iterable<String> jars = SPLITTER.split((String) purls);
     int len = Iterables.size(jars);
-    if ( len > 0) {
+    if (len > 0) {
       final URL[] urls = new URL[len];
       try {
         int i = 0;
         for (String jar : jars) {
-          LOG.debug(jar);
+          LOG.debug("Parsing URL for {}", jar);
           urls[i++] = new URL(jar);
         }
       } catch (Exception e) {
         throw new MetricsConfigException(e);
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("using plugin jars: "+ Iterables.toString(jars));
+        LOG.debug("Using plugin jars: {}", Iterables.toString(jars));
       }
       pluginLoader = doPrivileged(new PrivilegedAction<ClassLoader>() {
         @Override public ClassLoader run() {
@@ -259,9 +265,13 @@ class MetricsConfig extends SubsetConfiguration {
   MetricsFilter getFilter(String prefix) {
     // don't create filter instances without out options
     MetricsConfig conf = subset(prefix);
-    if (conf.isEmpty()) return null;
+    if (conf.isEmpty()) {
+      return null;
+    }
     MetricsFilter filter = getPlugin(prefix);
-    if (filter != null) return filter;
+    if (filter != null) {
+      return filter;
+    }
     // glob filter is assumed if pattern is specified but class is not.
     filter = new GlobFilter();
     filter.init(conf);
