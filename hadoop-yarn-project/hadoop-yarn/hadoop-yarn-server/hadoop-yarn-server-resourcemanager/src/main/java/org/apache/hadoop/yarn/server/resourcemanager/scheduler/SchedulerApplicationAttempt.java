@@ -1241,12 +1241,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       return;
     }
 
-    RMAppAttempt attempt =
-        rmContext.getRMApps().get(attemptId.getApplicationId())
-          .getCurrentAppAttempt();
-    if (attempt != null) {
-      attempt.getRMAppAttemptMetrics().incNumAllocatedContainers(containerType,
-        requestType);
+    RMApp app = rmContext.getRMApps().get(attemptId.getApplicationId());
+    if (app != null) {
+      RMAppAttempt attempt = app.getCurrentAppAttempt();
+      if (attempt != null) {
+        attempt.getRMAppAttemptMetrics()
+            .incNumAllocatedContainers(containerType, requestType);
+      }
     }
   }
 
