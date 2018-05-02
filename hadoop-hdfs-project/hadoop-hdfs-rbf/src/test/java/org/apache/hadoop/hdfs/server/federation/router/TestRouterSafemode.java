@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -187,7 +188,7 @@ public class TestRouterSafemode {
     try {
       router.getRpcServer().delete("/testfile.txt", true);
       fail("We should have thrown a safe mode exception");
-    } catch (RouterSafeModeException sme) {
+    } catch (StandbyException sme) {
       exception = true;
     }
     assertTrue("We should have thrown a safe mode exception", exception);
