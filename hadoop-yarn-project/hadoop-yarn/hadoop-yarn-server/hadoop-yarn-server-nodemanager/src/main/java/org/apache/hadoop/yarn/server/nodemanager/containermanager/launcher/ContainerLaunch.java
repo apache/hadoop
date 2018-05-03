@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -844,6 +846,7 @@ public class ContainerLaunch implements Callable<Integer> {
       throw new IOException("Reap container failed for container "
           + containerIdStr);
     }
+    cleanupContainerFiles(getContainerWorkDir());
   }
 
   /**
@@ -1856,6 +1859,40 @@ public class ContainerLaunch implements Callable<Integer> {
     container.setWorkDir(workDir);
     if (container.isRetryContextSet()) {
       context.getNMStateStore().storeContainerWorkDir(containerId, workDir);
+    }
+  }
+
+  protected Path getContainerWorkDir() throws IOException {
+    String containerWorkDir = container.getWorkDir();
+    if (containerWorkDir == null
+        || !dirsHandler.isGoodLocalDir(containerWorkDir)) {
+      throw new IOException(
+          "Could not find a good work dir " + containerWorkDir
+              + " for container " + container);
+    }
+
+    return new Path(containerWorkDir);
+  }
+
+  /**
+   * Clean up container's files for container relaunch or cleanup.
+   */
+  protected void cleanupContainerFiles(Path containerWorkDir) {
+    LOG.debug("cleanup container {} files", containerWorkDir);
+    // delete ContainerScriptPath
+    deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
+    // delete TokensPath
+    deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+  }
+
+  private void deleteAsUser(Path path) {
+    try {
+      exec.deleteAsUser(new DeletionAsUserContext.Builder()
+          .setUser(container.getUser())
+          .setSubDir(path)
+          .build());
+    } catch (Exception e) {
+      LOG.warn("Failed to delete " + path, e);
     }
   }
 }
