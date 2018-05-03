@@ -59,7 +59,12 @@ public class TestApiServiceClient {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
         throws ServletException, IOException {
       System.out.println("Get was called");
-      resp.setStatus(HttpServletResponse.SC_OK);
+      if (req.getPathInfo() != null
+          && req.getPathInfo().contains("nonexistent-app")) {
+        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+      } else {
+        resp.setStatus(HttpServletResponse.SC_OK);
+      }
     }
 
     @Override
@@ -134,6 +139,18 @@ public class TestApiServiceClient {
     try {
       int result = badAsc.actionLaunch(fileName, appName, lifetime, queue);
       assertEquals(EXIT_EXCEPTION_THROWN, result);
+    } catch (IOException | YarnException e) {
+      fail();
+    }
+  }
+
+  @Test
+  public void testStatus() {
+    String appName = "nonexistent-app";
+    try {
+      String result = asc.getStatusString(appName);
+      assertEquals("Status reponse don't match",
+          " Service " + appName + " not found", result);
     } catch (IOException | YarnException e) {
       fail();
     }

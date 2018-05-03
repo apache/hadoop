@@ -186,7 +186,7 @@ public class ApiServer {
     ServiceStatus serviceStatus = new ServiceStatus();
     try {
       if (appName == null) {
-        throw new IllegalArgumentException("Service name can not be null.");
+        throw new IllegalArgumentException("Service name cannot be null.");
       }
       UserGroupInformation ugi = getProxyUser(request);
       LOG.info("GET: getService for appName = {} user = {}", appName, ugi);
@@ -194,9 +194,13 @@ public class ApiServer {
       return Response.ok(app).build();
     } catch (AccessControlException e) {
       return formatResponse(Status.FORBIDDEN, e.getMessage());
-    } catch (IllegalArgumentException |
-        FileNotFoundException e) {
+    } catch (IllegalArgumentException e) {
       serviceStatus.setDiagnostics(e.getMessage());
+      serviceStatus.setCode(ERROR_CODE_APP_NAME_INVALID);
+      return Response.status(Status.NOT_FOUND).entity(serviceStatus)
+          .build();
+    } catch (FileNotFoundException e) {
+      serviceStatus.setDiagnostics("Service " + appName + " not found");
       serviceStatus.setCode(ERROR_CODE_APP_NAME_INVALID);
       return Response.status(Status.NOT_FOUND).entity(serviceStatus)
           .build();
