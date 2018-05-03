@@ -77,13 +77,13 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    |   2  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
    | N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |
    +-------------------------------+----------------------+----------------------+
-   |   3  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |
+   |   3  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                  N/A |
    | N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |
    +-------------------------------+----------------------+----------------------+
    |   4  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
    | N/A   29C    P8    25W / 149W |     12MiB / 11439MiB |      0%      Default |
    +-------------------------------+----------------------+----------------------+
-   |   5  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                    0 |
+   |   5  Tesla K80           Off  | 0000B6D4:00:00.0 Off |                  N/A |
    | N/A   24C    P8    35W / 149W |      1MiB / 11439MiB |      0%      Default |
    +-------------------------------+----------------------+----------------------+
    |   6  Tesla K80           Off  | 00009D9C:00:00.0 Off |                    0 |
@@ -105,7 +105,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    +-----------------------------------------------------------------------------+
    */
   Pattern GPU_INFO_FORMAT =
-    Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+(0|1)\\s+");
+    Pattern.compile("\\s+([0-9]{1,2})\\s+[\\s\\S]*\\s+(0|1|N/A)\\s+");
   Pattern GPU_MEM_FORMAT =
     Pattern.compile("([0-9]+)MiB\\s*/\\s*([0-9]+)MiB");
 
@@ -492,8 +492,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
             if (mat.group(1) != null && mat.group(2) != null) {
               long index = Long.parseLong(mat.group(1));
               currentIndex = index;
-              long errCode = Long.parseLong(mat.group(2));
-              if (errCode == 0) {
+
+              String errCode = mat.group(2);
+              if (!errCode.equals("1")) {
                 gpuAttributeCapacity |= (1L << index);
               } else {
                 LOG.error("ignored error: gpu " + index + " ECC code is 1, will make this gpu unavailable");
