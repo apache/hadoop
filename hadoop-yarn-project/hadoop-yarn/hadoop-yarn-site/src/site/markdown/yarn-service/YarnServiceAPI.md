@@ -766,9 +766,13 @@ POST URL - http://localhost:8088/app/v1/services
 ##### GET Response JSON
 GET URL - http://localhost:8088/app/v1/services/hello-world
 
-Note, that the 3 containers will come up on 3 different nodes. If there are less
-than 3 NMs running in the cluster, then all 3 container requests will not be
-fulfilled and the service will be in non-STABLE state.
+Note, for an anti-affinity component no more than 1 container will be allocated
+in a specific node. In this example, 3 containers have been requested by
+component "hello". All 3 containers were allocated because the cluster had 3 or
+more NMs. If the cluster had less than 3 NMs then less than 3 containers would
+be allocated. In cases when the number of allocated containers are less than the
+number of requested containers, the component and the service will be in
+non-STABLE state.
 
 ```json
 {
