@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,11 +82,11 @@ public class ServiceClientTest extends ServiceClient {
   }
 
   @Override
-  public Service getStatus(String appName) {
-    if (appName != null && appName.equals("jenkins")) {
+  public Service getStatus(String appName) throws FileNotFoundException {
+    if ("jenkins".equals(appName)) {
       return goodServiceStatus;
     } else {
-      throw new IllegalArgumentException();
+      throw new FileNotFoundException("Service " + appName + " not found");
     }
   }
 

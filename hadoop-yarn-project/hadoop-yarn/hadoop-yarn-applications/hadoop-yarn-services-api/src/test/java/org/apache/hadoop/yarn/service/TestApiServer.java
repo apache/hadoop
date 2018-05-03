@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
+import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.webapp.ApiServer;
 import org.junit.After;
 import org.junit.Before;
@@ -151,10 +152,17 @@ public class TestApiServer {
 
   @Test
   public void testBadGetService() {
-    final Response actual = apiServer.getService(request, "no-jenkins");
+    final String serviceName = "nonexistent-jenkins";
+    final Response actual = apiServer.getService(request, serviceName);
     assertEquals("Get service is ",
         Response.status(Status.NOT_FOUND).build().getStatus(),
         actual.getStatus());
+    ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service " + serviceName + " not found",
+        serviceStatus.getDiagnostics());
   }
 
   @Test
@@ -163,6 +171,11 @@ public class TestApiServer {
     assertEquals("Get service is ",
         Response.status(Status.NOT_FOUND).build().getStatus(),
         actual.getStatus());
+    ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service name cannot be null.", serviceStatus.getDiagnostics());
   }
 
   @Test

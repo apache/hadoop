@@ -479,6 +479,13 @@ public class ApiServiceClient extends AppAdminClient {
     try {
       ClientResponse response = getApiClient(getServicePath(appName))
           .get(ClientResponse.class);
+      if (response.getStatus() == 404) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Service ");
+        sb.append(appName);
+        sb.append(" not found");
+        return sb.toString();
+      }
       if (response.getStatus() != 200) {
         StringBuilder sb = new StringBuilder();
         sb.append(appName);
