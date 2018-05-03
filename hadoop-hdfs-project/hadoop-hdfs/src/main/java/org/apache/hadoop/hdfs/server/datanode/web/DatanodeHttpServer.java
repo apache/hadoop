@@ -43,6 +43,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -91,6 +92,11 @@ public class DatanodeHttpServer implements Closeable {
   private InetSocketAddress httpsAddress;
   static final Log LOG = LogFactory.getLog(DatanodeHttpServer.class);
 
+  @InterfaceAudience.Private
+  public static final String DATANODE_HTTP_MAX_THREADS_KEY =
+      "dfs.datanode.http.max-threads";
+  private static final int DATANODE_HTTP_MAX_THREADS_DEFAULT = 10;
+
   public DatanodeHttpServer(final Configuration conf,
       final DataNode datanode,
       final ServerSocketChannel externalHttpChannel)
@@ -99,7 +105,9 @@ public class DatanodeHttpServer implements Closeable {
     this.conf = conf;
 
     Configuration confForInfoServer = new Configuration(conf);
-    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS,
+        conf.getInt(DATANODE_HTTP_MAX_THREADS_KEY,
+            DATANODE_HTTP_MAX_THREADS_DEFAULT));
     int proxyPort =
         confForInfoServer.getInt(DFS_DATANODE_HTTP_INTERNAL_PROXY_PORT, 0);
     HttpServer2.Builder builder = new HttpServer2.Builder()
