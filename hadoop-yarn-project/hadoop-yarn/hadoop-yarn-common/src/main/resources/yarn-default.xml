@@ -677,6 +677,13 @@
   </property>
 
   <property>
+    <description>The range of values above base epoch that the RM will use before
+      wrapping around</description>
+    <name>yarn.resourcemanager.epoch.range</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>The list of RM nodes in the cluster when HA is
       enabled. See description of yarn.resourcemanager.ha
       .enabled for full details on how this is used.</description>

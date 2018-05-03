@@ -94,6 +94,8 @@ public class RMStateStoreTestBase {
 
   protected final long epoch = 10L;
 
+  private final long epochRange = 10L;
+
   static class TestDispatcher implements Dispatcher, EventHandler<Event> {
 
     ApplicationAttemptId attemptId;
@@ -139,6 +141,10 @@ public class RMStateStoreTestBase {
     Version getCurrentVersion() throws Exception;
     boolean appExists(RMApp app) throws Exception;
     boolean attemptExists(RMAppAttempt attempt) throws Exception;
+  }
+
+  public long getEpochRange() {
+    return epochRange;
   }
 
   void waitNotify(TestDispatcher dispatcher) {
@@ -576,6 +582,14 @@ public class RMStateStoreTestBase {
     
     long thirdTimeEpoch = store.getAndIncrementEpoch();
     Assert.assertEquals(epoch + 2, thirdTimeEpoch);
+
+    for (int i = 0; i < epochRange; ++i) {
+      store.getAndIncrementEpoch();
+    }
+    long wrappedEpoch = store.getAndIncrementEpoch();
+    // Epoch should have wrapped around and then incremented once for a total
+    // of + 3
+    Assert.assertEquals(epoch + 3, wrappedEpoch);
   }
 
   public void testAppDeletion(RMStateStoreHelper stateStoreHelper)

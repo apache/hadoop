@@ -491,13 +491,13 @@ public class ZKRMStateStore extends RMStateStore {
       Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
       currentEpoch = epoch.getEpoch();
       // increment epoch and store it
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       zkManager.safeSetData(epochNodePath, storeData, -1, zkAcl,
           fencingNodePath);
     } else {
       // initialize epoch node with 1 for the next time.
-      byte[] storeData = Epoch.newInstance(currentEpoch + 1).getProto()
+      byte[] storeData = Epoch.newInstance(nextEpoch(currentEpoch)).getProto()
           .toByteArray();
       zkManager.safeCreate(epochNodePath, storeData, zkAcl,
           CreateMode.PERSISTENT, zkAcl, fencingNodePath);

@@ -188,6 +188,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_EPOCH = RM_PREFIX + "epoch";
   public static final long DEFAULT_RM_EPOCH = 0L;
 
+  /** The epoch range before wrap around. 0 disables wrap around*/
+  public static final String RM_EPOCH_RANGE = RM_EPOCH + ".range";
+  public static final long DEFAULT_RM_EPOCH_RANGE = 0;
+
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
     RM_PREFIX + "address";
