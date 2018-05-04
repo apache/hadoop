@@ -129,7 +129,7 @@ public class FailoverController {
 
     if (!toSvcStatus.getState().equals(HAServiceState.STANDBY)) {
       throw new FailoverFailedException(
-          "Can't failover to an active service");
+          "Can't failover to an " + toSvcStatus.getState() + " service");
     }
     
     if (!toSvcStatus.isReadyToBecomeActive()) {

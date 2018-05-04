@@ -1759,25 +1759,35 @@ public class NameNode extends ReconfigurableBase implements
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     if (state == OBSERVER_STATE) {
-      // TODO: we may need to remove this when enabling failover for observer
       throw new ServiceFailedException(
-          "Cannot transition from Observer to Active");
+          "Cannot transition from '" + OBSERVER_STATE + "' to '" +
+              ACTIVE_STATE + "'");
     }
     state.setState(haContext, ACTIVE_STATE);
   }
-  
-  synchronized void transitionToStandby() 
+
+  synchronized void transitionToStandby()
       throws ServiceFailedException, AccessControlException {
     namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
-    if (state == OBSERVER_STATE) {
-      // TODO: we may need to remove this when enabling failover for observer
-      throw new ServiceFailedException(
-          "Cannot transition from Observer to Standby");
-    }
     state.setState(haContext, STANDBY_STATE);
+  }
+
+  synchronized void transitionToObserver()
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
+    if (!haEnabled) {
+      throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    // Transition from ACTIVE to OBSERVER is forbidden.
+    if (state == ACTIVE_STATE) {
+      throw new ServiceFailedException(
+          "Cannot transition from '" + ACTIVE_STATE + "' to '" +
+              OBSERVER_STATE + "'");
+    }
+    state.setState(haContext, OBSERVER_STATE);
   }
 
   synchronized HAServiceStatus getServiceStatus()
@@ -1831,7 +1841,6 @@ public class NameNode extends ReconfigurableBase implements
 
   @Override // NameNodeStatusMXBean
   public String getState() {
-    // TODO: maybe we should return a different result for observer namenode?
     String servStateStr = "";
     HAServiceState servState = getServiceState();
     if (null != servState) {

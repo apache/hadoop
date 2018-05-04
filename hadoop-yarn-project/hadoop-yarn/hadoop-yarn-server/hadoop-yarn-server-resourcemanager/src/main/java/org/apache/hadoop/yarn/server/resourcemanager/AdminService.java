@@ -355,6 +355,13 @@ public class AdminService extends CompositeService implements
     }
   }
 
+  @Override
+  public synchronized void transitionToObserver(
+      StateChangeRequestInfo reqInfo) throws IOException {
+    // Should NOT get here, as RMHAServiceTarget doesn't support observer.
+    throw new ServiceFailedException("Does not support transition to Observer");
+  }
+
   /**
    * Return the HA status of this RM. This includes the current state and
    * whether the RM is ready to become active.
