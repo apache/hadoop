@@ -67,6 +67,50 @@ The collector class configuration may specify a comma-separated list of collecto
 |:---- |:---- |:---- |
 | `yarn.nodemanager.aux-services` | `...,mapreduce_shuffle` | The auxiliary service name |
 | `yarn.nodemanager.aux-services.mapreduce_shuffle.class` | `org.apache.hadoop.mapred.ShuffleHandler` | The auxiliary service class to use |
+| `yarn.nodemanager.aux-services.%s.classpath` | NONE | local directory which includes the related jar file as well as all the dependencies’ jar file. We could specify the single jar file or use /dep/* to load all jars under the dep directory. |
+| `yarn.nodemanager.aux-services.%s.remote-classpath` | NONE | The remote absolute or relative path to jar file |
+
+#### Example of loading jar file from HDFS:
+
+```xml
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle,AuxServiceFromHDFS</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.remote-classpath</name>
+        <value>/aux/test/aux-service-hdfs.jar</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class&lt;/name>
+        <value>org.apache.auxtest.AuxServiceFromHDFS2</value>
+    </property>
+</configuration>
+```
+
+#### Example of loading jar file from local file system:
+
+```xml
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle,AuxServiceFromHDFS</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.classpath</name>
+        <value>/aux/test/aux-service-hdfs.jar</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services.AuxServiceFromHDFS.class&lt;/name>
+        <value>org.apache.auxtest.AuxServiceFromHDFS2</value>
+    </property>
+</configuration>
+```
 
 **IMPORTANT:** If setting an auxiliary service in addition the default
 `mapreduce_shuffle` service, then a new service key should be added to the
