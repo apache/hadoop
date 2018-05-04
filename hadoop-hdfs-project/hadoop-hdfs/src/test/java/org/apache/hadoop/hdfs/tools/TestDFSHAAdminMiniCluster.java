@@ -116,6 +116,50 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse(nnode2.isStandbyState());
     assertEquals(0, runTool("-transitionToStandby", "nn2"));
     assertTrue(nnode2.isStandbyState());
+    assertEquals(0, runTool("-transitionToObserver", "nn2"));
+    assertFalse(nnode2.isStandbyState());
+    assertTrue(nnode2.isObserverState());
+  }
+
+  @Test
+  public void testObserverTransition() throws Exception {
+    NameNode nnode1 = cluster.getNameNode(0);
+    assertTrue(nnode1.isStandbyState());
+
+    // Should be able to transition from STANDBY to OBSERVER
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertFalse(nnode1.isStandbyState());
+    assertTrue(nnode1.isObserverState());
+
+    // Transition from Observer to Observer should be no-op
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isObserverState());
+
+    // Should also be able to transition back from OBSERVER to STANDBY
+    assertEquals(0, runTool("-transitionToStandby", "nn1"));
+    assertTrue(nnode1.isStandbyState());
+    assertFalse(nnode1.isObserverState());
+  }
+
+  @Test
+  public void testObserverIllegalTransition() throws Exception {
+    NameNode nnode1 = cluster.getNameNode(0);
+    assertTrue(nnode1.isStandbyState());
+    assertEquals(0, runTool("-transitionToActive", "nn1"));
+    assertFalse(nnode1.isStandbyState());
+    assertTrue(nnode1.isActiveState());
+
+    // Should NOT be able to transition from ACTIVE to OBSERVER
+    assertEquals(-1, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isActiveState());
+
+    // Should NOT be able to transition from OBSERVER to ACTIVE
+    assertEquals(0, runTool("-transitionToStandby", "nn1"));
+    assertTrue(nnode1.isStandbyState());
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    assertTrue(nnode1.isObserverState());
+    assertEquals(-1, runTool("-transitionToActive", "nn1"));
+    assertFalse(nnode1.isActiveState());
   }
   
   @Test

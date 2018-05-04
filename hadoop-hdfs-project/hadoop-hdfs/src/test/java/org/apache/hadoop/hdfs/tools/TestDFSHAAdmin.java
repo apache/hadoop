@@ -276,6 +276,12 @@ public class TestDFSHAAdmin {
   }
 
   @Test
+  public void testTransitionToObserver() throws Exception {
+    assertEquals(0, runTool("-transitionToObserver", "nn1"));
+    Mockito.verify(mockProtocol).transitionToObserver(anyReqInfo());
+  }
+
+  @Test
   public void testFailoverWithNoFencerConfigured() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     assertEquals(-1, runTool("-failover", "nn1", "nn2"));

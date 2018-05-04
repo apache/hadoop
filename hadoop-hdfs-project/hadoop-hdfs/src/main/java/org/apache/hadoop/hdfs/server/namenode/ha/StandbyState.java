@@ -39,6 +39,7 @@ import org.apache.hadoop.ipc.StandbyException;
  */
 @InterfaceAudience.Private
 public class StandbyState extends HAState {
+  // TODO: consider implementing a ObserverState instead of using the flag.
   private final boolean isObserver;
 
   public StandbyState() {
@@ -46,19 +47,16 @@ public class StandbyState extends HAState {
   }
 
   public StandbyState(boolean isObserver) {
-    super(HAServiceState.STANDBY);
+    super(isObserver ? HAServiceState.OBSERVER : HAServiceState.STANDBY);
     this.isObserver = isObserver;
   }
 
   @Override
   public void setState(HAContext context, HAState s) throws ServiceFailedException {
-    if (s == NameNode.ACTIVE_STATE) {
+    if (s == NameNode.ACTIVE_STATE ||
+        (!isObserver && s == NameNode.OBSERVER_STATE) ||
+        (isObserver && s == NameNode.STANDBY_STATE)) {
       setStateInternal(context, s);
-      return;
-    }
-    if (isObserver && s == NameNode.STANDBY_STATE) {
-      // To guard against the exception in the following super call.
-      // The other case, standby -> observer, should not happen.
       return;
     }
     super.setState(context, s);
