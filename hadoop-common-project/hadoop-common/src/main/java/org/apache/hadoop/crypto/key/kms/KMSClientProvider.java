@@ -522,12 +522,21 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       int expectedResponse, Class<T> klass, int authRetryCount)
       throws IOException {
     T ret = null;
+    OutputStream os = null;
     try {
       if (jsonOutput != null) {
-        writeJson(jsonOutput, conn.getOutputStream());
+        os = conn.getOutputStream();
+        writeJson(jsonOutput, os);
       }
     } catch (IOException ex) {
-      IOUtils.closeStream(conn.getInputStream());
+      // The payload is not serialized if getOutputStream fails.
+      // Calling getInputStream will issue the put/post request with no payload
+      // which causes HTTP 500 server error.
+      if (os == null) {
+        conn.disconnect();
+      } else {
+        IOUtils.closeStream(conn.getInputStream());
+      }
       throw ex;
     }
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
