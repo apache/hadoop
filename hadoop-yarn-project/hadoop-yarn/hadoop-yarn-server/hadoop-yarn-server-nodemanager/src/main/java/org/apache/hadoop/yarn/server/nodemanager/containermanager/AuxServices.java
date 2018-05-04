@@ -230,15 +230,30 @@ public class AuxServices extends AbstractService
               }
             }
             if (reDownload) {
+              LocalResourceType srcType = null;
+              String lowerDst = StringUtils.toLowerCase(src.toString());
+              if (lowerDst.endsWith(".jar")) {
+                srcType = LocalResourceType.FILE;
+              } else if (lowerDst.endsWith(".zip") ||
+                  lowerDst.endsWith(".tar.gz") || lowerDst.endsWith(".tgz")
+                  || lowerDst.endsWith(".tar")) {
+                srcType = LocalResourceType.ARCHIVE;
+              } else {
+                throw new YarnRuntimeException(
+                    "Can not unpack file from remote-file-path:" + src
+                        + "for aux-service:" + ".\n");
+              }
               LocalResource scRsrc = LocalResource.newInstance(
                   URL.fromURI(src.toUri()),
-                  LocalResourceType.ARCHIVE, LocalResourceVisibility.PRIVATE,
+                  srcType, LocalResourceVisibility.PRIVATE,
                   scFileStatus.getLen(), scFileStatus.getModificationTime());
               FSDownload download = new FSDownload(localLFS, null, conf,
                   downloadDest, scRsrc, null);
               try {
                 Path downloaded = download.call();
-                dest = new Path(downloaded + Path.SEPARATOR + "*");
+                // don't need to convert downloaded path into a dir
+                // since its already a jar path.
+                dest = downloaded;
               } catch (Exception ex) {
                 throw new YarnRuntimeException(
                     "Exception happend while downloading files "
