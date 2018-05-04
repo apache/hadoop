@@ -31,6 +31,7 @@ message RemoteNodeProto {
   optional NodeIdProto node_id = 1;
   optional string http_address = 2;
   optional string rack_name = 3;
+  optional string node_partition = 4;
 }
 
 message RegisterDistributedSchedulingAMResponseProto {
