@@ -909,13 +909,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
         commandFile, runCommand);
 
+    // Some failures here are acceptable. Let the calling executor decide.
+    launchOp.disableFailureLogging();
+
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
           launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
-      LOG.warn("Launch container failed. Exception: ", e);
-      LOG.info("Docker command used: " + runCommand);
-
       throw new ContainerExecutionException("Launch container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
     }
@@ -938,14 +938,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       PrivilegedOperation launchOp = buildLaunchOp(ctx, commandFile,
           startCommand);
 
+      // Some failures here are acceptable. Let the calling executor decide.
+      launchOp.disableFailureLogging();
+
       try {
         privilegedOperationExecutor.executePrivilegedOperation(null,
             launchOp, null, null, false, false);
       } catch (PrivilegedOperationException e) {
-        LOG.warn("Relaunch container failed. Exception: ", e);
-        LOG.info("Docker command used: " + startCommand);
-
-        throw new ContainerExecutionException("Launch container failed", e
+        throw new ContainerExecutionException("Relaunch container failed", e
             .getExitCode(), e.getOutput(), e.getErrorOutput());
       }
     } else {
