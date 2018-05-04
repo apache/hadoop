@@ -69,14 +69,34 @@ public class ITestS3GuardFsShell extends AbstractS3ATestBase {
 
   public void testMkdirTrailing() throws Throwable {
     Path dest = path("trailing");
+    getFileSystem().delete(dest, true);
     try {
       String destStr = dest.toString() + "/";
       exec(new String[]{"-mkdir", "-p", destStr});
+/*
       exec(new String[]{"-test", "-d", destStr});
       exec(new String[]{"-rmdir", destStr});
       assertShell(1, new String[]{"-test", "-d", destStr});
+*/
     } finally {
       getFileSystem().delete(dest, true);
     }
   }
+
+  public void testMkdirTrailingExists() throws Throwable {
+    Path dest = path("trailingexists");
+    getFileSystem().mkdirs(dest);
+    try {
+      String destStr = dest.toString() + "/";
+      exec(new String[]{"-mkdir", "-p", destStr});
+/*
+      exec(new String[]{"-test", "-d", destStr});
+      exec(new String[]{"-rmdir", destStr});
+      assertShell(1, new String[]{"-test", "-d", destStr});
+*/
+    } finally {
+      getFileSystem().delete(dest, true);
+    }
+  }
+
 }
