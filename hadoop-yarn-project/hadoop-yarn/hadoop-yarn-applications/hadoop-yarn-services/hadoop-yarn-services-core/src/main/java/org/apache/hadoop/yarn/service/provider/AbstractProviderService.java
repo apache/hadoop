@@ -97,6 +97,10 @@ public abstract class AbstractProviderService implements ProviderService,
     ProviderUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
         compLaunchContext, tokensForSubstitution, instance, context);
 
+    // handles static files (like normal file / archive file) for localization.
+    ProviderUtils.handleStaticFilesForLocalization(launcher, fileSystem,
+        compLaunchContext);
+
     // substitute launch command
     String launchCommand = compLaunchContext.getLaunchCommand();
     // docker container may have empty commands
