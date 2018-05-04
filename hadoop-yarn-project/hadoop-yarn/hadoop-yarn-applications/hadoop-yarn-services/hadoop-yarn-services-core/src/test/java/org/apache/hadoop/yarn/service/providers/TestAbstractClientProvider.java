@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.yarn.service.providers;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
@@ -57,6 +59,7 @@ public class TestAbstractClientProvider {
   public void testConfigFiles() throws IOException {
     ClientProvider clientProvider = new ClientProvider();
     FileSystem mockFs = mock(FileSystem.class);
+    FileStatus mockFileStatus = mock(FileStatus.class);
     when(mockFs.exists(anyObject())).thenReturn(true);
 
     ConfigFile configFile = new ConfigFile();
@@ -112,6 +115,47 @@ public class TestAbstractClientProvider {
     try {
       clientProvider.validateConfigFiles(configFiles, mockFs);
       Assert.fail(EXCEPTION_PREFIX + "duplicate dest file");
+    } catch (IllegalArgumentException e) {
+    }
+
+    configFiles.clear();
+    configFile = new ConfigFile();
+    configFile.setType(ConfigFile.TypeEnum.STATIC);
+    configFile.setSrcFile(null);
+    configFile.setDestFile("path/destfile3");
+    configFiles.add(configFile);
+    try {
+      clientProvider.validateConfigFiles(configFiles, mockFs);
+      Assert.fail(EXCEPTION_PREFIX + "dest file with multiple path elements");
+    } catch (IllegalArgumentException e) {
+    }
+
+    configFile.setDestFile("/path/destfile3");
+    try {
+      clientProvider.validateConfigFiles(configFiles, mockFs);
+      Assert.fail(EXCEPTION_PREFIX + "src file should be specified");
+    } catch (IllegalArgumentException e) {
+    }
+
+    //should succeed
+    configFile.setSrcFile("srcFile");
+    configFile.setDestFile("destfile3");
+    clientProvider.validateConfigFiles(configFiles, mockFs);
+
+    when(mockFileStatus.isDirectory()).thenReturn(true);
+    when(mockFs.getFileStatus(new Path("srcFile")))
+        .thenReturn(mockFileStatus).thenReturn(mockFileStatus);
+
+    configFiles.clear();
+    configFile = new ConfigFile();
+    configFile.setType(ConfigFile.TypeEnum.STATIC);
+    configFile.setSrcFile("srcFile");
+    configFile.setDestFile("destfile3");
+    configFiles.add(configFile);
+
+    try {
+      clientProvider.validateConfigFiles(configFiles, mockFs);
+      Assert.fail(EXCEPTION_PREFIX + "src file is a directory");
     } catch (IllegalArgumentException e) {
     }
   }

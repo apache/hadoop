@@ -475,6 +475,8 @@ definitions:
           - YAML
           - TEMPLATE
           - HADOOP_XML
+          - STATIC
+          - ARCHIVE
       dest_file:
         type: string
         description: The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.
