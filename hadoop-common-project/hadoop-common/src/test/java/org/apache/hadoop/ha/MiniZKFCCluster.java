@@ -187,6 +187,10 @@ public class MiniZKFCCluster {
     svcs.get(idx).actUnreachable = unreachable;
   }
 
+  public void setFailToBecomeObserver(int idx, boolean doFail) {
+    svcs.get(idx).failToBecomeObserver = doFail;
+  }
+
   /**
    * Wait for the given HA service to enter the given HA state.
    * This is based on the state of ZKFC, not the state of HA service.
