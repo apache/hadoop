@@ -300,7 +300,11 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
             creds.getAllTokens());
       }
       if (!creds.getAllTokens().isEmpty()) {
-        dToken = getDelegationToken(url, creds);
+        InetSocketAddress serviceAddr = new InetSocketAddress(url.getHost(),
+            url.getPort());
+        Text service = SecurityUtil.buildTokenService(serviceAddr);
+        dToken = creds.getToken(service);
+        LOG.debug("Using delegation token {} from service:{}", dToken, service);
         if (dToken != null) {
           if (useQueryStringForDelegationToken()) {
             // delegation token will go in the query string, injecting it
@@ -334,21 +338,6 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
           dToken.encodeToUrlString());
     }
     return conn;
-  }
-
-  /**
-   * Select a delegation token from all tokens in credentials, based on url.
-   */
-  @InterfaceAudience.Private
-  public org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
-      getDelegationToken(URL url, Credentials creds) {
-    final InetSocketAddress serviceAddr =
-        new InetSocketAddress(url.getHost(), url.getPort());
-    final Text service = SecurityUtil.buildTokenService(serviceAddr);
-    org.apache.hadoop.security.token.Token<? extends TokenIdentifier> dToken =
-        creds.getToken(service);
-    LOG.debug("Selected delegation token {} using service:{}", dToken, service);
-    return dToken;
   }
 
   /**
