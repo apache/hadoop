@@ -637,22 +637,22 @@ public class JobStatus implements Writable, Cloneable {
   
   public String toString() {
     StringBuffer buffer = new StringBuffer();
-    buffer.append("job-id : " + jobid).append("\n");
-    buffer.append("uber-mode : " + isUber).append("\n");
-    buffer.append("map-progress : " + mapProgress).append("\n");
-    buffer.append("reduce-progress : " + reduceProgress).append("\n");
-    buffer.append("cleanup-progress : " + cleanupProgress).append("\n");
-    buffer.append("setup-progress : " + setupProgress).append("\n");
-    buffer.append("runstate : " + runState).append("\n");
-    buffer.append("start-time : " + startTime).append("\n");
-    buffer.append("user-name : " + user).append("\n");
-    buffer.append("priority : " + priority).append("\n");
-    buffer.append("scheduling-info : " + schedulingInfo).append("\n");
-    buffer.append("num-used-slots" + numUsedSlots).append("\n");
-    buffer.append("num-reserved-slots" + numReservedSlots).append("\n");
-    buffer.append("used-mem" + usedMem).append("\n");
-    buffer.append("reserved-mem" + reservedMem).append("\n");
-    buffer.append("needed-mem" + neededMem).append("\n");
+    buffer.append("job-id : " + jobid);
+    buffer.append("uber-mode : " + isUber);
+    buffer.append("map-progress : " + mapProgress);
+    buffer.append("reduce-progress : " + reduceProgress);
+    buffer.append("cleanup-progress : " + cleanupProgress);
+    buffer.append("setup-progress : " + setupProgress);
+    buffer.append("runstate : " + runState);
+    buffer.append("start-time : " + startTime);
+    buffer.append("user-name : " + user);
+    buffer.append("priority : " + priority);
+    buffer.append("scheduling-info : " + schedulingInfo);
+    buffer.append("num-used-slots" + numUsedSlots);
+    buffer.append("num-reserved-slots" + numReservedSlots);
+    buffer.append("used-mem" + usedMem);
+    buffer.append("reserved-mem" + reservedMem);
+    buffer.append("needed-mem" + neededMem);
     return buffer.toString();
   }
 }
