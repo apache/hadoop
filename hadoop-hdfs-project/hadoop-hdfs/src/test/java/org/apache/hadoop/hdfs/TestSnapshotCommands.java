@@ -135,6 +135,11 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.nonexist sn.rename", 1,
         "renameSnapshot: The snapshot sn.nonexist does not exist for directory /sub1", conf);
 
+    //try renaming a non-existing snapshot to itself
+    DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.nonexist sn.nonexist", 1,
+        "renameSnapshot: The snapshot sn.nonexist " +
+            "does not exist for directory /sub1", conf);
+
     //try renaming to existing snapshots
     DFSTestUtil.FsShellRun("-createSnapshot /sub1 sn.new", conf);
     DFSTestUtil.FsShellRun("-renameSnapshot /sub1 sn.new sn.rename", 1,

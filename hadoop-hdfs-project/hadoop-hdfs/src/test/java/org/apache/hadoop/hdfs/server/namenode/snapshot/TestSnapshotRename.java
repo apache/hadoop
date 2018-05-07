@@ -184,6 +184,22 @@ public class TestSnapshotRename {
     exception.expectMessage(error);
     hdfs.renameSnapshot(sub1, "wrongName", "s2");
   }
+
+  /**
+   * Test rename a non-existing snapshot to itself.
+   */
+  @Test (timeout=60000)
+  public void testRenameNonExistingSnapshotToItself() throws Exception {
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    // Create snapshot for sub1
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
+
+    exception.expect(SnapshotException.class);
+    String error = "The snapshot wrongName does not exist for directory "
+        + sub1.toString();
+    exception.expectMessage(error);
+    hdfs.renameSnapshot(sub1, "wrongName", "wrongName");
+  }
   
   /**
    * Test rename a snapshot to another existing snapshot 
