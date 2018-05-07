@@ -490,11 +490,12 @@ public class UsersManager implements AbstractUsersManager {
       Resource clusterResource, String nodePartition,
       SchedulingMode schedulingMode) {
 
-    Map<SchedulingMode, Resource> userLimitPerSchedulingMode = preComputedActiveUserLimit
-        .get(nodePartition);
+    Map<SchedulingMode, Resource> userLimitPerSchedulingMode;
 
     try {
       writeLock.lock();
+      userLimitPerSchedulingMode =
+          preComputedActiveUserLimit.get(nodePartition);
       if (isRecomputeNeeded(schedulingMode, nodePartition, true)) {
         // recompute
         userLimitPerSchedulingMode = reComputeUserLimits(userName,
@@ -548,11 +549,11 @@ public class UsersManager implements AbstractUsersManager {
       Resource clusterResource, String nodePartition,
       SchedulingMode schedulingMode) {
 
-    Map<SchedulingMode, Resource> userLimitPerSchedulingMode = preComputedAllUserLimit
-        .get(nodePartition);
+    Map<SchedulingMode, Resource> userLimitPerSchedulingMode;
 
     try {
       writeLock.lock();
+      userLimitPerSchedulingMode = preComputedAllUserLimit.get(nodePartition);
       if (isRecomputeNeeded(schedulingMode, nodePartition, false)) {
         // recompute
         userLimitPerSchedulingMode = reComputeUserLimits(userName,
