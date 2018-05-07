@@ -119,14 +119,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   public void renameSnapshot(String path, String oldName, String newName)
       throws SnapshotException {
-    if (newName.equals(oldName)) {
-      return;
-    }
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
       throw new SnapshotException("The snapshot " + oldName
           + " does not exist for directory " + path);
     } else {
+      if (newName.equals(oldName)) {
+        return;
+      }
       final byte[] newNameBytes = DFSUtil.string2Bytes(newName);
       int indexOfNew = searchSnapshot(newNameBytes);
       if (indexOfNew >= 0) {
