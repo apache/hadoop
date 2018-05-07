@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.HostsFileManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -763,7 +764,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
         new NMLivelinessMonitor(privateDispatcher);
     nmLivelinessMonitor.init(conf);
     nmLivelinessMonitor.start();
-    NodesListManager nodesListManager = new NodesListManager(privateContext);
+    NodesListManager nodesListManager = new NodesListManager(privateContext,
+        new HostsFileManager());
     nodesListManager.init(conf);
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);

@@ -430,19 +430,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     String schedulerClassName = conf.get(YarnConfiguration.RM_SCHEDULER,
         YarnConfiguration.DEFAULT_RM_SCHEDULER);
     LOG.info("Using Scheduler: " + schedulerClassName);
-    try {
-      Class<?> schedulerClazz = Class.forName(schedulerClassName);
-      if (ResourceScheduler.class.isAssignableFrom(schedulerClazz)) {
-        return (ResourceScheduler) ReflectionUtils.newInstance(schedulerClazz,
-            this.conf);
-      } else {
-        throw new YarnRuntimeException("Class: " + schedulerClassName
-            + " not instance of " + ResourceScheduler.class.getCanonicalName());
-      }
-    } catch (ClassNotFoundException e) {
-      throw new YarnRuntimeException("Could not instantiate Scheduler: "
-          + schedulerClassName, e);
-    }
+    return newInstance(ResourceScheduler.class, schedulerClassName);
   }
 
   protected ReservationSystem createReservationSystem() {
@@ -452,39 +440,37 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (reservationClassName == null) {
       return null;
     }
-    LOG.info("Using ReservationSystem: " + reservationClassName);
-    try {
-      Class<?> reservationClazz = Class.forName(reservationClassName);
-      if (ReservationSystem.class.isAssignableFrom(reservationClazz)) {
-        return (ReservationSystem) ReflectionUtils.newInstance(
-            reservationClazz, this.conf);
-      } else {
-        throw new YarnRuntimeException("Class: " + reservationClassName
-            + " not instance of " + ReservationSystem.class.getCanonicalName());
-      }
-    } catch (ClassNotFoundException e) {
-      throw new YarnRuntimeException(
-          "Could not instantiate ReservationSystem: " + reservationClassName, e);
-    }
+    return newInstance(ReservationSystem.class, reservationClassName);
   }
 
   protected SystemServiceManager createServiceManager() {
     String schedulerClassName =
         YarnConfiguration.DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS;
-    LOG.info("Using SystemServiceManager: " + schedulerClassName);
+    return newInstance(SystemServiceManager.class, schedulerClassName);
+  }
+
+  protected HostsConfigManager createHostsConfigManager() {
+    String className =
+        conf.get(YarnConfiguration.RM_HOSTS_CONFIG_MANAGER_CLASS,
+            YarnConfiguration.DEFAULT_RM_HOSTS_CONFIG_MANAGER_CLASS);
+    return newInstance(HostsConfigManager.class, className);
+  }
+
+  private <T> T newInstance(Class<T> parentClass, String className) {
+    LOG.info("Using " + parentClass.getCanonicalName() + ": " + className);
     try {
-      Class<?> schedulerClazz = Class.forName(schedulerClassName);
-      if (SystemServiceManager.class.isAssignableFrom(schedulerClazz)) {
-        return (SystemServiceManager) ReflectionUtils
-            .newInstance(schedulerClazz, this.conf);
+      Class<?> clazz = Class.forName(className);
+      if (parentClass.isAssignableFrom(clazz)) {
+        Object instance = ReflectionUtils.newInstance(clazz, conf);
+        return parentClass.cast(instance);
       } else {
         throw new YarnRuntimeException(
-            "Class: " + schedulerClassName + " not instance of "
-                + SystemServiceManager.class.getCanonicalName());
+            "Class: " + className + " not instance of "
+                + parentClass.getCanonicalName());
       }
     } catch (ClassNotFoundException e) {
       throw new YarnRuntimeException(
-          "Could not instantiate SystemServiceManager: " + schedulerClassName,
+          "Could not instantiate " + parentClass.getCanonicalName() + ": " + className,
           e);
     }
   }
@@ -697,8 +683,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
         rmContext.setDelegationTokenRenewer(delegationTokenRenewer);
       }
 
+      // Instantiate HostsConfigManager.
+      HostsConfigManager hostsConfigManager = createHostsConfigManager();
+
       // Register event handler for NodesListManager
-      nodesListManager = new NodesListManager(rmContext);
+      nodesListManager = new NodesListManager(rmContext, hostsConfigManager);
       rmDispatcher.register(NodesListManagerEventType.class, nodesListManager);
       addService(nodesListManager);
       rmContext.setNodesListManager(nodesListManager);

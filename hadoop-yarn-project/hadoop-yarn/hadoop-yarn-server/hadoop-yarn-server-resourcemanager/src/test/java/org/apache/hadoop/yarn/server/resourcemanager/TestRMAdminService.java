@@ -802,7 +802,7 @@ public class TestRMAdminService {
     rm.adminService.refreshNodes(RefreshNodesRequest
         .newInstance(DecommissionType.NORMAL));
     Set<String> excludeHosts =
-        rm.getNodesListManager().getHostsReader().getExcludedHosts();
+        rm.getNodesListManager().getHostsConfigManager().getExcludedHosts();
     Assert.assertTrue(excludeHosts.size() == 1);
     Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
   }
@@ -1038,7 +1038,7 @@ public class TestRMAdminService {
       // validate values for excludeHosts
       Set<String> excludeHosts =
           resourceManager.getRMContext().getNodesListManager()
-              .getHostsReader().getExcludedHosts();
+              .getHostsConfigManager().getExcludedHosts();
       Assert.assertTrue(excludeHosts.size() == 1);
       Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
 

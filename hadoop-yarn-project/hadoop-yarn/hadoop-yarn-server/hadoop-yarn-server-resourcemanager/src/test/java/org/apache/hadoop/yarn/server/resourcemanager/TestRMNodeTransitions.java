@@ -123,8 +123,8 @@ public class TestRMNodeTransitions {
           null, null, mock(DelegationTokenRenewer.class), null, null, null,
           null, null);
     NodesListManager nodesListManager = mock(NodesListManager.class);
-    HostsFileReader reader = mock(HostsFileReader.class);
-    when(nodesListManager.getHostsReader()).thenReturn(reader);
+    HostsConfigManager hostsConfigManager = mock(HostsConfigManager.class);
+    when(nodesListManager.getHostsConfigManager()).thenReturn(hostsConfigManager);
     ((RMContextImpl) rmContext).setNodesListManager(nodesListManager);
     scheduler = mock(YarnScheduler.class);
     doAnswer(

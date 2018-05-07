@@ -522,7 +522,12 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
   public static final int DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 600000;
-  
+
+  public static final String RM_HOSTS_CONFIG_MANAGER_CLASS =
+    RM_PREFIX + "hosts-config.provider.class";
+  public static final String DEFAULT_RM_HOSTS_CONFIG_MANAGER_CLASS =
+      "org.apache.hadoop.yarn.server.resourcemanager.HostsFileManager";
+
   /** Path to file with nodes to include.*/
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
     RM_PREFIX + "nodes.include-path";

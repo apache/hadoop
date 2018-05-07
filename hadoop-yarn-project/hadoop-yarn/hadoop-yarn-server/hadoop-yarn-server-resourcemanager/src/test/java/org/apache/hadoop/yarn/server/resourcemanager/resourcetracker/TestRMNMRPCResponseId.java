@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.HostsFileManager;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -74,7 +75,7 @@ public class TestRMNMRPCResponseId {
           new NMTokenSecretManagerInRM(conf), null, null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
-    NodesListManager nodesListManager = new NodesListManager(context);
+    NodesListManager nodesListManager = new NodesListManager(context, new HostsFileManager());
     nodesListManager.init(conf);
     
     context.getContainerTokenSecretManager().rollMasterKey();

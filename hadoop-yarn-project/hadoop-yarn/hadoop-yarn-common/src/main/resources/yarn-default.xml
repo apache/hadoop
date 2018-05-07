@@ -355,6 +355,12 @@
   </property>
 
   <property>
+    <description>Class name of Hosts config provider implementation.</description>
+    <name>yarn.resourcemanager.hosts-config.provider.class</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Path to file with nodes to include.</description>
     <name>yarn.resourcemanager.nodes.include-path</name>
     <value></value>

@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.resourcemanager.HostsConfigManager;
+import org.apache.hadoop.yarn.server.resourcemanager.HostsFileManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
@@ -70,6 +72,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
   private List<RMNodeEvent> rmNodeEvents = new ArrayList<RMNodeEvent>();
   private Dispatcher dispatcher;
   private RMContextImpl context;
+  private HostsConfigManager hostsConfigManager;
 
   public TestNMReconnect(SchedulerType type) throws IOException {
     super(type);
@@ -98,6 +101,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
 
     context = new RMContextImpl(dispatcher, null,
         null, null, null, null, null, null, null, null);
+    hostsConfigManager = new HostsFileManager();
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,
@@ -106,7 +110,7 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
         dispatcher);
     nmLivelinessMonitor.init(conf);
     nmLivelinessMonitor.start();
-    NodesListManager nodesListManager = new NodesListManager(context);
+    NodesListManager nodesListManager = new NodesListManager(context, hostsConfigManager);
     nodesListManager.init(conf);
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);

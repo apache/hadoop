@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import org.apache.hadoop.yarn.server.resourcemanager.HostsFileManager;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -81,7 +82,7 @@ public class TestNMExpiry {
         dispatcher);
     nmLivelinessMonitor.init(conf);
     nmLivelinessMonitor.start();
-    NodesListManager nodesListManager = new NodesListManager(context);
+    NodesListManager nodesListManager = new NodesListManager(context, new HostsFileManager());
     nodesListManager.init(conf);
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
