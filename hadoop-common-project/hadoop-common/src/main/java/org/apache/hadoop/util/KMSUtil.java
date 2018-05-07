@@ -26,14 +26,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Utils for KMS.
  */
 @InterfaceAudience.Private
 public final class KMSUtil {
-  public static final Logger LOG = LoggerFactory.getLogger(KMSUtil.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(KMSUtil.class);
 
   private KMSUtil() { /* Hidden constructor */ }
 
@@ -55,13 +55,6 @@ public final class KMSUtil {
     if (providerUriStr == null || providerUriStr.isEmpty()) {
       return null;
     }
-    KeyProvider kp = KMSUtilFaultInjector.get().createKeyProviderForTests(
-        providerUriStr, conf);
-    if (kp != null) {
-      LOG.info("KeyProvider is created with uri: {}. This should happen only " +
-              "in tests.", providerUriStr);
-      return kp;
-    }
     return createKeyProviderFromUri(conf, URI.create(providerUriStr));
   }
 
@@ -77,39 +70,5 @@ public final class KMSUtil {
           + " was found but it is a transient provider.");
     }
     return keyProvider;
-  }
-
-  /**
-   * Creates a key provider from token service field, which must be URI format.
-   *
-   * @param conf
-   * @param tokenServiceValue
-   * @return new KeyProvider or null
-   * @throws IOException
-   */
-  public static KeyProvider createKeyProviderFromTokenService(
-      final Configuration conf, final String tokenServiceValue)
-      throws IOException {
-    LOG.debug("Creating key provider from token service value {}. ",
-        tokenServiceValue);
-    final KeyProvider kp = KMSUtilFaultInjector.get()
-        .createKeyProviderForTests(tokenServiceValue, conf);
-    if (kp != null) {
-      LOG.info("KeyProvider is created with uri: {}. This should happen only "
-          + "in tests.", tokenServiceValue);
-      return kp;
-    }
-    if (!tokenServiceValue.contains("://")) {
-      throw new IllegalArgumentException(
-          "Invalid token service " + tokenServiceValue);
-    }
-    final URI tokenServiceUri;
-    try {
-      tokenServiceUri = new URI(tokenServiceValue);
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(
-          "Invalid token service " + tokenServiceValue, e);
-    }
-    return createKeyProviderFromUri(conf, tokenServiceUri);
   }
 }
