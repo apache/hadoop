@@ -68,7 +68,7 @@ public class TestCommitBlockSynchronization {
         block, (short) 1, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
     blockInfo.setBlockCollection(file);
     blockInfo.setGenerationStamp(genStamp);
-    blockInfo.initializeBlockRecovery(genStamp);
+    blockInfo.initializeBlockRecovery(genStamp, true);
     doReturn(true).when(file).removeLastBlock(any(Block.class));
     doReturn(true).when(file).isUnderConstruction();
     doReturn(new BlockInfoContiguous[1]).when(file).getBlocks();

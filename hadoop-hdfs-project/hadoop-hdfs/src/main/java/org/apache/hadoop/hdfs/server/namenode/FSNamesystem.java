@@ -2205,7 +2205,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           truncatedBlockUC.getTruncateBlock().getNumBytes(), truncatedBlockUC);
     }
     if (shouldRecoverNow) {
-      truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp());
+      truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp(),
+          true);
     }
 
     return newBlock;
@@ -4105,7 +4106,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } else if(truncateRecovery) {
         recoveryBlock.setGenerationStamp(blockRecoveryId);
       }
-      uc.initializeBlockRecovery(blockRecoveryId);
+      uc.initializeBlockRecovery(blockRecoveryId, true);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery

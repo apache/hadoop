@@ -491,8 +491,20 @@ public class LeaseManager {
         try {
           INodesInPath iip = fsnamesystem.getFSDirectory().getINodesInPath(p,
               true);
-          boolean completed = fsnamesystem.internalReleaseLease(leaseToCheck, p,
-              iip, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          // Sanity check to make sure the path is correct
+          if (!p.startsWith("/")) {
+            throw new IOException("Invalid path in the lease " + p);
+          }
+          boolean completed = false;
+          try {
+            completed = fsnamesystem.internalReleaseLease(
+                leaseToCheck, p, iip,
+                HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          } catch (IOException e) {
+            LOG.warn("Cannot release the path " + p + " in the lease "
+                + leaseToCheck + ". It will be retried.", e);
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             if (completed) {
               LOG.debug("Lease recovery for " + p + " is complete. File closed.");
@@ -505,7 +517,7 @@ public class LeaseManager {
             needSync = true;
           }
         } catch (IOException e) {
-          LOG.error("Cannot release the path " + p + " in the lease "
+          LOG.warn("Removing lease with an invalid path: " + p + ","
               + leaseToCheck, e);
           removing.add(p);
         }
