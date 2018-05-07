@@ -248,7 +248,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
       throws SCMException {
     Preconditions.checkNotNull(datanodeDetails, "node is null");
     try {
-      byte[]  result = nodePoolStore.get(
+      byte[] result = nodePoolStore.get(
           datanodeDetails.getProtoBufMessage().toByteArray());
       return result == null ? null : DFSUtil.bytes2String(result);
     } catch (IOException e) {

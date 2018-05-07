@@ -119,7 +119,6 @@ public class ContainerCommandHandler extends OzoneCommandHandler {
   public static void addOptions(Options options) {
     addCommandsOption(options);
     // for create container options.
-    CreateContainerHandler.addOptions(options);
     DeleteContainerHandler.addOptions(options);
     InfoContainerHandler.addOptions(options);
     ListContainerHandler.addOptions(options);

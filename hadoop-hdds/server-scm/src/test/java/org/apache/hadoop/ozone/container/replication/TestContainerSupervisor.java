@@ -149,17 +149,17 @@ public class TestContainerSupervisor {
    */
   public void testDetectSingleContainerReplica() throws TimeoutException,
       InterruptedException {
-    String singleNodeContainer = "SingleNodeContainer";
-    String threeNodeContainer = "ThreeNodeContainer";
+    long singleNodeContainerID = 9001;
+    long threeNodeContainerID = 9003;
     InProgressPool ppool = containerSupervisor.getInProcessPoolList().get(0);
     // Only single datanode reporting that "SingleNodeContainer" exists.
     List<ContainerReportsRequestProto> clist =
-        datanodeStateManager.getContainerReport(singleNodeContainer,
+        datanodeStateManager.getContainerReport(singleNodeContainerID,
             ppool.getPool().getPoolName(), 1);
     ppool.handleContainerReport(clist.get(0));
 
     // Three nodes are going to report that ThreeNodeContainer  exists.
-    clist = datanodeStateManager.getContainerReport(threeNodeContainer,
+    clist = datanodeStateManager.getContainerReport(threeNodeContainerID,
         ppool.getPool().getPoolName(), 3);
 
     for (ContainerReportsRequestProto reportsProto : clist) {
@@ -169,9 +169,10 @@ public class TestContainerSupervisor {
         200, 1000);
     ppool.setDoneProcessing();
 
-    List<Map.Entry<String, Integer>> containers = ppool.filterContainer(p -> p
+    List<Map.Entry<Long, Integer>> containers = ppool.filterContainer(p -> p
         .getValue() == 1);
-    Assert.assertEquals(singleNodeContainer, containers.get(0).getKey());
+    Assert.assertEquals(singleNodeContainerID,
+        containers.get(0).getKey().longValue());
     int count = containers.get(0).getValue();
     Assert.assertEquals(1L, count);
   }
@@ -184,24 +185,24 @@ public class TestContainerSupervisor {
    */
   public void testDetectOverReplica() throws TimeoutException,
       InterruptedException {
-    String normalContainer = "NormalContainer";
-    String overReplicated = "OverReplicatedContainer";
-    String wayOverReplicated = "WayOverReplicated";
+    long normalContainerID = 9000;
+    long overReplicatedContainerID = 9001;
+    long wayOverReplicatedContainerID = 9002;
     InProgressPool ppool = containerSupervisor.getInProcessPoolList().get(0);
 
     List<ContainerReportsRequestProto> clist =
-        datanodeStateManager.getContainerReport(normalContainer,
+        datanodeStateManager.getContainerReport(normalContainerID,
             ppool.getPool().getPoolName(), 3);
     ppool.handleContainerReport(clist.get(0));
 
-    clist = datanodeStateManager.getContainerReport(overReplicated,
+    clist = datanodeStateManager.getContainerReport(overReplicatedContainerID,
         ppool.getPool().getPoolName(), 4);
 
     for (ContainerReportsRequestProto reportsProto : clist) {
       ppool.handleContainerReport(reportsProto);
     }
 
-    clist = datanodeStateManager.getContainerReport(wayOverReplicated,
+    clist = datanodeStateManager.getContainerReport(wayOverReplicatedContainerID,
         ppool.getPool().getPoolName(), 7);
 
     for (ContainerReportsRequestProto reportsProto : clist) {
@@ -215,7 +216,7 @@ public class TestContainerSupervisor {
         200, 1000);
     ppool.setDoneProcessing();
 
-    List<Map.Entry<String, Integer>> containers = ppool.filterContainer(p -> p
+    List<Map.Entry<Long, Integer>> containers = ppool.filterContainer(p -> p
         .getValue() > 3);
     Assert.assertEquals(2, containers.size());
   }
@@ -255,14 +256,15 @@ public class TestContainerSupervisor {
               logCapturer.getOutput().contains("PoolNew"),
           200, 15 * 1000);
 
+      long newContainerID = 7001;
       // Assert that we are able to send a container report to this new
       // pool and datanode.
       List<ContainerReportsRequestProto> clist =
-          datanodeStateManager.getContainerReport("NewContainer1",
+          datanodeStateManager.getContainerReport(newContainerID,
               "PoolNew", 1);
       containerSupervisor.handleContainerReport(clist.get(0));
       GenericTestUtils.waitFor(() ->
-          inProgressLog.getOutput().contains("NewContainer1") && inProgressLog
+          inProgressLog.getOutput().contains(Long.toString(newContainerID)) && inProgressLog
               .getOutput().contains(id.getUuidString()),
           200, 10 * 1000);
     } finally {

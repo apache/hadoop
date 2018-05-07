@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto
@@ -108,7 +109,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         txResultBuilder.setSuccess(true);
       } catch (IOException e) {
         LOG.warn("Failed to delete blocks for container={}, TXID={}",
-            entry.getContainerName(), entry.getTxID(), e);
+            entry.getContainerID(), entry.getTxID(), e);
         txResultBuilder.setSuccess(false);
       }
       resultBuilder.addResults(txResultBuilder.build());
@@ -150,7 +151,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
    */
   private void deleteContainerBlocks(DeletedBlocksTransaction delTX,
       Configuration config) throws IOException {
-    String containerId = delTX.getContainerName();
+    long containerId = delTX.getContainerID();
     ContainerData containerInfo = containerManager.readContainer(containerId);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Processing Container : {}, DB path : {}", containerId,
@@ -159,9 +160,9 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
 
     int newDeletionBlocks = 0;
     MetadataStore containerDB = KeyUtils.getDB(containerInfo, config);
-    for (String blk : delTX.getBlockIDList()) {
+    for (Long blk : delTX.getLocalIDList()) {
       BatchOperation batch = new BatchOperation();
-      byte[] blkBytes = DFSUtil.string2Bytes(blk);
+      byte[] blkBytes = Longs.toByteArray(blk);
       byte[] blkInfo = containerDB.get(blkBytes);
       if (blkInfo != null) {
         // Found the block in container db,

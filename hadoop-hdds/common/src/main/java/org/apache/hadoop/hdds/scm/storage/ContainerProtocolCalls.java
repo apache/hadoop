@@ -51,6 +51,7 @@ import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
+import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
 
@@ -79,7 +80,6 @@ public final class ContainerProtocolCalls  {
       KeyData containerKeyData, String traceID) throws IOException {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto
         .newBuilder()
-        .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
@@ -106,7 +106,6 @@ public final class ContainerProtocolCalls  {
       KeyData containerKeyData, String traceID) throws IOException {
     PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
         .newBuilder()
-        .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
@@ -125,18 +124,16 @@ public final class ContainerProtocolCalls  {
    *
    * @param xceiverClient client to perform call
    * @param chunk information about chunk to read
-   * @param key the key name
+   * @param blockID ID of the block
    * @param traceID container protocol call args
    * @return container protocol read chunk response
    * @throws IOException if there is an I/O error while performing the call
    */
   public static ReadChunkResponseProto readChunk(XceiverClientSpi xceiverClient,
-      ChunkInfo chunk, String key, String traceID)
-      throws IOException {
+        ChunkInfo chunk, BlockID blockID, String traceID) throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
-        .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
-        .setKeyName(key)
+        .setBlockID(blockID.getProtobuf())
         .setChunkData(chunk);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
@@ -156,18 +153,17 @@ public final class ContainerProtocolCalls  {
    *
    * @param xceiverClient client to perform call
    * @param chunk information about chunk to write
-   * @param key the key name
+   * @param blockID ID of the block
    * @param data the data of the chunk to write
    * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
    */
   public static void writeChunk(XceiverClientSpi xceiverClient, ChunkInfo chunk,
-      String key, ByteString data, String traceID)
+      BlockID blockID, ByteString data, String traceID)
       throws IOException {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
-        .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
-        .setKeyName(key)
+        .setBlockID(blockID.getProtobuf())
         .setChunkData(chunk)
         .setData(data);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
@@ -189,30 +185,29 @@ public final class ContainerProtocolCalls  {
    * than 1 MB.
    *
    * @param client - client that communicates with the container.
-   * @param containerName - Name of the container
-   * @param key - Name of the Key
+   * @param blockID - ID of the block
    * @param data - Data to be written into the container.
    * @param traceID - Trace ID for logging purpose.
    * @throws IOException
    */
   public static void writeSmallFile(XceiverClientSpi client,
-      String containerName, String key, byte[] data, String traceID)
+      BlockID blockID, byte[] data, String traceID)
       throws IOException {
 
     KeyData containerKeyData =
-        KeyData.newBuilder().setContainerName(containerName).setName(key)
+        KeyData.newBuilder().setBlockID(blockID.getProtobuf())
             .build();
     PutKeyRequestProto.Builder createKeyRequest =
         PutKeyRequestProto.newBuilder()
-            .setPipeline(client.getPipeline().getProtobufMessage())
             .setKeyData(containerKeyData);
 
     KeyValue keyValue =
         KeyValue.newBuilder().setKey("OverWriteRequested").setValue("true")
             .build();
     ChunkInfo chunk =
-        ChunkInfo.newBuilder().setChunkName(key + "_chunk").setOffset(0)
-            .setLen(data.length).addMetadata(keyValue).build();
+        ChunkInfo.newBuilder().setChunkName(blockID.getLocalID()
+            + "_chunk").setOffset(0).setLen(data.length).
+            addMetadata(keyValue).build();
 
     PutSmallFileRequestProto putSmallFileRequest =
         PutSmallFileRequestProto.newBuilder().setChunkInfo(chunk)
@@ -234,17 +229,18 @@ public final class ContainerProtocolCalls  {
   /**
    * createContainer call that creates a container on the datanode.
    * @param client  - client
+   * @param containerID - ID of container
    * @param traceID - traceID
    * @throws IOException
    */
-  public static void createContainer(XceiverClientSpi client, String traceID)
-      throws IOException {
+  public static void createContainer(XceiverClientSpi client, long containerID,
+      String traceID) throws IOException {
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto
             .newBuilder();
     ContainerProtos.ContainerData.Builder containerData = ContainerProtos
         .ContainerData.newBuilder();
-    containerData.setName(client.getPipeline().getContainerName());
+    containerData.setContainerID(containerID);
     createRequest.setPipeline(client.getPipeline().getProtobufMessage());
     createRequest.setContainerData(containerData.build());
 
@@ -268,12 +264,11 @@ public final class ContainerProtocolCalls  {
    * @param traceID
    * @throws IOException
    */
-  public static void deleteContainer(XceiverClientSpi client,
+  public static void deleteContainer(XceiverClientSpi client, long containerID,
       boolean force, String traceID) throws IOException {
     ContainerProtos.DeleteContainerRequestProto.Builder deleteRequest =
         ContainerProtos.DeleteContainerRequestProto.newBuilder();
-    deleteRequest.setName(client.getPipeline().getContainerName());
-    deleteRequest.setPipeline(client.getPipeline().getProtobufMessage());
+    deleteRequest.setContainerID(containerID);
     deleteRequest.setForceDelete(force);
     String id = client.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto.Builder request =
@@ -291,14 +286,15 @@ public final class ContainerProtocolCalls  {
    * Close a container.
    *
    * @param client
+   * @param containerID
    * @param traceID
    * @throws IOException
    */
-  public static void closeContainer(XceiverClientSpi client, String traceID)
-      throws IOException {
+  public static void closeContainer(XceiverClientSpi client,
+      long containerID, String traceID) throws IOException {
     ContainerProtos.CloseContainerRequestProto.Builder closeRequest =
         ContainerProtos.CloseContainerRequestProto.newBuilder();
-    closeRequest.setPipeline(client.getPipeline().getProtobufMessage());
+    closeRequest.setContainerID(containerID);
 
     String id = client.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto.Builder request =
@@ -320,11 +316,11 @@ public final class ContainerProtocolCalls  {
    * @throws IOException
    */
   public static ReadContainerResponseProto readContainer(
-      XceiverClientSpi client, String containerName,
+      XceiverClientSpi client, long containerID,
       String traceID) throws IOException {
     ReadContainerRequestProto.Builder readRequest =
         ReadContainerRequestProto.newBuilder();
-    readRequest.setName(containerName);
+    readRequest.setContainerID(containerID);
     readRequest.setPipeline(client.getPipeline().getProtobufMessage());
     String id = client.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto.Builder request =
@@ -340,25 +336,23 @@ public final class ContainerProtocolCalls  {
   }
 
   /**
-   * Reads the data given the container name and key.
+   * Reads the data given the blockID
    *
    * @param client
-   * @param containerName - name of the container
-   * @param key - key
+   * @param blockID - ID of the block
    * @param traceID - trace ID
    * @return GetSmallFileResponseProto
    * @throws IOException
    */
   public static GetSmallFileResponseProto readSmallFile(XceiverClientSpi client,
-      String containerName, String key, String traceID) throws IOException {
+      BlockID blockID, String traceID) throws IOException {
     KeyData containerKeyData = KeyData
         .newBuilder()
-        .setContainerName(containerName)
-        .setName(key).build();
+        .setBlockID(blockID.getProtobuf())
+        .build();
 
     GetKeyRequestProto.Builder getKey = GetKeyRequestProto
         .newBuilder()
-        .setPipeline(client.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
     ContainerProtos.GetSmallFileRequestProto getSmallFileRequest =
         GetSmallFileRequestProto

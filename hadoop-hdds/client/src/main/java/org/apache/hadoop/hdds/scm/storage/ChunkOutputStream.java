@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
+import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -53,7 +54,7 @@ import static org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls
  */
 public class ChunkOutputStream extends OutputStream {
 
-  private final String containerKey;
+  private final BlockID blockID;
   private final String key;
   private final String traceID;
   private final KeyData.Builder containerKeyData;
@@ -67,25 +68,24 @@ public class ChunkOutputStream extends OutputStream {
   /**
    * Creates a new ChunkOutputStream.
    *
-   * @param containerKey container key
+   * @param blockID block ID
    * @param key chunk key
    * @param xceiverClientManager client manager that controls client
    * @param xceiverClient client to perform container calls
    * @param traceID container protocol call args
    * @param chunkSize chunk size
    */
-  public ChunkOutputStream(String containerKey, String key,
-      XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
-      String traceID, int chunkSize) {
-    this.containerKey = containerKey;
+  public ChunkOutputStream(BlockID blockID, String key,
+       XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
+       String traceID, int chunkSize) {
+    this.blockID = blockID;
     this.key = key;
     this.traceID = traceID;
     this.chunkSize = chunkSize;
     KeyValue keyValue = KeyValue.newBuilder()
         .setKey("TYPE").setValue("KEY").build();
     this.containerKeyData = KeyData.newBuilder()
-        .setContainerName(xceiverClient.getPipeline().getContainerName())
-        .setName(containerKey)
+        .setBlockID(blockID.getProtobuf())
         .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
@@ -217,7 +217,7 @@ public class ChunkOutputStream extends OutputStream {
         .setLen(data.size())
         .build();
     try {
-      writeChunk(xceiverClient, chunk, key, data, traceID);
+      writeChunk(xceiverClient, chunk, blockID, data, traceID);
     } catch (IOException e) {
       throw new IOException(
           "Unexpected Storage Container Exception: " + e.toString(), e);

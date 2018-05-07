@@ -21,7 +21,6 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
@@ -105,18 +104,17 @@ public final class ChunkUtils {
    * Validates chunk data and returns a file object to Chunk File that we are
    * expected to write data to.
    *
-   * @param pipeline - pipeline.
    * @param data - container data.
    * @param info - chunk info.
    * @return File
    * @throws StorageContainerException
    */
-  public static File validateChunk(Pipeline pipeline, ContainerData data,
+  public static File validateChunk(ContainerData data,
       ChunkInfo info) throws StorageContainerException {
 
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
 
-    File chunkFile = getChunkFile(pipeline, data, info);
+    File chunkFile = getChunkFile(data, info);
     if (ChunkUtils.isOverWriteRequested(chunkFile, info)) {
       if (!ChunkUtils.isOverWritePermitted(info)) {
         log.error("Rejecting write chunk request. Chunk overwrite " +
@@ -132,21 +130,21 @@ public final class ChunkUtils {
   /**
    * Validates that Path to chunk file exists.
    *
-   * @param pipeline - Container Info.
    * @param data - Container Data
    * @param info - Chunk info
    * @return - File.
    * @throws StorageContainerException
    */
-  public static File getChunkFile(Pipeline pipeline, ContainerData data,
+  public static File getChunkFile(ContainerData data,
       ChunkInfo info) throws StorageContainerException {
 
+    Preconditions.checkNotNull(data, "Container data can't be null");
     Logger log = LoggerFactory.getLogger(ChunkManagerImpl.class);
-    if (data == null) {
-      log.error("Invalid container Name: {}", pipeline.getContainerName());
-      throw new StorageContainerException("Unable to find the container Name:" +
+    if (data.getContainerID() < 0) {
+      log.error("Invalid container id: {}", data.getContainerID());
+      throw new StorageContainerException("Unable to find the container id:" +
           " " +
-          pipeline.getContainerName(), CONTAINER_NOT_FOUND);
+          data.getContainerID(), CONTAINER_NOT_FOUND);
     }
 
     File dataDir = ContainerUtils.getDataDirectory(data).toFile();
@@ -335,7 +333,7 @@ public final class ChunkUtils {
         ContainerProtos.ReadChunkResponseProto.newBuilder();
     response.setChunkData(info.getProtoBufMessage());
     response.setData(ByteString.copyFrom(data));
-    response.setPipeline(msg.getReadChunk().getPipeline());
+    response.setBlockID(msg.getReadChunk().getBlockID());
 
     ContainerProtos.ContainerCommandResponseProto.Builder builder =
         ContainerUtils.getContainerResponse(msg, ContainerProtos.Result

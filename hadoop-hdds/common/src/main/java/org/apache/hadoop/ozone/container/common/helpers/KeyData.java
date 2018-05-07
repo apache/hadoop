@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -30,8 +31,7 @@ import java.util.TreeMap;
  * Helper class to convert Protobuf to Java classes.
  */
 public class KeyData {
-  private final String containerName;
-  private final String keyName;
+  private final BlockID blockID;
   private final Map<String, String> metadata;
 
   /**
@@ -44,12 +44,10 @@ public class KeyData {
   /**
    * Constructs a KeyData Object.
    *
-   * @param containerName
-   * @param keyName
+   * @param blockID
    */
-  public KeyData(String containerName, String keyName) {
-    this.containerName = containerName;
-    this.keyName = keyName;
+  public KeyData(BlockID blockID) {
+    this.blockID = blockID;
     this.metadata = new TreeMap<>();
   }
 
@@ -62,7 +60,7 @@ public class KeyData {
    */
   public static KeyData getFromProtoBuf(ContainerProtos.KeyData data) throws
       IOException {
-    KeyData keyData = new KeyData(data.getContainerName(), data.getName());
+    KeyData keyData = new KeyData(BlockID.getFromProtobuf(data.getBlockID()));
     for (int x = 0; x < data.getMetadataCount(); x++) {
       keyData.addMetadata(data.getMetadata(x).getKey(),
           data.getMetadata(x).getValue());
@@ -78,8 +76,7 @@ public class KeyData {
   public ContainerProtos.KeyData getProtoBufMessage() {
     ContainerProtos.KeyData.Builder builder =
         ContainerProtos.KeyData.newBuilder();
-    builder.setContainerName(this.containerName);
-    builder.setName(this.getKeyName());
+    builder.setBlockID(this.blockID.getProtobuf());
     builder.addAllChunks(this.chunks);
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       HddsProtos.KeyValue.Builder keyValBuilder =
@@ -135,19 +132,27 @@ public class KeyData {
   }
 
   /**
-   * Returns container Name.
-   * @return String.
+   * Returns container ID.
+   * @return long.
    */
-  public String getContainerName() {
-    return containerName;
+  public long getContainerID() {
+    return blockID.getContainerID();
   }
 
   /**
-   * Returns KeyName.
-   * @return String.
+   * Returns LocalID.
+   * @return long.
    */
-  public String getKeyName() {
-    return keyName;
+  public long getLocalID() {
+    return blockID.getLocalID();
+  }
+
+  /**
+   * Return Block ID.
+   * @return BlockID.
+   */
+  public BlockID getBlockID() {
+    return blockID;
   }
 
   /**

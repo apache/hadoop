@@ -56,7 +56,7 @@ public class DatanodeDeletedBlockTransactions {
   public void addTransaction(DeletedBlocksTransaction tx) throws IOException {
     ContainerInfo info = null;
     try {
-      info = mappingService.getContainer(tx.getContainerName());
+      info = mappingService.getContainer(tx.getContainerID());
     } catch (IOException e) {
       SCMBlockDeletingService.LOG.warn("Got container info error.", e);
     }
@@ -64,7 +64,7 @@ public class DatanodeDeletedBlockTransactions {
     if (info == null) {
       SCMBlockDeletingService.LOG.warn(
           "Container {} not found, continue to process next",
-          tx.getContainerName());
+          tx.getContainerID());
       return;
     }
 
@@ -75,7 +75,7 @@ public class DatanodeDeletedBlockTransactions {
         if (txs != null && txs.size() < maximumAllowedTXNum) {
           boolean hasContained = false;
           for (DeletedBlocksTransaction t : txs) {
-            if (t.getContainerName().equals(tx.getContainerName())) {
+            if (t.getContainerID() == tx.getContainerID()) {
               hasContained = true;
               break;
             }

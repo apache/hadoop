@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -43,14 +43,6 @@ public interface BlockManager extends Closeable {
       HddsProtos.ReplicationFactor factor, String owner) throws IOException;
 
   /**
-   *  Give the key to the block, get the pipeline info.
-   * @param key - key to the block.
-   * @return - Pipeline that used to access the block.
-   * @throws IOException
-   */
-  Pipeline getBlock(String key) throws IOException;
-
-  /**
    * Deletes a list of blocks in an atomic operation. Internally, SCM
    * writes these blocks into a {@link DeletedBlockLog} and deletes them
    * from SCM DB. If this is successful, given blocks are entering pending
@@ -60,7 +52,7 @@ public interface BlockManager extends Closeable {
    *                 a particular object key.
    * @throws IOException if exception happens, non of the blocks is deleted.
    */
-  void deleteBlocks(List<String> blockIDs) throws IOException;
+  void deleteBlocks(List<BlockID> blockIDs) throws IOException;
 
   /**
    * @return the block deletion transaction log maintained by SCM.

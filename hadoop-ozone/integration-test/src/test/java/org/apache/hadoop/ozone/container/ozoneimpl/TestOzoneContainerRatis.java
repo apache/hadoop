@@ -67,7 +67,7 @@ public class TestOzoneContainerRatis {
 
   private static void runTest(
       String testName, RpcType rpc, int numNodes,
-      CheckedBiConsumer<String, XceiverClientSpi, Exception> test)
+      CheckedBiConsumer<Long, XceiverClientSpi, Exception> test)
       throws Exception {
     LOG.info(testName + "(rpc=" + rpc + ", numNodes=" + numNodes);
 
@@ -84,7 +84,6 @@ public class TestOzoneContainerRatis {
       final String containerName = OzoneUtils.getRequestID();
       final List<HddsDatanodeService> datanodes = cluster.getHddsDatanodes();
       final Pipeline pipeline = ContainerTestHelper.createPipeline(
-          containerName,
           CollectionUtils.as(datanodes,
               HddsDatanodeService::getDatanodeDetails));
       LOG.info("pipeline=" + pipeline);

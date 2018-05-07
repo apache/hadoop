@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -36,7 +37,6 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
@@ -114,10 +114,10 @@ public class TestStorageContainerManagerHelper {
     return keyLocationMap;
   }
 
-  public List<String> getPendingDeletionBlocks(String containerName)
+  public List<String> getPendingDeletionBlocks(Long containerID)
       throws IOException {
     List<String> pendingDeletionBlocks = Lists.newArrayList();
-    MetadataStore meta = getContainerMetadata(containerName);
+    MetadataStore meta = getContainerMetadata(containerID);
     KeyPrefixFilter filter =
         new KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> kvs = meta
@@ -130,18 +130,18 @@ public class TestStorageContainerManagerHelper {
     return pendingDeletionBlocks;
   }
 
-  public List<String> getAllBlocks(Set<String> containerNames)
+  public List<Long> getAllBlocks(Set<Long> containerIDs)
       throws IOException {
-    List<String> allBlocks = Lists.newArrayList();
-    for (String containerName : containerNames) {
-      allBlocks.addAll(getAllBlocks(containerName));
+    List<Long> allBlocks = Lists.newArrayList();
+    for (Long containerID : containerIDs) {
+      allBlocks.addAll(getAllBlocks(containerID));
     }
     return allBlocks;
   }
 
-  public List<String> getAllBlocks(String containerName) throws IOException {
-    List<String> allBlocks = Lists.newArrayList();
-    MetadataStore meta = getContainerMetadata(containerName);
+  public List<Long> getAllBlocks(Long containeID) throws IOException {
+    List<Long> allBlocks = Lists.newArrayList();
+    MetadataStore meta = getContainerMetadata(containeID);
     MetadataKeyFilter filter =
         (preKey, currentKey, nextKey) -> !DFSUtil.bytes2String(currentKey)
             .startsWith(OzoneConsts.DELETING_KEY_PREFIX);
@@ -149,20 +149,21 @@ public class TestStorageContainerManagerHelper {
         meta.getRangeKVs(null, Integer.MAX_VALUE, filter);
     kvs.forEach(entry -> {
       String key = DFSUtil.bytes2String(entry.getKey());
-      allBlocks.add(key.replace(OzoneConsts.DELETING_KEY_PREFIX, ""));
+      key.replace(OzoneConsts.DELETING_KEY_PREFIX, "");
+      allBlocks.add(Long.parseLong(key));
     });
     return allBlocks;
   }
 
-  private MetadataStore getContainerMetadata(String containerName)
+  private MetadataStore getContainerMetadata(Long containerID)
       throws IOException {
-    Pipeline pipeline = cluster.getStorageContainerManager()
-        .getClientProtocolServer().getContainer(containerName);
-    DatanodeDetails leadDN = pipeline.getLeader();
+    ContainerInfo container = cluster.getStorageContainerManager()
+        .getClientProtocolServer().getContainer(containerID);
+    DatanodeDetails leadDN = container.getPipeline().getLeader();
     OzoneContainer containerServer =
         getContainerServerByDatanodeUuid(leadDN.getUuidString());
     ContainerData containerData = containerServer.getContainerManager()
-        .readContainer(containerName);
+        .readContainer(containerID);
     return KeyUtils.getDB(containerData, conf);
   }
 

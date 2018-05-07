@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -59,6 +60,7 @@ public class TestContainerMapping {
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
   private static String containerOwner = "OZONE";
+  private static Random random;
 
   private static final long TIMEOUT = 10000;
 
@@ -83,6 +85,7 @@ public class TestContainerMapping {
     nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
     xceiverClientManager = new XceiverClientManager(conf);
+    random = new Random();
   }
 
   @AfterClass
@@ -103,7 +106,7 @@ public class TestContainerMapping {
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        UUID.randomUUID().toString(), containerOwner);
+        containerOwner);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -120,7 +123,7 @@ public class TestContainerMapping {
       ContainerInfo containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
-          UUID.randomUUID().toString(), containerOwner);
+          containerOwner);
 
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
@@ -132,59 +135,41 @@ public class TestContainerMapping {
 
   @Test
   public void testGetContainer() throws IOException {
-    String containerName = UUID.randomUUID().toString();
-    Pipeline pipeline = mapping.allocateContainer(
+    ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName,
-        containerOwner).getPipeline();
+        xceiverClientManager.getFactor(),
+        containerOwner);
+    Pipeline pipeline  = containerInfo.getPipeline();
     Assert.assertNotNull(pipeline);
-    Pipeline newPipeline = mapping.getContainer(containerName).getPipeline();
+    Pipeline newPipeline = mapping.getContainer(
+        containerInfo.getContainerID()).getPipeline();
     Assert.assertEquals(pipeline.getLeader().getUuid(),
         newPipeline.getLeader().getUuid());
   }
 
   @Test
-  public void testDuplicateAllocateContainerFails() throws IOException {
-    String containerName = UUID.randomUUID().toString();
-    Pipeline pipeline = mapping.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName,
-        containerOwner).getPipeline();
-    Assert.assertNotNull(pipeline);
-    thrown.expectMessage("Specified container already exists.");
-    mapping.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName,
-        containerOwner);
-  }
-
-  @Test
   public void testgetNoneExistentContainer() throws IOException {
-    String containerName = UUID.randomUUID().toString();
     thrown.expectMessage("Specified key does not exist.");
-    mapping.getContainer(containerName);
+    mapping.getContainer(random.nextLong());
   }
 
   @Test
   public void testChillModeAllocateContainerFails() throws IOException {
-    String containerName = UUID.randomUUID().toString();
     nodeManager.setChillmode(true);
     thrown.expectMessage("Unable to create container while in chill mode");
     mapping.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName,
-        containerOwner);
+        xceiverClientManager.getFactor(), containerOwner);
   }
 
   @Test
   public void testContainerCreationLeaseTimeout() throws IOException,
       InterruptedException {
-    String containerName = UUID.randomUUID().toString();
     nodeManager.setChillmode(false);
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        containerName,
         containerOwner);
-    mapping.updateContainerState(containerInfo.getContainerName(),
+    mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
 
@@ -198,14 +183,13 @@ public class TestContainerMapping {
 
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
-    mapping.updateContainerState(containerInfo.getContainerName(),
+    mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATED);
   }
 
   @Test
   public void testFullContainerReport() throws IOException {
-    String containerName = UUID.randomUUID().toString();
-    ContainerInfo info = createContainer(containerName);
+    ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
@@ -213,9 +197,7 @@ public class TestContainerMapping {
         new ArrayList<>();
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
         StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
-    ciBuilder.setContainerName(containerName)
-        //setting some random hash
-        .setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
+    ciBuilder.setFinalhash("e16cc9d6024365750ed8dbd194ea46d2")
         .setSize(5368709120L)
         .setUsed(2000000000L)
         .setKeyCount(100000000L)
@@ -234,15 +216,14 @@ public class TestContainerMapping {
 
     mapping.processContainerReports(crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(containerName);
+    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
     Assert.assertEquals(100000000L, updatedContainer.getNumberOfKeys());
     Assert.assertEquals(2000000000L, updatedContainer.getUsedBytes());
   }
 
   @Test
   public void testContainerCloseWithContainerReport() throws IOException {
-    String containerName = UUID.randomUUID().toString();
-    ContainerInfo info = createContainer(containerName);
+    ContainerInfo info = createContainer();
     DatanodeDetails datanodeDetails = TestUtils.getDatanodeDetails();
     ContainerReportsRequestProto.reportType reportType =
         ContainerReportsRequestProto.reportType.fullReport;
@@ -251,9 +232,7 @@ public class TestContainerMapping {
 
     StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
         StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
-    ciBuilder.setContainerName(containerName)
-        //setting some random hash
-        .setFinalhash("7c45eb4d7ed5e0d2e89aaab7759de02e")
+    ciBuilder.setFinalhash("7c45eb4d7ed5e0d2e89aaab7759de02e")
         .setSize(5368709120L)
         .setUsed(5368705120L)
         .setKeyCount(500000000L)
@@ -272,7 +251,7 @@ public class TestContainerMapping {
 
     mapping.processContainerReports(crBuilder.build());
 
-    ContainerInfo updatedContainer = mapping.getContainer(containerName);
+    ContainerInfo updatedContainer = mapping.getContainer(info.getContainerID());
     Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
     NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
@@ -287,9 +266,8 @@ public class TestContainerMapping {
 
   @Test
   public void testCloseContainer() throws IOException {
-    String containerName = UUID.randomUUID().toString();
-    ContainerInfo info = createContainer(containerName);
-    mapping.updateContainerState(containerName,
+    ContainerInfo info = createContainer();
+    mapping.updateContainerState(info.getContainerID(),
         HddsProtos.LifeCycleEvent.FINALIZE);
     NavigableSet<ContainerID> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainerIDs(
@@ -298,7 +276,7 @@ public class TestContainerMapping {
             xceiverClientManager.getFactor(),
             HddsProtos.LifeCycleState.CLOSING);
     Assert.assertTrue(pendingCloseContainers.contains(info.containerID()));
-    mapping.updateContainerState(containerName,
+    mapping.updateContainerState(info.getContainerID(),
         HddsProtos.LifeCycleEvent.CLOSE);
     NavigableSet<ContainerID> closeContainers = mapping.getStateManager()
         .getMatchingContainerIDs(
@@ -311,21 +289,18 @@ public class TestContainerMapping {
 
   /**
    * Creates a container with the given name in ContainerMapping.
-   * @param containerName
-   *          Name of the container
    * @throws IOException
    */
-  private ContainerInfo createContainer(String containerName)
+  private ContainerInfo createContainer()
       throws IOException {
     nodeManager.setChillmode(false);
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        containerName,
         containerOwner);
-    mapping.updateContainerState(containerInfo.getContainerName(),
+    mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATE);
-    mapping.updateContainerState(containerInfo.getContainerName(),
+    mapping.updateContainerState(containerInfo.getContainerID(),
         HddsProtos.LifeCycleEvent.CREATED);
     return containerInfo;
   }

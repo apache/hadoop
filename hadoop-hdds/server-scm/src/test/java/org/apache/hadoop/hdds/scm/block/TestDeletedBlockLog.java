@@ -82,17 +82,22 @@ public class TestDeletedBlockLog {
     FileUtils.deleteDirectory(testDir);
   }
 
-  private Map<String, List<String>> generateData(int dataSize) {
-    Map<String, List<String>> blockMap = new HashMap<>();
+  private Map<Long, List<Long>> generateData(int dataSize) {
+    Map<Long, List<Long>> blockMap = new HashMap<>();
     Random random = new Random(1);
+    int continerIDBase = random.nextInt(100);
+    int localIDBase = random.nextInt(1000);
     for (int i = 0; i < dataSize; i++) {
-      String containerName = "container-" + UUID.randomUUID().toString();
-      List<String> blocks = new ArrayList<>();
+      //String containerName = "container-" + UUID.randomUUID().toString();
+      long containerID = continerIDBase + i;
+      List<Long> blocks = new ArrayList<>();
       int blockSize = random.nextInt(30) + 1;
       for (int j = 0; j < blockSize; j++)  {
-        blocks.add("block-" + UUID.randomUUID().toString());
+        //blocks.add("block-" + UUID.randomUUID().toString());
+        long localID = localIDBase + j;
+        blocks.add(localID);
       }
-      blockMap.put(containerName, blocks);
+      blockMap.put(containerID, blocks);
     }
     return blockMap;
   }
@@ -104,7 +109,7 @@ public class TestDeletedBlockLog {
     Assert.assertEquals(0, blocks.size());
 
     // Creates 40 TX in the log.
-    for (Map.Entry<String, List<String>> entry : generateData(40).entrySet()){
+    for (Map.Entry<Long, List<Long>> entry : generateData(40).entrySet()){
       deletedBlockLog.addTransaction(entry.getKey(), entry.getValue());
     }
 
@@ -143,7 +148,7 @@ public class TestDeletedBlockLog {
     int maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 20);
 
     // Create 30 TXs in the log.
-    for (Map.Entry<String, List<String>> entry : generateData(30).entrySet()){
+    for (Map.Entry<Long, List<Long>> entry : generateData(30).entrySet()){
       deletedBlockLog.addTransaction(entry.getKey(), entry.getValue());
     }
 
@@ -172,7 +177,7 @@ public class TestDeletedBlockLog {
 
   @Test
   public void testCommitTransactions() throws Exception {
-    for (Map.Entry<String, List<String>> entry : generateData(50).entrySet()){
+    for (Map.Entry<Long, List<Long>> entry : generateData(50).entrySet()){
       deletedBlockLog.addTransaction(entry.getKey(), entry.getValue());
     }
     List<DeletedBlocksTransaction> blocks =
@@ -203,7 +208,7 @@ public class TestDeletedBlockLog {
     for (int i = 0; i < 100; i++) {
       int state = random.nextInt(4);
       if (state == 0) {
-        for (Map.Entry<String, List<String>> entry :
+        for (Map.Entry<Long, List<Long>> entry :
             generateData(10).entrySet()){
           deletedBlockLog.addTransaction(entry.getKey(), entry.getValue());
         }
@@ -234,7 +239,7 @@ public class TestDeletedBlockLog {
 
   @Test
   public void testPersistence() throws Exception {
-    for (Map.Entry<String, List<String>> entry : generateData(50).entrySet()){
+    for (Map.Entry<Long, List<Long>> entry : generateData(50).entrySet()){
       deletedBlockLog.addTransaction(entry.getKey(), entry.getValue());
     }
     // close db and reopen it again to make sure
@@ -257,10 +262,10 @@ public class TestDeletedBlockLog {
     int txNum = 10;
     int maximumAllowedTXNum = 5;
     List<DeletedBlocksTransaction> blocks = null;
-    List<String> containerNames = new LinkedList<>();
+    List<Long> containerIDs = new LinkedList<>();
 
     int count = 0;
-    String containerName = null;
+    long containerID = 0L;
     DatanodeDetails dnDd1 = DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
@@ -279,18 +284,18 @@ public class TestDeletedBlockLog {
         .build();
     Mapping mappingService = mock(ContainerMapping.class);
     // Creates {TXNum} TX in the log.
-    for (Map.Entry<String, List<String>> entry : generateData(txNum)
+    for (Map.Entry<Long, List<Long>> entry : generateData(txNum)
         .entrySet()) {
       count++;
-      containerName = entry.getKey();
-      containerNames.add(containerName);
-      deletedBlockLog.addTransaction(containerName, entry.getValue());
+      containerID = entry.getKey();
+      containerIDs.add(containerID);
+      deletedBlockLog.addTransaction(containerID, entry.getValue());
 
       // make TX[1-6] for datanode1; TX[7-10] for datanode2
       if (count <= (maximumAllowedTXNum + 1)) {
-        mockContainerInfo(mappingService, containerName, dnDd1);
+        mockContainerInfo(mappingService, containerID, dnDd1);
       } else {
-        mockContainerInfo(mappingService, containerName, dnId2);
+        mockContainerInfo(mappingService, containerID, dnId2);
       }
     }
 
@@ -325,7 +330,7 @@ public class TestDeletedBlockLog {
     DeletedBlocksTransaction.Builder builder =
         DeletedBlocksTransaction.newBuilder();
     builder.setTxID(11);
-    builder.setContainerName(containerName);
+    builder.setContainerID(containerID);
     builder.setCount(0);
     transactions.addTransaction(builder.build());
 
@@ -334,30 +339,29 @@ public class TestDeletedBlockLog {
         transactions.getDatanodeTransactions(dnId2.getUuid()).size());
 
     // Add new TX in dnID2, then dnID2 will reach maximum value.
-    containerName = "newContainer";
     builder = DeletedBlocksTransaction.newBuilder();
     builder.setTxID(12);
-    builder.setContainerName(containerName);
+    builder.setContainerID(containerID);
     builder.setCount(0);
-    mockContainerInfo(mappingService, containerName, dnId2);
+    mockContainerInfo(mappingService, containerID, dnId2);
     transactions.addTransaction(builder.build());
     // Since all node are full, then transactions is full.
     Assert.assertTrue(transactions.isFull());
   }
 
-  private void mockContainerInfo(Mapping mappingService, String containerName,
+  private void mockContainerInfo(Mapping mappingService, long containerID,
       DatanodeDetails dd) throws IOException {
     PipelineChannel pipelineChannel =
         new PipelineChannel("fake", LifeCycleState.OPEN,
             ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "fake");
     pipelineChannel.addMember(dd);
-    Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
+    Pipeline pipeline = new Pipeline(pipelineChannel);
 
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     builder.setPipeline(pipeline);
 
     ContainerInfo conatinerInfo = builder.build();
     Mockito.doReturn(conatinerInfo).when(mappingService)
-        .getContainer(containerName);
+        .getContainer(containerID);
   }
 }

@@ -21,11 +21,12 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ChunkInputStream;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
@@ -260,7 +261,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
           storageContainerLocationClient, String requestId)
       throws IOException {
     long length = 0;
-    String containerKey;
+    long containerKey;
     ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream();
     groupInputStream.key = keyInfo.getKeyName();
     List<KsmKeyLocationInfo> keyLocationInfos =
@@ -268,20 +269,20 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
     groupInputStream.streamOffset = new long[keyLocationInfos.size()];
     for (int i = 0; i < keyLocationInfos.size(); i++) {
       KsmKeyLocationInfo ksmKeyLocationInfo = keyLocationInfos.get(i);
-      String containerName = ksmKeyLocationInfo.getContainerName();
-      Pipeline pipeline =
-          storageContainerLocationClient.getContainer(containerName);
+      BlockID blockID = ksmKeyLocationInfo.getBlockID();
+      long containerID = blockID.getContainerID();
+      ContainerInfo container =
+          storageContainerLocationClient.getContainer(containerID);
       XceiverClientSpi xceiverClient =
-          xceiverClientManager.acquireClient(pipeline);
+          xceiverClientManager.acquireClient(container.getPipeline(), containerID);
       boolean success = false;
-      containerKey = ksmKeyLocationInfo.getBlockID();
+      containerKey = ksmKeyLocationInfo.getLocalID();
       try {
         LOG.debug("get key accessing {} {}",
-            xceiverClient.getPipeline().getContainerName(), containerKey);
+            containerID, containerKey);
         groupInputStream.streamOffset[i] = length;
-        ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
-            .containerKeyDataForRead(
-                xceiverClient.getPipeline().getContainerName(), containerKey);
+          ContainerProtos.KeyData containerKeyData = OzoneContainerTranslation
+            .containerKeyDataForRead(blockID);
         ContainerProtos.GetKeyResponseProto response = ContainerProtocolCalls
             .getKey(xceiverClient, containerKeyData, requestId);
         List<ContainerProtos.ChunkInfo> chunks =
@@ -291,7 +292,7 @@ public class ChunkGroupInputStream extends InputStream implements Seekable {
         }
         success = true;
         ChunkInputStream inputStream = new ChunkInputStream(
-            containerKey, xceiverClientManager, xceiverClient,
+            ksmKeyLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
             chunks, requestId);
         groupInputStream.addStream(inputStream,
             ksmKeyLocationInfo.getLength());

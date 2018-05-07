@@ -16,30 +16,25 @@
  */
 package org.apache.hadoop.hdds.scm.block;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.utils.BatchOperation;
-import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,10 +49,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .CHILL_MODE_EXCEPTION;
 import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
-    .FAILED_TO_FIND_BLOCK;
-import static org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes
     .INVALID_BLOCK_SIZE;
-import static org.apache.hadoop.hdds.server.ServerUtils.getOzoneMetaDirPath;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -66,7 +58,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 
 /** Block Manager manages the block access for SCM. */
 public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
@@ -78,11 +69,9 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
   private final NodeManager nodeManager;
   private final Mapping containerManager;
-  private final MetadataStore blockStore;
 
   private final Lock lock;
   private final long containerSize;
-  private final long cacheSize;
 
   private final DeletedBlockLog deletedBlockLog;
   private final SCMBlockDeletingService blockDeletingService;
@@ -97,30 +86,17 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @param conf - configuration.
    * @param nodeManager - node manager.
    * @param containerManager - container manager.
-   * @param cacheSizeMB - cache size for level db store.
    * @throws IOException
    */
   public BlockManagerImpl(final Configuration conf,
-      final NodeManager nodeManager, final Mapping containerManager,
-      final int cacheSizeMB) throws IOException {
+      final NodeManager nodeManager, final Mapping containerManager)
+      throws IOException {
     this.nodeManager = nodeManager;
     this.containerManager = containerManager;
-    this.cacheSize = cacheSizeMB;
 
     this.containerSize = OzoneConsts.GB * conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
-    File metaDir = getOzoneMetaDirPath(conf);
-    String scmMetaDataDir = metaDir.getPath();
-
-    // Write the block key to container name mapping.
-    File blockContainerDbPath = new File(scmMetaDataDir, BLOCK_DB);
-    blockStore =
-        MetadataStoreBuilder.newBuilder()
-            .setConf(conf)
-            .setDbFile(blockContainerDbPath)
-            .setCacheSize(this.cacheSize * OzoneConsts.MB)
-            .build();
 
     this.containerProvisionBatchSize =
         conf.getInt(
@@ -181,12 +157,11 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     lock.lock();
     try {
       for (int i = 0; i < count; i++) {
-        String containerName = UUID.randomUUID().toString();
         ContainerInfo containerInfo = null;
         try {
           // TODO: Fix this later when Ratis is made the Default.
           containerInfo = containerManager.allocateContainer(type, factor,
-              containerName, owner);
+              owner);
 
           if (containerInfo == null) {
             LOG.warn("Unable to allocate container.");
@@ -267,7 +242,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                   size, owner, type, factor, HddsProtos.LifeCycleState
                       .ALLOCATED);
       if (containerInfo != null) {
-        containerManager.updateContainerState(containerInfo.getContainerName(),
+        containerManager.updateContainerState(containerInfo.getContainerID(),
             HddsProtos.LifeCycleEvent.CREATE);
         return newBlock(containerInfo, HddsProtos.LifeCycleState.ALLOCATED);
       }
@@ -297,7 +272,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                   size, owner, type, factor, HddsProtos.LifeCycleState
                       .ALLOCATED);
       if (containerInfo != null) {
-        containerManager.updateContainerState(containerInfo.getContainerName(),
+        containerManager.updateContainerState(containerInfo.getContainerID(),
             HddsProtos.LifeCycleEvent.CREATE);
         return newBlock(containerInfo, HddsProtos.LifeCycleState.ALLOCATED);
       }
@@ -327,68 +302,27 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       ContainerInfo containerInfo, HddsProtos.LifeCycleState state)
       throws IOException {
 
-    // TODO : Replace this with Block ID.
-    String blockKey = UUID.randomUUID().toString();
-    boolean createContainer = (state == HddsProtos.LifeCycleState.ALLOCATED);
-
-    AllocatedBlock.Builder abb =
-        new AllocatedBlock.Builder()
-            .setKey(blockKey)
-            // TODO : Use containerinfo instead of pipeline.
-            .setPipeline(containerInfo.getPipeline())
-            .setShouldCreateContainer(createContainer);
-    LOG.trace("New block allocated : {} Container ID: {}", blockKey,
-        containerInfo.toString());
-
     if (containerInfo.getPipeline().getMachines().size() == 0) {
       LOG.error("Pipeline Machine count is zero.");
       return null;
     }
 
-    // Persist this block info to the blockStore DB, so getBlock(key) can
-    // find which container the block lives.
-    // TODO : Remove this DB in future
-    // and make this a KSM operation. Category: SCALABILITY.
-    if (containerInfo.getPipeline().getMachines().size() > 0) {
-      blockStore.put(
-          DFSUtil.string2Bytes(blockKey),
-          DFSUtil.string2Bytes(containerInfo.getPipeline().getContainerName()));
-    }
+    // TODO : Revisit this local ID allocation when HA is added.
+    // TODO: this does not work well if multiple allocation kicks in a tight
+    // loop.
+    long localID = Time.getUtcTime();
+    long containerID = containerInfo.getContainerID();
+
+    boolean createContainer = (state == HddsProtos.LifeCycleState.ALLOCATED);
+
+    AllocatedBlock.Builder abb =
+        new AllocatedBlock.Builder()
+            .setBlockID(new BlockID(containerID, localID))
+            .setPipeline(containerInfo.getPipeline())
+            .setShouldCreateContainer(createContainer);
+    LOG.trace("New block allocated : {} Container ID: {}", localID,
+        containerID);
     return abb.build();
-  }
-
-  /**
-   * Given a block key, return the Pipeline information.
-   *
-   * @param key - block key assigned by SCM.
-   * @return Pipeline (list of DNs and leader) to access the block.
-   * @throws IOException
-   */
-  @Override
-  public Pipeline getBlock(final String key) throws IOException {
-    lock.lock();
-    try {
-      byte[] containerBytes = blockStore.get(DFSUtil.string2Bytes(key));
-      if (containerBytes == null) {
-        throw new SCMException(
-            "Specified block key does not exist. key : " + key,
-            FAILED_TO_FIND_BLOCK);
-      }
-
-      String containerName = DFSUtil.bytes2String(containerBytes);
-      ContainerInfo containerInfo = containerManager.getContainer(
-          containerName);
-      if (containerInfo == null) {
-        LOG.debug("Container {} allocated by block service"
-            + "can't be found in SCM", containerName);
-        throw new SCMException(
-            "Unable to find container for the block",
-            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
-      }
-      return containerInfo.getPipeline();
-    } finally {
-      lock.unlock();
-    }
   }
 
   /**
@@ -403,40 +337,28 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @throws IOException if exception happens, non of the blocks is deleted.
    */
   @Override
-  public void deleteBlocks(List<String> blockIDs) throws IOException {
+  public void deleteBlocks(List<BlockID> blockIDs) throws IOException {
     if (!nodeManager.isOutOfChillMode()) {
       throw new SCMException("Unable to delete block while in chill mode",
           CHILL_MODE_EXCEPTION);
     }
 
     lock.lock();
-    LOG.info("Deleting blocks {}", String.join(",", blockIDs));
-    Map<String, List<String>> containerBlocks = new HashMap<>();
-    BatchOperation batch = new BatchOperation();
-    BatchOperation rollbackBatch = new BatchOperation();
+    LOG.info("Deleting blocks {}", StringUtils.join(",", blockIDs));
+    Map<Long, List<Long>> containerBlocks = new HashMap<>();
     // TODO: track the block size info so that we can reclaim the container
     // TODO: used space when the block is deleted.
     try {
-      for (String blockKey : blockIDs) {
-        byte[] blockKeyBytes = DFSUtil.string2Bytes(blockKey);
-        byte[] containerBytes = blockStore.get(blockKeyBytes);
-        if (containerBytes == null) {
-          throw new SCMException(
-              "Specified block key does not exist. key : " + blockKey,
-              FAILED_TO_FIND_BLOCK);
-        }
-        batch.delete(blockKeyBytes);
-        rollbackBatch.put(blockKeyBytes, containerBytes);
-
+      for (BlockID block : blockIDs) {
         // Merge blocks to a container to blocks mapping,
         // prepare to persist this info to the deletedBlocksLog.
-        String containerName = DFSUtil.bytes2String(containerBytes);
-        if (containerBlocks.containsKey(containerName)) {
-          containerBlocks.get(containerName).add(blockKey);
+        long containerID = block.getContainerID();
+        if (containerBlocks.containsKey(containerID)) {
+          containerBlocks.get(containerID).add(block.getLocalID());
         } else {
-          List<String> item = new ArrayList<>();
-          item.add(blockKey);
-          containerBlocks.put(containerName, item);
+          List<Long> item = new ArrayList<>();
+          item.add(block.getLocalID());
+          containerBlocks.put(containerID, item);
         }
       }
 
@@ -445,34 +367,13 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       // removed. If we write the log first, once log is written, the
       // async deleting service will start to scan and might be picking
       // up some blocks to do real deletions, that might cause data loss.
-      blockStore.writeBatch(batch);
       try {
         deletedBlockLog.addTransactions(containerBlocks);
       } catch (IOException e) {
-        try {
-          // If delLog update is failed, we need to rollback the changes.
-          blockStore.writeBatch(rollbackBatch);
-        } catch (IOException rollbackException) {
-          // This is a corner case. AddTX fails and rollback also fails,
-          // this will leave these blocks in inconsistent state. They were
-          // moved to pending deletion state in SCM DB but were not written
-          // into delLog so real deletions would not be done. Blocks become
-          // to be invisible from namespace but actual data are not removed.
-          // We log an error here so admin can manually check and fix such
-          // errors.
-          LOG.error(
-              "Blocks might be in inconsistent state because"
-                  + " they were moved to pending deletion state in SCM DB but"
-                  + " not written into delLog. Admin can manually add them"
-                  + " into delLog for deletions. Inconsistent block list: {}",
-              String.join(",", blockIDs),
-              e);
-          throw rollbackException;
-        }
         throw new IOException(
             "Skip writing the deleted blocks info to"
                 + " the delLog because addTransaction fails. Batch skipped: "
-                + String.join(",", blockIDs),
+                + StringUtils.join(",", blockIDs),
             e);
       }
       // TODO: Container report handling of the deleted blocks:
@@ -488,11 +389,6 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     return this.deletedBlockLog;
   }
 
-  @VisibleForTesting
-  public String getDeletedKeyName(String key) {
-    return StringUtils.format(".Deleted/%s", key);
-  }
-
   /**
    * Close the resources for BlockManager.
    *
@@ -500,9 +396,6 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    */
   @Override
   public void close() throws IOException {
-    if (blockStore != null) {
-      blockStore.close();
-    }
     if (deletedBlockLog != null) {
       deletedBlockLog.close();
     }

@@ -19,13 +19,13 @@ package org.apache.hadoop.ozone.scm;
 
 import com.google.common.cache.Cache;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
@@ -78,29 +78,24 @@ public class TestXceiverClientManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
-    String containerName1 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline1 = storageContainerLocationClient
+    ContainerInfo container1 = storageContainerLocationClient
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
-            containerName1, containerOwner);
-    XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
+            containerOwner);
+    XceiverClientSpi client1 = clientManager.acquireClient(container1.getPipeline(),
+        container1.getContainerID());
     Assert.assertEquals(1, client1.getRefcount());
-    Assert.assertEquals(containerName1,
-        client1.getPipeline().getContainerName());
 
-    String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline2 = storageContainerLocationClient
+    ContainerInfo container2 = storageContainerLocationClient
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
-            containerName2, containerOwner);
-    XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
+            containerOwner);
+    XceiverClientSpi client2 = clientManager.acquireClient(container2.getPipeline(),
+        container2.getContainerID());
     Assert.assertEquals(1, client2.getRefcount());
-    Assert.assertEquals(containerName2,
-        client2.getPipeline().getContainerName());
 
-    XceiverClientSpi client3 = clientManager.acquireClient(pipeline1);
+    XceiverClientSpi client3 = clientManager.acquireClient(container1.getPipeline(),
+        container1.getContainerID());
     Assert.assertEquals(2, client3.getRefcount());
     Assert.assertEquals(2, client1.getRefcount());
-    Assert.assertEquals(containerName1,
-        client3.getPipeline().getContainerName());
     Assert.assertEquals(client1, client3);
     clientManager.releaseClient(client1);
     clientManager.releaseClient(client2);
@@ -112,43 +107,43 @@ public class TestXceiverClientManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
-    Cache<String, XceiverClientSpi> cache =
+    Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
-    String containerName1 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline1 =
+    ContainerInfo container1 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(), HddsProtos.ReplicationFactor.ONE,
-            containerName1, containerOwner);
-    XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
+            containerOwner);
+    XceiverClientSpi client1 = clientManager.acquireClient(container1.getPipeline(),
+        container1.getContainerID());
     Assert.assertEquals(1, client1.getRefcount());
-    Assert.assertEquals(containerName1,
-        client1.getPipeline().getContainerName());
+    Assert.assertEquals(container1.getPipeline(),
+        client1.getPipeline());
 
-    String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline2 =
+    ContainerInfo container2 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(),
-            HddsProtos.ReplicationFactor.ONE, containerName2, containerOwner);
-    XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
+            HddsProtos.ReplicationFactor.ONE, containerOwner);
+    XceiverClientSpi client2 = clientManager.acquireClient(container2.getPipeline(),
+        container2.getContainerID());
     Assert.assertEquals(1, client2.getRefcount());
-    Assert.assertEquals(containerName2,
-        client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
 
     // least recent container (i.e containerName1) is evicted
-    XceiverClientSpi nonExistent1 = cache.getIfPresent(containerName1);
+    XceiverClientSpi nonExistent1 = cache.getIfPresent(container1.getContainerID());
     Assert.assertEquals(null, nonExistent1);
     // However container call should succeed because of refcount on the client.
     String traceID1 = "trace" + RandomStringUtils.randomNumeric(4);
-    ContainerProtocolCalls.createContainer(client1,  traceID1);
+    ContainerProtocolCalls.createContainer(client1,
+        container1.getContainerID(),  traceID1);
 
     // After releasing the client, this connection should be closed
     // and any container operations should fail
     clientManager.releaseClient(client1);
     exception.expect(IOException.class);
     exception.expectMessage("This channel is not connected.");
-    ContainerProtocolCalls.createContainer(client1,  traceID1);
+    ContainerProtocolCalls.createContainer(client1,
+        container1.getContainerID(), traceID1);
     clientManager.releaseClient(client2);
   }
 
@@ -157,42 +152,39 @@ public class TestXceiverClientManager {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(SCM_CONTAINER_CLIENT_MAX_SIZE_KEY, 1);
     XceiverClientManager clientManager = new XceiverClientManager(conf);
-    Cache<String, XceiverClientSpi> cache =
+    Cache<Long, XceiverClientSpi> cache =
         clientManager.getClientCache();
 
-    String containerName1 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline1 =
+    ContainerInfo container1 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(),
-            clientManager.getFactor(), containerName1, containerOwner);
-    XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
+            clientManager.getFactor(), containerOwner);
+    XceiverClientSpi client1 = clientManager.acquireClient(container1.getPipeline(),
+        container1.getContainerID());
     Assert.assertEquals(1, client1.getRefcount());
-    Assert.assertEquals(containerName1,
-        client1.getPipeline().getContainerName());
 
     clientManager.releaseClient(client1);
     Assert.assertEquals(0, client1.getRefcount());
 
-    String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline2 = storageContainerLocationClient
+    ContainerInfo container2 = storageContainerLocationClient
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
-            containerName2, containerOwner);
-    XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
+            containerOwner);
+    XceiverClientSpi client2 = clientManager.acquireClient(container2.getPipeline(),
+        container2.getContainerID());
     Assert.assertEquals(1, client2.getRefcount());
-    Assert.assertEquals(containerName2,
-        client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
 
 
     // now client 1 should be evicted
-    XceiverClientSpi nonExistent = cache.getIfPresent(containerName1);
+    XceiverClientSpi nonExistent = cache.getIfPresent(container1.getContainerID());
     Assert.assertEquals(null, nonExistent);
 
     // Any container operation should now fail
     String traceID2 = "trace" + RandomStringUtils.randomNumeric(4);
     exception.expect(IOException.class);
     exception.expectMessage("This channel is not connected.");
-    ContainerProtocolCalls.createContainer(client1, traceID2);
+    ContainerProtocolCalls.createContainer(client1,
+        container1.getContainerID(), traceID2);
     clientManager.releaseClient(client2);
   }
 }

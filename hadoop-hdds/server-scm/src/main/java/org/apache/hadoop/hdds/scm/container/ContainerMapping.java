@@ -18,6 +18,7 @@ package org.apache.hadoop.hdds.scm.container;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.closer.ContainerCloser;
@@ -26,7 +27,6 @@ import org.apache.hadoop.hdds.scm.container.replication.ContainerSupervisor;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -38,8 +38,6 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
 import org.apache.hadoop.ozone.lease.LeaseManager;
-import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
@@ -149,16 +147,15 @@ public class ContainerMapping implements Mapping {
    * {@inheritDoc}
    */
   @Override
-  public ContainerInfo getContainer(final String containerName) throws
+  public ContainerInfo getContainer(final long containerID) throws
       IOException {
     ContainerInfo containerInfo;
     lock.lock();
     try {
-      byte[] containerBytes = containerStore.get(containerName.getBytes(
-          encoding));
+      byte[] containerBytes = containerStore.get(Longs.toByteArray(containerID));
       if (containerBytes == null) {
         throw new SCMException(
-            "Specified key does not exist. key : " + containerName,
+            "Specified key does not exist. key : " + containerID,
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
 
@@ -175,19 +172,18 @@ public class ContainerMapping implements Mapping {
    * {@inheritDoc}
    */
   @Override
-  public List<ContainerInfo> listContainer(String startName,
-      String prefixName, int count) throws IOException {
+  public List<ContainerInfo> listContainer(long startContainerID,
+      int count) throws IOException {
     List<ContainerInfo> containerList = new ArrayList<>();
     lock.lock();
     try {
       if (containerStore.isEmpty()) {
         throw new IOException("No container exists in current db");
       }
-      MetadataKeyFilter prefixFilter = new KeyPrefixFilter(prefixName);
-      byte[] startKey = startName == null ? null : DFSUtil.string2Bytes(
-          startName);
+      byte[] startKey = startContainerID <= 0 ? null :
+          Longs.toByteArray(startContainerID);
       List<Map.Entry<byte[], byte[]>> range =
-          containerStore.getSequentialRangeKVs(startKey, count, prefixFilter);
+          containerStore.getSequentialRangeKVs(startKey, count, null);
 
       // Transform the values into the pipelines.
       // TODO: filter by container state
@@ -209,7 +205,6 @@ public class ContainerMapping implements Mapping {
    * Allocates a new container.
    *
    * @param replicationFactor - replication factor of the container.
-   * @param containerName - Name of the container.
    * @param owner - The string name of the Service that owns this container.
    * @return - Pipeline that makes up this container.
    * @throws IOException - Exception
@@ -218,11 +213,8 @@ public class ContainerMapping implements Mapping {
   public ContainerInfo allocateContainer(
       ReplicationType type,
       ReplicationFactor replicationFactor,
-      final String containerName,
       String owner)
       throws IOException {
-    Preconditions.checkNotNull(containerName);
-    Preconditions.checkState(!containerName.isEmpty());
 
     ContainerInfo containerInfo;
     if (!nodeManager.isOutOfChillMode()) {
@@ -233,19 +225,12 @@ public class ContainerMapping implements Mapping {
 
     lock.lock();
     try {
-      byte[] containerBytes = containerStore.get(containerName.getBytes(
-          encoding));
-      if (containerBytes != null) {
-        throw new SCMException(
-            "Specified container already exists. key : " + containerName,
-            SCMException.ResultCodes.CONTAINER_EXISTS);
-      }
       containerInfo =
           containerStateManager.allocateContainer(
-              pipelineSelector, type, replicationFactor, containerName,
-              owner);
-      containerStore.put(
-          containerName.getBytes(encoding), containerInfo.getProtobuf()
+              pipelineSelector, type, replicationFactor, owner);
+
+      byte[] containerIDBytes = Longs.toByteArray(containerInfo.getContainerID());
+      containerStore.put(containerIDBytes, containerInfo.getProtobuf()
               .toByteArray());
     } finally {
       lock.unlock();
@@ -256,20 +241,20 @@ public class ContainerMapping implements Mapping {
   /**
    * Deletes a container from SCM.
    *
-   * @param containerName - Container name
+   * @param containerID - Container ID
    * @throws IOException if container doesn't exist or container store failed
    *                     to delete the
    *                     specified key.
    */
   @Override
-  public void deleteContainer(String containerName) throws IOException {
+  public void deleteContainer(long containerID) throws IOException {
     lock.lock();
     try {
-      byte[] dbKey = containerName.getBytes(encoding);
+      byte[] dbKey = Longs.toByteArray(containerID);
       byte[] containerBytes = containerStore.get(dbKey);
       if (containerBytes == null) {
         throw new SCMException(
-            "Failed to delete container " + containerName + ", reason : " +
+            "Failed to delete container " + containerID + ", reason : " +
                 "container doesn't exist.",
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
@@ -284,17 +269,17 @@ public class ContainerMapping implements Mapping {
    */
   @Override
   public HddsProtos.LifeCycleState updateContainerState(
-      String containerName, HddsProtos.LifeCycleEvent event) throws
+      long containerID, HddsProtos.LifeCycleEvent event) throws
       IOException {
     ContainerInfo containerInfo;
     lock.lock();
     try {
-      byte[] dbKey = containerName.getBytes(encoding);
+      byte[] dbKey = Longs.toByteArray(containerID);
       byte[] containerBytes = containerStore.get(dbKey);
       if (containerBytes == null) {
         throw new SCMException(
             "Failed to update container state"
-                + containerName
+                + containerID
                 + ", reason : container doesn't exist.",
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
@@ -310,7 +295,7 @@ public class ContainerMapping implements Mapping {
             containerLeaseManager.acquire(containerInfo);
         // Register callback to be executed in case of timeout
         containerLease.registerCallBack(() -> {
-          updateContainerState(containerName,
+          updateContainerState(containerID,
               HddsProtos.LifeCycleEvent.TIMEOUT);
           return null;
         });
@@ -388,7 +373,7 @@ public class ContainerMapping implements Mapping {
     containerSupervisor.handleContainerReport(reports);
     for (StorageContainerDatanodeProtocolProtos.ContainerInfo datanodeState :
         containerInfos) {
-      byte[] dbKey = datanodeState.getContainerNameBytes().toByteArray();
+      byte[] dbKey = Longs.toByteArray(datanodeState.getContainerID());
       lock.lock();
       try {
         byte[] containerBytes = containerStore.get(dbKey);
@@ -409,14 +394,14 @@ public class ContainerMapping implements Mapping {
           // If the container is closed, then state is already written to SCM
           // DB.TODO: So can we can write only once to DB.
           if (closeContainerIfNeeded(newState)) {
-            LOG.info("Closing the Container: {}", newState.getContainerName());
+            LOG.info("Closing the Container: {}", newState.getContainerID());
           }
         } else {
           // Container not found in our container db.
           LOG.error("Error while processing container report from datanode :" +
                   " {}, for container: {}, reason: container doesn't exist in" +
                   "container database.", reports.getDatanodeDetails(),
-              datanodeState.getContainerName());
+              datanodeState.getContainerID());
         }
       } finally {
         lock.unlock();
@@ -436,7 +421,7 @@ public class ContainerMapping implements Mapping {
       HddsProtos.SCMContainerInfo knownState) {
     HddsProtos.SCMContainerInfo.Builder builder =
         HddsProtos.SCMContainerInfo.newBuilder();
-    builder.setContainerName(knownState.getContainerName());
+    builder.setContainerID(knownState.getContainerID());
     builder.setPipeline(knownState.getPipeline());
     // If used size is greater than allocated size, we will be updating
     // allocated size with used size. This update is done as a fallback
@@ -473,7 +458,7 @@ public class ContainerMapping implements Mapping {
     float containerUsedPercentage = 1.0f *
         newState.getUsedBytes() / this.size;
 
-    ContainerInfo scmInfo = getContainer(newState.getContainerName());
+    ContainerInfo scmInfo = getContainer(newState.getContainerID());
     if (containerUsedPercentage >= containerCloseThreshold
         && !isClosed(scmInfo)) {
       // We will call closer till get to the closed state.
@@ -488,13 +473,13 @@ public class ContainerMapping implements Mapping {
         // closed state from container reports. This state change should be
         // invoked once and only once.
         HddsProtos.LifeCycleState state = updateContainerState(
-            scmInfo.getContainerName(),
+            scmInfo.getContainerID(),
             HddsProtos.LifeCycleEvent.FINALIZE);
         if (state != HddsProtos.LifeCycleState.CLOSING) {
           LOG.error("Failed to close container {}, reason : Not able " +
                   "to " +
                   "update container state, current container state: {}.",
-              newState.getContainerName(), state);
+              newState.getContainerID(), state);
           return false;
         }
         return true;
@@ -561,11 +546,11 @@ public class ContainerMapping implements Mapping {
   @VisibleForTesting
   public void flushContainerInfo() throws IOException {
     List<ContainerInfo> containers = containerStateManager.getAllContainers();
-    List<String> failedContainers = new ArrayList<>();
+    List<Long> failedContainers = new ArrayList<>();
     for (ContainerInfo info : containers) {
       // even if some container updated failed, others can still proceed
       try {
-        byte[] dbKey = info.getContainerName().getBytes(encoding);
+        byte[] dbKey = Longs.toByteArray(info.getContainerID());
         byte[] containerBytes = containerStore.get(dbKey);
         // TODO : looks like when a container is deleted, the container is
         // removed from containerStore but not containerStateManager, so it can
@@ -577,7 +562,6 @@ public class ContainerMapping implements Mapping {
           ContainerInfo oldInfo = ContainerInfo.fromProtobuf(oldInfoProto);
           ContainerInfo newInfo = new ContainerInfo.Builder()
               .setAllocatedBytes(info.getAllocatedBytes())
-              .setContainerName(oldInfo.getContainerName())
               .setNumberOfKeys(oldInfo.getNumberOfKeys())
               .setOwner(oldInfo.getOwner())
               .setPipeline(oldInfo.getPipeline())
@@ -588,10 +572,10 @@ public class ContainerMapping implements Mapping {
         } else {
           LOG.debug("Container state manager has container {} but not found " +
                   "in container store, a deleted container?",
-              info.getContainerName());
+              info.getContainerID());
         }
       } catch (IOException ioe) {
-        failedContainers.add(info.getContainerName());
+        failedContainers.add(info.getContainerID());
       }
     }
     if (!failedContainers.isEmpty()) {

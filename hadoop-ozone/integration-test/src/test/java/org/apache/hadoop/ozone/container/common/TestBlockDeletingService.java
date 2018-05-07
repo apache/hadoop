@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.testutils.BlockDeletingServiceTestImpl;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
@@ -35,7 +37,6 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
 import org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
@@ -128,19 +129,21 @@ public class TestBlockDeletingService {
       Configuration conf, int numOfContainers, int numOfBlocksPerContainer,
       int numOfChunksPerBlock, File chunkDir) throws IOException {
     for (int x = 0; x < numOfContainers; x++) {
-      String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, new Long(x), conf);
-      mgr.createContainer(createSingleNodePipeline(containerName), data);
-      data = mgr.readContainer(containerName);
+      long containerID = ContainerTestHelper.getTestContainerID();
+      ContainerData data = new ContainerData(containerID, conf);
+      mgr.createContainer(data);
+      data = mgr.readContainer(containerID);
       MetadataStore metadata = KeyUtils.getDB(data, conf);
       for (int j = 0; j<numOfBlocksPerContainer; j++) {
-        String blockName = containerName + "b" + j;
-        String deleteStateName = OzoneConsts.DELETING_KEY_PREFIX + blockName;
-        KeyData kd = new KeyData(containerName, deleteStateName);
+        BlockID blockID =
+            ContainerTestHelper.getTestBlockID(containerID);
+        String deleteStateName = OzoneConsts.DELETING_KEY_PREFIX +
+            blockID.getLocalID();
+        KeyData kd = new KeyData(blockID);
         List<ContainerProtos.ChunkInfo> chunks = Lists.newArrayList();
         for (int k = 0; k<numOfChunksPerBlock; k++) {
           // offset doesn't matter here
-          String chunkName = blockName + "_chunk_" + k;
+          String chunkName = blockID.getLocalID() + "_chunk_" + k;
           File chunk = new File(chunkDir, chunkName);
           FileUtils.writeStringToFile(chunk, "a chunk",
               Charset.defaultCharset());
@@ -200,7 +203,7 @@ public class TestBlockDeletingService {
 
     // Ensure 1 container was created
     List<ContainerData> containerData = Lists.newArrayList();
-    containerManager.listContainer(null, 1, "", containerData);
+    containerManager.listContainer(0L, 1, containerData);
     Assert.assertEquals(1, containerData.size());
     MetadataStore meta = KeyUtils.getDB(containerData.get(0), conf);
 
@@ -286,7 +289,7 @@ public class TestBlockDeletingService {
 
     // get container meta data
     List<ContainerData> containerData = Lists.newArrayList();
-    containerManager.listContainer(null, 1, "", containerData);
+    containerManager.listContainer(0L, 1, containerData);
     MetadataStore meta = KeyUtils.getDB(containerData.get(0), conf);
 
     LogCapturer newLog = LogCapturer.captureLogs(BackgroundService.LOG);

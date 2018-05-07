@@ -51,7 +51,7 @@ public class ContainerCloser {
   private static final long MULTIPLIER = 3L;
   private static final int CLEANUP_WATER_MARK = 1000;
   private final NodeManager nodeManager;
-  private final Map<String, Long> commandIssued;
+  private final Map<Long, Long> commandIssued;
   private final Configuration configuration;
   private final AtomicInteger mapCount;
   private final long reportInterval;
@@ -93,12 +93,12 @@ public class ContainerCloser {
    */
   public void close(HddsProtos.SCMContainerInfo info) {
 
-    if (commandIssued.containsKey(info.getContainerName())) {
+    if (commandIssued.containsKey(info.getContainerID())) {
       // We check if we issued a close command in last 3 * reportInterval secs.
-      long commandQueueTime = commandIssued.get(info.getContainerName());
+      long commandQueueTime = commandIssued.get(info.getContainerID());
       long currentTime = TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow());
       if (currentTime > commandQueueTime + (MULTIPLIER * reportInterval)) {
-        commandIssued.remove(info.getContainerName());
+        commandIssued.remove(info.getContainerID());
         mapCount.decrementAndGet();
       } else {
         // Ignore this request, since we just issued a close command. We
@@ -131,10 +131,10 @@ public class ContainerCloser {
         pipeline.getPipelineChannel().getMembersList()) {
       nodeManager.addDatanodeCommand(
           DatanodeDetails.getFromProtoBuf(datanodeDetails).getUuid(),
-          new CloseContainerCommand(info.getContainerName()));
+          new CloseContainerCommand(info.getContainerID()));
     }
-    if (!commandIssued.containsKey(info.getContainerName())) {
-      commandIssued.put(info.getContainerName(),
+    if (!commandIssued.containsKey(info.getContainerID())) {
+      commandIssued.put(info.getContainerID(),
           TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow()));
       mapCount.incrementAndGet();
     }
@@ -150,7 +150,7 @@ public class ContainerCloser {
       Runnable entryCleaner = () -> {
         LOG.debug("Starting close container Hash map cleaner.");
         try {
-          for (Map.Entry<String, Long> entry : commandIssued.entrySet()) {
+          for (Map.Entry<Long, Long> entry : commandIssued.entrySet()) {
             long commandQueueTime = entry.getValue();
             if (commandQueueTime + (MULTIPLIER * reportInterval) >
                 TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow())) {

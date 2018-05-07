@@ -17,10 +17,10 @@
 package org.apache.hadoop.hdds.scm.protocolPB;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
@@ -35,13 +35,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .KeyBlocks;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .ScmLocatedBlockProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -52,7 +46,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -79,41 +72,6 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   public ScmBlockLocationProtocolClientSideTranslatorPB(
       ScmBlockLocationProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
-  }
-
-  /**
-   * Find the set of nodes to read/write a block, as
-   * identified by the block key.  This method supports batch lookup by
-   * passing multiple keys.
-   *
-   * @param keys batch of block keys to find
-   * @return allocated blocks for each block key
-   * @throws IOException if there is any failure
-   */
-  @Override
-  public Set<AllocatedBlock> getBlockLocations(Set<String> keys)
-      throws IOException {
-    GetScmBlockLocationsRequestProto.Builder req =
-        GetScmBlockLocationsRequestProto.newBuilder();
-    for (String key : keys) {
-      req.addKeys(key);
-    }
-    final GetScmBlockLocationsResponseProto resp;
-    try {
-      resp = rpcProxy.getScmBlockLocations(NULL_RPC_CONTROLLER,
-          req.build());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-    Set<AllocatedBlock> locatedBlocks =
-        Sets.newLinkedHashSetWithExpectedSize(resp.getLocatedBlocksCount());
-    for (ScmLocatedBlockProto locatedBlock : resp.getLocatedBlocksList()) {
-      locatedBlocks.add(new AllocatedBlock.Builder()
-          .setKey(locatedBlock.getKey())
-          .setPipeline(Pipeline.getFromProtoBuf(locatedBlock.getPipeline()))
-          .build());
-    }
-    return locatedBlocks;
   }
 
   /**
@@ -144,7 +102,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
           response.getErrorMessage() : "Allocate block failed.");
     }
     AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
-        .setKey(response.getKey())
+        .setBlockID(BlockID.getFromProtobuf(response.getBlockID()))
         .setPipeline(Pipeline.getFromProtoBuf(response.getPipeline()))
         .setShouldCreateContainer(response.getCreateContainer());
     return builder.build();

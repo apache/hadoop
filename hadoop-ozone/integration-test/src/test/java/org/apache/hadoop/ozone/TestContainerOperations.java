@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -77,11 +78,12 @@ public class TestContainerOperations {
    */
   @Test
   public void testCreate() throws Exception {
-    Pipeline pipeline0 = storageClient.createContainer(HddsProtos
+    ContainerInfo container = storageClient.createContainer(HddsProtos
         .ReplicationType.STAND_ALONE, HddsProtos.ReplicationFactor
-        .ONE, "container0", "OZONE");
-    assertEquals("container0", pipeline0.getContainerName());
-
+        .ONE, "OZONE");
+    assertEquals(container.getContainerID(),
+        storageClient.getContainer(container.getContainerID()).
+            getContainerID());
   }
 
 }

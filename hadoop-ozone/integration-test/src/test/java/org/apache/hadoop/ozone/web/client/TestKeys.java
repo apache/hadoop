@@ -623,12 +623,11 @@ public class TestKeys {
         List<KsmKeyLocationInfo> locations =
             keyInfo.getLatestVersionLocations().getLocationList();
         for (KsmKeyLocationInfo location : locations) {
-          String containerName = location.getContainerName();
-          KeyData keyData = new KeyData(containerName, location.getBlockID());
+          KeyData keyData = new KeyData(location.getBlockID());
           KeyData blockInfo = cm.getContainerManager()
               .getKeyManager().getKey(keyData);
           ContainerData containerData = cm.getContainerManager()
-              .readContainer(containerName);
+              .readContainer(keyData.getContainerID());
           File dataDir = ContainerUtils
               .getDataDirectory(containerData).toFile();
           for (ContainerProtos.ChunkInfo chunkInfo : blockInfo.getChunks()) {

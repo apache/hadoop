@@ -180,12 +180,12 @@ public class BlockDeletingService extends BackgroundService{
           meta.getSequentialRangeKVs(null, blockLimitPerTask, filter);
       if (toDeleteBlocks.isEmpty()) {
         LOG.debug("No under deletion block found in container : {}",
-            containerData.getContainerName());
+            containerData.getContainerID());
       }
 
       List<String> succeedBlocks = new LinkedList<>();
       LOG.debug("Container : {}, To-Delete blocks : {}",
-          containerData.getContainerName(), toDeleteBlocks.size());
+          containerData.getContainerID(), toDeleteBlocks.size());
       File dataDir = ContainerUtils.getDataDirectory(containerData).toFile();
       if (!dataDir.exists() || !dataDir.isDirectory()) {
         LOG.error("Invalid container data dir {} : "
@@ -220,11 +220,11 @@ public class BlockDeletingService extends BackgroundService{
       meta.writeBatch(batch);
       // update count of pending deletion blocks in in-memory container status
       containerManager.decrPendingDeletionBlocks(succeedBlocks.size(),
-          containerData.getContainerName());
+          containerData.getContainerID());
 
       if (!succeedBlocks.isEmpty()) {
         LOG.info("Container: {}, deleted blocks: {}, task elapsed time: {}ms",
-            containerData.getContainerName(), succeedBlocks.size(),
+            containerData.getContainerID(), succeedBlocks.size(),
             Time.monotonicNow() - startTime);
       }
       crr.addAll(succeedBlocks);

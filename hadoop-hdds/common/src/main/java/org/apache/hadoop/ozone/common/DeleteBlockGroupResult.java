@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.common;
 
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmBlockResult;
@@ -52,7 +53,7 @@ public class DeleteBlockGroupResult {
         new ArrayList<>(blockResultList.size());
     for (DeleteBlockResult result : blockResultList) {
       DeleteScmBlockResult proto = DeleteScmBlockResult.newBuilder()
-          .setKey(result.getKey())
+          .setBlockID(result.getBlockID().getProtobuf())
           .setResult(result.getResult()).build();
       resultProtoList.add(proto);
     }
@@ -63,8 +64,8 @@ public class DeleteBlockGroupResult {
       List<DeleteScmBlockResult> results) {
     List<DeleteBlockResult> protoResults = new ArrayList<>(results.size());
     for (DeleteScmBlockResult result : results) {
-      protoResults.add(new DeleteBlockResult(result.getKey(),
-          result.getResult()));
+      protoResults.add(new DeleteBlockResult(BlockID.getFromProtobuf(
+          result.getBlockID()), result.getResult()));
     }
     return protoResults;
   }
@@ -87,10 +88,10 @@ public class DeleteBlockGroupResult {
   /**
    * @return A list of deletion failed block IDs.
    */
-  public List<String> getFailedBlocks() {
-    List<String> failedBlocks = blockResultList.stream()
+  public List<BlockID> getFailedBlocks() {
+    List<BlockID> failedBlocks = blockResultList.stream()
         .filter(result -> result.getResult() != Result.success)
-        .map(DeleteBlockResult::getKey).collect(Collectors.toList());
+        .map(DeleteBlockResult::getBlockID).collect(Collectors.toList());
     return failedBlocks;
   }
 }

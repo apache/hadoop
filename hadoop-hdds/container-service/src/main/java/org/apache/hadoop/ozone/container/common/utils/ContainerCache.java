@@ -69,15 +69,15 @@ public final class ContainerCache extends LRUMap {
   /**
    * Closes a db instance.
    *
-   * @param container - name of the container to be closed.
+   * @param containerID - ID of the container to be closed.
    * @param db - db instance to close.
    */
-  private void closeDB(String container, MetadataStore db) {
+  private void closeDB(long containerID, MetadataStore db) {
     if (db != null) {
       try {
         db.close();
       } catch (IOException e) {
-        LOG.error("Error closing DB. Container: " + container, e);
+        LOG.error("Error closing DB. Container: " + containerID, e);
       }
     }
   }
@@ -93,7 +93,7 @@ public final class ContainerCache extends LRUMap {
       while (iterator.hasNext()) {
         iterator.next();
         MetadataStore db = (MetadataStore) iterator.getValue();
-        closeDB(iterator.getKey().toString(), db);
+        closeDB(((Number)iterator.getKey()).longValue(), db);
       }
       // reset the cache
       cache.clear();
@@ -110,7 +110,7 @@ public final class ContainerCache extends LRUMap {
     lock.lock();
     try {
       MetadataStore db = (MetadataStore) entry.getValue();
-      closeDB(entry.getKey().toString(), db);
+      closeDB(((Number)entry.getKey()).longValue(), db);
     } finally {
       lock.unlock();
     }
@@ -120,28 +120,27 @@ public final class ContainerCache extends LRUMap {
   /**
    * Returns a DB handle if available, create the handler otherwise.
    *
-   * @param containerName - Name of the container.
+   * @param containerID - ID of the container.
    * @return MetadataStore.
    */
-  public MetadataStore getDB(String containerName, String containerDBPath)
+  public MetadataStore getDB(long containerID, String containerDBPath)
       throws IOException {
-    Preconditions.checkNotNull(containerName);
-    Preconditions.checkState(!containerName.isEmpty());
+    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) this.get(containerName);
+      MetadataStore db = (MetadataStore) this.get(containerID);
 
       if (db == null) {
         db = MetadataStoreBuilder.newBuilder()
             .setDbFile(new File(containerDBPath))
             .setCreateIfMissing(false)
             .build();
-        this.put(containerName, db);
+        this.put(containerID, db);
       }
       return db;
     } catch (Exception e) {
       LOG.error("Error opening DB. Container:{} ContainerPath:{}",
-          containerName, containerDBPath, e);
+          containerID, containerDBPath, e);
       throw e;
     } finally {
       lock.unlock();
@@ -151,16 +150,15 @@ public final class ContainerCache extends LRUMap {
   /**
    * Remove a DB handler from cache.
    *
-   * @param containerName - Name of the container.
+   * @param containerID - ID of the container.
    */
-  public void removeDB(String containerName) {
-    Preconditions.checkNotNull(containerName);
-    Preconditions.checkState(!containerName.isEmpty());
+  public void removeDB(long containerID) {
+    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore)this.get(containerName);
-      closeDB(containerName, db);
-      this.remove(containerName);
+      MetadataStore db = (MetadataStore)this.get(containerID);
+      closeDB(containerID, db);
+      this.remove(containerID);
     } finally {
       lock.unlock();
     }

@@ -31,62 +31,57 @@ import java.util.List;
  */
 public interface Mapping extends Closeable {
   /**
-   * Returns the ContainerInfo from the container name.
+   * Returns the ContainerInfo from the container ID.
    *
-   * @param containerName - Name
+   * @param containerID - ID of container.
    * @return - ContainerInfo such as creation state and the pipeline.
    * @throws IOException
    */
-  ContainerInfo getContainer(String containerName) throws IOException;
+  ContainerInfo getContainer(long containerID) throws IOException;
 
   /**
    * Returns containers under certain conditions.
-   * Search container names from start name(exclusive),
-   * and use prefix name to filter the result. The max
-   * size of the searching range cannot exceed the
+   * Search container IDs from start ID(exclusive),
+   * The max size of the searching range cannot exceed the
    * value of count.
    *
-   * @param startName start name, if null, start searching at the head.
-   * @param prefixName prefix name, if null, then filter is disabled.
-   * @param count count, if count < 0, the max size is unlimited.(
+   * @param startContainerID start containerID, >=0, start searching at the head if 0.
+   * @param count count must be >= 0
    *              Usually the count will be replace with a very big
-   *              value instead of being unlimited in case the db is very big)
+   *              value instead of being unlimited in case the db is very big.
    *
    * @return a list of container.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(String startName, String prefixName,
-      int count) throws IOException;
+  List<ContainerInfo> listContainer(long startContainerID, int count) throws IOException;
 
   /**
    * Allocates a new container for a given keyName and replication factor.
    *
    * @param replicationFactor - replication factor of the container.
-   * @param containerName - Name.
    * @param owner
    * @return - Container Info.
    * @throws IOException
    */
   ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor replicationFactor,
-      String containerName, String owner) throws IOException;
+      HddsProtos.ReplicationFactor replicationFactor, String owner) throws IOException;
 
   /**
    * Deletes a container from SCM.
    *
-   * @param containerName - Container Name
+   * @param containerID - Container ID
    * @throws IOException
    */
-  void deleteContainer(String containerName) throws IOException;
+  void deleteContainer(long containerID) throws IOException;
 
   /**
    * Update container state.
-   * @param containerName - Container Name
+   * @param containerID - Container ID
    * @param event - container life cycle event
    * @return - new container state
    * @throws IOException
    */
-  HddsProtos.LifeCycleState updateContainerState(String containerName,
+  HddsProtos.LifeCycleState updateContainerState(long containerID,
       HddsProtos.LifeCycleEvent event) throws IOException;
 
   /**

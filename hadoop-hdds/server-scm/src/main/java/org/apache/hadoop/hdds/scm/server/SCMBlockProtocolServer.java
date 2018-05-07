@@ -29,7 +29,6 @@ import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.DeleteBlockResult;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -37,6 +36,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.protocolPB
     .ScmBlockLocationProtocolServerSideTranslatorPB;
@@ -46,9 +46,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY;
@@ -139,20 +137,6 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
   }
 
   @Override
-  public Set<AllocatedBlock> getBlockLocations(Set<String> keys) throws
-      IOException {
-    Set<AllocatedBlock> locatedBlocks = new HashSet<>();
-    for (String key : keys) {
-      Pipeline pipeline = scm.getScmBlockManager().getBlock(key);
-      AllocatedBlock block = new AllocatedBlock.Builder().setKey(key)
-          .setPipeline(pipeline).build();
-      locatedBlocks.add(block);
-    }
-    return locatedBlocks;
-
-  }
-
-  @Override
   public AllocatedBlock allocateBlock(long size, HddsProtos.ReplicationType
       type, HddsProtos.ReplicationFactor factor, String owner) throws
       IOException {
@@ -202,7 +186,7 @@ public class SCMBlockProtocolServer implements ScmBlockLocationProtocol {
             .Result.unknownFailure;
       }
       List<DeleteBlockResult> blockResultList = new ArrayList<>();
-      for (String blockKey : keyBlocks.getBlockIDList()) {
+      for (BlockID blockKey : keyBlocks.getBlockIDList()) {
         blockResultList.add(new DeleteBlockResult(blockKey, resultCode));
       }
       results.add(new DeleteBlockGroupResult(keyBlocks.getGroupID(),

@@ -94,7 +94,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   private ThreadPoolExecutor writeChunkExecutor;
   private final ConcurrentHashMap<Long, CompletableFuture<Message>>
       writeChunkFutureMap;
-  private final ConcurrentHashMap<String, CompletableFuture<Message>>
+  private final ConcurrentHashMap<Long, CompletableFuture<Message>>
       createContainerFutureMap;
 
   ContainerStateMachine(ContainerDispatcher dispatcher,
@@ -146,8 +146,7 @@ public class ContainerStateMachine extends BaseStateMachine {
       // create the log entry proto
       final WriteChunkRequestProto commitWriteChunkProto =
           WriteChunkRequestProto.newBuilder()
-              .setPipeline(write.getPipeline())
-              .setKeyName(write.getKeyName())
+              .setBlockID(write.getBlockID())
               .setChunkData(write.getChunkData())
               // skipping the data field as it is
               // already set in statemachine data proto
@@ -196,9 +195,9 @@ public class ContainerStateMachine extends BaseStateMachine {
   private CompletableFuture<Message> handleWriteChunk(
       ContainerCommandRequestProto requestProto, long entryIndex) {
     final WriteChunkRequestProto write = requestProto.getWriteChunk();
-    String containerName = write.getPipeline().getContainerName();
+    long containerID = write.getBlockID().getContainerID();
     CompletableFuture<Message> future =
-        createContainerFutureMap.get(containerName);
+        createContainerFutureMap.get(containerID);
     CompletableFuture<Message> writeChunkFuture;
     if (future != null) {
       writeChunkFuture = future.thenApplyAsync(
@@ -213,10 +212,10 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   private CompletableFuture<Message> handleCreateContainer(
       ContainerCommandRequestProto requestProto) {
-    String containerName =
-        requestProto.getCreateContainer().getContainerData().getName();
+    long containerID =
+        requestProto.getCreateContainer().getContainerData().getContainerID();
     createContainerFutureMap.
-        computeIfAbsent(containerName, k -> new CompletableFuture<>());
+        computeIfAbsent(containerID, k -> new CompletableFuture<>());
     return CompletableFuture.completedFuture(() -> ByteString.EMPTY);
   }
 
@@ -270,9 +269,9 @@ public class ContainerStateMachine extends BaseStateMachine {
       } else {
         Message message = runCommand(requestProto);
         if (cmdType == ContainerProtos.Type.CreateContainer) {
-          String containerName =
-              requestProto.getCreateContainer().getContainerData().getName();
-          createContainerFutureMap.remove(containerName).complete(message);
+          long containerID =
+              requestProto.getCreateContainer().getContainerData().getContainerID();
+          createContainerFutureMap.remove(containerID).complete(message);
         }
         return CompletableFuture.completedFuture(message);
       }

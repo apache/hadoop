@@ -38,19 +38,20 @@ public interface StorageContainerLocationProtocol {
    * set of datanodes that should be used creating this container.
    *
    */
-  Pipeline allocateContainer(HddsProtos.ReplicationType replicationType,
-      HddsProtos.ReplicationFactor factor, String containerName, String owner)
+  ContainerInfo allocateContainer(HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor factor, String owner)
       throws IOException;
 
   /**
    * Ask SCM the location of the container. SCM responds with a group of
    * nodes where this container and its replicas are located.
    *
-   * @param containerName - Name of the container.
-   * @return Pipeline - the pipeline where container locates.
+   * @param containerID - ID of the container.
+   * @return ContainerInfo - the container info such as where the pipeline
+   *                         is located.
    * @throws IOException
    */
-  Pipeline getContainer(String containerName) throws IOException;
+  ContainerInfo getContainer(long containerID) throws IOException;
 
   /**
    * Ask SCM a list of containers with a range of container names
@@ -59,8 +60,7 @@ public interface StorageContainerLocationProtocol {
    * use prefix name to filter the result. the max size of the
    * searching range cannot exceed the value of count.
    *
-   * @param startName start name, if null, start searching at the head.
-   * @param prefixName prefix name, if null, then filter is disabled.
+   * @param startContainerID start container ID.
    * @param count count, if count < 0, the max size is unlimited.(
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big)
@@ -68,18 +68,18 @@ public interface StorageContainerLocationProtocol {
    * @return a list of container.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(String startName, String prefixName,
-      int count) throws IOException;
+  List<ContainerInfo> listContainer(long startContainerID, int count)
+      throws IOException;
 
   /**
    * Deletes a container in SCM.
    *
-   * @param containerName
+   * @param containerID
    * @throws IOException
    *   if failed to delete the container mapping from db store
    *   or container doesn't exist.
    */
-  void deleteContainer(String containerName) throws IOException;
+  void deleteContainer(long containerID) throws IOException;
 
   /**
    *  Queries a list of Node Statuses.
@@ -94,12 +94,12 @@ public interface StorageContainerLocationProtocol {
    * or containers on datanodes.
    * Container will be in Operational state after that.
    * @param type object type
-   * @param name object name
+   * @param id object id
    * @param op operation type (e.g., create, close, delete)
    * @param stage creation stage
    */
   void notifyObjectStageChange(
-      ObjectStageChangeRequestProto.Type type, String name,
+      ObjectStageChangeRequestProto.Type type, long id,
       ObjectStageChangeRequestProto.Op op,
       ObjectStageChangeRequestProto.Stage stage) throws IOException;
 

@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
+import org.apache.hadoop.hdds.client.BlockID;
+
 /**
  * Allocated block wraps the result returned from SCM#allocateBlock which
  * contains a Pipeline and the key.
  */
 public final class AllocatedBlock {
   private Pipeline pipeline;
-  private String key;
+  private BlockID blockID;
   // Indicates whether the client should create container before writing block.
   private boolean shouldCreateContainer;
 
@@ -33,7 +35,7 @@ public final class AllocatedBlock {
    */
   public static class Builder {
     private Pipeline pipeline;
-    private String key;
+    private BlockID blockID;
     private boolean shouldCreateContainer;
 
     public Builder setPipeline(Pipeline p) {
@@ -41,8 +43,8 @@ public final class AllocatedBlock {
       return this;
     }
 
-    public Builder setKey(String k) {
-      this.key = k;
+    public Builder setBlockID(BlockID blockID) {
+      this.blockID = blockID;
       return this;
     }
 
@@ -52,14 +54,14 @@ public final class AllocatedBlock {
     }
 
     public AllocatedBlock build() {
-      return new AllocatedBlock(pipeline, key, shouldCreateContainer);
+      return new AllocatedBlock(pipeline, blockID, shouldCreateContainer);
     }
   }
 
-  private AllocatedBlock(Pipeline pipeline, String key,
+  private AllocatedBlock(Pipeline pipeline, BlockID blockID,
       boolean shouldCreateContainer) {
     this.pipeline = pipeline;
-    this.key = key;
+    this.blockID = blockID;
     this.shouldCreateContainer = shouldCreateContainer;
   }
 
@@ -67,8 +69,8 @@ public final class AllocatedBlock {
     return pipeline;
   }
 
-  public String getKey() {
-    return key;
+  public BlockID getBlockID() {
+    return blockID;
   }
 
   public boolean getCreateContainer() {

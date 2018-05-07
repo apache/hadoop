@@ -641,14 +641,6 @@ public class TestKeySpaceManager {
         new MetadataKeyFilters.KeyPrefixFilter(DELETING_KEY_PREFIX));
     Assert.assertEquals(1, list.size());
 
-    // Check the block key in SCM, make sure it's deleted.
-    Set<String> keys = new HashSet<>();
-    keys.add(keyArgs.getResourceName());
-    exception.expect(IOException.class);
-    exception.expectMessage("Specified block key does not exist");
-    cluster.getStorageContainerManager().getBlockProtocolServer()
-        .getBlockLocations(keys);
-
     // Delete the key again to test deleting non-existing key.
     exception.expect(IOException.class);
     exception.expectMessage("KEY_NOT_FOUND");

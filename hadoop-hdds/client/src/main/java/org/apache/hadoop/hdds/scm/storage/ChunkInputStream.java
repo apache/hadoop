@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -45,7 +46,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
-  private final String key;
+  private final BlockID blockID;
   private final String traceID;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
@@ -58,15 +59,15 @@ public class ChunkInputStream extends InputStream implements Seekable {
   /**
    * Creates a new ChunkInputStream.
    *
-   * @param key chunk key
+   * @param blockID block ID of the chunk
    * @param xceiverClientManager client manager that controls client
    * @param xceiverClient client to perform container calls
    * @param chunks list of chunks to read
    * @param traceID container protocol call traceID
    */
-  public ChunkInputStream(String key, XceiverClientManager xceiverClientManager,
+  public ChunkInputStream(BlockID blockID, XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID) {
-    this.key = key;
+    this.blockID = blockID;
     this.traceID = traceID;
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
@@ -196,7 +197,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
     final ReadChunkResponseProto readChunkResponse;
     try {
       readChunkResponse = ContainerProtocolCalls.readChunk(xceiverClient,
-          chunks.get(chunkIndex), key, traceID);
+          chunks.get(chunkIndex), blockID, traceID);
     } catch (IOException e) {
       throw new IOException("Unexpected OzoneException: " + e.toString(), e);
     }
@@ -211,7 +212,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
         || pos >= chunkOffset[chunks.size() - 1] + chunks.get(chunks.size() - 1)
         .getLen()) {
       throw new EOFException(
-          "EOF encountered pos: " + pos + " container key: " + key);
+          "EOF encountered pos: " + pos + " container key: " + blockID.getLocalID());
     }
     if (chunkIndex == -1) {
       chunkIndex = Arrays.binarySearch(chunkOffset, pos);

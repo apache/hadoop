@@ -239,7 +239,7 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
 
       for (StorageContainerDatanodeProtocolProtos.ContainerInfo report:
           reports.getReportsList()) {
-        containers.put(report.getContainerName(), report);
+        containers.put(report.getContainerID(), report);
       }
     }
 

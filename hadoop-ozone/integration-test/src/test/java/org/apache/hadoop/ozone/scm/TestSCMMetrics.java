@@ -22,9 +22,8 @@ import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 
-import java.util.UUID;
-
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.TestUtils;
@@ -225,7 +224,7 @@ public class TestSCMMetrics {
 
     for (int i = 0; i < numReport; i++) {
       ContainerReport report = new ContainerReport(
-          UUID.randomUUID().toString(), DigestUtils.sha256Hex("Simulated"));
+          RandomUtils.nextLong(), DigestUtils.sha256Hex("Simulated"));
       report.setSize(stat.getSize().get());
       report.setBytesUsed(stat.getUsed().get());
       report.setReadCount(stat.getReadCount().get());

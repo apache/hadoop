@@ -91,7 +91,6 @@ public class TestMiniOzoneCluster {
     assertEquals(numberOfNodes, datanodes.size());
     for(HddsDatanodeService dn : datanodes) {
       // Create a single member pipe line
-      String containerName = OzoneUtils.getRequestID();
       DatanodeDetails datanodeDetails = dn.getDatanodeDetails();
       final PipelineChannel pipelineChannel =
           new PipelineChannel(datanodeDetails.getUuidString(),
@@ -99,7 +98,7 @@ public class TestMiniOzoneCluster {
               HddsProtos.ReplicationType.STAND_ALONE,
               HddsProtos.ReplicationFactor.ONE, "test");
       pipelineChannel.addMember(datanodeDetails);
-      Pipeline pipeline = new Pipeline(containerName, pipelineChannel);
+      Pipeline pipeline = new Pipeline(pipelineChannel);
 
       // Verify client is able to connect to the container
       try (XceiverClient client = new XceiverClient(pipeline, conf)){

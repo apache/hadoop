@@ -190,8 +190,14 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     try {
       for(Long txID : txIDs) {
         try {
+          byte [] deleteBlockBytes =
+              deletedStore.get(Longs.toByteArray(txID));
+          if (deleteBlockBytes == null) {
+            LOG.warn("Delete txID {} not found", txID);
+            continue;
+          }
           DeletedBlocksTransaction block = DeletedBlocksTransaction
-              .parseFrom(deletedStore.get(Longs.toByteArray(txID)));
+              .parseFrom(deleteBlockBytes);
           DeletedBlocksTransaction.Builder builder = block.toBuilder();
           int currentCount = block.getCount();
           if (currentCount > -1) {
@@ -216,11 +222,11 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
   }
 
   private DeletedBlocksTransaction constructNewTransaction(long txID,
-      String containerName, List<String> blocks) {
+      long containerID, List<Long> blocks) {
     return DeletedBlocksTransaction.newBuilder()
         .setTxID(txID)
-        .setContainerName(containerName)
-        .addAllBlockID(blocks)
+        .setContainerID(containerID)
+        .addAllLocalID(blocks)
         .setCount(0)
         .build();
   }
@@ -250,18 +256,18 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
   /**
    * {@inheritDoc}
    *
-   * @param containerName - container name.
+   * @param containerID - container ID.
    * @param blocks - blocks that belong to the same container.
    * @throws IOException
    */
   @Override
-  public void addTransaction(String containerName, List<String> blocks)
+  public void addTransaction(long containerID, List<Long> blocks)
       throws IOException {
     BatchOperation batch = new BatchOperation();
     lock.lock();
     try {
       DeletedBlocksTransaction tx = constructNewTransaction(lastTxID + 1,
-          containerName, blocks);
+          containerID, blocks);
       byte[] key = Longs.toByteArray(lastTxID + 1);
 
       batch.put(key, tx.toByteArray());
@@ -303,13 +309,13 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
    * @throws IOException
    */
   @Override
-  public void addTransactions(Map<String, List<String>> containerBlocksMap)
+  public void addTransactions(Map<Long, List<Long>> containerBlocksMap)
       throws IOException {
     BatchOperation batch = new BatchOperation();
     lock.lock();
     try {
       long currentLatestID = lastTxID;
-      for (Map.Entry<String, List<String>> entry :
+      for (Map.Entry<Long, List<Long>> entry :
           containerBlocksMap.entrySet()) {
         currentLatestID += 1;
         byte[] key = Longs.toByteArray(currentLatestID);

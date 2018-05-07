@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.BackgroundTask;
 import org.apache.hadoop.utils.BackgroundTaskQueue;
@@ -97,7 +98,7 @@ public class OpenKeyCleanupService extends BackgroundService {
               LOG.warn("Deleting open Key {} failed because some of the blocks"
                       + " were failed to delete, failed blocks: {}",
                   result.getObjectKey(),
-                  String.join(",", result.getFailedBlocks()));
+                  StringUtils.join(",", result.getFailedBlocks()));
             }
           }
           LOG.info("Found {} expired open key entries, successfully " +

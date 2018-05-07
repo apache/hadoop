@@ -21,12 +21,14 @@ package org.apache.hadoop.ozone.container;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -39,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,9 +82,9 @@ public final class ContainerTestHelper {
    * @return Pipeline with single node in it.
    * @throws IOException
    */
-  public static Pipeline createSingleNodePipeline(String containerName) throws
+  public static Pipeline createSingleNodePipeline() throws
       IOException {
-    return createPipeline(containerName, 1);
+    return createPipeline(1);
   }
 
   public static String createLocalAddress() throws IOException {
@@ -111,19 +114,18 @@ public final class ContainerTestHelper {
    * @return Pipeline with single node in it.
    * @throws IOException
    */
-  public static Pipeline createPipeline(String containerName, int numNodes)
+  public static Pipeline createPipeline(int numNodes)
       throws IOException {
     Preconditions.checkArgument(numNodes >= 1);
     final List<DatanodeDetails> ids = new ArrayList<>(numNodes);
     for(int i = 0; i < numNodes; i++) {
       ids.add(createDatanodeDetails());
     }
-    return createPipeline(containerName, ids);
+    return createPipeline(ids);
   }
 
   public static Pipeline createPipeline(
-      String containerName, Iterable<DatanodeDetails> ids)
-      throws IOException {
+      Iterable<DatanodeDetails> ids) throws IOException {
     Objects.requireNonNull(ids, "ids == null");
     final Iterator<DatanodeDetails> i = ids.iterator();
     Preconditions.checkArgument(i.hasNext());
@@ -136,21 +138,21 @@ public final class ContainerTestHelper {
     for(; i.hasNext();) {
       pipelineChannel.addMember(i.next());
     }
-    return new Pipeline(containerName, pipelineChannel);
+    return new Pipeline(pipelineChannel);
   }
 
   /**
    * Creates a ChunkInfo for testing.
    *
-   * @param keyName - Name of the key
+   * @param keyID - ID of the key
    * @param seqNo - Chunk number.
    * @return ChunkInfo
    * @throws IOException
    */
-  public static ChunkInfo getChunk(String keyName, int seqNo, long offset,
+  public static ChunkInfo getChunk(long keyID, int seqNo, long offset,
       long len) throws IOException {
 
-    ChunkInfo info = new ChunkInfo(String.format("%s.data.%d", keyName,
+    ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", keyID,
         seqNo), offset, len);
     return info;
   }
@@ -185,29 +187,27 @@ public final class ContainerTestHelper {
    * Returns a writeChunk Request.
    *
    * @param pipeline - A set of machines where this container lives.
-   * @param containerName - Name of the container.
-   * @param keyName - Name of the Key this chunk is part of.
+   * @param blockID - Block ID of the chunk.
    * @param datalen - Length of data.
    * @return ContainerCommandRequestProto
    * @throws IOException
    * @throws NoSuchAlgorithmException
    */
   public static ContainerCommandRequestProto getWriteChunkRequest(
-      Pipeline pipeline, String containerName, String keyName, int datalen)
+      Pipeline pipeline, BlockID blockID, int datalen)
       throws IOException, NoSuchAlgorithmException {
-    LOG.trace("writeChunk {} (key={}) to pipeline=",
-        datalen, keyName, pipeline);
+    LOG.trace("writeChunk {} (blockID={}) to pipeline=",
+        datalen, blockID, pipeline);
     ContainerProtos.WriteChunkRequestProto.Builder writeRequest =
         ContainerProtos.WriteChunkRequestProto
             .newBuilder();
 
     Pipeline newPipeline =
-        new Pipeline(containerName, pipeline.getPipelineChannel());
-    writeRequest.setPipeline(newPipeline.getProtobufMessage());
-    writeRequest.setKeyName(keyName);
+        new Pipeline(pipeline.getPipelineChannel());
+    writeRequest.setBlockID(blockID.getProtobuf());
 
     byte[] data = getData(datalen);
-    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     setDataChecksum(info, data);
 
     writeRequest.setChunkData(info.getProtoBufMessage());
@@ -227,29 +227,26 @@ public final class ContainerTestHelper {
    * Returns PutSmallFile Request that we can send to the container.
    *
    * @param pipeline - Pipeline
-   * @param containerName - ContainerName.
-   * @param keyName - KeyName
+   * @param blockID - Block ID of the small file.
    * @param dataLen - Number of bytes in the data
    * @return ContainerCommandRequestProto
    */
   public static ContainerCommandRequestProto getWriteSmallFileRequest(
-      Pipeline pipeline, String containerName, String keyName, int dataLen)
+      Pipeline pipeline, BlockID blockID, int dataLen)
       throws Exception {
     ContainerProtos.PutSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.PutSmallFileRequestProto.newBuilder();
     Pipeline newPipeline =
-        new Pipeline(containerName, pipeline.getPipelineChannel());
+        new Pipeline(pipeline.getPipelineChannel());
     byte[] data = getData(dataLen);
-    ChunkInfo info = getChunk(keyName, 0, 0, dataLen);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, dataLen);
     setDataChecksum(info, data);
 
 
     ContainerProtos.PutKeyRequestProto.Builder putRequest =
         ContainerProtos.PutKeyRequestProto.newBuilder();
 
-    putRequest.setPipeline(newPipeline.getProtobufMessage());
-    KeyData keyData = new KeyData(containerName, keyName);
-
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
     newList.add(info.getProtoBufMessage());
     keyData.setChunks(newList);
@@ -270,12 +267,11 @@ public final class ContainerTestHelper {
 
 
   public static ContainerCommandRequestProto getReadSmallFileRequest(
-      ContainerProtos.PutKeyRequestProto putKey)
+      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKey)
       throws Exception {
     ContainerProtos.GetSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.GetSmallFileRequestProto.newBuilder();
-    Pipeline pipeline = Pipeline.getFromProtoBuf(putKey.getPipeline());
-    ContainerCommandRequestProto getKey = getKeyRequest(putKey);
+    ContainerCommandRequestProto getKey = getKeyRequest(pipeline, putKey);
     smallFileRequest.setKey(getKey.getGetKey());
 
     ContainerCommandRequestProto.Builder request =
@@ -290,23 +286,21 @@ public final class ContainerTestHelper {
   /**
    * Returns a read Request.
    *
+   * @param pipeline pipeline.
    * @param request writeChunkRequest.
    * @return Request.
    * @throws IOException
    * @throws NoSuchAlgorithmException
    */
   public static ContainerCommandRequestProto getReadChunkRequest(
-      ContainerProtos.WriteChunkRequestProto request)
+      Pipeline pipeline, ContainerProtos.WriteChunkRequestProto request)
       throws IOException, NoSuchAlgorithmException {
-    LOG.trace("readChunk key={} from pipeline={}",
-        request.getKeyName(), request.getPipeline());
+    LOG.trace("readChunk blockID={} from pipeline={}",
+        request.getBlockID(), pipeline);
 
     ContainerProtos.ReadChunkRequestProto.Builder readRequest =
         ContainerProtos.ReadChunkRequestProto.newBuilder();
-    Pipeline pipeline = Pipeline.getFromProtoBuf(request.getPipeline());
-    readRequest.setPipeline(request.getPipeline());
-
-    readRequest.setKeyName(request.getKeyName());
+    readRequest.setBlockID(request.getBlockID());
     readRequest.setChunkData(request.getChunkData());
 
     ContainerCommandRequestProto.Builder newRequest =
@@ -321,25 +315,25 @@ public final class ContainerTestHelper {
   /**
    * Returns a delete Request.
    *
+   * @param pipeline pipeline.
    * @param writeRequest - write request
    * @return request
    * @throws IOException
    * @throws NoSuchAlgorithmException
    */
   public static ContainerCommandRequestProto getDeleteChunkRequest(
-      ContainerProtos.WriteChunkRequestProto writeRequest)
+      Pipeline pipeline, ContainerProtos.WriteChunkRequestProto writeRequest)
       throws
       IOException, NoSuchAlgorithmException {
-    LOG.trace("deleteChunk key={} from pipeline={}",
-        writeRequest.getKeyName(), writeRequest.getPipeline());
-    Pipeline pipeline = Pipeline.getFromProtoBuf(writeRequest.getPipeline());
+    LOG.trace("deleteChunk blockID={} from pipeline={}",
+        writeRequest.getBlockID(), pipeline);
+
     ContainerProtos.DeleteChunkRequestProto.Builder deleteRequest =
         ContainerProtos.DeleteChunkRequestProto
             .newBuilder();
 
-    deleteRequest.setPipeline(writeRequest.getPipeline());
     deleteRequest.setChunkData(writeRequest.getChunkData());
-    deleteRequest.setKeyName(writeRequest.getKeyName());
+    deleteRequest.setBlockID(writeRequest.getBlockID());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -357,19 +351,17 @@ public final class ContainerTestHelper {
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandRequestProto getCreateContainerRequest(
-      String containerName, Pipeline pipeline) throws IOException {
-    LOG.trace("addContainer: {}", containerName);
+      long containerID, Pipeline pipeline) throws IOException {
+    LOG.trace("addContainer: {}", containerID);
 
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
         ContainerProtos.CreateContainerRequestProto
             .newBuilder();
     ContainerProtos.ContainerData.Builder containerData = ContainerProtos
         .ContainerData.newBuilder();
-    containerData.setName(containerName);
-    createRequest.setPipeline(
-        ContainerTestHelper.createSingleNodePipeline(containerName)
-            .getProtobufMessage());
+    containerData.setContainerID(containerID);
     createRequest.setContainerData(containerData.build());
+    createRequest.setPipeline(pipeline.getProtobufMessage());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -386,18 +378,18 @@ public final class ContainerTestHelper {
    * Creates a container data based on the given meta data,
    * and request to update an existing container with it.
    *
-   * @param containerName
+   * @param containerID
    * @param metaData
    * @return
    * @throws IOException
    */
   public static ContainerCommandRequestProto getUpdateContainerRequest(
-      String containerName, Map<String, String> metaData) throws IOException {
+      long containerID, Map<String, String> metaData) throws IOException {
     ContainerProtos.UpdateContainerRequestProto.Builder updateRequestBuilder =
         ContainerProtos.UpdateContainerRequestProto.newBuilder();
     ContainerProtos.ContainerData.Builder containerData = ContainerProtos
         .ContainerData.newBuilder();
-    containerData.setName(containerName);
+    containerData.setContainerID(containerID);
     String[] keys = metaData.keySet().toArray(new String[]{});
     for(int i=0; i<keys.length; i++) {
       KeyValue.Builder kvBuilder = KeyValue.newBuilder();
@@ -406,7 +398,7 @@ public final class ContainerTestHelper {
       containerData.addMetadata(i, kvBuilder.build());
     }
     Pipeline pipeline =
-        ContainerTestHelper.createSingleNodePipeline(containerName);
+        ContainerTestHelper.createSingleNodePipeline();
     updateRequestBuilder.setPipeline(pipeline.getProtobufMessage());
     updateRequestBuilder.setContainerData(containerData.build());
 
@@ -440,22 +432,20 @@ public final class ContainerTestHelper {
 
   /**
    * Returns the PutKeyRequest for test purpose.
-   *
+   * @param pipeline - pipeline.
    * @param writeRequest - Write Chunk Request.
    * @return - Request
    */
   public static ContainerCommandRequestProto getPutKeyRequest(
-      ContainerProtos.WriteChunkRequestProto writeRequest) {
+      Pipeline pipeline, ContainerProtos.WriteChunkRequestProto writeRequest) {
     LOG.trace("putKey: {} to pipeline={}",
-        writeRequest.getKeyName(), writeRequest.getPipeline());
+        writeRequest.getBlockID());
 
-    Pipeline pipeline = Pipeline.getFromProtoBuf(writeRequest.getPipeline());
     ContainerProtos.PutKeyRequestProto.Builder putRequest =
         ContainerProtos.PutKeyRequestProto.newBuilder();
 
-    putRequest.setPipeline(writeRequest.getPipeline());
-    KeyData keyData = new KeyData(writeRequest.getPipeline().getContainerName(),
-        writeRequest.getKeyName());
+    KeyData keyData = new KeyData(
+        BlockID.getFromProtobuf(writeRequest.getBlockID()));
     List<ContainerProtos.ChunkInfo> newList = new LinkedList<>();
     newList.add(writeRequest.getChunkData());
     keyData.setChunks(newList);
@@ -472,24 +462,22 @@ public final class ContainerTestHelper {
 
   /**
    * Gets a GetKeyRequest for test purpose.
-   *
+   * @param  pipeline - pipeline
    * @param putKeyRequest - putKeyRequest.
    * @return - Request
+   * immediately.
    */
   public static ContainerCommandRequestProto getKeyRequest(
-      ContainerProtos.PutKeyRequestProto putKeyRequest) {
-    LOG.trace("getKey: name={} from pipeline={}",
-        putKeyRequest.getKeyData().getName(), putKeyRequest.getPipeline());
-    Pipeline pipeline = Pipeline.getFromProtoBuf(putKeyRequest.getPipeline());
+      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
+    HddsProtos.BlockID blockID = putKeyRequest.getKeyData().getBlockID();
+    LOG.trace("getKey: blockID={}", blockID);
 
     ContainerProtos.GetKeyRequestProto.Builder getRequest =
         ContainerProtos.GetKeyRequestProto.newBuilder();
     ContainerProtos.KeyData.Builder keyData = ContainerProtos.KeyData
         .newBuilder();
-    keyData.setContainerName(putKeyRequest.getPipeline().getContainerName());
-    keyData.setName(putKeyRequest.getKeyData().getName());
+    keyData.setBlockID(blockID);
     getRequest.setKeyData(keyData);
-    getRequest.setPipeline(putKeyRequest.getPipeline());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -517,18 +505,17 @@ public final class ContainerTestHelper {
   }
 
   /**
+   * @param pipeline - pipeline.
    * @param putKeyRequest - putKeyRequest.
    * @return - Request
    */
   public static ContainerCommandRequestProto getDeleteKeyRequest(
-      ContainerProtos.PutKeyRequestProto putKeyRequest) {
-    LOG.trace("deleteKey: name={} from pipeline={}",
-        putKeyRequest.getKeyData().getName(), putKeyRequest.getPipeline());
-    Pipeline pipeline = Pipeline.getFromProtoBuf(putKeyRequest.getPipeline());
+      Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
+    LOG.trace("deleteKey: name={}",
+        putKeyRequest.getKeyData().getBlockID());
     ContainerProtos.DeleteKeyRequestProto.Builder delRequest =
         ContainerProtos.DeleteKeyRequestProto.newBuilder();
-    delRequest.setPipeline(putKeyRequest.getPipeline());
-    delRequest.setName(putKeyRequest.getKeyData().getName());
+    delRequest.setBlockID(putKeyRequest.getKeyData().getBlockID());
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteKey);
@@ -541,14 +528,14 @@ public final class ContainerTestHelper {
   /**
    * Returns a close container request.
    * @param pipeline - pipeline
+   * @param containerID - ID of the container.
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandRequestProto getCloseContainer(
-      Pipeline pipeline) {
-    Preconditions.checkNotNull(pipeline);
+      Pipeline pipeline, long containerID) {
     ContainerProtos.CloseContainerRequestProto closeRequest =
-        ContainerProtos.CloseContainerRequestProto.newBuilder().setPipeline(
-            pipeline.getProtobufMessage()).build();
+        ContainerProtos.CloseContainerRequestProto.newBuilder().
+            setContainerID(containerID).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
         ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
             .Type.CloseContainer).setCloseContainer(closeRequest)
@@ -562,19 +549,19 @@ public final class ContainerTestHelper {
   /**
    * Returns a simple request without traceId.
    * @param pipeline - pipeline
+   * @param containerID - ID of the container.
    * @return ContainerCommandRequestProto without traceId.
    */
   public static ContainerCommandRequestProto getRequestWithoutTraceId(
-          Pipeline pipeline) {
+      Pipeline pipeline, long containerID) {
     Preconditions.checkNotNull(pipeline);
     ContainerProtos.CloseContainerRequestProto closeRequest =
-            ContainerProtos.CloseContainerRequestProto.newBuilder().setPipeline(
-                    pipeline.getProtobufMessage()).build();
+            ContainerProtos.CloseContainerRequestProto.newBuilder().
+                setContainerID(containerID).build();
     ContainerProtos.ContainerCommandRequestProto cmd =
             ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
                     .Type.CloseContainer).setCloseContainer(closeRequest)
-                    .setDatanodeUuid(
-                        pipeline.getLeader().getUuidString())
+                    .setDatanodeUuid(pipeline.getLeader().getUuidString())
                     .build();
     return cmd;
   }
@@ -585,17 +572,36 @@ public final class ContainerTestHelper {
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandRequestProto getDeleteContainer(
-      Pipeline pipeline, boolean forceDelete) {
+      Pipeline pipeline, long containerID, boolean forceDelete) {
     Preconditions.checkNotNull(pipeline);
     ContainerProtos.DeleteContainerRequestProto deleteRequest =
-        ContainerProtos.DeleteContainerRequestProto.newBuilder().setName(
-            pipeline.getContainerName()).setPipeline(
-            pipeline.getProtobufMessage()).setForceDelete(forceDelete).build();
+        ContainerProtos.DeleteContainerRequestProto.newBuilder().
+            setContainerID(containerID).
+            setForceDelete(forceDelete).build();
     return ContainerCommandRequestProto.newBuilder()
         .setCmdType(ContainerProtos.Type.DeleteContainer)
         .setDeleteContainer(deleteRequest)
         .setTraceID(UUID.randomUUID().toString())
         .setDatanodeUuid(pipeline.getLeader().getUuidString())
         .build();
+  }
+
+  private static void sleep(long milliseconds) {
+    try {
+      Thread.sleep(milliseconds);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  public static BlockID getTestBlockID(long containerID) {
+    // Add 2ms delay so that localID based on UtcTime
+    // won't collide.
+    sleep(2);
+    return new BlockID(containerID, Time.getUtcTime());
+  }
+
+  public static long getTestContainerID() {
+    return Time.getUtcTime();
   }
 }

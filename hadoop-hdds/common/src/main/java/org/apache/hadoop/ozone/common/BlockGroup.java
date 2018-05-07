@@ -17,9 +17,12 @@
 
 package org.apache.hadoop.ozone.common;
 
+import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .KeyBlocks;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,13 +31,13 @@ import java.util.List;
 public final class BlockGroup {
 
   private String groupID;
-  private List<String> blockIDs;
-  private BlockGroup(String groupID, List<String> blockIDs) {
+  private List<BlockID> blockIDs;
+  private BlockGroup(String groupID, List<BlockID> blockIDs) {
     this.groupID = groupID;
     this.blockIDs = blockIDs;
   }
 
-  public List<String> getBlockIDList() {
+  public List<BlockID> getBlockIDList() {
     return blockIDs;
   }
 
@@ -43,8 +46,11 @@ public final class BlockGroup {
   }
 
   public KeyBlocks getProto() {
-    return KeyBlocks.newBuilder().setKey(groupID)
-        .addAllBlocks(blockIDs).build();
+    KeyBlocks.Builder kbb = KeyBlocks.newBuilder();
+    for (BlockID block : blockIDs) {
+      kbb.addBlocks(block.getProtobuf());
+    }
+    return kbb.setKey(groupID).build();
   }
 
   /**
@@ -53,8 +59,12 @@ public final class BlockGroup {
    * @return a group of blocks.
    */
   public static BlockGroup getFromProto(KeyBlocks proto) {
+    List<BlockID> blockIDs = new ArrayList<>();
+    for (HddsProtos.BlockID block : proto.getBlocksList()) {
+      blockIDs.add(new BlockID(block.getContainerID(), block.getLocalID()));
+    }
     return BlockGroup.newBuilder().setKeyName(proto.getKey())
-        .addAllBlockIDs(proto.getBlocksList()).build();
+        .addAllBlockIDs(blockIDs).build();
   }
 
   public static Builder newBuilder() {
@@ -67,14 +77,14 @@ public final class BlockGroup {
   public static class Builder {
 
     private String groupID;
-    private List<String> blockIDs;
+    private List<BlockID> blockIDs;
 
     public Builder setKeyName(String blockGroupID) {
       this.groupID = blockGroupID;
       return this;
     }
 
-    public Builder addAllBlockIDs(List<String> keyBlocks) {
+    public Builder addAllBlockIDs(List<BlockID> keyBlocks) {
       this.blockIDs = keyBlocks;
       return this;
     }

@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolPro
  */
 public class ContainerReport {
   private static final int UNKNOWN = -1;
-  private final String containerName;
   private final String finalhash;
   private long size;
   private long keyCount;
@@ -51,11 +50,11 @@ public class ContainerReport {
   /**
    * Constructs the ContainerReport.
    *
-   * @param containerName - Container Name.
+   * @param containerID - Container ID.
    * @param finalhash - Final Hash.
    */
-  public ContainerReport(String containerName, String finalhash) {
-    this.containerName = containerName;
+  public ContainerReport(long containerID, String finalhash) {
+    this.containerID = containerID;
     this.finalhash = finalhash;
     this.size = UNKNOWN;
     this.keyCount = UNKNOWN;
@@ -74,7 +73,7 @@ public class ContainerReport {
    */
   public static ContainerReport getFromProtoBuf(ContainerInfo info) {
     Preconditions.checkNotNull(info);
-    ContainerReport report = new ContainerReport(info.getContainerName(),
+    ContainerReport report = new ContainerReport(info.getContainerID(),
         info.getFinalhash());
     if (info.hasSize()) {
       report.setSize(info.getSize());
@@ -100,15 +99,6 @@ public class ContainerReport {
 
     report.setContainerID(info.getContainerID());
     return report;
-  }
-
-  /**
-   * Gets the container name.
-   *
-   * @return - Name
-   */
-  public String getContainerName() {
-    return containerName;
   }
 
   /**
@@ -203,7 +193,6 @@ public class ContainerReport {
    */
   public ContainerInfo getProtoBufMessage() {
     return ContainerInfo.newBuilder()
-        .setContainerName(this.getContainerName())
         .setKeyCount(this.getKeyCount())
         .setSize(this.getSize())
         .setUsed(this.getBytesUsed())

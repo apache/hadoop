@@ -87,7 +87,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
  * create a container, which then can be used to store data.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
-public final class StorageContainerManager extends ServiceRuntimeInfoImpl
+public class StorageContainerManager extends ServiceRuntimeInfoImpl
     implements SCMMXBean {
 
   private static final Logger LOG = LoggerFactory
@@ -168,8 +168,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         cacheSize);
 
     scmBlockManager =
-        new BlockManagerImpl(conf, getScmNodeManager(), scmContainerManager,
-            cacheSize);
+        new BlockManagerImpl(conf, getScmNodeManager(), scmContainerManager);
 
     scmAdminUsernames = conf.getTrimmedStringCollection(OzoneConfigKeys
         .OZONE_ADMINISTRATORS);
@@ -459,9 +458,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   @VisibleForTesting
-  public ContainerInfo getContainerInfo(String containerName) throws
+  public ContainerInfo getContainerInfo(long containerID) throws
       IOException {
-    return scmContainerManager.getContainer(containerName);
+    return scmContainerManager.getContainer(containerID);
   }
 
   /**

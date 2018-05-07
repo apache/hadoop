@@ -60,7 +60,7 @@ public class XceiverClientManager implements Closeable {
 
   //TODO : change this to SCM configuration class
   private final Configuration conf;
-  private final Cache<String, XceiverClientSpi> clientCache;
+  private final Cache<Long, XceiverClientSpi> clientCache;
   private final boolean useRatis;
 
   private static XceiverClientMetrics metrics;
@@ -84,10 +84,10 @@ public class XceiverClientManager implements Closeable {
         .expireAfterAccess(staleThresholdMs, TimeUnit.MILLISECONDS)
         .maximumSize(maxSize)
         .removalListener(
-            new RemovalListener<String, XceiverClientSpi>() {
+            new RemovalListener<Long, XceiverClientSpi>() {
             @Override
             public void onRemoval(
-                RemovalNotification<String, XceiverClientSpi>
+                RemovalNotification<Long, XceiverClientSpi>
                   removalNotification) {
               synchronized (clientCache) {
                 // Mark the entry as evicted
@@ -99,7 +99,7 @@ public class XceiverClientManager implements Closeable {
   }
 
   @VisibleForTesting
-  public Cache<String, XceiverClientSpi> getClientCache() {
+  public Cache<Long, XceiverClientSpi> getClientCache() {
     return clientCache;
   }
 
@@ -114,14 +114,14 @@ public class XceiverClientManager implements Closeable {
    * @return XceiverClientSpi connected to a container
    * @throws IOException if a XceiverClientSpi cannot be acquired
    */
-  public XceiverClientSpi acquireClient(Pipeline pipeline)
+  public XceiverClientSpi acquireClient(Pipeline pipeline, long containerID)
       throws IOException {
     Preconditions.checkNotNull(pipeline);
     Preconditions.checkArgument(pipeline.getMachines() != null);
     Preconditions.checkArgument(!pipeline.getMachines().isEmpty());
 
     synchronized (clientCache) {
-      XceiverClientSpi info = getClient(pipeline);
+      XceiverClientSpi info = getClient(pipeline, containerID);
       info.incrementReference();
       return info;
     }
@@ -139,11 +139,10 @@ public class XceiverClientManager implements Closeable {
     }
   }
 
-  private XceiverClientSpi getClient(Pipeline pipeline)
+  private XceiverClientSpi getClient(Pipeline pipeline, long containerID)
       throws IOException {
-    String containerName = pipeline.getContainerName();
     try {
-      return clientCache.get(containerName,
+      return clientCache.get(containerID,
           new Callable<XceiverClientSpi>() {
           @Override
           public XceiverClientSpi call() throws Exception {

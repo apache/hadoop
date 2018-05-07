@@ -24,7 +24,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -41,7 +41,7 @@ import static org.apache.hadoop.hdds.scm.cli.SCMCLI.HELP_OP;
 public class InfoContainerHandler extends OzoneCommandHandler {
 
   public static final String CONTAINER_INFO = "info";
-  protected static final String OPT_CONTAINER_NAME = "c";
+  protected static final String OPT_CONTAINER_ID = "c";
 
   /**
    * Constructs a handler object.
@@ -57,7 +57,7 @@ public class InfoContainerHandler extends OzoneCommandHandler {
     if (!cmd.hasOption(CONTAINER_INFO)) {
       throw new IOException("Expecting container info");
     }
-    if (!cmd.hasOption(OPT_CONTAINER_NAME)) {
+    if (!cmd.hasOption(OPT_CONTAINER_ID)) {
       displayHelp();
       if (!cmd.hasOption(HELP_OP)) {
         throw new IOException("Expecting container name");
@@ -65,16 +65,17 @@ public class InfoContainerHandler extends OzoneCommandHandler {
         return;
       }
     }
-    String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
-    Pipeline pipeline = getScmClient().getContainer(containerName);
-    Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
+    String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
+    ContainerInfo container = getScmClient().
+        getContainer(Long.parseLong(containerID));
+    Preconditions.checkNotNull(container, "Container cannot be null");
 
     ContainerData containerData =
-        getScmClient().readContainer(pipeline);
+        getScmClient().readContainer(container.getContainerID(),
+            container.getPipeline());
 
     // Print container report info.
-    logOut("Container Name: %s",
-        containerData.getName());
+    logOut("Container id: %s", containerID);
     String openStatus =
         containerData.getState() == HddsProtos.LifeCycleState.OPEN ? "OPEN" :
             "CLOSED";
@@ -91,8 +92,10 @@ public class InfoContainerHandler extends OzoneCommandHandler {
     logOut("Container Metadata: {%s}", metadataStr);
 
     // Print pipeline of an existing container.
-    logOut("LeaderID: %s", pipeline.getLeader().getHostName());
-    String machinesStr = pipeline.getMachines().stream().map(
+    logOut("LeaderID: %s", container.getPipeline()
+        .getLeader().getHostName());
+    String machinesStr = container.getPipeline()
+        .getMachines().stream().map(
         DatanodeDetails::getHostName).collect(Collectors.joining(","));
     logOut("Datanodes: [%s]", machinesStr);
   }
@@ -107,8 +110,8 @@ public class InfoContainerHandler extends OzoneCommandHandler {
   }
 
   public static void addOptions(Options options) {
-    Option containerNameOpt = new Option(OPT_CONTAINER_NAME,
-        true, "Specify container name");
-    options.addOption(containerNameOpt);
+    Option containerIdOpt = new Option(OPT_CONTAINER_ID,
+        true, "Specify container id");
+    options.addOption(containerIdOpt);
   }
 }

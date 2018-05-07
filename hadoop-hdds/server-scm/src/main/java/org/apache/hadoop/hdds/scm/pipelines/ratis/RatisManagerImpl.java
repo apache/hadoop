@@ -95,7 +95,7 @@ public class RatisManagerImpl extends PipelineManager {
               PipelineSelector.newPipelineFromNodes(newNodesList,
               LifeCycleState.OPEN, ReplicationType.RATIS, factor, conduitName);
           Pipeline pipeline =
-              new Pipeline("setup", pipelineChannel);
+              new Pipeline(pipelineChannel);
           try (XceiverClientRatis client =
               XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
             client.createPipeline(pipeline.getPipelineName(), newNodesList);

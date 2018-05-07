@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.UriInfo;
+import java.util.Arrays;
 
 /**
  * UserArgs is used to package caller info
@@ -118,7 +119,8 @@ public class UserArgs {
    * @return String[]
    */
   public String[] getGroups() {
-    return this.groups;
+    return groups != null ?
+        Arrays.copyOf(groups, groups.length) : null;
   }
 
   /**
@@ -127,7 +129,9 @@ public class UserArgs {
    * @param groups list of groups
    */
   public void setGroups(String[] groups) {
-    this.groups = groups;
+    if (groups != null) {
+      this.groups = Arrays.copyOf(groups, groups.length);
+    }
   }
 
   /**

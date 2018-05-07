@@ -30,6 +30,7 @@ import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Type;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -186,7 +187,7 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getName(),
+          msg.getCreateContainer().getContainerData().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
@@ -230,7 +231,7 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getName(),
+          msg.getCreateContainer().getContainerData().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
@@ -273,7 +274,7 @@ public class Dispatcher implements ContainerDispatcher {
     } catch (IOException ex) {
       LOG.warn("Container operation failed. " +
               "Container: {} Operation: {}  trace ID: {} Error: {}",
-          msg.getCreateContainer().getContainerData().getName(),
+          msg.getCreateContainer().getContainerData().getContainerID(),
           msg.getCmdType().name(),
           msg.getTraceID(),
           ex.toString(), ex);
@@ -318,17 +319,14 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getUpdateContainer().getPipeline());
-    String containerName = msg.getUpdateContainer()
-        .getContainerData().getName();
+    long containerID = msg.getUpdateContainer()
+        .getContainerData().getContainerID();
 
     ContainerData data = ContainerData.getFromProtBuf(
         msg.getUpdateContainer().getContainerData(), conf);
     boolean forceUpdate = msg.getUpdateContainer().getForceUpdate();
-    this.containerManager.updateContainer(
-        pipeline, containerName, data, forceUpdate);
+    this.containerManager.updateContainer(containerID,
+        data, forceUpdate);
     return ContainerUtils.getContainerResponse(msg);
   }
 
@@ -349,8 +347,9 @@ public class Dispatcher implements ContainerDispatcher {
       return ContainerUtils.malformedRequest(msg);
     }
 
-    String name = msg.getReadContainer().getName();
-    ContainerData container = this.containerManager.readContainer(name);
+    long containerID = msg.getReadContainer().getContainerID();
+    ContainerData container = this.containerManager.
+        readContainer(containerID);
     return ContainerUtils.getReadContainerResponse(msg, container);
   }
 
@@ -370,12 +369,9 @@ public class Dispatcher implements ContainerDispatcher {
       return ContainerUtils.malformedRequest(msg);
     }
 
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getDeleteContainer().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-    String name = msg.getDeleteContainer().getName();
+    long containerID = msg.getDeleteContainer().getContainerID();
     boolean forceDelete = msg.getDeleteContainer().getForceDelete();
-    this.containerManager.deleteContainer(pipeline, name, forceDelete);
+    this.containerManager.deleteContainer(containerID, forceDelete);
     return ContainerUtils.getContainerResponse(msg);
   }
 
@@ -401,7 +397,7 @@ public class Dispatcher implements ContainerDispatcher {
         msg.getCreateContainer().getPipeline());
     Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
 
-    this.containerManager.createContainer(pipeline, cData);
+    this.containerManager.createContainer(cData);
     return ContainerUtils.getContainerResponse(msg);
   }
 
@@ -420,14 +416,12 @@ public class Dispatcher implements ContainerDispatcher {
             msg.getTraceID());
         return ContainerUtils.malformedRequest(msg);
       }
-      Pipeline pipeline = Pipeline.getFromProtoBuf(msg.getCloseContainer()
-          .getPipeline());
-      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      long containerID = msg.getCloseContainer().getContainerID();
+      if (!this.containerManager.isOpen(containerID)) {
         throw new StorageContainerException("Attempting to close a closed " +
             "container.", CLOSED_CONTAINER_IO);
       }
-      this.containerManager.closeContainer(pipeline.getContainerName());
+      this.containerManager.closeContainer(containerID);
       return ContainerUtils.getContainerResponse(msg);
     } catch (NoSuchAlgorithmException e) {
       throw new StorageContainerException("No such Algorithm", e,
@@ -449,11 +443,9 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    String keyName = msg.getWriteChunk().getKeyName();
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getWriteChunk().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+    BlockID blockID = BlockID.getFromProtobuf(
+        msg.getWriteChunk().getBlockID());
+    if (!this.containerManager.isOpen(blockID.getContainerID())) {
       throw new StorageContainerException("Write to closed container.",
           CLOSED_CONTAINER_IO);
     }
@@ -469,7 +461,7 @@ public class Dispatcher implements ContainerDispatcher {
 
     }
     this.containerManager.getChunkManager()
-        .writeChunk(pipeline, keyName, chunkInfo,
+        .writeChunk(blockID, chunkInfo,
             data, msg.getWriteChunk().getStage());
 
     return ChunkUtils.getChunkResponse(msg);
@@ -489,17 +481,13 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-
-    String keyName = msg.getReadChunk().getKeyName();
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getReadChunk().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-
+    BlockID blockID = BlockID.getFromProtobuf(
+        msg.getReadChunk().getBlockID());
     ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getReadChunk()
         .getChunkData());
     Preconditions.checkNotNull(chunkInfo);
-    byte[] data = this.containerManager.getChunkManager().readChunk(pipeline,
-        keyName, chunkInfo);
+    byte[] data = this.containerManager.getChunkManager().
+        readChunk(blockID, chunkInfo);
     metrics.incContainerBytesStats(Type.ReadChunk, data.length);
     return ChunkUtils.getReadChunkResponse(msg, data, chunkInfo);
   }
@@ -519,11 +507,10 @@ public class Dispatcher implements ContainerDispatcher {
       return ContainerUtils.malformedRequest(msg);
     }
 
-    String keyName = msg.getDeleteChunk().getKeyName();
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getDeleteChunk().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+    BlockID blockID = BlockID.getFromProtobuf(msg.getDeleteChunk()
+        .getBlockID());
+    long containerID = blockID.getContainerID();
+    if (!this.containerManager.isOpen(containerID)) {
       throw new StorageContainerException("Write to closed container.",
           CLOSED_CONTAINER_IO);
     }
@@ -531,7 +518,7 @@ public class Dispatcher implements ContainerDispatcher {
         .getChunkData());
     Preconditions.checkNotNull(chunkInfo);
 
-    this.containerManager.getChunkManager().deleteChunk(pipeline, keyName,
+    this.containerManager.getChunkManager().deleteChunk(blockID,
         chunkInfo);
     return ChunkUtils.getChunkResponse(msg);
   }
@@ -550,15 +537,16 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    Pipeline pipeline = Pipeline.getFromProtoBuf(msg.getPutKey().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+    BlockID blockID = BlockID.getFromProtobuf(
+        msg.getPutKey().getKeyData().getBlockID());
+    long containerID = blockID.getContainerID();
+    if (!this.containerManager.isOpen(containerID)) {
       throw new StorageContainerException("Write to closed container.",
           CLOSED_CONTAINER_IO);
     }
     KeyData keyData = KeyData.getFromProtoBuf(msg.getPutKey().getKeyData());
     Preconditions.checkNotNull(keyData);
-    this.containerManager.getKeyManager().putKey(pipeline, keyData);
+    this.containerManager.getKeyManager().putKey(keyData);
     long numBytes = keyData.getProtoBufMessage().toByteArray().length;
     metrics.incContainerBytesStats(Type.PutKey, numBytes);
     return KeyUtils.getKeyResponse(msg);
@@ -601,17 +589,15 @@ public class Dispatcher implements ContainerDispatcher {
           msg.getTraceID());
       return ContainerUtils.malformedRequest(msg);
     }
-    Pipeline pipeline =
-        Pipeline.getFromProtoBuf(msg.getDeleteKey().getPipeline());
-    Preconditions.checkNotNull(pipeline);
-    if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+    BlockID blockID = BlockID.getFromProtobuf(msg.getDeleteKey()
+        .getBlockID());
+    Preconditions.checkNotNull(blockID);
+    long containerID = blockID.getContainerID();
+    if (!this.containerManager.isOpen(containerID)) {
       throw new StorageContainerException("Write to closed container.",
           CLOSED_CONTAINER_IO);
     }
-    String keyName = msg.getDeleteKey().getName();
-    Preconditions.checkNotNull(keyName);
-    Preconditions.checkState(!keyName.isEmpty());
-    this.containerManager.getKeyManager().deleteKey(pipeline, keyName);
+    this.containerManager.getKeyManager().deleteKey(blockID);
     return KeyUtils.getKeyResponse(msg);
   }
 
@@ -632,12 +618,11 @@ public class Dispatcher implements ContainerDispatcher {
     }
     try {
 
-      Pipeline pipeline =
-          Pipeline.getFromProtoBuf(msg.getPutSmallFile()
-              .getKey().getPipeline());
+      BlockID blockID = BlockID.getFromProtobuf(msg.
+          getPutSmallFile().getKey().getKeyData().getBlockID());
+      long containerID = blockID.getContainerID();
 
-      Preconditions.checkNotNull(pipeline);
-      if (!this.containerManager.isOpen(pipeline.getContainerName())) {
+      if (!this.containerManager.isOpen(containerID)) {
         throw new StorageContainerException("Write to closed container.",
             CLOSED_CONTAINER_IO);
       }
@@ -648,12 +633,12 @@ public class Dispatcher implements ContainerDispatcher {
       byte[] data = msg.getPutSmallFile().getData().toByteArray();
 
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
-      this.containerManager.getChunkManager().writeChunk(pipeline, keyData
-          .getKeyName(), chunkInfo, data, ContainerProtos.Stage.COMBINED);
+      this.containerManager.getChunkManager().writeChunk(blockID,
+          chunkInfo, data, ContainerProtos.Stage.COMBINED);
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       keyData.setChunks(chunks);
-      this.containerManager.getKeyManager().putKey(pipeline, keyData);
+      this.containerManager.getKeyManager().putKey(keyData);
       return FileUtils.getPutFileResponse(msg);
     } catch (StorageContainerException e) {
       return ContainerUtils.logAndReturnError(LOG, e, msg);
@@ -680,12 +665,7 @@ public class Dispatcher implements ContainerDispatcher {
       return ContainerUtils.malformedRequest(msg);
     }
     try {
-      Pipeline pipeline =
-          Pipeline.getFromProtoBuf(msg.getGetSmallFile()
-              .getKey().getPipeline());
-
       long bytes = 0;
-      Preconditions.checkNotNull(pipeline);
       KeyData keyData = KeyData.getFromProtoBuf(msg.getGetSmallFile()
           .getKey().getKeyData());
       KeyData data = this.containerManager.getKeyManager().getKey(keyData);
@@ -694,9 +674,8 @@ public class Dispatcher implements ContainerDispatcher {
         bytes += chunk.getSerializedSize();
         ByteString current =
             ByteString.copyFrom(this.containerManager.getChunkManager()
-                .readChunk(
-                    pipeline, keyData.getKeyName(), ChunkInfo.getFromProtoBuf(
-                        chunk)));
+                .readChunk(keyData.getBlockID(),
+                    ChunkInfo.getFromProtoBuf(chunk)));
         dataBuf = dataBuf.concat(current);
         c = chunk;
       }

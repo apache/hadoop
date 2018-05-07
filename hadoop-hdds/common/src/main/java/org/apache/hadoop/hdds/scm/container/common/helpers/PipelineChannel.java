@@ -40,6 +40,8 @@ public class PipelineChannel {
   private ReplicationType type;
   private ReplicationFactor factor;
   private String name;
+  // TODO: change to long based id
+  //private long id;
 
   public PipelineChannel(String leaderID, LifeCycleState lifeCycleState,
       ReplicationType replicationType, ReplicationFactor replicationFactor,

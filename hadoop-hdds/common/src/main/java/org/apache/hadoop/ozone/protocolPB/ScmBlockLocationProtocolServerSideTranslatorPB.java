@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
-import com.google.common.collect.Sets;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,18 +37,11 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .ScmLocatedBlockProto;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -73,34 +65,6 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     this.impl = impl;
   }
 
-
-  @Override
-  public GetScmBlockLocationsResponseProto getScmBlockLocations(
-      RpcController controller, GetScmBlockLocationsRequestProto req)
-      throws ServiceException {
-    Set<String> keys = Sets.newLinkedHashSetWithExpectedSize(
-        req.getKeysCount());
-    for (String key : req.getKeysList()) {
-      keys.add(key);
-    }
-    final Set<AllocatedBlock> blocks;
-    try {
-      blocks = impl.getBlockLocations(keys);
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
-    GetScmBlockLocationsResponseProto.Builder resp =
-        GetScmBlockLocationsResponseProto.newBuilder();
-    for (AllocatedBlock block: blocks) {
-      ScmLocatedBlockProto.Builder locatedBlock =
-          ScmLocatedBlockProto.newBuilder()
-              .setKey(block.getKey())
-              .setPipeline(block.getPipeline().getProtobufMessage());
-      resp.addLocatedBlocks(locatedBlock.build());
-    }
-    return resp.build();
-  }
-
   @Override
   public AllocateScmBlockResponseProto allocateScmBlock(
       RpcController controller, AllocateScmBlockRequestProto request)
@@ -112,7 +76,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       if (allocatedBlock != null) {
         return
             AllocateScmBlockResponseProto.newBuilder()
-                .setKey(allocatedBlock.getKey())
+                .setBlockID(allocatedBlock.getBlockID().getProtobuf())
                 .setPipeline(allocatedBlock.getPipeline().getProtobufMessage())
                 .setCreateContainer(allocatedBlock.getCreateContainer())
                 .setErrorCode(AllocateScmBlockResponseProto.Error.success)

@@ -61,7 +61,7 @@ public final class InProgressPool {
   private final NodeManager nodeManager;
   private final NodePoolManager poolManager;
   private final ExecutorService executorService;
-  private final Map<String, Integer> containerCountMap;
+  private final Map<Long, Integer> containerCountMap;
   private final Map<UUID, Boolean> processedNodeSet;
   private final long startTime;
   private ProgressStatus status;
@@ -258,12 +258,12 @@ public final class InProgressPool {
         for (ContainerInfo info : reports.getReportsList()) {
           containerProcessedCount.incrementAndGet();
           LOG.debug("Total Containers processed: {} Container Name: {}",
-              containerProcessedCount.get(), info.getContainerName());
+              containerProcessedCount.get(), info.getContainerID());
 
           // Update the container map with count + 1 if the key exists or
           // update the map with 1. Since this is a concurrentMap the
           // computation and update is atomic.
-          containerCountMap.merge(info.getContainerName(), 1, Integer::sum);
+          containerCountMap.merge(info.getContainerID(), 1, Integer::sum);
         }
       }
     };
@@ -275,8 +275,8 @@ public final class InProgressPool {
    * @param predicate -- Predicate to filter by
    * @return A list of map entries.
    */
-  public List<Map.Entry<String, Integer>> filterContainer(
-      Predicate<Map.Entry<String, Integer>> predicate) {
+  public List<Map.Entry<Long, Integer>> filterContainer(
+      Predicate<Map.Entry<Long, Integer>> predicate) {
     return containerCountMap.entrySet().stream()
         .filter(predicate).collect(Collectors.toList());
   }

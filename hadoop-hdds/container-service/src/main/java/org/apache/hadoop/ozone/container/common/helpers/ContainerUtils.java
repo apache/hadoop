@@ -184,6 +184,12 @@ public final class ContainerUtils {
         removeExtension(containerFile.getName())).toString();
   }
 
+  public static long getContainerIDFromFile(File containerFile) {
+    Preconditions.checkNotNull(containerFile);
+    String containerID = getContainerNameFromFile(containerFile);
+    return Long.parseLong(containerID);
+  }
+
   /**
    * Verifies that this in indeed a new container.
    *
@@ -289,8 +295,8 @@ public final class ContainerUtils {
    */
   public static File getMetadataFile(ContainerData containerData,
       Path location) {
-    return location.resolve(containerData
-        .getContainerName().concat(CONTAINER_META))
+    return location.resolve(Long.toString(containerData
+        .getContainerID()).concat(CONTAINER_META))
         .toFile();
   }
 
@@ -303,8 +309,8 @@ public final class ContainerUtils {
    */
   public static File getContainerFile(ContainerData containerData,
       Path location) {
-    return location.resolve(containerData
-        .getContainerName().concat(CONTAINER_EXTENSION))
+    return location.resolve(Long.toString(containerData
+        .getContainerID()).concat(CONTAINER_EXTENSION))
         .toFile();
   }
 

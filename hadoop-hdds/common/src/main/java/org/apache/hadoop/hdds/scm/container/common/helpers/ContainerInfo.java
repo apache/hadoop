@@ -43,11 +43,9 @@ public class ContainerInfo
   // The wall-clock ms since the epoch at which the current state enters.
   private long stateEnterTime;
   private String owner;
-  private String containerName;
   private long containerID;
   ContainerInfo(
       long containerID,
-      final String containerName,
       HddsProtos.LifeCycleState state,
       Pipeline pipeline,
       long allocatedBytes,
@@ -56,7 +54,6 @@ public class ContainerInfo
       long stateEnterTime,
       String owner) {
     this.containerID = containerID;
-    this.containerName = containerName;
     this.pipeline = pipeline;
     this.allocatedBytes = allocatedBytes;
     this.usedBytes = usedBytes;
@@ -82,17 +79,12 @@ public class ContainerInfo
     builder.setState(info.getState());
     builder.setStateEnterTime(info.getStateEnterTime());
     builder.setOwner(info.getOwner());
-    builder.setContainerName(info.getContainerName());
     builder.setContainerID(info.getContainerID());
     return builder.build();
   }
 
   public long getContainerID() {
     return containerID;
-  }
-
-  public String getContainerName() {
-    return containerName;
   }
 
   public HddsProtos.LifeCycleState getState() {
@@ -170,7 +162,6 @@ public class ContainerInfo
     if (getOwner() != null) {
       builder.setOwner(getOwner());
     }
-    builder.setContainerName(getContainerName());
     return builder.build();
   }
 
@@ -189,7 +180,6 @@ public class ContainerInfo
         + ", pipeline=" + pipeline
         + ", stateEnterTime=" + stateEnterTime
         + ", owner=" + owner
-        + ", containerName='" + containerName
         + '}';
   }
 
@@ -206,7 +196,7 @@ public class ContainerInfo
     ContainerInfo that = (ContainerInfo) o;
 
     return new EqualsBuilder()
-        .append(pipeline.getContainerName(), that.pipeline.getContainerName())
+        .append(getContainerID(), that.getContainerID())
 
         // TODO : Fix this later. If we add these factors some tests fail.
         // So Commenting this to continue and will enforce this with
@@ -221,7 +211,7 @@ public class ContainerInfo
   @Override
   public int hashCode() {
     return new HashCodeBuilder(11, 811)
-        .append(pipeline.getContainerName())
+        .append(getContainerID())
         .append(pipeline.getFactor())
         .append(pipeline.getType())
         .append(owner)
@@ -275,7 +265,6 @@ public class ContainerInfo
     private long keys;
     private long stateEnterTime;
     private String owner;
-    private String containerName;
     private long containerID;
 
     public Builder setContainerID(long id) {
@@ -319,14 +308,9 @@ public class ContainerInfo
       return this;
     }
 
-    public Builder setContainerName(String container) {
-      this.containerName = container;
-      return this;
-    }
-
     public ContainerInfo build() {
       return new
-          ContainerInfo(containerID, containerName, state, pipeline,
+          ContainerInfo(containerID, state, pipeline,
           allocated, used, keys, stateEnterTime, owner);
     }
   }

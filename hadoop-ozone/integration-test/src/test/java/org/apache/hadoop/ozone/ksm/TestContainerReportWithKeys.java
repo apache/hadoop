@@ -117,24 +117,24 @@ public class TestContainerReportWithKeys {
         cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    ContainerData cd = getContainerData(keyInfo.getContainerName());
+    ContainerData cd = getContainerData(keyInfo.getContainerID());
 
     LOG.info("DN Container Data:  keyCount: {} used: {} ",
         cd.getKeyCount(), cd.getBytesUsed());
 
-    ContainerInfo cinfo = scm.getContainerInfo(keyInfo.getContainerName());
+    ContainerInfo cinfo = scm.getContainerInfo(keyInfo.getContainerID());
 
     LOG.info("SCM Container Info keyCount: {} usedBytes: {}",
         cinfo.getNumberOfKeys(), cinfo.getUsedBytes());
   }
 
 
-  private static ContainerData getContainerData(String containerName) {
+  private static ContainerData getContainerData(long containerID) {
     ContainerData containerData;
     try {
       ContainerManager containerManager = cluster.getHddsDatanodes().get(0)
           .getDatanodeStateMachine().getContainer().getContainerManager();
-      containerData = containerManager.readContainer(containerName);
+      containerData = containerManager.readContainer(containerID);
     } catch (StorageContainerException e) {
       throw new AssertionError(e);
     }

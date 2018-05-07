@@ -21,7 +21,9 @@ import com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
@@ -32,6 +34,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
+import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
@@ -41,6 +44,7 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -74,6 +78,14 @@ public class BenchMarkDatanodeDispatcher {
   private AtomicInteger containerCount;
   private AtomicInteger keyCount;
   private AtomicInteger chunkCount;
+
+  final int initContainers = 100;
+  final int initKeys = 50;
+  final int initChunks = 100;
+
+  List<Long> containers;
+  List<Long> keys;
+  List<String> chunks;
 
   @Setup(Level.Trial)
   public void initialize() throws IOException {
@@ -110,20 +122,39 @@ public class BenchMarkDatanodeDispatcher {
     keyCount = new AtomicInteger();
     chunkCount = new AtomicInteger();
 
+    containers = new ArrayList<>();
+    keys = new ArrayList<>();
+    chunks = new ArrayList<>();
+
     // Create containers
-    for (int x = 0; x < 100; x++) {
-      String containerName = "container-" + containerCount.getAndIncrement();
-      dispatcher.dispatch(getCreateContainerCommand(containerName));
+    for (int x = 0; x < initContainers; x++) {
+      long containerID = Time.getUtcTime() + x;
+      ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
+      dispatcher.dispatch(req);
+      containers.add(containerID);
+      containerCount.getAndIncrement();
     }
+
+    for (int x = 0; x < initKeys; x++) {
+      keys.add(Time.getUtcTime()+x);
+    }
+
+    for (int x = 0; x < initChunks; x++) {
+      chunks.add("chunk-" + x);
+    }
+
     // Add chunk and keys to the containers
-    for (int x = 0; x < 50; x++) {
-      String chunkName = "chunk-" + chunkCount.getAndIncrement();
-      String keyName = "key-" + keyCount.getAndIncrement();
-      for (int y = 0; y < 100; y++) {
-        String containerName = "container-" + y;
-        dispatcher.dispatch(getWriteChunkCommand(containerName, chunkName));
+    for (int x = 0; x < initKeys; x++) {
+      String chunkName = chunks.get(x);
+      chunkCount.getAndIncrement();
+      long key = keys.get(x);
+      keyCount.getAndIncrement();
+      for (int y = 0; y < initContainers; y++) {
+        long containerID = containers.get(y);
+        BlockID  blockID = new BlockID(containerID, key);
         dispatcher
-            .dispatch(getPutKeyCommand(containerName, chunkName, keyName));
+            .dispatch(getPutKeyCommand(blockID, chunkName));
+        dispatcher.dispatch(getWriteChunkCommand(blockID, chunkName));
       }
     }
   }
@@ -134,147 +165,166 @@ public class BenchMarkDatanodeDispatcher {
     FileUtils.deleteDirectory(new File(baseDir));
   }
 
-  private ContainerCommandRequestProto getCreateContainerCommand(
-      String containerName) {
+  private ContainerCommandRequestProto getCreateContainerCommand(long containerID) {
     CreateContainerRequestProto.Builder createRequest =
         CreateContainerRequestProto.newBuilder();
     createRequest.setPipeline(
-        new Pipeline(containerName, pipelineChannel).getProtobufMessage());
+        new Pipeline(pipelineChannel).getProtobufMessage());
     createRequest.setContainerData(
-        ContainerData.newBuilder().setName(containerName).build());
+        ContainerData.newBuilder().setContainerID(
+            containerID).build());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
     request.setCreateContainer(createRequest);
     request.setDatanodeUuid(datanodeUuid);
-    request.setTraceID(containerName + "-trace");
+    request.setTraceID(containerID + "-trace");
     return request.build();
   }
 
   private ContainerCommandRequestProto getWriteChunkCommand(
-      String containerName, String key) {
-
+      BlockID blockID, String chunkName) {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
-        .setPipeline(
-            new Pipeline(containerName, pipelineChannel).getProtobufMessage())
-        .setKeyName(key)
-        .setChunkData(getChunkInfo(containerName, key))
+        .setBlockID(blockID.getProtobuf())
+        .setChunkData(getChunkInfo(blockID, chunkName))
         .setData(data);
 
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder();
     request.setCmdType(ContainerProtos.Type.WriteChunk)
-        .setTraceID(containerName + "-" + key +"-trace")
+        .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
         .setWriteChunk(writeChunkRequest);
     return request.build();
   }
 
   private ContainerCommandRequestProto getReadChunkCommand(
-      String containerName, String key) {
+      BlockID blockID, String chunkName) {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
-        .setPipeline(
-            new Pipeline(containerName, pipelineChannel).getProtobufMessage())
-        .setKeyName(key)
-        .setChunkData(getChunkInfo(containerName, key));
+        .setBlockID(blockID.getProtobuf())
+        .setChunkData(getChunkInfo(blockID, chunkName));
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder();
     request.setCmdType(ContainerProtos.Type.ReadChunk)
-        .setTraceID(containerName + "-" + key +"-trace")
+        .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
         .setReadChunk(readChunkRequest);
     return request.build();
   }
 
   private ContainerProtos.ChunkInfo getChunkInfo(
-      String containerName, String key) {
+      BlockID blockID, String chunkName) {
     ContainerProtos.ChunkInfo.Builder builder =
         ContainerProtos.ChunkInfo.newBuilder()
             .setChunkName(
-                DigestUtils.md5Hex(key) + "_stream_" + containerName + "_chunk_"
-                    + key)
+                DigestUtils.md5Hex(chunkName)
+                    + "_stream_" + blockID.getContainerID() + "_block_"
+                    + blockID.getLocalID())
             .setOffset(0).setLen(data.size());
     return builder.build();
   }
 
   private ContainerCommandRequestProto getPutKeyCommand(
-      String containerName, String chunkKey, String key) {
+      BlockID blockID, String chunkKey) {
     PutKeyRequestProto.Builder putKeyRequest = PutKeyRequestProto
         .newBuilder()
-        .setPipeline(
-            new Pipeline(containerName, pipelineChannel).getProtobufMessage())
-        .setKeyData(getKeyData(containerName, chunkKey, key));
+        .setKeyData(getKeyData(blockID, chunkKey));
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder();
     request.setCmdType(ContainerProtos.Type.PutKey)
-        .setTraceID(containerName + "-" + key +"-trace")
+        .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
         .setPutKey(putKeyRequest);
     return request.build();
   }
 
   private ContainerCommandRequestProto getGetKeyCommand(
-      String containerName, String chunkKey, String key) {
+      BlockID blockID, String chunkKey) {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto.newBuilder()
-        .setPipeline(
-            new Pipeline(containerName, pipelineChannel).getProtobufMessage())
-        .setKeyData(getKeyData(containerName, chunkKey, key));
+        .setKeyData(getKeyData(blockID, chunkKey));
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(ContainerProtos.Type.GetKey)
-        .setTraceID(containerName + "-" + key +"-trace")
+        .setTraceID(getBlockTraceID(blockID))
         .setDatanodeUuid(datanodeUuid)
         .setGetKey(readKeyRequest);
     return request.build();
   }
 
   private ContainerProtos.KeyData getKeyData(
-      String containerName, String chunkKey, String key) {
+      BlockID blockID, String chunkKey) {
     ContainerProtos.KeyData.Builder builder =  ContainerProtos.KeyData
         .newBuilder()
-        .setContainerName(containerName)
-        .setName(key)
-        .addChunks(getChunkInfo(containerName, chunkKey));
+        .setBlockID(blockID.getProtobuf())
+        .addChunks(getChunkInfo(blockID, chunkKey));
     return builder.build();
   }
 
   @Benchmark
   public void createContainer(BenchMarkDatanodeDispatcher bmdd) {
-    bmdd.dispatcher.dispatch(getCreateContainerCommand(
-        "container-" + containerCount.getAndIncrement()));
+    long containerID = RandomUtils.nextLong();
+    ContainerCommandRequestProto req = getCreateContainerCommand(containerID);
+    bmdd.dispatcher.dispatch(req);
+    bmdd.containers.add(containerID);
+    bmdd.containerCount.getAndIncrement();
   }
 
 
   @Benchmark
   public void writeChunk(BenchMarkDatanodeDispatcher bmdd) {
-    String containerName = "container-" + random.nextInt(containerCount.get());
     bmdd.dispatcher.dispatch(getWriteChunkCommand(
-        containerName, "chunk-" + chunkCount.getAndIncrement()));
+        getRandomBlockID(), getNewChunkToWrite()));
   }
 
   @Benchmark
   public void readChunk(BenchMarkDatanodeDispatcher bmdd) {
-    String containerName = "container-" + random.nextInt(containerCount.get());
-    String chunkKey = "chunk-" + random.nextInt(chunkCount.get());
-    bmdd.dispatcher.dispatch(getReadChunkCommand(containerName, chunkKey));
+    BlockID blockID = getRandomBlockID();
+    String chunkKey = getRandomChunkToRead();
+    bmdd.dispatcher.dispatch(getReadChunkCommand(blockID, chunkKey));
   }
 
   @Benchmark
   public void putKey(BenchMarkDatanodeDispatcher bmdd) {
-    String containerName = "container-" + random.nextInt(containerCount.get());
-    String chunkKey = "chunk-" + random.nextInt(chunkCount.get());
-    bmdd.dispatcher.dispatch(getPutKeyCommand(
-        containerName, chunkKey, "key-" + keyCount.getAndIncrement()));
+    BlockID blockID = getRandomBlockID();
+    String chunkKey = getNewChunkToWrite();
+    bmdd.dispatcher.dispatch(getPutKeyCommand(blockID, chunkKey));
   }
 
   @Benchmark
   public void getKey(BenchMarkDatanodeDispatcher bmdd) {
-    String containerName = "container-" + random.nextInt(containerCount.get());
-    String chunkKey = "chunk-" + random.nextInt(chunkCount.get());
-    String key = "key-" + random.nextInt(keyCount.get());
-    bmdd.dispatcher.dispatch(getGetKeyCommand(containerName, chunkKey, key));
+    BlockID blockID = getRandomBlockID();
+    String chunkKey = getNewChunkToWrite();
+    bmdd.dispatcher.dispatch(getGetKeyCommand(blockID, chunkKey));
+  }
+
+  // Chunks writes from benchmark only reaches certain containers
+  // Use initChunks instead of updated counters to guarantee
+  // key/chunks are readable.
+
+  private BlockID getRandomBlockID() {
+    return new BlockID(getRandomContainerID(), getRandomKeyID());
+  }
+
+  private long getRandomContainerID() {
+    return containers.get(random.nextInt(initContainers));
+  }
+
+  private long getRandomKeyID() {
+    return keys.get(random.nextInt(initKeys));
+  }
+
+  private String getRandomChunkToRead() {
+    return chunks.get(random.nextInt(initChunks));
+  }
+
+  private String getNewChunkToWrite() {
+    return "chunk-" + chunkCount.getAndIncrement();
+  }
+
+  private String getBlockTraceID(BlockID blockID) {
+    return blockID.getContainerID() + "-" + blockID.getLocalID() +"-trace";
   }
 }

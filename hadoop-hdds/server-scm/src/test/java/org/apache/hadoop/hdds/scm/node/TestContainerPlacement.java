@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
@@ -160,13 +161,11 @@ public class TestContainerPlacement {
 
       assertTrue(nodeManager.isOutOfChillMode());
 
-      String container1 = UUID.randomUUID().toString();
-      Pipeline pipeline1 = containerManager.allocateContainer(
+      ContainerInfo containerInfo = containerManager.allocateContainer(
           xceiverClientManager.getType(),
-          xceiverClientManager.getFactor(), container1, "OZONE")
-          .getPipeline();
+          xceiverClientManager.getFactor(), "OZONE");
       assertEquals(xceiverClientManager.getFactor().getNumber(),
-          pipeline1.getMachines().size());
+          containerInfo.getPipeline().getMachines().size());
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);

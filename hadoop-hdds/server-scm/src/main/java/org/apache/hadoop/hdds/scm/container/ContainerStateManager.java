@@ -157,8 +157,7 @@ public class ContainerStateManager implements Closeable {
 
     List<ContainerInfo> containerList;
     try {
-      containerList = containerMapping.listContainer(null,
-          null, Integer.MAX_VALUE);
+      containerList = containerMapping.listContainer(0, Integer.MAX_VALUE);
 
       // if there are no container to load, let us return.
       if (containerList == null || containerList.size() == 0) {
@@ -280,24 +279,21 @@ public class ContainerStateManager implements Closeable {
    * @param selector -- Pipeline selector class.
    * @param type -- Replication type.
    * @param replicationFactor - Replication replicationFactor.
-   * @param containerName - Container Name.
    * @return Container Info.
    * @throws IOException  on Failure.
    */
   public ContainerInfo allocateContainer(PipelineSelector selector, HddsProtos
       .ReplicationType type, HddsProtos.ReplicationFactor replicationFactor,
-      final String containerName, String owner) throws
-      IOException {
+      String owner) throws IOException {
 
     Pipeline pipeline = selector.getReplicationPipeline(type,
-        replicationFactor, containerName);
+        replicationFactor);
 
     Preconditions.checkNotNull(pipeline, "Pipeline type=%s/"
         + "replication=%s couldn't be found for the new container. "
         + "Do you have enough nodes?", type, replicationFactor);
 
     ContainerInfo containerInfo = new ContainerInfo.Builder()
-        .setContainerName(containerName)
         .setState(HddsProtos.LifeCycleState.ALLOCATED)
         .setPipeline(pipeline)
         // This is bytes allocated for blocks inside container, not the
@@ -332,7 +328,7 @@ public class ContainerStateManager implements Closeable {
       String error = String.format("Failed to update container state %s, " +
               "reason: invalid state transition from state: %s upon " +
               "event: %s.",
-          info.getPipeline().getContainerName(), info.getState(), event);
+          info.getContainerID(), info.getState(), event);
       LOG.error(error);
       throw new SCMException(error, FAILED_TO_CHANGE_CONTAINER_STATE);
     }

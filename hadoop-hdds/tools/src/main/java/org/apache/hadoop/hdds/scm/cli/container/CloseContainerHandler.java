@@ -24,7 +24,7 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.cli.SCMCLI;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 
 import java.io.IOException;
 
@@ -34,30 +34,32 @@ import java.io.IOException;
 public class CloseContainerHandler extends OzoneCommandHandler {
 
   public static final String CONTAINER_CLOSE = "close";
-  public static final String OPT_CONTAINER_NAME = "c";
+  public static final String OPT_CONTAINER_ID = "c";
 
   @Override
   public void execute(CommandLine cmd) throws IOException {
     if (!cmd.hasOption(CONTAINER_CLOSE)) {
       throw new IOException("Expecting container close");
     }
-    if (!cmd.hasOption(OPT_CONTAINER_NAME)) {
+    if (!cmd.hasOption(OPT_CONTAINER_ID)) {
       displayHelp();
       if (!cmd.hasOption(SCMCLI.HELP_OP)) {
-        throw new IOException("Expecting container name");
+        throw new IOException("Expecting container id");
       } else {
         return;
       }
     }
-    String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
+    String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
 
-    Pipeline pipeline = getScmClient().getContainer(containerName);
-    if (pipeline == null) {
+    ContainerInfo container = getScmClient().
+        getContainer(Long.parseLong(containerID));
+    if (container == null) {
       throw new IOException("Cannot close an non-exist container "
-          + containerName);
+          + containerID);
     }
-    logOut("Closing container : %s.", containerName);
-    getScmClient().closeContainer(pipeline);
+    logOut("Closing container : %s.", containerID);
+    getScmClient().closeContainer(container.getContainerID(),
+        container.getPipeline());
     logOut("Container closed.");
   }
 
@@ -72,8 +74,8 @@ public class CloseContainerHandler extends OzoneCommandHandler {
   }
 
   public static void addOptions(Options options) {
-    Option containerNameOpt = new Option(OPT_CONTAINER_NAME,
-        true, "Specify container name");
+    Option containerNameOpt = new Option(OPT_CONTAINER_ID,
+        true, "Specify container ID");
     options.addOption(containerNameOpt);
   }
 

@@ -41,7 +41,7 @@ public class RandomContainerDeletionChoosingPolicy
 
   @Override
   public List<ContainerData> chooseContainerForBlockDeletion(int count,
-      Map<String, ContainerStatus> candidateContainers)
+      Map<Long, ContainerStatus> candidateContainers)
       throws StorageContainerException {
     Preconditions.checkNotNull(candidateContainers,
         "Internal assertion: candidate containers cannot be null");
@@ -58,7 +58,7 @@ public class RandomContainerDeletionChoosingPolicy
 
         LOG.debug("Select container {} for block deletion, "
             + "pending deletion blocks num: {}.",
-            entry.getContainer().getContainerName(),
+            entry.getContainer().getContainerID(),
             entry.getNumPendingDeletionBlocks());
       } else {
         break;

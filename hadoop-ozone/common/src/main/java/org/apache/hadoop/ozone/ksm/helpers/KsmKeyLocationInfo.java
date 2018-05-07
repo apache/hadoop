@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.ksm.helpers;
 
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyLocation;
 
 /**
@@ -23,9 +24,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyL
  * into a number of subkeys. This class represents one such subkey instance.
  */
 public final class KsmKeyLocationInfo {
-  private final String containerName;
-  // name of the block id SCM assigned for the key
-  private final String blockID;
+  private final BlockID blockID;
   private final boolean shouldCreateContainer;
   // the id of this subkey in all the subkeys.
   private final long length;
@@ -33,10 +32,8 @@ public final class KsmKeyLocationInfo {
   // the version number indicating when this block was added
   private long createVersion;
 
-  private KsmKeyLocationInfo(String containerName,
-      String blockID, boolean shouldCreateContainer,
+  private KsmKeyLocationInfo(BlockID blockID, boolean shouldCreateContainer,
       long length, long offset) {
-    this.containerName = containerName;
     this.blockID = blockID;
     this.shouldCreateContainer = shouldCreateContainer;
     this.length = length;
@@ -51,12 +48,16 @@ public final class KsmKeyLocationInfo {
     return createVersion;
   }
 
-  public String getContainerName() {
-    return containerName;
+  public BlockID getBlockID() {
+    return blockID;
   }
 
-  public String getBlockID() {
-    return blockID;
+  public long getContainerID() {
+    return blockID.getContainerID();
+  }
+
+  public long getLocalID() {
+    return blockID.getLocalID();
   }
 
   public boolean getShouldCreateContainer() {
@@ -75,19 +76,13 @@ public final class KsmKeyLocationInfo {
    * Builder of KsmKeyLocationInfo.
    */
   public static class Builder {
-    private String containerName;
-    private String blockID;
+    private BlockID blockID;
     private boolean shouldCreateContainer;
     private long length;
     private long offset;
 
-    public Builder setContainerName(String container) {
-      this.containerName = container;
-      return this;
-    }
-
-    public Builder setBlockID(String block) {
-      this.blockID = block;
+    public Builder setBlockID(BlockID blockId) {
+      this.blockID = blockId;
       return this;
     }
 
@@ -107,15 +102,14 @@ public final class KsmKeyLocationInfo {
     }
 
     public KsmKeyLocationInfo build() {
-      return new KsmKeyLocationInfo(containerName, blockID,
+      return new KsmKeyLocationInfo(blockID,
           shouldCreateContainer, length, offset);
     }
   }
 
   public KeyLocation getProtobuf() {
     return KeyLocation.newBuilder()
-        .setContainerName(containerName)
-        .setBlockID(blockID)
+        .setBlockID(blockID.getProtobuf())
         .setShouldCreateContainer(shouldCreateContainer)
         .setLength(length)
         .setOffset(offset)
@@ -125,8 +119,7 @@ public final class KsmKeyLocationInfo {
 
   public static KsmKeyLocationInfo getFromProtobuf(KeyLocation keyLocation) {
     KsmKeyLocationInfo info = new KsmKeyLocationInfo(
-        keyLocation.getContainerName(),
-        keyLocation.getBlockID(),
+        BlockID.getFromProtobuf(keyLocation.getBlockID()),
         keyLocation.getShouldCreateContainer(),
         keyLocation.getLength(),
         keyLocation.getOffset());

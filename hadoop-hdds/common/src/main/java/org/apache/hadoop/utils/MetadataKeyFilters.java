@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.utils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 /**
@@ -94,8 +94,8 @@ public final class MetadataKeyFilters {
       if (Strings.isNullOrEmpty(keyPrefix)) {
         accept = true;
       } else {
-        if (currentKey != null &&
-            DFSUtil.bytes2String(currentKey).startsWith(keyPrefix)) {
+        byte [] prefixBytes = keyPrefix.getBytes();
+        if (currentKey != null && prefixMatch(prefixBytes, currentKey)) {
           keysHinted++;
           accept = true;
         } else {
@@ -113,6 +113,20 @@ public final class MetadataKeyFilters {
     @Override
     public int getKeysHintedNum() {
       return keysHinted;
+    }
+
+    private boolean prefixMatch(byte[] prefix, byte[] key) {
+      Preconditions.checkNotNull(prefix);
+      Preconditions.checkNotNull(key);
+      if (key.length < prefix.length) {
+        return false;
+      }
+      for (int i = 0; i < prefix.length; i++) {
+        if (key[i] != prefix[i]) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 }

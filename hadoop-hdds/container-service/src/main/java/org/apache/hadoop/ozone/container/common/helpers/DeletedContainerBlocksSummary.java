@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.container.common.helpers;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,7 @@ public final class DeletedContainerBlocksSummary {
   // value : the number of blocks need to be deleted in this container
   // if the message contains multiple entries for same block,
   // blocks will be merged
-  private final Map<String, Integer> blockSummary;
+  private final Map<Long, Integer> blockSummary;
   // total number of blocks in this message
   private int numOfBlocks;
 
@@ -47,14 +48,14 @@ public final class DeletedContainerBlocksSummary {
     blockSummary = Maps.newHashMap();
     blocks.forEach(entry -> {
       txSummary.put(entry.getTxID(), entry.getCount());
-      if (blockSummary.containsKey(entry.getContainerName())) {
-        blockSummary.put(entry.getContainerName(),
-            blockSummary.get(entry.getContainerName())
-                + entry.getBlockIDCount());
+      if (blockSummary.containsKey(entry.getContainerID())) {
+        blockSummary.put(entry.getContainerID(),
+            blockSummary.get(entry.getContainerID())
+                + entry.getLocalIDCount());
       } else {
-        blockSummary.put(entry.getContainerName(), entry.getBlockIDCount());
+        blockSummary.put(entry.getContainerID(), entry.getLocalIDCount());
       }
-      numOfBlocks += entry.getBlockIDCount();
+      numOfBlocks += entry.getLocalIDCount();
     });
   }
 
@@ -93,9 +94,9 @@ public final class DeletedContainerBlocksSummary {
           .append("TimesProceed=")
           .append(blks.getCount())
           .append(", ")
-          .append(blks.getContainerName())
+          .append(blks.getContainerID())
           .append(" : [")
-          .append(String.join(",", blks.getBlockIDList())).append("]")
+          .append(StringUtils.join(',', blks.getLocalIDList())).append("]")
           .append("\n");
     }
     return sb.toString();

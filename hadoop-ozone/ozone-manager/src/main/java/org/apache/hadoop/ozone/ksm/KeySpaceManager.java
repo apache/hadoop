@@ -715,7 +715,7 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public KsmKeyLocationInfo  allocateBlock(KsmKeyArgs args, int clientID)
+  public KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
       throws IOException {
     try {
       metrics.incNumBlockAllocateCalls();

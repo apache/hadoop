@@ -50,7 +50,6 @@ message PipelineChannel {
 // A pipeline is composed of PipelineChannel (Ratis/StandAlone) that back a
 // container.
 message Pipeline {
-    required string containerName = 1;
     required PipelineChannel pipelineChannel = 2;
 }
 
@@ -135,8 +134,7 @@ enum LifeCycleEvent {
 }
 
 message SCMContainerInfo {
-    // TODO : Remove the container name from pipeline.
-    required string containerName = 1;
+    required int64 containerID = 1;
     required LifeCycleState state = 2;
     required Pipeline pipeline = 3;
     // This is not total size of container, but space allocated by SCM for
@@ -146,7 +144,6 @@ message SCMContainerInfo {
     required uint64 numberOfKeys = 6;
     optional int64 stateEnterTime = 7;
     required string owner = 8;
-    required int64 containerID = 9;
 }
 
 message GetScmInfoRequestProto {
@@ -167,4 +164,12 @@ enum ReplicationType {
 enum ReplicationFactor {
     ONE = 1;
     THREE = 3;
+}
+
+/**
+ * Block ID that uniquely identify a block by SCM.
+ */
+message BlockID {
+    required int64 containerID = 1;
+    required int64 localID = 2;
 }

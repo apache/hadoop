@@ -164,7 +164,7 @@ public class TestKsmBlockVersioning {
           // all the blocks from the previous version must present in the next
           // version
           for (KsmKeyLocationInfo info2 : version.getLocationList()) {
-            if (info.getBlockID().equals(info2.getBlockID())) {
+            if (info.getLocalID() == info2.getLocalID()) {
               found = true;
               break;
             }

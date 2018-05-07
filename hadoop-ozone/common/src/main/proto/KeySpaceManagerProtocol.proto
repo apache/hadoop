@@ -230,13 +230,12 @@ message KeyArgs {
 }
 
 message KeyLocation {
-    required string blockID = 1;
-    required string containerName = 2;
-    required bool shouldCreateContainer = 3;
-    required uint64 offset = 4;
-    required uint64 length = 5;
+    required hadoop.hdds.BlockID blockID = 1;
+    required bool shouldCreateContainer = 2;
+    required uint64 offset = 3;
+    required uint64 length = 4;
     // indicated at which version this block gets created.
-    optional uint64 createVersion = 6;
+    optional uint64 createVersion = 5;
 }
 
 message KeyLocationList {

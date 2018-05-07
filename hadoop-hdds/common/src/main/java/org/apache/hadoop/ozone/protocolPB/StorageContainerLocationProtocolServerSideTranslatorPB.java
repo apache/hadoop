@@ -23,7 +23,6 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -83,11 +82,10 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public ContainerResponseProto allocateContainer(RpcController unused,
       ContainerRequestProto request) throws ServiceException {
     try {
-      Pipeline pipeline = impl.allocateContainer(request.getReplicationType(),
-          request.getReplicationFactor(), request.getContainerName(),
-          request.getOwner());
+      ContainerInfo container = impl.allocateContainer(request.getReplicationType(),
+          request.getReplicationFactor(), request.getOwner());
       return ContainerResponseProto.newBuilder()
-          .setPipeline(pipeline.getProtobufMessage())
+          .setContainerInfo(container.getProtobuf())
           .setErrorCode(ContainerResponseProto.Error.success)
           .build();
 
@@ -101,9 +99,9 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       RpcController controller, GetContainerRequestProto request)
       throws ServiceException {
     try {
-      Pipeline pipeline = impl.getContainer(request.getContainerName());
+      ContainerInfo container = impl.getContainer(request.getContainerID());
       return GetContainerResponseProto.newBuilder()
-          .setPipeline(pipeline.getProtobufMessage())
+          .setContainerInfo(container.getProtobuf())
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -114,23 +112,17 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   public SCMListContainerResponseProto listContainer(RpcController controller,
       SCMListContainerRequestProto request) throws ServiceException {
     try {
-      String startName = null;
-      String prefixName = null;
+      long startContainerID = 0;
       int count = -1;
 
       // Arguments check.
-      if (request.hasPrefixName()) {
+      if (request.hasStartContainerID()) {
         // End container name is given.
-        prefixName = request.getPrefixName();
+        startContainerID = request.getStartContainerID();
       }
-      if (request.hasStartName()) {
-        // End container name is given.
-        startName = request.getStartName();
-      }
-
       count = request.getCount();
       List<ContainerInfo> containerList =
-          impl.listContainer(startName, prefixName, count);
+          impl.listContainer(startContainerID, count);
       SCMListContainerResponseProto.Builder builder =
           SCMListContainerResponseProto.newBuilder();
       for (ContainerInfo container : containerList) {
@@ -147,7 +139,7 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       RpcController controller, SCMDeleteContainerRequestProto request)
       throws ServiceException {
     try {
-      impl.deleteContainer(request.getContainerName());
+      impl.deleteContainer(request.getContainerID());
       return SCMDeleteContainerResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -178,7 +170,7 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       RpcController controller, ObjectStageChangeRequestProto request)
       throws ServiceException {
     try {
-      impl.notifyObjectStageChange(request.getType(), request.getName(),
+      impl.notifyObjectStageChange(request.getType(), request.getId(),
           request.getOp(), request.getStage());
       return ObjectStageChangeResponseProto.newBuilder().build();
     } catch (IOException e) {

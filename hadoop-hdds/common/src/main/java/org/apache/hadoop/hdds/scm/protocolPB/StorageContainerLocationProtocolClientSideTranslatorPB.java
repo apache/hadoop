@@ -17,7 +17,6 @@
 package org.apache.hadoop.hdds.scm.protocolPB;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -92,20 +91,14 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * supports replication factor of either 1 or 3.
    * @param type - Replication Type
    * @param factor - Replication Count
-   * @param containerName - Name
    * @return
    * @throws IOException
    */
   @Override
-  public Pipeline allocateContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor factor, String
-      containerName, String owner) throws IOException {
+  public ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor factor, String owner) throws IOException {
 
-    Preconditions.checkNotNull(containerName, "Container Name cannot be Null");
-    Preconditions.checkState(!containerName.isEmpty(), "Container name cannot" +
-        " be empty");
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
-        .setContainerName(containerName)
         .setReplicationFactor(factor)
         .setReplicationType(type)
         .setOwner(owner)
@@ -121,22 +114,20 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       throw new IOException(response.hasErrorMessage() ?
           response.getErrorMessage() : "Allocate container failed.");
     }
-    return Pipeline.getFromProtoBuf(response.getPipeline());
+    return ContainerInfo.fromProtobuf(response.getContainerInfo());
   }
 
-  public Pipeline getContainer(String containerName) throws IOException {
-    Preconditions.checkNotNull(containerName,
-        "Container Name cannot be Null");
-    Preconditions.checkState(!containerName.isEmpty(),
-        "Container name cannot be empty");
+  public ContainerInfo getContainer(long containerID) throws IOException {
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative");
     GetContainerRequestProto request = GetContainerRequestProto
         .newBuilder()
-        .setContainerName(containerName)
+        .setContainerID(containerID)
         .build();
     try {
       GetContainerResponseProto response =
           rpcProxy.getContainer(NULL_RPC_CONTROLLER, request);
-      return Pipeline.getFromProtoBuf(response.getPipeline());
+      return ContainerInfo.fromProtobuf(response.getContainerInfo());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -146,16 +137,15 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * {@inheritDoc}
    */
   @Override
-  public List<ContainerInfo> listContainer(String startName, String prefixName,
-      int count) throws IOException {
+  public List<ContainerInfo> listContainer(long startContainerID, int count)
+      throws IOException {
+    Preconditions.checkState(startContainerID >= 0,
+        "Container ID cannot be negative.");
+    Preconditions.checkState(count > 0,
+        "Container count must be greater than 0.");
     SCMListContainerRequestProto.Builder builder = SCMListContainerRequestProto
         .newBuilder();
-    if (prefixName != null) {
-      builder.setPrefixName(prefixName);
-    }
-    if (startName != null) {
-      builder.setStartName(startName);
-    }
+    builder.setStartContainerID(startContainerID);
     builder.setCount(count);
     SCMListContainerRequestProto request = builder.build();
 
@@ -177,17 +167,17 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * Ask SCM to delete a container by name. SCM will remove
    * the container mapping in its database.
    *
-   * @param containerName
+   * @param containerID
    * @throws IOException
    */
   @Override
-  public void deleteContainer(String containerName)
+  public void deleteContainer(long containerID)
       throws IOException {
-    Preconditions.checkState(!Strings.isNullOrEmpty(containerName),
-        "Container name cannot be null or empty");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative");
     SCMDeleteContainerRequestProto request = SCMDeleteContainerRequestProto
         .newBuilder()
-        .setContainerName(containerName)
+        .setContainerID(containerID)
         .build();
     try {
       rpcProxy.deleteContainer(NULL_RPC_CONTROLLER, request);
@@ -226,21 +216,21 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   /**
    * Notify from client that creates object on datanodes.
    * @param type object type
-   * @param name object name
+   * @param id object id
    * @param op operation type (e.g., create, close, delete)
    * @param stage object creation stage : begin/complete
    */
   @Override
   public void notifyObjectStageChange(
-      ObjectStageChangeRequestProto.Type type, String name,
+      ObjectStageChangeRequestProto.Type type, long id,
       ObjectStageChangeRequestProto.Op op,
       ObjectStageChangeRequestProto.Stage stage) throws IOException {
-    Preconditions.checkState(!Strings.isNullOrEmpty(name),
-        "Object name cannot be null or empty");
+    Preconditions.checkState(id >= 0,
+        "Object id cannot be negative.");
     ObjectStageChangeRequestProto request =
         ObjectStageChangeRequestProto.newBuilder()
             .setType(type)
-            .setName(name)
+            .setId(id)
             .setOp(op)
             .setStage(stage)
             .build();

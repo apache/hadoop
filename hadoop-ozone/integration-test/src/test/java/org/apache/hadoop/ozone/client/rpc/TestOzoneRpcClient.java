@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -45,7 +46,6 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.util.Time;
@@ -388,10 +388,10 @@ public class TestOzoneRpcClient {
     KsmKeyInfo keyInfo = keySpaceManager.lookupKey(keyArgs);
     for (KsmKeyLocationInfo info:
         keyInfo.getLatestVersionLocations().getLocationList()) {
-      Pipeline pipeline =
-          storageContainerLocationClient.getContainer(info.getContainerName());
-      if ((pipeline.getFactor() != replicationFactor) ||
-          (pipeline.getType() != replicationType)) {
+      ContainerInfo container =
+          storageContainerLocationClient.getContainer(info.getContainerID());
+      if ((container.getPipeline().getFactor() != replicationFactor) ||
+          (container.getPipeline().getType() != replicationType)) {
         return false;
       }
     }

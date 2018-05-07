@@ -35,7 +35,6 @@ import "hdds.proto";
 * Request send to SCM asking where the container should be created.
 */
 message ContainerRequestProto {
-  required string containerName = 1;
   // Ozone only support replciation of either 1 or 3.
   required ReplicationFactor replicationFactor = 2;
   required ReplicationType  replicationType = 3;
@@ -53,30 +52,29 @@ message ContainerResponseProto {
     errorContainerMissing = 3;
   }
   required Error errorCode = 1;
-  required Pipeline pipeline = 2;
+  required SCMContainerInfo containerInfo = 2;
   optional string errorMessage = 3;
 }
 
 message GetContainerRequestProto {
-  required string containerName = 1;
+  required int64 containerID = 1;
 }
 
 message GetContainerResponseProto {
-  required Pipeline pipeline = 1;
+  required SCMContainerInfo containerInfo = 1;
 }
 
 message SCMListContainerRequestProto {
   required uint32 count = 1;
-  optional string startName = 2;
-  optional string prefixName = 3;
-}
+  optional uint64 startContainerID = 2;
+ }
 
 message SCMListContainerResponseProto {
   repeated SCMContainerInfo containers = 1;
 }
 
 message SCMDeleteContainerRequestProto {
-  required string containerName = 1;
+  required int64 containerID = 1;
 }
 
 message SCMDeleteContainerResponseProto {
@@ -97,7 +95,7 @@ message ObjectStageChangeRequestProto {
     begin = 1;
     complete = 2;
   }
-  required string name = 1;
+  required int64 id = 1;
   required Type type = 2;
   required Op op= 3;
   required Stage stage = 4;

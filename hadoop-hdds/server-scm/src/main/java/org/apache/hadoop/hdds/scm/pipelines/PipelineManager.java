@@ -50,11 +50,10 @@ public abstract class PipelineManager {
    * needed and based on the replication type in the request appropriate
    * Interface is invoked.
    *
-   * @param containerName Name of the container
    * @param replicationFactor - Replication Factor
    * @return a Pipeline.
    */
-  public synchronized final Pipeline getPipeline(String containerName,
+  public synchronized final Pipeline getPipeline(
       ReplicationFactor replicationFactor, ReplicationType replicationType)
       throws IOException {
     /**
@@ -74,15 +73,17 @@ public abstract class PipelineManager {
     PipelineChannel pipelineChannel =
         allocatePipelineChannel(replicationFactor);
     if (pipelineChannel != null) {
-      LOG.debug("created new pipelineChannel:{} for container:{}",
-          pipelineChannel.getName(), containerName);
+      LOG.debug("created new pipelineChannel:{} for container with " +
+              "replicationType:{} replicationFactor:{}",
+          pipelineChannel.getName(), replicationType, replicationFactor);
       activePipelineChannels.add(pipelineChannel);
     } else {
       pipelineChannel =
           findOpenPipelineChannel(replicationType, replicationFactor);
       if (pipelineChannel != null) {
-        LOG.debug("re-used pipelineChannel:{} for container:{}",
-            pipelineChannel.getName(), containerName);
+        LOG.debug("re-used pipelineChannel:{} for container with " +
+                "replicationType:{} replicationFactor:{}",
+            pipelineChannel.getName(), replicationType, replicationFactor);
       }
     }
     if (pipelineChannel == null) {
@@ -90,7 +91,7 @@ public abstract class PipelineManager {
               "free nodes or operational pipelineChannel.");
       return null;
     } else {
-      return new Pipeline(containerName, pipelineChannel);
+      return new Pipeline(pipelineChannel);
     }
   }
 

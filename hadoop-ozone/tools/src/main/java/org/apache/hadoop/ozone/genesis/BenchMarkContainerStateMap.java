@@ -60,7 +60,7 @@ public class BenchMarkContainerStateMap {
     for (int x = 1; x < 1000; x++) {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
-            .setContainerName(pipeline.getContainerName()).setState(CLOSED)
+            .setState(CLOSED)
             .setPipeline(pipeline)
             // This is bytes allocated for blocks inside container, not the
             // container size
@@ -76,7 +76,7 @@ public class BenchMarkContainerStateMap {
     for (int y = currentCount; y < 2000; y++) {
       try {
         ContainerInfo containerInfo = new ContainerInfo.Builder()
-            .setContainerName(pipeline.getContainerName()).setState(OPEN)
+            .setState(OPEN)
             .setPipeline(pipeline)
             // This is bytes allocated for blocks inside container, not the
             // container size
@@ -91,7 +91,7 @@ public class BenchMarkContainerStateMap {
     }
     try {
       ContainerInfo containerInfo = new ContainerInfo.Builder()
-          .setContainerName(pipeline.getContainerName()).setState(OPEN)
+          .setState(OPEN)
           .setPipeline(pipeline)
           // This is bytes allocated for blocks inside container, not the
           // container size
@@ -142,7 +142,7 @@ public class BenchMarkContainerStateMap {
     for (; i.hasNext();) {
       pipelineChannel.addMember(i.next());
     }
-    return new Pipeline(containerName, pipelineChannel);
+    return new Pipeline(pipelineChannel);
   }
 
   @Benchmark
@@ -151,7 +151,7 @@ public class BenchMarkContainerStateMap {
     Pipeline pipeline = createSingleNodePipeline(UUID.randomUUID().toString());
     int cid = state.containerID.incrementAndGet();
     ContainerInfo containerInfo = new ContainerInfo.Builder()
-        .setContainerName(pipeline.getContainerName()).setState(CLOSED)
+        .setState(CLOSED)
         .setPipeline(pipeline)
         // This is bytes allocated for blocks inside container, not the
         // container size

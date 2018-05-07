@@ -27,9 +27,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -78,14 +81,15 @@ public class TestXceiverClientMetrics {
     OzoneConfiguration conf = new OzoneConfiguration();
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
-    String containerName = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline = storageContainerLocationClient
+    ContainerInfo container = storageContainerLocationClient
         .allocateContainer(clientManager.getType(), clientManager.getFactor(),
-            containerName, containerOwner);
-    XceiverClientSpi client = clientManager.acquireClient(pipeline);
+            containerOwner);
+    XceiverClientSpi client = clientManager.acquireClient(
+        container.getPipeline(), container.getContainerID());
 
     ContainerCommandRequestProto request = ContainerTestHelper
-        .getCreateContainerRequest(containerName, pipeline);
+        .getCreateContainerRequest(container.getContainerID(),
+            container.getPipeline());
     client.sendCommand(request);
 
     MetricsRecordBuilder containerMetrics = getMetrics(
@@ -109,11 +113,12 @@ public class TestXceiverClientMetrics {
         try {
           // use async interface for testing pending metrics
           for (int i = 0; i < numRequest; i++) {
-            String keyName = OzoneUtils.getRequestID();
+            BlockID blockID = ContainerTestHelper.
+                getTestBlockID(container.getContainerID());
             ContainerProtos.ContainerCommandRequestProto smallFileRequest;
 
             smallFileRequest = ContainerTestHelper.getWriteSmallFileRequest(
-                client.getPipeline(), containerName, keyName, 1024);
+                client.getPipeline(), blockID, 1024);
             CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
                 response = client.sendCommandAsync(smallFileRequest);
             computeResults.add(response);

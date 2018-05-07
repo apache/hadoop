@@ -22,6 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.mockito.Mockito.mock;
 
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -53,13 +54,13 @@ public class TestContainerMetrics {
   public void testContainerMetrics() throws Exception {
     XceiverServer server = null;
     XceiverClient client = null;
-    String containerName = OzoneUtils.getRequestID();
+    long containerID = ContainerTestHelper.getTestContainerID();
     String keyName = OzoneUtils.getRequestID();
 
     try {
       final int interval = 1;
       Pipeline pipeline = ContainerTestHelper
-          .createSingleNodePipeline(containerName);
+          .createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -72,12 +73,12 @@ public class TestContainerMetrics {
       ContainerManager containerManager = mock(ContainerManager.class);
       ChunkManager chunkManager = mock(ChunkManager.class);
       Mockito.doNothing().when(chunkManager).writeChunk(
-          Mockito.any(Pipeline.class), Mockito.anyString(),
+          Mockito.any(BlockID.class),
           Mockito.any(ChunkInfo.class), Mockito.any(byte[].class),
           Mockito.any(ContainerProtos.Stage.class));
 
       Mockito.doReturn(chunkManager).when(containerManager).getChunkManager();
-      Mockito.doReturn(true).when(containerManager).isOpen(containerName);
+      Mockito.doReturn(true).when(containerManager).isOpen(containerID);
 
       Dispatcher dispatcher = new Dispatcher(containerManager, conf);
       dispatcher.init();
@@ -90,16 +91,17 @@ public class TestContainerMetrics {
 
       // Create container
       ContainerCommandRequestProto request = ContainerTestHelper
-          .getCreateContainerRequest(containerName, pipeline);
+          .getCreateContainerRequest(containerID, pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
       // Write Chunk
+      BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
       ContainerProtos.ContainerCommandRequestProto writeChunkRequest =
           ContainerTestHelper.getWriteChunkRequest(
-              pipeline, containerName, keyName, 1024);
+              pipeline, blockID, 1024);
       response = client.sendCommand(writeChunkRequest);
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());

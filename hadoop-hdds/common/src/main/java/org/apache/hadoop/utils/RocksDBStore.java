@@ -367,6 +367,7 @@ public class RocksDBStore implements MetadataStore {
   public void close() throws IOException {
     if (statMBeanName != null) {
       MBeans.unregister(statMBeanName);
+      statMBeanName = null;
     }
     if (db != null) {
       db.close();

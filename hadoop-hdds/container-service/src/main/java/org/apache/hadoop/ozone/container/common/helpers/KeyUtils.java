@@ -63,11 +63,11 @@ public final class KeyUtils {
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
     try {
-      return cache.getDB(container.getContainerName(), container.getDBPath());
+      return cache.getDB(container.getContainerID(), container.getDBPath());
     } catch (IOException ex) {
       String message =
           String.format("Unable to open DB. DB Name: %s, Path: %s. ex: %s",
-          container.getContainerName(), container.getDBPath(), ex.getMessage());
+          container.getContainerID(), container.getDBPath(), ex.getMessage());
       throw new StorageContainerException(message, UNABLE_TO_READ_METADATA_DB);
     }
   }
@@ -83,7 +83,7 @@ public final class KeyUtils {
     Preconditions.checkNotNull(container);
     ContainerCache cache = ContainerCache.getInstance(conf);
     Preconditions.checkNotNull(cache);
-    cache.removeDB(container.getContainerName());
+    cache.removeDB(container.getContainerID());
   }
   /**
    * Shutdown all DB Handles.

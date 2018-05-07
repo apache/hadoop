@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.container.common;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.TestUtils;
@@ -362,7 +363,7 @@ public class TestEndPoint {
    * @return
    */
   ContainerReport getRandomContainerReport() {
-    return new ContainerReport(UUID.randomUUID().toString(),
+    return new ContainerReport(RandomUtils.nextLong(),
         DigestUtils.sha256Hex("Random"));
   }
 
@@ -436,7 +437,8 @@ public class TestEndPoint {
         reportsBuilder = StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.newBuilder();
     for (int x = 0; x < count; x++) {
-      ContainerReport report = new ContainerReport(UUID.randomUUID().toString(),
+      long containerID = RandomUtils.nextLong();
+      ContainerReport report = new ContainerReport(containerID,
             DigestUtils.sha256Hex("Simulated"));
       report.setKeyCount(1000);
       report.setSize(OzoneConsts.GB * 5);
@@ -445,7 +447,6 @@ public class TestEndPoint {
       report.setReadBytes(OzoneConsts.GB * 1);
       report.setWriteCount(50);
       report.setWriteBytes(OzoneConsts.GB * 2);
-      report.setContainerID(1);
 
       reportsBuilder.addReports(report.getProtoBufMessage());
     }

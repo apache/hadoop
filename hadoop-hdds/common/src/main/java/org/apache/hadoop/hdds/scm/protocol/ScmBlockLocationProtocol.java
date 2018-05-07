@@ -26,24 +26,12 @@ import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 /**
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
  * to read/write a block.
  */
 public interface ScmBlockLocationProtocol {
-
-  /**
-   * Find the set of nodes to read/write a block, as
-   * identified by the block key.  This method supports batch lookup by
-   * passing multiple keys.
-   *
-   * @param keys batch of block keys to find
-   * @return allocated blocks for each block key
-   * @throws IOException if there is any failure
-   */
-  Set<AllocatedBlock> getBlockLocations(Set<String> keys) throws IOException;
 
   /**
    * Asks SCM where a block should be allocated. SCM responds with the

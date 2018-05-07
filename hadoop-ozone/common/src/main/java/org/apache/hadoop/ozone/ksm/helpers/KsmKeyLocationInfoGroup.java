@@ -111,7 +111,7 @@ public class KsmKeyLocationInfoGroup {
     StringBuilder sb = new StringBuilder();
     sb.append("version:").append(version).append(" ");
     for (KsmKeyLocationInfo kli : locationList) {
-      sb.append(kli.getBlockID()).append(" || ");
+      sb.append(kli.getLocalID()).append(" || ");
     }
     return sb.toString();
   }

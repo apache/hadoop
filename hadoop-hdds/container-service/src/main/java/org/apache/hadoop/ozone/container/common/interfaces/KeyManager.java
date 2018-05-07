@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 
 import java.io.IOException;
@@ -32,11 +32,10 @@ public interface KeyManager {
   /**
    * Puts or overwrites a key.
    *
-   * @param pipeline - Pipeline.
    * @param data     - Key Data.
    * @throws IOException
    */
-  void putKey(Pipeline pipeline, KeyData data) throws IOException;
+  void putKey(KeyData data) throws IOException;
 
   /**
    * Gets an existing key.
@@ -50,23 +49,21 @@ public interface KeyManager {
   /**
    * Deletes an existing Key.
    *
-   * @param pipeline - Pipeline.
-   * @param keyName  Key Data.
+   * @param blockID - ID of the block.
    * @throws StorageContainerException
    */
-  void deleteKey(Pipeline pipeline, String keyName)
+  void deleteKey(BlockID blockID)
       throws IOException;
 
   /**
    * List keys in a container.
    *
-   * @param pipeline - pipeline.
-   * @param prefix   - Prefix in needed.
-   * @param startKey  - Key to start from, EMPTY_STRING to begin.
+   * @param containerID - ID of the container.
+   * @param startLocalID  - Key to start from, 0 to begin.
    * @param count    - Number of keys to return.
    * @return List of Keys that match the criteria.
    */
-  List<KeyData> listKey(Pipeline pipeline, String prefix, String startKey,
+  List<KeyData> listKey(long containerID, long startLocalID,
       int count) throws IOException;
 
   /**

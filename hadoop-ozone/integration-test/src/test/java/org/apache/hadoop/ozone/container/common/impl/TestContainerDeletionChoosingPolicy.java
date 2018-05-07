@@ -93,12 +93,10 @@ public class TestContainerDeletionChoosingPolicy {
 
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
-      String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, new Long(i), conf);
-      containerManager.createContainer(createSingleNodePipeline(containerName),
-          data);
+      ContainerData data = new ContainerData(new Long(i), conf);
+      containerManager.createContainer(data);
       Assert.assertTrue(
-          containerManager.getContainerMap().containsKey(containerName));
+          containerManager.getContainerMap().containsKey(data.getContainerID()));
     }
 
     List<ContainerData> result0 = containerManager
@@ -113,8 +111,8 @@ public class TestContainerDeletionChoosingPolicy {
 
     boolean hasShuffled = false;
     for (int i = 0; i < numContainers; i++) {
-      if (!result1.get(i).getContainerName()
-          .equals(result2.get(i).getContainerName())) {
+      if (result1.get(i).getContainerID()
+           != result2.get(i).getContainerID()) {
         hasShuffled = true;
         break;
       }
@@ -144,9 +142,8 @@ public class TestContainerDeletionChoosingPolicy {
     // create [numContainers + 1] containers
     for (int i = 0; i <= numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, new Long(i), conf);
-      containerManager.createContainer(createSingleNodePipeline(containerName),
-          data);
+      ContainerData data = new ContainerData(new Long(i), conf);
+      containerManager.createContainer(data);
       Assert.assertTrue(
           containerManager.getContainerMap().containsKey(containerName));
 
@@ -186,7 +183,7 @@ public class TestContainerDeletionChoosingPolicy {
     // verify the order of return list
     int lastCount = Integer.MAX_VALUE;
     for (ContainerData data : result1) {
-      int currentCount = name2Count.remove(data.getContainerName());
+      int currentCount = name2Count.remove(data.getContainerID());
       // previous count should not smaller than next one
       Assert.assertTrue(currentCount > 0 && currentCount <= lastCount);
       lastCount = currentCount;

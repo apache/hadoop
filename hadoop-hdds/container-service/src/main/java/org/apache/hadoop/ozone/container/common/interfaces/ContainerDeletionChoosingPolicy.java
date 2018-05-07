@@ -41,6 +41,6 @@ public interface ContainerDeletionChoosingPolicy {
    * @throws StorageContainerException
    */
   List<ContainerData> chooseContainerForBlockDeletion(int count,
-      Map<String, ContainerStatus> candidateContainers)
+      Map<Long, ContainerStatus> candidateContainers)
       throws StorageContainerException;
 }

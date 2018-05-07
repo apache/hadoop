@@ -19,11 +19,11 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -66,13 +66,12 @@ public class ChunkManagerImpl implements ChunkManager {
   /**
    * writes a given chunk.
    *
-   * @param pipeline - Name and the set of machines that make this container.
-   * @param keyName - Name of the Key.
+   * @param blockID - ID of the block.
    * @param info - ChunkInfo.
    * @throws StorageContainerException
    */
   @Override
-  public void writeChunk(Pipeline pipeline, String keyName, ChunkInfo info,
+  public void writeChunk(BlockID blockID, ChunkInfo info,
       byte[] data, ContainerProtos.Stage stage)
       throws StorageContainerException {
     // we don't want container manager to go away while we are writing chunks.
@@ -80,13 +79,13 @@ public class ChunkManagerImpl implements ChunkManager {
 
     // TODO : Take keyManager Write lock here.
     try {
-      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      String containerName = pipeline.getContainerName();
-      Preconditions.checkNotNull(containerName,
-          "Container name cannot be null");
+      Preconditions.checkNotNull(blockID, "Block ID cannot be null.");
+      long containerID = blockID.getContainerID();
+      Preconditions.checkState(containerID >= 0,
+          "Container ID cannot be negative");
       ContainerData container =
-          containerManager.readContainer(containerName);
-      File chunkFile = ChunkUtils.validateChunk(pipeline, container, info);
+          containerManager.readContainer(containerID);
+      File chunkFile = ChunkUtils.validateChunk(container, info);
       File tmpChunkFile = getTmpChunkFile(chunkFile, info);
 
       LOG.debug("writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file",
@@ -96,16 +95,16 @@ public class ChunkManagerImpl implements ChunkManager {
         ChunkUtils.writeData(tmpChunkFile, info, data);
         break;
       case COMMIT_DATA:
-        commitChunk(tmpChunkFile, chunkFile, containerName, info.getLen());
+        commitChunk(tmpChunkFile, chunkFile, containerID, info.getLen());
         break;
       case COMBINED:
         // directly write to the chunk file
         long oldSize = chunkFile.length();
         ChunkUtils.writeData(chunkFile, info, data);
         long newSize = chunkFile.length();
-        containerManager.incrBytesUsed(containerName, newSize - oldSize);
-        containerManager.incrWriteCount(containerName);
-        containerManager.incrWriteBytes(containerName, info.getLen());
+        containerManager.incrBytesUsed(containerID, newSize - oldSize);
+        containerManager.incrWriteCount(containerID);
+        containerManager.incrWriteBytes(containerID, info.getLen());
         break;
       default:
         throw new IOException("Can not identify write operation.");
@@ -136,22 +135,21 @@ public class ChunkManagerImpl implements ChunkManager {
 
   // Commit the chunk by renaming the temporary chunk file to chunk file
   private void commitChunk(File tmpChunkFile, File chunkFile,
-      String containerName, long chunkLen) throws IOException {
+      long containerID, long chunkLen) throws IOException {
     long sizeDiff = tmpChunkFile.length() - chunkFile.length();
     // It is safe to replace here as the earlier chunk if existing should be
     // caught as part of validateChunk
     Files.move(tmpChunkFile.toPath(), chunkFile.toPath(),
         StandardCopyOption.REPLACE_EXISTING);
-    containerManager.incrBytesUsed(containerName, sizeDiff);
-    containerManager.incrWriteCount(containerName);
-    containerManager.incrWriteBytes(containerName, chunkLen);
+    containerManager.incrBytesUsed(containerID, sizeDiff);
+    containerManager.incrWriteCount(containerID);
+    containerManager.incrWriteBytes(containerID, chunkLen);
   }
 
   /**
    * reads the data defined by a chunk.
    *
-   * @param pipeline - container pipeline.
-   * @param keyName - Name of the Key
+   * @param blockID - ID of the block.
    * @param info - ChunkInfo.
    * @return byte array
    * @throws StorageContainerException
@@ -159,20 +157,20 @@ public class ChunkManagerImpl implements ChunkManager {
    * TODO: Explore if we need to do that for ozone.
    */
   @Override
-  public byte[] readChunk(Pipeline pipeline, String keyName, ChunkInfo info)
+  public byte[] readChunk(BlockID blockID, ChunkInfo info)
       throws StorageContainerException {
     containerManager.readLock();
     try {
-      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      String containerName = pipeline.getContainerName();
-      Preconditions.checkNotNull(containerName,
-          "Container name cannot be null");
+      Preconditions.checkNotNull(blockID, "Block ID cannot be null.");
+      long containerID = blockID.getContainerID();
+      Preconditions.checkState(containerID >= 0,
+          "Container ID cannot be negative");
       ContainerData container =
-          containerManager.readContainer(containerName);
-      File chunkFile = ChunkUtils.getChunkFile(pipeline, container, info);
+          containerManager.readContainer(containerID);
+      File chunkFile = ChunkUtils.getChunkFile(container, info);
       ByteBuffer data =  ChunkUtils.readData(chunkFile, info);
-      containerManager.incrReadCount(containerName);
-      containerManager.incrReadBytes(containerName, chunkFile.length());
+      containerManager.incrReadCount(containerID);
+      containerManager.incrReadBytes(containerID, chunkFile.length());
       return data.array();
     } catch (ExecutionException | NoSuchAlgorithmException e) {
       LOG.error("read data failed. error: {}", e);
@@ -191,25 +189,25 @@ public class ChunkManagerImpl implements ChunkManager {
   /**
    * Deletes a given chunk.
    *
-   * @param pipeline - Pipeline.
-   * @param keyName - Key Name
+   * @param blockID - ID of the block.
    * @param info - Chunk Info
    * @throws StorageContainerException
    */
   @Override
-  public void deleteChunk(Pipeline pipeline, String keyName, ChunkInfo info)
+  public void deleteChunk(BlockID blockID, ChunkInfo info)
       throws StorageContainerException {
     containerManager.readLock();
     try {
-      Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      String containerName = pipeline.getContainerName();
-      Preconditions.checkNotNull(containerName,
-          "Container name cannot be null");
-      File chunkFile = ChunkUtils.getChunkFile(pipeline, containerManager
-          .readContainer(containerName), info);
+      Preconditions.checkNotNull(blockID, "Block ID cannot be null.");
+      long containerID = blockID.getContainerID();
+      Preconditions.checkState(containerID >= 0,
+          "Container ID cannot be negative");
+
+      File chunkFile = ChunkUtils.getChunkFile(containerManager
+          .readContainer(containerID), info);
       if ((info.getOffset() == 0) && (info.getLen() == chunkFile.length())) {
         FileUtil.fullyDelete(chunkFile);
-        containerManager.decrBytesUsed(containerName, chunkFile.length());
+        containerManager.decrBytesUsed(containerID, chunkFile.length());
       } else {
         LOG.error("Not Supported Operation. Trying to delete a " +
             "chunk that is in shared file. chunk info : " + info.toString());

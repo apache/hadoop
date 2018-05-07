@@ -72,21 +72,21 @@ public class BenchMarkRocksDbStore {
         .toFile();
     opts.setCreateIfMissing(true);
     opts.setWriteBufferSize(
-        (long) StorageUnit.MB.toBytes(Long.valueOf(writeBufferSize)));
-    opts.setMaxWriteBufferNumber(Integer.valueOf(maxWriteBufferNumber));
-    opts.setMaxBackgroundFlushes(Integer.valueOf(maxBackgroundFlushes));
+        (long) StorageUnit.MB.toBytes(Long.parseLong(writeBufferSize)));
+    opts.setMaxWriteBufferNumber(Integer.parseInt(maxWriteBufferNumber));
+    opts.setMaxBackgroundFlushes(Integer.parseInt(maxBackgroundFlushes));
     BlockBasedTableConfig tableConfig = new BlockBasedTableConfig();
     tableConfig.setBlockSize(
-        (long) StorageUnit.KB.toBytes(Long.valueOf(blockSize)));
-    opts.setMaxOpenFiles(Integer.valueOf(maxOpenFiles));
+        (long) StorageUnit.KB.toBytes(Long.parseLong(blockSize)));
+    opts.setMaxOpenFiles(Integer.parseInt(maxOpenFiles));
     opts.setMaxBytesForLevelBase(
-        (long) StorageUnit.MB.toBytes(Long.valueOf(maxBytesForLevelBase)));
+        (long) StorageUnit.MB.toBytes(Long.parseLong(maxBytesForLevelBase)));
     opts.setCompactionStyle(CompactionStyle.UNIVERSAL);
     opts.setLevel0FileNumCompactionTrigger(10);
     opts.setLevel0SlowdownWritesTrigger(20);
     opts.setLevel0StopWritesTrigger(40);
     opts.setTargetFileSizeBase(
-        (long) StorageUnit.MB.toBytes(Long.valueOf(maxBytesForLevelBase)) / 10);
+        (long) StorageUnit.MB.toBytes(Long.parseLong(maxBytesForLevelBase)) / 10);
     opts.setMaxBackgroundCompactions(8);
     opts.setUseFsync(false);
     opts.setBytesPerSync(8388608);

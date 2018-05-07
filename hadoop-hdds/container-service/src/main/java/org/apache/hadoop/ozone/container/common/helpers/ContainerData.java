@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ContainerData {
 
-  private final String containerName;
   private final Map<String, String> metadata;
   private String dbPath;  // Path to Level DB Store.
   // Path to Physical file system where container and checksum are stored.
@@ -48,18 +47,18 @@ public class ContainerData {
   private String hash;
   private AtomicLong bytesUsed;
   private long maxSize;
-  private Long containerID;
+  private long containerID;
   private HddsProtos.LifeCycleState state;
 
   /**
    * Constructs a  ContainerData Object.
    *
-   * @param containerName - Name
+   * @param containerID - ID
+   * @param conf - Configuration
    */
-  public ContainerData(String containerName, Long containerID,
+  public ContainerData(long containerID,
       Configuration conf) {
     this.metadata = new TreeMap<>();
-    this.containerName = containerName;
     this.maxSize = conf.getLong(ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY,
         ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT) * OzoneConsts.GB;
     this.bytesUsed =  new AtomicLong(0L);
@@ -76,7 +75,7 @@ public class ContainerData {
   public static ContainerData getFromProtBuf(
       ContainerProtos.ContainerData protoData, Configuration conf)
       throws IOException {
-    ContainerData data = new ContainerData(protoData.getName(),
+    ContainerData data = new ContainerData(
         protoData.getContainerID(), conf);
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
@@ -117,7 +116,6 @@ public class ContainerData {
   public ContainerProtos.ContainerData getProtoBufMessage() {
     ContainerProtos.ContainerData.Builder builder = ContainerProtos
         .ContainerData.newBuilder();
-    builder.setName(this.getContainerName());
     builder.setContainerID(this.getContainerID());
 
     if (this.getDBPath() != null) {
@@ -154,15 +152,6 @@ public class ContainerData {
     }
 
     return builder.build();
-  }
-
-  /**
-   * Returns the name of the container.
-   *
-   * @return - name
-   */
-  public String getContainerName() {
-    return containerName;
   }
 
   /**
@@ -231,9 +220,11 @@ public class ContainerData {
    *
    * @return String Name.
    */
-  public String getName() {
-    return getContainerName();
-  }
+    // TODO: check the ContainerCache class to see if we are using the ContainerID instead.
+   /*
+   public String getName() {
+    return getContainerID();
+  }*/
 
   /**
    * Get container file path.
@@ -255,7 +246,7 @@ public class ContainerData {
    * Get container ID.
    * @return - container ID.
    */
-  public synchronized Long getContainerID() {
+  public synchronized long getContainerID() {
     return containerID;
   }
 
@@ -284,7 +275,7 @@ public class ContainerData {
 
     // Some thing brain dead for now. name + Time stamp of when we get the close
     // container message.
-    setHash(DigestUtils.sha256Hex(this.getContainerName() +
+    setHash(DigestUtils.sha256Hex(this.getContainerID() +
         Long.toString(Time.monotonicNow())));
   }
 

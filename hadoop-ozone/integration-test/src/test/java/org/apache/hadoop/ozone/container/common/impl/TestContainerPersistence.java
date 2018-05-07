@@ -19,8 +19,9 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -36,6 +38,7 @@ import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.MetadataStore;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -177,19 +180,21 @@ public class TestContainerPersistence {
     }
   }
 
+  private long getTestContainerID() {
+    return ContainerTestHelper.getTestContainerID();
+  }
+
   @Test
   public void testCreateContainer() throws Exception {
-
-    String containerName = OzoneUtils.getRequestID();
-    ContainerData data = new ContainerData(containerName, containerID++, conf);
+    long testContainerID = getTestContainerID();
+    ContainerData data = new ContainerData(testContainerID, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName),
-        data);
+    containerManager.createContainer(data);
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName));
+        .containsKey(testContainerID));
     ContainerStatus status = containerManager
-        .getContainerMap().get(containerName);
+        .getContainerMap().get(testContainerID);
 
     Assert.assertNotNull(status.getContainer());
     Assert.assertNotNull(status.getContainer().getContainerPath());
@@ -215,16 +220,14 @@ public class TestContainerPersistence {
 
   @Test
   public void testCreateDuplicateContainer() throws Exception {
-    String containerName = OzoneUtils.getRequestID();
+    long testContainerID = getTestContainerID();
 
-    ContainerData data = new ContainerData(containerName, containerID++, conf);
+    ContainerData data = new ContainerData(testContainerID, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName),
-        data);
+    containerManager.createContainer(data);
     try {
-      containerManager.createContainer(createSingleNodePipeline(
-          containerName), data);
+      containerManager.createContainer(data);
       fail("Expected Exception not thrown.");
     } catch (IOException ex) {
       Assert.assertNotNull(ex);
@@ -233,85 +236,76 @@ public class TestContainerPersistence {
 
   @Test
   public void testDeleteContainer() throws Exception {
-    String containerName1 = OzoneUtils.getRequestID();
-    String containerName2 = OzoneUtils.getRequestID();
+    long testContainerID1 = getTestContainerID();
+    Thread.sleep(100);
+    long testContainerID2 = getTestContainerID();
 
-
-    ContainerData data = new ContainerData(containerName1, containerID++, conf);
+    ContainerData data = new ContainerData(testContainerID1, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName1),
-        data);
-    containerManager.closeContainer(containerName1);
+    containerManager.createContainer(data);
+    containerManager.closeContainer(testContainerID1);
 
-    data = new ContainerData(containerName2, containerID++, conf);
+    data = new ContainerData(testContainerID2, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName2),
-        data);
-    containerManager.closeContainer(containerName2);
+    containerManager.createContainer(data);
+    containerManager.closeContainer(testContainerID2);
 
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName1));
+        .containsKey(testContainerID1));
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName2));
+        .containsKey(testContainerID2));
 
-    containerManager.deleteContainer(createSingleNodePipeline(containerName1),
-        containerName1, false);
+    containerManager.deleteContainer(testContainerID1, false);
     Assert.assertFalse(containerManager.getContainerMap()
-        .containsKey(containerName1));
+        .containsKey(testContainerID1));
 
     // Let us make sure that we are able to re-use a container name after
     // delete.
 
-    data = new ContainerData(containerName1, containerID++, conf);
+    data = new ContainerData(testContainerID1, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(createSingleNodePipeline(containerName1),
-        data);
-    containerManager.closeContainer(containerName1);
+    containerManager.createContainer(data);
+    containerManager.closeContainer(testContainerID1);
 
     // Assert we still have both containers.
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName1));
+        .containsKey(testContainerID1));
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName2));
+        .containsKey(testContainerID2));
 
     // Add some key to a container and then delete.
     // Delete should fail because the container is no longer empty.
-    KeyData someKey = new KeyData(containerName1, "someKey");
+    BlockID blockID1 = ContainerTestHelper.getTestBlockID(testContainerID1);
+    KeyData someKey = new KeyData(blockID1);
     someKey.setChunks(new LinkedList<ContainerProtos.ChunkInfo>());
-    keyManager.putKey(
-        createSingleNodePipeline(containerName1),
-        someKey);
+    keyManager.putKey(someKey);
 
     exception.expect(StorageContainerException.class);
     exception.expectMessage(
         "Container cannot be deleted because it is not empty.");
-    containerManager.deleteContainer(
-        createSingleNodePipeline(containerName1),
-        containerName1, false);
+    containerManager.deleteContainer(testContainerID1, false);
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName1));
+        .containsKey(testContainerID1));
   }
 
   @Test
   public void testGetContainerReports() throws Exception{
     final int count = 10;
-    List<String> containerNames = new ArrayList<String>();
+    List<Long> containerIDs = new ArrayList<>();
 
     for (int i = 0; i < count; i++) {
-      String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, containerID++,
-          conf);
-      containerManager.createContainer(createSingleNodePipeline(containerName),
-          data);
+      long testContainerID = getTestContainerID();
+      ContainerData data = new ContainerData(testContainerID, conf);
+      containerManager.createContainer(data);
 
       // Close a bunch of containers.
       // Put closed container names to a list.
       if (i%3 == 0) {
-        containerManager.closeContainer(containerName);
-        containerNames.add(containerName);
+        containerManager.closeContainer(testContainerID);
+        containerIDs.add(testContainerID);
       }
     }
 
@@ -319,10 +313,10 @@ public class TestContainerPersistence {
     List<ContainerData> reports = containerManager.getContainerReports();
     Assert.assertEquals(4, reports.size());
     for(ContainerData report : reports) {
-      String actualName = report.getContainerName();
-      Assert.assertTrue(containerNames.remove(actualName));
+      long actualContainerID = report.getContainerID();
+      Assert.assertTrue(containerIDs.remove(actualContainerID));
     }
-    Assert.assertTrue(containerNames.isEmpty());
+    Assert.assertTrue(containerIDs.isEmpty());
   }
 
   /**
@@ -336,31 +330,29 @@ public class TestContainerPersistence {
     final int count = 50;
     final int step = 5;
 
-    Map<String, ContainerData> testMap = new HashMap<>();
+    Map<Long, ContainerData> testMap = new HashMap<>();
     for (int x = 0; x < count; x++) {
-      String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName, containerID++,
-          conf);
+      long testContainerID = getTestContainerID();
+      ContainerData data = new ContainerData(testContainerID, conf);
       data.addMetadata("VOLUME", "shire");
       data.addMetadata("owner)", "bilbo");
-      containerManager.createContainer(createSingleNodePipeline(containerName),
-          data);
-      testMap.put(containerName, data);
+      containerManager.createContainer(data);
+      testMap.put(testContainerID, data);
     }
 
     int counter = 0;
-    String prevKey = "";
+    long prevKey = 0;
     List<ContainerData> results = new LinkedList<>();
     while (counter < count) {
-      containerManager.listContainer(null, step, prevKey, results);
+      containerManager.listContainer(prevKey, step, results);
       for (int y = 0; y < results.size(); y++) {
-        testMap.remove(results.get(y).getContainerName());
+        testMap.remove(results.get(y).getContainerID());
       }
       counter += step;
-      String nextKey = results.get(results.size() - 1).getContainerName();
+      long nextKey = results.get(results.size() - 1).getContainerID();
 
       //Assert that container is returning results in a sorted fashion.
-      Assert.assertTrue(prevKey.compareTo(nextKey) < 0);
+      Assert.assertTrue(prevKey < nextKey);
       prevKey = nextKey;
       results.clear();
     }
@@ -369,23 +361,22 @@ public class TestContainerPersistence {
     Assert.assertTrue(testMap.isEmpty());
   }
 
-  private ChunkInfo writeChunkHelper(String containerName, String keyName,
+  private ChunkInfo writeChunkHelper(BlockID blockID,
       Pipeline pipeline) throws IOException,
       NoSuchAlgorithmException {
     final int datalen = 1024;
-    Pipeline newPipeline =
-        new Pipeline(containerName, pipeline.getPipelineChannel());
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    long testContainerID = blockID.getContainerID();
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner", "bilbo");
     if(!containerManager.getContainerMap()
-        .containsKey(containerName)) {
-      containerManager.createContainer(newPipeline, cData);
+        .containsKey(testContainerID)) {
+      containerManager.createContainer(cData);
     }
-    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(newPipeline, keyName, info, data, COMBINED);
+    chunkManager.writeChunk(blockID, info, data, COMBINED);
     return info;
 
   }
@@ -399,10 +390,10 @@ public class TestContainerPersistence {
   @Test
   public void testWriteChunk() throws IOException,
       NoSuchAlgorithmException {
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-    writeChunkHelper(containerName, keyName, pipeline);
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(getTestContainerID());
+    Pipeline pipeline = createSingleNodePipeline();
+    writeChunkHelper(blockID, pipeline);
   }
 
   /**
@@ -418,29 +409,30 @@ public class TestContainerPersistence {
     final int datalen = 1024;
     final int chunkCount = 1024;
 
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
+    long testContainerID = getTestContainerID();
     Map<String, ChunkInfo> fileHashMap = new HashMap<>();
 
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
+    containerManager.createContainer(cData);
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
+
     for (int x = 0; x < chunkCount; x++) {
-      ChunkInfo info = getChunk(keyName, x, 0, datalen);
+      ChunkInfo info = getChunk(blockID.getLocalID(), x, 0, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
-      String fileName = String.format("%s.data.%d", keyName, x);
+      chunkManager.writeChunk(blockID, info, data, COMBINED);
+      String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
       fileHashMap.put(fileName, info);
     }
 
-    ContainerData cNewData = containerManager.readContainer(containerName);
+    ContainerData cNewData = containerManager.readContainer(testContainerID);
     Assert.assertNotNull(cNewData);
     Path dataDir = ContainerUtils.getDataDirectory(cNewData);
 
-    String globFormat = String.format("%s.data.*", keyName);
+    String globFormat = String.format("%s.data.*", blockID.getLocalID());
     MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
     // Read chunk via file system and verify.
@@ -460,9 +452,9 @@ public class TestContainerPersistence {
       // Read chunk via ReadChunk call.
       sha.reset();
       for (int x = 0; x < chunkCount; x++) {
-        String fileName = String.format("%s.data.%d", keyName, x);
+        String fileName = String.format("%s.data.%d", blockID.getLocalID(), x);
         ChunkInfo info = fileHashMap.get(fileName);
-        byte[] data = chunkManager.readChunk(pipeline, keyName, info);
+        byte[] data = chunkManager.readChunk(blockID, info);
         sha.update(data);
         Assert.assertEquals(Hex.encodeHexString(sha.digest()),
             info.getChecksum());
@@ -482,24 +474,24 @@ public class TestContainerPersistence {
     final int start = datalen/4;
     final int length = datalen/2;
 
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
 
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
-    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    containerManager.createContainer(cData);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+    chunkManager.writeChunk(blockID, info, data, COMBINED);
 
-    byte[] readData = chunkManager.readChunk(pipeline, keyName, info);
+    byte[] readData = chunkManager.readChunk(blockID, info);
     assertTrue(Arrays.equals(data, readData));
 
-    ChunkInfo info2 = getChunk(keyName, 0, start, length);
-    byte[] readData2 = chunkManager.readChunk(pipeline, keyName, info2);
+    ChunkInfo info2 = getChunk(blockID.getLocalID(), 0, start, length);
+    byte[] readData2 = chunkManager.readChunk(blockID, info2);
     assertEquals(length, readData2.length);
     assertTrue(Arrays.equals(
         Arrays.copyOfRange(data, start, start + length), readData2));
@@ -516,20 +508,21 @@ public class TestContainerPersistence {
   public void testOverWrite() throws IOException,
       NoSuchAlgorithmException {
     final int datalen = 1024;
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
 
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
+
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
-    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    containerManager.createContainer(cData);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+    chunkManager.writeChunk(blockID, info, data, COMBINED);
     try {
-      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+      chunkManager.writeChunk(blockID, info, data, COMBINED);
     } catch (IOException ex) {
       Assert.assertTrue(ex.getCause().getMessage().contains(
           "Rejecting write chunk request. OverWrite flag required"));
@@ -537,11 +530,11 @@ public class TestContainerPersistence {
 
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
-    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
-    long bytesUsed = containerManager.getBytesUsed(containerName);
+    chunkManager.writeChunk(blockID, info, data, COMBINED);
+    long bytesUsed = containerManager.getBytesUsed(testContainerID);
     Assert.assertEquals(datalen, bytesUsed);
 
-    long bytesWrite = containerManager.getWriteBytes(containerName);
+    long bytesWrite = containerManager.getWriteBytes(testContainerID);
     Assert.assertEquals(datalen * 2, bytesWrite);
   }
 
@@ -558,28 +551,28 @@ public class TestContainerPersistence {
     final int datalen = 1024;
     final int chunkCount = 1024;
 
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
 
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
+    containerManager.createContainer(cData);
     MessageDigest oldSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     for (int x = 0; x < chunkCount; x++) {
       // we are writing to the same chunk file but at different offsets.
       long offset = x * datalen;
-      ChunkInfo info = getChunk(keyName, 0, offset, datalen);
+      ChunkInfo info = getChunk(blockID.getLocalID(), 0, offset, datalen);
       byte[] data = getData(datalen);
       oldSha.update(data);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+      chunkManager.writeChunk(blockID, info, data, COMBINED);
     }
 
     // Request to read the whole data in a single go.
-    ChunkInfo largeChunk = getChunk(keyName, 0, 0, datalen * chunkCount);
-    byte[] newdata = chunkManager.readChunk(pipeline, keyName, largeChunk);
+    ChunkInfo largeChunk = getChunk(blockID.getLocalID(), 0, 0, datalen * chunkCount);
+    byte[] newdata = chunkManager.readChunk(blockID, largeChunk);
     MessageDigest newSha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
     newSha.update(newdata);
     Assert.assertEquals(Hex.encodeHexString(oldSha.digest()),
@@ -596,22 +589,22 @@ public class TestContainerPersistence {
   public void testDeleteChunk() throws IOException,
       NoSuchAlgorithmException {
     final int datalen = 1024;
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
 
-    ContainerData cData = new ContainerData(containerName, containerID++, conf);
+    ContainerData cData = new ContainerData(testContainerID, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
-    containerManager.createContainer(pipeline, cData);
-    ChunkInfo info = getChunk(keyName, 0, 0, datalen);
+    containerManager.createContainer(cData);
+    ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
-    chunkManager.deleteChunk(pipeline, keyName, info);
+    chunkManager.writeChunk(blockID, info, data, COMBINED);
+    chunkManager.deleteChunk(blockID, info);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
-    chunkManager.readChunk(pipeline, keyName, info);
+    chunkManager.readChunk(blockID, info);
   }
 
   /**
@@ -622,15 +615,16 @@ public class TestContainerPersistence {
    */
   @Test
   public void testPutKey() throws IOException, NoSuchAlgorithmException {
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
-    KeyData keyData = new KeyData(containerName, keyName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
+    Pipeline pipeline = createSingleNodePipeline();
+    ChunkInfo info = writeChunkHelper(blockID, pipeline);
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     keyData.setChunks(chunkList);
-    keyManager.putKey(pipeline, keyData);
+    keyManager.putKey(keyData);
     KeyData readKeyData = keyManager.getKey(keyData);
     ChunkInfo readChunk =
         ChunkInfo.getFromProtoBuf(readKeyData.getChunks().get(0));
@@ -649,39 +643,40 @@ public class TestContainerPersistence {
     final int chunkCount = 2;
     final int datalen = 1024;
     long totalSize = 0L;
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
+    Pipeline pipeline = createSingleNodePipeline();
     List<ChunkInfo> chunkList = new LinkedList<>();
-    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    ChunkInfo info = writeChunkHelper(blockID, pipeline);
     totalSize += datalen;
     chunkList.add(info);
     for (int x = 1; x < chunkCount; x++) {
       // with holes in the front (before x * datalen)
-      info = getChunk(keyName, x, x * datalen, datalen);
+      info = getChunk(blockID.getLocalID(), x, x * datalen, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
+      chunkManager.writeChunk(blockID, info, data, COMBINED);
       totalSize += datalen * (x + 1);
       chunkList.add(info);
     }
 
-    long bytesUsed = containerManager.getBytesUsed(containerName);
+    long bytesUsed = containerManager.getBytesUsed(testContainerID);
     Assert.assertEquals(totalSize, bytesUsed);
-    long writeBytes = containerManager.getWriteBytes(containerName);
+    long writeBytes = containerManager.getWriteBytes(testContainerID);
     Assert.assertEquals(chunkCount * datalen, writeBytes);
-    long readCount = containerManager.getReadCount(containerName);
+    long readCount = containerManager.getReadCount(testContainerID);
     Assert.assertEquals(0, readCount);
-    long writeCount = containerManager.getWriteCount(containerName);
+    long writeCount = containerManager.getWriteCount(testContainerID);
     Assert.assertEquals(chunkCount, writeCount);
 
-    KeyData keyData = new KeyData(containerName, keyName);
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkProtoList = new LinkedList<>();
     for (ChunkInfo i : chunkList) {
       chunkProtoList.add(i.getProtoBufMessage());
     }
     keyData.setChunks(chunkProtoList);
-    keyManager.putKey(pipeline, keyData);
+    keyManager.putKey(keyData);
     KeyData readKeyData = keyManager.getKey(keyData);
     ChunkInfo lastChunk = chunkList.get(chunkList.size() - 1);
     ChunkInfo readChunk =
@@ -698,16 +693,16 @@ public class TestContainerPersistence {
    */
   @Test
   public void testDeleteKey() throws IOException, NoSuchAlgorithmException {
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
-    KeyData keyData = new KeyData(containerName, keyName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.getTestBlockID(testContainerID);
+    Pipeline pipeline = createSingleNodePipeline();
+    ChunkInfo info = writeChunkHelper(blockID, pipeline);
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     keyData.setChunks(chunkList);
-    keyManager.putKey(pipeline, keyData);
-    keyManager.deleteKey(pipeline, keyName);
+    keyManager.putKey(keyData);
+    keyManager.deleteKey(blockID);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the key.");
     keyManager.getKey(keyData);
@@ -722,19 +717,20 @@ public class TestContainerPersistence {
   @Test
   public void testDeleteKeyTwice() throws IOException,
       NoSuchAlgorithmException {
-    String containerName = OzoneUtils.getRequestID();
-    String keyName = OzoneUtils.getRequestID();
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
-    KeyData keyData = new KeyData(containerName, keyName);
+    long testContainerID = getTestContainerID();
+    BlockID blockID = ContainerTestHelper.
+        getTestBlockID(testContainerID);
+    Pipeline pipeline = createSingleNodePipeline();
+    ChunkInfo info = writeChunkHelper(blockID, pipeline);
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     keyData.setChunks(chunkList);
-    keyManager.putKey(pipeline, keyData);
-    keyManager.deleteKey(pipeline, keyName);
+    keyManager.putKey(keyData);
+    keyManager.deleteKey(blockID);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the key.");
-    keyManager.deleteKey(pipeline, keyName);
+    keyManager.deleteKey(blockID);
   }
 
   /**
@@ -745,35 +741,30 @@ public class TestContainerPersistence {
    */
   @Test
   public void testUpdateContainer() throws IOException {
-    String containerName = OzoneUtils.getRequestID();
-    ContainerData data = new ContainerData(containerName, containerID++, conf);
+    long testContainerID = ContainerTestHelper.
+        getTestContainerID();
+    ContainerData data = new ContainerData(testContainerID, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner", "bilbo");
 
-    containerManager.createContainer(
-        createSingleNodePipeline(containerName),
-        data);
+    containerManager.createContainer(data);
 
     File orgContainerFile = containerManager.getContainerFile(data);
     Assert.assertTrue(orgContainerFile.exists());
 
-    ContainerData newData = new ContainerData(containerName, containerID++,
-        conf);
+    ContainerData newData = new ContainerData(testContainerID, conf);
     newData.addMetadata("VOLUME", "shire_new");
     newData.addMetadata("owner", "bilbo_new");
 
-    containerManager.updateContainer(
-        createSingleNodePipeline(containerName),
-        containerName,
-        newData, false);
+    containerManager.updateContainer(testContainerID, newData, false);
 
     Assert.assertEquals(1, containerManager.getContainerMap().size());
     Assert.assertTrue(containerManager.getContainerMap()
-        .containsKey(containerName));
+        .containsKey(testContainerID));
 
     // Verify in-memory map
     ContainerData actualNewData = containerManager.getContainerMap()
-        .get(containerName).getContainer();
+        .get(testContainerID).getContainer();
     Assert.assertEquals("shire_new",
         actualNewData.getAllMetadata().get("VOLUME"));
     Assert.assertEquals("bilbo_new",
@@ -802,23 +793,21 @@ public class TestContainerPersistence {
     // Delete container file then try to update without force update flag.
     FileUtil.fullyDelete(newContainerFile);
     try {
-      containerManager.updateContainer(createSingleNodePipeline(containerName),
-          containerName, newData, false);
+      containerManager.updateContainer(testContainerID, newData, false);
     } catch (StorageContainerException ex) {
       Assert.assertEquals("Container file not exists or "
-          + "corrupted. Name: " + containerName, ex.getMessage());
+          + "corrupted. ID: " + testContainerID, ex.getMessage());
     }
 
     // Update with force flag, it should be success.
-    newData = new ContainerData(containerName, containerID++, conf);
+    newData = new ContainerData(testContainerID, conf);
     newData.addMetadata("VOLUME", "shire_new_1");
     newData.addMetadata("owner", "bilbo_new_1");
-    containerManager.updateContainer(createSingleNodePipeline(containerName),
-        containerName, newData, true);
+    containerManager.updateContainer(testContainerID, newData, true);
 
     // Verify in-memory map
     actualNewData = containerManager.getContainerMap()
-        .get(containerName).getContainer();
+        .get(testContainerID).getContainer();
     Assert.assertEquals("shire_new_1",
         actualNewData.getAllMetadata().get("VOLUME"));
     Assert.assertEquals("bilbo_new_1",
@@ -827,16 +816,14 @@ public class TestContainerPersistence {
     // Update a non-existing container
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Container doesn't exist.");
-    containerManager.updateContainer(
-        createSingleNodePipeline("non_exist_container"),
-        "non_exist_container", newData, false);
+    containerManager.updateContainer(RandomUtils.nextLong(),
+        newData, false);
   }
 
-  private KeyData writeKeyHelper(Pipeline pipeline,
-      String containerName, String keyName)
+  private KeyData writeKeyHelper(Pipeline pipeline, BlockID blockID)
       throws IOException, NoSuchAlgorithmException {
-    ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
-    KeyData keyData = new KeyData(containerName, keyName);
+    ChunkInfo info = writeChunkHelper(blockID, pipeline);
+    KeyData keyData = new KeyData(blockID);
     List<ContainerProtos.ChunkInfo> chunkList = new LinkedList<>();
     chunkList.add(info.getProtoBufMessage());
     keyData.setChunks(chunkList);
@@ -845,61 +832,43 @@ public class TestContainerPersistence {
 
   @Test
   public void testListKey() throws Exception {
-    String containerName = "c0" + RandomStringUtils.randomAlphanumeric(10);
-    Pipeline pipeline = createSingleNodePipeline(containerName);
-    List<String> expectedKeys = new ArrayList<String>();
+
+    long testContainerID = getTestContainerID();
+    Pipeline pipeline = createSingleNodePipeline();
+    List<BlockID> expectedKeys = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
-      String keyName = "k" + i + "-" + UUID.randomUUID();
-      expectedKeys.add(keyName);
-      KeyData kd = writeKeyHelper(pipeline, containerName, keyName);
-      keyManager.putKey(pipeline, kd);
+      BlockID blockID = new BlockID(
+          testContainerID, i);
+      expectedKeys.add(blockID);
+      KeyData kd = writeKeyHelper(pipeline, blockID);
+      keyManager.putKey(kd);
     }
 
     // List all keys
-    List<KeyData> result = keyManager.listKey(pipeline, null, null, 100);
+    List<KeyData> result = keyManager.listKey(testContainerID, 0, 100);
     Assert.assertEquals(10, result.size());
 
     int index = 0;
     for (int i = index; i < result.size(); i++) {
       KeyData data = result.get(i);
-      Assert.assertEquals(containerName, data.getContainerName());
-      Assert.assertEquals(expectedKeys.get(i), data.getKeyName());
+      Assert.assertEquals(testContainerID, data.getContainerID());
+      Assert.assertEquals(expectedKeys.get(i).getLocalID(), data.getLocalID());
       index++;
     }
 
-    // List key with prefix
-    result = keyManager.listKey(pipeline, "k1", null, 100);
-    // There is only one key with prefix k1
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals(expectedKeys.get(1), result.get(0).getKeyName());
-
-
     // List key with startKey filter
-    String k6 = expectedKeys.get(6);
-    result = keyManager.listKey(pipeline, null, k6, 100);
+    long k6 = expectedKeys.get(6).getLocalID();
+    result = keyManager.listKey(testContainerID, k6, 100);
 
     Assert.assertEquals(4, result.size());
     for (int i = 6; i < 10; i++) {
-      Assert.assertEquals(expectedKeys.get(i),
-          result.get(i - 6).getKeyName());
-    }
-
-    // List key with both prefix and startKey filter
-    String k7 = expectedKeys.get(7);
-    result = keyManager.listKey(pipeline, "k3", k7, 100);
-    // k3 is after k7, enhance we get an empty result
-    Assert.assertTrue(result.isEmpty());
-
-    // Set a pretty small cap for the key count
-    result = keyManager.listKey(pipeline, null, null, 3);
-    Assert.assertEquals(3, result.size());
-    for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(expectedKeys.get(i), result.get(i).getKeyName());
+      Assert.assertEquals(expectedKeys.get(i).getLocalID(),
+          result.get(i - 6).getLocalID());
     }
 
     // Count must be >0
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Count must be a positive number.");
-    keyManager.listKey(pipeline, null, null, -1);
+    keyManager.listKey(testContainerID, 0, -1);
   }
 }

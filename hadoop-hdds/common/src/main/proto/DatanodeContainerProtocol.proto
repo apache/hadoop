@@ -197,17 +197,15 @@ message ContainerCommandResponseProto {
 }
 
 message ContainerData {
-  required string name = 1;
+  required int64 containerID = 1;
   repeated KeyValue metadata = 2;
   optional string dbPath = 3;
   optional string containerPath = 4;
-  optional string hash = 6;
-  optional int64 bytesUsed = 7;
-  optional int64 size = 8;
-  optional int64 keyCount = 9;
-  //TODO: change required after we switch container ID from string to long
-  optional int64 containerID = 10;
-  optional LifeCycleState state = 11 [default = OPEN];
+  optional string hash = 5;
+  optional int64 bytesUsed = 6;
+  optional int64 size = 7;
+  optional int64 keyCount = 8;
+  optional LifeCycleState state = 9 [default = OPEN];
 }
 
 message ContainerMeta {
@@ -226,7 +224,7 @@ message  CreateContainerResponseProto {
 
 message  ReadContainerRequestProto {
   required Pipeline pipeline = 1;
-  required string name = 2;
+  required int64 containerID = 2;
 }
 
 message  ReadContainerResponseProto {
@@ -243,19 +241,16 @@ message  UpdateContainerResponseProto {
 }
 
 message  DeleteContainerRequestProto {
-  required Pipeline pipeline = 1;
-  required string name = 2;
-  optional bool forceDelete = 3 [default = false];
+  required int64 containerID = 1;
+  optional bool forceDelete = 2 [default = false];
 }
 
 message  DeleteContainerResponseProto {
 }
 
 message  ListContainerRequestProto {
-  required Pipeline pipeline = 1;
-  optional string prefix = 2;
-  required uint32 count = 3; // Max Results to return
-  optional string prevKey = 4;  // if this is not set query from start.
+  required int64 startContainerID = 1;
+  optional uint32 count = 2; // Max Results to return
 }
 
 message  ListContainerResponseProto {
@@ -263,34 +258,31 @@ message  ListContainerResponseProto {
 }
 
 message CloseContainerRequestProto {
-  required Pipeline pipeline = 1;
+  required int64 containerID = 1;
 }
 
 message CloseContainerResponseProto {
-  optional Pipeline pipeline = 1;
   optional string hash = 2;
+  optional int64 containerID = 3;
 }
 
 message KeyData {
-  required string containerName = 1;
-  required string name = 2;
-  optional int64 flags = 3; // for future use.
-  repeated KeyValue metadata = 4;
-  repeated ChunkInfo chunks = 5;
+  required BlockID blockID = 1;
+  optional int64 flags = 2; // for future use.
+  repeated KeyValue metadata = 3;
+  repeated ChunkInfo chunks = 4;
 }
 
 // Key Messages.
 message  PutKeyRequestProto {
-  required Pipeline pipeline = 1;
-  required KeyData keyData = 2;
+  required KeyData keyData = 1;
 }
 
 message  PutKeyResponseProto {
 }
 
 message  GetKeyRequestProto  {
-  required Pipeline pipeline = 1;
-  required KeyData keyData = 2;
+  required KeyData keyData = 1;
 }
 
 message  GetKeyResponseProto  {
@@ -299,17 +291,15 @@ message  GetKeyResponseProto  {
 
 
 message  DeleteKeyRequestProto {
-  required Pipeline pipeline = 1;
-  required string name = 2;
+  required BlockID blockID = 1;
 }
 
 message   DeleteKeyResponseProto {
 }
 
 message  ListKeyRequestProto {
-  required Pipeline pipeline = 1;
-  optional string prefix = 2; // if specified returns keys that match prefix.
-  required string prevKey = 3;
+  required int64 containerID = 1;
+  optional int64 startLocalID = 2;
   required uint32 count = 4;
 
 }
@@ -335,31 +325,28 @@ enum Stage {
 }
 
 message  WriteChunkRequestProto  {
-  required Pipeline pipeline = 1;
-  required string keyName = 2;
-  required ChunkInfo chunkData = 3;
-  optional bytes data = 4;
-  optional Stage stage = 5 [default = COMBINED];
+  required BlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
+  optional bytes data = 3;
+  optional Stage stage = 4 [default = COMBINED];
 }
 
 message  WriteChunkResponseProto {
 }
 
 message  ReadChunkRequestProto  {
-  required Pipeline pipeline = 1;
-  required string keyName = 2;
-  required ChunkInfo chunkData = 3;
+  required BlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
 }
 
 message  ReadChunkResponseProto {
-  required Pipeline pipeline = 1;
+  required BlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   required bytes data = 3;
 }
 
 message  DeleteChunkRequestProto {
-  required Pipeline pipeline = 1;
-  required string keyName = 2;
+  required BlockID blockID = 1;
   required ChunkInfo chunkData = 3;
 }
 
@@ -367,10 +354,9 @@ message  DeleteChunkResponseProto {
 }
 
 message  ListChunkRequestProto {
-  required Pipeline pipeline = 1;
-  required string keyName = 2;
-  required string prevChunkName = 3;
-  required uint32 count = 4;
+  required BlockID blockID = 1;
+  required string prevChunkName = 2;
+  required uint32 count = 3;
 }
 
 message  ListChunkResponseProto {
@@ -400,7 +386,7 @@ message GetSmallFileResponseProto {
 }
 
 message CopyContainerRequestProto {
-  required string containerName = 1;
+  required int64 containerID = 1;
   required uint64 readOffset = 2;
   optional uint64 len = 3;
 }

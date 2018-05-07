@@ -87,7 +87,6 @@ message NodeContianerMapping {
 A container report contains the following information.
 */
 message ContainerInfo {
-  required string containerName = 1;
   optional string finalhash = 2;
   optional int64 size = 3;
   optional int64 used = 4;
@@ -102,10 +101,12 @@ message ContainerInfo {
 }
 
 // The deleted blocks which are stored in deletedBlock.db of scm.
+// We don't use BlockID because this only contians multiple localIDs
+// of the same containerID.
 message DeletedBlocksTransaction {
   required int64 txID = 1;
-  required string containerName = 2;
-  repeated string blockID = 3;
+  required int64 containerID = 2;
+  repeated int64 localID = 3;
   // the retry time of sending deleting command to datanode.
   required int32 count = 4;
 }
@@ -201,7 +202,7 @@ message SendContainerReportProto {
 This command asks the datanode to close a specific container.
 */
 message SCMCloseContainerCmdResponseProto {
-  required string containerName = 1;
+  required int64 containerID = 1;
 }
 
 /**

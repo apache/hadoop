@@ -25,7 +25,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 
 import java.io.IOException;
 
@@ -39,7 +39,7 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
 
   protected static final String CONTAINER_DELETE = "delete";
   protected static final String OPT_FORCE = "f";
-  protected static final String OPT_CONTAINER_NAME = "c";
+  protected static final String OPT_CONTAINER_ID = "c";
 
   public DeleteContainerHandler(ScmClient scmClient) {
     super(scmClient);
@@ -49,7 +49,7 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
   public void execute(CommandLine cmd) throws IOException {
     Preconditions.checkArgument(cmd.hasOption(CONTAINER_DELETE),
         "Expecting command delete");
-    if (!cmd.hasOption(OPT_CONTAINER_NAME)) {
+    if (!cmd.hasOption(OPT_CONTAINER_ID)) {
       displayHelp();
       if (!cmd.hasOption(HELP_OP)) {
         throw new IOException("Expecting container name");
@@ -58,17 +58,19 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
       }
     }
 
-    String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
+    String containerID = cmd.getOptionValue(OPT_CONTAINER_ID);
 
-    Pipeline pipeline = getScmClient().getContainer(containerName);
-    if (pipeline == null) {
+    ContainerInfo container = getScmClient().getContainer(
+        Long.parseLong(containerID));
+    if (container == null) {
       throw new IOException("Cannot delete an non-exist container "
-          + containerName);
+          + containerID);
     }
 
-    logOut("Deleting container : %s.", containerName);
-    getScmClient().deleteContainer(pipeline, cmd.hasOption(OPT_FORCE));
-    logOut("Container %s deleted.", containerName);
+    logOut("Deleting container : %s.", containerID);
+    getScmClient().deleteContainer(container.getContainerID(),
+        container.getPipeline(), cmd.hasOption(OPT_FORCE));
+    logOut("Container %s deleted.", containerID);
   }
 
   @Override
@@ -85,8 +87,8 @@ public class DeleteContainerHandler extends OzoneCommandHandler {
         false,
         "forcibly delete a container");
     options.addOption(forceOpt);
-    Option containerNameOpt = new Option(OPT_CONTAINER_NAME,
-        true, "Specify container name");
+    Option containerNameOpt = new Option(OPT_CONTAINER_ID,
+        true, "Specify container id");
     options.addOption(containerNameOpt);
   }
 }

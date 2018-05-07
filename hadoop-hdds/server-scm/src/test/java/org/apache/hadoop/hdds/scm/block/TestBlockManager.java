@@ -23,7 +23,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -40,7 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneConsts.GB;
 import static org.apache.hadoop.ozone.OzoneConsts.MB;
@@ -76,7 +74,7 @@ public class TestBlockManager {
     }
     nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
-    blockManager = new BlockManagerImpl(conf, nodeManager, mapping, 128);
+    blockManager = new BlockManagerImpl(conf, nodeManager, mapping);
     if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
       factor = HddsProtos.ReplicationFactor.THREE;
@@ -107,32 +105,12 @@ public class TestBlockManager {
   }
 
   @Test
-  public void testGetAllocatedBlock() throws IOException {
-    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor, containerOwner);
-    Assert.assertNotNull(block);
-    Pipeline pipeline = blockManager.getBlock(block.getKey());
-    Assert.assertEquals(pipeline.getLeader().getUuid(),
-        block.getPipeline().getLeader().getUuid());
-  }
-
-  @Test
   public void testDeleteBlock() throws Exception {
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner);
     Assert.assertNotNull(block);
-    blockManager.deleteBlocks(Collections.singletonList(block.getKey()));
-
-    // Deleted block can not be retrieved
-    thrown.expectMessage("Specified block key does not exist.");
-    blockManager.getBlock(block.getKey());
-
-    // Tombstone of the deleted block can be retrieved if it has not been
-    // cleaned yet.
-    String deletedKeyName = blockManager.getDeletedKeyName(block.getKey());
-    Pipeline pipeline = blockManager.getBlock(deletedKeyName);
-    Assert.assertEquals(pipeline.getLeader().getUuid(),
-        block.getPipeline().getLeader().getUuid());
+    blockManager.deleteBlocks(Collections.singletonList(
+        block.getBlockID()));
   }
 
   @Test
@@ -143,12 +121,6 @@ public class TestBlockManager {
         type, factor, containerOwner);
   }
 
-  @Test
-  public void testGetNoneExistentContainer() throws IOException {
-    String nonExistBlockKey = UUID.randomUUID().toString();
-    thrown.expectMessage("Specified block key does not exist.");
-    blockManager.getBlock(nonExistBlockKey);
-  }
 
   @Test
   public void testChillModeAllocateBlockFails() throws IOException {

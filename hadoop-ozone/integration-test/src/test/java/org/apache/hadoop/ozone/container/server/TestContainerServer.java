@@ -77,8 +77,9 @@ public class TestContainerServer {
       channel = new EmbeddedChannel(new XceiverServerHandler(
           new TestContainerDispatcher()));
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(containerName,
-              ContainerTestHelper.createSingleNodePipeline(containerName));
+          ContainerTestHelper.getCreateContainerRequest(
+              ContainerTestHelper.getTestContainerID(),
+              ContainerTestHelper.createSingleNodePipeline());
       channel.writeInbound(request);
       Assert.assertTrue(channel.finish());
 
@@ -165,8 +166,7 @@ public class TestContainerServer {
     XceiverClientSpi client = null;
     String containerName = OzoneUtils.getRequestID();
     try {
-      final Pipeline pipeline = ContainerTestHelper.createPipeline(
-          containerName, numDatanodes);
+      final Pipeline pipeline = ContainerTestHelper.createPipeline(numDatanodes);
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
@@ -182,7 +182,8 @@ public class TestContainerServer {
 
       final ContainerCommandRequestProto request =
           ContainerTestHelper
-              .getCreateContainerRequest(containerName, pipeline);
+              .getCreateContainerRequest(
+                  ContainerTestHelper.getTestContainerID(), pipeline);
       Assert.assertNotNull(request.getTraceID());
 
       ContainerCommandResponseProto response = client.sendCommand(request);
@@ -202,8 +203,7 @@ public class TestContainerServer {
     String containerName = OzoneUtils.getRequestID();
 
     try {
-      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline(
-          containerName);
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
       OzoneConfiguration conf = new OzoneConfiguration();
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
@@ -219,8 +219,8 @@ public class TestContainerServer {
       client.connect();
 
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(containerName,
-              pipeline);
+          ContainerTestHelper.getCreateContainerRequest(
+              ContainerTestHelper.getTestContainerID(), pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());

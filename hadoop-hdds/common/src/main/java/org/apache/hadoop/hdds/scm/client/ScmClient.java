@@ -41,78 +41,76 @@ import java.util.List;
 public interface ScmClient {
   /**
    * Creates a Container on SCM and returns the pipeline.
-   * @param containerId - String container ID
-   * @return Pipeline
+   * @return ContainerInfo
    * @throws IOException
    */
-  Pipeline createContainer(String containerId, String owner) throws IOException;
+  ContainerInfo createContainer(String owner) throws IOException;
 
   /**
    * Gets a container by Name -- Throws if the container does not exist.
-   * @param containerId - String Container ID
+   * @param containerId - Container ID
    * @return Pipeline
    * @throws IOException
    */
-  Pipeline getContainer(String containerId) throws IOException;
+  ContainerInfo getContainer(long containerId) throws IOException;
 
   /**
-   * Close a container by name.
+   * Close a container.
    *
-   * @param pipeline the container to be closed.
+   * @param containerId - ID of the container.
+   * @param pipeline - Pipeline where the container is located.
    * @throws IOException
    */
-  void closeContainer(Pipeline pipeline) throws IOException;
+  void closeContainer(long containerId, Pipeline pipeline) throws IOException;
 
   /**
    * Deletes an existing container.
+   * @param containerId - ID of the container.
    * @param pipeline - Pipeline that represents the container.
    * @param force - true to forcibly delete the container.
    * @throws IOException
    */
-  void deleteContainer(Pipeline pipeline, boolean force) throws IOException;
+  void deleteContainer(long containerId, Pipeline pipeline, boolean force) throws IOException;
 
   /**
    * Lists a range of containers and get their info.
    *
-   * @param startName start name, if null, start searching at the head.
-   * @param prefixName prefix name, if null, then filter is disabled.
-   * @param count count, if count < 0, the max size is unlimited.(
-   *              Usually the count will be replace with a very big
-   *              value instead of being unlimited in case the db is very big)
+   * @param startContainerID start containerID.
+   * @param count count must be > 0.
    *
    * @return a list of pipeline.
    * @throws IOException
    */
-  List<ContainerInfo> listContainer(String startName, String prefixName,
+  List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException;
 
   /**
    * Read meta data from an existing container.
-   * @param pipeline - Pipeline that represents the container.
+   * @param containerID - ID of the container.
+   * @param pipeline - Pipeline where the container is located.
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerData readContainer(Pipeline pipeline) throws IOException;
-
+  ContainerData readContainer(long containerID, Pipeline pipeline)
+      throws IOException;
 
   /**
    * Gets the container size -- Computed by SCM from Container Reports.
-   * @param pipeline - Pipeline
+   * @param containerID - ID of the container.
    * @return number of bytes used by this container.
    * @throws IOException
    */
-  long getContainerSize(Pipeline pipeline) throws IOException;
+  long getContainerSize(long containerID) throws IOException;
 
   /**
    * Creates a Container on SCM and returns the pipeline.
    * @param type - Replication Type.
    * @param replicationFactor - Replication Factor
-   * @param containerId - Container ID
-   * @return Pipeline
+   * @return ContainerInfo
    * @throws IOException - in case of error.
    */
-  Pipeline createContainer(HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor replicationFactor, String containerId,
+  ContainerInfo createContainer(HddsProtos.ReplicationType type,
+      HddsProtos.ReplicationFactor replicationFactor,
       String owner) throws IOException;
 
   /**

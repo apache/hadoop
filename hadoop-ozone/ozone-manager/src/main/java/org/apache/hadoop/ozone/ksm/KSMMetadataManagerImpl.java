@@ -21,11 +21,11 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -480,8 +480,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
       if (latest == null) {
         return Collections.emptyList();
       }
-      List<String> item = latest.getLocationList().stream()
-          .map(KsmKeyLocationInfo::getBlockID)
+      List<BlockID> item = latest.getLocationList().stream()
+          .map(b->new BlockID(b.getContainerID(), b.getLocalID()))
           .collect(Collectors.toList());
       BlockGroup keyBlocks = BlockGroup.newBuilder()
           .setKeyName(DFSUtil.bytes2String(entry.getKey()))
@@ -510,9 +510,9 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
         continue;
       }
       // Get block keys as a list.
-      List<String> item = info.getLatestVersionLocations()
+      List<BlockID> item = info.getLatestVersionLocations()
           .getBlocksLatestVersionOnly().stream()
-          .map(KsmKeyLocationInfo::getBlockID)
+          .map(b->new BlockID(b.getContainerID(), b.getLocalID()))
           .collect(Collectors.toList());
       BlockGroup keyBlocks = BlockGroup.newBuilder()
           .setKeyName(DFSUtil.bytes2String(entry.getKey()))

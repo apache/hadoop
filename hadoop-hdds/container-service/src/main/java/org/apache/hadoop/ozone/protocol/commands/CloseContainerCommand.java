@@ -32,10 +32,10 @@ import static org.apache.hadoop.hdds.protocol.proto
 public class CloseContainerCommand
     extends SCMCommand<SCMCloseContainerCmdResponseProto> {
 
-  private String containerName;
+  private long containerID;
 
-  public CloseContainerCommand(String containerName) {
-    this.containerName = containerName;
+  public CloseContainerCommand(long containerID) {
+    this.containerID = containerID;
   }
 
   /**
@@ -60,17 +60,17 @@ public class CloseContainerCommand
 
   public SCMCloseContainerCmdResponseProto getProto() {
     return SCMCloseContainerCmdResponseProto.newBuilder()
-        .setContainerName(containerName).build();
+        .setContainerID(containerID).build();
   }
 
   public static CloseContainerCommand getFromProtobuf(
       SCMCloseContainerCmdResponseProto closeContainerProto) {
     Preconditions.checkNotNull(closeContainerProto);
-    return new CloseContainerCommand(closeContainerProto.getContainerName());
+    return new CloseContainerCommand(closeContainerProto.getContainerID());
 
   }
 
-  public String getContainerName() {
-    return containerName;
+  public long getContainerID() {
+    return containerID;
   }
 }

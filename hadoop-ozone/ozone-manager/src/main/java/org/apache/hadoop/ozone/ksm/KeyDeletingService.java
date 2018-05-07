@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.BackgroundTask;
@@ -117,7 +118,7 @@ public class KeyDeletingService extends BackgroundService {
               LOG.warn("Key {} deletion failed because some of the blocks"
                   + " were failed to delete, failed blocks: {}",
                   result.getObjectKey(),
-                  String.join(",", result.getFailedBlocks()));
+                  StringUtils.join(",", result.getFailedBlocks()));
             }
           }
 

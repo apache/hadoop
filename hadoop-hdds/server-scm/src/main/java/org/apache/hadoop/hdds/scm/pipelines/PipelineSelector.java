@@ -166,14 +166,14 @@ public class PipelineSelector {
    */
 
   public Pipeline getReplicationPipeline(ReplicationType replicationType,
-      HddsProtos.ReplicationFactor replicationFactor, String containerName)
+      HddsProtos.ReplicationFactor replicationFactor)
       throws IOException {
     PipelineManager manager = getPipelineManager(replicationType);
     Preconditions.checkNotNull(manager, "Found invalid pipeline manager");
-    LOG.debug("Getting replication pipeline for {} : Replication {}",
-        containerName, replicationFactor.toString());
+    LOG.debug("Getting replication pipeline forReplicationType {} : ReplicationFactor {}",
+        replicationType.toString(), replicationFactor.toString());
     return manager.
-        getPipeline(containerName, replicationFactor, replicationType);
+        getPipeline(replicationFactor, replicationType);
   }
 
   /**

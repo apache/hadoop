@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.client.io;
 
 
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdds.client.BlockID;
+
 
 /**
  * This class contains methods that define the translation between the Ozone
@@ -30,16 +32,13 @@ final class OzoneContainerTranslation {
   /**
    * Creates key data intended for reading a container key.
    *
-   * @param containerName container name
-   * @param containerKey container key
+   * @param blockID - ID of the block.
    * @return KeyData intended for reading the container key
    */
-  public static KeyData containerKeyDataForRead(String containerName,
-      String containerKey) {
+  public static KeyData containerKeyDataForRead(BlockID blockID) {
     return KeyData
         .newBuilder()
-        .setContainerName(containerName)
-        .setName(containerKey)
+        .setBlockID(blockID.getProtobuf())
         .build();
   }
 

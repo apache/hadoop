@@ -89,12 +89,12 @@ public interface DeletedBlockLog extends Closeable {
   /**
    * Creates a block deletion transaction and adds that into the log.
    *
-   * @param containerName - container name.
+   * @param containerID - container ID.
    * @param blocks - blocks that belong to the same container.
    *
    * @throws IOException
    */
-  void addTransaction(String containerName, List<String> blocks)
+  void addTransaction(long containerID, List<Long> blocks)
       throws IOException;
 
   /**
@@ -110,7 +110,7 @@ public interface DeletedBlockLog extends Closeable {
    * @param containerBlocksMap a map of containerBlocks.
    * @throws IOException
    */
-  void addTransactions(Map<String, List<String>> containerBlocksMap)
+  void addTransactions(Map<Long, List<Long>> containerBlocksMap)
       throws IOException;
 
   /**

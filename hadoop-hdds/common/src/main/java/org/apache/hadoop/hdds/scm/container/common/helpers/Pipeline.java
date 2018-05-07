@@ -57,7 +57,6 @@ public class Pipeline {
     WRITER = mapper.writer(filters);
   }
 
-  private String containerName;
   private PipelineChannel pipelineChannel;
   /**
    * Allows you to maintain private data on pipelines. This is not serialized
@@ -68,11 +67,9 @@ public class Pipeline {
   /**
    * Constructs a new pipeline data structure.
    *
-   * @param containerName - Container
    * @param pipelineChannel - transport information for this container
    */
-  public Pipeline(String containerName, PipelineChannel pipelineChannel) {
-    this.containerName = containerName;
+  public Pipeline(PipelineChannel pipelineChannel) {
     this.pipelineChannel = pipelineChannel;
     data = null;
   }
@@ -87,7 +84,7 @@ public class Pipeline {
     Preconditions.checkNotNull(pipeline);
     PipelineChannel pipelineChannel =
         PipelineChannel.getFromProtoBuf(pipeline.getPipelineChannel());
-    return new Pipeline(pipeline.getContainerName(), pipelineChannel);
+    return new Pipeline(pipelineChannel);
   }
 
   public HddsProtos.ReplicationFactor getFactor() {
@@ -146,18 +143,8 @@ public class Pipeline {
   public HddsProtos.Pipeline getProtobufMessage() {
     HddsProtos.Pipeline.Builder builder =
         HddsProtos.Pipeline.newBuilder();
-    builder.setContainerName(this.containerName);
     builder.setPipelineChannel(this.pipelineChannel.getProtobufMessage());
     return builder.build();
-  }
-
-  /**
-   * Returns containerName if available.
-   *
-   * @return String.
-   */
-  public String getContainerName() {
-    return containerName;
   }
 
   /**
@@ -223,7 +210,6 @@ public class Pipeline {
     pipelineChannel.getDatanodes().keySet().stream()
         .forEach(id -> b.
             append(id.endsWith(pipelineChannel.getLeaderID()) ? "*" + id : id));
-    b.append("] container:").append(containerName);
     b.append(" name:").append(getPipelineName());
     if (getType() != null) {
       b.append(" type:").append(getType().toString());

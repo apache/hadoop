@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.container.testutils;
 
+import com.google.common.primitives.Longs;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.node.NodePoolManager;
@@ -56,13 +57,13 @@ public class ReplicationDatanodeStateManager {
 
   /**
    * Get Container Report as if it is from a datanode in the cluster.
-   * @param containerName - Container Name.
+   * @param containerID - Container ID.
    * @param poolName - Pool Name.
    * @param dataNodeCount - Datanode Count.
    * @return List of Container Reports.
    */
   public List<ContainerReportsRequestProto> getContainerReport(
-      String containerName, String poolName, int dataNodeCount) {
+      long containerID, String poolName, int dataNodeCount) {
     List<ContainerReportsRequestProto> containerList = new LinkedList<>();
     List<DatanodeDetails> nodesInPool = poolManager.getNodes(poolName);
 
@@ -75,7 +76,6 @@ public class ReplicationDatanodeStateManager {
           "required container reports");
     }
 
-    int containerID = 1;
     while (containerList.size() < dataNodeCount && nodesInPool.size() > 0) {
       DatanodeDetails id = nodesInPool.get(r.nextInt(nodesInPool.size()));
       nodesInPool.remove(id);
@@ -83,8 +83,9 @@ public class ReplicationDatanodeStateManager {
       // We return container reports only for nodes that are healthy.
       if (nodeManager.getNodeState(id) == HEALTHY) {
         ContainerInfo info = ContainerInfo.newBuilder()
-            .setContainerName(containerName)
-            .setFinalhash(DigestUtils.sha256Hex(containerName))
+            .setContainerID(containerID)
+            .setFinalhash(DigestUtils.sha256Hex(
+                Longs.toByteArray(containerID)))
             .setContainerID(containerID)
             .build();
         ContainerReportsRequestProto containerReport =

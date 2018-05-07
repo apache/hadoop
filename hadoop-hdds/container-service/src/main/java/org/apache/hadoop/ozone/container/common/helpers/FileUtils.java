@@ -65,7 +65,8 @@ public final class FileUtils {
         ContainerProtos.ReadChunkResponseProto.newBuilder();
     readChunkresponse.setChunkData(info.getProtoBufMessage());
     readChunkresponse.setData(ByteString.copyFrom(data));
-    readChunkresponse.setPipeline(msg.getGetSmallFile().getKey().getPipeline());
+    readChunkresponse.setBlockID(msg.getGetSmallFile().getKey().
+        getKeyData().getBlockID());
 
     ContainerProtos.GetSmallFileResponseProto.Builder getSmallFile =
         ContainerProtos.GetSmallFileResponseProto.newBuilder();

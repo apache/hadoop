@@ -203,8 +203,7 @@ public class KeyManagerImpl implements KeyManager {
       KsmKeyInfo keyInfo =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(keyData));
       KsmKeyLocationInfo info = new KsmKeyLocationInfo.Builder()
-          .setContainerName(allocatedBlock.getPipeline().getContainerName())
-          .setBlockID(allocatedBlock.getKey())
+          .setBlockID(allocatedBlock.getBlockID())
           .setShouldCreateContainer(allocatedBlock.getCreateContainer())
           .setLength(scmBlockSize)
           .setOffset(0)
@@ -256,8 +255,7 @@ public class KeyManagerImpl implements KeyManager {
         AllocatedBlock allocatedBlock =
             scmBlockClient.allocateBlock(allocateSize, type, factor, ksmId);
         KsmKeyLocationInfo subKeyInfo = new KsmKeyLocationInfo.Builder()
-            .setContainerName(allocatedBlock.getPipeline().getContainerName())
-            .setBlockID(allocatedBlock.getKey())
+            .setBlockID(allocatedBlock.getBlockID())
             .setShouldCreateContainer(allocatedBlock.getCreateContainer())
             .setLength(allocateSize)
             .setOffset(0)

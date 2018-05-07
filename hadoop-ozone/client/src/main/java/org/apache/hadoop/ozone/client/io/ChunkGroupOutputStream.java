@@ -21,6 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -32,7 +34,6 @@ import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -162,30 +163,34 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private void checkKeyLocationInfo(KsmKeyLocationInfo subKeyInfo)
       throws IOException {
-    String containerKey = subKeyInfo.getBlockID();
-    String containerName = subKeyInfo.getContainerName();
-    Pipeline pipeline = scmClient.getContainer(containerName);
+    ContainerInfo container = scmClient.getContainer(
+        subKeyInfo.getContainerID());
     XceiverClientSpi xceiverClient =
-        xceiverClientManager.acquireClient(pipeline);
+        xceiverClientManager.acquireClient(container.getPipeline(),
+            container.getContainerID());
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
       try {
-        ContainerProtocolCalls.createContainer(xceiverClient, requestID);
+        ContainerProtocolCalls.createContainer(xceiverClient,
+            container.getContainerID(), requestID);
         scmClient.notifyObjectStageChange(
             ObjectStageChangeRequestProto.Type.container,
-            containerName, ObjectStageChangeRequestProto.Op.create,
+            subKeyInfo.getContainerID(),
+            ObjectStageChangeRequestProto.Op.create,
             ObjectStageChangeRequestProto.Stage.complete);
       } catch (StorageContainerException ex) {
         if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
           //container already exist, this should never happen
-          LOG.debug("Container {} already exists.", containerName);
+          LOG.debug("Container {} already exists.",
+              container.getContainerID());
         } else {
-          LOG.error("Container creation failed for {}.", containerName, ex);
+          LOG.error("Container creation failed for {}.",
+              container.getContainerID(), ex);
           throw ex;
         }
       }
     }
-    streamEntries.add(new ChunkOutputStreamEntry(containerKey,
+    streamEntries.add(new ChunkOutputStreamEntry(subKeyInfo.getBlockID(),
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
         chunkSize, subKeyInfo.getLength()));
   }
@@ -390,7 +395,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
   private static class ChunkOutputStreamEntry extends OutputStream {
     private OutputStream outputStream;
-    private final String containerKey;
+    private final BlockID blockID;
     private final String key;
     private final XceiverClientManager xceiverClientManager;
     private final XceiverClientSpi xceiverClient;
@@ -401,12 +406,12 @@ public class ChunkGroupOutputStream extends OutputStream {
     // the current position of this stream 0 <= currentPosition < length
     private long currentPosition;
 
-    ChunkOutputStreamEntry(String containerKey, String key,
+    ChunkOutputStreamEntry(BlockID blockID, String key,
         XceiverClientManager xceiverClientManager,
         XceiverClientSpi xceiverClient, String requestId, int chunkSize,
         long length) {
       this.outputStream = null;
-      this.containerKey = containerKey;
+      this.blockID = blockID;
       this.key = key;
       this.xceiverClientManager = xceiverClientManager;
       this.xceiverClient = xceiverClient;
@@ -424,7 +429,7 @@ public class ChunkGroupOutputStream extends OutputStream {
      */
     ChunkOutputStreamEntry(OutputStream outputStream, long length) {
       this.outputStream = outputStream;
-      this.containerKey = null;
+      this.blockID = null;
       this.key = null;
       this.xceiverClientManager = null;
       this.xceiverClient = null;
@@ -445,7 +450,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
     private synchronized void checkStream() {
       if (this.outputStream == null) {
-        this.outputStream = new ChunkOutputStream(containerKey,
+        this.outputStream = new ChunkOutputStream(blockID,
             key, xceiverClientManager, xceiverClient,
             requestId, chunkSize);
       }

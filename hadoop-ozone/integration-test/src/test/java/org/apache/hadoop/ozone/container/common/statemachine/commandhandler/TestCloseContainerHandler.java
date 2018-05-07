@@ -79,32 +79,32 @@ public class TestCloseContainerHandler {
         cluster.getKeySpaceManager().lookupKey(keyArgs).getKeyLocationVersions()
             .get(0).getBlocksLatestVersionOnly().get(0);
 
-    String containerName = ksmKeyLocationInfo.getContainerName();
+    long containerID = ksmKeyLocationInfo.getContainerID();
 
-    Assert.assertFalse(isContainerClosed(cluster, containerName));
+    Assert.assertFalse(isContainerClosed(cluster, containerID));
 
     DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
         .getDatanodeDetails();
     //send the order to close the container
     cluster.getStorageContainerManager().getScmNodeManager()
         .addDatanodeCommand(datanodeDetails.getUuid(),
-            new CloseContainerCommand(containerName));
+            new CloseContainerCommand(containerID));
 
-    GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerName),
+    GenericTestUtils.waitFor(() -> isContainerClosed(cluster, containerID),
             500,
             5 * 1000);
 
     //double check if it's really closed (waitFor also throws an exception)
-    Assert.assertTrue(isContainerClosed(cluster, containerName));
+    Assert.assertTrue(isContainerClosed(cluster, containerID));
   }
 
   private Boolean isContainerClosed(MiniOzoneCluster cluster,
-      String containerName) {
+      long containerID) {
     ContainerData containerData;
     try {
       containerData = cluster.getHddsDatanodes().get(0)
           .getDatanodeStateMachine().getContainer().getContainerManager()
-          .readContainer(containerName);
+          .readContainer(containerID);
       return !containerData.isOpen();
     } catch (StorageContainerException e) {
       throw new AssertionError(e);

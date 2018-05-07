@@ -24,7 +24,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -113,7 +112,9 @@ public class ContainerManagerImpl implements ContainerManager {
   static final Logger LOG =
       LoggerFactory.getLogger(ContainerManagerImpl.class);
 
-  private final ConcurrentSkipListMap<String, ContainerStatus>
+  // TODO: consider primitive collection like eclipse-collections
+  // to avoid autoboxing overhead
+  private final ConcurrentSkipListMap<Long, ContainerStatus>
       containerMap = new ConcurrentSkipListMap<>();
 
   // Use a non-fair RW lock for better throughput, we may revisit this decision
@@ -229,6 +230,7 @@ public class ContainerManagerImpl implements ContainerManager {
     Preconditions.checkNotNull(keyName,
         "Container Name  to container key mapping is null");
 
+    long containerID = Long.parseLong(keyName);
     try {
       String containerFileName = containerName.concat(CONTAINER_EXTENSION);
       String metaFileName = containerName.concat(CONTAINER_META);
@@ -249,7 +251,7 @@ public class ContainerManagerImpl implements ContainerManager {
         // when loading the info we get a null, this often means last time
         // SCM was ending up at some middle phase causing that the metadata
         // was not populated. Such containers are marked as inactive.
-        containerMap.put(keyName, new ContainerStatus(null));
+        containerMap.put(containerID, new ContainerStatus(null));
         return;
       }
       containerData = ContainerData.getFromProtBuf(containerDataProto, conf);
@@ -263,7 +265,7 @@ public class ContainerManagerImpl implements ContainerManager {
         // Hopefully SCM will ask us to delete this container and rebuild it.
         LOG.error("Invalid SHA found for container data. Name :{}"
             + "cowardly refusing to read invalid data", containerName);
-        containerMap.put(keyName, new ContainerStatus(null));
+        containerMap.put(containerID, new ContainerStatus(null));
         return;
       }
 
@@ -295,7 +297,7 @@ public class ContainerManagerImpl implements ContainerManager {
       }).sum();
       containerStatus.setBytesUsed(bytesUsed);
 
-      containerMap.put(keyName, containerStatus);
+      containerMap.put(containerID, containerStatus);
     } catch (IOException | NoSuchAlgorithmException ex) {
       LOG.error("read failed for file: {} ex: {}", containerName,
           ex.getMessage());
@@ -303,7 +305,7 @@ public class ContainerManagerImpl implements ContainerManager {
       // TODO : Add this file to a recovery Queue.
 
       // Remember that this container is busted and we cannot use it.
-      containerMap.put(keyName, new ContainerStatus(null));
+      containerMap.put(containerID, new ContainerStatus(null));
       throw new StorageContainerException("Unable to read container info",
           UNABLE_TO_READ_METADATA_DB);
     } finally {
@@ -316,18 +318,17 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Creates a container with the given name.
    *
-   * @param pipeline -- Nodes which make up this container.
    * @param containerData - Container Name and metadata.
    * @throws StorageContainerException - Exception
    */
   @Override
-  public void createContainer(Pipeline pipeline, ContainerData containerData)
+  public void createContainer(ContainerData containerData)
       throws StorageContainerException {
     Preconditions.checkNotNull(containerData, "Container data cannot be null");
     writeLock();
     try {
-      if (containerMap.containsKey(containerData.getName())) {
-        LOG.debug("container already exists. {}", containerData.getName());
+      if (containerMap.containsKey(containerData.getContainerID())) {
+        LOG.debug("container already exists. {}", containerData.getContainerID());
         throw new StorageContainerException("container already exists.",
             CONTAINER_EXISTS);
       }
@@ -399,7 +400,7 @@ public class ContainerManagerImpl implements ContainerManager {
           location);
       File metadataFile = ContainerUtils.getMetadataFile(containerData,
           location);
-      String containerName = containerData.getContainerName();
+      String containerName = Long.toString(containerData.getContainerID());
 
       if(!overwrite) {
         ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
@@ -446,7 +447,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
       LOG.error("Creation of container failed. Name: {}, we might need to " +
               "cleanup partially created artifacts. ",
-          containerData.getContainerName(), ex);
+          containerData.getContainerID(), ex);
       throw new StorageContainerException("Container creation failed. ",
           ex, CONTAINER_INTERNAL_ERROR);
     } finally {
@@ -459,45 +460,45 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Deletes an existing container.
    *
-   * @param pipeline - nodes that make this container.
-   * @param containerName - name of the container.
+   * @param containerID - ID of the container.
    * @param forceDelete - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
   @Override
-  public void deleteContainer(Pipeline pipeline, String containerName,
+  public void deleteContainer(long containerID,
       boolean forceDelete) throws StorageContainerException {
-    Preconditions.checkNotNull(containerName, "Container name cannot be null");
-    Preconditions.checkState(containerName.length() > 0,
-        "Container name length cannot be zero.");
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative.");
     writeLock();
     try {
-      if (isOpen(pipeline.getContainerName())) {
+      if (isOpen(containerID)) {
         throw new StorageContainerException(
             "Deleting an open container is not allowed.",
             UNCLOSED_CONTAINER_IO);
       }
 
-      ContainerStatus status = containerMap.get(containerName);
+      ContainerStatus status = containerMap.get(containerID);
       if (status == null) {
-        LOG.debug("No such container. Name: {}", containerName);
-        throw new StorageContainerException("No such container. Name : " +
-            containerName, CONTAINER_NOT_FOUND);
+        LOG.debug("No such container. ID: {}", containerID);
+        throw new StorageContainerException("No such container. ID : " +
+            containerID, CONTAINER_NOT_FOUND);
       }
       if (status.getContainer() == null) {
-        LOG.debug("Invalid container data. Name: {}", containerName);
+        LOG.debug("Invalid container data. ID: {}", containerID);
         throw new StorageContainerException("Invalid container data. Name : " +
-            containerName, CONTAINER_NOT_FOUND);
+            containerID, CONTAINER_NOT_FOUND);
       }
       ContainerUtils.removeContainer(status.getContainer(), conf, forceDelete);
-      containerMap.remove(containerName);
+      containerMap.remove(containerID);
     } catch (StorageContainerException e) {
       throw e;
     } catch (IOException e) {
       // TODO : An I/O error during delete can leave partial artifacts on the
       // disk. We will need the cleaner thread to cleanup this information.
-      LOG.error("Failed to cleanup container. Name: {}", containerName, e);
-      throw new StorageContainerException(containerName, e, IO_EXCEPTION);
+      String errMsg = String.format("Failed to cleanup container. ID: %d",
+          containerID);
+      LOG.error(errMsg, e);
+      throw new StorageContainerException(errMsg, e, IO_EXCEPTION);
     } finally {
       writeUnlock();
     }
@@ -511,25 +512,29 @@ public class ContainerManagerImpl implements ContainerManager {
    * time. It is possible that using this iteration you can miss certain
    * container from the listing.
    *
-   * @param prefix -  Return keys that match this prefix.
+   * @param startContainerID -  Return containers with ID >= startContainerID.
    * @param count - how many to return
-   * @param prevKey - Previous Key Value or empty String.
    * @param data - Actual containerData
    * @throws StorageContainerException
    */
   @Override
-  public void listContainer(String prefix, long count, String prevKey,
+  public void listContainer(long startContainerID, long count,
       List<ContainerData> data) throws StorageContainerException {
-    // TODO : Support list with Prefix and PrevKey
     Preconditions.checkNotNull(data,
         "Internal assertion: data cannot be null");
+    Preconditions.checkState(startContainerID >= 0,
+        "Start container ID cannot be negative");
+    Preconditions.checkState(count > 0,
+        "max number of containers returned " +
+            "must be positive");
+
     readLock();
     try {
-      ConcurrentNavigableMap<String, ContainerStatus> map;
-      if (prevKey == null || prevKey.isEmpty()) {
+      ConcurrentNavigableMap<Long, ContainerStatus> map;
+      if (startContainerID == 0) {
         map = containerMap.tailMap(containerMap.firstKey(), true);
       } else {
-        map = containerMap.tailMap(prevKey, false);
+        map = containerMap.tailMap(startContainerID, false);
       }
 
       int currentCount = 0;
@@ -549,24 +554,23 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Get metadata about a specific container.
    *
-   * @param containerName - Name of the container
+   * @param containerID - ID of the container
    * @return ContainerData - Container Data.
    * @throws StorageContainerException
    */
   @Override
-  public ContainerData readContainer(String containerName) throws
-      StorageContainerException {
-    Preconditions.checkNotNull(containerName, "Container name cannot be null");
-    Preconditions.checkState(containerName.length() > 0,
-        "Container name length cannot be zero.");
-    if (!containerMap.containsKey(containerName)) {
-      throw new StorageContainerException("Unable to find the container. Name: "
-          + containerName, CONTAINER_NOT_FOUND);
+  public ContainerData readContainer(long containerID)
+      throws StorageContainerException {
+    Preconditions.checkState(containerID >= 0,
+        "Container ID cannot be negative.");
+    if (!containerMap.containsKey(containerID)) {
+      throw new StorageContainerException("Unable to find the container. ID: "
+          + containerID, CONTAINER_NOT_FOUND);
     }
-    ContainerData cData = containerMap.get(containerName).getContainer();
+    ContainerData cData = containerMap.get(containerID).getContainer();
     if (cData == null) {
-      throw new StorageContainerException("Invalid container data. Name: "
-          + containerName, CONTAINER_INTERNAL_ERROR);
+      throw new StorageContainerException("Invalid container data. ID: "
+          + containerID, CONTAINER_INTERNAL_ERROR);
     }
     return cData;
   }
@@ -575,13 +579,13 @@ public class ContainerManagerImpl implements ContainerManager {
    * Closes a open container, if it is already closed or does not exist a
    * StorageContainerException is thrown.
    *
-   * @param containerName - Name of the container.
+   * @param containerID - ID of the container.
    * @throws StorageContainerException
    */
   @Override
-  public void closeContainer(String containerName)
+  public void closeContainer(long containerID)
       throws StorageContainerException, NoSuchAlgorithmException {
-    ContainerData containerData = readContainer(containerName);
+    ContainerData containerData = readContainer(containerID);
     containerData.closeContainer();
     writeContainerInfo(containerData, true);
     MetadataStore db = KeyUtils.getDB(containerData, conf);
@@ -602,15 +606,13 @@ public class ContainerManagerImpl implements ContainerManager {
     // issues.
 
     ContainerStatus status = new ContainerStatus(containerData);
-    containerMap.put(containerName, status);
+    containerMap.put(containerID, status);
   }
 
   @Override
-  public void updateContainer(Pipeline pipeline, String containerName,
-      ContainerData data, boolean forceUpdate)
-      throws StorageContainerException {
-    Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-    Preconditions.checkNotNull(containerName, "Container name cannot be null");
+  public void updateContainer(long containerID, ContainerData data,
+      boolean forceUpdate) throws StorageContainerException {
+    Preconditions.checkState(containerID >= 0, "Container ID cannot be negative.");
     Preconditions.checkNotNull(data, "Container data cannot be null");
     FileOutputStream containerStream = null;
     DigestOutputStream dos = null;
@@ -618,9 +620,9 @@ public class ContainerManagerImpl implements ContainerManager {
     File containerFileBK = null, containerFile = null;
     boolean deleted = false;
 
-    if(!containerMap.containsKey(containerName)) {
+    if(!containerMap.containsKey(containerID)) {
       throw new StorageContainerException("Container doesn't exist. Name :"
-          + containerName, CONTAINER_NOT_FOUND);
+          + containerID, CONTAINER_NOT_FOUND);
     }
 
     try {
@@ -633,7 +635,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
     try {
       Path location = locationManager.getContainerPath();
-      ContainerData orgData = containerMap.get(containerName).getContainer();
+      ContainerData orgData = containerMap.get(containerID).getContainer();
       if (orgData == null) {
         // updating a invalid container
         throw new StorageContainerException("Update a container with invalid" +
@@ -642,7 +644,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
       if (!forceUpdate && !orgData.isOpen()) {
         throw new StorageContainerException(
-            "Update a closed container is not allowed. Name: " + containerName,
+            "Update a closed container is not allowed. ID: " + containerID,
             UNSUPPORTED_REQUEST);
       }
 
@@ -652,7 +654,7 @@ public class ContainerManagerImpl implements ContainerManager {
       if (!forceUpdate) {
         if (!containerFile.exists() || !containerFile.canWrite()) {
           throw new StorageContainerException(
-              "Container file not exists or corrupted. Name: " + containerName,
+              "Container file not exists or corrupted. ID: " + containerID,
               CONTAINER_INTERNAL_ERROR);
         }
 
@@ -672,7 +674,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
       // Update the in-memory map
       ContainerStatus newStatus = new ContainerStatus(data);
-      containerMap.replace(containerName, newStatus);
+      containerMap.replace(containerID, newStatus);
     } catch (IOException e) {
       // Restore the container file from backup
       if(containerFileBK != null && containerFileBK.exists() && deleted) {
@@ -683,8 +685,8 @@ public class ContainerManagerImpl implements ContainerManager {
               CONTAINER_INTERNAL_ERROR);
         } else {
           throw new StorageContainerException(
-              "Failed to restore container data from the backup. Name: "
-                  + containerName, CONTAINER_INTERNAL_ERROR);
+              "Failed to restore container data from the backup. ID: "
+                  + containerID, CONTAINER_INTERNAL_ERROR);
         }
       } else {
         throw new StorageContainerException(
@@ -711,22 +713,22 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Checks if a container exists.
    *
-   * @param containerName - Name of the container.
+   * @param containerID - ID of the container.
    * @return true if the container is open false otherwise.
    * @throws StorageContainerException - Throws Exception if we are not able to
    *                                   find the container.
    */
   @Override
-  public boolean isOpen(String containerName) throws StorageContainerException {
-    final ContainerStatus status = containerMap.get(containerName);
+  public boolean isOpen(long containerID) throws StorageContainerException {
+    final ContainerStatus status = containerMap.get(containerID);
     if (status == null) {
       throw new StorageContainerException(
-          "Container status not found: " + containerName, CONTAINER_NOT_FOUND);
+          "Container status not found: " + containerID, CONTAINER_NOT_FOUND);
     }
     final ContainerData cData = status.getContainer();
     if (cData == null) {
       throw new StorageContainerException(
-          "Container not found: " + containerName, CONTAINER_NOT_FOUND);
+          "Container not found: " + containerID, CONTAINER_NOT_FOUND);
     }
     return cData.isOpen();
   }
@@ -746,7 +748,7 @@ public class ContainerManagerImpl implements ContainerManager {
 
 
   @VisibleForTesting
-  public ConcurrentSkipListMap<String, ContainerStatus> getContainerMap() {
+  public ConcurrentSkipListMap<Long, ContainerStatus> getContainerMap() {
     return containerMap;
   }
 
@@ -901,7 +903,7 @@ public class ContainerManagerImpl implements ContainerManager {
     for (ContainerStatus container: containers) {
       StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
           StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
-      ciBuilder.setContainerName(container.getContainer().getContainerName())
+      ciBuilder.setContainerID(container.getContainer().getContainerID())
           .setSize(container.getContainer().getMaxSize())
           .setUsed(container.getContainer().getBytesUsed())
           .setKeyCount(container.getContainer().getKeyCount())
@@ -966,7 +968,7 @@ public class ContainerManagerImpl implements ContainerManager {
   }
 
   @Override
-  public void incrPendingDeletionBlocks(int numBlocks, String containerId) {
+  public void incrPendingDeletionBlocks(int numBlocks, long containerId) {
     writeLock();
     try {
       ContainerStatus status = containerMap.get(containerId);
@@ -977,7 +979,7 @@ public class ContainerManagerImpl implements ContainerManager {
   }
 
   @Override
-  public void decrPendingDeletionBlocks(int numBlocks, String containerId) {
+  public void decrPendingDeletionBlocks(int numBlocks, long containerId) {
     writeLock();
     try {
       ContainerStatus status = containerMap.get(containerId);
@@ -990,35 +992,35 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Increase the read count of the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId - ID of the container.
    */
   @Override
-  public void incrReadCount(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public void incrReadCount(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     status.incrReadCount();
   }
 
-  public long getReadCount(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long getReadCount(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.getReadCount();
   }
 
   /**
    * Increse the read counter for bytes read from the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId - ID of the container.
    * @param readBytes     - bytes read from the container.
    */
   @Override
-  public void incrReadBytes(String containerName, long readBytes) {
-    ContainerStatus status = containerMap.get(containerName);
+  public void incrReadBytes(long containerId, long readBytes) {
+    ContainerStatus status = containerMap.get(containerId);
     status.incrReadBytes(readBytes);
   }
 
-  public long getReadBytes(String containerName) {
+  public long getReadBytes(long containerId) {
     readLock();
     try {
-      ContainerStatus status = containerMap.get(containerName);
+      ContainerStatus status = containerMap.get(containerId);
       return status.getReadBytes();
     } finally {
       readUnlock();
@@ -1028,76 +1030,76 @@ public class ContainerManagerImpl implements ContainerManager {
   /**
    * Increase the write count of the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId - Name of the container.
    */
   @Override
-  public void incrWriteCount(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public void incrWriteCount(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     status.incrWriteCount();
   }
 
-  public long getWriteCount(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long getWriteCount(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.getWriteCount();
   }
 
   /**
    * Increse the write counter for bytes write into the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId   - ID of the container.
    * @param writeBytes    - bytes write into the container.
    */
   @Override
-  public void incrWriteBytes(String containerName, long writeBytes) {
-    ContainerStatus status = containerMap.get(containerName);
+  public void incrWriteBytes(long containerId, long writeBytes) {
+    ContainerStatus status = containerMap.get(containerId);
     status.incrWriteBytes(writeBytes);
   }
 
-  public long getWriteBytes(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long getWriteBytes(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.getWriteBytes();
   }
 
   /**
    * Increase the bytes used by the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId   - ID of the container.
    * @param used          - additional bytes used by the container.
    * @return the current bytes used.
    */
   @Override
-  public long incrBytesUsed(String containerName, long used) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long incrBytesUsed(long containerId, long used) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.incrBytesUsed(used);
   }
 
   /**
    * Decrease the bytes used by the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId   - ID of the container.
    * @param used          - additional bytes reclaimed by the container.
    * @return the current bytes used.
    */
   @Override
-  public long decrBytesUsed(String containerName, long used) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long decrBytesUsed(long containerId, long used) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.decrBytesUsed(used);
   }
 
-  public long getBytesUsed(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long getBytesUsed(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.getBytesUsed();
   }
 
   /**
    * Get the number of keys in the container.
    *
-   * @param containerName - Name of the container.
+   * @param containerId - ID of the container.
    * @return the current key count.
    */
   @Override
-  public long getNumKeys(String containerName) {
-    ContainerStatus status = containerMap.get(containerName);
+  public long getNumKeys(long containerId) {
+    ContainerStatus status = containerMap.get(containerId);
     return status.getNumKeys();  }
 
   /**

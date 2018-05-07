@@ -170,7 +170,7 @@ public class HeartbeatEndpointTask
                 commandResponseProto.getCloseContainerProto());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received SCM container close request for container {}",
-              closeContainer.getContainerName());
+              closeContainer.getContainerID());
         }
         this.context.addCommand(closeContainer);
         break;

@@ -58,19 +58,20 @@ public class CloseContainerHandler implements CommandHandler {
     LOG.debug("Processing Close Container command.");
     invocationCount++;
     long startTime = Time.monotonicNow();
-    String containerName = "UNKNOWN";
+    // TODO: define this as INVALID_CONTAINER_ID in HddsConsts.java (TBA)
+    long containerID = -1;
     try {
 
       SCMCloseContainerCmdResponseProto
           closeContainerProto =
           SCMCloseContainerCmdResponseProto
               .parseFrom(command.getProtoBufMessage());
-      containerName = closeContainerProto.getContainerName();
+      containerID = closeContainerProto.getContainerID();
 
-      container.getContainerManager().closeContainer(containerName);
+      container.getContainerManager().closeContainer(containerID);
 
     } catch (Exception e) {
-      LOG.error("Can't close container " + containerName, e);
+      LOG.error("Can't close container " + containerID, e);
     } finally {
       long endTime = Time.monotonicNow();
       totalTime += endTime - startTime;

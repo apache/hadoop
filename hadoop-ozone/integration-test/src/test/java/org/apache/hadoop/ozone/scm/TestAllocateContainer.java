@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.scm;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -67,12 +68,12 @@ public class TestAllocateContainer {
 
   @Test
   public void testAllocate() throws Exception {
-    Pipeline pipeline = storageContainerLocationClient.allocateContainer(
+    ContainerInfo container = storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        "container0", containerOwner);
-    Assert.assertNotNull(pipeline);
-    Assert.assertNotNull(pipeline.getLeader());
+        containerOwner);
+    Assert.assertNotNull(container);
+    Assert.assertNotNull(container.getPipeline().getLeader());
 
   }
 
@@ -81,19 +82,6 @@ public class TestAllocateContainer {
     thrown.expect(NullPointerException.class);
     storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), null, containerOwner);
-  }
-
-  @Test
-  public void testAllocateDuplicate() throws Exception {
-    String containerName = RandomStringUtils.randomAlphanumeric(10);
-    thrown.expect(IOException.class);
-    thrown.expectMessage("Specified container already exists");
-    storageContainerLocationClient.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName, containerOwner);
-    storageContainerLocationClient.allocateContainer(
-        xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName, containerOwner);
+        xceiverClientManager.getFactor(), null);
   }
 }
