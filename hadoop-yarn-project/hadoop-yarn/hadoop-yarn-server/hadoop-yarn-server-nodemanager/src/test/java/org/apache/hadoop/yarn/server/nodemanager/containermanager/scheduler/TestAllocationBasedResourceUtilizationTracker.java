@@ -33,9 +33,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for the {@link AllocationBasedResourceTracker} class.
+ * Tests for the {@link AllocationBasedResourceUtilizationTracker} class.
  */
-public class TestAllocationBasedResourceTracker {
+public class TestAllocationBasedResourceUtilizationTracker {
 
   private ContainerScheduler mockContainerScheduler;
 
@@ -62,21 +62,32 @@ public class TestAllocationBasedResourceTracker {
    */
   @Test
   public void testHasResourcesAvailable() {
-    AllocationBasedResourceTracker tracker =
-        new AllocationBasedResourceTracker(mockContainerScheduler);
+    AllocationBasedResourceUtilizationTracker tracker =
+        new AllocationBasedResourceUtilizationTracker(mockContainerScheduler);
     Container testContainer = mock(Container.class);
     when(testContainer.getResource()).thenReturn(Resource.newInstance(512, 4));
     for (int i = 0; i < 2; i++) {
-      Assert.assertTrue(
-          isResourcesAvailable(tracker.getAvailableResources(), testContainer));
-      tracker.containerLaunched(testContainer);
+      Assert.assertTrue(tracker.hasResourcesAvailable(testContainer));
+      tracker.addContainerResources(testContainer);
     }
-    Assert.assertFalse(
-        isResourcesAvailable(tracker.getAvailableResources(), testContainer));
+    Assert.assertFalse(tracker.hasResourcesAvailable(testContainer));
   }
 
-  private static boolean isResourcesAvailable(
-      Resource available, Container container) {
-    return available.compareTo(container.getResource()) >= 0;
+  /**
+   * Test the case where the current allocation has been truncated to 0.8888891
+   * (8/9 cores used). Request 1 additional core - hasEnoughCpu should return
+   * true.
+   */
+  @Test
+  public void testHasEnoughCpu() {
+    AllocationBasedResourceUtilizationTracker tracker =
+        new AllocationBasedResourceUtilizationTracker(mockContainerScheduler);
+    float currentAllocation = 0.8888891f;
+    long totalCores = 9;
+    int alreadyUsedCores = 8;
+    Assert.assertTrue(tracker.hasEnoughCpu(currentAllocation, totalCores,
+        (int) totalCores - alreadyUsedCores));
+    Assert.assertFalse(tracker.hasEnoughCpu(currentAllocation, totalCores,
+        (int) totalCores - alreadyUsedCores + 1));
   }
 }

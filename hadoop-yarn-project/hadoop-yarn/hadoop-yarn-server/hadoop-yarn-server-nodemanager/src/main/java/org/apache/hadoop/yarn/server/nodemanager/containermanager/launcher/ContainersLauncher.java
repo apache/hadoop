@@ -121,7 +121,8 @@ public class ContainersLauncher extends AbstractService
               containerId.getApplicationAttemptId().getApplicationId());
 
         ContainerLaunch launch =
-            createContainerLaunch(app, event.getContainer());
+            new ContainerLaunch(context, getConfig(), dispatcher, exec, app,
+              event.getContainer(), dirsHandler, containerManager);
         containerLauncher.submit(launch);
         running.put(containerId, launch);
         break;
@@ -223,11 +224,5 @@ public class ContainersLauncher extends AbstractService
         }
         break;
     }
-  }
-
-  protected ContainerLaunch createContainerLaunch(
-      Application app, Container container) {
-    return new ContainerLaunch(context, getConfig(), dispatcher,
-        exec, app, container, dirsHandler, containerManager);
   }
 }

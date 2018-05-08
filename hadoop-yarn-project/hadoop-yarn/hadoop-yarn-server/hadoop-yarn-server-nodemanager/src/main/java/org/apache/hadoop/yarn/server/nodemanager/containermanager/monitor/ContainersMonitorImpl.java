@@ -25,10 +25,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.MemoryResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.NMAllocationPolicy;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.SnapshotBasedOverAllocationPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,9 +112,8 @@ public class ContainersMonitorImpl extends AbstractService implements
     CPU, MEMORY
   }
 
-  private ContainersResourceUtilization latestContainersUtilization;
+  private ResourceUtilization containersUtilization;
 
-  private NMAllocationPolicy overAllocationPolicy;
   private ResourceThresholds overAllocationPreemptionThresholds;
   private int overAlloctionPreemptionCpuCount = -1;
 
@@ -134,8 +129,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     this.monitoringThread = new MonitoringThread();
 
-    this.latestContainersUtilization = new ContainersResourceUtilization(
-        ResourceUtilization.newInstance(-1, -1, -1.0f), -1L);
+    this.containersUtilization = ResourceUtilization.newInstance(0, 0, 0.0f);
   }
 
   @Override
@@ -371,20 +365,11 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.overAllocationPreemptionThresholds = ResourceThresholds.newInstance(
         cpuPreemptionThreshold, memoryPreemptionThreshold);
 
-    // TODO make this configurable
-    this.overAllocationPolicy =
-        createOverAllocationPolicy(resourceThresholds);
-
     LOG.info("NodeManager oversubscription enabled with overallocation " +
         "thresholds (memory:" + overAllocationMemoryUtilizationThreshold +
         ", CPU:" + overAllocationCpuUtilizationThreshold + ") and preemption" +
         " threshold (memory:" + memoryPreemptionThreshold + ", CPU:" +
         cpuPreemptionThreshold + ")");
-  }
-
-  protected NMAllocationPolicy createOverAllocationPolicy(
-      ResourceThresholds resourceThresholds) {
-    return new SnapshotBasedOverAllocationPolicy(resourceThresholds, this);
   }
 
   private boolean isResourceCalculatorAvailable() {
@@ -670,12 +655,7 @@ public class ContainersMonitorImpl extends AbstractService implements
         }
 
         // Save the aggregated utilization of the containers
-        setLatestContainersUtilization(trackedContainersUtilization);
-
-        // check opportunity to start containers if over-allocation is on
-        if (context.isOverAllocationEnabled()) {
-          attemptToStartContainersUponLowUtilization();
-        }
+        setContainersUtilization(trackedContainersUtilization);
 
         // Publish the container utilization metrics to node manager
         // metrics system.
@@ -1065,34 +1045,12 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   @Override
-  public ContainersResourceUtilization getContainersUtilization(
-      boolean latest) {
-    // TODO update containerUtilization if latest is true
-    return this.latestContainersUtilization;
+  public ResourceUtilization getContainersUtilization() {
+    return this.containersUtilization;
   }
 
-  @Override
-  public NMAllocationPolicy getContainerOverAllocationPolicy() {
-    return overAllocationPolicy;
-  }
-
-  private void setLatestContainersUtilization(ResourceUtilization utilization) {
-    this.latestContainersUtilization = new ContainersResourceUtilization(
-        utilization, System.currentTimeMillis());
-  }
-
-  @VisibleForTesting
-  public void attemptToStartContainersUponLowUtilization() {
-    if (getContainerOverAllocationPolicy() != null) {
-      Resource available = getContainerOverAllocationPolicy()
-          .getAvailableResources();
-      if (available.getMemorySize() > 0 &&
-          available.getVirtualCores() > 0) {
-        eventDispatcher.getEventHandler().handle(
-            new ContainerSchedulerEvent(null,
-                ContainerSchedulerEventType.SCHEDULE_CONTAINERS));
-      }
-    }
+  private void setContainersUtilization(ResourceUtilization utilization) {
+    this.containersUtilization = utilization;
   }
 
   @Override

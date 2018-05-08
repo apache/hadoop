@@ -245,12 +245,6 @@ public class ContainerManagerImpl extends CompositeService implements
             metrics);
     addService(rsrcLocalizationSrvc);
 
-    this.containersMonitor = createContainersMonitor(exec);
-    addService(this.containersMonitor);
-
-    // ContainersLauncher must be added after ContainersMonitor
-    // because the former depends on the latter to initialize
-    // over-allocation first.
     containersLauncher = createContainersLauncher(context, exec);
     addService(containersLauncher);
 
@@ -275,6 +269,8 @@ public class ContainerManagerImpl extends CompositeService implements
       nmMetricsPublisher = createNMTimelinePublisher(context);
       context.setNMTimelinePublisher(nmMetricsPublisher);
     }
+    this.containersMonitor = createContainersMonitor(exec);
+    addService(this.containersMonitor);
 
     dispatcher.register(ContainerEventType.class,
         new ContainerEventDispatcher());

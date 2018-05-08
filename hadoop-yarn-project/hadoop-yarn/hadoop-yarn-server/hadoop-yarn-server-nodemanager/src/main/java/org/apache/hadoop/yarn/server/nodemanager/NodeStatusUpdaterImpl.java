@@ -543,7 +543,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private ResourceUtilization getContainersUtilization() {
     ContainersMonitor containersMonitor =
         this.context.getContainerManager().getContainersMonitor();
-    return containersMonitor.getContainersUtilization(false).getUtilization();
+    return containersMonitor.getContainersUtilization();
   }
 
   /**

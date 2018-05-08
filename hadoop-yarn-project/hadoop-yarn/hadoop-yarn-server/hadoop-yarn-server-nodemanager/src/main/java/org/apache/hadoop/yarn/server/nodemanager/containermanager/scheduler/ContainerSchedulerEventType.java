@@ -28,7 +28,5 @@ public enum ContainerSchedulerEventType {
   // Producer: Node HB response - RM has asked to shed the queue
   SHED_QUEUED_CONTAINERS,
   CONTAINER_PAUSED,
-  RECOVERY_COMPLETED,
-  // Producer: Containers Monitor when over-allocation is on
-  SCHEDULE_CONTAINERS
+  RECOVERY_COMPLETED
 }

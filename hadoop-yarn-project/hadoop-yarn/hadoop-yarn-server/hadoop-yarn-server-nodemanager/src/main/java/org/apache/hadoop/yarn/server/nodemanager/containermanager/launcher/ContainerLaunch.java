@@ -1079,7 +1079,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * @return Process ID
    * @throws Exception
    */
-  protected String getContainerPid(Path pidFilePath) throws Exception {
+  private String getContainerPid(Path pidFilePath) throws Exception {
     String containerIdStr = 
         container.getContainerId().toString();
     String processId = null;
