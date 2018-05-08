@@ -238,6 +238,7 @@
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
+    <gcs.version>1.9.0.3.0.0.0-SNAPSHOT</gcs.version>
     <t9000-core.version>1.0.0.7.3.1.0-SNAPSHOT</t9000-core.version>
   </properties>
 
@@ -2131,6 +2132,54 @@
         <groupId>javax.cache</groupId>
         <artifactId>cache-api</artifactId>
         <version>${cache.api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.cloud.bigdataoss</groupId>
+        <artifactId>gcs-connector</artifactId>
+        <classifier>shaded</classifier>
+        <version>${gcs.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client-java6</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client-jackson2</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-storage</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client-java6</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>util</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>gcsio</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>util-hadoop</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
     </dependencies>
   </dependencyManagement>

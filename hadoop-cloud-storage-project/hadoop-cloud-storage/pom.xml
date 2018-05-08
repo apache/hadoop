@@ -122,5 +122,10 @@
       <artifactId>hadoop-azure-datalake</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.cloud.bigdataoss</groupId>
+      <artifactId>gcs-connector</artifactId>
+      <classifier>shaded</classifier>
+    </dependency>
   </dependencies>
 </project>

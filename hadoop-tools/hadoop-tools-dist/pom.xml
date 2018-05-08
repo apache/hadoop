@@ -133,6 +133,12 @@
       <scope>compile</scope>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.cloud.bigdataoss</groupId>
+      <artifactId>gcs-connector</artifactId>
+      <scope>compile</scope>
+      <classifier>shaded</classifier>
+    </dependency>
   </dependencies>
 
   <build>
