@@ -81,6 +81,33 @@ export default Ember.Controller.extend({
       });
     },
 
+    showKillApplicationConfirm() {
+      this.set('actionResponse', null);
+      Ember.$("#killApplicationConfirmDialog").modal('show');
+    },
+
+    killApplication() {
+      var self = this;
+      Ember.$("#killApplicationConfirmDialog").modal('hide');
+      const adapter = this.store.adapterFor('yarn-app');
+      self.set('isLoading', true);
+      adapter.sendKillApplication(this.model.app.id).then(function () {
+        self.set('actionResponse', {
+          msg: 'Application killed successfully. Auto refreshing in 5 seconds.',
+          type: 'success'
+        });
+        Ember.run.later(self, function () {
+          this.set('actionResponse', null);
+          this.send("refresh");
+        }, 5000);
+      }, function (err) {
+        let message = err.diagnostics || 'Error: Kill application failed!';
+        self.set('actionResponse', { msg: message, type: 'error' });
+      }).finally(function () {
+        self.set('isLoading', false);
+      });
+    },
+
     resetActionResponse() {
       this.set('actionResponse', null);
     }
@@ -125,5 +152,13 @@ export default Ember.Controller.extend({
       amHostAddress = 'http://' + amHostAddress;
     }
     return amHostAddress;
+  }),
+
+  isKillable: Ember.computed("model.app.state", function () {
+    if (this.get("model.app.applicationType") === 'yarn-service') {
+      return false;
+    }
+    const killableStates = ['NEW', 'NEW_SAVING', 'SUBMITTED', 'ACCEPTED', 'RUNNING'];
+    return killableStates.indexOf(this.get("model.app.state")) > -1;
   })
 });
