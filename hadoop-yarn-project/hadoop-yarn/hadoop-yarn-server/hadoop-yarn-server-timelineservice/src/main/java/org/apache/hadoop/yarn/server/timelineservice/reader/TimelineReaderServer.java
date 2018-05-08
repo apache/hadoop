@@ -186,10 +186,17 @@ public class TimelineReaderServer extends CompositeService {
 
     LOG.info("Instantiating TimelineReaderWebApp at " + bindAddress);
     try {
+
+      String httpScheme = WebAppUtils.getHttpSchemePrefix(conf);
+
       HttpServer2.Builder builder = new HttpServer2.Builder()
             .setName("timeline")
             .setConf(conf)
-            .addEndpoint(URI.create("http://" + bindAddress));
+            .addEndpoint(URI.create(httpScheme + bindAddress));
+
+      if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
+        WebAppUtils.loadSslConfiguration(builder, conf);
+      }
       readerWebServer = builder.build();
       readerWebServer.addJerseyResourcePackage(
           TimelineReaderWebServices.class.getPackage().getName() + ";"
