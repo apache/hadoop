@@ -33,7 +33,13 @@
 #define DOCKER_KILL_COMMAND "kill"
 #define DOCKER_VOLUME_COMMAND "volume"
 #define DOCKER_START_COMMAND "start"
+#define DOCKER_ARG_MAX 1024
+#define ARGS_INITIAL_VALUE { 0 };
 
+typedef struct args {
+    int length;
+    char *data[DOCKER_ARG_MAX];
+} args;
 
 enum docker_error_codes {
     INVALID_COMMAND_FILE = 1,
@@ -77,7 +83,7 @@ char *get_docker_binary(const struct configuration *conf);
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker inspect command line string. The function will verify that the params file is meant for the
@@ -88,7 +94,7 @@ int get_docker_command(const char* command_file, const struct configuration* con
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_inspect_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_inspect_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker load command line string. The function will verify that the params file is meant for the load command.
@@ -98,7 +104,7 @@ int get_docker_inspect_command(const char* command_file, const struct configurat
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_load_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_load_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker pull command line string. The function will verify that the params file is meant for the pull command.
@@ -108,7 +114,7 @@ int get_docker_load_command(const char* command_file, const struct configuration
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_pull_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_pull_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker rm command line string. The function will verify that the params file is meant for the rm command.
@@ -118,7 +124,7 @@ int get_docker_pull_command(const char* command_file, const struct configuration
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_rm_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_rm_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker run command line string. The function will verify that the params file is meant for the run command.
@@ -128,7 +134,7 @@ int get_docker_rm_command(const char* command_file, const struct configuration* 
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_run_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_run_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker stop command line string. The function will verify that the params file is meant for the stop command.
@@ -138,7 +144,7 @@ int get_docker_run_command(const char* command_file, const struct configuration*
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_stop_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_stop_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker kill command line string. The function will verify that the params file is meant for the kill command.
@@ -148,7 +154,7 @@ int get_docker_stop_command(const char* command_file, const struct configuration
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_kill_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_kill_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Get the Docker volume command line string. The function will verify that the
@@ -159,8 +165,7 @@ int get_docker_kill_command(const char* command_file, const struct configuration
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_volume_command(const char *command_file, const struct configuration *conf, char *out,
-                               const size_t outlen);
+int get_docker_volume_command(const char *command_file, const struct configuration *conf, args *args);
 
 /**
  * Get the Docker start command line string. The function will verify that the params file is meant for the start command.
@@ -170,7 +175,7 @@ int get_docker_volume_command(const char *command_file, const struct configurati
  * @param outlen Size of the output buffer
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
-int get_docker_start_command(const char* command_file, const struct configuration* conf, char *out, const size_t outlen);
+int get_docker_start_command(const char* command_file, const struct configuration* conf, args *args);
 
 /**
  * Give an error message for the supplied error code
@@ -186,4 +191,15 @@ const char *get_docker_error_message(const int error_code);
  */
 int docker_module_enabled(const struct configuration *conf);
 
+/**
+ * Helper function to reset args data structure.
+ * @param args Pointer reference to args data structure
+ */
+void reset_args(args *args);
+
+/**
+ * Extract execv args from args data structure.
+ * @param args Pointer reference to args data structure
+ */
+char** extract_execv_args(args *args);
 #endif

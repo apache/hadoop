@@ -20,6 +20,7 @@
 #include "container-executor.h"
 #include "utils/docker-util.h"
 #include "utils/path-utils.h"
+#include "utils/string-utils.h"
 #include "util.h"
 #include "config.h"
 
@@ -737,7 +738,6 @@ static int create_container_directories(const char* user, const char *app_id,
     result = OUT_OF_MEMORY;
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
-
     char* const* log_dir_ptr;
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
@@ -753,10 +753,10 @@ static int create_container_directories(const char* user, const char *app_id,
         free(combined_name);
         return OUT_OF_MEMORY;
       } else if (mkdirs(container_log_dir, perms) != 0) {
-    	free(container_log_dir);
+        free(container_log_dir);
       } else {
-    	result = 0;
-    	free(container_log_dir);
+        free(container_log_dir);
+        result = 0;
       }
     }
     free(combined_name);
@@ -799,7 +799,7 @@ static struct passwd* get_user_info(const char* user) {
         string_size, &result) != 0) {
     free(buffer);
     fprintf(LOGFILE, "Can't get user information %s - %s\n", user,
-	    strerror(errno));
+           strerror(errno));
     return NULL;
   }
   return result;
@@ -1094,7 +1094,6 @@ int initialize_user(const char *user, char* const* local_dirs) {
 }
 
 int create_log_dirs(const char *app_id, char * const * log_dirs) {
-
   char* const* log_root;
   char *any_one_app_log_dir = NULL;
   for(log_root=log_dirs; *log_root != NULL; ++log_root) {
@@ -1275,11 +1274,9 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-char *construct_docker_command(const char *command_file) {
+char **construct_docker_command(const char *command_file) {
   int ret = 0;
-  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
-  char *buffer = alloc_and_clear_memory(command_size, sizeof(char));
-
+  struct args buffer = ARGS_INITIAL_VALUE;
   uid_t user = geteuid();
   gid_t group = getegid();
   if (change_effective_user(nm_uid, nm_gid) != 0) {
@@ -1287,8 +1284,7 @@ char *construct_docker_command(const char *command_file) {
     fflush(ERRORFILE);
     exit(SETUID_OPER_FAILED);
   }
-
-  ret = get_docker_command(command_file, &CFG, buffer, command_size);
+  ret = get_docker_command(command_file, &CFG, &buffer);
   if (ret != 0) {
     fprintf(ERRORFILE, "Error constructing docker command, docker error code=%d, error message='%s'\n", ret,
             get_docker_error_message(ret));
@@ -1302,31 +1298,24 @@ char *construct_docker_command(const char *command_file) {
     exit(SETUID_OPER_FAILED);
   }
 
-  return buffer;
+  char** copy = extract_execv_args(&buffer);
+  return copy;
 }
 
 int run_docker(const char *command_file) {
-  char* docker_command = construct_docker_command(command_file);
+  char **args = construct_docker_command(command_file);
   char* docker_binary = get_docker_binary(&CFG);
-  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
-
-  char* docker_command_with_binary = alloc_and_clear_memory(command_size, sizeof(char));
-  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
-  fprintf(LOGFILE, "Invoking '%s'\n", docker_command_with_binary);
-  char **args = split_delimiter(docker_command_with_binary, " ");
-
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
               docker_binary, strerror(errno));
-      fflush(LOGFILE);
-      fflush(ERRORFILE);
-      free(docker_binary);
-      free(args);
-      free(docker_command_with_binary);
-      free(docker_command);
-      exit_code = DOCKER_RUN_FAILED;
+    fflush(LOGFILE);
+    fflush(ERRORFILE);
+    free(docker_binary);
+    free_values(args);
+    exit_code = DOCKER_RUN_FAILED;
   } else {
+    free_values(args);
     exit_code = 0;
   }
   return exit_code;
@@ -1452,7 +1441,7 @@ int create_local_dirs(const char * user, const char *app_id,
 
   // Copy script file with permissions 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
-    fprintf(ERRORFILE, "Could not create copy file %d %s\n", container_file_source, script_file_dest);
+    fprintf(ERRORFILE, "Could not create copy file %s %s (%d)\n", script_name, script_file_dest, container_file_source);
     fflush(ERRORFILE);
     exit_code = COULD_NOT_CREATE_SCRIPT_COPY;
     goto cleanup;
@@ -1513,25 +1502,15 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
   char *docker_command_with_binary = NULL;
-  char *docker_wait_command = NULL;
   char *docker_inspect_command = NULL;
-  char *docker_rm_command = NULL;
   char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
 
-  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
-
-  docker_command_with_binary = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_wait_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-  docker_inspect_exitcode_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
-
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
 
-  char *docker_command = NULL;
+  char **docker_command = NULL;
   char *docker_binary = NULL;
 
   fprintf(LOGFILE, "Creating script paths...\n");
@@ -1581,21 +1560,31 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
+  docker_command_with_binary = flatten(docker_command);
 
-  fprintf(LOGFILE, "Launching docker container...\n");
-  fprintf(LOGFILE, "Docker run command: %s\n", docker_command_with_binary);
-  FILE* start_docker = popen(docker_command_with_binary, "r");
-  if (WEXITSTATUS(pclose (start_docker)) != 0)
-  {
+  // Launch container
+  pid_t child_pid = fork();
+  if (child_pid == -1) {
     fprintf (ERRORFILE,
-     "Could not invoke docker %s.\n", docker_command_with_binary);
+      "Could not invoke docker %s.\n", docker_command_with_binary);
     fflush(ERRORFILE);
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
 
-  snprintf(docker_inspect_command, command_size,
+  if (child_pid == 0) {
+    execvp(docker_binary, docker_command);
+    fprintf(ERRORFILE, "failed to execute docker command! error: %s\n", strerror(errno));
+    return UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+  } else {
+    exit_code = wait_and_get_exit_code(child_pid);
+    if (exit_code != 0) {
+      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      goto cleanup;
+    }
+  }
+
+  docker_inspect_command = make_string(
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
@@ -1643,10 +1632,10 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     }
 
     fprintf(LOGFILE, "Waiting for docker container to finish.\n");
+
+    // wait for pid to finish
 #ifdef __linux
-    size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
-    char* proc_pid_path = alloc_and_clear_memory(command_size, sizeof(char));
-    snprintf(proc_pid_path, command_size, "%s/%d", PROC_PATH, pid);
+    char* proc_pid_path = make_string("%s/%d", PROC_PATH, pid);
     while (dir_exists(proc_pid_path) == 0) {
       sleep(1);
     }
@@ -1661,7 +1650,8 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 #endif
   }
 
-  sprintf(docker_inspect_exitcode_command,
+  // discover container exit code
+  docker_inspect_exitcode_command = make_string(
     "%s inspect --format {{.State.ExitCode}} %s",
   docker_binary, container_id);
   fprintf(LOGFILE, "Obtaining the exit code...\n");
@@ -1713,9 +1703,8 @@ cleanup:
   free(script_file_dest);
   free(cred_file_dest);
   free(docker_command_with_binary);
-  free(docker_wait_command);
   free(docker_inspect_command);
-  free(docker_rm_command);
+  free_values(docker_command);
   return exit_code;
 }
 
@@ -2404,3 +2393,24 @@ int traffic_control_read_stats(char *command_file) {
 struct configuration* get_cfg() {
   return &CFG;
 }
+
+/**
+ * Flatten docker launch command
+ */
+char* flatten(char **args) {
+  size_t total = 1;
+  for (int i = 0; args[i] != NULL; i++) {
+    total = total + strlen(args[i]) + 1;
+  }
+  char *buffer = (char *) malloc(total * sizeof(char));
+  char *to = NULL;
+  to = buffer;
+  for (int i = 0; args[i] != NULL; i++) {
+    to = stpcpy(to, args[i]);
+    to = stpcpy(to, " ");
+  }
+  *to = '\0';
+  return buffer;
+}
+
+

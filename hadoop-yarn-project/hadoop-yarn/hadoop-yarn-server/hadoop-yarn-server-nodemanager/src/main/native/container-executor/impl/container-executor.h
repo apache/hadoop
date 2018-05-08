@@ -284,3 +284,8 @@ int execute_regex_match(const char *regex_str, const char *input);
 int validate_docker_image_name(const char *image_name);
 
 struct configuration* get_cfg();
+
+/**
+ * Flatten docker launch command
+ */
+char* flatten(char **args);
