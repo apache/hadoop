@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -43,9 +44,9 @@ import org.apache.hadoop.utils.MetadataStore;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedList;
 import java.util.Set;
 
 /**
@@ -148,9 +149,7 @@ public class TestStorageContainerManagerHelper {
     List<Map.Entry<byte[], byte[]>> kvs =
         meta.getRangeKVs(null, Integer.MAX_VALUE, filter);
     kvs.forEach(entry -> {
-      String key = DFSUtil.bytes2String(entry.getKey());
-      key.replace(OzoneConsts.DELETING_KEY_PREFIX, "");
-      allBlocks.add(Long.parseLong(key));
+      allBlocks.add(Longs.fromByteArray(entry.getKey()));
     });
     return allBlocks;
   }
