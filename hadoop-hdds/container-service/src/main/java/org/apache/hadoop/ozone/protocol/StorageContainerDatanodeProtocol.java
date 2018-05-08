@@ -69,12 +69,11 @@ public interface StorageContainerDatanodeProtocol {
   /**
    * Register Datanode.
    * @param datanodeDetails - Datanode Details.
-   * @param scmAddresses - List of SCMs this datanode is configured to
-   *                     communicate.
+   *
    * @return SCM Command.
    */
-  SCMRegisteredCmdResponseProto register(DatanodeDetailsProto datanodeDetails,
-      String[] scmAddresses) throws IOException;
+  SCMRegisteredCmdResponseProto register(DatanodeDetailsProto datanodeDetails)
+      throws IOException;
 
   /**
    * Send a container report.

@@ -156,8 +156,7 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    */
   @Override
   public SCMRegisteredCmdResponseProto register(
-      DatanodeDetailsProto datanodeDetailsProto,
-      String[] scmAddresses) throws IOException {
+      DatanodeDetailsProto datanodeDetailsProto) throws IOException {
     SCMRegisterRequestProto.Builder req =
         SCMRegisterRequestProto.newBuilder();
     req.setDatanodeDetails(datanodeDetailsProto);

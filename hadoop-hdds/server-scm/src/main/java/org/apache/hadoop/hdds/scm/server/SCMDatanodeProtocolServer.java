@@ -167,17 +167,16 @@ public class SCMDatanodeProtocolServer implements
 
   @Override
   public SCMRegisteredCmdResponseProto register(
-      HddsProtos.DatanodeDetailsProto datanodeDetails, String[] scmAddresses)
+      HddsProtos.DatanodeDetailsProto datanodeDetails)
       throws IOException {
     // TODO : Return the list of Nodes that forms the SCM HA.
     return getRegisteredResponse(scm.getScmNodeManager()
-        .register(datanodeDetails), null);
+        .register(datanodeDetails));
   }
 
   @VisibleForTesting
   public static SCMRegisteredCmdResponseProto getRegisteredResponse(
-        SCMCommand cmd,
-        StorageContainerDatanodeProtocolProtos.SCMNodeAddressList addressList) {
+        SCMCommand cmd) {
     Preconditions.checkState(cmd.getClass() == RegisteredCommand.class);
     RegisteredCommand rCmd = (RegisteredCommand) cmd;
     SCMCmdType type = cmd.getType();

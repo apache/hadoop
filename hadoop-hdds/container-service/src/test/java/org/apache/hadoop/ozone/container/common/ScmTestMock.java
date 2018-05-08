@@ -195,14 +195,12 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * Register Datanode.
    *
    * @param datanodeDetailsProto DatanodDetailsProto.
-   * @param scmAddresses - List of SCMs this datanode is configured to
-   * communicate.
    * @return SCM Command.
    */
   @Override
   public StorageContainerDatanodeProtocolProtos
       .SCMRegisteredCmdResponseProto register(
-          DatanodeDetailsProto datanodeDetailsProto, String[] scmAddresses)
+          DatanodeDetailsProto datanodeDetailsProto)
       throws IOException {
     rpcCount.incrementAndGet();
     sleepIfNeeded();

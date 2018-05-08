@@ -68,15 +68,8 @@ public class StorageContainerDatanodeProtocolServerSideTranslatorPB
   public StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
       register(RpcController controller, StorageContainerDatanodeProtocolProtos
       .SCMRegisterRequestProto request) throws ServiceException {
-    String[] addressArray = null;
-
-    if (request.hasAddressList()) {
-      addressArray = request.getAddressList().getAddressListList()
-          .toArray(new String[0]);
-    }
-
     try {
-      return impl.register(request.getDatanodeDetails(), addressArray);
+      return impl.register(request.getDatanodeDetails());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

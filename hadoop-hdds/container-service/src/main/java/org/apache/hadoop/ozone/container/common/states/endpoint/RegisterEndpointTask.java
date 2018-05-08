@@ -99,8 +99,7 @@ public final class RegisterEndpointTask implements
 
       // TODO : Add responses to the command Queue.
       SCMRegisteredCmdResponseProto response = rpcEndPoint.getEndPoint()
-          .register(datanodeDetails.getProtoBufMessage(),
-              conf.getStrings(ScmConfigKeys.OZONE_SCM_NAMES));
+          .register(datanodeDetails.getProtoBufMessage());
       Preconditions.checkState(UUID.fromString(response.getDatanodeUUID())
               .equals(datanodeDetails.getUuid()),
           "Unexpected datanode ID in the response.");

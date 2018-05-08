@@ -203,14 +203,12 @@ public class TestEndPoint {
 
   @Test
   public void testRegister() throws Exception {
-    String[] scmAddressArray = new String[1];
-    scmAddressArray[0] = serverAddress.toString();
     DatanodeDetails nodeToRegister = getDatanodeDetails();
     try (EndpointStateMachine rpcEndPoint =
              createEndpoint(
                  SCMTestUtils.getConf(), serverAddress, 1000)) {
       SCMRegisteredCmdResponseProto responseProto = rpcEndPoint.getEndPoint()
-          .register(nodeToRegister.getProtoBufMessage(), scmAddressArray);
+          .register(nodeToRegister.getProtoBufMessage());
       Assert.assertNotNull(responseProto);
       Assert.assertEquals(nodeToRegister.getUuidString(),
           responseProto.getDatanodeUUID());
