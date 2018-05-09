@@ -642,9 +642,12 @@ public class TestKeySpaceManager {
     Assert.assertEquals(1, list.size());
 
     // Delete the key again to test deleting non-existing key.
-    exception.expect(IOException.class);
-    exception.expectMessage("KEY_NOT_FOUND");
-    storageHandler.deleteKey(keyArgs);
+    try {
+      storageHandler.deleteKey(keyArgs);
+      Assert.fail("Expected exception not thrown.");
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe.getMessage().contains("KEY_NOT_FOUND"));
+    }
     Assert.assertEquals(1 + numKeyDeleteFails,
         ksmMetrics.getNumKeyDeletesFails());
   }
