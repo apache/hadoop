@@ -37,6 +37,7 @@ import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -113,7 +114,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   }
 
   private static StorageContainerManager getScm(OzoneConfiguration conf)
-      throws IOException {
+      throws IOException, AuthenticationException {
     conf.setBoolean(OZONE_ENABLED, true);
     SCMStorage scmStore = new SCMStorage(conf);
     if(scmStore.getState() != StorageState.INITIALIZED) {

@@ -36,11 +36,15 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionResponseProto;
 
 import java.io.IOException;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * The protocol spoken between datanodes and SCM. For specifics please the
  * Protoc file that defines this protocol.
  */
+@KerberosInfo(
+    serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface StorageContainerDatanodeProtocol {
   /**
