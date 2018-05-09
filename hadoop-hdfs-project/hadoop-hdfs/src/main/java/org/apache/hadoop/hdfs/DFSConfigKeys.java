@@ -1086,6 +1086,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_JOURNALNODE_SYNC_INTERVAL_KEY =
       "dfs.journalnode.sync.interval";
   public static final long DFS_JOURNALNODE_SYNC_INTERVAL_DEFAULT = 2*60*1000L;
+  public static final String DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY =
+      "dfs.journalnode.edit-cache-size.bytes";
+  public static final int DFS_JOURNALNODE_EDIT_CACHE_SIZE_DEFAULT = 1024 * 1024;
 
   // Journal-node related configs for the client side.
   public static final String  DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY = "dfs.qjournal.queued-edits.limit.mb";
