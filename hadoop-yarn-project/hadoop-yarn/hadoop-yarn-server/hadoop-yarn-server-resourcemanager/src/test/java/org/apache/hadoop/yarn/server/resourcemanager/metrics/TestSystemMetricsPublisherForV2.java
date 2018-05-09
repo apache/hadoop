@@ -402,6 +402,9 @@ public class TestSystemMetricsPublisherForV2 {
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(
         ContainerId.newContainerId(appAttemptId, 1));
+    when(container.getNodeId())
+        .thenReturn(NodeId.newInstance("testhost", 8042));
+    when(container.getNodeHttpAddress()).thenReturn("testhost:25050");
     when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");
