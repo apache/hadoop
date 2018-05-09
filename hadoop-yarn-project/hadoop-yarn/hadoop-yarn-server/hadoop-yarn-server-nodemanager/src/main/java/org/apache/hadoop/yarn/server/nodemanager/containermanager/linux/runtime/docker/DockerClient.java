@@ -110,7 +110,7 @@ public final class DockerClient {
     ApplicationId appId = containerId.getApplicationAttemptId()
         .getApplicationId();
     File dockerCommandFile;
-    String cmdDir = null;
+    File cmdDir = null;
 
     if(nmContext == null || nmContext.getLocalDirsHandler() == null) {
       throw new ContainerExecutionException(
@@ -118,12 +118,17 @@ public final class DockerClient {
     }
 
     try {
-      cmdDir = nmContext.getLocalDirsHandler().getLocalPathForWrite(
+      String cmdDirPath = nmContext.getLocalDirsHandler().getLocalPathForWrite(
           ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR +
           appId + Path.SEPARATOR + filePrefix + Path.SEPARATOR).toString();
+      cmdDir = new File(cmdDirPath);
+      if (!cmdDir.mkdirs() && !cmdDir.exists()) {
+        throw new IOException("Cannot create container private directory "
+            + cmdDir);
+      }
 
       dockerCommandFile = File.createTempFile(TMP_FILE_PREFIX + filePrefix,
-          TMP_FILE_SUFFIX, new File(cmdDir));
+          TMP_FILE_SUFFIX, cmdDir);
 
       Writer writer = new OutputStreamWriter(
           new FileOutputStream(dockerCommandFile.toString()), "UTF-8");
