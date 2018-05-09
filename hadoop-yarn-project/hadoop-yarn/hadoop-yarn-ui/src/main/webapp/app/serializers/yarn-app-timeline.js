@@ -61,7 +61,9 @@ export default DS.JSONAPISerializer.extend({
         numAMContainerPreempted: 0,
         clusterUsagePercentage: 0,
         queueUsagePercentage: 0,
-        currentAppAttemptId: payload.info.YARN_APPLICATION_LATEST_APP_ATTEMPT
+        currentAppAttemptId: payload.info.YARN_APPLICATION_LATEST_APP_ATTEMPT,
+        trackingUI : '',
+        trackingUrl : ''
       }
     };
 

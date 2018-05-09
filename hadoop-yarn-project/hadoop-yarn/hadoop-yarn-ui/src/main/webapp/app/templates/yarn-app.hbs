@@ -116,6 +116,9 @@
             <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
           </div>
           <div>Priority {{model.app.priority}}</div>
+          {{#if model.app.trackingUrl}}
+            <div><a href="{{model.app.trackingUrl}}" target="_blank">{{model.app.trackingUI}}</a></div>
+          {{/if}}
         </div>
       </div>
     </div>
