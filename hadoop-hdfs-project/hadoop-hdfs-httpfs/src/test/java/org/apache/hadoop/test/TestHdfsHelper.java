@@ -163,8 +163,10 @@ public class TestHdfsHelper extends TestDirHelper {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
       FileSystemTestHelper helper = new FileSystemTestHelper();
+      Path targetFile = new Path(new File(helper.getTestRootDir())
+          .getAbsolutePath(), "test.jks");
       final String jceksPath = JavaKeyStoreProvider.SCHEME_NAME + "://file" +
-          new Path(helper.getTestRootDir(), "test.jks").toUri();
+          targetFile.toUri();
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
           jceksPath);
       MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
