@@ -68,8 +68,10 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -434,7 +436,8 @@ public class TestStorageContainerManager {
   }
 
   @Test
-  public void testSCMInitializationFailure() throws IOException {
+  public void testSCMInitializationFailure()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = new OzoneConfiguration();
     final String path =
         GenericTestUtils.getTempPath(UUID.randomUUID().toString());

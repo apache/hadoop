@@ -75,6 +75,13 @@ if [[ ${SECURITY_ENABLED} == "kerberos" || ${SECURITY_AUTHORIZATION_ENABLED} == 
   exit 1
 fi
 
+#SECURITY_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey hadoop.security.authentication | tr '[:upper:]' '[:lower:]' 2>&-)
+#SECURITY_AUTHORIZATION_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey hadoop.security.authorization | tr '[:upper:]' '[:lower:]' 2>&-)
+#if [[ ${SECURITY_ENABLED} == "kerberos" || ${SECURITY_AUTHORIZATION_ENABLED} == "true" ]]; then
+#  echo "Ozone is not supported in a security enabled cluster."
+#  exit 1
+#fi
+
 #---------------------------------------------------------
 # Check if ozone is enabled
 OZONE_ENABLED=$("${HADOOP_HDFS_HOME}/bin/ozone" getozoneconf -confKey ozone.enabled | tr '[:upper:]' '[:lower:]' 2>&-)

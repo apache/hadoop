@@ -296,6 +296,9 @@ public final class OzoneConfigKeys {
       "hdds.lock.suppress.warning.interval.ms";
   public static final long
       HDDS_LOCK_SUPPRESS_WARNING_INTERVAL_MS_DEAFULT = 10000L;
+  public static final String OZONE_SECURITY_ENABLED_KEY = "ozone.security.enabled";
+  public static final String OZONE_SYSTEM_TAGS_KEY = "ozone.system.tags";
+  public static final boolean OZONE_SECURITY_ENABLED_DEFAULT = false;
 
   public static final String OZONE_CONTAINER_COPY_WORKDIR =
       "hdds.datanode.replication.work.dir";

@@ -436,6 +436,8 @@ public abstract class TestConfigurationFieldsBase {
     // Create XML key/value map
     LOG_XML.debug("Reading XML property files\n");
     xmlKeyValueMap = extractPropertiesFromXml(xmlFilename);
+    // Remove hadoop property set in ozone-default.xml
+    xmlKeyValueMap.remove("hadoop.custom.tags");
     LOG_XML.debug("\n=====\n");
 
     // Create default configuration variable key/value map

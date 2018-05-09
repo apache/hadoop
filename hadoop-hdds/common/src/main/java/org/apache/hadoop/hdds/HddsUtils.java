@@ -242,18 +242,7 @@ public final class HddsUtils {
   }
 
   public static boolean isHddsEnabled(Configuration conf) {
-    String securityEnabled =
-        conf.get(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-            "simple");
-    boolean securityAuthorizationEnabled = conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false);
-
-    if (securityEnabled.equals("kerberos") || securityAuthorizationEnabled) {
-      LOG.error("Ozone is not supported in a security enabled cluster. ");
-      return false;
-    } else {
-      return conf.getBoolean(OZONE_ENABLED, OZONE_ENABLED_DEFAULT);
-    }
+    return conf.getBoolean(OZONE_ENABLED, OZONE_ENABLED_DEFAULT);
   }
 
 
