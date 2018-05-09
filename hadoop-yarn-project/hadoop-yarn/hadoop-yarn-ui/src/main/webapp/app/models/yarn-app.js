@@ -53,6 +53,8 @@ export default DS.Model.extend({
   remainingTimeoutInSeconds: DS.attr("number"),
   applicationExpiryTime: DS.attr("string"),
   resourceRequests: DS.attr("array"),
+  trackingUI: DS.attr("string"),
+  trackingUrl: DS.attr("string"),
 
   isFailed: function() {
     return this.get("finalStatus") === "FAILED";

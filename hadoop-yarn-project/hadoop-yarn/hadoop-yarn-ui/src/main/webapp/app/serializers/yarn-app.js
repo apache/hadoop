@@ -69,7 +69,9 @@ export default DS.JSONAPISerializer.extend({
           queueUsagePercentage: payload.queueUsagePercentage,
           currentAppAttemptId: payload.currentAppAttemptId,
           remainingTimeoutInSeconds: timeoutInSecs,
-          applicationExpiryTime: appExpiryTime
+          applicationExpiryTime: appExpiryTime,
+          trackingUI : payload.trackingUI,
+          trackingUrl : payload.trackingUrl
         }
       };
 
