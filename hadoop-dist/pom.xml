@@ -229,30 +229,32 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-ozone-ozone-manager</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdds-server-scm</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdds-tools</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdds-container-service</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-ozone-objectstore-service</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdds-tools</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-ozone-tools</artifactId>
+          <scope>provided</scope>
         </dependency>
       </dependencies>
       <build>

@@ -49,14 +49,18 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>metrics-core</artifactId>
       <version>3.2.4</version>
     </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-server-scm</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-common</artifactId>
+      <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
