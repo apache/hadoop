@@ -528,6 +528,50 @@ public class TestOzoneRpcClient {
   }
 
   @Test
+  public void testRenameKey()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String fromKeyName = UUID.randomUUID().toString();
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OzoneOutputStream out = bucket.createKey(fromKeyName,
+        value.getBytes().length, ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE);
+    out.write(value.getBytes());
+    out.close();
+    OzoneKey key = bucket.getKey(fromKeyName);
+    Assert.assertEquals(fromKeyName, key.getName());
+
+    // Rename to empty string should fail.
+    IOException ioe = null;
+    String toKeyName = "";
+    try {
+      bucket.renameKey(fromKeyName, toKeyName);
+    } catch (IOException e) {
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Rename key failed, error"));
+
+    toKeyName = UUID.randomUUID().toString();
+    bucket.renameKey(fromKeyName, toKeyName);
+
+    // Lookup for old key should fail.
+    try {
+      bucket.getKey(fromKeyName);
+    } catch (IOException e) {
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Lookup key failed, error"));
+
+    key = bucket.getKey(toKeyName);
+    Assert.assertEquals(toKeyName, key.getName());
+  }
+
+  @Test
   public void testListVolume() throws IOException, OzoneException {
     String volBase = "vol-" + RandomStringUtils.randomNumeric(3);
     //Create 10 volume vol-<random>-a-0-<random> to vol-<random>-a-9-<random>

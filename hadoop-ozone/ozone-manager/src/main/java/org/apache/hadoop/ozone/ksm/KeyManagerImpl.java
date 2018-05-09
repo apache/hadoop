@@ -396,6 +396,71 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
+  public void renameKey(KsmKeyArgs args, String toKeyName) throws IOException {
+    Preconditions.checkNotNull(args);
+    Preconditions.checkNotNull(toKeyName);
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
+    String fromKeyName = args.getKeyName();
+    if (toKeyName.length() == 0 || fromKeyName.length() == 0) {
+      LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}.",
+          volumeName, bucketName, fromKeyName, toKeyName);
+      throw new KSMException("Key name is empty",
+          ResultCodes.FAILED_INVALID_KEY_NAME);
+    }
+
+    metadataManager.writeLock().lock();
+    try {
+      // fromKeyName should exist
+      byte[] fromKey = metadataManager.getDBKeyBytes(
+          volumeName, bucketName, fromKeyName);
+      byte[] fromKeyValue = metadataManager.get(fromKey);
+      if (fromKeyValue == null) {
+        // TODO: Add support for renaming open key
+        LOG.error(
+            "Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}. "
+                + "Key: {} not found.", volumeName, bucketName, fromKeyName,
+            toKeyName, fromKeyName);
+        throw new KSMException("Key not found",
+            KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
+      }
+
+      // toKeyName should not exist
+      byte[] toKey =
+          metadataManager.getDBKeyBytes(volumeName, bucketName, toKeyName);
+      byte[] toKeyValue = metadataManager.get(toKey);
+      if (toKeyValue != null) {
+        LOG.error(
+            "Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}. "
+                + "Key: {} already exists.", volumeName, bucketName,
+            fromKeyName, toKeyName, toKeyName);
+        throw new KSMException("Key not found",
+            KSMException.ResultCodes.FAILED_KEY_ALREADY_EXISTS);
+      }
+
+      if (fromKeyName.equals(toKeyName)) {
+        return;
+      }
+
+      KsmKeyInfo newKeyInfo =
+          KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(fromKeyValue));
+      newKeyInfo.setKeyName(toKeyName);
+      newKeyInfo.updateModifcationTime();
+      BatchOperation batch = new BatchOperation();
+      batch.delete(fromKey);
+      batch.put(toKey, newKeyInfo.getProtobuf().toByteArray());
+      metadataManager.writeBatch(batch);
+    } catch (DBException ex) {
+      LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} toKey:{}.",
+          volumeName, bucketName, fromKeyName, toKeyName, ex);
+      throw new KSMException(ex.getMessage(),
+          ResultCodes.FAILED_KEY_RENAME);
+    } finally {
+      metadataManager.writeLock().unlock();
+    }
+  }
+
+  @Override
   public void deleteKey(KsmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     metadataManager.writeLock().lock();

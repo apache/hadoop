@@ -34,7 +34,7 @@ public final class KsmKeyInfo {
   private final String volumeName;
   private final String bucketName;
   // name of key client specified
-  private final String keyName;
+  private String keyName;
   private long dataSize;
   private List<KsmKeyLocationInfoGroup> keyLocationVersions;
   private final long creationTime;
@@ -73,6 +73,10 @@ public final class KsmKeyInfo {
 
   public String getKeyName() {
     return keyName;
+  }
+
+  public void setKeyName(String keyName) {
+    this.keyName = keyName;
   }
 
   public long getDataSize() {

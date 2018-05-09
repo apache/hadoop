@@ -264,6 +264,15 @@ public interface StorageHandler extends Closeable{
    */
   void deleteKey(KeyArgs args) throws IOException, OzoneException;
 
+  /**
+   * Renames an existing key within a bucket.
+   *
+   * @param args KeyArgs
+   * @param toKeyName New name to be used for the key
+   * @throws OzoneException
+   */
+  void renameKey(KeyArgs args, String toKeyName)
+      throws IOException, OzoneException;
 
   /**
    * Returns a list of Key.

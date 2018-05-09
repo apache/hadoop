@@ -744,6 +744,17 @@ public final class KeySpaceManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  @Override
+  public void renameKey(KsmKeyArgs args, String toKeyName) throws IOException {
+    try {
+      metrics.incNumKeyRenames();
+      keyManager.renameKey(args, toKeyName);
+    } catch (IOException e) {
+      metrics.incNumKeyRenameFails();
+      throw e;
+    }
+  }
+
   /**
    * Deletes an existing key.
    *

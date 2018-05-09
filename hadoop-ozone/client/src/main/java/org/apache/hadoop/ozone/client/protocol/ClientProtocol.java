@@ -285,6 +285,16 @@ public interface ClientProtocol {
   void deleteKey(String volumeName, String bucketName, String keyName)
       throws IOException;
 
+  /**
+   * Renames an existing key within a bucket.
+   * @param volumeName Name of the Volume
+   * @param bucketName Name of the Bucket
+   * @param fromKeyName Name of the Key to be renamed
+   * @param toKeyName New name to be used for the Key
+   * @throws IOException
+   */
+  void renameKey(String volumeName, String bucketName, String fromKeyName,
+      String toKeyName) throws IOException;
 
   /**
    * Returns list of Keys in {Volume/Bucket} that matches the keyPrefix,

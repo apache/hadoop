@@ -652,6 +652,121 @@ public class TestKeySpaceManager {
         ksmMetrics.getNumKeyDeletesFails());
   }
 
+  /**
+   * Test rename key for ksm.
+   *
+   * @throws IOException
+   * @throws OzoneException
+   */
+  @Test
+  public void testRenameKey() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+    String keyName = "key" + RandomStringUtils.randomNumeric(5);
+    long numKeyRenames = ksmMetrics.getNumKeyRenames();
+    long numKeyRenameFails = ksmMetrics.getNumKeyRenameFails();
+    int testRenameFails = 0;
+    int testRenames = 0;
+    IOException ioe = null;
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    storageHandler.createBucket(bucketArgs);
+
+    KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
+    keyArgs.setSize(100);
+    String toKeyName = "key" + RandomStringUtils.randomNumeric(5);
+
+    // Rename from non-existent key should fail
+    try {
+      testRenames++;
+      storageHandler.renameKey(keyArgs, toKeyName);
+    } catch (IOException e) {
+      testRenameFails++;
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Rename key failed, error"));
+
+    // Write the contents of the key to be renamed
+    String dataString = RandomStringUtils.randomAscii(100);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+    }
+
+    // Rename the key
+    toKeyName = "key" + RandomStringUtils.randomNumeric(5);
+    testRenames++;
+    storageHandler.renameKey(keyArgs, toKeyName);
+    Assert.assertEquals(numKeyRenames + testRenames,
+        ksmMetrics.getNumKeyRenames());
+    Assert.assertEquals(numKeyRenameFails + testRenameFails,
+        ksmMetrics.getNumKeyRenameFails());
+
+    // Try to get the key, should fail as it has been renamed
+    try {
+      storageHandler.newKeyReader(keyArgs);
+    } catch (IOException e) {
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("KEY_NOT_FOUND"));
+
+    // Verify the contents of the renamed key
+    keyArgs = new KeyArgs(toKeyName, bucketArgs);
+    InputStream in = storageHandler.newKeyReader(keyArgs);
+    byte[] b = new byte[dataString.getBytes().length];
+    in.read(b);
+    Assert.assertEquals(new String(b), dataString);
+
+    // Rewrite the renamed key. Rename to key which already exists should fail.
+    keyArgs = new KeyArgs(keyName, bucketArgs);
+    keyArgs.setSize(100);
+    dataString = RandomStringUtils.randomAscii(100);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+      stream.close();
+      testRenames++;
+      storageHandler.renameKey(keyArgs, toKeyName);
+    } catch (IOException e) {
+      testRenameFails++;
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Rename key failed, error"));
+
+    // Rename to empty string should fail
+    toKeyName = "";
+    try {
+      testRenames++;
+      storageHandler.renameKey(keyArgs, toKeyName);
+    } catch (IOException e) {
+      testRenameFails++;
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Rename key failed, error"));
+
+    // Rename from empty string should fail
+    keyArgs = new KeyArgs("", bucketArgs);
+    toKeyName = "key" + RandomStringUtils.randomNumeric(5);
+    try {
+      testRenames++;
+      storageHandler.renameKey(keyArgs, toKeyName);
+    } catch (IOException e) {
+      testRenameFails++;
+      ioe = e;
+    }
+    Assert.assertTrue(ioe.getMessage().contains("Rename key failed, error"));
+
+    Assert.assertEquals(numKeyRenames + testRenames,
+        ksmMetrics.getNumKeyRenames());
+    Assert.assertEquals(numKeyRenameFails + testRenameFails,
+        ksmMetrics.getNumKeyRenameFails());
+  }
+
   @Test(timeout = 60000)
   public void testListBuckets() throws IOException, OzoneException {
     ListBuckets result = null;

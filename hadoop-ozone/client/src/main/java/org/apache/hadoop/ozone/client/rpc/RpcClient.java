@@ -520,6 +520,21 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
+  public void renameKey(String volumeName, String bucketName,
+      String fromKeyName, String toKeyName) throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    Preconditions.checkNotNull(fromKeyName);
+    Preconditions.checkNotNull(toKeyName);
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(fromKeyName)
+        .build();
+    keySpaceManagerClient.renameKey(keyArgs, toKeyName);
+  }
+
+  @Override
   public List<OzoneKey> listKeys(String volumeName, String bucketName,
                                  String keyPrefix, String prevKey,
                                  int maxListResult)

@@ -52,6 +52,7 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numBucketDeletes;
   private @Metric MutableCounterLong numKeyAllocate;
   private @Metric MutableCounterLong numKeyLookup;
+  private @Metric MutableCounterLong numKeyRenames;
   private @Metric MutableCounterLong numKeyDeletes;
   private @Metric MutableCounterLong numBucketLists;
   private @Metric MutableCounterLong numKeyLists;
@@ -72,6 +73,7 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numBucketDeleteFails;
   private @Metric MutableCounterLong numKeyAllocateFails;
   private @Metric MutableCounterLong numKeyLookupFails;
+  private @Metric MutableCounterLong numKeyRenameFails;
   private @Metric MutableCounterLong numKeyDeleteFails;
   private @Metric MutableCounterLong numBucketListFails;
   private @Metric MutableCounterLong numKeyListFails;
@@ -206,6 +208,16 @@ public class KSMMetrics {
 
   public void incNumKeyLookupFails() {
     numKeyLookupFails.incr();
+  }
+
+  public void incNumKeyRenames() {
+    numKeyOps.incr();
+    numKeyRenames.incr();
+  }
+
+  public void incNumKeyRenameFails() {
+    numKeyOps.incr();
+    numKeyRenameFails.incr();
   }
 
   public void incNumKeyDeleteFails() {
@@ -378,6 +390,16 @@ public class KSMMetrics {
   @VisibleForTesting
   public long getNumKeyLookupFails() {
     return numKeyLookupFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyRenames() {
+    return numKeyRenames.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyRenameFails() {
+    return numKeyRenameFails.value();
   }
 
   @VisibleForTesting

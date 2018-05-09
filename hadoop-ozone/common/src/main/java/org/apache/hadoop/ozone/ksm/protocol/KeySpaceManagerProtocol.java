@@ -166,10 +166,17 @@ public interface KeySpaceManagerProtocol {
    * Look up for the container of an existing key.
    *
    * @param args the args of the key.
-   * @return KsmKeyInfo isntacne that client uses to talk to container.
+   * @return KsmKeyInfo instance that client uses to talk to container.
    * @throws IOException
    */
   KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException;
+
+  /**
+   * Rename an existing key within a bucket
+   * @param args the args of the key.
+   * @param toKeyName New name to be used for the Key
+   */
+  void renameKey(KsmKeyArgs args, String toKeyName) throws IOException;
 
   /**
    * Deletes an existing key.

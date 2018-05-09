@@ -339,6 +339,12 @@ public class LocalStorageHandler implements StorageHandler {
     oz.deleteKey(args);
   }
 
+  @Override
+  public void renameKey(KeyArgs args, String toKeyName)
+      throws IOException, OzoneException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
   /**
    * Returns a list of Key.
    *

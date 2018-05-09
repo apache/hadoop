@@ -86,6 +86,16 @@ public interface KeyManager {
   KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException;
 
   /**
+   * Renames an existing key within a bucket.
+   *
+   * @param args the args of the key provided by client.
+   * @param toKeyName New name to be used for the key
+   * @throws IOException if specified key doesn't exist or
+   * some other I/O errors while renaming the key.
+   */
+  void renameKey(KsmKeyArgs args, String toKeyName) throws IOException;
+
+  /**
    * Deletes an object by an object key. The key will be immediately removed
    * from KSM namespace and become invisible to clients. The object data
    * will be removed in async manner that might retain for some time.

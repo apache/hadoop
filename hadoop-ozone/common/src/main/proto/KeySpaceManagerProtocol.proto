@@ -50,8 +50,9 @@ enum Status {
     BUCKET_ALREADY_EXISTS = 10;
     KEY_ALREADY_EXISTS = 11;
     KEY_NOT_FOUND = 12;
-    ACCESS_DENIED = 13;
-    INTERNAL_ERROR = 14;
+    INVALID_KEY_NAME = 13;
+    ACCESS_DENIED = 14;
+    INTERNAL_ERROR = 15;
 }
 
 
@@ -276,6 +277,15 @@ message SetBucketPropertyResponse {
     required Status status = 1;
 }
 
+message RenameKeyRequest{
+    required KeyArgs keyArgs = 1;
+    required string toKeyName = 2;
+}
+
+message RenameKeyResponse{
+    required Status status = 1;
+}
+
 message DeleteBucketRequest {
     required string volumeName = 1;
     required string bucketName = 2;
@@ -411,6 +421,12 @@ service KeySpaceManagerService {
     */
     rpc lookupKey(LocateKeyRequest)
         returns(LocateKeyResponse);
+
+    /**
+       Rename an existing key within a bucket.
+    */
+    rpc renameKey(RenameKeyRequest)
+        returns(RenameKeyResponse);
 
     /**
        Delete an existing key.

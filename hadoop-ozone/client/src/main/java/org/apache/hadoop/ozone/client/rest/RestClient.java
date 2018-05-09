@@ -676,6 +676,12 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
+  public void renameKey(String volumeName, String bucketName,
+      String fromKeyName, String toKeyName) throws IOException {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
+
+  @Override
   public List<OzoneKey> listKeys(String volumeName, String bucketName,
                                  String keyPrefix, String prevKey,
                                  int maxListResult)

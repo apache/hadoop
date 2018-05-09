@@ -305,6 +305,14 @@ public class OzoneBucket {
     proxy.deleteKey(volumeName, name, key);
   }
 
+  public void renameKey(String fromKeyName, String toKeyName)
+      throws IOException {
+    Preconditions.checkNotNull(proxy, "Client proxy is not set.");
+    Preconditions.checkNotNull(fromKeyName);
+    Preconditions.checkNotNull(toKeyName);
+    proxy.renameKey(volumeName, name, fromKeyName, toKeyName);
+  }
+
   /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */

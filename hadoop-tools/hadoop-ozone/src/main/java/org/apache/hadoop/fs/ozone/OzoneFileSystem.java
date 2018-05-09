@@ -257,30 +257,17 @@ public class OzoneFileSystem extends FileSystem {
 
     boolean processKey(String key) throws IOException {
       String newKeyName = dstKey.concat(key.substring(srcKey.length()));
-      rename(key, newKeyName);
+      bucket.renameKey(key, newKeyName);
       return true;
-    }
-
-    // TODO: currently rename work by copying the streams, with changes in KSM,
-    // this operation can be improved by renaming the keys in KSM directly.
-    private void rename(String src, String dst) throws IOException {
-      try (OzoneInputStream inputStream = bucket.readKey(src);
-          OzoneOutputStream outputStream = bucket
-              .createKey(dst, 0, replicationType, replicationFactor)) {
-        IOUtils.copyBytes(inputStream, outputStream, getConf());
-      }
     }
   }
 
   /**
    * Check whether the source and destination path are valid and then perform
-   * rename by copying the data from source path to destination path.
+   * rename from source path to destination path.
    *
-   * The rename operation is performed by copying data from source key
-   * to destination key. This is done by reading the source key data into a
-   * temporary file and then writing this temporary file to destination key.
-   * The temporary file is deleted after the rename operation.
-   * TODO: Optimize the operation by renaming keys in KSM.
+   * The rename operation is performed by renaming the keys with src as prefix.
+   * For such keys the prefix is changed from src to dst.
    *
    * @param src source path for rename
    * @param dst destination path for rename
@@ -290,8 +277,11 @@ public class OzoneFileSystem extends FileSystem {
    */
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-    LOG.trace("rename() from:{} to:{}", src, dst);
+    if (src.equals(dst)) {
+      return true;
+    }
 
+    LOG.trace("rename() from:{} to:{}", src, dst);
     if (src.isRoot()) {
       // Cannot rename root of file system
       LOG.trace("Cannot rename the root of a filesystem");
@@ -367,8 +357,7 @@ public class OzoneFileSystem extends FileSystem {
       }
     }
     RenameIterator iterator = new RenameIterator(src, dst);
-    iterator.iterate();
-    return src.equals(dst) || delete(src, true);
+    return iterator.iterate();
   }
 
   private class DeleteIterator extends OzoneListingIterator {

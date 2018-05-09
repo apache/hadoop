@@ -457,6 +457,17 @@ public final class DistributedStorageHandler implements StorageHandler {
   }
 
   @Override
+  public void renameKey(KeyArgs args, String toKeyName)
+      throws IOException, OzoneException {
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .build();
+    keySpaceManagerClient.renameKey(keyArgs, toKeyName);
+  }
+
+  @Override
   public KeyInfo getKeyInfo(KeyArgs args) throws IOException, OzoneException {
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
