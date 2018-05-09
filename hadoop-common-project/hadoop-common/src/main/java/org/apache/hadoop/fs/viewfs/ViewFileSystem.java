@@ -1037,12 +1037,12 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
       checkPathIsSlash(f);
-      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
+      FileStatus[] result = new FileStatus[theInternalDir.children.size()];
       int i = 0;
-      for (Entry<String, INode<FileSystem>> iEntry :
-          theInternalDir.getChildren().entrySet()) {
+      for (Entry<String, INode<FileSystem>> iEntry : 
+                                          theInternalDir.children.entrySet()) {
         INode<FileSystem> inode = iEntry.getValue();
-        if (inode.isLink()) {
+        if (inode instanceof INodeLink ) {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
 
           result[i++] = new FileStatus(0, false, 0, 0,
@@ -1065,12 +1065,11 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
         throws AccessControlException, FileAlreadyExistsException {
-      if (theInternalDir.isRoot() && dir == null) {
+      if (theInternalDir.isRoot && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       // Note dir starts with /
-      if (theInternalDir.getChildren().containsKey(
-          dir.toString().substring(1))) {
+      if (theInternalDir.children.containsKey(dir.toString().substring(1))) {
         return true; // this is the stupid semantics of FileSystem
       }
       throw readOnlyMountTable("mkdirs",  dir);

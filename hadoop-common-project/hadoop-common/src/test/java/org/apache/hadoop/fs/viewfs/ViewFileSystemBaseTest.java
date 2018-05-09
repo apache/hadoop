@@ -1005,8 +1005,8 @@ abstract public class ViewFileSystemBaseTest {
           + mtPrefix + Constants.CONFIG_VIEWFS_LINK + "." + "/");
     } catch (Exception e) {
       if (e instanceof UnsupportedFileSystemException) {
-        String msg = " Use " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
-            " instead";
+        String msg = Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH
+            + " is not supported yet.";
         assertThat(e.getMessage(), containsString(msg));
       } else {
         fail("Unexpected exception: " + e.getMessage());
