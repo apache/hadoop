@@ -369,10 +369,24 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   private boolean expired(FileStatus status, long expiry, String keyPrefix) {
+    // remove the protocol from path string to be able to compare
+    String bucket = status.getPath().toUri().getHost();
+    String statusTranslatedPath = "";
+    if(bucket != null && !bucket.isEmpty()){
+      // if there's a bucket, (well defined host in Uri) the pathToParentKey
+      // can be used to get the path from the status
+      statusTranslatedPath =
+          PathMetadataDynamoDBTranslation.pathToParentKey(status.getPath());
+    } else {
+      // if there's no bucket in the path the pathToParentKey will fail, so
+      // this is the fallback to get the path from status
+      statusTranslatedPath = status.getPath().toUri().getPath();
+    }
+
     // Note: S3 doesn't track modification time on directories, so for
     // consistency with the DynamoDB implementation we ignore that here
     return status.getModificationTime() < expiry && !status.isDirectory()
-      && status.getPath().toString().startsWith(keyPrefix);
+      && statusTranslatedPath.startsWith(keyPrefix);
   }
 
   @VisibleForTesting
