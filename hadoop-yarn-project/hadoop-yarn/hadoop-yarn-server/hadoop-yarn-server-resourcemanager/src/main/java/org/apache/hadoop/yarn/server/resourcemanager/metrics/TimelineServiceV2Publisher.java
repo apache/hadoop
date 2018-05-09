@@ -318,6 +318,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     if (appAttempt.getMasterContainer() != null) {
       entityInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_INFO,
           appAttempt.getMasterContainer().getId().toString());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ADDRESS,
+          appAttempt.getMasterContainer().getNodeHttpAddress());
+      entityInfo.put(AppAttemptMetricsConstants.MASTER_NODE_ID,
+          appAttempt.getMasterContainer().getNodeId().toString());
     }
     entity.setInfo(entityInfo);
     entity.setIdPrefix(

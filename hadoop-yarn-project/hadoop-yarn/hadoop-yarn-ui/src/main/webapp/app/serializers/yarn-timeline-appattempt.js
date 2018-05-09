@@ -37,10 +37,10 @@ export default DS.JSONAPISerializer.extend({
           finishedTime: Converter.timeStampToDate(finishedTime),
           containerId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_CONTAINER,
           amContainerId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_CONTAINER,
-          nodeHttpAddress: '',
-          nodeId: '',
+          nodeHttpAddress: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_NODE_ADDRESS,
+          nodeId: payload.info.YARN_APPLICATION_ATTEMPT_MASTER_NODE_ID,
           hosts: payload.info.YARN_APPLICATION_ATTEMPT_HOST,
-          state: payload.info.YARN_APPLICATION_ATTEMPT_HOST,
+          state: payload.info.YARN_APPLICATION_ATTEMPT_STATE,
           logsLink: '',
           appAttemptId: payload.id
         }
