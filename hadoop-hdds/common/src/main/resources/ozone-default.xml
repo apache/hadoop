@@ -1308,7 +1308,6 @@
       datanode unless the datanode confirms the completion.
     </description>
   </property>
-
   <property>
     <name>hdds.db.profile</name>
     <value>DISK</value>
@@ -1317,7 +1316,6 @@
     that tunes the RocksDB settings for the hardware it is running
     on. Right now, we have SSD and DISK as profile options.</description>
   </property>
-
   <property>
     <name>hdds.datanode.replication.work.dir</name>
     <tag>DATANODE</tag>
@@ -1584,6 +1582,30 @@
     <value>false</value>
     <tag>OZONE, SECURITY, ACL</tag>
     <description>Key to enable/disable ozone acls.</description>
+  </property>
+  <property>
+    <name>ozone.scm.kerberos.keytab.file</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description> The keytab file used by each SCM daemon to login as its
+      service principal. The principal name is configured with
+      ozone.scm.kerberos.principal.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.kerberos.principal</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description>The SCM service principal. Ex scm/_HOST@REALM.TLD.</description>
+  </property>
+
+  <property>
+    <name>ozone.scm.web.authentication.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+  </property>
+  <property>
+    <name>ozone.scm.web.authentication.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
 </configuration>

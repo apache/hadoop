@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.hdds.scm.protocol;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -27,11 +29,13 @@ import org.apache.hadoop.hdds.protocol.proto
 
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * ContainerLocationProtocol is used by an HDFS node to find the set of nodes
  * that currently host a container.
  */
+@KerberosInfo(serverPrincipal = ScmConfigKeys.OZONE_SCM_KERBEROS_PRINCIPAL_KEY)
 public interface StorageContainerLocationProtocol {
   /**
    * Asks SCM where a container should be allocated. SCM responds with the

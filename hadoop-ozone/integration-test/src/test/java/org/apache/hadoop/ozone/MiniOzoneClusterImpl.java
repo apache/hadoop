@@ -48,6 +48,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.slf4j.Logger;
@@ -232,8 +233,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartStorageContainerManager()
-      throws TimeoutException, InterruptedException, IOException {
+  public void restartStorageContainerManager() throws TimeoutException,
+      InterruptedException, IOException, AuthenticationException {
     scm.stop();
     scm.join();
     scm = StorageContainerManager.createSCM(null, conf);
@@ -370,9 +371,16 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     public MiniOzoneCluster build() throws IOException {
       DefaultMetricsSystem.setMiniClusterMode(true);
       initializeConfiguration();
-      StorageContainerManager scm = createSCM();
-      scm.start();
-      OzoneManager om = createOM();
+      StorageContainerManager scm;
+      OzoneManager om;
+      try {
+        scm = createSCM();
+        scm.start();
+        om = createOM();
+      } catch (AuthenticationException ex) {
+        throw new IOException("Unable to build MiniOzoneCluster. ", ex);
+      }
+
       om.start();
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
       MiniOzoneClusterImpl cluster = new MiniOzoneClusterImpl(conf, om, scm,
@@ -424,7 +432,8 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
      *
      * @throws IOException
      */
-    private StorageContainerManager createSCM() throws IOException {
+    private StorageContainerManager createSCM()
+        throws IOException, AuthenticationException {
       configureSCM();
       SCMStorage scmStore = new SCMStorage(conf);
       initializeScmStorage(scmStore);
