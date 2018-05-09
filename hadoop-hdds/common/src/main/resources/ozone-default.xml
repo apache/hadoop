@@ -152,6 +152,7 @@
     </description>
   </property>
   <property>
+<<<<<<< HEAD
     <name>dfs.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
@@ -209,6 +210,9 @@
   </property>
   <property>
     <name>hdds.container.report.interval</name>
+=======
+    <name>ozone.container.report.interval</name>
+>>>>>>> HDDS-6. Enable SCM kerberos auth. Contributed by Ajay Kumar.
     <value>60000ms</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
     <description>Time interval of the datanode to send container report. Each
