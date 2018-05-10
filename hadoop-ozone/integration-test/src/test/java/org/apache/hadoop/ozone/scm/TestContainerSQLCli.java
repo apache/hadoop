@@ -177,29 +177,6 @@ public class TestContainerSQLCli {
   }
 
   @Test
-  public void testConvertBlockDB() throws Exception {
-    String dbOutPath = GenericTestUtils.getTempPath(
-        UUID.randomUUID() + "/out_sql.db");
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
-    String dbPath = dbRootPath + "/" + BLOCK_DB;
-    String[] args = {"-p", dbPath, "-o", dbOutPath};
-
-    cli.run(args);
-
-    Connection conn = connectDB(dbOutPath);
-    String sql = "SELECT * FROM blockContainer";
-    ResultSet rs = executeQuery(conn, sql);
-    while(rs.next()) {
-      String blockKey = rs.getString("blockKey");
-      String containerName = rs.getString("containerName");
-      assertTrue(blockContainerMap.containsKey(blockKey) &&
-          blockContainerMap.remove(blockKey).equals(containerName));
-    }
-    assertEquals(0, blockContainerMap.size());
-    Files.delete(Paths.get(dbOutPath));
-  }
-
-  @Test
   public void testConvertNodepoolDB() throws Exception {
     String dbOutPath = GenericTestUtils.getTempPath(
         UUID.randomUUID() + "/out_sql.db");

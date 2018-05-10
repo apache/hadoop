@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.scm.cli;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
+import com.google.protobuf.ByteString;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -86,7 +88,7 @@ public class SQLCLI  extends Configured implements Tool {
   // for container.db
   private static final String CREATE_CONTAINER_INFO =
       "CREATE TABLE containerInfo (" +
-          "containerName TEXT PRIMARY KEY NOT NULL, " +
+          "containerID LONG PRIMARY KEY NOT NULL, " +
           "leaderUUID TEXT NOT NULL)";
   private static final String CREATE_CONTAINER_MEMBERS =
       "CREATE TABLE containerMembers (" +
@@ -100,22 +102,14 @@ public class SQLCLI  extends Configured implements Tool {
           "ipAddress TEXT, " +
           "containerPort INTEGER NOT NULL);";
   private static final String INSERT_CONTAINER_INFO =
-      "INSERT INTO containerInfo (containerName, leaderUUID) " +
-          "VALUES (\"%s\", \"%s\")";
+      "INSERT INTO containerInfo (containerID, leaderUUID) " +
+          "VALUES (\"%d\", \"%s\")";
   private static final String INSERT_DATANODE_INFO =
       "INSERT INTO datanodeInfo (hostname, datanodeUUid, ipAddress, " +
           "containerPort) " +
           "VALUES (\"%s\", \"%s\", \"%s\", \"%d\")";
   private static final String INSERT_CONTAINER_MEMBERS =
       "INSERT INTO containerMembers (containerName, datanodeUUID) " +
-          "VALUES (\"%s\", \"%s\")";
-  // for block.db
-  private static final String CREATE_BLOCK_CONTAINER =
-      "CREATE TABLE blockContainer (" +
-          "blockKey TEXT PRIMARY KEY NOT NULL, " +
-          "containerName TEXT NOT NULL)";
-  private static final String INSERT_BLOCK_CONTAINER =
-      "INSERT INTO blockContainer (blockKey, containerName) " +
           "VALUES (\"%s\", \"%s\")";
   // for nodepool.db
   private static final String CREATE_NODE_POOL =
@@ -291,10 +285,7 @@ public class SQLCLI  extends Configured implements Tool {
     if (dbName.toString().endsWith(CONTAINER_DB_SUFFIX)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
-    } else if (dbName.toString().equals(BLOCK_DB)) {
-      LOG.info("Converting block DB");
-      convertBlockDB(dbPath, outPath);
-    } else if (dbName.toString().equals(NODEPOOL_DB)) {
+    }  else if (dbName.toString().equals(NODEPOOL_DB)) {
       LOG.info("Converting node pool DB");
       convertNodePoolDB(dbPath, outPath);
     } else if (dbName.toString().equals(OPEN_CONTAINERS_DB)) {
@@ -498,14 +489,14 @@ public class SQLCLI  extends Configured implements Tool {
 
       HashSet<String> uuidChecked = new HashSet<>();
       dbStore.iterate(null, (key, value) -> {
-        String containerName = new String(key, encoding);
+        long containerID = Longs.fromByteArray(key);
         ContainerInfo containerInfo = null;
         containerInfo = ContainerInfo.fromProtobuf(
             HddsProtos.SCMContainerInfo.PARSER.parseFrom(value));
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema
-          insertContainerDB(conn, containerName,
+          insertContainerDB(conn, containerID,
               containerInfo.getPipeline().getProtobufMessage(), uuidChecked);
           return true;
         } catch (SQLException e) {
@@ -518,16 +509,16 @@ public class SQLCLI  extends Configured implements Tool {
   /**
    * Insert into the sqlite DB of container.db.
    * @param conn the connection to the sqlite DB.
-   * @param containerName the name of the container.
+   * @param containerID the id of the container.
    * @param pipeline the actual container pipeline object.
    * @param uuidChecked the uuid that has been already inserted.
    * @throws SQLException throws exception.
    */
-  private void insertContainerDB(Connection conn, String containerName,
+  private void insertContainerDB(Connection conn, long containerID,
       Pipeline pipeline, Set<String> uuidChecked) throws SQLException {
-    LOG.info("Insert to sql container db, for container {}", containerName);
+    LOG.info("Insert to sql container db, for container {}", containerID);
     String insertContainerInfo = String.format(
-        INSERT_CONTAINER_INFO, containerName,
+        INSERT_CONTAINER_INFO, containerID,
         pipeline.getPipelineChannel().getLeaderID());
     executeSQL(conn, insertContainerInfo);
 
@@ -546,49 +537,11 @@ public class SQLCLI  extends Configured implements Tool {
         uuidChecked.add(uuid);
       }
       String insertContainerMembers = String.format(
-          INSERT_CONTAINER_MEMBERS, containerName, uuid);
+          INSERT_CONTAINER_MEMBERS, containerID, uuid);
       executeSQL(conn, insertContainerMembers);
     }
     LOG.info("Insertion completed.");
   }
-
-  /**
-   * Converts block.db to sqlite. This is rather simple db, the schema has only
-   * one table:
-   *
-   * blockContainer
-   * --------------------------
-   * blockKey*  | containerName
-   * --------------------------
-   *
-   * @param dbPath path to container db.
-   * @param outPath path to output sqlite
-   * @throws IOException throws exception.
-   */
-  private void convertBlockDB(Path dbPath, Path outPath) throws Exception {
-    LOG.info("Create tables for sql block db.");
-    File dbFile = dbPath.toFile();
-    try (MetadataStore dbStore = MetadataStoreBuilder.newBuilder()
-        .setConf(conf).setDbFile(dbFile).build();
-        Connection conn = connectDB(outPath.toString())) {
-      executeSQL(conn, CREATE_BLOCK_CONTAINER);
-
-      dbStore.iterate(null, (key, value) -> {
-        String blockKey = DFSUtilClient.bytes2String(key);
-        String containerName = DFSUtilClient.bytes2String(value);
-        String insertBlockContainer = String.format(
-            INSERT_BLOCK_CONTAINER, blockKey, containerName);
-
-        try {
-          executeSQL(conn, insertBlockContainer);
-          return true;
-        } catch (SQLException e) {
-          throw new IOException(e);
-        }
-      });
-    }
-  }
-
   /**
    * Converts nodePool.db to sqlite. The schema of sql db:
    * two tables, nodePool and datanodeInfo (the same datanode Info as for
