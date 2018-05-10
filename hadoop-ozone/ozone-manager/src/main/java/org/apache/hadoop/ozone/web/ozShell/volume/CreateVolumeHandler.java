@@ -19,8 +19,10 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -52,14 +54,14 @@ public class CreateVolumeHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.CREATE_VOLUME)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : createVolume is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.CREATE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
     if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Volume name is required to create a volume");
     }
 
@@ -77,7 +79,7 @@ public class CreateVolumeHandler extends Handler {
     }
 
     if (!cmd.hasOption(Shell.USER)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "User name is needed in createVolume call.");
     }
 
@@ -86,13 +88,19 @@ public class CreateVolumeHandler extends Handler {
     }
 
     userName = cmd.getOptionValue(Shell.USER);
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
 
-    OzoneVolume vol = client.createVolume(volumeName, userName, quota);
+    VolumeArgs.Builder volumeArgsBuilder = VolumeArgs.newBuilder()
+        .setAdmin(rootName)
+        .setOwner(userName);
+    if (quota != null) {
+      volumeArgsBuilder.setQuota(quota);
+    }
+    client.getObjectStore().createVolume(volumeName, volumeArgsBuilder.build());
+
     if (cmd.hasOption(Shell.VERBOSE)) {
-      System.out.printf("%s%n",
-          JsonUtils.toJsonStringWithDefaultPrettyPrinter(vol.getJsonString()));
+      OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
+      System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+          JsonUtils.toJsonString(OzoneClientUtils.asVolumeInfo(vol))));
     }
   }
 }

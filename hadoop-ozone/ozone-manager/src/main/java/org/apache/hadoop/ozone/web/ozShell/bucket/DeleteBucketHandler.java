@@ -19,8 +19,8 @@
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -37,7 +37,6 @@ import java.nio.file.Paths;
 public class DeleteBucketHandler extends Handler {
   private String volumeName;
   private String bucketName;
-  private String rootName;
 
   /**
    * Executes the Client Calls.
@@ -52,7 +51,7 @@ public class DeleteBucketHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.DELETE_BUCKET)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : deleteBucket is missing");
     }
 
@@ -60,7 +59,7 @@ public class DeleteBucketHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 2) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume and bucket name required in delete Bucket");
     }
 
@@ -72,16 +71,7 @@ public class DeleteBucketHandler extends Handler {
       System.out.printf("Bucket Name : %s%n", bucketName);
     }
 
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    } else {
-      rootName = System.getProperty("user.name");
-    }
-
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
-
-    OzoneVolume vol = client.getVolume(volumeName);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     vol.deleteBucket(bucketName);
   }
 }

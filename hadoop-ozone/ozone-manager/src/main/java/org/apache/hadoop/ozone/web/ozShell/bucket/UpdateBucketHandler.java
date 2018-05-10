@@ -18,9 +18,11 @@
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -31,6 +33,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Allows users to add and remove acls and from a bucket.
@@ -38,13 +43,12 @@ import java.nio.file.Paths;
 public class UpdateBucketHandler extends Handler {
   private String volumeName;
   private String bucketName;
-  private String rootName;
 
   @Override
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.UPDATE_BUCKET)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : updateBucket is missing");
     }
 
@@ -53,7 +57,7 @@ public class UpdateBucketHandler extends Handler {
     Path path = Paths.get(ozoneURI.getPath());
 
     if (path.getNameCount() < 2) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume and bucket name required in update bucket");
     }
 
@@ -65,30 +69,27 @@ public class UpdateBucketHandler extends Handler {
       System.out.printf("Bucket Name : %s%n", bucketName);
     }
 
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    } else {
-      rootName = System.getProperty("user.name");
-    }
-
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
-
-    OzoneVolume vol = client.getVolume(volumeName);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
     if (cmd.hasOption(Shell.ADD_ACLS)) {
       String aclString = cmd.getOptionValue(Shell.ADD_ACLS);
       String[] aclArray = aclString.split(",");
-      vol.addAcls(bucketName, aclArray);
+      List<OzoneAcl> aclList =
+          Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl))
+              .collect(Collectors.toList());
+      bucket.addAcls(aclList);
     }
 
     if (cmd.hasOption(Shell.REMOVE_ACLS)) {
       String aclString = cmd.getOptionValue(Shell.REMOVE_ACLS);
       String[] aclArray = aclString.split(",");
-      vol.removeAcls(bucketName, aclArray);
+      List<OzoneAcl> aclList =
+          Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl))
+              .collect(Collectors.toList());
+      bucket.removeAcls(aclList);
     }
 
-    OzoneBucket bucket = vol.getBucket(bucketName);
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        bucket.getBucketInfo().toJsonString()));
+        JsonUtils.toJsonString(OzoneClientUtils.asBucketInfo(bucket))));
   }
 }

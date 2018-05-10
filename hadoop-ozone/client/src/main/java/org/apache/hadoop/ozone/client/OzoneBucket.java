@@ -291,7 +291,21 @@ public class OzoneBucket {
    * @return {@code Iterator<OzoneKey>}
    */
   public Iterator<OzoneKey> listKeys(String keyPrefix) {
-    return new KeyIterator(keyPrefix);
+    return listKeys(keyPrefix, null);
+  }
+
+  /**
+   * Returns Iterator to iterate over all keys after prevKey in the bucket.
+   * If prevKey is null it iterates from the first key in the bucket.
+   * The result can be restricted using key prefix, will return all
+   * keys if key prefix is null.
+   *
+   * @param keyPrefix Bucket prefix to match
+   * @param prevKey Keys will be listed after this key name
+   * @return {@code Iterator<OzoneKey>}
+   */
+  public Iterator<OzoneKey> listKeys(String keyPrefix, String prevKey) {
+    return new KeyIterator(keyPrefix, prevKey);
   }
 
   /**
@@ -325,14 +339,15 @@ public class OzoneBucket {
 
 
     /**
-     * Creates an Iterator to iterate over all keys in the bucket,
-     * which matches volume prefix.
+     * Creates an Iterator to iterate over all keys after prevKey in the bucket.
+     * If prevKey is null it iterates from the first key in the bucket.
+     * The returned keys match key prefix.
      * @param keyPrefix
      */
-    KeyIterator(String keyPrefix) {
+    KeyIterator(String keyPrefix, String prevKey) {
       this.keyPrefix = keyPrefix;
       this.currentValue = null;
-      this.currentIterator = getNextListOfKeys(null).iterator();
+      this.currentIterator = getNextListOfKeys(prevKey).iterator();
     }
 
     @Override

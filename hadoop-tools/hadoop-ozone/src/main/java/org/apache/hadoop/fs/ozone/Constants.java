@@ -23,11 +23,7 @@ package org.apache.hadoop.fs.ozone;
  */
 public final class Constants {
 
-  public static final String OZONE_URI_SCHEME = "o3";
-
   public static final String OZONE_DEFAULT_USER = "hdfs";
-
-  public static final String OZONE_HTTP_SCHEME = "http://";
 
   public static final String OZONE_USER_DIR = "/user";
 
@@ -36,8 +32,6 @@ public final class Constants {
 
   /** Temporary directory. */
   public static final String BUFFER_TMP_KEY = "hadoop.tmp.dir";
-
-  public static final String OZONE_URI_DELIMITER = "/";
 
   /** Page size for Ozone listing operation. */
   public static final int LISTING_PAGE_SIZE = 1024;

@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
@@ -141,7 +142,7 @@ public class TestVolume {
       fail("Except the volume creation be failed because the"
           + " volume name starts with an invalid char #");
     } catch (Exception e) {
-      assertTrue(e instanceof OzoneRestClientException);
+      assertTrue(e instanceof OzoneClientException);
       assertTrue(e.getMessage().contains("Bucket or Volume name"
           + " has an unsupported character : #"));
     }

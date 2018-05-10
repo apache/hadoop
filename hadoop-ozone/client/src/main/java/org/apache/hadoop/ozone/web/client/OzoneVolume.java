@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -203,7 +204,7 @@ public class OzoneVolume {
       executeCreateBucket(httpPost, httpClient);
       return getBucket(bucketName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpPost);
     }
@@ -276,7 +277,7 @@ public class OzoneVolume {
       if (entity != null) {
         throw OzoneException.parse(EntityUtils.toString(entity));
       } else {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
     } finally {
       if (entity != null) {
@@ -307,7 +308,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(putRequest);
     }
@@ -336,7 +337,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(putRequest);
     }
@@ -361,7 +362,7 @@ public class OzoneVolume {
       return executeInfoBucket(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(getRequest);
     }
@@ -388,7 +389,7 @@ public class OzoneVolume {
       int errorCode = response.getStatusLine().getStatusCode();
       entity = response.getEntity();
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
       if ((errorCode == HTTP_OK) || (errorCode == HTTP_CREATED)) {
         OzoneBucket bucket =
@@ -432,7 +433,7 @@ public class OzoneVolume {
         throw OzoneException.parse(EntityUtils.toString(entity));
       }
 
-      throw new OzoneRestClientException("Unexpected null in http result");
+      throw new OzoneClientException("Unexpected null in http result");
     } finally {
       if (entity != null) {
         EntityUtils.consumeQuietly(entity);
@@ -467,7 +468,7 @@ public class OzoneVolume {
       return executeListBuckets(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage(), e);
+      throw new OzoneClientException(e.getMessage(), e);
     } finally {
       releaseConnection(getRequest);
     }
@@ -496,7 +497,7 @@ public class OzoneVolume {
       entity = response.getEntity();
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
       if (errorCode == HTTP_OK) {
         ListBuckets bucketList =
@@ -535,7 +536,7 @@ public class OzoneVolume {
       executeDeleteBucket(delRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(delRequest);
     }
@@ -564,7 +565,7 @@ public class OzoneVolume {
       }
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload.");
+        throw new OzoneClientException("Unexpected null in http payload.");
       }
 
       throw OzoneException.parse(EntityUtils.toString(entity));

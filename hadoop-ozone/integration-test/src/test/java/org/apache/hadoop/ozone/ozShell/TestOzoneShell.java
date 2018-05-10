@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.ozShell;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -26,15 +27,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -43,11 +50,16 @@ import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneKey;
-import org.apache.hadoop.ozone.web.client.OzoneRestClient;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.BucketInfo;
@@ -63,11 +75,19 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This test class specified for testing Ozone shell command.
  */
+@RunWith(value = Parameterized.class)
 public class TestOzoneShell {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOzoneShell.class);
 
   /**
    * Set the timeout for every test.
@@ -79,7 +99,7 @@ public class TestOzoneShell {
   private static File baseDir;
   private static OzoneConfiguration conf = null;
   private static MiniOzoneCluster cluster = null;
-  private static OzoneRestClient client = null;
+  private static ClientProtocol client = null;
   private static Shell shell = null;
 
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -87,6 +107,16 @@ public class TestOzoneShell {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
+  @Parameterized.Parameters
+  public static Collection<Object[]> clientProtocol() {
+    Object[][] params = new Object[][] {
+        {RpcClient.class},
+        {RestClient.class}};
+    return Arrays.asList(params);
+  }
+
+  @Parameterized.Parameter
+  public Class clientProtocol;
   /**
    * Create a MiniDFSCluster for testing with using distributed Ozone
    * handler type.
@@ -110,13 +140,12 @@ public class TestOzoneShell {
     shell = new Shell();
     shell.setConf(conf);
 
-    cluster = MiniOzoneCluster.newBuilder(conf).build();
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(3)
+        .build();
+    conf.setInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue());
+    client = new RpcClient(conf);
     cluster.waitForClusterToBeReady();
-    final int port = cluster.getHddsDatanodes().get(0).getDatanodeDetails()
-        .getOzoneRestPort();
-    url = String.format("http://localhost:%d", port);
-    client = new OzoneRestClient(String.format("http://localhost:%d", port));
-    client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
   }
 
   /**
@@ -137,6 +166,26 @@ public class TestOzoneShell {
   public void setup() {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
+    if(clientProtocol.equals(RestClient.class)) {
+      String hostName = cluster.getKeySpaceManager().getHttpServer()
+          .getHttpAddress().getHostName();
+      int port = cluster
+          .getKeySpaceManager().getHttpServer().getHttpAddress().getPort();
+      url = String.format("http://" + hostName + ":" + port);
+    } else {
+      List<ServiceInfo> services = null;
+      try {
+        services = cluster.getKeySpaceManager().getServiceList();
+      } catch (IOException e) {
+        LOG.error("Could not get service list from KSM");
+      }
+      String hostName = services.stream().filter(
+          a -> a.getNodeType().equals(HddsProtos.NodeType.KSM))
+          .collect(Collectors.toList()).get(0).getHostname();
+
+      String port = cluster.getKeySpaceManager().getRpcPort();
+      url = String.format("o3://" + hostName + ":" + port);
+    }
   }
 
   @After
@@ -152,22 +201,29 @@ public class TestOzoneShell {
 
   @Test
   public void testCreateVolume() throws Exception {
+    LOG.info("Running testCreateVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String userName = "bilbo";
     String[] args = new String[] {"-createVolume", url + "/" + volumeName,
         "-user", userName, "-root"};
 
     assertEquals(0, ToolRunner.run(shell, args));
-    OzoneVolume volumeInfo = client.getVolume(volumeName);
-    assertEquals(volumeName, volumeInfo.getVolumeName());
-    assertEquals(userName, volumeInfo.getOwnerName());
+    OzoneVolume volumeInfo = client.getVolumeDetails(volumeName);
+    assertEquals(volumeName, volumeInfo.getName());
+    assertEquals(userName, volumeInfo.getOwner());
   }
 
   @Test
   public void testDeleteVolume() throws Exception {
+    LOG.info("Running testDeleteVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
-    assertNotNull(vol);
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume volume = client.getVolumeDetails(volumeName);
+    assertNotNull(volume);
 
     String[] args = new String[] {"-deleteVolume", url + "/" + volumeName,
         "-root"};
@@ -175,9 +231,9 @@ public class TestOzoneShell {
 
     // verify if volume has been deleted
     try {
-      client.getVolume(volumeName);
+      client.getVolumeDetails(volumeName);
       fail("Get volume call should have thrown.");
-    } catch (OzoneException e) {
+    } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Info Volume failed, error:VOLUME_NOT_FOUND", e);
     }
@@ -185,8 +241,13 @@ public class TestOzoneShell {
 
   @Test
   public void testInfoVolume() throws Exception {
+    LOG.info("Running testInfoVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    client.createVolume(volumeName, "bilbo", "100TB");
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
 
     String[] args = new String[] {"-infoVolume", url + "/" + volumeName,
         "-root"};
@@ -206,45 +267,53 @@ public class TestOzoneShell {
 
   @Test
   public void testUpdateVolume() throws Exception {
+    LOG.info("Running testUpdateVolume");
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String userName = "bilbo";
-    OzoneVolume vol = client.createVolume(volumeName, userName, "100TB");
-    assertEquals(userName, vol.getOwnerName());
-    assertEquals(100, vol.getQuota().getSize(), 100);
-    assertEquals(OzoneQuota.Units.TB, vol.getQuota().getUnit());
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
+    assertEquals(userName, vol.getOwner());
+    assertEquals(OzoneQuota.parseQuota("100TB").sizeInBytes(), vol.getQuota());
 
     String[] args = new String[] {"-updateVolume", url + "/" + volumeName,
         "-quota", "500MB", "-root"};
     assertEquals(0, ToolRunner.run(shell, args));
-    vol = client.getVolume(volumeName);
-    assertEquals(userName, vol.getOwnerName());
-    assertEquals(500, vol.getQuota().getSize(), 500);
-    assertEquals(OzoneQuota.Units.MB, vol.getQuota().getUnit());
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(userName, vol.getOwner());
+    assertEquals(OzoneQuota.parseQuota("500MB").sizeInBytes(), vol.getQuota());
 
     String newUser = "new-user";
     args = new String[] {"-updateVolume", url + "/" + volumeName,
         "-user", newUser, "-root"};
     assertEquals(0, ToolRunner.run(shell, args));
-    vol = client.getVolume(volumeName);
-    assertEquals(newUser, vol.getOwnerName());
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(newUser, vol.getOwner());
 
     // test error conditions
     args = new String[] {"-updateVolume", url + "/invalid-volume",
         "-user", newUser, "-root"};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
-        "Volume owner change failed, error:VOLUME_NOT_FOUND"));
+        "Info Volume failed, error:VOLUME_NOT_FOUND"));
 
     err.reset();
     args = new String[] {"-updateVolume", url + "/invalid-volume",
         "-quota", "500MB", "-root"};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
-        "Volume quota change failed, error:VOLUME_NOT_FOUND"));
+        "Info Volume failed, error:VOLUME_NOT_FOUND"));
   }
 
   @Test
   public void testListVolume() throws Exception {
+    LOG.info("Running testListVolume");
+    if (clientProtocol.equals(RestClient.class)) {
+      return;
+    }
     String commandOutput;
     List<VolumeInfo> volumes;
     final int volCount = 20;
@@ -265,7 +334,12 @@ public class TestOzoneShell {
         userName = user2;
         volumeName = "test-vol" + x;
       }
-      OzoneVolume vol = client.createVolume(volumeName, userName, "100TB");
+      VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+          .setOwner(userName)
+          .setQuota("100TB")
+          .build();
+      client.createVolume(volumeName, volumeArgs);
+      OzoneVolume vol = client.getVolumeDetails(volumeName);
       assertNotNull(vol);
     }
 
@@ -343,16 +417,17 @@ public class TestOzoneShell {
 
   @Test
   public void testCreateBucket() throws Exception {
+    LOG.info("Running testCreateBucket");
     OzoneVolume vol = creatVolume();
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     String[] args = new String[] {"-createBucket",
-        url + "/" + vol.getVolumeName() + "/" + bucketName};
+        url + "/" + vol.getName() + "/" + bucketName};
 
     assertEquals(0, ToolRunner.run(shell, args));
     OzoneBucket bucketInfo = vol.getBucket(bucketName);
-    assertEquals(vol.getVolumeName(),
-        bucketInfo.getBucketInfo().getVolumeName());
-    assertEquals(bucketName, bucketInfo.getBucketName());
+    assertEquals(vol.getName(),
+        bucketInfo.getVolumeName());
+    assertEquals(bucketName, bucketInfo.getName());
 
     // test create a bucket in a non-exist volume
     args = new String[] {"-createBucket",
@@ -365,20 +440,22 @@ public class TestOzoneShell {
 
   @Test
   public void testDeleteBucket() throws Exception {
+    LOG.info("Running testDeleteBucket");
     OzoneVolume vol = creatVolume();
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    OzoneBucket bucketInfo = vol.createBucket(bucketName);
+    vol.createBucket(bucketName);
+    OzoneBucket bucketInfo = vol.getBucket(bucketName);
     assertNotNull(bucketInfo);
 
     String[] args = new String[] {"-deleteBucket",
-        url + "/" + vol.getVolumeName() + "/" + bucketName};
+        url + "/" + vol.getName() + "/" + bucketName};
     assertEquals(0, ToolRunner.run(shell, args));
 
     // verify if bucket has been deleted in volume
     try {
       vol.getBucket(bucketName);
       fail("Get bucket should have thrown.");
-    } catch (OzoneException e) {
+    } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Info Bucket failed, error: BUCKET_NOT_FOUND", e);
     }
@@ -393,7 +470,7 @@ public class TestOzoneShell {
     err.reset();
     // test delete non-exist bucket
     args = new String[] {"-deleteBucket",
-        url + "/" + vol.getVolumeName() + "/invalid-bucket"};
+        url + "/" + vol.getName() + "/invalid-bucket"};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
         "Delete Bucket failed, error:BUCKET_NOT_FOUND"));
@@ -401,12 +478,13 @@ public class TestOzoneShell {
 
   @Test
   public void testInfoBucket() throws Exception {
+    LOG.info("Running testInfoBucket");
     OzoneVolume vol = creatVolume();
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
     vol.createBucket(bucketName);
 
     String[] args = new String[] {"-infoBucket",
-        url + "/" + vol.getVolumeName() + "/" + bucketName};
+        url + "/" + vol.getName() + "/" + bucketName};
     assertEquals(0, ToolRunner.run(shell, args));
 
     String output = out.toString();
@@ -416,7 +494,7 @@ public class TestOzoneShell {
 
     // test get info from a non-exist bucket
     args = new String[] {"-infoBucket",
-        url + "/" + vol.getVolumeName() + "/invalid-bucket" + bucketName};
+        url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
         "Info Bucket failed, error: BUCKET_NOT_FOUND"));
@@ -424,13 +502,15 @@ public class TestOzoneShell {
 
   @Test
   public void testUpdateBucket() throws Exception {
+    LOG.info("Running testUpdateBucket");
     OzoneVolume vol = creatVolume();
     String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    OzoneBucket bucket = vol.createBucket(bucketName);
-    assertEquals(0, bucket.getAcls().size());
+    vol.createBucket(bucketName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    int aclSize = bucket.getAcls().size();
 
     String[] args = new String[] {"-updateBucket",
-        url + "/" + vol.getVolumeName() + "/" + bucketName, "-addAcl",
+        url + "/" + vol.getName() + "/" + bucketName, "-addAcl",
         "user:frodo:rw,group:samwise:r"};
     assertEquals(0, ToolRunner.run(shell, args));
     String output = out.toString();
@@ -438,36 +518,40 @@ public class TestOzoneShell {
         && output.contains(OzoneConsts.OZONE_TIME_ZONE));
 
     bucket = vol.getBucket(bucketName);
-    assertEquals(2, bucket.getAcls().size());
+    assertEquals(2 + aclSize, bucket.getAcls().size());
 
-    OzoneAcl acl = bucket.getAcls().get(0);
+    OzoneAcl acl = bucket.getAcls().get(aclSize);
     assertTrue(acl.getName().equals("frodo")
         && acl.getType() == OzoneACLType.USER
         && acl.getRights()== OzoneACLRights.READ_WRITE);
 
     args = new String[] {"-updateBucket",
-        url + "/" + vol.getVolumeName() + "/" + bucketName, "-removeAcl",
+        url + "/" + vol.getName() + "/" + bucketName, "-removeAcl",
         "user:frodo:rw"};
     assertEquals(0, ToolRunner.run(shell, args));
 
     bucket = vol.getBucket(bucketName);
-    acl = bucket.getAcls().get(0);
-    assertEquals(1, bucket.getAcls().size());
+    acl = bucket.getAcls().get(aclSize);
+    assertEquals(1 + aclSize, bucket.getAcls().size());
     assertTrue(acl.getName().equals("samwise")
         && acl.getType() == OzoneACLType.GROUP
         && acl.getRights()== OzoneACLRights.READ);
 
     // test update bucket for a non-exist bucket
     args = new String[] {"-updateBucket",
-        url + "/" + vol.getVolumeName() + "/invalid-bucket", "-addAcl",
+        url + "/" + vol.getName() + "/invalid-bucket", "-addAcl",
         "user:frodo:rw"};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
-        "Setting bucket property failed, error: BUCKET_NOT_FOUND"));
+        "Info Bucket failed, error: BUCKET_NOT_FOUND"));
   }
 
   @Test
   public void testListBucket() throws Exception {
+    LOG.info("Running testListBucket");
+    if (clientProtocol.equals(RestClient.class)) {
+      return;
+    }
     List<BucketInfo> buckets;
     String commandOutput;
     int bucketCount = 11;
@@ -478,13 +562,14 @@ public class TestOzoneShell {
     for (int i = 0; i < bucketCount; i++) {
       String name = "test-bucket" + i;
       bucketNames.add(name);
-      OzoneBucket bucket = vol.createBucket(name);
+      vol.createBucket(name);
+      OzoneBucket bucket = vol.getBucket(name);
       assertNotNull(bucket);
     }
 
     // test -length option
     String[] args = new String[] {"-listBucket",
-        url + "/" + vol.getVolumeName(), "-length", "100"};
+        url + "/" + vol.getName(), "-length", "100"};
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
     buckets = (List<BucketInfo>) JsonUtils.toJsonList(commandOutput,
@@ -497,13 +582,13 @@ public class TestOzoneShell {
     // test-bucket10, test-bucket2, ,..., test-bucket9]
     for (int i = 0; i < buckets.size(); i++) {
       assertEquals(buckets.get(i).getBucketName(), bucketNames.get(i));
-      assertEquals(buckets.get(i).getVolumeName(), vol.getVolumeName());
+      assertEquals(buckets.get(i).getVolumeName(), vol.getName());
       assertTrue(buckets.get(i).getCreatedOn()
           .contains(OzoneConsts.OZONE_TIME_ZONE));
     }
 
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
+    args = new String[] {"-listBucket", url + "/" + vol.getName(),
         "-length", "3"};
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
@@ -519,7 +604,7 @@ public class TestOzoneShell {
 
     // test -prefix option
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
+    args = new String[] {"-listBucket", url + "/" + vol.getName(),
         "-length", "100", "-prefix", "test-bucket1"};
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
@@ -533,7 +618,7 @@ public class TestOzoneShell {
 
     // test -start option
     out.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
+    args = new String[] {"-listBucket", url + "/" + vol.getName(),
         "-length", "100", "-start", "test-bucket7"};
     assertEquals(0, ToolRunner.run(shell, args));
     commandOutput = out.toString();
@@ -546,7 +631,7 @@ public class TestOzoneShell {
 
     // test error conditions
     err.reset();
-    args = new String[] {"-listBucket", url + "/" + vol.getVolumeName(),
+    args = new String[] {"-listBucket", url + "/" + vol.getName(),
         "-length", "-1"};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
@@ -555,9 +640,10 @@ public class TestOzoneShell {
 
   @Test
   public void testPutKey() throws Exception {
+    LOG.info("Running testPutKey");
     OzoneBucket bucket = creatBucket();
-    String volumeName = bucket.getBucketInfo().getVolumeName();
-    String bucketName = bucket.getBucketName();
+    String volumeName = bucket.getVolumeName();
+    String bucketName = bucket.getName();
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
 
     String[] args = new String[] {"-putKey",
@@ -565,8 +651,8 @@ public class TestOzoneShell {
         createTmpFile()};
     assertEquals(0, ToolRunner.run(shell, args));
 
-    OzoneKey keyInfo = bucket.getKeyInfo(keyName);
-    assertEquals(keyName, keyInfo.getObjectInfo().getKeyName());
+    OzoneKey keyInfo = bucket.getKey(keyName);
+    assertEquals(keyName, keyInfo.getName());
 
     // test put key in a non-exist bucket
     args = new String[] {"-putKey",
@@ -574,18 +660,22 @@ public class TestOzoneShell {
         createTmpFile()};
     assertEquals(1, ToolRunner.run(shell, args));
     assertTrue(err.toString().contains(
-        "Create key failed, error:BUCKET_NOT_FOUND"));
+        "Info Bucket failed, error: BUCKET_NOT_FOUND"));
   }
 
   @Test
   public void testGetKey() throws Exception {
+    LOG.info("Running testGetKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
-    String volumeName = bucket.getBucketInfo().getVolumeName();
-    String bucketName = bucket.getBucketName();
+    String volumeName = bucket.getVolumeName();
+    String bucketName = bucket.getName();
 
     String dataStr = "test-data";
-    bucket.putKey(keyName, dataStr);
+    OzoneOutputStream keyOutputStream =
+        bucket.createKey(keyName, dataStr.length());
+    keyOutputStream.write(dataStr.getBytes());
+    keyOutputStream.close();
 
     String tmpPath = baseDir.getAbsolutePath() + "/testfile-"
         + UUID.randomUUID().toString();
@@ -603,14 +693,19 @@ public class TestOzoneShell {
 
   @Test
   public void testDeleteKey() throws Exception {
+    LOG.info("Running testDeleteKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
-    String volumeName = bucket.getBucketInfo().getVolumeName();
-    String bucketName = bucket.getBucketName();
-    bucket.putKey(keyName, "test-data");
+    String volumeName = bucket.getVolumeName();
+    String bucketName = bucket.getName();
+    String dataStr = "test-data";
+    OzoneOutputStream keyOutputStream =
+        bucket.createKey(keyName, dataStr.length());
+    keyOutputStream.write(dataStr.getBytes());
+    keyOutputStream.close();
 
-    OzoneKey keyInfo = bucket.getKeyInfo(keyName);
-    assertEquals(keyName, keyInfo.getObjectInfo().getKeyName());
+    OzoneKey keyInfo = bucket.getKey(keyName);
+    assertEquals(keyName, keyInfo.getName());
 
     String[] args = new String[] {"-deleteKey",
         url + "/" + volumeName + "/" + bucketName + "/" + keyName};
@@ -618,9 +713,9 @@ public class TestOzoneShell {
 
     // verify if key has been deleted in the bucket
     try {
-      bucket.getKeyInfo(keyName);
+      bucket.getKey(keyName);
       fail("Get key should have thrown.");
-    } catch (OzoneException e) {
+    } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Lookup key failed, error:KEY_NOT_FOUND", e);
     }
@@ -643,22 +738,29 @@ public class TestOzoneShell {
 
   @Test
   public void testInfoKey() throws Exception {
+    LOG.info("Running testInfoKey");
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     OzoneBucket bucket = creatBucket();
-    String volumeName = bucket.getBucketInfo().getVolumeName();
-    String bucketName = bucket.getBucketName();
-    bucket.putKey(keyName, "test-data");
+    String volumeName = bucket.getVolumeName();
+    String bucketName = bucket.getName();
+    String dataStr = "test-data";
+    OzoneOutputStream keyOutputStream =
+        bucket.createKey(keyName, dataStr.length());
+    keyOutputStream.write(dataStr.getBytes());
+    keyOutputStream.close();
 
     String[] args = new String[] {"-infoKey",
         url + "/" + volumeName + "/" + bucketName + "/" + keyName};
 
     // verify the response output
-    assertEquals(0, ToolRunner.run(shell, args));
-
+    int a = ToolRunner.run(shell, args);
     String output = out.toString();
+    assertEquals(0, a);
+
     assertTrue(output.contains(keyName));
-    assertTrue(output.contains("createdOn") && output.contains("modifiedOn")
-        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
+    assertTrue(
+        output.contains("createdOn") && output.contains("modifiedOn") && output
+            .contains(OzoneConsts.OZONE_TIME_ZONE));
 
     // reset stream
     out.reset();
@@ -677,19 +779,27 @@ public class TestOzoneShell {
 
   @Test
   public void testListKey() throws Exception {
+    LOG.info("Running testListKey");
+    if (clientProtocol.equals(RestClient.class)) {
+      return;
+    }
     String commandOutput;
     List<KeyInfo> keys;
     int keyCount = 11;
     OzoneBucket bucket = creatBucket();
-    String volumeName = bucket.getBucketInfo().getVolumeName();
-    String bucketName = bucket.getBucketName();
+    String volumeName = bucket.getVolumeName();
+    String bucketName = bucket.getName();
 
     String keyName;
     List<String> keyNames = new ArrayList<>();
     for (int i = 0; i < keyCount; i++) {
       keyName = "test-key" + i;
       keyNames.add(keyName);
-      bucket.putKey(keyName, "test-data" + i);
+      String dataStr = "test-data";
+      OzoneOutputStream keyOutputStream =
+          bucket.createKey(keyName, dataStr.length());
+      keyOutputStream.write(dataStr.getBytes());
+      keyOutputStream.close();
     }
 
     // test -length option
@@ -763,17 +873,23 @@ public class TestOzoneShell {
         "the vaule should be a positive number"));
   }
 
-  private OzoneVolume creatVolume() throws OzoneException {
-    String volumeName = UUID.randomUUID().toString() + "volume";
-    OzoneVolume vol = client.createVolume(volumeName, "bilbo", "100TB");
+  private OzoneVolume creatVolume() throws OzoneException, IOException {
+    String volumeName = RandomStringUtils.randomNumeric(5) + "volume";
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume volume = client.getVolumeDetails(volumeName);
 
-    return vol;
+    return volume;
   }
 
-  private OzoneBucket creatBucket() throws OzoneException {
+  private OzoneBucket creatBucket() throws OzoneException, IOException {
     OzoneVolume vol = creatVolume();
-    String bucketName = UUID.randomUUID().toString() + "bucket";
-    OzoneBucket bucketInfo = vol.createBucket(bucketName);
+    String bucketName = RandomStringUtils.randomNumeric(5) + "bucket";
+    vol.createBucket(bucketName);
+    OzoneBucket bucketInfo = vol.getBucket(bucketName);
 
     return bucketInfo;
   }

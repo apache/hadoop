@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -118,7 +119,7 @@ public class TestOzoneFileInterfaces {
     storageHandler.createBucket(bucketArgs);
 
     rootPath = String
-        .format("%s://%s.%s/", Constants.OZONE_URI_SCHEME, bucketName,
+        .format("%s://%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucketName,
             volumeName);
     if (setDefaultFs) {
       // Set the fs.defaultFS and start the filesystem
@@ -145,7 +146,7 @@ public class TestOzoneFileInterfaces {
           "The initialized file system is not OzoneFileSystem but " +
               fs.getClass(),
           fs instanceof OzoneFileSystem);
-      assertEquals(Constants.OZONE_URI_SCHEME, fs.getUri().getScheme());
+      assertEquals(OzoneConsts.OZONE_URI_SCHEME, fs.getUri().getScheme());
     }
   }
 

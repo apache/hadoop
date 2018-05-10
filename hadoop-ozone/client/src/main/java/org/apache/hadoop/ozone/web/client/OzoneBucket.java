@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -169,11 +170,11 @@ public class OzoneBucket {
    */
   public void putKey(String keyName, String data) throws OzoneException {
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException("Invalid key Name.");
+      throw new OzoneClientException("Invalid key Name.");
     }
 
     if (data == null) {
-      throw new OzoneRestClientException("Invalid data.");
+      throw new OzoneClientException("Invalid data.");
     }
 
     HttpPut putRequest = null;
@@ -195,7 +196,7 @@ public class OzoneBucket {
       }
       executePutKey(putRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(is);
       releaseConnection(putRequest);
@@ -211,7 +212,7 @@ public class OzoneBucket {
    */
   public void putKey(File dataFile) throws OzoneException {
     if (dataFile == null) {
-      throw new OzoneRestClientException("Invalid file object.");
+      throw new OzoneClientException("Invalid file object.");
     }
     String keyName = dataFile.getName();
     putKey(keyName, dataFile);
@@ -228,11 +229,11 @@ public class OzoneBucket {
       throws OzoneException {
 
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     if (file == null) {
-      throw new OzoneRestClientException("Invalid data stream");
+      throw new OzoneClientException("Invalid data stream");
     }
 
     HttpPut putRequest = null;
@@ -253,7 +254,7 @@ public class OzoneBucket {
       executePutKey(putRequest, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
-      final OzoneRestClientException orce = new OzoneRestClientException(
+      final OzoneClientException orce = new OzoneClientException(
           "Failed to putKey: keyName=" + keyName + ", file=" + file);
       orce.initCause(ex);
       LOG.trace("", orce);
@@ -285,7 +286,7 @@ public class OzoneBucket {
       }
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       throw OzoneException.parse(EntityUtils.toString(entity));
@@ -306,11 +307,11 @@ public class OzoneBucket {
   public void getKey(String keyName, Path downloadTo) throws OzoneException {
 
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     if (downloadTo == null) {
-      throw new OzoneRestClientException("Invalid download path");
+      throw new OzoneClientException("Invalid download path");
     }
 
     FileOutputStream outPutFile = null;
@@ -326,7 +327,7 @@ public class OzoneBucket {
       executeGetKey(getRequest, httpClient, outPutFile);
       outPutFile.flush();
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutFile);
       releaseConnection(getRequest);
@@ -343,7 +344,7 @@ public class OzoneBucket {
   public String getKey(String keyName) throws OzoneException {
 
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     HttpGet getRequest = null;
@@ -360,7 +361,7 @@ public class OzoneBucket {
       executeGetKey(getRequest, httpClient, outPutStream);
       return outPutStream.toString(ENCODING_NAME);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutStream);
       releaseConnection(getRequest);
@@ -394,7 +395,7 @@ public class OzoneBucket {
       }
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       throw OzoneException.parse(EntityUtils.toString(entity));
@@ -414,7 +415,7 @@ public class OzoneBucket {
   public void deleteKey(String keyName) throws OzoneException {
 
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     HttpDelete deleteRequest = null;
@@ -427,7 +428,7 @@ public class OzoneBucket {
           .getClient().getHttpDelete(builder.toString());
       executeDeleteKey(deleteRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(deleteRequest);
     }
@@ -457,7 +458,7 @@ public class OzoneBucket {
       }
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       throw OzoneException.parse(EntityUtils.toString(entity));
@@ -505,7 +506,7 @@ public class OzoneBucket {
       return executeListKeys(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage(), e);
+      throw new OzoneClientException(e.getMessage(), e);
     } finally {
       releaseConnection(getRequest);
     }
@@ -534,7 +535,7 @@ public class OzoneBucket {
       getRequest = client.getHttpGet(uri.toString());
       return executeListKeys(getRequest, HttpClientBuilder.create().build());
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage());
+      throw new OzoneClientException(e.getMessage());
     } finally {
       releaseConnection(getRequest);
     }
@@ -560,7 +561,7 @@ public class OzoneBucket {
       entity = response.getEntity();
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
       if (errorCode == HTTP_OK) {
         String temp = EntityUtils.toString(entity);
@@ -586,7 +587,7 @@ public class OzoneBucket {
    */
   public OzoneKey getKeyInfo(String keyName) throws OzoneException {
     if ((keyName == null) || keyName.isEmpty()) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Unable to get key info, key name is null or empty");
     }
 
@@ -604,7 +605,7 @@ public class OzoneBucket {
       getRequest = client.getHttpGet(builder.toString());
       return executeGetKeyInfo(getRequest, httpClient);
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage(), e);
+      throw new OzoneClientException(e.getMessage(), e);
     } finally {
       releaseConnection(getRequest);
     }
@@ -627,7 +628,7 @@ public class OzoneBucket {
       int errorCode = response.getStatusLine().getStatusCode();
       entity = response.getEntity();
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       if (errorCode == HTTP_OK) {

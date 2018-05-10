@@ -39,6 +39,7 @@ services:
         - ./docker-config
    ksm:
       image: apache/hadoop-runner
+      hostname: ksm
       volumes:
          - ${HADOOPDIR}:/opt/hadoop
       ports:

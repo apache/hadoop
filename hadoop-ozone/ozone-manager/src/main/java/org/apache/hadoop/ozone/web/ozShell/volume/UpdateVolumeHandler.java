@@ -19,7 +19,9 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
+import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -32,7 +34,6 @@ import java.net.URISyntaxException;
  * Executes update volume calls.
  */
 public class UpdateVolumeHandler extends Handler {
-  private String rootName;
   private String ownerName;
   private String volumeName;
   private String quota;
@@ -49,25 +50,19 @@ public class UpdateVolumeHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.UPDATE_VOLUME)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : updateVolume is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.UPDATE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
     if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Volume name is required to update a volume");
     }
 
     // we need to skip the slash in the URI path
     volumeName = ozoneURI.getPath().substring(1);
-
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    } else {
-      rootName = System.getProperty("user.name");
-    }
 
     if (cmd.hasOption(Shell.QUOTA)) {
       quota = cmd.getOptionValue(Shell.QUOTA);
@@ -77,16 +72,13 @@ public class UpdateVolumeHandler extends Handler {
       ownerName = cmd.getOptionValue(Shell.USER);
     }
 
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
-
+    OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
     if (quota != null && !quota.isEmpty()) {
-      client.setVolumeQuota(volumeName, quota);
+      volume.setQuota(OzoneQuota.parseQuota(quota));
     }
 
     if (ownerName != null && !ownerName.isEmpty()) {
-      client.setVolumeOwner(volumeName, ownerName);
+      volume.setOwner(ownerName);
     }
-
   }
 }

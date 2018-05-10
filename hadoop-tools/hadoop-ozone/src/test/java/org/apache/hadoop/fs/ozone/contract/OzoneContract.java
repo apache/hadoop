@@ -24,9 +24,9 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.ozone.Constants;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -56,7 +56,7 @@ class OzoneContract extends AbstractFSContract {
 
   @Override
   public String getScheme() {
-    return Constants.OZONE_URI_SCHEME;
+    return OzoneConsts.OZONE_URI_SCHEME;
   }
 
   @Override
@@ -107,7 +107,7 @@ class OzoneContract extends AbstractFSContract {
     }
 
     String uri = String.format("%s://%s.%s/",
-        Constants.OZONE_URI_SCHEME, bucketName, volumeName);
+        OzoneConsts.OZONE_URI_SCHEME, bucketName, volumeName);
     getConf().set("fs.defaultFS", uri);
     copyClusterConfigs(KSMConfigKeys.OZONE_KSM_ADDRESS_KEY);
     copyClusterConfigs(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY);

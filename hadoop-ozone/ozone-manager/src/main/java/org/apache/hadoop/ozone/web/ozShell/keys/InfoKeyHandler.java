@@ -25,10 +25,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneKey;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientException;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -38,7 +39,6 @@ import org.apache.hadoop.ozone.web.utils.JsonUtils;
  * Executes Info Object.
  */
 public class InfoKeyHandler extends Handler {
-  private String userName;
   private String volumeName;
   private String bucketName;
   private String keyName;
@@ -55,22 +55,14 @@ public class InfoKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.INFO_KEY)) {
-      throw new OzoneRestClientException("Incorrect call : infoKey is missing");
+      throw new OzoneClientException("Incorrect call : infoKey is missing");
     }
-
-
-    if (cmd.hasOption(Shell.USER)) {
-      userName = cmd.getOptionValue(Shell.USER);
-    } else {
-      userName = System.getProperty("user.name");
-    }
-
 
     String ozoneURIString = cmd.getOptionValue(Shell.INFO_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume/bucket/key name required in infoKey");
     }
 
@@ -85,14 +77,11 @@ public class InfoKeyHandler extends Handler {
       System.out.printf("Key Name : %s%n", keyName);
     }
 
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(userName);
-
-    OzoneVolume vol = client.getVolume(volumeName);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
-    OzoneKey key = bucket.getKeyInfo(keyName);
+    OzoneKey key = bucket.getKey(keyName);
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        key.getObjectInfo().toJsonString()));
+        JsonUtils.toJsonString(OzoneClientUtils.asKeyInfo(key))));
   }
 }

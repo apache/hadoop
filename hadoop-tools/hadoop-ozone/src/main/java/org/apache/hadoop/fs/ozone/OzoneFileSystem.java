@@ -64,9 +64,9 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
-import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_SCHEME;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
-import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_DELIMITER;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
 
 /**

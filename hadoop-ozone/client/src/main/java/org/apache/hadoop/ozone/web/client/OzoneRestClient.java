@@ -24,6 +24,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -111,7 +112,7 @@ public class OzoneRestClient implements Closeable {
    */
   public void setEndPointURI(URI endPointURI) throws OzoneException {
     if ((endPointURI == null) || (endPointURI.toString().isEmpty())) {
-      throw new OzoneRestClientException("Invalid ozone URI");
+      throw new OzoneClientException("Invalid ozone URI");
     }
     this.endPointURI = endPointURI;
   }
@@ -151,7 +152,7 @@ public class OzoneRestClient implements Closeable {
    * @param onBehalfOf - The user on behalf we are making the call for
    * @param quota      - Quota's are specified in a specific format. it is
    *                   integer(MB|GB|TB), for example 100TB.
-   * @throws OzoneRestClientException
+   * @throws OzoneClientException
    */
   public OzoneVolume createVolume(String volumeName, String onBehalfOf,
                                   String quota) throws OzoneException {
@@ -169,7 +170,7 @@ public class OzoneRestClient implements Closeable {
       executeCreateVolume(httpPost, httpClient);
       return getVolume(volumeName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpPost);
     }
@@ -196,7 +197,7 @@ public class OzoneRestClient implements Closeable {
       httpGet = getHttpGet(builder.toString());
       return executeInfoVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpGet);
     }
@@ -247,7 +248,7 @@ public class OzoneRestClient implements Closeable {
       }
       return executeListVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpGet);
     }
@@ -329,7 +330,7 @@ public class OzoneRestClient implements Closeable {
       return executeListVolume(httpGet, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpGet);
     }
@@ -351,7 +352,7 @@ public class OzoneRestClient implements Closeable {
       httpDelete = getHttpDelete(builder.toString());
       executeDeleteVolume(httpDelete, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(httpDelete);
     }
@@ -368,7 +369,7 @@ public class OzoneRestClient implements Closeable {
       throws OzoneException {
     HttpPut putRequest = null;
     if (newOwner == null || newOwner.isEmpty()) {
-      throw new OzoneRestClientException("Invalid new owner name");
+      throw new OzoneClientException("Invalid new owner name");
     }
     try (CloseableHttpClient httpClient = newHttpClient()) {
       OzoneUtils.verifyResourceName(volumeName);
@@ -380,7 +381,7 @@ public class OzoneRestClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(putRequest);
     }
@@ -399,7 +400,7 @@ public class OzoneRestClient implements Closeable {
   public void setVolumeQuota(String volumeName, String quota)
       throws OzoneException {
     if (quota == null || quota.isEmpty()) {
-      throw new OzoneRestClientException("Invalid quota");
+      throw new OzoneClientException("Invalid quota");
     }
     HttpPut putRequest = null;
     try (CloseableHttpClient httpClient = newHttpClient()) {
@@ -413,7 +414,7 @@ public class OzoneRestClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       releaseConnection(putRequest);
     }
@@ -443,7 +444,7 @@ public class OzoneRestClient implements Closeable {
       if (entity != null) {
         throw OzoneException.parse(EntityUtils.toString(entity));
       } else {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
     } finally {
       if (entity != null) {
@@ -470,7 +471,7 @@ public class OzoneRestClient implements Closeable {
 
       entity = response.getEntity();
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       if (errorCode == HTTP_OK) {
@@ -531,7 +532,7 @@ public class OzoneRestClient implements Closeable {
       entity = response.getEntity();
 
       if (entity == null) {
-        throw new OzoneRestClientException("Unexpected null in http payload");
+        throw new OzoneClientException("Unexpected null in http payload");
       }
 
       String temp = EntityUtils.toString(entity);
@@ -595,11 +596,11 @@ public class OzoneRestClient implements Closeable {
     OzoneUtils.verifyResourceName(bucketName);
 
     if (StringUtils.isEmpty(keyName)) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     if (file == null) {
-      throw new OzoneRestClientException("Invalid data stream");
+      throw new OzoneClientException("Invalid data stream");
     }
 
     HttpPut putRequest = null;
@@ -619,7 +620,7 @@ public class OzoneRestClient implements Closeable {
       putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(fis));
       OzoneBucket.executePutKey(putRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(fis);
       releaseConnection(putRequest);
@@ -641,11 +642,11 @@ public class OzoneRestClient implements Closeable {
     OzoneUtils.verifyResourceName(bucketName);
 
     if (StringUtils.isEmpty(keyName)) {
-      throw new OzoneRestClientException("Invalid key Name");
+      throw new OzoneClientException("Invalid key Name");
     }
 
     if (downloadTo == null) {
-      throw new OzoneRestClientException("Invalid download path");
+      throw new OzoneClientException("Invalid download path");
     }
 
     FileOutputStream outPutFile = null;
@@ -661,7 +662,7 @@ public class OzoneRestClient implements Closeable {
       OzoneBucket.executeGetKey(getRequest, httpClient, outPutFile);
       outPutFile.flush();
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage(), ex);
+      throw new OzoneClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutFile);
       releaseConnection(getRequest);
@@ -706,7 +707,7 @@ public class OzoneRestClient implements Closeable {
       getRequest = getHttpGet(builder.toString());
       return OzoneBucket.executeListKeys(getRequest, httpClient);
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage(), e);
+      throw new OzoneClientException(e.getMessage(), e);
     } finally {
       releaseConnection(getRequest);
     }

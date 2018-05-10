@@ -19,26 +19,26 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Executes List Volume call.
  */
 public class ListVolumeHandler extends Handler {
-  private String rootName;
   private String userName;
 
   /**
@@ -54,16 +54,16 @@ public class ListVolumeHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.LIST_VOLUME)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : listVolume is missing");
     }
 
-    int maxKeys = 0;
+    int maxVolumes = Integer.MAX_VALUE;
     if (cmd.hasOption(Shell.LIST_LENGTH)) {
       String length = cmd.getOptionValue(Shell.LIST_LENGTH);
       OzoneUtils.verifyMaxKeyLength(length);
 
-      maxKeys = Integer.parseInt(length);
+      maxVolumes = Integer.parseInt(length);
     }
 
     String startVolume = null;
@@ -77,11 +77,7 @@ public class ListVolumeHandler extends Handler {
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.LIST_VOLUME);
-    URI ozoneURI = verifyURI(ozoneURIString);
-
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    }
+    verifyURI(ozoneURIString);
 
     if (cmd.hasOption(Shell.USER)) {
       userName = cmd.getOptionValue(Shell.USER);
@@ -89,26 +85,28 @@ public class ListVolumeHandler extends Handler {
       userName = System.getProperty("user.name");
     }
 
-    client.setEndPointURI(ozoneURI);
-    if (rootName != null) {
-      client.setUserAuth(rootName);
+    Iterator<OzoneVolume> volumeIterator;
+    if(userName != null) {
+      volumeIterator = client.getObjectStore()
+          .listVolumesByUser(userName, prefix, startVolume);
     } else {
-      client.setUserAuth(userName);
+      volumeIterator = client.getObjectStore().listVolumes(prefix);
     }
 
-    List<OzoneVolume> volumes = client.listVolumes(userName, prefix, maxKeys,
-        startVolume);
-    if (volumes != null) {
-      if (cmd.hasOption(Shell.VERBOSE)) {
-        System.out.printf("Found : %d volumes for user : %s %n", volumes.size(),
-            userName);
-      }
+    List<VolumeInfo> volumeInfos = new ArrayList<>();
 
-      List<VolumeInfo> jsonData = volumes.stream()
-          .map(OzoneVolume::getVolumeInfo).collect(Collectors.toList());
-      System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-          JsonUtils.toJsonString(jsonData)));
+    while (maxVolumes > 0 && volumeIterator.hasNext()) {
+      VolumeInfo volume = OzoneClientUtils.asVolumeInfo(volumeIterator.next());
+      volumeInfos.add(volume);
+      maxVolumes -= 1;
     }
+
+    if (cmd.hasOption(Shell.VERBOSE)) {
+      System.out.printf("Found : %d volumes for user : %s ", volumeInfos.size(),
+          userName);
+    }
+    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        JsonUtils.toJsonString(volumeInfos)));
   }
 }
 

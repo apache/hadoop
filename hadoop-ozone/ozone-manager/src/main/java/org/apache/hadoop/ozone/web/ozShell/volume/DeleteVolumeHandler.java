@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web.ozShell.volume;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -34,7 +34,6 @@ import java.net.URISyntaxException;
 public class DeleteVolumeHandler extends Handler {
 
   private String volumeName;
-  private String rootName;
 
   /**
    * Executes the delete volume call.
@@ -49,14 +48,14 @@ public class DeleteVolumeHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.DELETE_VOLUME)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : deleteVolume call is missing");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.DELETE_VOLUME);
     URI ozoneURI = verifyURI(ozoneURIString);
     if (ozoneURI.getPath().isEmpty()) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Volume name is required to delete a volume");
     }
 
@@ -67,15 +66,6 @@ public class DeleteVolumeHandler extends Handler {
       System.out.printf("Volume name : %s%n", volumeName);
     }
 
-    if (cmd.hasOption(Shell.RUNAS)) {
-      rootName = "hdfs";
-    } else {
-      rootName = System.getProperty("user.name");
-    }
-
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(rootName);
-    client.deleteVolume(volumeName);
-
+    client.getObjectStore().deleteVolume(volumeName);
   }
 }

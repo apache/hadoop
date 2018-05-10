@@ -19,9 +19,9 @@
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -36,7 +36,6 @@ import java.nio.file.Paths;
  * Executes Delete Key.
  */
 public class DeleteKeyHandler extends Handler {
-  private String userName;
   private String volumeName;
   private String bucketName;
   private String keyName;
@@ -53,23 +52,15 @@ public class DeleteKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.DELETE_KEY)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : deleteKey is missing");
     }
-
-
-    if (cmd.hasOption(Shell.USER)) {
-      userName = cmd.getOptionValue(Shell.USER);
-    } else {
-      userName = System.getProperty("user.name");
-    }
-
 
     String ozoneURIString = cmd.getOptionValue(Shell.DELETE_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume/bucket/key name required in deleteKey");
     }
 
@@ -84,13 +75,8 @@ public class DeleteKeyHandler extends Handler {
       System.out.printf("Key Name : %s%n", keyName);
     }
 
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(userName);
-
-
-    OzoneVolume vol = client.getVolume(volumeName);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
     OzoneBucket bucket = vol.getBucket(bucketName);
     bucket.deleteKey(keyName);
-
   }
 }

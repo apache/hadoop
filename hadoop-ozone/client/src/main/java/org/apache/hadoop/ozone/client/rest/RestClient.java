@@ -44,7 +44,6 @@ import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
-import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
@@ -94,7 +93,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class RestClient implements ClientProtocol {
 
   private static final String PATH_SEPARATOR = "/";
-  private static final Logger LOG = LoggerFactory.getLogger(RpcClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestClient.class);
 
   private final Configuration conf;
   private final URI ozoneRestUri;
@@ -195,8 +194,9 @@ public class RestClient implements ClientProtocol {
 
       ServiceInfo restServer = selector.getRestServer(dataNodeInfos);
 
-      return NetUtils.createSocketAddr(restServer.getHostname() + ":" +
-          restServer.getPort(ServicePort.Type.HTTP));
+      return NetUtils.createSocketAddr(
+          NetUtils.normalizeHostName(restServer.getHostname()) + ":"
+              + restServer.getPort(ServicePort.Type.HTTP));
     } finally {
       EntityUtils.consume(entity);
     }

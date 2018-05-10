@@ -292,7 +292,7 @@ public final class OzoneClientFactory {
       return ctor.newInstance(config);
     } catch (Exception e) {
       final String message = "Couldn't create protocol " + protocolClass;
-      LOG.error(message + " exception:" + e);
+      LOG.error(message + " exception: ", e);
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
       } else if (e instanceof InvocationTargetException) {

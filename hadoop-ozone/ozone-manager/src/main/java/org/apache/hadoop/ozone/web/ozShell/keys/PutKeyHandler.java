@@ -20,7 +20,15 @@ package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.hdds.client.ReplicationFactor;
+import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
@@ -33,11 +41,15 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION_TYPE;
+
 /**
  * Puts a file into an ozone bucket.
  */
 public class PutKeyHandler extends Handler {
-  private String userName;
   private String volumeName;
   private String bucketName;
   private String keyName;
@@ -54,24 +66,18 @@ public class PutKeyHandler extends Handler {
   protected void execute(CommandLine cmd)
       throws IOException, OzoneException, URISyntaxException {
     if (!cmd.hasOption(Shell.PUT_KEY)) {
-      throw new OzoneRestClientException("Incorrect call : putKey is missing");
+      throw new OzoneClientException("Incorrect call : putKey is missing");
     }
 
     if (!cmd.hasOption(Shell.FILE)) {
-      throw new OzoneRestClientException("put key needs a file to put");
-    }
-
-    if (cmd.hasOption(Shell.USER)) {
-      userName = cmd.getOptionValue(Shell.USER);
-    } else {
-      userName = System.getProperty("user.name");
+      throw new OzoneClientException("put key needs a file to put");
     }
 
     String ozoneURIString = cmd.getOptionValue(Shell.PUT_KEY);
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 3) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume/bucket/key name required in putKey");
     }
 
@@ -86,7 +92,6 @@ public class PutKeyHandler extends Handler {
       System.out.printf("Key Name : %s%n", keyName);
     }
 
-
     String fileName = cmd.getOptionValue(Shell.FILE);
     File dataFile = new File(fileName);
 
@@ -97,10 +102,22 @@ public class PutKeyHandler extends Handler {
       stream.close();
     }
 
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(userName);
+    Configuration conf = new OzoneConfiguration();
+    ReplicationFactor replicationFactor = ReplicationFactor.valueOf(
+        conf.getInt(OZONE_REPLICATION, ReplicationFactor.THREE.getValue()));
+    ReplicationType replicationType = ReplicationType.valueOf(
+        conf.get(OZONE_REPLICATION_TYPE, ReplicationType.RATIS.toString()));
 
-    client.putKey(volumeName, bucketName, keyName, dataFile);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    OzoneOutputStream outputStream = bucket
+        .createKey(keyName, dataFile.length(), replicationType,
+            replicationFactor);
+    FileInputStream fileInputStream = new FileInputStream(dataFile);
+    IOUtils.copyBytes(fileInputStream, outputStream,
+        conf.getInt(OZONE_SCM_CHUNK_SIZE_KEY, OZONE_SCM_CHUNK_SIZE_DEFAULT));
+    outputStream.close();
+    fileInputStream.close();
   }
 
 }

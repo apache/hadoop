@@ -19,12 +19,11 @@
 package org.apache.hadoop.ozone.web.ozShell.keys;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.client.OzoneKey;
+import org.apache.hadoop.ozone.client.*;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
@@ -33,14 +32,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Executes List Keys.
  */
 public class ListKeyHandler extends Handler {
-  private String userName;
   private String volumeName;
   private String bucketName;
 
@@ -57,14 +56,15 @@ public class ListKeyHandler extends Handler {
       throws IOException, OzoneException, URISyntaxException {
 
     if (!cmd.hasOption(Shell.LIST_KEY)) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "Incorrect call : listKey is missing");
     }
 
-    String length = null;
+    int maxKeys = Integer.MAX_VALUE;
     if (cmd.hasOption(Shell.LIST_LENGTH)) {
-      length = cmd.getOptionValue(Shell.LIST_LENGTH);
+      String length = cmd.getOptionValue(Shell.LIST_LENGTH);
       OzoneUtils.verifyMaxKeyLength(length);
+      maxKeys = Integer.parseInt(length);
     }
 
     String startKey = null;
@@ -81,7 +81,7 @@ public class ListKeyHandler extends Handler {
     URI ozoneURI = verifyURI(ozoneURIString);
     Path path = Paths.get(ozoneURI.getPath());
     if (path.getNameCount() < 2) {
-      throw new OzoneRestClientException(
+      throw new OzoneClientException(
           "volume/bucket is required in listKey");
     }
 
@@ -94,23 +94,23 @@ public class ListKeyHandler extends Handler {
       System.out.printf("bucket Name : %s%n", bucketName);
     }
 
-    if (cmd.hasOption(Shell.USER)) {
-      userName = cmd.getOptionValue(Shell.USER);
-    } else {
-      userName = System.getProperty("user.name");
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
+    OzoneBucket bucket = vol.getBucket(bucketName);
+    Iterator<OzoneKey> keyIterator = bucket.listKeys(prefix, startKey);
+    List<KeyInfo> keyInfos = new ArrayList<>();
+
+    while (maxKeys > 0 && keyIterator.hasNext()) {
+      KeyInfo key = OzoneClientUtils.asKeyInfo(keyIterator.next());
+      keyInfos.add(key);
+      maxKeys -= 1;
     }
 
-
-    client.setEndPointURI(ozoneURI);
-    client.setUserAuth(userName);
-
-    List<OzoneKey> keys = client.listKeys(volumeName, bucketName, length,
-        startKey, prefix);
-
-    List<KeyInfo> jsonData = keys.stream()
-        .map(OzoneKey::getObjectInfo).collect(Collectors.toList());
-    System.out.printf(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString(jsonData)));
+    if (cmd.hasOption(Shell.VERBOSE)) {
+      System.out.printf("Found : %d keys for bucket %s in volume : %s ",
+          keyInfos.size(), bucketName, volumeName);
+    }
+    System.out.println(JsonUtils.toJsonStringWithDefaultPrettyPrinter(
+        JsonUtils.toJsonString(keyInfos)));
   }
 
 }

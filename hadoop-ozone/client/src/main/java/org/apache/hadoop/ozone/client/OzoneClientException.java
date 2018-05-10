@@ -15,20 +15,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.web.client;
+package org.apache.hadoop.ozone.client;
 
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 /**
  * This exception is thrown by the Ozone Clients.
  */
-public class OzoneRestClientException extends OzoneException {
+public class OzoneClientException extends OzoneException {
   /**
    * Constructor that allows the shortMessage.
    *
    * @param shortMessage Short Message
    */
-  public OzoneRestClientException(String shortMessage) {
+  public OzoneClientException(String shortMessage) {
     super(0, shortMessage, shortMessage);
   }
 
@@ -38,7 +38,7 @@ public class OzoneRestClientException extends OzoneException {
    * @param shortMessage short message
    * @param ex exception
    */
-  public OzoneRestClientException(String shortMessage, Exception ex) {
+  public OzoneClientException(String shortMessage, Exception ex) {
     super(0, shortMessage, shortMessage, ex);
   }
 
@@ -48,7 +48,7 @@ public class OzoneRestClientException extends OzoneException {
    * @param shortMessage Short Message
    * @param message long error message
    */
-  public OzoneRestClientException(String shortMessage, String message) {
+  public OzoneClientException(String shortMessage, String message) {
     super(0, shortMessage, message);
   }
 }

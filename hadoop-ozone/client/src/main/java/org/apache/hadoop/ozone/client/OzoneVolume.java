@@ -222,7 +222,22 @@ public class OzoneVolume {
    * @return {@code Iterator<OzoneBucket>}
    */
   public Iterator<OzoneBucket> listBuckets(String bucketPrefix) {
-    return new BucketIterator(bucketPrefix);
+    return listBuckets(bucketPrefix, null);
+  }
+
+  /**
+   * Returns Iterator to iterate over all buckets after prevBucket in the volume.
+   * If prevBucket is null it iterates from the first bucket in the volume.
+   * The result can be restricted using bucket prefix, will return all
+   * buckets if bucket prefix is null.
+   *
+   * @param bucketPrefix Bucket prefix to match
+   * @param prevBucket Buckets are listed after this bucket
+   * @return {@code Iterator<OzoneBucket>}
+   */
+  public Iterator<OzoneBucket> listBuckets(String bucketPrefix,
+      String prevBucket) {
+    return new BucketIterator(bucketPrefix, prevBucket);
   }
 
   /**
@@ -250,14 +265,15 @@ public class OzoneVolume {
 
 
     /**
-     * Creates an Iterator to iterate over all buckets in the volume,
-     * which matches volume prefix.
+     * Creates an Iterator to iterate over all buckets after prevBucket in the volume.
+     * If prevBucket is null it iterates from the first bucket in the volume.
+     * The returned buckets match bucket prefix.
      * @param bucketPrefix
      */
-    BucketIterator(String bucketPrefix) {
+    public BucketIterator(String bucketPrefix, String prevBucket) {
       this.bucketPrefix = bucketPrefix;
       this.currentValue = null;
-      this.currentIterator = getNextListOfBuckets(null).iterator();
+      this.currentIterator = getNextListOfBuckets(prevBucket).iterator();
     }
 
     @Override

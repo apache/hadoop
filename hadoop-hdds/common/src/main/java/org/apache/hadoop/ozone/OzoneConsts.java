@@ -58,6 +58,10 @@ public final class OzoneConsts {
   public static final String OZONE_USER = "user";
   public static final String OZONE_REQUEST = "request";
 
+  public static final String OZONE_URI_SCHEME = "o3";
+  public static final String OZONE_HTTP_SCHEME = "http";
+  public static final String OZONE_URI_DELIMITER = "/";
+
   public static final String CONTAINER_EXTENSION = ".container";
   public static final String CONTAINER_META = ".meta";
 
@@ -95,7 +99,13 @@ public final class OzoneConsts {
   /**
    * Supports Bucket Versioning.
    */
-  public enum Versioning {NOT_DEFINED, ENABLED, DISABLED}
+  public enum Versioning {
+    NOT_DEFINED, ENABLED, DISABLED;
+
+    public static Versioning getVersioning(boolean versioning) {
+      return versioning ? ENABLED : DISABLED;
+    }
+  }
 
   /**
    * Ozone handler types.
