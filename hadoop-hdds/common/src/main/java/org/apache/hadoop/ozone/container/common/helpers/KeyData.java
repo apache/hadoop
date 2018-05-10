@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
@@ -76,11 +75,11 @@ public class KeyData {
   public ContainerProtos.KeyData getProtoBufMessage() {
     ContainerProtos.KeyData.Builder builder =
         ContainerProtos.KeyData.newBuilder();
-    builder.setBlockID(this.blockID.getProtobuf());
+    builder.setBlockID(this.blockID.getDatanodeBlockIDProtobuf());
     builder.addAllChunks(this.chunks);
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
-      HddsProtos.KeyValue.Builder keyValBuilder =
-          HddsProtos.KeyValue.newBuilder();
+      ContainerProtos.KeyValue.Builder keyValBuilder =
+          ContainerProtos.KeyValue.newBuilder();
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }

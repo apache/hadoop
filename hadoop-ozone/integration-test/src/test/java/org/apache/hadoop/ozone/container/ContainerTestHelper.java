@@ -28,11 +28,10 @@ import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -204,7 +203,7 @@ public final class ContainerTestHelper {
 
     Pipeline newPipeline =
         new Pipeline(pipeline.getPipelineChannel());
-    writeRequest.setBlockID(blockID.getProtobuf());
+    writeRequest.setBlockID(blockID.getDatanodeBlockIDProtobuf());
 
     byte[] data = getData(datalen);
     ChunkInfo info = getChunk(blockID.getLocalID(), 0, 0, datalen);
@@ -361,7 +360,6 @@ public final class ContainerTestHelper {
         .ContainerData.newBuilder();
     containerData.setContainerID(containerID);
     createRequest.setContainerData(containerData.build());
-    createRequest.setPipeline(pipeline.getProtobufMessage());
 
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -399,7 +397,6 @@ public final class ContainerTestHelper {
     }
     Pipeline pipeline =
         ContainerTestHelper.createSingleNodePipeline();
-    updateRequestBuilder.setPipeline(pipeline.getProtobufMessage());
     updateRequestBuilder.setContainerData(containerData.build());
 
     ContainerCommandRequestProto.Builder request =
@@ -469,7 +466,8 @@ public final class ContainerTestHelper {
    */
   public static ContainerCommandRequestProto getKeyRequest(
       Pipeline pipeline, ContainerProtos.PutKeyRequestProto putKeyRequest) {
-    HddsProtos.BlockID blockID = putKeyRequest.getKeyData().getBlockID();
+    ContainerProtos.DatanodeBlockID blockID =
+        putKeyRequest.getKeyData().getBlockID();
     LOG.trace("getKey: blockID={}", blockID);
 
     ContainerProtos.GetKeyRequestProto.Builder getRequest =

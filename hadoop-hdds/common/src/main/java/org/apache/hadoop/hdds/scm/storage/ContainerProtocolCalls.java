@@ -50,7 +50,7 @@ import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .WriteChunkRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
@@ -133,7 +133,7 @@ public final class ContainerProtocolCalls  {
         ChunkInfo chunk, BlockID blockID, String traceID) throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .setChunkData(chunk);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
@@ -163,7 +163,7 @@ public final class ContainerProtocolCalls  {
       throws IOException {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .setChunkData(chunk)
         .setData(data);
     String id = xceiverClient.getPipeline().getLeader().getUuidString();
@@ -195,7 +195,7 @@ public final class ContainerProtocolCalls  {
       throws IOException {
 
     KeyData containerKeyData =
-        KeyData.newBuilder().setBlockID(blockID.getProtobuf())
+        KeyData.newBuilder().setBlockID(blockID.getDatanodeBlockIDProtobuf())
             .build();
     PutKeyRequestProto.Builder createKeyRequest =
         PutKeyRequestProto.newBuilder()
@@ -241,7 +241,6 @@ public final class ContainerProtocolCalls  {
     ContainerProtos.ContainerData.Builder containerData = ContainerProtos
         .ContainerData.newBuilder();
     containerData.setContainerID(containerID);
-    createRequest.setPipeline(client.getPipeline().getProtobufMessage());
     createRequest.setContainerData(containerData.build());
 
     String id = client.getPipeline().getLeader().getUuidString();
@@ -321,7 +320,6 @@ public final class ContainerProtocolCalls  {
     ReadContainerRequestProto.Builder readRequest =
         ReadContainerRequestProto.newBuilder();
     readRequest.setContainerID(containerID);
-    readRequest.setPipeline(client.getPipeline().getProtobufMessage());
     String id = client.getPipeline().getLeader().getUuidString();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
@@ -348,7 +346,7 @@ public final class ContainerProtocolCalls  {
       BlockID blockID, String traceID) throws IOException {
     KeyData containerKeyData = KeyData
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .build();
 
     GetKeyRequestProto.Builder getKey = GetKeyRequestProto

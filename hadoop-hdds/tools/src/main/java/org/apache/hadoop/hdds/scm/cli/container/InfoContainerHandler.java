@@ -27,7 +27,8 @@ import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+    .ContainerLifeCycleState;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -77,7 +78,7 @@ public class InfoContainerHandler extends OzoneCommandHandler {
     // Print container report info.
     logOut("Container id: %s", containerID);
     String openStatus =
-        containerData.getState() == HddsProtos.LifeCycleState.OPEN ? "OPEN" :
+        containerData.getState() == ContainerLifeCycleState.OPEN ? "OPEN" :
             "CLOSED";
     logOut("Container State: %s", openStatus);
     if (!containerData.getHash().isEmpty()) {

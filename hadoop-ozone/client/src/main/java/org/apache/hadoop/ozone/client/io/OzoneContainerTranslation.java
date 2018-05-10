@@ -38,7 +38,7 @@ final class OzoneContainerTranslation {
   public static KeyData containerKeyDataForRead(BlockID blockID) {
     return KeyData
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .build();
   }
 

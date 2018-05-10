@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.container.common.impl;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
@@ -392,10 +391,6 @@ public class Dispatcher implements ContainerDispatcher {
     ContainerData cData = ContainerData.getFromProtBuf(
         msg.getCreateContainer().getContainerData(), conf);
     Preconditions.checkNotNull(cData, "Container data is null");
-
-    Pipeline pipeline = Pipeline.getFromProtoBuf(
-        msg.getCreateContainer().getPipeline());
-    Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
 
     this.containerManager.createContainer(cData);
     return ContainerUtils.getContainerResponse(msg);

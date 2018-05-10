@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdds.client;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 /**
@@ -56,4 +57,15 @@ public class BlockID {
     return new BlockID(blockID.getContainerID(),
         blockID.getLocalID());
   }
+
+  public ContainerProtos.DatanodeBlockID getDatanodeBlockIDProtobuf() {
+    return ContainerProtos.DatanodeBlockID.newBuilder().
+        setContainerID(containerID).setLocalID(localID).build();
+  }
+
+  public static BlockID getFromProtobuf(ContainerProtos.DatanodeBlockID blockID) {
+    return new BlockID(blockID.getContainerID(),
+        blockID.getLocalID());
+  }
+
 }

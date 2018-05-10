@@ -22,7 +22,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+    .ContainerLifeCycleState;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.Time;
 
@@ -48,7 +49,7 @@ public class ContainerData {
   private AtomicLong bytesUsed;
   private long maxSize;
   private long containerID;
-  private HddsProtos.LifeCycleState state;
+  private ContainerLifeCycleState state;
 
   /**
    * Constructs a  ContainerData Object.
@@ -63,7 +64,7 @@ public class ContainerData {
         ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT) * OzoneConsts.GB;
     this.bytesUsed =  new AtomicLong(0L);
     this.containerID = containerID;
-    this.state = HddsProtos.LifeCycleState.OPEN;
+    this.state = ContainerLifeCycleState.OPEN;
   }
 
   /**
@@ -133,8 +134,8 @@ public class ContainerData {
     builder.setState(this.getState());
 
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
-      HddsProtos.KeyValue.Builder keyValBuilder =
-          HddsProtos.KeyValue.newBuilder();
+      ContainerProtos.KeyValue.Builder keyValBuilder =
+          ContainerProtos.KeyValue.newBuilder();
       builder.addMetadata(keyValBuilder.setKey(entry.getKey())
           .setValue(entry.getValue()).build());
     }
@@ -250,11 +251,11 @@ public class ContainerData {
     return containerID;
   }
 
-  public synchronized  void setState(HddsProtos.LifeCycleState state) {
+  public synchronized void setState(ContainerLifeCycleState state) {
     this.state = state;
   }
 
-  public synchronized HddsProtos.LifeCycleState getState() {
+  public synchronized ContainerLifeCycleState getState() {
     return this.state;
   }
 
@@ -263,7 +264,7 @@ public class ContainerData {
    * @return - boolean
    */
   public synchronized  boolean isOpen() {
-    return HddsProtos.LifeCycleState.OPEN == state;
+    return ContainerLifeCycleState.OPEN == state;
   }
 
   /**
@@ -271,7 +272,7 @@ public class ContainerData {
    */
   public synchronized void closeContainer() {
     // TODO: closed or closing here
-    setState(HddsProtos.LifeCycleState.CLOSED);
+    setState(ContainerLifeCycleState.CLOSED);
 
     // Some thing brain dead for now. name + Time stamp of when we get the close
     // container message.

@@ -27,9 +27,7 @@
 option java_package = "org.apache.hadoop.hdds.protocol.proto";
 option java_outer_classname = "ContainerProtos";
 option java_generate_equals_and_hash = true;
-package hadoop.hdds;
-import "hdfs.proto";
-import "hdds.proto";
+package hadoop.hdds.datanode;
 
 /**
  * Commands that are used to manipulate the state of containers on a datanode.
@@ -134,6 +132,28 @@ enum Result {
   CLOSED_CONTAINER_RETRY = 27;
 }
 
+/**
+ * Block ID that uniquely identify a block in Datanode.
+ */
+message DatanodeBlockID {
+  required int64 containerID = 1;
+  required int64 localID = 2;
+}
+
+message KeyValue {
+  required string key = 1;
+  optional string value = 2;
+}
+
+/**
+ * Lifecycle states of a container in Datanode.
+ */
+enum ContainerLifeCycleState {
+    OPEN = 1;
+    CLOSING = 2;
+    CLOSED = 3;
+}
+
 message ContainerCommandRequestProto {
   required Type cmdType = 1; // Type of the command
 
@@ -205,7 +225,7 @@ message ContainerData {
   optional int64 bytesUsed = 6;
   optional int64 size = 7;
   optional int64 keyCount = 8;
-  optional LifeCycleState state = 9 [default = OPEN];
+  optional ContainerLifeCycleState state = 9 [default = OPEN];
 }
 
 message ContainerMeta {
@@ -215,26 +235,23 @@ message ContainerMeta {
 
 // Container Messages.
 message  CreateContainerRequestProto {
-  required Pipeline pipeline = 1;
-  required ContainerData containerData = 2;
+  required ContainerData containerData = 1;
 }
 
 message  CreateContainerResponseProto {
 }
 
 message  ReadContainerRequestProto {
-  required Pipeline pipeline = 1;
-  required int64 containerID = 2;
+  required int64 containerID = 1;
 }
 
 message  ReadContainerResponseProto {
-  optional ContainerData containerData = 2;
+  optional ContainerData containerData = 1;
 }
 
 message  UpdateContainerRequestProto {
-  required Pipeline pipeline = 1;
-  required ContainerData containerData = 2;
-  optional bool forceUpdate = 3 [default = false];
+  required ContainerData containerData = 1;
+  optional bool forceUpdate = 2 [default = false];
 }
 
 message  UpdateContainerResponseProto {
@@ -262,12 +279,12 @@ message CloseContainerRequestProto {
 }
 
 message CloseContainerResponseProto {
-  optional string hash = 2;
-  optional int64 containerID = 3;
+  optional string hash = 1;
+  optional int64 containerID = 2;
 }
 
 message KeyData {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
   optional int64 flags = 2; // for future use.
   repeated KeyValue metadata = 3;
   repeated ChunkInfo chunks = 4;
@@ -291,7 +308,7 @@ message  GetKeyResponseProto  {
 
 
 message  DeleteKeyRequestProto {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
 }
 
 message   DeleteKeyResponseProto {
@@ -300,7 +317,7 @@ message   DeleteKeyResponseProto {
 message  ListKeyRequestProto {
   required int64 containerID = 1;
   optional int64 startLocalID = 2;
-  required uint32 count = 4;
+  required uint32 count = 3;
 
 }
 
@@ -325,7 +342,7 @@ enum Stage {
 }
 
 message  WriteChunkRequestProto  {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   optional bytes data = 3;
   optional Stage stage = 4 [default = COMBINED];
@@ -335,26 +352,26 @@ message  WriteChunkResponseProto {
 }
 
 message  ReadChunkRequestProto  {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
 }
 
 message  ReadChunkResponseProto {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
   required ChunkInfo chunkData = 2;
   required bytes data = 3;
 }
 
 message  DeleteChunkRequestProto {
-  required BlockID blockID = 1;
-  required ChunkInfo chunkData = 3;
+  required DatanodeBlockID blockID = 1;
+  required ChunkInfo chunkData = 2;
 }
 
 message  DeleteChunkResponseProto {
 }
 
 message  ListChunkRequestProto {
-  required BlockID blockID = 1;
+  required DatanodeBlockID blockID = 1;
   required string prevChunkName = 2;
   required uint32 count = 3;
 }

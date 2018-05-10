@@ -32,7 +32,6 @@ import org.apache.hadoop.ozone.container.common.impl.Dispatcher;
 import org.apache.hadoop.ozone.container.common.impl.KeyManagerImpl;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineChannel;
 import org.apache.hadoop.util.Time;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -168,8 +167,6 @@ public class BenchMarkDatanodeDispatcher {
   private ContainerCommandRequestProto getCreateContainerCommand(long containerID) {
     CreateContainerRequestProto.Builder createRequest =
         CreateContainerRequestProto.newBuilder();
-    createRequest.setPipeline(
-        new Pipeline(pipelineChannel).getProtobufMessage());
     createRequest.setContainerData(
         ContainerData.newBuilder().setContainerID(
             containerID).build());
@@ -187,7 +184,7 @@ public class BenchMarkDatanodeDispatcher {
       BlockID blockID, String chunkName) {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .setChunkData(getChunkInfo(blockID, chunkName))
         .setData(data);
 
@@ -204,7 +201,7 @@ public class BenchMarkDatanodeDispatcher {
       BlockID blockID, String chunkName) {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .setChunkData(getChunkInfo(blockID, chunkName));
     ContainerCommandRequestProto.Builder request = ContainerCommandRequestProto
         .newBuilder();
@@ -258,7 +255,7 @@ public class BenchMarkDatanodeDispatcher {
       BlockID blockID, String chunkKey) {
     ContainerProtos.KeyData.Builder builder =  ContainerProtos.KeyData
         .newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .addChunks(getChunkInfo(blockID, chunkKey));
     return builder.build();
   }

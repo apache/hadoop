@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyData;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.KeyValue;
+import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyValue;
 import org.apache.hadoop.hdds.client.BlockID;
 
 import java.io.IOException;
@@ -85,7 +85,7 @@ public class ChunkOutputStream extends OutputStream {
     KeyValue keyValue = KeyValue.newBuilder()
         .setKey("TYPE").setValue("KEY").build();
     this.containerKeyData = KeyData.newBuilder()
-        .setBlockID(blockID.getProtobuf())
+        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
         .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
