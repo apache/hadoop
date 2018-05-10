@@ -128,6 +128,12 @@ public class NetworkPacketTaggingHandlerImpl
     return null;
   }
 
+  @Override
+  public List<PrivilegedOperation> updateContainer(Container container)
+      throws ResourceHandlerException {
+    return null;
+  }
+
   /**
    * Cleanup operation once container is completed - deletes cgroup.
    *

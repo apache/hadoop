@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
@@ -72,7 +73,11 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests to verify that the {@link ContainerScheduler} is able to queue and
@@ -1183,6 +1188,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
+    containerScheduler.resourceHandlerChain =
+        mock(ResourceHandlerChain.class);
     // Ensure two containers are properly queued.
     Assert.assertEquals(1, containerScheduler.getNumQueuedContainers());
     Assert.assertEquals(0,
@@ -1246,6 +1253,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         ContainerEventType.INIT_CONTAINER,
         ContainerEventType.UPDATE_CONTAINER_TOKEN,
         ContainerEventType.CONTAINER_LAUNCHED), containerEventTypes);
+    verify(containerScheduler.resourceHandlerChain,
+        times(1))
+        .updateContainer(any());
   }
 
   @Test
