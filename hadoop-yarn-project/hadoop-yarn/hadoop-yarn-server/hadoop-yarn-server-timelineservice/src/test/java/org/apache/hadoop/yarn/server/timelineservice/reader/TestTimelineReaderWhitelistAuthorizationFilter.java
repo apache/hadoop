@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,13 +33,12 @@ import java.util.Map;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.security.TimelineReaderWhitelistAuthorizationFilter;
-import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -100,11 +100,11 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
       }
     });
 
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     f.doFilter(mockHsr, r, null);
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
   public void checkFilterNotAllowedUser() throws ServletException, IOException {
     Map<String, String> map = new HashMap<String, String>();
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED, "true");
@@ -115,14 +115,20 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
     FilterConfig fc = new DummyFilterConfig(map);
     f.init(fc);
     HttpServletRequest mockHsr = Mockito.mock(HttpServletRequest.class);
+    String userName = "testuser1";
     Mockito.when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
       @Override
       public String getName() {
-        return "testuser1";
+        return userName;
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     f.doFilter(mockHsr, r, null);
+
+    String msg = "User " + userName
+        + " is not allowed to read TimelineService V2 data.";
+    Mockito.verify(r)
+        .sendError(eq(HttpServletResponse.SC_FORBIDDEN), eq(msg));
   }
 
   @Test
@@ -143,7 +149,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user1";
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user1", GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
@@ -155,7 +161,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
     });
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
   public void checkFilterNotAlloweGroup()
       throws ServletException, IOException, InterruptedException {
     Map<String, String> map = new HashMap<String, String>();
@@ -167,15 +173,16 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
     FilterConfig fc = new DummyFilterConfig(map);
     f.init(fc);
     HttpServletRequest mockHsr = Mockito.mock(HttpServletRequest.class);
+    String userName = "user200";
     Mockito.when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
       @Override
       public String getName() {
-        return "user200";
+        return userName;
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
-        UserGroupInformation.createUserForTesting("user200", GROUP_NAMES);
+        UserGroupInformation.createUserForTesting(userName, GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
@@ -183,6 +190,10 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return null;
       }
     });
+    String msg = "User " + userName
+        + " is not allowed to read TimelineService V2 data.";
+    Mockito.verify(r)
+        .sendError(eq(HttpServletResponse.SC_FORBIDDEN), eq(msg));
   }
 
   @Test
@@ -205,7 +216,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user90";
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user90", GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
@@ -235,7 +246,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user90";
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user90", GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
@@ -247,7 +258,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
     });
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
   public void checkFilterAllowNoOneWhenAdminAclsEmptyAndUserAclsEmpty()
       throws ServletException, IOException, InterruptedException {
     // check that users in admin acl list are allowed to read
@@ -258,15 +269,16 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
     FilterConfig fc = new DummyFilterConfig(map);
     f.init(fc);
     HttpServletRequest mockHsr = Mockito.mock(HttpServletRequest.class);
+    String userName = "user88";
     Mockito.when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
       @Override
       public String getName() {
-        return "user88";
+        return userName;
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
-        UserGroupInformation.createUserForTesting("user88", GROUP_NAMES);
+        UserGroupInformation.createUserForTesting(userName, GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
@@ -274,6 +286,10 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return null;
       }
     });
+    String msg = "User " + userName
+        + " is not allowed to read TimelineService V2 data.";
+    Mockito.verify(r)
+        .sendError(eq(HttpServletResponse.SC_FORBIDDEN), eq(msg));
   }
 
   @Test
@@ -293,7 +309,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user437";
       }
     });
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
         UserGroupInformation.createUserForTesting("user437", GROUP_NAMES);
     user1.doAs(new PrivilegedExceptionAction<Object>() {
@@ -327,7 +343,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
       }
     });
 
-    ServletResponse r = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user1 =
         // both username and group name are not part of admin and
         // read allowed users
@@ -348,7 +364,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user27";
       }
     });
-    ServletResponse r2 = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r2 = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user2 =
         UserGroupInformation.createUserForTesting("user27", GROUP_NAMES);
     user2.doAs(new PrivilegedExceptionAction<Object>() {
@@ -366,7 +382,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
         return "user2";
       }
     });
-    ServletResponse r3 = Mockito.mock(ServletResponse.class);
+    HttpServletResponse r3 = Mockito.mock(HttpServletResponse.class);
     UserGroupInformation user3 =
         UserGroupInformation.createUserForTesting("user2", GROUP_NAMES);
     user3.doAs(new PrivilegedExceptionAction<Object>() {
