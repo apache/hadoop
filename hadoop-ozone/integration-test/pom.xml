@@ -24,8 +24,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </parent>
   <artifactId>hadoop-ozone-integration-test</artifactId>
   <version>0.2.1-SNAPSHOT</version>
-  <description>Apache Hadoop Ozone Integration test package</description>
-  <name>Apache Hadoop Ozone integration tests</name>
+  <description>Apache Hadoop Ozone Integration Tests</description>
+  <name>Apache Hadoop Ozone Integration Tests</name>
   <packaging>jar</packaging>
 
   <dependencies>

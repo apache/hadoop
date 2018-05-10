@@ -24,7 +24,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </parent>
   <artifactId>hadoop-ozone-common</artifactId>
   <version>0.2.1-SNAPSHOT</version>
-  <description>Apache Hadoop Ozone Common libraris</description>
+  <description>Apache Hadoop Ozone Common</description>
   <name>Apache Hadoop Ozone Common</name>
   <packaging>jar</packaging>
 

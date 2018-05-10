@@ -24,8 +24,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </parent>
   <artifactId>hadoop-hdds-container-service</artifactId>
   <version>0.2.1-SNAPSHOT</version>
-  <description>Apache HDDS Container server</description>
-  <name>Apache HDDS Container server</name>
+  <description>Apache Hadoop Distributed Data Store Container Service</description>
+  <name>Apache Hadoop HDDS Container Service</name>
   <packaging>jar</packaging>
 
   <properties>

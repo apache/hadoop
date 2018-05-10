@@ -26,8 +26,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <artifactId>hadoop-hdds</artifactId>
   <version>0.2.1-SNAPSHOT</version>
-  <description>Apache Hadoop Distributed Data Store Parent project</description>
-  <name>Apache Hdds</name>
+  <description>Apache Hadoop Distributed Data Store Project</description>
+  <name>Apache Hadoop HDDS</name>
   <packaging>pom</packaging>
 
   <modules>

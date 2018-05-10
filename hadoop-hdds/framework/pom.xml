@@ -24,8 +24,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   </parent>
   <artifactId>hadoop-hdds-server-framework</artifactId>
   <version>0.2.1-SNAPSHOT</version>
-  <description>Apache HDDS server framework</description>
-  <name>Apache HDDS Server Common</name>
+  <description>Apache Hadoop Distributed Data Store Server Framework</description>
+  <name>Apache Hadoop HDDS Server Framework</name>
   <packaging>jar</packaging>
 
   <properties>
