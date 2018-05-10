@@ -22,9 +22,13 @@ import static java.lang.Thread.sleep;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
 
+
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +65,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -75,6 +80,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+        .FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -365,7 +373,7 @@ public class TestApplicationMasterService {
       am2.addContainerToBeReleased(cId);
       try {
         am2.schedule();
-        Assert.fail("Exception was expected!!");
+        fail("Exception was expected!!");
       } catch (InvalidContainerReleaseException e) {
         StringBuilder sb = new StringBuilder("Cannot release container : ");
         sb.append(cId.toString());
@@ -460,7 +468,7 @@ public class TestApplicationMasterService {
               FinalApplicationStatus.FAILED, "", "");
       try {
         am1.unregisterAppAttempt(req, false);
-        Assert.fail("ApplicationMasterNotRegisteredException should be thrown");
+        fail("ApplicationMasterNotRegisteredException should be thrown");
       } catch (ApplicationMasterNotRegisteredException e) {
         Assert.assertNotNull(e);
         Assert.assertNotNull(e.getMessage());
@@ -468,7 +476,7 @@ public class TestApplicationMasterService {
             "Application Master is trying to unregister before registering for:"
         ));
       } catch (Exception e) {
-        Assert.fail("ApplicationMasterNotRegisteredException should be thrown");
+        fail("ApplicationMasterNotRegisteredException should be thrown");
       }
 
       am1.registerAppAttempt();
@@ -627,9 +635,7 @@ public class TestApplicationMasterService {
       Assert.assertEquals("UPDATE_OUTSTANDING_ERROR",
           response.getUpdateErrors().get(0).getReason());
     } finally {
-      if (rm != null) {
-        rm.close();
-      }
+      rm.close();
     }
   }
 
@@ -709,34 +715,48 @@ public class TestApplicationMasterService {
 
     ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
 
-    CapacitySchedulerConfiguration csconf =
-        new CapacitySchedulerConfiguration();
-    csconf.setResourceComparator(DominantResourceCalculator.class);
+    final YarnConfiguration yarnConf;
+    if (schedulerCls.getCanonicalName()
+        .equals(CapacityScheduler.class.getCanonicalName())) {
+      CapacitySchedulerConfiguration csConf =
+          new CapacitySchedulerConfiguration();
+      csConf.setResourceComparator(DominantResourceCalculator.class);
+      yarnConf = new YarnConfiguration(csConf);
+    } else if (schedulerCls.getCanonicalName()
+        .equals(FairScheduler.class.getCanonicalName())) {
+      FairSchedulerConfiguration fsConf = new FairSchedulerConfiguration();
+      yarnConf = new YarnConfiguration(fsConf);
+    } else {
+      throw new IllegalStateException(
+          "Scheduler class is of wrong type: " + schedulerCls);
+    }
 
-    YarnConfiguration conf = new YarnConfiguration(csconf);
     // Don't reset resource types since we have already configured resource
     // types
-    conf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, schedulerCls,
+    yarnConf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        false);
+    yarnConf.setClass(YarnConfiguration.RM_SCHEDULER, schedulerCls,
         ResourceScheduler.class);
-    conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, false);
+    yarnConf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, false);
 
-    MockRM rm = new MockRM(conf);
+    MockRM rm = new MockRM(yarnConf);
     rm.start();
 
     MockNM nm1 = rm.registerNode("199.99.99.1:1234", TestUtils
         .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, null));
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app1 = rm.submitApp(GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // Now request resource, memory > allowed
     boolean exception = false;
     try {
-      am1.allocate(Arrays.asList(ResourceRequest.newBuilder().capability(
-          Resource.newInstance(9 * GB, 1)).numContainers(1).resourceName("*")
-          .build()), null);
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+              .capability(Resource.newInstance(9 * GB, 1))
+              .numContainers(1)
+              .resourceName("*")
+              .build()), null);
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
@@ -744,14 +764,83 @@ public class TestApplicationMasterService {
 
     exception = false;
     try {
-      // Now request resource, vcore > allowed
-      am1.allocate(Arrays.asList(ResourceRequest.newBuilder().capability(
-          Resource.newInstance(8 * GB, 18)).numContainers(1).resourceName("*")
-          .build()), null);
+      // Now request resource, vcores > allowed
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+              .capability(Resource.newInstance(8 * GB, 18))
+              .numContainers(1)
+              .resourceName("*")
+              .build()), null);
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
     Assert.assertTrue(exception);
+
+    rm.close();
+  }
+
+  @Test
+  public void testValidateRequestCapacityAgainstMinMaxAllocationWithDifferentUnits()
+      throws Exception {
+
+    // Initialize resource map for 2 types.
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    // Initialize mandatory resources
+    ResourceInformation memory =
+        ResourceInformation.newInstance(ResourceInformation.MEMORY_MB.getName(),
+            ResourceInformation.MEMORY_MB.getUnits(),
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores =
+        ResourceInformation.newInstance(ResourceInformation.VCORES.getName(),
+            ResourceInformation.VCORES.getUnits(),
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    ResourceInformation res1 =
+        ResourceInformation.newInstance("res_1", "G", 0, 4);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+    riMap.put("res_1", res1);
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    FairSchedulerConfiguration fsConf =
+            new FairSchedulerConfiguration();
+
+    YarnConfiguration yarnConf = new YarnConfiguration(fsConf);
+    // Don't reset resource types since we have already configured resource
+    // types
+    yarnConf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        false);
+    yarnConf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
+        ResourceScheduler.class);
+    yarnConf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, false);
+
+    MockRM rm = new MockRM(yarnConf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("199.99.99.1:1234",
+        ResourceTypesTestHelper.newResource(
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+            ImmutableMap.<String, String> builder()
+                .put("res_1", "5G").build()));
+
+    RMApp app1 = rm.submitApp(GB, "app", "user", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+    // Now request res_1, 500M < 5G so it should be allowed
+    try {
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+          .capability(ResourceTypesTestHelper.newResource(4 * GB, 1,
+              ImmutableMap.<String, String> builder()
+                  .put("res_1", "500M")
+                      .build()))
+          .numContainers(1).resourceName("*").build()), null);
+    } catch (InvalidResourceRequestException e) {
+      fail(
+          "Allocate request should be accepted but exception was thrown: " + e);
+    }
 
     rm.close();
   }
@@ -774,11 +863,11 @@ public class TestApplicationMasterService {
         ResourceInformation.VCORES.getUnits(),
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
         DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-    ResourceInformation res_1 = ResourceInformation.newInstance("res_1",
+    ResourceInformation res1 = ResourceInformation.newInstance("res_1",
         ResourceInformation.VCORES.getUnits(), 0, 4);
     riMap.put(ResourceInformation.MEMORY_URI, memory);
     riMap.put(ResourceInformation.VCORES_URI, vcores);
-    riMap.put("res_1", res_1);
+    riMap.put("res_1", res1);
 
     ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
 
@@ -786,15 +875,16 @@ public class TestApplicationMasterService {
         new CapacitySchedulerConfiguration();
     csconf.setResourceComparator(DominantResourceCalculator.class);
 
-    YarnConfiguration conf = new YarnConfiguration(csconf);
+    YarnConfiguration yarnConf = new YarnConfiguration(csconf);
     // Don't reset resource types since we have already configured resource
     // types
-    conf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+    yarnConf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        false);
+    yarnConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
-    conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, false);
+    yarnConf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, false);
 
-    MockRM rm = new MockRM(conf);
+    MockRM rm = new MockRM(yarnConf);
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -805,18 +895,21 @@ public class TestApplicationMasterService {
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
             ImmutableMap.of("res_1", 4)));
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app1 = rm.submitApp(GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-    Assert.assertEquals(Resource.newInstance(1 * GB, 1),
+    Assert.assertEquals(Resource.newInstance(GB, 1),
         leafQueue.getUsedResources());
 
     // Now request resource, memory > allowed
     boolean exception = false;
     try {
-      am1.allocate(Arrays.asList(ResourceRequest.newBuilder().capability(
-          TestUtils.createResource(9 * GB, 1, ImmutableMap.of("res_1", 1)))
-          .numContainers(1).resourceName("*").build()), null);
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+              .capability(TestUtils.createResource(9 * GB, 1,
+                      ImmutableMap.of("res_1", 1)))
+              .numContainers(1)
+              .resourceName("*")
+              .build()), null);
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
@@ -824,11 +917,13 @@ public class TestApplicationMasterService {
 
     exception = false;
     try {
-      // Now request resource, vcore > allowed
-      am1.allocate(Arrays.asList(ResourceRequest.newBuilder().capability(
-          TestUtils.createResource(8 * GB, 18, ImmutableMap.of("res_1", 1)))
-          .numContainers(1).resourceName("*")
-          .build()), null);
+      // Now request resource, vcores > allowed
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+          .capability(
+              TestUtils.createResource(8 * GB, 18, ImmutableMap.of("res_1", 1)))
+              .numContainers(1)
+              .resourceName("*")
+              .build()), null);
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
@@ -837,10 +932,12 @@ public class TestApplicationMasterService {
     exception = false;
     try {
       // Now request resource, res_1 > allowed
-      am1.allocate(Arrays.asList(ResourceRequest.newBuilder().capability(
-          TestUtils.createResource(8 * GB, 1, ImmutableMap.of("res_1", 100)))
-          .numContainers(1).resourceName("*")
-          .build()), null);
+      am1.allocate(Collections.singletonList(ResourceRequest.newBuilder()
+              .capability(TestUtils.createResource(8 * GB, 1,
+                      ImmutableMap.of("res_1", 100)))
+              .numContainers(1)
+              .resourceName("*")
+              .build()), null);
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
@@ -856,7 +953,7 @@ public class TestApplicationMasterService {
       rmContainer.handle(
           new RMContainerEvent(containerId, RMContainerEventType.LAUNCHED));
     } else {
-      Assert.fail("Cannot find RMContainer");
+      fail("Cannot find RMContainer");
     }
   }
 }
