@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -25,6 +29,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.util.Time;
 
+import java.io.IOException;
 import java.util.Comparator;
 
 /**
@@ -32,6 +37,17 @@ import java.util.Comparator;
  */
 public class ContainerInfo
     implements Comparator<ContainerInfo>, Comparable<ContainerInfo> {
+
+  private static final ObjectWriter WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+    mapper
+        .setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE);
+    WRITER = mapper.writer();
+  }
+
   private HddsProtos.LifeCycleState state;
   private Pipeline pipeline;
   // Bytes allocated by SCM for clients.
@@ -252,6 +268,16 @@ public class ContainerInfo
   @Override
   public int compareTo(ContainerInfo o) {
     return this.compare(this, o);
+  }
+
+  /**
+   * Returns a JSON string of this object.
+   *
+   * @return String - json string
+   * @throws IOException
+   */
+  public String toJsonString() throws IOException {
+    return WRITER.writeValueAsString(this);
   }
 
   /**

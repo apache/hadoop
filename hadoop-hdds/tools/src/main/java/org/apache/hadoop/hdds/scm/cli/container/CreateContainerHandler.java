@@ -44,6 +44,10 @@ public class CreateContainerHandler extends OzoneCommandHandler {
 
   @Override
   public void execute(CommandLine cmd) throws IOException {
+    if (cmd.hasOption(HELP_OP)) {
+      displayHelp();
+    }
+
     if (!cmd.hasOption(CONTAINER_CREATE)) {
       throw new IOException("Expecting container create");
     }
@@ -57,7 +61,7 @@ public class CreateContainerHandler extends OzoneCommandHandler {
   public void displayHelp() {
     Options options = new Options();
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm -container -create <option>",
-        "where <option> is", options, "");
+    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm -container -create",
+        null, options, null);
   }
 }

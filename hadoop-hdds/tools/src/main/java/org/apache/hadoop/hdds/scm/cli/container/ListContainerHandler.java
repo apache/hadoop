@@ -24,7 +24,6 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.hdds.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import java.io.IOException;
@@ -87,14 +86,15 @@ public class ListContainerHandler extends OzoneCommandHandler {
 
     // Output data list
     for (ContainerInfo container : containerList) {
-      outputContainerPipeline(container.getPipeline());
+      outputContainerInfo(container);
     }
   }
 
-  private void outputContainerPipeline(Pipeline pipeline) throws IOException {
+  private void outputContainerInfo(ContainerInfo containerInfo)
+      throws IOException {
     // Print container report info.
     logOut("%s", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        pipeline.toJsonString()));
+        containerInfo.toJsonString()));
   }
 
   @Override

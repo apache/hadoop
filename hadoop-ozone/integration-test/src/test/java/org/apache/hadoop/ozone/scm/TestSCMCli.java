@@ -55,7 +55,6 @@ import static org.apache.hadoop.hdds.scm.cli.ResultCode.EXECUTION_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertFalse;
 /**
  * This class tests the CLI of SCM.
@@ -126,21 +125,12 @@ public class TestSCMCli {
 
   @Test
   public void testCreateContainer() throws Exception {
-    long containerID = ContainerTestHelper.getTestContainerID();
-    try {
-      scm.getClientProtocolServer().getContainer(containerID);
-      fail("should not be able to get the container");
-    } catch (IOException ioe) {
-      assertTrue(ioe.getMessage().contains(
-          "Specified key does not exist. key : " + containerID));
-    }
-    String[] args = {"-container", "-create", "-c",
-        Long.toString(containerID)};
+    ByteArrayOutputStream testContent = new ByteArrayOutputStream();
+    PrintStream testPrintOut = new PrintStream(testContent);
+    System.setOut(testPrintOut);
+    String[] args = {"-container", "-create"};
     assertEquals(ResultCode.SUCCESS, cli.run(args));
-    ContainerInfo container = scm.getClientProtocolServer()
-        .getContainer(containerID);
-    assertNotNull(container);
-    assertEquals(containerID, container.containerID());
+    assertEquals("", testContent.toString());
   }
 
   private boolean containerExist(long containerID) {
@@ -215,9 +205,9 @@ public class TestSCMCli {
     ContainerInfo emptyContainer = containerOperationClient
         .createContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, containerOwner);
-    containerOperationClient.closeContainer(container.getContainerID(),
+    containerOperationClient.closeContainer(emptyContainer.getContainerID(),
         container.getPipeline());
-    Assert.assertTrue(containerExist(container.getContainerID()));
+    Assert.assertTrue(containerExist(emptyContainer.getContainerID()));
 
     // Successfully delete an empty container.
     delCmd = new String[] {"-container", "-delete", "-c",
@@ -252,7 +242,7 @@ public class TestSCMCli {
     DatanodeDetails datanodeDetails = cluster.getHddsDatanodes().get(0)
         .getDatanodeDetails();
     String formatStr =
-        "Container Name: %s\n" +
+        "Container id: %s\n" +
         "Container State: %s\n" +
         "Container DB Path: %s\n" +
         "Container Path: %s\n" +
@@ -261,7 +251,7 @@ public class TestSCMCli {
         "Datanodes: [%s]\n";
 
     String formatStrWithHash =
-        "Container Name: %s\n" +
+        "Container id: %s\n" +
         "Container State: %s\n" +
         "Container Hash: %s\n" +
         "Container DB Path: %s\n" +
@@ -271,8 +261,9 @@ public class TestSCMCli {
         "Datanodes: [%s]\n";
 
     // Test a non-exist container
-    String cname = "nonExistContainer";
-    String[] info = {"-container", "-info", cname};
+    String containerID =
+        Long.toString(ContainerTestHelper.getTestContainerID());
+    String[] info = { "-container", "-info", containerID };
     int exitCode = runCommandAndGetOutput(info, null, null);
     assertEquals("Expected Execution Error, Did not find that.",
         EXECUTION_ERROR, exitCode);
@@ -286,14 +277,16 @@ public class TestSCMCli {
             readContainer(container.getContainerID(),
                 container.getPipeline()), conf);
 
-    info = new String[]{"-container", "-info", "-c", cname};
+    info = new String[] { "-container", "-info", "-c",
+        Long.toString(container.getContainerID()) };
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals("Expected Success, did not find it.", ResultCode.SUCCESS,
             exitCode);
 
     String openStatus = data.isOpen() ? "OPEN" : "CLOSED";
-    String expected = String.format(formatStr, cname, openStatus,
+    String expected =
+        String.format(formatStr, container.getContainerID(), openStatus,
         data.getDBPath(), data.getContainerPath(), "",
         datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
@@ -307,14 +300,16 @@ public class TestSCMCli {
     data = ContainerData
         .getFromProtBuf(containerOperationClient.readContainer(
             container.getContainerID(), container.getPipeline()), conf);
-    KeyUtils.getDB(data, conf).put(cname.getBytes(), "someKey".getBytes());
+    KeyUtils.getDB(data, conf)
+        .put(containerID.getBytes(), "someKey".getBytes());
 
-    info = new String[]{"-container", "-info", "-c", cname};
+    info = new String[] { "-container", "-info", "-c",
+        Long.toString(container.getContainerID()) };
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
 
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
-    expected = String.format(formatStr, cname, openStatus,
+    expected = String.format(formatStr, container.getContainerID(), openStatus,
         data.getDBPath(), data.getContainerPath(), "",
         datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
@@ -326,7 +321,8 @@ public class TestSCMCli {
     containerOperationClient.closeContainer(
         container.getContainerID(), container.getPipeline());
 
-    info = new String[] {"-container", "-info", "-c", cname};
+    info = new String[] { "-container", "-info", "-c",
+        Long.toString(container.getContainerID()) };
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
     data = ContainerData
@@ -334,9 +330,10 @@ public class TestSCMCli {
             container.getContainerID(), container.getPipeline()), conf);
 
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
-    expected = String.format(formatStrWithHash, cname, openStatus,
-        data.getHash(), data.getDBPath(), data.getContainerPath(),
-        "", datanodeDetails.getHostName(), datanodeDetails.getHostName());
+    expected = String
+        .format(formatStrWithHash, container.getContainerID(), openStatus,
+            data.getHash(), data.getDBPath(), data.getContainerPath(), "",
+            datanodeDetails.getHostName(), datanodeDetails.getHostName());
     assertEquals(expected, out.toString());
   }
 
@@ -413,16 +410,16 @@ public class TestSCMCli {
     args = new String[] {"-container", "-list", "-start",
         startContainerIDStr};
     exitCode = runCommandAndGetOutput(args, out, err);
-    assertEquals(ResultCode.SUCCESS, exitCode);
-    assertTrue(out.toString().isEmpty());
+    assertEquals(ResultCode.EXECUTION_ERROR, exitCode);
+    assertTrue(err.toString().contains(
+        "java.io.IOException: Expecting container count"));
   }
 
   @Test
   public void testCloseContainer() throws Exception {
-    long containerID = ContainerTestHelper.getTestContainerID();
-    String[] args = {"-container", "-create", "-c",
-        Long.toString(containerID)};
-    assertEquals(ResultCode.SUCCESS, cli.run(args));
+    long containerID = containerOperationClient
+        .createContainer(xceiverClientManager.getType(),
+            HddsProtos.ReplicationFactor.ONE, containerOwner).getContainerID();
     ContainerInfo container = scm.getClientProtocolServer()
         .getContainer(containerID);
     assertNotNull(container);
@@ -477,7 +474,7 @@ public class TestSCMCli {
     String[] args2 = {"-container", "-create", "-help"};
     assertEquals(ResultCode.SUCCESS, cli.run(args2));
     String expected2 =
-        "usage: hdfs scm -container -create\n";
+        "usage: hdfs scm -container -create\n\n";
     assertEquals(expected2, testContent.toString());
     testContent.reset();
 
@@ -502,11 +499,10 @@ public class TestSCMCli {
 
     String[] args5 = {"-container", "-list", "-help"};
     assertEquals(ResultCode.SUCCESS, cli.run(args5));
-    String expected5 =
-        "usage: hdfs scm -container -list <option>\n" +
-            "where <option> can be the following\n" +
-            " -start <arg>    Specify start container id, required\n" +
-            " -count <arg>   Specify count number name\n";
+    String expected5 = "usage: hdfs scm -container -list <option>\n"
+        + "where <option> can be the following\n"
+        + " -count <arg>   Specify count number, required\n"
+        + " -start <arg>   Specify start container id\n";
     assertEquals(expected5, testContent.toString());
     testContent.reset();
 
