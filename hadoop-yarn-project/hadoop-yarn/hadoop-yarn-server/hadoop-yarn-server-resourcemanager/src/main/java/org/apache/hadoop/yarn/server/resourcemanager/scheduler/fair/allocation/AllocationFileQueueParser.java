@@ -217,7 +217,10 @@ public class AllocationFileQueueParser {
     // if a leaf in the alloc file is marked as type='parent'
     // then store it as a parent queue
     if (isLeaf && !"parent".equals(element.getAttribute("type"))) {
-      builder.configuredQueues(FSQueueType.LEAF, queueName);
+      // reservable queue has been already configured as parent
+      if (!isReservable) {
+        builder.configuredQueues(FSQueueType.LEAF, queueName);
+      }
     } else {
       if (isReservable) {
         throw new AllocationConfigurationException("The configuration settings"

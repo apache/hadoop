@@ -42,6 +42,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -801,6 +804,13 @@ public class TestAllocationFileLoaderService {
     String nonreservableQueueName = "root.other";
     assertFalse(allocConf.isReservable(nonreservableQueueName));
     assertTrue(allocConf.isReservable(reservableQueueName));
+    Map<FSQueueType, Set<String>> configuredQueues =
+        allocConf.getConfiguredQueues();
+    assertTrue("reservable queue is expected be to a parent queue",
+        configuredQueues.get(FSQueueType.PARENT).contains(reservableQueueName));
+    assertFalse("reservable queue should not be a leaf queue",
+        configuredQueues.get(FSQueueType.LEAF)
+          .contains(reservableQueueName));
 
     assertTrue(allocConf.getMoveOnExpiry(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration.DEFAULT_RESERVATION_WINDOW,
