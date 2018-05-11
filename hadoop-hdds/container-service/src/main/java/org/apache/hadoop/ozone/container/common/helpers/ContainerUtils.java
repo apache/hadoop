@@ -47,7 +47,7 @@ import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
 import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
     .UNABLE_TO_FIND_DATA_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_META;
+
 
 /**
  * A set of helper functions to create proper responses.
@@ -194,10 +194,9 @@ public final class ContainerUtils {
    * Verifies that this in indeed a new container.
    *
    * @param containerFile - Container File to verify
-   * @param metadataFile - metadata File to verify
    * @throws IOException
    */
-  public static void verifyIsNewContainer(File containerFile, File metadataFile)
+  public static void verifyIsNewContainer(File containerFile)
       throws IOException {
     Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
     if (containerFile.exists()) {
@@ -205,13 +204,6 @@ public final class ContainerUtils {
           containerFile.toPath());
       throw new FileAlreadyExistsException("container already exists on " +
           "disk.");
-    }
-
-    if (metadataFile.exists()) {
-      log.error("metadata found on disk, but missing container. Refusing to" +
-          " write this container. File: {} ", metadataFile.toPath());
-      throw new FileAlreadyExistsException(("metadata found on disk, but " +
-          "missing container. Refusing to write this container."));
     }
 
     File parentPath = new File(containerFile.getParent());
@@ -228,11 +220,6 @@ public final class ContainerUtils {
       throw new IOException("creation of a new container file failed.");
     }
 
-    if (!metadataFile.createNewFile()) {
-      log.error("creation of the metadata file failed. File: {}",
-          metadataFile.toPath());
-      throw new IOException("creation of a new container file failed.");
-    }
   }
 
   public static String getContainerDbFileName(String containerName) {
@@ -284,20 +271,6 @@ public final class ContainerUtils {
           " Path: " + dataPath);
     }
     return metadataPath;
-  }
-
-  /**
-   * Returns Metadata location.
-   *
-   * @param containerData - Data
-   * @param location - Path
-   * @return Path
-   */
-  public static File getMetadataFile(ContainerData containerData,
-      Path location) {
-    return location.resolve(Long.toString(containerData
-        .getContainerID()).concat(CONTAINER_META))
-        .toFile();
   }
 
   /**
@@ -395,10 +368,10 @@ public final class ContainerUtils {
     String rootPath = getContainerNameFromFile(new File(containerData
         .getContainerPath()));
     Path containerPath = Paths.get(rootPath.concat(CONTAINER_EXTENSION));
-    Path metaPath = Paths.get(rootPath.concat(CONTAINER_META));
+
 
     FileUtils.forceDelete(containerPath.toFile());
-    FileUtils.forceDelete(metaPath.toFile());
+
   }
 
   /**

@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.ozone.container.common.helpers;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
     .ContainerLifeCycleState;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -45,7 +43,6 @@ public class ContainerData {
   private String dbPath;  // Path to Level DB Store.
   // Path to Physical file system where container and checksum are stored.
   private String containerFilePath;
-  private String hash;
   private AtomicLong bytesUsed;
   private long maxSize;
   private long containerID;
@@ -95,10 +92,6 @@ public class ContainerData {
       data.setState(protoData.getState());
     }
 
-    if(protoData.hasHash()) {
-      data.setHash(protoData.getHash());
-    }
-
     if (protoData.hasBytesUsed()) {
       data.setBytesUsed(protoData.getBytesUsed());
     }
@@ -121,10 +114,6 @@ public class ContainerData {
 
     if (this.getDBPath() != null) {
       builder.setDbPath(this.getDBPath());
-    }
-
-    if (this.getHash() != null) {
-      builder.setHash(this.getHash());
     }
 
     if (this.getContainerPath() != null) {
@@ -274,22 +263,6 @@ public class ContainerData {
     // TODO: closed or closing here
     setState(ContainerLifeCycleState.CLOSED);
 
-    // Some thing brain dead for now. name + Time stamp of when we get the close
-    // container message.
-    setHash(DigestUtils.sha256Hex(this.getContainerID() +
-        Long.toString(Time.monotonicNow())));
-  }
-
-  /**
-   * Final hash for this container.
-   * @return - Hash
-   */
-  public String getHash() {
-    return hash;
-  }
-
-  public void setHash(String hash) {
-    this.hash = hash;
   }
 
   public void setMaxSize(long maxSize) {
