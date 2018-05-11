@@ -830,6 +830,7 @@ free_and_exit:
 
 int get_docker_start_command(const char *command_file, const struct configuration *conf, args *args) {
   int ret = 0;
+  char *docker = NULL;
   char *container_name = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_START_COMMAND, &command_config);
@@ -842,9 +843,18 @@ int get_docker_start_command(const char *command_file, const struct configuratio
     return INVALID_DOCKER_CONTAINER_NAME;
   }
 
+  docker = get_docker_binary(conf);
+  ret = add_to_args(args, docker);
+  free(docker);
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+
   ret = add_docker_config_param(&command_config, args);
   if (ret != 0) {
-    return BUFFER_TOO_SMALL;
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
   }
 
   ret = add_to_args(args, DOCKER_START_COMMAND);
@@ -933,7 +943,7 @@ static int set_pid_namespace(const struct configuration *command_config,
       if (pid_host_enabled != NULL) {
         if (strcmp(pid_host_enabled, "1") == 0 ||
             strcasecmp(pid_host_enabled, "True") == 0) {
-          ret = add_to_args(args, "--pid='host'");
+          ret = add_to_args(args, "--pid=host");
           if (ret != 0) {
             ret = BUFFER_TOO_SMALL;
           }

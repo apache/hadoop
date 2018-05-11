@@ -365,7 +365,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
          "[docker-command-execution]\n  docker-command=start\n  name=container_e1_12312_11111_02_000001",
-         "start container_e1_12312_11111_02_000001"));
+         "/usr/bin/docker start container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -514,7 +514,7 @@ namespace ContainerExecutor {
     std::vector<std::pair<std::string, std::string> >::const_iterator itr;
     std::vector<std::pair<std::string, int> >::const_iterator itr2;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  pid=host", "--pid='host'"));
+        "[docker-command-execution]\n  docker-command=run\n  pid=host", "--pid=host"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run", ""));
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
