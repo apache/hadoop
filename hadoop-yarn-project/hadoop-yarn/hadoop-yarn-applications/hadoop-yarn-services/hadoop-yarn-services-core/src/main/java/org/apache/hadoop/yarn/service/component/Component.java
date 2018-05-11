@@ -323,7 +323,7 @@ public class Component implements EventHandler<ComponentEvent> {
             org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
         component.getScheduler().getApp().setState(ServiceState.STARTED);
         return FLEXING;
-      } else if (delta < 0){
+      } else if (delta < 0) {
         delta = 0 - delta;
         // scale down
         LOG.info("[FLEX DOWN COMPONENT " + component.getName()
@@ -343,7 +343,9 @@ public class Component implements EventHandler<ComponentEvent> {
           instance.destroy();
         }
         checkAndUpdateComponentState(component, false);
-        return STABLE;
+        return component.componentSpec.getState()
+            == org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE
+                ? STABLE : FLEXING;
       } else {
         LOG.info("[FLEX COMPONENT " + component.getName() + "]: already has " +
             event.getDesired() + " instances, ignoring");
@@ -440,7 +442,7 @@ public class Component implements EventHandler<ComponentEvent> {
               component.componentSpec.getState());
         }
         // component state change will trigger re-check of service state
-        component.context.getServiceManager().checkAndUpdateServiceState(true);
+        component.context.getServiceManager().checkAndUpdateServiceState();
       }
     } else {
       // container moving out of READY state could be because of FLEX down so
@@ -449,14 +451,18 @@ public class Component implements EventHandler<ComponentEvent> {
           .value() < component.componentMetrics.containersDesired.value()) {
         component.componentSpec.setState(
             org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
-        if (curState != component.componentSpec.getState()) {
-          LOG.info("[COMPONENT {}] state changed from {} -> {}",
-              component.componentSpec.getName(), curState,
-              component.componentSpec.getState());
-        }
-        // component state change will trigger re-check of service state
-        component.context.getServiceManager().checkAndUpdateServiceState(false);
+      } else if (component.componentMetrics.containersReady
+          .value() == component.componentMetrics.containersDesired.value()) {
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
       }
+      if (curState != component.componentSpec.getState()) {
+        LOG.info("[COMPONENT {}] state changed from {} -> {}",
+            component.componentSpec.getName(), curState,
+            component.componentSpec.getState());
+      }
+      // component state change will trigger re-check of service state
+      component.context.getServiceManager().checkAndUpdateServiceState();
     }
     // when the service is stable then the state of component needs to
     // transition to stable

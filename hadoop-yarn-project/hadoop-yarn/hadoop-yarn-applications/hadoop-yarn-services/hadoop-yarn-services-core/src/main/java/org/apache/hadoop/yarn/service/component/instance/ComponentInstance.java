@@ -581,14 +581,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
 
   @Override
   public int compareTo(ComponentInstance to) {
-    long delta = containerStartedTime - to.containerStartedTime;
-    if (delta == 0) {
-      return getCompInstanceId().compareTo(to.getCompInstanceId());
-    } else if (delta < 0) {
-      return -1;
-    } else {
-      return 1;
-    }
+    return getCompInstanceId().compareTo(to.getCompInstanceId());
   }
 
   @Override public boolean equals(Object o) {

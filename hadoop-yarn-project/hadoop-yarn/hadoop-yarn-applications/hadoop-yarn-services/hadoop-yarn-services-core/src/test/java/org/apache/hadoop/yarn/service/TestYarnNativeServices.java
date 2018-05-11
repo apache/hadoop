@@ -484,8 +484,37 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       }
     }
 
-    // Flex compa up to 4, which is more containers than the no of NMs
+    // Flex compa up to 5, which is more containers than the no of NMs
     Map<String, Long> compCounts = new HashMap<>();
+    compCounts.put("compa", 5L);
+    exampleApp.getComponent("compa").setNumberOfContainers(5L);
+    client.flexByRestService(exampleApp.getName(), compCounts);
+    try {
+      // 10 secs is enough for the container to be started. The down side of
+      // this test is that it has to wait that long. Setting a higher wait time
+      // will add to the total time taken by tests to run.
+      waitForServiceToBeStable(client, exampleApp, 10000);
+      Assert.fail("Service should not be in a stable state. It should throw "
+          + "a timeout exception.");
+    } catch (Exception e) {
+      // Check that service state is not STABLE and only 3 containers are
+      // running and the fourth one should not get allocated.
+      service = client.getStatus(exampleApp.getName());
+      component = service.getComponent("compa");
+      Assert.assertNotEquals("Service state should not be STABLE",
+          ServiceState.STABLE, service.getState());
+      Assert.assertEquals("Component state should be FLEXING",
+          ComponentState.FLEXING, component.getState());
+      Assert.assertEquals("3 containers are expected to be running", 3,
+          component.getContainers().size());
+    }
+
+    // Flex compa down to 4 now, which is still more containers than the no of
+    // NMs. This tests the usecase that flex down does not kill any of the
+    // currently running containers since the required number of containers are
+    // still higher than the currently running number of containers. However,
+    // component state will still be FLEXING and service state not STABLE.
+    compCounts = new HashMap<>();
     compCounts.put("compa", 4L);
     exampleApp.getComponent("compa").setNumberOfContainers(4L);
     client.flexByRestService(exampleApp.getName(), compCounts);
@@ -508,6 +537,15 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       Assert.assertEquals("3 containers are expected to be running", 3,
           component.getContainers().size());
     }
+
+    // Finally flex compa down to 3, which is exactly the number of containers
+    // currently running. This will bring the component and service states to
+    // STABLE.
+    compCounts = new HashMap<>();
+    compCounts.put("compa", 3L);
+    exampleApp.getComponent("compa").setNumberOfContainers(3L);
+    client.flexByRestService(exampleApp.getName(), compCounts);
+    waitForServiceToBeStable(client, exampleApp);
 
     LOG.info("Stop/destroy service {}", exampleApp);
     client.actionStop(exampleApp.getName(), true);
