@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
@@ -38,9 +37,9 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
-import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -50,10 +49,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -454,43 +451,5 @@ public class TestRouterQuota {
         .getMountTableEntries(getRequest);
 
     return removeResponse.getEntries();
-  }
-
-  @Test
-  public void testQuotaSynchronization() throws IOException {
-    long updateNsQuota = 3;
-    long updateSsQuota = 4;
-    MountTable mountTable = MountTable.newInstance("/quotaSync",
-        Collections.singletonMap("ns0", "/"), Time.now(), Time.now());
-    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(1)
-        .spaceQuota(2).build());
-    // Add new mount table
-    addMountTable(mountTable);
-
-    // ensure the quota is not set as updated value
-    QuotaUsage realQuota = nnContext1.getFileSystem()
-        .getQuotaUsage(new Path("/"));
-    assertNotEquals(updateNsQuota, realQuota.getQuota());
-    assertNotEquals(updateSsQuota, realQuota.getSpaceQuota());
-
-    // Call periodicInvoke to ensure quota  updated in quota manager
-    // and state store.
-    RouterQuotaUpdateService updateService = routerContext.getRouter()
-        .getQuotaCacheUpdateService();
-    updateService.periodicInvoke();
-
-    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(updateNsQuota)
-        .spaceQuota(updateSsQuota).build());
-    UpdateMountTableEntryRequest updateRequest = UpdateMountTableEntryRequest
-        .newInstance(mountTable);
-    RouterClient client = routerContext.getAdminClient();
-    MountTableManager mountTableManager = client.getMountTableManager();
-    mountTableManager.updateMountTableEntry(updateRequest);
-
-    // verify if the quota is updated in real path
-    realQuota = nnContext1.getFileSystem().getQuotaUsage(
-        new Path("/"));
-    assertEquals(updateNsQuota, realQuota.getQuota());
-    assertEquals(updateSsQuota, realQuota.getSpaceQuota());
   }
 }

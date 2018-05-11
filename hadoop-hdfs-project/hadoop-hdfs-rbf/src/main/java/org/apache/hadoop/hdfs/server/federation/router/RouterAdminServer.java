@@ -26,7 +26,6 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
@@ -55,7 +54,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
-import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -230,31 +228,7 @@ public class RouterAdminServer extends AbstractService
   @Override
   public UpdateMountTableEntryResponse updateMountTableEntry(
       UpdateMountTableEntryRequest request) throws IOException {
-    UpdateMountTableEntryResponse response =
-        getMountTableStore().updateMountTableEntry(request);
-
-    MountTable mountTable = request.getEntry();
-    if (mountTable != null) {
-      synchronizeQuota(mountTable);
-    }
-    return response;
-  }
-
-  /**
-   * Synchronize the quota value across mount table and subclusters.
-   * @param mountTable Quota set in given mount table.
-   * @throws IOException
-   */
-  private void synchronizeQuota(MountTable mountTable) throws IOException {
-    String path = mountTable.getSourcePath();
-    long nsQuota = mountTable.getQuota().getQuota();
-    long ssQuota = mountTable.getQuota().getSpaceQuota();
-
-    if (nsQuota != HdfsConstants.QUOTA_DONT_SET
-        || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
-      this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
-          ssQuota, null);
-    }
+    return getMountTableStore().updateMountTableEntry(request);
   }
 
   @Override
