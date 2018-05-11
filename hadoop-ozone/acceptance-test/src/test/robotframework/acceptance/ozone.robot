@@ -52,9 +52,29 @@ Test ozone cli
                     Execute on          datanode        ozone oz -createVolume http://ksm/hive -user bilbo -quota 100TB -root
     ${result} =     Execute on          datanode        ozone oz -listVolume o3://ksm -user bilbo | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.volumeName=="hive")'
                     Should contain      ${result}       createdOn
+                    Execute on          datanode        ozone oz -updateVolume http://ksm/hive -user bill -quota 10TB
+    ${result} =     Execute on          datanode        ozone oz -infoVolume http://ksm/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .owner | .name'
+                    Should Be Equal     ${result}       bill
+    ${result} =     Execute on          datanode        ozone oz -infoVolume http://ksm/hive | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.volumeName=="hive") | .quota | .size'
+                    Should Be Equal     ${result}       10
                     Execute on          datanode        ozone oz -createBucket http://ksm/hive/bb1
-    ${result}       Execute on          datanode        ozone oz -listBucket o3://ksm/hive/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
+    ${result} =     Execute on          datanode        ozone oz -infoBucket http://ksm/hive/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .storageType'
+                    Should Be Equal     ${result}       DISK
+    ${result} =     Execute on          datanode        ozone oz -updateBucket http://ksm/hive/bb1 -addAcl user:frodo:rw,group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="samwise") | .type'
+                    Should Be Equal     ${result}       GROUP
+    ${result} =     Execute on          datanode        ozone oz -updateBucket http://ksm/hive/bb1 -removeAcl group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="frodo") | .type'
+                    Should Be Equal     ${result}       USER
+    ${result} =     Execute on          datanode        ozone oz -listBucket o3://ksm/hive/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
                     Should Be Equal     ${result}       hive
+                    Execute on          datanode        ozone oz -putKey http://ksm/hive/bb1/key1 -file NOTICE.txt
+                    Execute on          datanode        rm -f NOTICE.txt.1
+                    Execute on          datanode        ozone oz -getKey http://ksm/hive/bb1/key1 -file NOTICE.txt.1
+                    Execute on          datanode        ls -l NOTICE.txt.1
+    ${result} =     Execute on          datanode        ozone oz -infoKey http://ksm/hive/bb1/key1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.keyName=="key1")'
+                    Should contain      ${result}       createdOn
+    ${result} =     Execute on          datanode        ozone oz -listKey o3://ksm/hive/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
+                    Should Be Equal     ${result}       key1
+                    Execute on          datanode        ozone oz -deleteKey http://ksm/hive/bb1/key1 -v
                     Execute on          datanode        ozone oz -deleteBucket http://ksm/hive/bb1
                     Execute on          datanode        ozone oz -deleteVolume http://ksm/hive -user bilbo
 
@@ -106,12 +126,12 @@ Scale datanodes up
 Execute on
     [arguments]     ${componentname}    ${command}
     ${rc}           ${return} =         Run docker compose          exec ${componentname} ${command}
-    Log             ${return}
     [return]        ${return}
 
 Run docker compose
     [arguments]                     ${command}
                                     Set Environment Variable    HADOOPDIR                              ${basedir}/../../hadoop-dist/target/hadoop-${version}
     ${rc}                           ${output} =                 Run And Return Rc And Output           docker-compose -f ${basedir}/target/compose/docker-compose.yaml ${command}
+    Log                             ${output}
     Should Be Equal As Integers     ${rc}                       0
     [return]                            ${rc}                       ${output}

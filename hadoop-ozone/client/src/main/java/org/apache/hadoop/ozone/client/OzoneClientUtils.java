@@ -47,6 +47,7 @@ public final class OzoneClientUtils {
     bucketInfo.setStorageType(bucket.getStorageType());
     bucketInfo.setVersioning(
         OzoneConsts.Versioning.getVersioning(bucket.getVersioning()));
+    bucketInfo.setAcls(bucket.getAcls());
     return bucketInfo;
   }
 
