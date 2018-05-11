@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.ozone.container.server;
 
-import io.netty.channel.embedded.EmbeddedChannel;
+import org.apache.ratis.shaded.io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerCommandResponseProto;
 
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;

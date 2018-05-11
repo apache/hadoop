@@ -27,7 +27,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -79,26 +79,26 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_EXISTS;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_INTERNAL_ERROR;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_NOT_FOUND;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .ERROR_IN_COMPACT_DB;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .INVALID_CONFIG;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .IO_EXCEPTION;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .NO_SUCH_ALGORITHM;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNABLE_TO_READ_METADATA_DB;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNCLOSED_CONTAINER_IO;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNSUPPORTED_REQUEST;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_EXISTS;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_NOT_FOUND;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.ERROR_IN_COMPACT_DB;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.INVALID_CONFIG;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.IO_EXCEPTION;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.NO_SUCH_ALGORITHM;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNABLE_TO_READ_METADATA_DB;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNCLOSED_CONTAINER_IO;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNSUPPORTED_REQUEST;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 
 /**

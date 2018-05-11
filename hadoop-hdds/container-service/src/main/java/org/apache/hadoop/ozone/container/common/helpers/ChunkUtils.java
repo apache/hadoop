@@ -18,12 +18,12 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ChunkManagerImpl;
@@ -40,22 +40,22 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CHECKSUM_MISMATCH;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_INTERNAL_ERROR;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_NOT_FOUND;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .INVALID_WRITE_SIZE;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .IO_EXCEPTION;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .OVERWRITE_FLAG_REQUIRED;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNABLE_TO_FIND_CHUNK;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNABLE_TO_FIND_DATA_DIR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CHECKSUM_MISMATCH;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_NOT_FOUND;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.INVALID_WRITE_SIZE;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.IO_EXCEPTION;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.OVERWRITE_FLAG_REQUIRED;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_CHUNK;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNABLE_TO_FIND_DATA_DIR;
 
 /**
  * Set of utility functions used by the chunk Manager.

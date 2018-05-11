@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
@@ -42,9 +42,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.apache.commons.io.FilenameUtils.removeExtension;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result
     .INVALID_ARGUMENT;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result
     .UNABLE_TO_FIND_DATA_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_EXTENSION;
 

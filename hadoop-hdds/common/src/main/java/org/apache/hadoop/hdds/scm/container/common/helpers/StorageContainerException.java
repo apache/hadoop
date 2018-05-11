@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.container.common.helpers;
 
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
 import java.io.IOException;
 

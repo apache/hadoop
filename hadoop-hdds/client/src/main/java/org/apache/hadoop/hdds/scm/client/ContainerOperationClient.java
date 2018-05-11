@@ -25,8 +25,9 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.storage.ContainerProtocolCalls;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadContainerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 
 /**

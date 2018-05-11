@@ -19,14 +19,15 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.ratis.shaded.com.google.protobuf
+    .InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.ratis.RatisHelper;
@@ -37,7 +38,6 @@ import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
-import org.apache.ratis.shaded.com.google.protobuf.ShadedProtoUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,8 +211,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private RaftClientReply sendRequest(ContainerCommandRequestProto request)
       throws IOException {
     boolean isReadOnlyRequest = isReadOnly(request);
-    ByteString byteString =
-        ShadedProtoUtil.asShadedByteString(request.toByteArray());
+    ByteString byteString = request.toByteString();
     LOG.debug("sendCommand {} {}", isReadOnlyRequest, request);
     final RaftClientReply reply =  isReadOnlyRequest ?
         getClient().sendReadOnly(() -> byteString) :
@@ -224,8 +223,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   private CompletableFuture<RaftClientReply> sendRequestAsync(
       ContainerCommandRequestProto request) throws IOException {
     boolean isReadOnlyRequest = isReadOnly(request);
-    ByteString byteString =
-        ShadedProtoUtil.asShadedByteString(request.toByteArray());
+    ByteString byteString = request.toByteString();
     LOG.debug("sendCommandAsync {} {}", isReadOnlyRequest, request);
     return isReadOnlyRequest ? getClient().sendReadOnlyAsync(() -> byteString) :
         getClient().sendAsync(() -> byteString);
@@ -237,7 +235,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final RaftClientReply reply = sendRequest(request);
     Preconditions.checkState(reply.isSuccess());
     return ContainerCommandResponseProto.parseFrom(
-        ShadedProtoUtil.asByteString(reply.getMessage().getContent()));
+        reply.getMessage().getContent());
   }
 
   /**
@@ -257,7 +255,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         .thenApply(reply -> {
           try {
             return ContainerCommandResponseProto.parseFrom(
-                ShadedProtoUtil.asByteString(reply.getMessage().getContent()));
+                reply.getMessage().getContent());
           } catch (InvalidProtocolBufferException e) {
             throw new CompletionException(e);
           }

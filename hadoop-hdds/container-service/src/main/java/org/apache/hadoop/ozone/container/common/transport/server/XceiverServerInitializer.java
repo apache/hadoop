@@ -19,14 +19,16 @@
 package org.apache.hadoop.ozone.container.common.transport.server;
 
 import com.google.common.base.Preconditions;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.protobuf.ProtobufDecoder;
-import io.netty.handler.codec.protobuf.ProtobufEncoder;
-import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
-import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.ratis.shaded.io.netty.channel.ChannelInitializer;
+import org.apache.ratis.shaded.io.netty.channel.ChannelPipeline;
+import org.apache.ratis.shaded.io.netty.channel.socket.SocketChannel;
+import org.apache.ratis.shaded.io.netty.handler.codec.protobuf.ProtobufDecoder;
+import org.apache.ratis.shaded.io.netty.handler.codec.protobuf.ProtobufEncoder;
+import org.apache.ratis.shaded.io.netty.handler.codec.protobuf
+    .ProtobufVarint32FrameDecoder;
+import org.apache.ratis.shaded.io.netty.handler.codec.protobuf
+    .ProtobufVarint32LengthFieldPrepender;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 

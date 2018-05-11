@@ -19,13 +19,14 @@
 package org.apache.hadoop.ozone.container.common.transport.server;
 
 import com.google.common.base.Preconditions;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import org.apache.ratis.shaded.io.netty.bootstrap.ServerBootstrap;
+import org.apache.ratis.shaded.io.netty.channel.Channel;
+import org.apache.ratis.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.ratis.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.ratis.shaded.io.netty.channel.socket.nio
+    .NioServerSocketChannel;
+import org.apache.ratis.shaded.io.netty.handler.logging.LogLevel;
+import org.apache.ratis.shaded.io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;

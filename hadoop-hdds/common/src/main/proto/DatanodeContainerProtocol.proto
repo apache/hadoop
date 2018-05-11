@@ -24,7 +24,7 @@
 
 // This file contains protocol buffers that are used to transfer data
 // to and from the datanode.
-option java_package = "org.apache.hadoop.hdds.protocol.proto";
+option java_package = "org.apache.hadoop.hdds.protocol.datanode.proto";
 option java_outer_classname = "ContainerProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.hdds.datanode;

@@ -20,7 +20,8 @@ package org.apache.hadoop.hdds.scm.client;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.ContainerData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ContainerData;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.IOException;

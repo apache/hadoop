@@ -19,13 +19,14 @@
 package org.apache.hadoop.ozone.container.common.statemachine.background;
 
 import com.google.common.collect.Lists;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.ratis.shaded.com.google.protobuf
+    .InvalidProtocolBufferException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;

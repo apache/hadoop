@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.client.io;
 
 
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.KeyData;
 import org.apache.hadoop.hdds.client.BlockID;
 
 

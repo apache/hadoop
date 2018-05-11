@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.ozone.container.common.transport.server;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.ratis.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.ratis.shaded.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.slf4j.Logger;

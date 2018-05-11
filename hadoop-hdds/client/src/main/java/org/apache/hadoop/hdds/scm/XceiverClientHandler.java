@@ -18,13 +18,13 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.base.Preconditions;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.ratis.shaded.io.netty.channel.Channel;
+import org.apache.ratis.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.ratis.shaded.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;

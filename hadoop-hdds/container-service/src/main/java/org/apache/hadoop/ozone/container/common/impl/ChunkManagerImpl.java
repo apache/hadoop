@@ -21,7 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -40,10 +40,10 @@ import java.nio.file.StandardCopyOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .CONTAINER_INTERNAL_ERROR;
-import static org.apache.hadoop.hdds.protocol.proto.ContainerProtos.Result
-    .UNSUPPORTED_REQUEST;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.CONTAINER_INTERNAL_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .Result.UNSUPPORTED_REQUEST;
 
 /**
  * An implementation of ChunkManager that is used by default in ozone.

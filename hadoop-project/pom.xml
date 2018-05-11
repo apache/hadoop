@@ -104,6 +104,11 @@
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
 
+    <!-- Maven protoc compiler -->
+    <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
+    <protobuf-compile.version>3.1.0</protobuf-compile.version>
+    <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
+
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
 
@@ -413,7 +418,7 @@
         <version>${hadoop.version}</version>
       </dependency>
 
-     <dependency>
+      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
         <version>${hadoop.version}</version>
@@ -1737,8 +1742,8 @@
           </ignores>
         </configuration>
       </plugin>
-       <plugin>
-         <groupId>org.apache.maven.plugins</groupId>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>

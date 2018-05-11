@@ -19,13 +19,14 @@
 package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.ratis.shaded.com.google.protobuf
+    .InvalidProtocolBufferException;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ContainerProtos
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .WriteChunkRequestProto;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.ratis.conf.RaftProperties;
@@ -34,7 +35,6 @@ import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.server.storage.RaftStorage;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
-import org.apache.ratis.shaded.com.google.protobuf.ShadedProtoUtil;
 import org.apache.ratis.shaded.proto.RaftProtos.LogEntryProto;
 import org.apache.ratis.shaded.proto.RaftProtos.SMLogEntryProto;
 import org.apache.ratis.statemachine.StateMachineStorage;
@@ -159,8 +159,8 @@ public class ContainerStateMachine extends BaseStateMachine {
               .build();
 
       log = SMLogEntryProto.newBuilder()
-          .setData(getShadedByteString(commitContainerCommandProto))
-          .setStateMachineData(getShadedByteString(dataContainerCommandProto))
+          .setData(commitContainerCommandProto.toByteString())
+          .setStateMachineData(dataContainerCommandProto.toByteString())
           .build();
     } else if (proto.getCmdType() == ContainerProtos.Type.CreateContainer) {
       log = SMLogEntryProto.newBuilder()
@@ -175,21 +175,16 @@ public class ContainerStateMachine extends BaseStateMachine {
     return new TransactionContextImpl(this, request, log);
   }
 
-  private ByteString getShadedByteString(ContainerCommandRequestProto proto) {
-    return ShadedProtoUtil.asShadedByteString(proto.toByteArray());
-  }
-
   private ContainerCommandRequestProto getRequestProto(ByteString request)
       throws InvalidProtocolBufferException {
-    return ContainerCommandRequestProto.parseFrom(
-        ShadedProtoUtil.asByteString(request));
+    return ContainerCommandRequestProto.parseFrom(request);
   }
 
   private Message runCommand(ContainerCommandRequestProto requestProto) {
     LOG.trace("dispatch {}", requestProto);
     ContainerCommandResponseProto response = dispatcher.dispatch(requestProto);
     LOG.trace("response {}", response);
-    return () -> ShadedProtoUtil.asShadedByteString(response.toByteArray());
+    return () -> response.toByteString();
   }
 
   private CompletableFuture<Message> handleWriteChunk(
