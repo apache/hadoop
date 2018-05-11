@@ -94,6 +94,8 @@ static gid_t nm_gid = -1;
 struct configuration CFG = {.size=0, .sections=NULL};
 struct section executor_cfg = {.size=0, .kv_pairs=NULL};
 
+static char *chosen_container_log_dir = NULL;
+
 char *concatenate(char *concat_pattern, char *return_path_name,
    int numArgs, ...);
 
@@ -755,8 +757,9 @@ static int create_container_directories(const char* user, const char *app_id,
       } else if (mkdirs(container_log_dir, perms) != 0) {
         free(container_log_dir);
       } else {
-        free(container_log_dir);
         result = 0;
+        chosen_container_log_dir = strdup(container_log_dir);
+        free(container_log_dir);
       }
     }
     free(combined_name);
@@ -1127,6 +1130,34 @@ char* get_container_log_directory(const char *log_root, const char* app_id,
                                   const char *container_id) {
   return concatenate("%s/%s/%s", "container log dir", 3, log_root, app_id,
                      container_id);
+}
+
+char *init_log_path(const char *container_log_dir, const char *logfile) {
+  char *tmp_buffer = NULL;
+  tmp_buffer = make_string("%s/%s", container_log_dir, logfile);
+
+  mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP;
+  int fd = open(tmp_buffer, O_CREAT | O_WRONLY, permissions);
+  if (fd >= 0) {
+    close(fd);
+    if (change_owner(tmp_buffer, user_detail->pw_uid, user_detail->pw_gid) != 0) {
+      fprintf(ERRORFILE, "Failed to chown %s to %d:%d: %s\n", tmp_buffer, user_detail->pw_uid, user_detail->pw_gid,
+          strerror(errno));
+      free(tmp_buffer);
+      tmp_buffer = NULL;
+    } else if (chmod(tmp_buffer, permissions) != 0) {
+      fprintf(ERRORFILE, "Can't chmod %s - %s\n",
+              tmp_buffer, strerror(errno));
+      free(tmp_buffer);
+      tmp_buffer = NULL;
+    }
+  } else {
+    fprintf(ERRORFILE, "Failed to create file %s - %s\n", tmp_buffer,
+            strerror(errno));
+    free(tmp_buffer);
+    tmp_buffer = NULL;
+  }
+  return tmp_buffer;
 }
 
 int create_container_log_dirs(const char *container_id, const char *app_id,
@@ -1506,6 +1537,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
+  int use_entry_point = 0;
 
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
@@ -1560,6 +1592,18 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
+  use_entry_point = get_use_entry_point_flag();
+  char *so = init_log_path(chosen_container_log_dir, "stdout.txt");
+  if (so == NULL) {
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+  char *se = init_log_path(chosen_container_log_dir, "stderr.txt");
+  if (se == NULL) {
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
   docker_command_with_binary = flatten(docker_command);
 
   // Launch container
@@ -1573,14 +1617,76 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   if (child_pid == 0) {
+    FILE* so_fd = fopen(so, "a+");
+    if (so_fd == NULL) {
+      fprintf(ERRORFILE, "Could not append to %s\n", so);
+      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      goto cleanup;
+    }
+    FILE* se_fd = fopen(se, "a+");
+    if (se_fd == NULL) {
+      fprintf(ERRORFILE, "Could not append to %s\n", se);
+      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      fclose(so_fd);
+      goto cleanup;
+    }
+    // if entry point is enabled, clone docker command output
+    // to stdout.txt and stderr.txt for yarn.
+    if (use_entry_point) {
+      fprintf(so_fd, "Launching docker container...\n");
+      fprintf(so_fd, "Docker run command: %s\n", docker_command_with_binary);
+      if (dup2(fileno(so_fd), fileno(stdout)) == -1) {
+        fprintf(ERRORFILE, "Could not append to stdout.txt\n");
+        fclose(so_fd);
+        return UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      }
+      if (dup2(fileno(se_fd), fileno(stderr)) == -1) {
+        fprintf(ERRORFILE, "Could not append to stderr.txt\n");
+        fclose(se_fd);
+        return UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      }
+    }
+    fclose(so_fd);
+    fclose(se_fd);
     execvp(docker_binary, docker_command);
     fprintf(ERRORFILE, "failed to execute docker command! error: %s\n", strerror(errno));
     return UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
   } else {
-    exit_code = wait_and_get_exit_code(child_pid);
-    if (exit_code != 0) {
-      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-      goto cleanup;
+    if (use_entry_point) {
+      int pid = 0;
+      int res = 0;
+      int count = 0;
+      int max_retries = get_max_retries(&CFG);
+      docker_inspect_command = make_string(
+          "%s inspect --format {{.State.Pid}} %s",
+          docker_binary, container_id);
+      // check for docker container pid
+      while (count < max_retries) {
+        fprintf(LOGFILE, "Inspecting docker container...\n");
+        fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_command);
+        fflush(LOGFILE);
+        FILE* inspect_docker = popen(docker_inspect_command, "r");
+        res = fscanf (inspect_docker, "%d", &pid);
+        fprintf(LOGFILE, "pid from docker inspect: %d\n", pid);
+        if (pclose (inspect_docker) != 0 || res <= 0) {
+          fprintf (ERRORFILE,
+              "Could not inspect docker to get pid %s.\n", docker_inspect_command);
+          fflush(ERRORFILE);
+          exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+        } else {
+          if (pid != 0) {
+            break;
+          }
+        }
+        sleep(3);
+        count++;
+      }
+    } else {
+      exit_code = wait_and_get_exit_code(child_pid);
+      if (exit_code != 0) {
+        exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+        goto cleanup;
+      }
     }
   }
 

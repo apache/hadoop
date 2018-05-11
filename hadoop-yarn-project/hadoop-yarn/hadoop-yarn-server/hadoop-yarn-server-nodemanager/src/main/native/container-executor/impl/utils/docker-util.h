@@ -23,6 +23,7 @@
 
 #define CONTAINER_EXECUTOR_CFG_DOCKER_SECTION "docker"
 #define DOCKER_BINARY_KEY "docker.binary"
+#define DOCKER_INSPECT_MAX_RETRIES_KEY "docker.inspect.max.retries"
 #define DOCKER_COMMAND_FILE_SECTION "docker-command-execution"
 #define DOCKER_INSPECT_COMMAND "inspect"
 #define DOCKER_LOAD_COMMAND "load"
@@ -84,6 +85,12 @@ char *get_docker_binary(const struct configuration *conf);
  * @return Return code with 0 indicating success and non-zero codes indicating error
  */
 int get_docker_command(const char* command_file, const struct configuration* conf, args *args);
+
+/**
+ * Check if use-entry-point flag is set.
+ * @return 0 when use-entry-point flag is set.
+ */
+int get_use_entry_point_flag();
 
 /**
  * Get the Docker inspect command line string. The function will verify that the params file is meant for the
@@ -202,4 +209,11 @@ void reset_args(args *args);
  * @param args Pointer reference to args data structure
  */
 char** extract_execv_args(args *args);
+
+/**
+ * Get max retries for docker inspect.
+ * @param conf Configuration structure
+ * @return value of max retries
+ */
+int get_max_retries(const struct configuration *conf);
 #endif

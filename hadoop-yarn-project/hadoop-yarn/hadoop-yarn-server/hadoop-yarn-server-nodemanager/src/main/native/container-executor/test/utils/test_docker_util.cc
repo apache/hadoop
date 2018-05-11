@@ -1312,6 +1312,48 @@ namespace ContainerExecutor {
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_run_command);
   }
 
+  TEST_F(TestDockerUtil, test_docker_run_entry_point) {
+
+    std::string container_executor_contents = "[docker]\n"
+        "  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
+        "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
+        "  docker.privileged-containers.enabled=1\n  docker.allowed.capabilities=CHOWN,SETUID\n"
+        "  docker.allowed.devices=/dev/test\n  docker.privileged-containers.registries=hadoop\n";
+    write_file(container_executor_cfg_file, container_executor_contents);
+    int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+    ret = create_ce_file();
+    if (ret != 0) {
+      std::cerr << "Could not create ce file, skipping test" << std::endl;
+      return;
+    }
+
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n"
+        "  docker-command=run\n"
+        "  name=container_e1_12312_11111_02_000001\n"
+        "  image=hadoop/docker-image\n"
+        "  user=nobody\n"
+        "  use-entry-point=true\n"
+        "  environ=/tmp/test.env\n",
+        "/usr/bin/docker run --name=container_e1_12312_11111_02_000001 --user=nobody --cap-drop=ALL "
+        "--env-file /tmp/test.env hadoop/docker-image"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n"
+        "  docker-command=run\n"
+        "  image=hadoop/docker-image\n"
+        "  user=nobody",
+        static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_run_command);
+  }
+
   TEST_F(TestDockerUtil, test_docker_run_no_privileged) {
 
     std::string container_executor_contents[] = {"[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"

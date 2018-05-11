@@ -21,12 +21,14 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class DockerRunCommand extends DockerCommand {
   private static final String RUN_COMMAND = "run";
+  private final Map<String, String> userEnv;
 
   /** The following are mandatory: */
   public DockerRunCommand(String containerId, String user, String image) {
@@ -34,6 +36,7 @@ public class DockerRunCommand extends DockerCommand {
     super.addCommandArguments("name", containerId);
     super.addCommandArguments("user", user);
     super.addCommandArguments("image", image);
+    this.userEnv = new LinkedHashMap<String, String>();
   }
 
   public DockerRunCommand removeContainerOnExit() {
@@ -173,5 +176,46 @@ public class DockerRunCommand extends DockerCommand {
   @Override
   public Map<String, List<String>> getDockerCommandWithArguments() {
     return super.getDockerCommandWithArguments();
+  }
+
+  public DockerRunCommand setOverrideDisabled(boolean toggle) {
+    String value = Boolean.toString(toggle);
+    super.addCommandArguments("use-entry-point", value);
+    return this;
+  }
+
+  public DockerRunCommand setLogDir(String logDir) {
+    super.addCommandArguments("log-dir", logDir);
+    return this;
+  }
+
+  /**
+   * Check if user defined environment variables are empty.
+   *
+   * @return true if user defined environment variables are not empty.
+   */
+  public boolean containsEnv() {
+    if (userEnv.size() > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get user defined environment variables.
+   *
+   * @return a map of user defined environment variables
+   */
+  public Map<String, String> getEnv() {
+    return userEnv;
+  }
+
+  /**
+   * Add user defined environment variables.
+   *
+   * @param environment A map of user defined environment variables
+   */
+  public final void addEnv(Map<String, String> environment) {
+    userEnv.putAll(environment);
   }
 }
