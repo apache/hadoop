@@ -235,7 +235,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_DELAYED_REMOVAL =
       "YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL";
-
   private Configuration conf;
   private Context nmContext;
   private DockerClient dockerClient;
@@ -736,6 +735,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
+    boolean useEntryPoint = Boolean.parseBoolean(environment
+              .get(ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE));
 
     if(network == null || network.isEmpty()) {
       network = defaultNetwork;
@@ -797,8 +798,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
         dockerRunAsUser, imageName)
-        .detachOnRun()
-        .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network);
     // Only add hostname if network is not host or if Registry DNS is enabled.
     if (!network.equalsIgnoreCase("host") ||
@@ -870,19 +869,22 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     addCGroupParentIfRequired(resourcesOpts, containerIdStr, runCommand);
 
-    String disableOverride = environment.get(
-        ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE);
-
-    if (disableOverride != null && disableOverride.equals("true")) {
-      LOG.info("command override disabled");
+    if (useEntryPoint) {
+      runCommand.setOverrideDisabled(true);
+      runCommand.addEnv(environment);
+      runCommand.setOverrideCommandWithArgs(container.getLaunchContext()
+          .getCommands());
+      runCommand.disableDetach();
+      runCommand.setLogDir(container.getLogDir());
     } else {
       List<String> overrideCommands = new ArrayList<>();
       Path launchDst =
           new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-
       overrideCommands.add("bash");
       overrideCommands.add(launchDst.toUri().getPath());
+      runCommand.setContainerWorkDir(containerWorkDir.toString());
       runCommand.setOverrideCommandWithArgs(overrideCommands);
+      runCommand.detachOnRun();
     }
 
     if(enableUserReMapping) {

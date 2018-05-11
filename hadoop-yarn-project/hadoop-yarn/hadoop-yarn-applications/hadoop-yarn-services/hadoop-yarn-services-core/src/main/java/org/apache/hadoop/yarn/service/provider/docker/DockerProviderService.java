@@ -17,13 +17,23 @@
  */
 package org.apache.hadoop.yarn.service.provider.docker;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.AbstractProviderService;
+import org.apache.hadoop.yarn.service.provider.ProviderUtils;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
+import org.apache.hadoop.yarn.service.containerlaunch.CommandLineBuilder;
+import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class DockerProviderService extends AbstractProviderService
     implements DockerKeys {
@@ -39,4 +49,36 @@ public class DockerProviderService extends AbstractProviderService
     launcher.setRunPrivilegedContainer(
         compInstance.getCompSpec().getRunPrivilegedContainer());
   }
+
+  @Override
+  public void buildContainerLaunchCommand(AbstractLauncher launcher,
+      Service service, ComponentInstance instance,
+      SliderFileSystem fileSystem, Configuration yarnConf, Container container,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      Map<String, String> tokensForSubstitution)
+          throws IOException, SliderException {
+    Component component = instance.getComponent().getComponentSpec();
+    boolean useEntryPoint = Boolean.parseBoolean(component
+        .getConfiguration().getEnv(Environment
+          .YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.name()));
+    if (useEntryPoint) {
+      String launchCommand = component.getLaunchCommand();
+      if (!StringUtils.isEmpty(launchCommand)) {
+        launcher.addCommand(launchCommand);
+      }
+    } else {
+      // substitute launch command
+      String launchCommand = compLaunchContext.getLaunchCommand();
+      // docker container may have empty commands
+      if (!StringUtils.isEmpty(launchCommand)) {
+        launchCommand = ProviderUtils
+            .substituteStrWithTokens(launchCommand, tokensForSubstitution);
+        CommandLineBuilder operation = new CommandLineBuilder();
+        operation.add(launchCommand);
+        operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
+        launcher.addCommand(operation.build());
+      }
+    }
+  }
+
 }

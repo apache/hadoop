@@ -1677,6 +1677,20 @@ public class ContainerLaunch implements Callable<Integer> {
       containerLogDirs, Map<Path, List<String>> resources,
       Path nmPrivateClasspathJarDir,
       Set<String> nmVars) throws IOException {
+    // Based on discussion in YARN-7654, for ENTRY_POINT enabled
+    // docker container, we forward user defined environment variables
+    // without node manager environment variables.  This is the reason
+    // that we skip sanitizeEnv method.
+    boolean overrideDisable = Boolean.parseBoolean(
+        environment.get(
+            Environment.
+                YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE.
+                    name()));
+    if (overrideDisable) {
+      environment.remove("WORK_DIR");
+      return;
+    }
+
     /**
      * Non-modifiable environment variables
      */

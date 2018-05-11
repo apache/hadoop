@@ -32,6 +32,8 @@
 #include <pwd.h>
 #include <errno.h>
 
+int entry_point = 0;
+
 static int read_and_verify_command_file(const char *command_file, const char *docker_command,
                                         struct configuration *command_config) {
   int ret = 0;
@@ -336,6 +338,17 @@ const char *get_docker_error_message(const int error_code) {
   }
 }
 
+int get_max_retries(const struct configuration *conf) {
+  int retries = 10;
+  char *max_retries = get_configuration_value(DOCKER_INSPECT_MAX_RETRIES_KEY,
+      CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
+  if (max_retries != NULL) {
+    retries = atoi(max_retries);
+    free(max_retries);
+  }
+  return retries;
+}
+
 char *get_docker_binary(const struct configuration *conf) {
   char *docker_binary = NULL;
   docker_binary = get_configuration_value(DOCKER_BINARY_KEY, CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
@@ -346,6 +359,10 @@ char *get_docker_binary(const struct configuration *conf) {
     }
   }
   return docker_binary;
+}
+
+int get_use_entry_point_flag() {
+  return entry_point;
 }
 
 int docker_module_enabled(const struct configuration *conf) {
@@ -364,6 +381,12 @@ int get_docker_command(const char *command_file, const struct configuration *con
   if (ret != 0) {
     return INVALID_COMMAND_FILE;
   }
+
+  char *value = get_configuration_value("use-entry-point", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (value != NULL && strcasecmp(value, "true") == 0) {
+    entry_point = 1;
+  }
+  free(value);
 
   char *command = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (strcmp(DOCKER_INSPECT_COMMAND, command) == 0) {
@@ -1009,6 +1032,24 @@ static int set_devices(const struct configuration *command_config, const struct 
   return ret;
 }
 
+static int set_env(const struct configuration *command_config, struct args *args) {
+  int ret = 0;
+  // Use envfile method.
+  char *envfile = get_configuration_value("environ", DOCKER_COMMAND_FILE_SECTION, command_config);
+  if (envfile != NULL) {
+    ret = add_to_args(args, "--env-file");
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+    }
+    ret = add_to_args(args, envfile);
+    if (ret != 0) {
+      ret = BUFFER_TOO_SMALL;
+    }
+    free(envfile);
+  }
+  return ret;
+}
+
 /**
  * Helper function to help normalize mounts for checking if mounts are
  * permitted. The function does the following -
@@ -1518,6 +1559,11 @@ int get_docker_run_command(const char *command_file, const struct configuration 
   if (ret != 0) {
     reset_args(args);
     return ret;
+  }
+
+  ret = set_env(&command_config, args);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
   }
 
   ret = add_to_args(args, image);
