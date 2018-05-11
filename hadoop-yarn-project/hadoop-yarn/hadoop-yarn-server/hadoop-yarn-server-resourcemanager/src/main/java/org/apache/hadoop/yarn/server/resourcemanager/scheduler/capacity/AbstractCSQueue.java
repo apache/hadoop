@@ -1046,4 +1046,19 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Map<String, Float> getUserWeights() {
     return userWeights;
   }
+
+  public void recoverDrainingState() {
+    try {
+      this.writeLock.lock();
+      if (getState() == QueueState.STOPPED) {
+        updateQueueState(QueueState.DRAINING);
+      }
+      LOG.info("Recover draining state for queue " + this.getQueuePath());
+      if (getParent() != null && getParent().getState() == QueueState.STOPPED) {
+        ((AbstractCSQueue) getParent()).recoverDrainingState();
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
 }
