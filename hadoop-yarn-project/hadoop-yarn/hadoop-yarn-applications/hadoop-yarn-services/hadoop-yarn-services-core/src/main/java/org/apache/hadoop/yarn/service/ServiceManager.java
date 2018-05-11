@@ -237,12 +237,11 @@ public class ServiceManager implements EventHandler<ServiceEvent> {
    * ServiceMaster.checkAndUpdateServiceState here to make it easy to fix
    * this in future.
    */
-  public void checkAndUpdateServiceState(boolean isIncrement) {
+  public void checkAndUpdateServiceState() {
     writeLock.lock();
     try {
       if (!getState().equals(State.UPGRADING)) {
-        ServiceMaster.checkAndUpdateServiceState(this.scheduler,
-            isIncrement);
+        ServiceMaster.checkAndUpdateServiceState(this.scheduler);
       }
     } finally {
       writeLock.unlock();
