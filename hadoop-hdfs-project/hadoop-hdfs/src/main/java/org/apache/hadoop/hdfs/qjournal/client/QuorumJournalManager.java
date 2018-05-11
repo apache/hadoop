@@ -77,6 +77,8 @@ public class QuorumJournalManager implements JournalManager {
   // Maximum number of transactions to fetch at a time when using the
   // RPC edit fetch mechanism
   private final int maxTxnsPerRpc;
+  // Whether or not in-progress tailing is enabled in the configuration
+  private final boolean inProgressTailingEnabled;
   // Timeouts for which the QJM will wait for each of the following actions.
   private final int startSegmentTimeoutMs;
   private final int prepareRecoveryTimeoutMs;
@@ -139,6 +141,9 @@ public class QuorumJournalManager implements JournalManager {
         conf.getInt(QJM_RPC_MAX_TXNS_KEY, QJM_RPC_MAX_TXNS_DEFAULT);
     Preconditions.checkArgument(maxTxnsPerRpc > 0,
         "Must specify %s greater than 0!", QJM_RPC_MAX_TXNS_KEY);
+    this.inProgressTailingEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
     // Configure timeouts.
     this.startSegmentTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_START_SEGMENT_TIMEOUT_KEY,
@@ -420,11 +425,8 @@ public class QuorumJournalManager implements JournalManager {
         layoutVersion);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs,
         "startLogSegment(" + txId + ")");
-    boolean updateCommittedTxId = conf.getBoolean(
-        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
     return new QuorumOutputStream(loggers, txId, outputBufferCapacity,
-        writeTxnsTimeoutMs, updateCommittedTxId);
+        writeTxnsTimeoutMs);
   }
 
   @Override
@@ -493,7 +495,10 @@ public class QuorumJournalManager implements JournalManager {
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxnId, boolean inProgressOk,
       boolean onlyDurableTxns) throws IOException {
-    if (inProgressOk) {
+    // Some calls will use inProgressOK to get in-progress edits even if
+    // the cache used for RPC calls is not enabled; fall back to using the
+    // streaming mechanism to serve such requests
+    if (inProgressOk && inProgressTailingEnabled) {
       LOG.info("Tailing edits starting from txn ID " + fromTxnId +
           " via RPC mechanism");
       try {

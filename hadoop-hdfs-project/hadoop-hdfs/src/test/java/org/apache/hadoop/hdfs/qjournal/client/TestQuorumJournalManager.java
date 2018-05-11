@@ -1045,6 +1045,10 @@ public class TestQuorumJournalManager {
         qjm.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     writeTxns(stm, 1, 10);
     writeTxns(stm, 11, 1);
+    // One last sync whose transactions are not expected to be seen in the
+    // input streams because the JournalNodes have not updated their concept
+    // of the committed transaction ID yet
+    writeTxns(stm, 12, 1);
 
     futureThrows(new IOException()).when(spies.get(0)).getJournaledEdits(1,
         QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
