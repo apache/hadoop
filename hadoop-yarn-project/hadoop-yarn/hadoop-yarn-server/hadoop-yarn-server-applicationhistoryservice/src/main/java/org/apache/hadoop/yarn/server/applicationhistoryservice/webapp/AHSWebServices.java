@@ -111,7 +111,7 @@ public class AHSWebServices extends WebServices {
   public TimelineAbout about(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res) {
-    init(res);
+    initForReadableEndpoints(res);
     return TimelineUtils.createTimelineAbout("Generic History Service API");
   }
 
@@ -141,7 +141,7 @@ public class AHSWebServices extends WebServices {
       @QueryParam("finishedTimeBegin") String finishBegin,
       @QueryParam("finishedTimeEnd") String finishEnd,
       @QueryParam("applicationTypes") Set<String> applicationTypes) {
-    init(res);
+    initForReadableEndpoints(res);
     validateStates(stateQuery, statesQuery);
     return super.getApps(req, res, stateQuery, statesQuery, finalStatusQuery,
       userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin,
@@ -155,7 +155,7 @@ public class AHSWebServices extends WebServices {
   @Override
   public AppInfo getApp(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getApp(req, res, appId);
   }
 
@@ -166,7 +166,7 @@ public class AHSWebServices extends WebServices {
   @Override
   public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getAppAttempts(req, res, appId);
   }
 
@@ -178,7 +178,7 @@ public class AHSWebServices extends WebServices {
   public AppAttemptInfo getAppAttempt(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getAppAttempt(req, res, appId, appAttemptId);
   }
 
@@ -190,7 +190,7 @@ public class AHSWebServices extends WebServices {
   public ContainersInfo getContainers(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getContainers(req, res, appId, appAttemptId);
   }
 
@@ -203,7 +203,7 @@ public class AHSWebServices extends WebServices {
       @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId,
       @PathParam("containerid") String containerId) {
-    init(res);
+    initForReadableEndpoints(res);
     return super.getContainer(req, res, appId, appAttemptId, containerId);
   }
 
@@ -257,7 +257,7 @@ public class AHSWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirected_from_node) {
     ContainerId containerId = null;
-    init(res);
+    initForReadableEndpoints(res);
     try {
       containerId = ContainerId.fromString(containerIdStr);
     } catch (IllegalArgumentException e) {
@@ -392,7 +392,7 @@ public class AHSWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirected_from_node) {
-    init(res);
+    initForReadableEndpoints(res);
     ContainerId containerId;
     try {
       containerId = ContainerId.fromString(containerIdStr);

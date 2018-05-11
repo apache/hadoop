@@ -684,7 +684,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     ResourceManager mockRM = mock(ResourceManager.class);
     Configuration conf = new YarnConfiguration();
-    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
     ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
     when(mockRM.getApplicationACLsManager()).thenReturn(aclsManager);
     RMWebServices webSvc =
