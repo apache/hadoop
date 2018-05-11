@@ -21,8 +21,7 @@ Suite Teardown      Teardown Ozone Cluster
 
 *** Variables ***
 ${COMMON_REST_HEADER}   -H "x-ozone-user: bilbo" -H "x-ozone-version: v1" -H  "Date: Mon, 26 Jun 2017 04:23:30 GMT" -H "Authorization:OZONE root"
-${version}
-
+${basedir}
 *** Test Cases ***
 
 Daemons are running without error
@@ -130,8 +129,8 @@ Execute on
 
 Run docker compose
     [arguments]                     ${command}
-                                    Set Environment Variable    HADOOPDIR                              ${basedir}/../../hadoop-dist/target/hadoop-${version}
-    ${rc}                           ${output} =                 Run And Return Rc And Output           docker-compose -f ${basedir}/target/compose/docker-compose.yaml ${command}
+                                    Set Environment Variable    OZONEDIR                               ${basedir}/hadoop-dist/target/ozone
+    ${rc}                           ${output} =                 Run And Return Rc And Output           docker-compose -f ${basedir}/hadoop-ozone/acceptance-test/src/test/compose/docker-compose.yaml ${command}
     Log                             ${output}
     Should Be Equal As Integers     ${rc}                       0
     [return]                            ${rc}                       ${output}

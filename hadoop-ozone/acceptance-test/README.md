@@ -20,19 +20,29 @@ This project contains acceptance tests for ozone/hdds using docker-compose and [
 
 To run the acceptance tests, please activate the `ozone-acceptance-test` profile and do a full build.
 
-Typically you need a `mvn install -Phdds,ozone-acceptance-test,dist -DskipTests` for a build without unit tests but with acceptance test.
+```
+mvn clean install -Pdist -Phdds
+cd hadoop-ozone/acceptance-test
+mvn integration-test -Phdds,ozone-acceptance-test,dist -DskipTests
+```
 
 Notes:
 
  1. You need a hadoop build in hadoop-dist/target directory.
  2. The `ozone-acceptance-test` could be activated with profile even if the unit tests are disabled.
-
+ 3. This method does not require the robot framework on path as jpython is used.
 
 ## Development
 
-You can run manually the robot tests with `robot` cli. (See robotframework docs to install it.)
+You can also run manually the robot tests with `robot` cli. 
+ (See robotframework docs to install it: http://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#installation-instructions)
 
- 1. Go to the `src/test/robotframework`
- 2. Execute `robot -v basedir:${PWD}/../../.. -v VERSION:3.2.0-SNAPSHOT .`
+In the dev-support directory we have two wrapper scripts to run robot framework with local robot cli 
+instead of calling it from maven.
 
-You can also use select just one test with -t `"*testnamefragment*"`
+It's useful during the development of the robot files as any robotframework cli 
+arguments could be used.
+
+ 1. `dev-support/bin/robot.sh` is the simple wrapper. The .robot file should be used as an argument.
+ 2. `dev-support/bin/robot-all.sh` will call the robot.sh with the main acceptance test directory, 
+ which means all the acceptance tests will be executed.

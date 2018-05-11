@@ -112,7 +112,7 @@ public final class NameNodeUtils {
     }
 
     if (port > 0) {
-      return currentNnAddress;
+       return currentNnAddress;
     } else {
       // the port is missing or 0. Figure out real bind address later.
       return null;

@@ -20,7 +20,7 @@ services:
       image: apache/hadoop-runner
       hostname: namenode
       volumes:
-         - ../..//hadoop-${VERSION}:/opt/hadoop
+         - ../../ozone:/opt/hadoop
       ports:
          - 9870:9870
       environment:
@@ -31,7 +31,7 @@ services:
    datanode:
       image: apache/hadoop-runner
       volumes:
-        - ../..//hadoop-${VERSION}:/opt/hadoop
+        - ../../ozone:/opt/hadoop
       ports:
         - 9864
       command: ["/opt/hadoop/bin/ozone","datanode"]
@@ -40,7 +40,7 @@ services:
    ksm:
       image: apache/hadoop-runner
       volumes:
-         - ../..//hadoop-${VERSION}:/opt/hadoop
+         - ../../ozone:/opt/hadoop
       ports:
          - 9874:9874
       environment:
@@ -51,7 +51,7 @@ services:
    scm:
       image: apache/hadoop-runner
       volumes:
-         - ../..//hadoop-${VERSION}:/opt/hadoop
+         - ../../ozone:/opt/hadoop
       ports:
          - 9876:9876
       env_file:
