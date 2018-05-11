@@ -51,6 +51,8 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.common.base.Supplier;
 
@@ -104,6 +106,14 @@ public class TestRouterAdminCLI {
     membership.registerNamenode(
         createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
     stateStore.refreshCaches(true);
+
+    // Mock the quota module since no real namenode is started up.
+    Quota quota = Mockito
+        .spy(routerContext.getRouter().createRpcServer().getQuotaModule());
+    Mockito.doNothing().when(quota).setQuota(Mockito.anyString(),
+        Mockito.anyLong(), Mockito.anyLong(), Mockito.any());
+    Whitebox.setInternalState(
+        routerContext.getRouter().getRpcServer(), "quotaCall", quota);
   }
 
   @AfterClass
