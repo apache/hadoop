@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Acceptance test suite for Ozone/Hdsl
+# Acceptance test suite for Ozone/Hdds
 
 This project contains acceptance tests for ozone/hdds using docker-compose and [robot framework](http://robotframework.org/).
 
@@ -20,7 +20,7 @@ This project contains acceptance tests for ozone/hdds using docker-compose and [
 
 To run the acceptance tests, please activate the `ozone-acceptance-test` profile and do a full build.
 
-Typically you need a `mvn install -Phdsl,ozone-acceptance-test,dist -DskipTests` for a build without unit tests but with acceptance test.
+Typically you need a `mvn install -Phdds,ozone-acceptance-test,dist -DskipTests` for a build without unit tests but with acceptance test.
 
 Notes:
 
