@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.util.AutoCloseableLock;
 
-
 /**
  * An in-memory cache of edits in their serialized form. This is used to serve
  * the {@link Journal#getJournaledEdits(long, int)} call, used by the
@@ -70,6 +69,9 @@ import org.apache.hadoop.util.AutoCloseableLock;
  */
 class JournaledEditsCache {
 
+  private static final int INVALID_LAYOUT_VERSION = 0;
+  private static final long INVALID_TXN_ID = -1;
+
   /** The capacity, in bytes, of this cache. */
   private final int capacity;
 
@@ -91,13 +93,13 @@ class JournaledEditsCache {
    */
   private final NavigableMap<Long, byte[]> dataMap = new TreeMap<>();
   /** Stores the layout version currently present in the cache. */
-  private int layoutVersion = Integer.MAX_VALUE;
+  private int layoutVersion = INVALID_LAYOUT_VERSION;
   /** Stores the serialized version of the header for the current version. */
   private ByteBuffer layoutHeader;
 
   /**
-   * The lowest/highest transaction IDs present in the cache. -1 if there are no
-   * transactions in the cache.
+   * The lowest/highest transaction IDs present in the cache.
+   * {@value INVALID_TXN_ID} if there are no transactions in the cache.
    */
   private long lowestTxnId;
   private long highestTxnId;
@@ -127,7 +129,7 @@ class JournaledEditsCache {
     ReadWriteLock lock = new ReentrantReadWriteLock(true);
     readLock = new AutoCloseableLock(lock.readLock());
     writeLock = new AutoCloseableLock(lock.writeLock());
-    initialize(-1);
+    initialize(INVALID_TXN_ID);
   }
 
   /**
@@ -144,6 +146,7 @@ class JournaledEditsCache {
    * transaction count of 0 will be returned. If {@code requestedStartTxn} is
    * lower than the lowest transaction currently contained in this cache, or no
    * transactions have yet been added to the cache, an exception will be thrown.
+   *
    * @param requestedStartTxn The ID of the first transaction to return. If any
    *                          transactions are returned, it is guaranteed that
    *                          the first one will have this ID.
@@ -160,7 +163,7 @@ class JournaledEditsCache {
     int txnCount = 0;
 
     try (AutoCloseableLock l = readLock.acquire()) {
-      if (lowestTxnId < 0 || requestedStartTxn < lowestTxnId) {
+      if (lowestTxnId == INVALID_TXN_ID || requestedStartTxn < lowestTxnId) {
         throw getCacheMissException(requestedStartTxn);
       } else if (requestedStartTxn > highestTxnId) {
         return 0;
@@ -222,6 +225,7 @@ class JournaledEditsCache {
    * This attempts to always handle malformed inputs gracefully rather than
    * throwing an exception, to allow the rest of the Journal's operations
    * to proceed normally.
+   *
    * @param inputData A buffer containing edits in serialized form
    * @param newStartTxn The txn ID of the first edit in {@code inputData}
    * @param newEndTxn The txn ID of the last edit in {@code inputData}
@@ -246,15 +250,16 @@ class JournaledEditsCache {
               newStartTxn, newEndTxn, newLayoutVersion), ioe);
           return;
         }
-      }
-      if (lowestTxnId < 0 || (highestTxnId + 1) != newStartTxn) {
-        // Cache initialization step
-        if (lowestTxnId >= 0) {
-          // Cache is out of sync; clear to avoid storing noncontiguous regions
-          Journal.LOG.error(String.format("Edits cache is out of sync; " +
-                  "looked for next txn id at %d but got start txn id for " +
-                  "cache put request at %d", highestTxnId + 1, newStartTxn));
-        }
+      } else if (lowestTxnId == INVALID_TXN_ID) {
+        Journal.LOG.info("Initializing edits cache starting from txn ID " +
+            newStartTxn);
+        initialize(newStartTxn);
+      } else if (highestTxnId + 1 != newStartTxn) {
+        // Cache is out of sync; clear to avoid storing noncontiguous regions
+        Journal.LOG.error(String.format("Edits cache is out of sync; " +
+            "looked for next txn id at %d but got start txn id for " +
+            "cache put request at %d. Reinitializing at new request.",
+            highestTxnId + 1, newStartTxn));
         initialize(newStartTxn);
       }
 
@@ -264,11 +269,12 @@ class JournaledEditsCache {
         totalSize -= lowest.getValue().length;
       }
       if (inputData.length > capacity) {
-        initialize(-1);
+        initialize(INVALID_TXN_ID);
         Journal.LOG.warn(String.format("A single batch of edits was too " +
                 "large to fit into the cache: startTxn = %d, endTxn = %d, " +
                 "input length = %d. The capacity of the cache (%s) must be " +
-                "increased for it to work properly (current capacity %d)",
+                "increased for it to work properly (current capacity %d)." +
+                "Cache is now empty.",
             newStartTxn, newEndTxn, inputData.length,
             DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, capacity));
         return;
@@ -289,6 +295,7 @@ class JournaledEditsCache {
    * Skip through a given stream of edits until the given transaction ID is
    * found. Return the number of bytes that appear prior to the given
    * transaction.
+   *
    * @param buf A buffer containing a stream of serialized edits
    * @param txnId The transaction ID to search for
    * @return The number of bytes appearing in {@code buf} <i>before</i>
@@ -312,13 +319,22 @@ class JournaledEditsCache {
   /**
    * Update the layout version of the cache. This clears out all existing
    * entries, and populates the new layout version and header for that version.
+   *
    * @param newLayoutVersion The new layout version to be stored in the cache
    * @param newStartTxn The new lowest transaction in the cache
    */
   private void updateLayoutVersion(int newLayoutVersion, long newStartTxn)
       throws IOException {
-    Journal.LOG.info("Updating edits cache to use layout version " +
-        newLayoutVersion + "; previously was " + layoutVersion);
+    StringBuilder logMsg = new StringBuilder()
+        .append("Updating edits cache to use layout version ")
+        .append(newLayoutVersion)
+        .append(" starting from txn ID ")
+        .append(newStartTxn);
+    if (layoutVersion != INVALID_LAYOUT_VERSION) {
+      logMsg.append("; previous version was ").append(layoutVersion)
+          .append("; old entries will be cleared.");
+    }
+    Journal.LOG.info(logMsg.toString());
     initialize(newStartTxn);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     EditLogFileOutputStream.writeHeader(newLayoutVersion,
@@ -329,20 +345,23 @@ class JournaledEditsCache {
 
   /**
    * Initialize the cache back to a clear state.
+   *
    * @param newInitialTxnId The new lowest transaction ID stored in the cache.
-   *                        -1 if the cache is to remain empty at this time.
+   *                        This should be {@value INVALID_TXN_ID} if the cache
+   *                        is to remain empty at this time.
    */
   private void initialize(long newInitialTxnId) {
     dataMap.clear();
     totalSize = 0;
     initialTxnId = newInitialTxnId;
     lowestTxnId = initialTxnId;
-    highestTxnId = -1;
+    highestTxnId = INVALID_TXN_ID; // this will be set later
   }
 
   /**
    * Return the underlying data buffer used to store information about the
    * given transaction ID.
+   *
    * @param txnId Transaction ID whose containing buffer should be fetched.
    * @return The data buffer for the transaction
    */
@@ -354,7 +373,7 @@ class JournaledEditsCache {
   }
 
   private CacheMissException getCacheMissException(long requestedTxnId) {
-    if (lowestTxnId < 0) {
+    if (lowestTxnId == INVALID_TXN_ID) {
       return new CacheMissException(0, "Cache is empty; either it was never " +
           "written to or the last write overflowed the cache capacity.");
     } else if (requestedTxnId < initialTxnId) {
