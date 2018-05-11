@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -179,15 +180,20 @@ public class TestRMWebServicesHttpStaticUserPermissions {
         assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
         InputStream errorStream = conn.getErrorStream();
         String error = "";
-        BufferedReader reader =
-            new BufferedReader(new InputStreamReader(errorStream, "UTF8"));
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(errorStream, "UTF8"));
         for (String line; (line = reader.readLine()) != null;) {
           error += line;
         }
         reader.close();
         errorStream.close();
+        JSONObject errResponse = new JSONObject(error);
+        JSONObject remoteException = errResponse
+            .getJSONObject("RemoteException");
         assertEquals(
-          "The default static user cannot carry out this operation.", error);
+            "java.lang.Exception: The default static user cannot carry out "
+            + "this operation.",
+            remoteException.getString("message"));
       }
       conn.disconnect();
     }
