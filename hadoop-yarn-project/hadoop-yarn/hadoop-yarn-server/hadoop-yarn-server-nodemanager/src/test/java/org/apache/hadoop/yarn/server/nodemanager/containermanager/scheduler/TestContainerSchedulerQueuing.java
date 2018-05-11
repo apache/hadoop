@@ -224,19 +224,16 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testStartMultipleContainers() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1024, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1024, 1),
@@ -280,19 +277,16 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testQueueMultipleContainers() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(3072, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(3072, 1),
@@ -338,26 +332,23 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testStartAndQueueMultipleContainers() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1024, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1024, 1),
@@ -410,12 +401,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testStartOpportunistcsWhenOppQueueIsFull() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
@@ -427,7 +415,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         YarnConfiguration.DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH);
     for (int i = 1; i < maxOppQueueLength + 2; i++) {
       list.add(StartContainerRequest.newInstance(
-          containerLaunchContext,
+          recordFactory.newRecordInstance(ContainerLaunchContext.class),
           createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
               context.getNodeId(),
               user, BuilderUtils.newResource(2048, 1),
@@ -495,26 +483,23 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testKillOpportunisticForGuaranteedContainer() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
@@ -584,12 +569,10 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     Listener listener = new Listener();
     ((NodeManager.DefaultContainerStateListener)containerManager.getContext().
         getContainerStateTransitionListener()).addListener(listener);
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
@@ -605,7 +588,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
@@ -713,42 +696,42 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(3), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(4), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(5), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(6), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
@@ -835,14 +818,14 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
@@ -882,26 +865,23 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testKillMultipleOpportunisticContainers() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
@@ -914,7 +894,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
     list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(3), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1500, 1),
@@ -962,14 +942,11 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testKillOnlyRequiredOpportunisticContainers() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     // Fill NM with Opportunistic containers
     for (int i = 0; i < 4; i++) {
       list.add(StartContainerRequest.newInstance(
-          containerLaunchContext,
+          recordFactory.newRecordInstance(ContainerLaunchContext.class),
           createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
               context.getNodeId(),
               user, BuilderUtils.newResource(512, 1),
@@ -985,7 +962,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     // Now ask for two Guaranteed containers
     for (int i = 4; i < 6; i++) {
       list.add(StartContainerRequest.newInstance(
-          containerLaunchContext,
+          recordFactory.newRecordInstance(ContainerLaunchContext.class),
           createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
               context.getNodeId(),
               user, BuilderUtils.newResource(512, 1),
@@ -1031,26 +1008,23 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public void testStopQueuedContainer() throws Exception {
     containerManager.start();
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(2), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(512, 1),
@@ -1137,19 +1111,16 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     ((NodeManager.DefaultContainerStateListener)containerManager.getContext().
         getContainerStateTransitionListener()).addListener(listener);
 
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<StartContainerRequest> list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(0), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(2048, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
     list.add(StartContainerRequest.newInstance(
-        containerLaunchContext,
+        recordFactory.newRecordInstance(ContainerLaunchContext.class),
         createContainerToken(createContainerId(1), DUMMY_RM_IDENTIFIER,
             context.getNodeId(),
             user, BuilderUtils.newResource(1024, 1),
@@ -1255,12 +1226,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     containerManager.start();
     // Construct the Container-id
     ContainerId cId = createContainerId(0);
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     StartContainerRequest scRequest =
         StartContainerRequest.newInstance(
-            containerLaunchContext,
+            recordFactory.newRecordInstance(ContainerLaunchContext.class),
             createContainerToken(cId, DUMMY_RM_IDENTIFIER,
                 context.getNodeId(), user, BuilderUtils.newResource(512, 1),
                 context.getContainerTokenSecretManager(), null));

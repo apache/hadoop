@@ -1486,8 +1486,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerManager.start();
 
     List<StartContainerRequest> list = new ArrayList<>();
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     for (int i = 0; i < 10; i++) {
       ContainerId cId = createContainerId(i);
       long identifier = 0;
@@ -1500,8 +1498,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
           createContainerToken(cId, identifier, context.getNodeId(), user,
             context.getContainerTokenSecretManager());
       StartContainerRequest request =
-          StartContainerRequest.newInstance(containerLaunchContext,
-            containerToken);
+          StartContainerRequest.newInstance(
+              recordFactory.newRecordInstance(ContainerLaunchContext.class),
+              containerToken);
       list.add(request);
     }
     StartContainersRequest requestList =
@@ -1531,9 +1530,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
   public void testMultipleContainersStopAndGetStatus() throws Exception {
     containerManager.start();
     List<StartContainerRequest> startRequest = new ArrayList<>();
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     List<ContainerId> containerIds = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       ContainerId cId;
@@ -1547,8 +1543,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
           createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
             user, context.getContainerTokenSecretManager());
       StartContainerRequest request =
-          StartContainerRequest.newInstance(containerLaunchContext,
-            containerToken);
+          StartContainerRequest.newInstance(
+              recordFactory.newRecordInstance(ContainerLaunchContext.class),
+              containerToken);
       startRequest.add(request);
       containerIds.add(cId);
     }
@@ -1788,15 +1785,14 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerManager.start();
     // Start 4 containers 0..4 with default resource (1024, 1)
     List<StartContainerRequest> list = new ArrayList<>();
-    ContainerLaunchContext containerLaunchContext = recordFactory
-        .newRecordInstance(ContainerLaunchContext.class);
     for (int i = 0; i < 4; i++) {
       ContainerId cId = createContainerId(i);
       long identifier = DUMMY_RM_IDENTIFIER;
       Token containerToken = createContainerToken(cId, identifier,
           context.getNodeId(), user, context.getContainerTokenSecretManager());
       StartContainerRequest request = StartContainerRequest.newInstance(
-          containerLaunchContext, containerToken);
+          recordFactory.newRecordInstance(ContainerLaunchContext.class),
+          containerToken);
       list.add(request);
     }
     StartContainersRequest requestList = StartContainersRequest
