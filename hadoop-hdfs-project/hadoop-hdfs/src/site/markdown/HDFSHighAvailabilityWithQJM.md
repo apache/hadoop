@@ -423,6 +423,41 @@ This guide describes high-level uses of each of these subcommands. For specific 
     **Note:** This is not yet implemented, and at present will always return
     success, unless the given NameNode is completely down.
 
+### Load Balancer Setup
+
+If you are running a set of NameNodes behind a Load Balancer (e.g. [Azure](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-custom-probe-overview) or [AWS](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html) ) and would like the Load Balancer to point to the active NN, you can use the /isActive HTTP endpoint as a health probe.
+http://NN_HOSTNAME/isActive will return a 200 status code response if the NN is in Active HA State, 405 otherwise.
+
+
+
+### In-Progress Edit Log Tailing
+
+Under the default settings, the Standby NameNode will only apply edits that are present in an edit
+log segments which has been finalized. If it is desirable to have a Standby NameNode which has more
+up-to-date namespace information, it is possible to enable tailing of in-progress edit segments.
+This setting will attempt to fetch edits from an in-memory cache on the JournalNodes and can reduce
+the lag time before a transaction is applied on the Standby NameNode to the order of milliseconds.
+If an edit cannot be served from the cache, the Standby will still be able to retrieve it, but the
+lag time will be much longer. The relevant configurations are:
+
+*   **dfs.ha.tail-edits.in-progress** - Whether or not to enable tailing on in-progress edits logs.
+    This will also enable the in-memory edit cache on the JournalNodes. Disabled by default.
+
+*   **dfs.journalnode.edit-cache-size.bytes** - The size of the in-memory cache of edits on the
+    JournalNode. Edits take around 200 bytes each in a typical environment, so, for example, the
+    default of 1048576 (1MB) can hold around 5000 transactions. It is recommended to monitor the
+    JournalNode metrics RpcRequestCacheMissAmountNumMisses and RpcRequestCacheMissAmountAvgTxns,
+    which respectively count the number of requests unable to be served by the cache, and the extra
+    number of transactions which would have needed to have been in the cache for the request to
+    succeed. For example, if a request attempted to fetch edits starting at transaction ID 10, but
+    the oldest data in the cache was at transaction ID 20, a value of 10 would be added to the
+    average.
+
+This feature is primarily useful in conjunction with the Standby/Observer Read feature. Using this
+feature, read requests can be serviced from non-active NameNodes; thus tailing in-progress edits
+provides these nodes with the ability to serve requests with data which is much more fresh. See the
+Apache JIRA ticket HDFS-12943 for more information on this feature.
+
 Automatic Failover
 ------------------
 
