@@ -17,6 +17,6 @@
  */
 
 /**
- * Container States package.
+ * Node States package.
  */
-package org.apache.hadoop.hdds.scm.container.states;
+package org.apache.hadoop.hdds.scm.node.states;

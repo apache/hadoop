@@ -38,7 +38,7 @@ public class ContainerID implements Comparable {
    */
   public ContainerID(long id) {
     Preconditions.checkState(id > 0,
-        "Container ID should be a positive int");
+        "Container ID should be a positive long. "+ id);
     this.id = id;
   }
 

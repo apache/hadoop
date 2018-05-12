@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.genesis;
 
+import org.apache.hadoop.conf.StorageUnit;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.InternalProfiler;
@@ -46,7 +47,8 @@ public class GenesisMemoryProfiler implements InternalProfiler {
     long totalHeap = Runtime.getRuntime().totalMemory();
 
     Collection<ScalarResult> samples = new ArrayList<>();
-    samples.add(new ScalarResult("Max heap", totalHeap, "bytes",
+    samples.add(new ScalarResult("Max heap",
+        StorageUnit.BYTES.toGBs(totalHeap), "GBs",
         AggregationPolicy.MAX));
     return samples;
   }
