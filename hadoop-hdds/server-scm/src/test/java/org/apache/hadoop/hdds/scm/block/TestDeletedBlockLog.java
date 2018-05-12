@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.block;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerMapping;
 import org.apache.hadoop.hdds.scm.container.Mapping;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
@@ -88,12 +89,10 @@ public class TestDeletedBlockLog {
     int continerIDBase = random.nextInt(100);
     int localIDBase = random.nextInt(1000);
     for (int i = 0; i < dataSize; i++) {
-      //String containerName = "container-" + UUID.randomUUID().toString();
       long containerID = continerIDBase + i;
       List<Long> blocks = new ArrayList<>();
       int blockSize = random.nextInt(30) + 1;
       for (int j = 0; j < blockSize; j++)  {
-        //blocks.add("block-" + UUID.randomUUID().toString());
         long localID = localIDBase + j;
         blocks.add(localID);
       }
@@ -266,7 +265,7 @@ public class TestDeletedBlockLog {
 
     int count = 0;
     long containerID = 0L;
-    DatanodeDetails dnDd1 = DatanodeDetails.newBuilder()
+    DatanodeDetails dnId1 = DatanodeDetails.newBuilder()
         .setUuid(UUID.randomUUID().toString())
         .setIpAddress("127.0.0.1")
         .setHostName("localhost")
@@ -293,7 +292,7 @@ public class TestDeletedBlockLog {
 
       // make TX[1-6] for datanode1; TX[7-10] for datanode2
       if (count <= (maximumAllowedTXNum + 1)) {
-        mockContainerInfo(mappingService, containerID, dnDd1);
+        mockContainerInfo(mappingService, containerID, dnId1);
       } else {
         mockContainerInfo(mappingService, containerID, dnId2);
       }
@@ -323,7 +322,7 @@ public class TestDeletedBlockLog {
     Assert.assertFalse(transactions.isFull());
     // The number of TX in dnID1 won't more than maximum value.
     Assert.assertEquals(maximumAllowedTXNum,
-        transactions.getDatanodeTransactions(dnDd1.getUuid()).size());
+        transactions.getDatanodeTransactions(dnId1.getUuid()).size());
 
     int size = transactions.getDatanodeTransactions(dnId2.getUuid()).size();
     // add duplicated container in dnID2, this should be failed.
@@ -339,6 +338,7 @@ public class TestDeletedBlockLog {
         transactions.getDatanodeTransactions(dnId2.getUuid()).size());
 
     // Add new TX in dnID2, then dnID2 will reach maximum value.
+    containerID = RandomUtils.nextLong();
     builder = DeletedBlocksTransaction.newBuilder();
     builder.setTxID(12);
     builder.setContainerID(containerID);
