@@ -242,4 +242,49 @@ public class KeyHandler implements Keys {
       }
     }.handleCall(volume, bucket, keys, req, headers, info, null);
   }
+
+  /**
+   * Renames an existing key within a bucket.
+   *
+   * @param volume      Storage Volume Name
+   * @param bucket      Name of the bucket
+   * @param key         Name of the Object
+   * @param toKeyName   New name of the Object
+   * @param req         http Request
+   * @param info        UriInfo
+   * @param headers     HttpHeaders
+   * @return Response
+   * @throws OzoneException
+   */
+  @Override
+  public Response renameKey(String volume, String bucket, String key,
+      String toKeyName, Request req, UriInfo info, HttpHeaders headers)
+      throws OzoneException {
+    return new KeyProcessTemplate() {
+      /**
+       * Abstract function that gets implemented in the KeyHandler functions.
+       * This function will just deal with the core file system related logic
+       * and will rely on handleCall function for repetitive error checks
+       *
+       * @param args - parsed bucket args, name, userName, ACLs etc
+       * @param input - The body as an Input Stream
+       * @param request - Http request
+       * @param headers - Parsed http Headers.
+       * @param info - UriInfo
+       *
+       * @return Response
+       *
+       * @throws IOException - From the file system operations
+       */
+      @Override
+      public Response doProcess(KeyArgs args, InputStream input,
+          Request request, HttpHeaders headers,
+          UriInfo info)
+          throws IOException, OzoneException, NoSuchAlgorithmException {
+        StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
+        fs.renameKey(args, toKeyName);
+        return OzoneRestUtils.getResponse(args, HTTP_OK, "");
+      }
+    }.handleCall(volume, bucket, key, req, headers, info, null);
+  }
 }

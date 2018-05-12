@@ -65,6 +65,8 @@ public final class Header {
   public static final String OZONE_LIST_QUERY_PREVKEY="prev-key";
   public static final String OZONE_LIST_QUERY_ROOTSCAN="root-scan";
 
+  public static final String OZONE_RENAME_TO_KEY_PARAM_NAME = "toKey";
+
   private Header() {
     // Never constructed.
   }

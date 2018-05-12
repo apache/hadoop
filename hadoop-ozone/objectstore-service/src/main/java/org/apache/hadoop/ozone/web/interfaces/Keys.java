@@ -29,6 +29,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
@@ -140,6 +141,36 @@ public interface Keys {
           true, paramType = "header")})
   Response deleteKey(@PathParam("volume") String volume,
       @PathParam("bucket") String bucket, @PathParam("keys") String keys,
+      @Context Request req, @Context UriInfo info, @Context HttpHeaders headers)
+      throws OzoneException;
+
+  /**
+   * Renames an existing key within a bucket.
+   *
+   * @param volume Storage Volume Name
+   * @param bucket Name of the bucket
+   * @param keys Name of the Object
+   * @param req http Request
+   * @param headers HttpHeaders
+   *
+   * @return Response
+   *
+   * @throws OzoneException
+   */
+  @POST
+  @ApiOperation("Renames an existing key within a bucket")
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
+          + "04:23:30 GMT", required = true, paramType = "header"),
+      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
+          true, paramType = "header")})
+  Response renameKey(@PathParam("volume") String volume,
+      @PathParam("bucket") String bucket, @PathParam("keys") String keys,
+      @QueryParam(Header.OZONE_RENAME_TO_KEY_PARAM_NAME) String toKeyName,
       @Context Request req, @Context UriInfo info, @Context HttpHeaders headers)
       throws OzoneException;
 }

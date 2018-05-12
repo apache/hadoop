@@ -678,7 +678,21 @@ public class RestClient implements ClientProtocol {
   @Override
   public void renameKey(String volumeName, String bucketName,
       String fromKeyName, String toKeyName) throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    try {
+      Preconditions.checkNotNull(volumeName);
+      Preconditions.checkNotNull(bucketName);
+      Preconditions.checkNotNull(fromKeyName);
+      Preconditions.checkNotNull(toKeyName);
+      URIBuilder builder = new URIBuilder(ozoneRestUri);
+      builder.setPath(PATH_SEPARATOR + volumeName + PATH_SEPARATOR + bucketName
+          + PATH_SEPARATOR + fromKeyName);
+      builder.addParameter(Header.OZONE_RENAME_TO_KEY_PARAM_NAME, toKeyName);
+      HttpPost httpPost = new HttpPost(builder.build());
+      addOzoneHeaders(httpPost);
+      EntityUtils.consume(executeHttpRequest(httpPost));
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override

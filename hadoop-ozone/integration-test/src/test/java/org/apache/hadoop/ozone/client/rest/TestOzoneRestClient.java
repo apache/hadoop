@@ -389,6 +389,36 @@ public class TestOzoneRestClient {
     bucket.getKey(keyName);
   }
 
+  @Test
+  public void testRenameKey()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    String fromKeyName = UUID.randomUUID().toString();
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    OzoneOutputStream out = bucket.createKey(fromKeyName,
+        value.getBytes().length, ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE);
+    out.write(value.getBytes());
+    out.close();
+    OzoneKey key = bucket.getKey(fromKeyName);
+    Assert.assertEquals(fromKeyName, key.getName());
+
+    String toKeyName = UUID.randomUUID().toString();
+    bucket.renameKey(fromKeyName, toKeyName);
+
+    key = bucket.getKey(toKeyName);
+    Assert.assertEquals(toKeyName, key.getName());
+
+    // Lookup for old key should fail.
+    thrown.expectMessage("Lookup key failed, error");
+    bucket.getKey(fromKeyName);
+  }
+
   /**
    * Close OzoneClient and shutdown MiniDFSCluster.
    */
