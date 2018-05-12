@@ -62,6 +62,14 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
     .HEALTHY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.HDDS_DATANODE_PLUGINS_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_IPC_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_IPC_RANDOM_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_RATIS_IPC_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
 
 /**
  * MiniOzoneCluster creates a complete in-process Ozone cluster suitable for
@@ -211,6 +219,14 @@ public final class MiniOzoneClusterImpl implements MiniOzoneCluster {
     HddsDatanodeService datanodeService = hddsDatanodes.get(i);
     datanodeService.stop();
     datanodeService.join();
+    // ensure same ports are used across restarts.
+    Configuration conf = datanodeService.getConf();
+    int currentPort = datanodeService.getDatanodeDetails().getContainerPort();
+    conf.setInt(DFS_CONTAINER_IPC_PORT, currentPort);
+    conf.setBoolean(DFS_CONTAINER_IPC_RANDOM_PORT, false);
+    int ratisPort = datanodeService.getDatanodeDetails().getRatisPort();
+    conf.setInt(DFS_CONTAINER_RATIS_IPC_PORT, ratisPort);
+    conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, false);
     datanodeService.start(null);
   }
 
