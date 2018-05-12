@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -138,14 +139,14 @@ public class TestContainerDeletionChoosingPolicy {
 
     int numContainers = 10;
     Random random = new Random();
-    Map<String, Integer> name2Count = new HashMap<>();
+    Map<Long, Integer> name2Count = new HashMap<>();
     // create [numContainers + 1] containers
     for (int i = 0; i <= numContainers; i++) {
-      String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(new Long(i), conf);
+      long containerId = RandomUtils.nextLong();
+      ContainerData data = new ContainerData(containerId, conf);
       containerManager.createContainer(data);
       Assert.assertTrue(
-          containerManager.getContainerMap().containsKey(containerName));
+          containerManager.getContainerMap().containsKey(containerId));
 
       // don't create deletion blocks in the last container.
       if (i == numContainers) {
@@ -155,7 +156,7 @@ public class TestContainerDeletionChoosingPolicy {
       // create random number of deletion blocks and write to container db
       int deletionBlocks = random.nextInt(numContainers) + 1;
       // record <ContainerName, DeletionCount> value
-      name2Count.put(containerName, deletionBlocks);
+      name2Count.put(containerId, deletionBlocks);
       for (int j = 0; j <= deletionBlocks; j++) {
         MetadataStore metadata = KeyUtils.getDB(data, conf);
         String blk = "blk" + i + "-" + j;
