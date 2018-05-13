@@ -58,8 +58,9 @@ public abstract class NodeAttribute {
       String attributeName, NodeAttributeType attributeType,
       String attributeValue) {
     NodeAttribute nodeAttribute = Records.newRecord(NodeAttribute.class);
-    nodeAttribute.setAttributePrefix(attributePrefix);
-    nodeAttribute.setAttributeName(attributeName);
+    NodeAttributeKey nodeAttributeKey =
+        NodeAttributeKey.newInstance(attributePrefix, attributeName);
+    nodeAttribute.setAttributeKey(nodeAttributeKey);
     nodeAttribute.setAttributeType(attributeType);
     nodeAttribute.setAttributeValue(attributeValue);
     return nodeAttribute;
@@ -67,19 +68,11 @@ public abstract class NodeAttribute {
 
   @Public
   @Unstable
-  public abstract String getAttributePrefix();
+  public abstract NodeAttributeKey getAttributeKey();
 
   @Public
   @Unstable
-  public abstract void setAttributePrefix(String attributePrefix);
-
-  @Public
-  @Unstable
-  public abstract String getAttributeName();
-
-  @Public
-  @Unstable
-  public abstract void setAttributeName(String attributeName);
+  public abstract void setAttributeKey(NodeAttributeKey attributeKey);
 
   @Public
   @Unstable

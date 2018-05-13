@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.AttributeToNodesProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesResponseProto;
-
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import static org.apache.hadoop.classification.InterfaceAudience.*;
-import static org.apache.hadoop.classification.InterfaceStability.*;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeKeyPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeToAttributeValuePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.AttributeToNodesProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeKeyProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeToAttributeValueProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesResponseProto;
 
 /**
  * Attributes to nodes response.
@@ -48,7 +49,7 @@ public class GetAttributesToNodesResponsePBImpl
   private GetAttributesToNodesResponseProto.Builder builder = null;
   private boolean viaProto = false;
 
-  private Map<NodeAttribute, Set<String>> attributesToNodes;
+  private Map<NodeAttributeKey, List<NodeToAttributeValue>> attributesToNodes;
 
   public GetAttributesToNodesResponsePBImpl() {
     this.builder = GetAttributesToNodesResponseProto.newBuilder();
@@ -70,10 +71,15 @@ public class GetAttributesToNodesResponsePBImpl
     this.attributesToNodes = new HashMap<>();
 
     for (AttributeToNodesProto c : list) {
-      Set<String> setNodes = new HashSet<>(c.getHostnamesList());
-      if (!setNodes.isEmpty()) {
-        this.attributesToNodes
-            .put(convertFromProtoFormat(c.getNodeAttribute()), setNodes);
+      List<NodeToAttributeValueProto> nodeValueMapList =
+          c.getNodeValueMapList();
+      List<NodeToAttributeValue> nodeToAttributeValue = new ArrayList<>();
+      for (NodeToAttributeValueProto valueProto : nodeValueMapList) {
+        nodeToAttributeValue.add(convertFromProtoFormat(valueProto));
+      }
+      if (!nodeToAttributeValue.isEmpty()) {
+        this.attributesToNodes.put(convertFromProtoFormat(c.getNodeAttribute()),
+            nodeToAttributeValue);
       }
     }
   }
@@ -94,7 +100,7 @@ public class GetAttributesToNodesResponsePBImpl
     Iterable<AttributeToNodesProto> iterable =
         () -> new Iterator<AttributeToNodesProto>() {
 
-          private Iterator<Map.Entry<NodeAttribute, Set<String>>> iter =
+          private Iterator<Map.Entry<NodeAttributeKey, List<NodeToAttributeValue>>> iter =
               attributesToNodes.entrySet().iterator();
 
           @Override
@@ -104,14 +110,18 @@ public class GetAttributesToNodesResponsePBImpl
 
           @Override
           public AttributeToNodesProto next() {
-            Map.Entry<NodeAttribute, Set<String>> now = iter.next();
-            Set<String> hostNames = new HashSet<>();
-            for (String host : now.getValue()) {
-              hostNames.add(host);
+            Map.Entry<NodeAttributeKey, List<NodeToAttributeValue>> attrToNodes
+                      = iter.next();
+
+            AttributeToNodesProto.Builder attrToNodesBuilder =
+                AttributeToNodesProto.newBuilder().setNodeAttribute(
+                    convertToProtoFormat(attrToNodes.getKey()));
+            for (NodeToAttributeValue hostToAttrVal : attrToNodes.getValue()) {
+              attrToNodesBuilder
+                  .addNodeValueMap(convertToProtoFormat(hostToAttrVal));
             }
-            return AttributeToNodesProto.newBuilder()
-                .setNodeAttribute(convertToProtoFormat(now.getKey()))
-                .addAllHostnames(hostNames).build();
+
+            return attrToNodesBuilder.build();
           }
 
           @Override
@@ -122,12 +132,22 @@ public class GetAttributesToNodesResponsePBImpl
     builder.addAllAttributesToNodes(iterable);
   }
 
-  private NodeAttributePBImpl convertFromProtoFormat(NodeAttributeProto p) {
-    return new NodeAttributePBImpl(p);
+  private NodeAttributeKey convertFromProtoFormat(NodeAttributeKeyProto p) {
+    return new NodeAttributeKeyPBImpl(p);
   }
 
-  private NodeAttributeProto convertToProtoFormat(NodeAttribute t) {
-    return ((NodeAttributePBImpl) t).getProto();
+  private NodeAttributeKeyProto convertToProtoFormat(NodeAttributeKey t) {
+    return ((NodeAttributeKeyPBImpl) t).getProto();
+  }
+
+  private NodeToAttributeValue convertFromProtoFormat(
+      NodeToAttributeValueProto p) {
+    return new NodeToAttributeValuePBImpl(p);
+  }
+
+  private NodeToAttributeValueProto convertToProtoFormat(
+      NodeToAttributeValue t) {
+    return ((NodeToAttributeValuePBImpl) t).getProto();
   }
 
   private void mergeLocalToBuilder() {
@@ -170,14 +190,15 @@ public class GetAttributesToNodesResponsePBImpl
   }
 
   @Override
-  public void setAttributeToNodes(Map<NodeAttribute, Set<String>> map) {
+  public void setAttributeToNodes(
+      Map<NodeAttributeKey, List<NodeToAttributeValue>> map) {
     initAttributesToNodes();
     attributesToNodes.clear();
     attributesToNodes.putAll(map);
   }
 
   @Override
-  public Map<NodeAttribute, Set<String>> getAttributesToNodes() {
+  public Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes() {
     initAttributesToNodes();
     return this.attributesToNodes;
   }

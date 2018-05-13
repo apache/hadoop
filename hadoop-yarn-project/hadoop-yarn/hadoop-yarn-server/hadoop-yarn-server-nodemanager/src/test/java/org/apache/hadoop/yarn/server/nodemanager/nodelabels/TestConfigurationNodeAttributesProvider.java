@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.BeforeClass;
@@ -120,7 +121,8 @@ public class TestConfigurationNodeAttributesProvider {
     while(times>0) {
       Set<NodeAttribute> current = spyProvider.getDescriptors();
       Assert.assertEquals(1, current.size());
-      String attributeName = current.iterator().next().getAttributeName();
+      String attributeName =
+          current.iterator().next().getAttributeKey().getAttributeName();
       if ("host".equals(attributeName)){
         numOfOldValue++;
       } else if ("os".equals(attributeName)) {
@@ -173,7 +175,7 @@ public class TestConfigurationNodeAttributesProvider {
       GenericTestUtils.waitFor(() -> {
         Set<NodeAttribute> attributes = spyProvider.getDescriptors();
         return "os".equalsIgnoreCase(attributes
-            .iterator().next().getAttributeName());
+            .iterator().next().getAttributeKey().getAttributeName());
       }, 500, 1000);
     } catch (Exception e) {
       // Make sure we get the timeout exception.
@@ -204,21 +206,22 @@ public class TestConfigurationNodeAttributesProvider {
     Iterator<NodeAttribute> ait = attributes.iterator();
 
     while(ait.hasNext()) {
-      NodeAttribute at = ait.next();
+      NodeAttribute attr = ait.next();
+      NodeAttributeKey at = attr.getAttributeKey();
       if (at.getAttributeName().equals("hostname")) {
         Assert.assertEquals("hostname", at.getAttributeName());
         Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
             at.getAttributePrefix());
         Assert.assertEquals(NodeAttributeType.STRING,
-            at.getAttributeType());
-        Assert.assertEquals("host1234", at.getAttributeValue());
+            attr.getAttributeType());
+        Assert.assertEquals("host1234", attr.getAttributeValue());
       } else if (at.getAttributeName().equals("uptime")) {
         Assert.assertEquals("uptime", at.getAttributeName());
         Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
             at.getAttributePrefix());
         Assert.assertEquals(NodeAttributeType.STRING,
-            at.getAttributeType());
-        Assert.assertEquals("321543", at.getAttributeValue());
+            attr.getAttributeType());
+        Assert.assertEquals("321543", attr.getAttributeValue());
       } else {
         Assert.fail("Unexpected attribute");
       }

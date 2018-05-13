@@ -880,7 +880,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         .getAttributesForNode(nodeId.getHost());
     Assert.assertEquals(1, attrs.size());
     NodeAttribute na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeName());
+    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
     Assert.assertEquals("host2", na.getAttributeValue());
     Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
 
@@ -900,7 +900,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     attrs = attributeManager.getAttributesForNode(nodeId.getHost());
     Assert.assertEquals(1, attrs.size());
     na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeName());
+    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
     Assert.assertEquals("host3", na.getAttributeValue());
     Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
   }

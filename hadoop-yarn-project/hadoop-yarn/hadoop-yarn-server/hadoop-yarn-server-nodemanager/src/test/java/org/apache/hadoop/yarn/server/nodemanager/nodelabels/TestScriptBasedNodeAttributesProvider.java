@@ -129,7 +129,7 @@ public class TestScriptBasedNodeAttributesProvider {
         .getDescriptors().iterator();
     while (it.hasNext()) {
       NodeAttribute att = it.next();
-      switch (att.getAttributeName()) {
+      switch (att.getAttributeKey().getAttributeName()) {
       case "host":
         Assert.assertEquals(NodeAttributeType.STRING, att.getAttributeType());
         Assert.assertEquals("host1234", att.getAttributeValue());
@@ -143,7 +143,8 @@ public class TestScriptBasedNodeAttributesProvider {
         Assert.assertEquals("10.0.0.1", att.getAttributeValue());
         break;
       default:
-        Assert.fail("Unexpected attribute name " + att.getAttributeName());
+        Assert.fail("Unexpected attribute name "
+            + att.getAttributeKey().getAttributeName());
         break;
       }
     }

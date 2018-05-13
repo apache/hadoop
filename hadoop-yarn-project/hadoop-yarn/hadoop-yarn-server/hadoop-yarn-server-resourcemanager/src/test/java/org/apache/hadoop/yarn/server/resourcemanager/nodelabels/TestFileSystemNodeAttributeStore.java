@@ -253,8 +253,10 @@ public class TestFileSystemNodeAttributeStore {
 
   public void checkNodeAttributeEqual(NodeAttribute atr1, NodeAttribute atr2) {
     Assert.assertEquals(atr1.getAttributeType(), atr2.getAttributeType());
-    Assert.assertEquals(atr1.getAttributeName(), atr2.getAttributeName());
-    Assert.assertEquals(atr1.getAttributePrefix(), atr2.getAttributePrefix());
+    Assert.assertEquals(atr1.getAttributeKey().getAttributeName(),
+        atr2.getAttributeKey().getAttributeName());
+    Assert.assertEquals(atr1.getAttributeKey().getAttributePrefix(),
+        atr2.getAttributeKey().getAttributePrefix());
     Assert.assertEquals(atr1.getAttributeValue(), atr2.getAttributeValue());
   }
 }

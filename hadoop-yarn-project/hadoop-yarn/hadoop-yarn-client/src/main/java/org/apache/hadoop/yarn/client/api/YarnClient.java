@@ -52,10 +52,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -914,26 +917,27 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Set<NodeAttribute> getClusterAttributes()
+  public abstract Set<NodeAttributeInfo> getClusterAttributes()
       throws YarnException, IOException;
 
   /**
    * <p>
-   * The interface used by client to get Attributes to nodes mapping
-   * for specified node attributes in existing cluster.
+   * The interface used by client to get mapping of AttributeKey to associated
+   * NodeToAttributeValue list for specified node attributeKeys in the cluster.
    * </p>
    *
-   * @param attributes Attributes for which Attributes to nodes mapping has to
-   *                   be retrieved.If empty or null is set then will return
-   *                   all attributes to node mapping in cluster.
-   * @return Attributes to nodes mappings for specific Attributes.
+   * @param attributes AttributeKeys for which associated NodeToAttributeValue
+   *          mapping value has to be retrieved. If empty or null is set then
+   *          will return mapping for all attributeKeys in the cluster
+   * @return mapping of AttributeKey to List of associated
+   *         NodeToAttributeValue's.
    * @throws YarnException
    * @throws IOException
    */
   @Public
   @Unstable
-  public abstract Map<NodeAttribute, Set<String>> getAttributesToNodes(
-      Set<NodeAttribute> attributes) throws YarnException, IOException;
+  public abstract Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException;
 
   /**
    * <p>

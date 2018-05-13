@@ -1035,7 +1035,7 @@ public class AdminService extends CompositeService implements
       List<NodeAttribute> nodeAttributes = nodeToAttributes.getNodeAttributes();
       if (!nodeAttributes.stream()
           .allMatch(nodeAttribute -> NodeAttribute.PREFIX_CENTRALIZED
-              .equals(nodeAttribute.getAttributePrefix()))) {
+              .equals(nodeAttribute.getAttributeKey().getAttributePrefix()))) {
         throw new IOException("Invalid Attribute Mapping for the node " + node
             + ". Prefix should be " + NodeAttribute.PREFIX_CENTRALIZED);
       }

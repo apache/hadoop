@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import com.google.protobuf.TextFormat;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesRequestProto;
-
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.hadoop.classification.InterfaceAudience.*;
-import static org.apache.hadoop.classification.InterfaceStability.*;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeKeyPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeKeyProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesRequestProto;
+
+import com.google.protobuf.TextFormat;
 
 /**
  * Attributes to nodes mapping request.
@@ -41,7 +41,7 @@ import static org.apache.hadoop.classification.InterfaceStability.*;
 public class GetAttributesToNodesRequestPBImpl
     extends GetAttributesToNodesRequest {
 
-  private Set<NodeAttribute> nodeAttributes = null;
+  private Set<NodeAttributeKey> nodeAttributes = null;
 
   private GetAttributesToNodesRequestProto proto =
       GetAttributesToNodesRequestProto.getDefaultInstance();
@@ -86,9 +86,9 @@ public class GetAttributesToNodesRequestPBImpl
     if (nodeAttributes == null) {
       return;
     }
-    Iterable<NodeAttributeProto> iterable =
-        () -> new Iterator<NodeAttributeProto>() {
-          private Iterator<NodeAttribute> iter = nodeAttributes.iterator();
+    Iterable<NodeAttributeKeyProto> iterable =
+        () -> new Iterator<NodeAttributeKeyProto>() {
+          private Iterator<NodeAttributeKey> iter = nodeAttributes.iterator();
 
           @Override
           public boolean hasNext() {
@@ -96,7 +96,7 @@ public class GetAttributesToNodesRequestPBImpl
           }
 
           @Override
-          public NodeAttributeProto next() {
+          public NodeAttributeKeyProto next() {
             return convertToProtoFormat(iter.next());
           }
 
@@ -110,12 +110,13 @@ public class GetAttributesToNodesRequestPBImpl
     builder.addAllNodeAttributes(iterable);
   }
 
-  private NodeAttributePBImpl convertFromProtoFormat(NodeAttributeProto p) {
-    return new NodeAttributePBImpl(p);
+  private NodeAttributeKeyPBImpl convertFromProtoFormat(
+      NodeAttributeKeyProto p) {
+    return new NodeAttributeKeyPBImpl(p);
   }
 
-  private NodeAttributeProto convertToProtoFormat(NodeAttribute t) {
-    return ((NodeAttributePBImpl) t).getProto();
+  private NodeAttributeKeyProto convertToProtoFormat(NodeAttributeKey t) {
+    return ((NodeAttributeKeyPBImpl) t).getProto();
   }
 
   private void maybeInitBuilder() {
@@ -131,7 +132,7 @@ public class GetAttributesToNodesRequestPBImpl
     }
     YarnServiceProtos.GetAttributesToNodesRequestProtoOrBuilder p =
         viaProto ? proto : builder;
-    List<NodeAttributeProto> nodeAttributesList = p.getNodeAttributesList();
+    List<NodeAttributeKeyProto> nodeAttributesList = p.getNodeAttributesList();
     this.nodeAttributes = new HashSet<>();
     nodeAttributesList
         .forEach((v) -> nodeAttributes.add(convertFromProtoFormat(v)));
@@ -159,7 +160,7 @@ public class GetAttributesToNodesRequestPBImpl
   }
 
   @Override
-  public void setNodeAttributes(Set<NodeAttribute> attributes) {
+  public void setNodeAttributes(Set<NodeAttributeKey> attributes) {
     maybeInitBuilder();
     if (nodeAttributes == null) {
       builder.clearNodeAttributes();
@@ -168,7 +169,7 @@ public class GetAttributesToNodesRequestPBImpl
   }
 
   @Override
-  public Set<NodeAttribute> getNodeAttributes() {
+  public Set<NodeAttributeKey> getNodeAttributes() {
     initNodeAttributes();
     return this.nodeAttributes;
   }

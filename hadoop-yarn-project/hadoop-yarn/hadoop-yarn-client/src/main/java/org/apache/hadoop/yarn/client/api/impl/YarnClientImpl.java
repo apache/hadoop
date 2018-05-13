@@ -99,10 +99,13 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -981,7 +984,7 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public Set<NodeAttribute> getClusterAttributes()
+  public Set<NodeAttributeInfo> getClusterAttributes()
       throws YarnException, IOException {
     GetClusterNodeAttributesRequest request =
         GetClusterNodeAttributesRequest.newInstance();
@@ -989,8 +992,8 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public Map<NodeAttribute, Set<String>> getAttributesToNodes(
-      Set<NodeAttribute> attributes) throws YarnException, IOException {
+  public Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException {
     GetAttributesToNodesRequest request =
         GetAttributesToNodesRequest.newInstance(attributes);
     return rmClient.getAttributesToNodes(request).getAttributesToNodes();

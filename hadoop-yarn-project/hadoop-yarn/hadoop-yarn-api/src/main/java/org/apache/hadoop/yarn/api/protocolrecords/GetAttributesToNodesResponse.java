@@ -17,29 +17,30 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import static org.apache.hadoop.classification.InterfaceAudience.Public;
-import static org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.util.Records;
-
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>
  * The response sent by the <code>ResourceManager</code> to a client requesting
- * attributes to hostname mapping.
+ * node to attribute value mapping for all or given set of Node AttributeKey's.
  * </p>
  *
  * @see ApplicationClientProtocol#getAttributesToNodes
- * (GetAttributesToNodesRequest)
+ *      (GetAttributesToNodesRequest)
  */
 @Public
 @Evolving
 public abstract class GetAttributesToNodesResponse {
   public static GetAttributesToNodesResponse newInstance(
-      Map<NodeAttribute, Set<String>> map) {
+      Map<NodeAttributeKey, List<NodeToAttributeValue>> map) {
     GetAttributesToNodesResponse response =
         Records.newRecord(GetAttributesToNodesResponse.class);
     response.setAttributeToNodes(map);
@@ -48,15 +49,17 @@ public abstract class GetAttributesToNodesResponse {
 
   @Public
   @Evolving
-  public abstract void setAttributeToNodes(Map<NodeAttribute, Set<String>> map);
+  public abstract void setAttributeToNodes(
+      Map<NodeAttributeKey, List<NodeToAttributeValue>> map);
 
-  /*
-   * Get attributes to node hostname mapping.
+  /**
+   * Get mapping of NodeAttributeKey to its associated mapping of list of
+   * NodeToAttributeValuenode to attribute value.
    *
-   * @return Map<NodeAttribute, Set<String>> node attributes to hostname
-   * mapping.
+   * @return Map<NodeAttributeKey, List<NodeToAttributeValue>> node attributes
+   *         to list of NodeToAttributeValuenode.
    */
   @Public
   @Evolving
-  public abstract Map<NodeAttribute, Set<String>> getAttributesToNodes();
+  public abstract Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes();
 }

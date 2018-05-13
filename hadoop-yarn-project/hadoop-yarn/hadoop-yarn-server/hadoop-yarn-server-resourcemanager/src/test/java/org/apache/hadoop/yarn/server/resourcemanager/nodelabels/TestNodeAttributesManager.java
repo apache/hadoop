@@ -344,11 +344,12 @@ public class TestNodeAttributesManager {
     clusterAttributes = attributesManager.getClusterNodeAttributes(
         Sets.newHashSet(NodeAttribute.PREFIX_DISTRIBUTED));
     Assert.assertEquals(1, clusterAttributes.size());
-    NodeAttribute att = clusterAttributes.iterator().next();
-    Assert.assertEquals("dist-node-attribute-v2_0", att.getAttributeName());
+    NodeAttribute attr = clusterAttributes.iterator().next();
+    Assert.assertEquals("dist-node-attribute-v2_0",
+        attr.getAttributeKey().getAttributeName());
     Assert.assertEquals(NodeAttribute.PREFIX_DISTRIBUTED,
-        att.getAttributePrefix());
-    Assert.assertEquals("dist_v3_0", att.getAttributeValue());
+        attr.getAttributeKey().getAttributePrefix());
+    Assert.assertEquals("dist_v3_0", attr.getAttributeValue());
 
     // Replace all attributes
     toReplaceMap.put(HOSTNAMES[0],

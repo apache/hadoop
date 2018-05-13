@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 
 /**
@@ -81,20 +82,21 @@ public abstract class NodeAttributesManager extends AbstractService {
    *
    * @param prefix set of prefix string's for which the attributes needs to
    *          returned
-   * @return set of node Attributes
+   * @return Set of node Attributes
    */
   public abstract Set<NodeAttribute> getClusterNodeAttributes(
       Set<String> prefix);
 
   /**
-   * Given a attribute set, return what all Nodes have attribute mapped to it.
-   * If the attributes set is null or empty, all attributes mapping are
-   * returned.
+   * Return a map of Nodes to attribute value for the given NodeAttributeKeys.
+   * If the attributeKeys set is null or empty, then mapping for all attributes
+   * are returned.
    *
-   * @return a Map of attributes to set of hostnames.
+   * @return a Map of attributeKeys to a map of hostnames to its attribute
+   *         values.
    */
-  public abstract Map<NodeAttribute, Set<String>> getAttributesToNodes(
-      Set<NodeAttribute> attributes);
+  public abstract Map<NodeAttributeKey, Map<String, AttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes);
 
   /**
    * NodeAttribute to AttributeValue Map.

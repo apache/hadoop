@@ -376,16 +376,31 @@ enum NodeAttributeTypeProto {
   STRING = 1;
 }
 
-message NodeAttributeProto {
-  optional string attributePrefix = 1;
+message NodeAttributeKeyProto {
+  optional string attributePrefix = 1 [default="rm.yarn.io"];
   required string attributeName = 2;
-  optional NodeAttributeTypeProto attributeType = 3 [default = STRING];
-  optional string attributeValue = 4 [default=""];
+}
+
+message NodeAttributeProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  optional NodeAttributeTypeProto attributeType = 2 [default = STRING];
+  optional string attributeValue = 3 [default=""];
+}
+
+
+message NodeAttributeInfoProto {
+  required NodeAttributeKeyProto attributeKey = 1;
+  required NodeAttributeTypeProto attributeType = 2;
+}
+
+message NodeToAttributeValueProto {
+  required string hostname = 1;
+  required string attributeValue = 2;
 }
 
 message AttributeToNodesProto {
-  required NodeAttributeProto nodeAttribute = 1;
-  repeated string hostnames = 2;
+  required NodeAttributeKeyProto nodeAttribute = 1;
+  repeated NodeToAttributeValueProto nodeValueMap = 2;
 }
 
 message NodeToAttributesProto {

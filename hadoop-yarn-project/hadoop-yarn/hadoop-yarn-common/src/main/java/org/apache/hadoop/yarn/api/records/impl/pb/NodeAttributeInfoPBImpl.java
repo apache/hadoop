@@ -15,39 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeKeyProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeInfoProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeTypeProto;
 
 /**
- * Implementation for NodeAttribute.
+ * Implementation for NodeAttributeInfo.
+ *
  */
-@Private
-@Unstable
-public class NodeAttributePBImpl extends NodeAttribute {
-  private NodeAttributeProto proto = NodeAttributeProto.getDefaultInstance();
-  private NodeAttributeProto.Builder builder = null;
+public class NodeAttributeInfoPBImpl extends NodeAttributeInfo {
+  private NodeAttributeInfoProto proto =
+      NodeAttributeInfoProto.getDefaultInstance();
+  private NodeAttributeInfoProto.Builder builder = null;
   private boolean viaProto = false;
 
-  public NodeAttributePBImpl() {
-    builder = NodeAttributeProto.newBuilder();
+  public NodeAttributeInfoPBImpl() {
+    builder = NodeAttributeInfoProto.newBuilder();
   }
 
-  public NodeAttributePBImpl(NodeAttributeProto proto) {
+  public NodeAttributeInfoPBImpl(NodeAttributeInfoProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public NodeAttributeProto getProto() {
+  public NodeAttributeInfoProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -55,14 +52,14 @@ public class NodeAttributePBImpl extends NodeAttribute {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = NodeAttributeProto.newBuilder(proto);
+      builder = NodeAttributeInfoProto.newBuilder(proto);
     }
     viaProto = false;
   }
 
   @Override
   public NodeAttributeKey getAttributeKey() {
-    NodeAttributeProtoOrBuilder p = viaProto ? proto : builder;
+    NodeAttributeInfoProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasAttributeKey()) {
       return null;
     }
@@ -72,7 +69,7 @@ public class NodeAttributePBImpl extends NodeAttribute {
   @Override
   public void setAttributeKey(NodeAttributeKey attributeKey) {
     maybeInitBuilder();
-    if(attributeKey == null) {
+    if (attributeKey == null) {
       builder.clearAttributeKey();
       return;
     }
@@ -80,27 +77,8 @@ public class NodeAttributePBImpl extends NodeAttribute {
   }
 
   @Override
-  public String getAttributeValue() {
-    NodeAttributeProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasAttributeValue()) {
-      return null;
-    }
-    return p.getAttributeValue();
-  }
-
-  @Override
-  public void setAttributeValue(String attributeValue) {
-    maybeInitBuilder();
-    if(attributeValue == null) {
-      builder.clearAttributeValue();
-      return;
-    }
-    builder.setAttributeValue(attributeValue);
-  }
-
-  @Override
   public NodeAttributeType getAttributeType() {
-    NodeAttributeProtoOrBuilder p = viaProto ? proto : builder;
+    NodeAttributeInfoProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasAttributeType()) {
       return null;
     }
@@ -134,7 +112,7 @@ public class NodeAttributePBImpl extends NodeAttribute {
 
   private NodeAttributeKeyProto convertToProtoFormat(
       NodeAttributeKey attributeKey) {
-    return ((NodeAttributeKeyPBImpl)attributeKey).getProto();
+    return ((NodeAttributeKeyPBImpl) attributeKey).getProto();
   }
 
   @Override
@@ -150,8 +128,8 @@ public class NodeAttributePBImpl extends NodeAttribute {
     if (obj == null) {
       return false;
     }
-    if (obj instanceof NodeAttribute) {
-      NodeAttribute other = (NodeAttribute) obj;
+    if (obj instanceof NodeAttributeInfo) {
+      NodeAttributeInfo other = (NodeAttributeInfo) obj;
       getAttributeKey().equals(other.getAttributeKey());
       return true;
     }
@@ -160,7 +138,6 @@ public class NodeAttributePBImpl extends NodeAttribute {
 
   @Override
   public String toString() {
-    return getAttributeKey().toString() + ":Value-" + getAttributeValue()
-        + ":Type-" + getAttributeType();
+    return getAttributeKey().toString() + ":Type-" + getAttributeType();
   }
 }

@@ -17,22 +17,24 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import static org.apache.hadoop.classification.InterfaceAudience.*;
-import static org.apache.hadoop.classification.InterfaceStability.*;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.util.Records;
-
 import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>
- * The request from clients to get attribtues to nodes mapping
- * in the cluster from the <code>ResourceManager</code>.
+ * The request from clients to get node to attribute value mapping for all or
+ * given set of Node AttributeKey's in the cluster from the
+ * <code>ResourceManager</code>.
  * </p>
  *
  * @see ApplicationClientProtocol#getAttributesToNodes
- * (GetAttributesToNodesRequest)
+ *      (GetAttributesToNodesRequest)
  */
 @Public
 @Evolving
@@ -43,7 +45,7 @@ public abstract class GetAttributesToNodesRequest {
   }
 
   public static GetAttributesToNodesRequest newInstance(
-      Set<NodeAttribute> attributes) {
+      Set<NodeAttributeKey> attributes) {
     GetAttributesToNodesRequest request =
         Records.newRecord(GetAttributesToNodesRequest.class);
     request.setNodeAttributes(attributes);
@@ -51,20 +53,22 @@ public abstract class GetAttributesToNodesRequest {
   }
 
   /**
-   * Set node attributes for which the mapping is required.
+   * Set node attributeKeys for which the mapping of hostname to attribute value
+   * is required.
    *
-   * @param attributes Set<NodeAttribute> provided.
+   * @param attributes Set<NodeAttributeKey> provided.
    */
   @Public
   @Unstable
-  public abstract void setNodeAttributes(Set<NodeAttribute> attributes);
+  public abstract void setNodeAttributes(Set<NodeAttributeKey> attributes);
 
   /**
-   * Get node attributes for which mapping mapping is required.
+   * Get node attributeKeys for which mapping of hostname to attribute value is
+   * required.
    *
-   * @return Set<NodeAttribute>
+   * @return Set<NodeAttributeKey>
    */
   @Public
   @Unstable
-  public abstract Set<NodeAttribute> getNodeAttributes();
+  public abstract Set<NodeAttributeKey> getNodeAttributes();
 }

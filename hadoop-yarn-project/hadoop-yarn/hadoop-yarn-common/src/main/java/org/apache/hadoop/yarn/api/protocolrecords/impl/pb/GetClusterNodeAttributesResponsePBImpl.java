@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import static org.apache.hadoop.classification.InterfaceAudience.*;
-import static org.apache.hadoop.classification.InterfaceStability.*;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodeAttributesResponseProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
-
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeInfoPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeInfoProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodeAttributesResponseProto;
 
 /**
  * Cluster node attributes response.
@@ -42,7 +42,7 @@ public class GetClusterNodeAttributesResponsePBImpl
   private GetClusterNodeAttributesResponseProto proto =
       GetClusterNodeAttributesResponseProto.getDefaultInstance();
   private GetClusterNodeAttributesResponseProto.Builder builder = null;
-  private Set<NodeAttribute> updatedNodeAttributes;
+  private Set<NodeAttributeInfo> clusterNodeAttributes;
   private boolean viaProto = false;
 
   public GetClusterNodeAttributesResponsePBImpl() {
@@ -72,7 +72,7 @@ public class GetClusterNodeAttributesResponsePBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.updatedNodeAttributes != null) {
+    if (this.clusterNodeAttributes != null) {
       addNodeAttributesToProto();
     }
   }
@@ -80,11 +80,12 @@ public class GetClusterNodeAttributesResponsePBImpl
   private void addNodeAttributesToProto() {
     maybeInitBuilder();
     builder.clearNodeAttributes();
-    List<NodeAttributeProto> protoList = new ArrayList<>();
-    for (NodeAttribute r : this.updatedNodeAttributes) {
-      protoList.add(convertToProtoFormat(r));
+    if (clusterNodeAttributes == null || clusterNodeAttributes.isEmpty()) {
+      return;
     }
-    builder.addAllNodeAttributes(protoList);
+
+    builder.addAllNodeAttributes(clusterNodeAttributes.stream()
+        .map(s -> convertToProtoFormat(s)).collect(Collectors.toSet()));
   }
 
   @Override
@@ -112,41 +113,44 @@ public class GetClusterNodeAttributesResponsePBImpl
   }
 
   @Override
-  public synchronized void setNodeAttributes(Set<NodeAttribute> attributes) {
+  public synchronized void setNodeAttributes(
+      Set<NodeAttributeInfo> attributes) {
     maybeInitBuilder();
-    this.updatedNodeAttributes = new HashSet<>();
+    this.clusterNodeAttributes = new HashSet<>();
     if (attributes == null) {
       builder.clearNodeAttributes();
       return;
     }
-    this.updatedNodeAttributes.addAll(attributes);
+    this.clusterNodeAttributes.addAll(attributes);
   }
 
   @Override
-  public synchronized Set<NodeAttribute> getNodeAttributes() {
-    if (this.updatedNodeAttributes != null) {
-      return this.updatedNodeAttributes;
+  public synchronized Set<NodeAttributeInfo> getNodeAttributes() {
+    if (this.clusterNodeAttributes != null) {
+      return this.clusterNodeAttributes;
     }
     initLocalNodeAttributes();
-    return this.updatedNodeAttributes;
+    return this.clusterNodeAttributes;
   }
 
   private void initLocalNodeAttributes() {
     YarnServiceProtos.GetClusterNodeAttributesResponseProtoOrBuilder p =
         viaProto ? proto : builder;
-    List<NodeAttributeProto> attributesProtoList = p.getNodeAttributesList();
-    this.updatedNodeAttributes = new HashSet<>();
-    for (NodeAttributeProto r : attributesProtoList) {
-      this.updatedNodeAttributes.add(convertFromProtoFormat(r));
-    }
+    List<NodeAttributeInfoProto> attributesProtoList =
+        p.getNodeAttributesList();
+    this.clusterNodeAttributes = new HashSet<>();
+    clusterNodeAttributes.addAll(attributesProtoList.stream()
+        .map(attr -> convertFromProtoFormat(attr)).collect(Collectors.toSet()));
   }
 
-  private NodeAttribute convertFromProtoFormat(NodeAttributeProto p) {
-    return new NodeAttributePBImpl(p);
+  private NodeAttributeInfoProto convertToProtoFormat(
+      NodeAttributeInfo attributeInfo) {
+    return ((NodeAttributeInfoPBImpl)attributeInfo).getProto();
   }
 
-  private NodeAttributeProto convertToProtoFormat(NodeAttribute t) {
-    return ((NodeAttributePBImpl) t).getProto();
+  private NodeAttributeInfo convertFromProtoFormat(
+      NodeAttributeInfoProto nodeAttributeInfoProto) {
+    return new NodeAttributeInfoPBImpl(nodeAttributeInfoProto);
   }
 
   @Override

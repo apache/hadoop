@@ -660,7 +660,7 @@ public class ResourceTrackerService extends AbstractService implements
       // Validate attributes
       if (!nodeAttributes.stream().allMatch(
           nodeAttribute -> NodeAttribute.PREFIX_DISTRIBUTED
-              .equals(nodeAttribute.getAttributePrefix()))) {
+              .equals(nodeAttribute.getAttributeKey().getAttributePrefix()))) {
         // All attributes must be in same prefix: nm.yarn.io.
         // Since we have the checks in NM to make sure attributes reported
         // in HB are with correct prefix, so it should not reach here.

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
@@ -32,11 +32,11 @@ public class RMNodeAttribute extends AbstractLabel {
 
   private NodeAttribute attribute;
   // TODO need to revisit whether we need to make this concurrent implementation
-  private Set<String> nodes = new HashSet<>();
+  private Map<String, AttributeValue> nodes = new HashMap<>();
 
   public RMNodeAttribute(NodeAttribute attribute) {
-    this(attribute.getAttributeName(), Resource.newInstance(0, 0), 0,
-        attribute);
+    this(attribute.getAttributeKey().getAttributeName(),
+        Resource.newInstance(0, 0), 0, attribute);
   }
 
   public RMNodeAttribute(String labelName, Resource res, int activeNMs,
@@ -57,16 +57,16 @@ public class RMNodeAttribute extends AbstractLabel {
     return attribute.getAttributeType();
   }
 
-  public void addNode(String node) {
-    nodes.add(node);
+  public void addNode(String node, AttributeValue attributeValue) {
+    nodes.put(node, attributeValue);
   }
 
   public void removeNode(String node) {
     nodes.remove(node);
   }
 
-  public Set<String> getAssociatedNodeIds() {
-    return new HashSet<String>(nodes);
+  public Map<String, AttributeValue> getAssociatedNodeIds() {
+    return new HashMap<String,  AttributeValue>(nodes);
   }
 
   @Override

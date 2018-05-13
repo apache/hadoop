@@ -41,8 +41,8 @@ public class NodeAttributeInfo {
   }
 
   public NodeAttributeInfo(NodeAttribute nodeAttribute) {
-    this.prefix = nodeAttribute.getAttributePrefix();
-    this.name = nodeAttribute.getAttributeName();
+    this.prefix = nodeAttribute.getAttributeKey().getAttributePrefix();
+    this.name = nodeAttribute.getAttributeKey().getAttributeName();
     this.type = nodeAttribute.getAttributeType().toString();
     this.value = nodeAttribute.getAttributeValue();
   }

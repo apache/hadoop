@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import static org.apache.hadoop.classification.InterfaceAudience.*;
-import static org.apache.hadoop.classification.InterfaceStability.*;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.util.Records;
-
 import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>
@@ -45,7 +46,7 @@ public abstract class GetClusterNodeAttributesResponse {
    * @return GetClusterNodeAttributesResponse.
    */
   public static GetClusterNodeAttributesResponse newInstance(
-      Set<NodeAttribute> attributes) {
+      Set<NodeAttributeInfo> attributes) {
     GetClusterNodeAttributesResponse response =
         Records.newRecord(GetClusterNodeAttributesResponse.class);
     response.setNodeAttributes(attributes);
@@ -55,18 +56,18 @@ public abstract class GetClusterNodeAttributesResponse {
   /**
    * Set node attributes to the response.
    *
-   * @param attributes Node attributes
+   * @param attributes Map of Node attributeKey to Type.
    */
   @Public
   @Unstable
-  public abstract void setNodeAttributes(Set<NodeAttribute> attributes);
+  public abstract void setNodeAttributes(Set<NodeAttributeInfo> attributes);
 
   /**
-   * Get node attributes of the response.
+   * Get node attributes from the response.
    *
-   * @return Node attributes
+   * @return Node attributes.
    */
   @Public
   @Unstable
-  public abstract Set<NodeAttribute> getNodeAttributes();
+  public abstract Set<NodeAttributeInfo> getNodeAttributes();
 }

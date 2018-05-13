@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.nodelabels;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 
 import java.io.IOException;
 import java.util.Set;
@@ -115,14 +116,18 @@ public final class NodeLabelUtil {
       throws IOException {
     if (attributeSet != null && !attributeSet.isEmpty()) {
       for (NodeAttribute nodeAttribute : attributeSet) {
-        String prefix = nodeAttribute.getAttributePrefix();
+        NodeAttributeKey attributeKey = nodeAttribute.getAttributeKey();
+        if (attributeKey == null) {
+          throw new IOException("AttributeKey  must be set");
+        }
+        String prefix = attributeKey.getAttributePrefix();
         if (Strings.isNullOrEmpty(prefix)) {
           throw new IOException("Attribute prefix must be set");
         }
         // Verify attribute prefix format.
         checkAndThrowAttributePrefix(prefix);
         // Verify attribute name format.
-        checkAndThrowLabelName(nodeAttribute.getAttributeName());
+        checkAndThrowLabelName(attributeKey.getAttributeName());
       }
     }
   }
@@ -140,8 +145,9 @@ public final class NodeLabelUtil {
     if (Strings.isNullOrEmpty(prefix)) {
       return attributeSet;
     }
-    return attributeSet.stream().filter(
-        nodeAttribute -> prefix.equals(nodeAttribute.getAttributePrefix()))
+    return attributeSet.stream()
+        .filter(nodeAttribute -> prefix
+            .equals(nodeAttribute.getAttributeKey().getAttributePrefix()))
         .collect(Collectors.toSet());
   }
 }

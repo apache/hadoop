@@ -18,16 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
-
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.NodeAttributeType;
-import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -78,6 +68,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -88,6 +82,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -117,10 +113,15 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueConfigurations;
@@ -142,6 +143,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -163,7 +165,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
-
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -176,11 +177,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 public class TestClientRMService {
 
@@ -2048,11 +2049,12 @@ public class TestClientRMService {
         GetClusterNodeAttributesRequest.newInstance();
     GetClusterNodeAttributesResponse response =
         client.getClusterNodeAttributes(request);
-    Set<NodeAttribute> attributes = response.getNodeAttributes();
+    Set<NodeAttributeInfo> attributes = response.getNodeAttributes();
     Assert.assertEquals("Size not correct", 3, attributes.size());
-    Assert.assertTrue(attributes.contains(gpu));
-    Assert.assertTrue(attributes.contains(os));
-    Assert.assertTrue(attributes.contains(docker));
+    Assert.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(gpu)));
+    Assert.assertTrue(attributes.contains(NodeAttributeInfo.newInstance(os)));
+    Assert
+        .assertTrue(attributes.contains(NodeAttributeInfo.newInstance(docker)));
     rpc.stopProxy(client, conf);
     rm.close();
   }
@@ -2071,17 +2073,17 @@ public class TestClientRMService {
     NodeAttributesManager mgr = rm.getRMContext().getNodeAttributesManager();
     String node1 = "host1";
     String node2 = "host2";
-    NodeAttribute gpu = NodeAttribute
-        .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
-            NodeAttributeType.STRING, "nvida");
-    NodeAttribute os = NodeAttribute
-        .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "OS",
+    NodeAttribute gpu =
+        NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
+            NodeAttributeType.STRING, "nvidia");
+    NodeAttribute os =
+        NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "OS",
             NodeAttributeType.STRING, "windows64");
-    NodeAttribute docker = NodeAttribute
-        .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "DOCKER",
+    NodeAttribute docker =
+        NodeAttribute.newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "DOCKER",
             NodeAttributeType.STRING, "docker0");
-    NodeAttribute dist = NodeAttribute
-        .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "VERSION",
+    NodeAttribute dist =
+        NodeAttribute.newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "VERSION",
             NodeAttributeType.STRING, "3_0_2");
     Map<String, Set<NodeAttribute>> nodes = new HashMap<>();
     nodes.put(node1, ImmutableSet.of(gpu, os, dist));
@@ -2099,33 +2101,53 @@ public class TestClientRMService {
         GetAttributesToNodesRequest.newInstance();
     GetAttributesToNodesResponse response =
         client.getAttributesToNodes(request);
-    Map<NodeAttribute, Set<String>> attrs = response.getAttributesToNodes();
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs =
+        response.getAttributesToNodes();
     Assert.assertEquals(response.getAttributesToNodes().size(), 4);
-    Assert.assertEquals(attrs.get(dist).size(), 2);
-    Assert.assertEquals(attrs.get(os).size(), 1);
-    Assert.assertEquals(attrs.get(gpu).size(), 1);
-    Assert.assertTrue(attrs.get(dist).contains(node1));
-    Assert.assertTrue(attrs.get(dist).contains(node2));
-    Assert.assertTrue(attrs.get(docker).contains(node2));
+    Assert.assertEquals(attrs.get(dist.getAttributeKey()).size(), 2);
+    Assert.assertEquals(attrs.get(os.getAttributeKey()).size(), 1);
+    Assert.assertEquals(attrs.get(gpu.getAttributeKey()).size(), 1);
+    Assert.assertTrue(findHostnameAndValInMapping(node1, "3_0_2",
+        attrs.get(dist.getAttributeKey())));
+    Assert.assertTrue(findHostnameAndValInMapping(node2, "3_0_2",
+        attrs.get(dist.getAttributeKey())));
+    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+        attrs.get(docker.getAttributeKey())));
 
-    GetAttributesToNodesRequest request2 =
-        GetAttributesToNodesRequest.newInstance(ImmutableSet.of(docker));
+    GetAttributesToNodesRequest request2 = GetAttributesToNodesRequest
+        .newInstance(ImmutableSet.of(docker.getAttributeKey()));
     GetAttributesToNodesResponse response2 =
         client.getAttributesToNodes(request2);
-    Map<NodeAttribute, Set<String>> attrs2 = response2.getAttributesToNodes();
-    Assert.assertEquals(response2.getAttributesToNodes().size(), 1);
-    Assert.assertTrue(attrs.get(docker).contains(node2));
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs2 =
+        response2.getAttributesToNodes();
+    Assert.assertEquals(attrs2.size(), 1);
+    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+        attrs2.get(docker.getAttributeKey())));
 
     GetAttributesToNodesRequest request3 =
-        GetAttributesToNodesRequest.newInstance(ImmutableSet.of(docker, os));
+        GetAttributesToNodesRequest.newInstance(
+            ImmutableSet.of(docker.getAttributeKey(), os.getAttributeKey()));
     GetAttributesToNodesResponse response3 =
         client.getAttributesToNodes(request3);
-    Map<NodeAttribute, Set<String>> attrs3 = response3.getAttributesToNodes();
-    Assert.assertEquals(response3.getAttributesToNodes().size(), 2);
-    Assert.assertTrue(attrs.get(os).contains(node1));
-    Assert.assertTrue(attrs.get(docker).contains(node2));
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs3 =
+        response3.getAttributesToNodes();
+    Assert.assertEquals(attrs3.size(), 2);
+    Assert.assertTrue(findHostnameAndValInMapping(node1, "windows64",
+        attrs3.get(os.getAttributeKey())));
+    Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
+        attrs3.get(docker.getAttributeKey())));
     rpc.stopProxy(client, conf);
     rm.close();
+  }
+
+  private boolean findHostnameAndValInMapping(String hostname, String attrVal,
+      List<NodeToAttributeValue> mappingVals) {
+    for (NodeToAttributeValue value : mappingVals) {
+      if (value.getHostname().equals(hostname)) {
+        return attrVal.equals(value.getAttributeValue());
+      }
+    }
+    return false;
   }
 
   @Test(timeout = 120000)
