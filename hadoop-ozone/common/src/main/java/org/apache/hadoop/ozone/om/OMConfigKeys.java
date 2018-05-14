@@ -78,4 +78,13 @@ public final class OMConfigKeys {
   public static final String OZONE_KEY_DELETING_LIMIT_PER_TASK =
       "ozone.key.deleting.limit.per.task";
   public static final int OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT = 1000;
+
+  public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
+      + "kerberos.keytab.file";
+  public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"
+      + ".kerberos.principal";
+  public static final String OZONE_OM_WEB_AUTHENTICATION_KERBEROS_KEYTAB_FILE =
+      "ozone.om.http.kerberos.keytab.file";
+  public static final String OZONE_OM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY
+      = "ozone.om.http.kerberos.principal";
 }

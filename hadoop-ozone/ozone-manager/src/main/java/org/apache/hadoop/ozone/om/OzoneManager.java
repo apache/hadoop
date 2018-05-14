@@ -47,6 +47,7 @@ import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.OMAction;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -63,7 +64,10 @@ import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerProtocolServerSideTranslatorPB;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.logging.log4j.Level;
@@ -91,6 +95,10 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneManagerService.newReflectiveBlockingService;
+import static org.apache.hadoop.ozone.om.OMConfigKeys
+    .OZONE_OM_KERBEROS_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys
+    .OZONE_OM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -99,7 +107,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 @InterfaceAudience.LimitedPrivate({"HDFS", "CBLOCK", "OZONE", "HBASE"})
 public final class OzoneManager extends ServiceRuntimeInfoImpl
     implements OzoneManagerProtocol, OMMXBean {
-  private static final Logger LOG =
+  public static final Logger LOG =
       LoggerFactory.getLogger(OzoneManager.class);
 
   private static final AuditLogger AUDIT =
@@ -127,14 +135,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     Preconditions.checkNotNull(conf);
     configuration = conf;
     omStorage = new OMStorage(conf);
-    scmBlockClient = getScmBlockClient(configuration);
-    scmContainerClient = getScmContainerClient(configuration);
     if (omStorage.getState() != StorageState.INITIALIZED) {
       throw new OMException("OM not initialized.",
           ResultCodes.OM_NOT_INITIALIZED);
     }
 
+    scmContainerClient = getScmContainerClient(configuration);
+
     // verifies that the SCM info in the OM Version file is correct.
+    scmBlockClient = getScmBlockClient(configuration);
+
     ScmInfo scmInfo = scmBlockClient.getScmInfo();
     if (!(scmInfo.getClusterId().equals(omStorage.getClusterID()) && scmInfo
         .getScmId().equals(omStorage.getScmId()))) {
@@ -164,6 +174,35 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         new KeyManagerImpl(scmBlockClient, metadataManager, configuration,
             omStorage.getOmId());
     httpServer = new OzoneManagerHttpServer(configuration, this);
+  }
+
+  /**
+   * Login KSM service user if security and Kerberos are enabled.
+   *
+   * @param  conf
+   * @throws IOException, AuthenticationException
+   */
+  private static void loginKSMUser(OzoneConfiguration conf)
+      throws IOException, AuthenticationException {
+
+    if (SecurityUtil.getAuthenticationMethod(conf).equals
+        (AuthenticationMethod.KERBEROS)) {
+      LOG.debug("Ozone security is enabled. Attempting login for KSM user. "
+              + "Principal: {},keytab: {}", conf.get
+              (OZONE_OM_KERBEROS_PRINCIPAL_KEY),
+          conf.get(OZONE_OM_KERBEROS_KEYTAB_FILE_KEY));
+
+      UserGroupInformation.setConfiguration(conf);
+
+      InetSocketAddress socAddr = getOmAddress(conf);
+      SecurityUtil.login(conf, OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
+          OZONE_OM_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
+    } else {
+      throw new AuthenticationException(SecurityUtil.getAuthenticationMethod
+          (conf) + " authentication method not supported. KSM user login "
+          + "failed.");
+    }
+    LOG.info("KSM login successful.");
   }
 
   /**
@@ -283,14 +322,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param argv Command line arguments
    * @param conf OzoneConfiguration
    * @return OM instance
-   * @throws IOException in case OM instance creation fails.
+   * @throws IOException, AuthenticationException in case OM instance
+   *   creation fails.
    */
   @VisibleForTesting
   public static OzoneManager createOm(
-      String[] argv, OzoneConfiguration conf) throws IOException {
+      String[] argv, OzoneConfiguration conf)
+      throws IOException, AuthenticationException {
     return createOm(argv, conf, false);
   }
-
 
   /**
    * Constructs OM instance based on command line arguments.
@@ -299,10 +339,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param conf OzoneConfiguration
    * @param printBanner if true then log a verbose startup message.
    * @return OM instance
-   * @throws IOException in case OM instance creation fails.
+   * @throws IOException, AuthenticationException in case OM instance
+   *   creation fails.
    */
   private static OzoneManager createOm(String[] argv,
-      OzoneConfiguration conf, boolean printBanner) throws IOException {
+      OzoneConfiguration conf, boolean printBanner)
+      throws IOException, AuthenticationException {
     if (!isHddsEnabled(conf)) {
       System.err.println("OM cannot be started in secure mode or when " +
           OZONE_ENABLED + " is set to false");
@@ -313,6 +355,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       printUsage(System.err);
       terminate(1);
       return null;
+    }
+    // Authenticate KSM if security is enabled
+    if (conf.getBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY, true)) {
+      loginKSMUser(conf);
     }
     switch (startOpt) {
     case CREATEOBJECTSTORE:
@@ -450,7 +496,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     metadataManager.start();
     keyManager.start();
     omRpcServer.start();
-    httpServer.start();
+    try {
+      httpServer.start();
+    } catch (Exception ex) {
+      // Allow OM to start as Http Server failure is not fatal.
+      LOG.error("OM HttpServer failed to start.", ex);
+    }
     registerMXBean();
     setStartTime();
   }
