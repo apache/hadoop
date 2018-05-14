@@ -35,6 +35,7 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +52,12 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 public class TestDFSStripedInputStream {
 
@@ -502,6 +508,25 @@ public class TestDFSStripedInputStream {
       assertTrue(in instanceof DFSStripedInputStream);
       // Close twice
       in.close();
+    }
+  }
+
+  @Test
+  public void testReadFailToGetCurrentBlock() throws Exception {
+    DFSTestUtil.writeFile(cluster.getFileSystem(), filePath, "test");
+    try (DFSStripedInputStream in = (DFSStripedInputStream) fs.getClient()
+        .open(filePath.toString())) {
+      final DFSStripedInputStream spy = spy(in);
+      final String msg = "Injected exception for testReadNPE";
+      doThrow(new IOException(msg)).when(spy).blockSeekTo(anyLong());
+      assertNull(in.getCurrentBlock());
+      try {
+        spy.read();
+        fail("read should have failed");
+      } catch (IOException expected) {
+        LOG.info("Exception caught", expected);
+        GenericTestUtils.assertExceptionContains(msg, expected);
+      }
     }
   }
 }
