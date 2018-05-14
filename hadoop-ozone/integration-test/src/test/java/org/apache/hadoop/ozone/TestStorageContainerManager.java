@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorage;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -107,19 +108,19 @@ public class TestStorageContainerManager {
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(ozoneConf).build();
     cluster.waitForClusterToBeReady();
     try {
-      String fakeUser = fakeRemoteUsername;
-      StorageContainerManager mockScm = Mockito.spy(
-          cluster.getStorageContainerManager());
-      Mockito.when(mockScm.getPpcRemoteUsername())
-          .thenReturn(fakeUser);
+
+      SCMClientProtocolServer mockClientServer = Mockito.spy(
+          cluster.getStorageContainerManager().getClientProtocolServer());
+      Mockito.when(mockClientServer.getRpcRemoteUsername())
+          .thenReturn(fakeRemoteUsername);
 
       try {
-        mockScm.getClientProtocolServer().deleteContainer(
+        mockClientServer.deleteContainer(
             ContainerTestHelper.getTestContainerID());
         fail("Operation should fail, expecting an IOException here.");
       } catch (Exception e) {
         if (expectPermissionDenied) {
-          verifyPermissionDeniedException(e, fakeUser);
+          verifyPermissionDeniedException(e, fakeRemoteUsername);
         } else {
           // If passes permission check, it should fail with
           // container not exist exception.
@@ -129,7 +130,7 @@ public class TestStorageContainerManager {
       }
 
       try {
-        ContainerInfo container2 = mockScm.getClientProtocolServer()
+        ContainerInfo container2 = mockClientServer
             .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE,  "OZONE");
         if (expectPermissionDenied) {
@@ -138,11 +139,11 @@ public class TestStorageContainerManager {
           Assert.assertEquals(1, container2.getPipeline().getMachines().size());
         }
       } catch (Exception e) {
-        verifyPermissionDeniedException(e, fakeUser);
+        verifyPermissionDeniedException(e, fakeRemoteUsername);
       }
 
       try {
-        ContainerInfo container3 = mockScm.getClientProtocolServer()
+        ContainerInfo container3 = mockClientServer
             .allocateContainer(xceiverClientManager.getType(),
             HddsProtos.ReplicationFactor.ONE, "OZONE");
         if (expectPermissionDenied) {
@@ -151,16 +152,16 @@ public class TestStorageContainerManager {
           Assert.assertEquals(1, container3.getPipeline().getMachines().size());
         }
       } catch (Exception e) {
-        verifyPermissionDeniedException(e, fakeUser);
+        verifyPermissionDeniedException(e, fakeRemoteUsername);
       }
 
       try {
-        mockScm.getClientProtocolServer().getContainer(
+        mockClientServer.getContainer(
             ContainerTestHelper.getTestContainerID());
         fail("Operation should fail, expecting an IOException here.");
       } catch (Exception e) {
         if (expectPermissionDenied) {
-          verifyPermissionDeniedException(e, fakeUser);
+          verifyPermissionDeniedException(e, fakeRemoteUsername);
         } else {
           // If passes permission check, it should fail with
           // key not exist exception.

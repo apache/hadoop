@@ -620,14 +620,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     return scmBlockManager;
   }
 
-  @VisibleForTesting
-  public String getPpcRemoteUsername() {
-    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
-    return user == null ? null : user.getUserName();
-  }
-
-  public void checkAdminAccess() throws IOException {
-    String remoteUser = getPpcRemoteUsername();
+  public void checkAdminAccess(String remoteUser) throws IOException {
     if (remoteUser != null) {
       if (!scmAdminUsernames.contains(remoteUser)) {
         throw new IOException(

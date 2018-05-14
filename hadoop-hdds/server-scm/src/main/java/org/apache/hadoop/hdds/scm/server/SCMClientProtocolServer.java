@@ -40,6 +40,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerLocationProtocolServerSideTranslatorPB;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,17 +138,26 @@ public class SCMClientProtocolServer implements
     getClientRpcServer().join();
   }
 
+  @VisibleForTesting
+  public String getRpcRemoteUsername() {
+    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+    return user == null ? null : user.getUserName();
+  }
+
   @Override
   public ContainerInfo allocateContainer(HddsProtos.ReplicationType
       replicationType, HddsProtos.ReplicationFactor factor,
       String owner) throws IOException {
-    getScm().checkAdminAccess();
+    String remoteUser = getRpcRemoteUsername();
+    getScm().checkAdminAccess(remoteUser);
     return scm.getScmContainerManager()
         .allocateContainer(replicationType, factor, owner);
   }
 
   @Override
   public ContainerInfo getContainer(long containerID) throws IOException {
+    String remoteUser = getRpcRemoteUsername();
+    getScm().checkAdminAccess(remoteUser);
     return scm.getScmContainerManager()
         .getContainer(containerID);
   }
@@ -161,7 +171,8 @@ public class SCMClientProtocolServer implements
 
   @Override
   public void deleteContainer(long containerID) throws IOException {
-    getScm().checkAdminAccess();
+    String remoteUser = getRpcRemoteUsername();
+    getScm().checkAdminAccess(remoteUser);
     scm.getScmContainerManager().deleteContainer(containerID);
 
   }
