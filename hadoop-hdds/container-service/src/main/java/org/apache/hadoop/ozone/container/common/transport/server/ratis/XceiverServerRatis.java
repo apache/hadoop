@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.container.common.transport.server
     .XceiverServerSpi;
 import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.RatisHelper;
+import org.apache.ratis.client.RaftClientConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.netty.NettyConfigKeys;
@@ -78,11 +79,31 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     final int numWriteChunkThreads = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT);
+    TimeUnit timeUnit =
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getUnit();
+    long duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration clientRequestTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
+    timeUnit = OzoneConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT
+        .getUnit();
+    duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration serverRequestTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
 
     Objects.requireNonNull(dd, "id == null");
     this.port = port;
-    RaftProperties serverProperties = newRaftProperties(rpc, port,
-        storageDir, maxChunkSize, raftSegmentSize, raftSegmentPreallocatedSize);
+    RaftProperties serverProperties =
+        newRaftProperties(rpc, port, storageDir, maxChunkSize, raftSegmentSize,
+            raftSegmentPreallocatedSize);
+    setRequestTimeout(serverProperties, clientRequestTimeout,
+        serverRequestTimeout);
 
     writeChunkExecutor =
         new ThreadPoolExecutor(numWriteChunkThreads, numWriteChunkThreads,
@@ -97,6 +118,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         .setProperties(serverProperties)
         .setStateMachine(stateMachine)
         .build();
+  }
+
+  private static void setRequestTimeout(RaftProperties serverProperties,
+      TimeDuration clientRequestTimeout, TimeDuration serverRequestTimeout) {
+    RaftClientConfigKeys.Rpc
+        .setRequestTimeout(serverProperties, clientRequestTimeout);
+    RaftServerConfigKeys.Rpc
+        .setRequestTimeout(serverProperties, serverRequestTimeout);
   }
 
   private static RaftProperties newRaftProperties(

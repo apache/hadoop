@@ -97,7 +97,7 @@
     <ldap-api.version>1.0.0-M33</ldap-api.version>
 
     <!-- Apache Ratis version -->
-    <ratis.version>0.1.1-alpha-8fd74ed-SNAPSHOT</ratis.version>
+    <ratis.version>0.1.1-alpha-d7d7061-SNAPSHOT</ratis.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
@@ -106,7 +106,7 @@
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
-    <protobuf-compile.version>3.1.0</protobuf-compile.version>
+    <protobuf-compile.version>3.5.0</protobuf-compile.version>
     <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
 
     <!-- define the Java language version used by the compiler -->
@@ -878,12 +878,6 @@
             <artifactId>javax.servlet-api</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-
-      <dependency>
-        <groupId>org.jctools</groupId>
-        <artifactId>jctools-core</artifactId>
-        <version>1.2.1</version>
       </dependency>
 
       <dependency>

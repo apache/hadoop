@@ -19,6 +19,9 @@ package org.apache.hadoop.hdds.scm;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.ratis.util.TimeDuration;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class contains constants for configuration keys used in SCM.
@@ -62,6 +65,16 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.segment.preallocated.size";
   public static final int
       DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT = 128 * 1024 * 1024;
+  public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
+      "dfs.ratis.client.request.timeout.duration";
+  public static final TimeDuration
+      DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT =
+      TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
+  public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
+      "dfs.ratis.server.request.timeout.duration";
+  public static final TimeDuration
+      DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT =
+      TimeDuration.valueOf(3000, TimeUnit.MILLISECONDS);
 
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final String OZONE_SCM_CHUNK_SIZE_KEY = "ozone.scm.chunk.size";

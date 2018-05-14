@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.ratis.util.TimeDuration;
 
 /**
  * This class contains constants for configuration keys used in Ozone.
@@ -226,6 +227,16 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
       "dfs.container.ratis.datanode.storage.dir";
+  public static final String DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY;
+  public static final TimeDuration
+      DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT;
+  public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
+      ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
+  public static final TimeDuration
+      DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT =
+      ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT;
 
   public static final String OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL =
       "ozone.web.authentication.kerberos.principal";

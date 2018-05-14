@@ -120,6 +120,18 @@
     </description>
   </property>
   <property>
+    <name>dfs.ratis.client.request.timeout.duration</name>
+    <value>3s</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis client request.</description>
+  </property>
+  <property>
+    <name>dfs.ratis.server.request.timeout.duration</name>
+    <value>3s</value>
+    <tag>OZONE, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server request.</description>
+  </property>
+  <property>
     <name>ozone.container.report.interval</name>
     <value>60000ms</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
