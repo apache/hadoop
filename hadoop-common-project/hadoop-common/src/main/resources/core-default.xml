@@ -2933,8 +2933,8 @@
     <name>adl.http.timeout</name>
     <value>-1</value>
     <description>
-      Base timeout (in seconds) for HTTP requests from the ADL SDK. Values of
-      zero or less cause the SDK default to be used instead.
+      Base timeout (in milliseconds) for HTTP requests from the ADL SDK. Values
+      of zero or less cause the SDK default to be used instead.
     </description>
   </property>
 
