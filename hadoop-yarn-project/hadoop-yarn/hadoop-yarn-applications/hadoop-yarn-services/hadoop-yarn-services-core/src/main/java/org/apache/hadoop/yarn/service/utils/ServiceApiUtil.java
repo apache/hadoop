@@ -29,13 +29,14 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.service.api.records.Container;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
+import org.apache.hadoop.yarn.service.api.records.Container;
+import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
@@ -111,14 +112,7 @@ public class ServiceApiUtil {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      if (!StringUtils.isEmpty(service.getKerberosPrincipal().getKeytab())) {
-        try {
-          // validate URI format
-          new URI(service.getKerberosPrincipal().getKeytab());
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-      }
+      validateKerberosPrincipal(service.getKerberosPrincipal());
     }
 
     // Validate the Docker client config.
@@ -145,9 +139,8 @@ public class ServiceApiUtil {
         throw new IllegalArgumentException("Component name collision: " +
             comp.getName());
       }
-      // If artifact is of type SERVICE (which cannot be filled from
-      // global), read external service and add its components to this
-      // service
+      // If artifact is of type SERVICE (which cannot be filled from global),
+      // read external service and add its components to this service
       if (comp.getArtifact() != null && comp.getArtifact().getType() ==
           Artifact.TypeEnum.SERVICE) {
         if (StringUtils.isEmpty(comp.getArtifact().getId())) {
@@ -223,6 +216,25 @@ public class ServiceApiUtil {
     // Service lifetime if not specified, is set to unlimited lifetime
     if (service.getLifetime() == null) {
       service.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
+    }
+  }
+
+  public static void validateKerberosPrincipal(
+      KerberosPrincipal kerberosPrincipal) throws IOException {
+    if (!StringUtils.isEmpty(kerberosPrincipal.getKeytab())) {
+      try {
+        // validate URI format
+        URI keytabURI = new URI(kerberosPrincipal.getKeytab());
+        if (keytabURI.getScheme() == null) {
+          throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
+              kerberosPrincipal.getKeytab()));
+        }
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(
+            String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID,
+                e.getLocalizedMessage()));
+      }
     }
   }
 
