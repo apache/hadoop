@@ -22,6 +22,7 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
 import org.apache.hadoop.yarn.service.api.records.Resource;
@@ -45,6 +46,7 @@ import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIM
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for ServiceApiUtil helper methods.
@@ -521,6 +523,45 @@ public class TestServiceApiUtil {
     // now it should succeed
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+    } catch (IllegalArgumentException e) {
+      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testKerberosPrincipal() throws IOException {
+    SliderFileSystem sfs = ServiceTestUtils.initMockFs();
+    Service app = createValidApplication("comp-a");
+    KerberosPrincipal kp = new KerberosPrincipal();
+    kp.setKeytab("/some/path");
+    kp.setPrincipalName("user/_HOST@domain.com");
+    app.setKerberosPrincipal(kp);
+
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+      Assert.fail(EXCEPTION_PREFIX + "service with invalid keytab URI scheme");
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+          String.format(RestApiErrorMessages.ERROR_KEYTAB_URI_SCHEME_INVALID,
+              kp.getKeytab()),
+          e.getMessage());
+    }
+
+    kp.setKeytab("/ blank / in / paths");
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
+      Assert.fail(EXCEPTION_PREFIX + "service with invalid keytab");
+    } catch (IllegalArgumentException e) {
+      // strip out the %s at the end of the RestApiErrorMessages string constant
+      assertTrue(e.getMessage().contains(
+          RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID.substring(0,
+              RestApiErrorMessages.ERROR_KEYTAB_URI_INVALID.length() - 2)));
+    }
+
+    kp.setKeytab("file:///tmp/a.keytab");
+    // now it should succeed
+    try {
+      ServiceApiUtil.validateKerberosPrincipal(app.getKerberosPrincipal());
     } catch (IllegalArgumentException e) {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
