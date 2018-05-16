@@ -796,12 +796,14 @@ public class TestDFSAdmin {
     if (closedFileSet != null) {
       for (Path closedFilePath : closedFileSet) {
         assertThat(outStr,
-            not(containsString(closedFilePath.toString() + "\n")));
+            not(containsString(closedFilePath.toString() +
+                System.lineSeparator())));
       }
     }
 
     for (Path openFilePath : openFilesMap.keySet()) {
-      assertThat(outStr, is(containsString(openFilePath.toString() + "\n")));
+      assertThat(outStr, is(containsString(openFilePath.toString() +
+          System.lineSeparator())));
     }
   }
 
