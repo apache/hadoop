@@ -1735,13 +1735,14 @@ public class ContainerLaunch implements Callable<Integer> {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
-    // variables here will be forced in, even if the container has specified them.
-    String nmAdminUserEnv = conf.get(
-        YarnConfiguration.NM_ADMIN_USER_ENV,
-        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
-    Apps.setEnvFromInputString(environment, nmAdminUserEnv, File.pathSeparator);
-    nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnv,
-        File.pathSeparator));
+    // variables here will be forced in, even if the container has
+    // specified them.
+    String defEnvStr = conf.get(YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
+    Apps.setEnvFromInputProperty(environment,
+        YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf,
+        File.pathSeparator);
+    nmVars.addAll(Apps.getEnvVarsFromInputProperty(
+        YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf));
 
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.

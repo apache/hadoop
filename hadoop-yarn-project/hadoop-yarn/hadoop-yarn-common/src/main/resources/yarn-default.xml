@@ -1059,7 +1059,16 @@
   </property>
 
   <property>
-    <description>Environment variables that should be forwarded from the NodeManager's environment to the container's.</description>
+    <description>
+      Environment variables that should be forwarded from the NodeManager's
+      environment to the container's, specified as a comma separated list of
+      VARNAME=value pairs.
+
+      To define environment variables individually, you can specify
+      multiple properties of the form yarn.nodemanager.admin-env.VARNAME,
+      where VARNAME is the name of the environment variable. This is the only
+      way to add a variable when its value contains commas.
+    </description>
     <name>yarn.nodemanager.admin-env</name>
     <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
   </property>
